@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-このファイルは、Claude Code (claude.ai/code) がこのリポジトリで作業する際のガイドです。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## コマンド
 
@@ -23,17 +23,52 @@ npm run lint
 
 **Expo Router** を使ったアプリで、**ファイルベースのルーティング**を採用しています。エントリーポイントは `expo-router/entry`（`package.json` に設定）。
 
-- `app/` — 画面とレイアウト。ファイルがそのままルートに対応する。`_layout.tsx` はナビゲーションのラッパー（現在は `<Stack />` のみ）。
-- `app/index.tsx` — ホーム画面（現在は空の状態）。
-- `app-example/` — Expo テンプレートの元コード（参照用。アクティブなアプリには含まれない）。
-- `assets/images/` — 静的な画像ファイル。
+### ディレクトリ構成
 
-**主要な設定:**
-- `app.json`: スラッグ・スキームは `codeflashcard`、新アーキテクチャ有効（`newArchEnabled: true`）、型付きルートと React Compiler の実験的機能も有効。
-- `tsconfig.json`: strictモード、パスエイリアス `@/*` がリポジトリルートに対応。
-- VSCode: 保存時に ESLint 自動修正とインポート整理が実行される。
+```
+app/
+├── _layout.tsx          # ルートレイアウト: SQLiteProvider + Stack
+└── (tabs)/
+    ├── _layout.tsx      # タブバー定義（ホーム / 学習 / 統計 / 設定）
+    ├── index.tsx        # ホーム画面（デッキ一覧、002チケットで実装）
+    ├── study.tsx        # 学習画面（007チケットで実装）
+    ├── stats.tsx        # 統計画面（012チケットで実装）
+    └── settings.tsx     # 設定画面（013・016チケットで実装）
 
-**技術スタック:** React Native 0.81 / React 19 / Expo 54 / expo-router 6。アニメーションに react-native-reanimated、ジェスチャー操作に react-native-gesture-handler が利用可能。
+lib/
+└── database/
+    └── schema.ts        # SQLiteテーブル定義 + migrateDbIfNeeded()
+
+types/
+└── index.ts             # 全ドメイン型（Deck, Card, Block, Tag, Review）
+
+docs/
+└── 000〜020-*.md        # 機能チケット（実装計画・Todo管理）
+```
+
+### ナビゲーション階層
+
+`Stack`（`app/_layout.tsx`）がルートシェル。その中に `(tabs)` グループが入る構造。`(tabs)` はURLパスに影響しない透過的なグループなので `app/(tabs)/index.tsx` は `/` にマップされる。
+
+### DB 初期化フロー
+
+`app/_layout.tsx` の `<SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>` がアプリ起動時に `lib/database/schema.ts` の `migrateDbIfNeeded()` を実行し5テーブルを作成する。子画面では `useSQLiteContext()` でDBインスタンスを取得する。
+
+### 型定義
+
+`types/index.ts` がドメイン型の唯一の定義元。ブロックは `TextBlock | CodeBlock | ImageBlock` のユニオン型で、カードの `frontContent / backContent / memoContent` は SQLite に JSON文字列として保存される。
+
+### 主要な設定
+
+- `app.json`: `newArchEnabled: true`（新アーキテクチャ）、`typedRoutes: true`、`reactCompiler: true`（実験的）
+- `tsconfig.json`: strictモード、`@/*` がリポジトリルートに対応
+- VSCode: 保存時に ESLint 自動修正とインポート整理が実行される
+
+**技術スタック:** React Native 0.81 / React 19 / Expo 54 / expo-router 6 / expo-sqlite。アニメーションに react-native-reanimated、ジェスチャー操作に react-native-gesture-handler が利用可能。
+
+### 実装チケット
+
+`docs/` 配下に機能チケット（000〜020）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
 ## アプリ要件
 

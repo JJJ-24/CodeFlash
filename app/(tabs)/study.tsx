@@ -1,0 +1,27 @@
+import { StyleSheet, Text, View } from 'react-native';
+
+export default function StudyScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>学習</Text>
+      <Text style={styles.sub}>（007 チケットで実装）</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  text: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  sub: {
+    fontSize: 14,
+    color: '#999',
+  },
+});

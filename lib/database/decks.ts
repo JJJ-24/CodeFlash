@@ -1,0 +1,48 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+
+import type { Deck } from '@/types';
+
+function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+export async function getAllDecks(db: SQLiteDatabase): Promise<Deck[]> {
+  return db.getAllAsync<Deck>('SELECT * FROM decks ORDER BY updatedAt DESC');
+}
+
+export async function getDeckById(db: SQLiteDatabase, id: string): Promise<Deck | null> {
+  return db.getFirstAsync<Deck>('SELECT * FROM decks WHERE id = ?', [id]);
+}
+
+export async function createDeck(
+  db: SQLiteDatabase,
+  data: Pick<Deck, 'name' | 'description' | 'language'>
+): Promise<Deck> {
+  const now = new Date().toISOString();
+  const id = generateId();
+  await db.runAsync(
+    'INSERT INTO decks (id, name, description, language, cardCount, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?)',
+    [id, data.name, data.description, data.language, now, now]
+  );
+  return { id, cardCount: 0, createdAt: now, updatedAt: now, ...data };
+}
+
+export async function updateDeck(
+  db: SQLiteDatabase,
+  id: string,
+  data: Pick<Deck, 'name' | 'description' | 'language'>
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync(
+    'UPDATE decks SET name = ?, description = ?, language = ?, updatedAt = ? WHERE id = ?',
+    [data.name, data.description, data.language, now, id]
+  );
+}
+
+export async function deleteDeck(db: SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM decks WHERE id = ?', [id]);
+}

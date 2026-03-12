@@ -1,27 +1,146 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import { deleteDeck, getAllDecks } from '@/lib/database/decks';
+import { useDeckStore } from '@/store/decks';
+import type { Deck } from '@/types';
+
+function DeckCard({ deck, onDelete }: { deck: Deck; onDelete: (id: string) => void }) {
+  const router = useRouter();
+  const { t } = useTranslation();
+
+  function confirmDelete() {
+    Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(deck.id) },
+    ]);
+  }
+
+  return (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push({ pathname: '/deck/[id]', params: { id: deck.id } })}
+      activeOpacity={0.7}
+    >
+      <View style={styles.cardContent}>
+        <Text style={styles.deckName} numberOfLines={1}>
+          {deck.name}
+        </Text>
+        {deck.description ? (
+          <Text style={styles.deckDesc} numberOfLines={2}>
+            {deck.description}
+          </Text>
+        ) : null}
+        <Text style={styles.cardCount}>{t('home.cards', { count: deck.cardCount })}</Text>
+      </View>
+      <View style={styles.cardActions}>
+        <Pressable
+          onPress={() => router.push({ pathname: '/deck/[id]/edit', params: { id: deck.id } })}
+          hitSlop={8}
+          style={styles.iconBtn}
+        >
+          <Ionicons name="pencil-outline" size={18} color="#666" />
+        </Pressable>
+        <Pressable onPress={confirmDelete} hitSlop={8} style={styles.iconBtn}>
+          <Ionicons name="trash-outline" size={18} color="#E53935" />
+        </Pressable>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function HomeScreen() {
+  const db = useSQLiteContext();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const { decks, setDecks, removeDeck } = useDeckStore();
+
+  useEffect(() => {
+    getAllDecks(db).then(setDecks);
+  }, [db]);
+
+  async function handleDelete(id: string) {
+    await deleteDeck(db, id);
+    removeDeck(id);
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>デッキ一覧</Text>
-      <Text style={styles.sub}>（002 チケットで実装）</Text>
+      {decks.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="layers-outline" size={72} color="#CCC" />
+          <Text style={styles.emptyText}>{t('home.empty')}</Text>
+          <Text style={styles.emptySubText}>{t('home.emptySub')}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={decks}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <DeckCard deck={item} onDelete={handleDelete} />}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push({ pathname: '/deck/new' })}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={30} color="#FFF" />
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  listContent: { padding: 16, gap: 12 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  emptyText: { fontSize: 18, fontWeight: '600', color: '#555' },
+  emptySubText: { fontSize: 14, color: '#999', textAlign: 'center', paddingHorizontal: 40 },
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardContent: { flex: 1 },
+  deckName: { fontSize: 16, fontWeight: '700', color: '#212121', marginBottom: 4 },
+  deckDesc: { fontSize: 13, color: '#757575', marginBottom: 6 },
+  cardCount: { fontSize: 12, color: '#9E9E9E' },
+  cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12 },
+  iconBtn: { padding: 4 },
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1976D2',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-  },
-  text: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  sub: {
-    fontSize: 14,
-    color: '#999',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });

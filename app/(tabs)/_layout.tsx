@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -8,12 +9,13 @@ function TabIcon({ name, color, size }: { name: IoniconsName; color: string; siz
 }
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   return (
     <Tabs screenOptions={{ headerShown: true }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'ホーム',
+          title: t('tabs.home'),
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="home-outline" color={color} size={size} />
           ),
@@ -22,7 +24,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="study"
         options={{
-          title: '学習',
+          title: t('tabs.study'),
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="book-outline" color={color} size={size} />
           ),
@@ -31,7 +33,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="stats"
         options={{
-          title: '統計',
+          title: t('tabs.stats'),
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="bar-chart-outline" color={color} size={size} />
           ),
@@ -40,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: '設定',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="settings-outline" color={color} size={size} />
           ),

@@ -1,0 +1,38 @@
+{
+  "home": {
+    "title": "Decks",
+    "empty": "No decks yet",
+    "emptySub": "Tap the + button to create your first deck",
+    "cards": "{{count}} cards"
+  },
+  "deck": {
+    "new": "New Deck",
+    "edit": "Edit Deck",
+    "detail": "Cards",
+    "delete": "Delete Deck",
+    "deleteConfirm": "Delete this deck?\nAll associated cards will also be deleted.",
+    "name": "Deck Name",
+    "namePlaceholder": "e.g. JavaScript Basics",
+    "description": "Description",
+    "descriptionPlaceholder": "Add a description (optional)",
+    "language": "Language",
+    "languageJa": "Japanese",
+    "languageEn": "English",
+    "create": "Create",
+    "save": "Save",
+    "study": "Start Study",
+    "noCards": "No cards yet"
+  },
+  "tabs": {
+    "home": "Home",
+    "study": "Study",
+    "stats": "Stats",
+    "settings": "Settings"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "ok": "OK"
+  }
+}

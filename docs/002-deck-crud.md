@@ -1,7 +1,7 @@
 # 002 デッキ管理 CRUD
 
 **フェーズ:** MVP
-**ステータス:** 未着手
+**ステータス:** 完了
 **依存:** 001
 **被依存:** 003, 014, 019
 
@@ -16,31 +16,31 @@
 ## Todo
 
 ### データ層
-- [ ] デッキ作成（`INSERT INTO decks`）
-- [ ] デッキ一覧取得（`SELECT * FROM decks ORDER BY updatedAt DESC`）
-- [ ] デッキ詳細取得（`SELECT * FROM decks WHERE id = ?`）
-- [ ] デッキ更新（name, description, language）
-- [ ] デッキ削除（カスケード: 紐付きカード・レビューも削除）
+- [x] デッキ作成（`INSERT INTO decks`）
+- [x] デッキ一覧取得（`SELECT * FROM decks ORDER BY updatedAt DESC`）
+- [x] デッキ詳細取得（`SELECT * FROM decks WHERE id = ?`）
+- [x] デッキ更新（name, description, language）
+- [x] デッキ削除（カスケード: 紐付きカード・レビューも削除）
 - [ ] cardCount の自動更新（カード追加/削除時にトリガー）
-- [ ] Zustand デッキストア（`useDeckStore`）
+- [x] Zustand デッキストア（`useDeckStore`）
 
 ### 画面 / UI
-- [ ] `app/index.tsx` — デッキ一覧画面
-  - [ ] デッキカード表示（名前・説明・カード枚数・最終学習日）
-  - [ ] 新規デッキ作成ボタン（FAB）
-  - [ ] 長押し or スワイプで削除・編集
-  - [ ] 空状態（デッキなし）の表示
-- [ ] `app/deck/new.tsx` — デッキ作成モーダル
-  - [ ] 名前・説明入力
-  - [ ] 言語選択（ja / en）
-- [ ] `app/deck/[id]/index.tsx` — デッキ詳細（カード一覧）
-  - [ ] カード一覧（003 チケット実装後に結合）
-  - [ ] デッキ編集ボタン
-  - [ ] デッキ削除確認ダイアログ
-- [ ] `app/deck/[id]/edit.tsx` — デッキ編集
+- [x] `app/(tabs)/index.tsx` — デッキ一覧画面
+  - [x] デッキカード表示（名前・説明・カード枚数）
+  - [x] 新規デッキ作成ボタン（FAB）
+  - [x] アイコンボタンで削除・編集（確認ダイアログ付き）
+  - [x] 空状態（デッキなし）の表示
+- [x] `app/deck/new.tsx` — デッキ作成モーダル
+  - [x] 名前・説明入力
+  - [x] 言語選択（ja / en）
+- [x] `app/deck/[id]/index.tsx` — デッキ詳細（カード一覧）
+  - [x] カード一覧（003 チケット実装後に結合）
+  - [x] デッキ編集ボタン
+  - [x] デッキ削除確認ダイアログ
+- [x] `app/deck/[id]/edit.tsx` — デッキ編集
 
 ### i18n
-- [ ] デッキ関連テキストの翻訳キー追加（ja / en）
+- [x] デッキ関連テキストの翻訳キー追加（ja / en）
 
 ---
 

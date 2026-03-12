@@ -1,3 +1,4 @@
+import '@/lib/i18n';
 import { Stack } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { Suspense } from 'react';
@@ -15,7 +16,11 @@ export default function RootLayout() {
       }
     >
       <SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
-        <Stack />
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="deck/new" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'modal' }} />
+        </Stack>
       </SQLiteProvider>
     </Suspense>
   );

@@ -1,0 +1,38 @@
+{
+  "home": {
+    "title": "デッキ一覧",
+    "empty": "デッキがまだありません",
+    "emptySub": "右下の + ボタンからデッキを作成しましょう",
+    "cards": "{{count}} 枚"
+  },
+  "deck": {
+    "new": "新規デッキ",
+    "edit": "デッキを編集",
+    "detail": "カード一覧",
+    "delete": "デッキを削除",
+    "deleteConfirm": "このデッキを削除しますか？\n紐付いたカードもすべて削除されます。",
+    "name": "デッキ名",
+    "namePlaceholder": "例: JavaScript 基礎",
+    "description": "説明",
+    "descriptionPlaceholder": "説明を入力（省略可）",
+    "language": "言語",
+    "languageJa": "日本語",
+    "languageEn": "英語",
+    "create": "作成",
+    "save": "保存",
+    "study": "学習開始",
+    "noCards": "カードがまだありません"
+  },
+  "tabs": {
+    "home": "ホーム",
+    "study": "学習",
+    "stats": "統計",
+    "settings": "設定"
+  },
+  "common": {
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "ok": "OK"
+  }
+}

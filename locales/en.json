@@ -23,6 +23,27 @@
     "study": "Start Study",
     "noCards": "No cards yet"
   },
+  "tag": {
+    "title": "Tags",
+    "new": "New Tag",
+    "edit": "Edit Tag",
+    "delete": "Delete Tag",
+    "deleteConfirm": "Delete this tag?\nThe tag will be removed from all cards.",
+    "name": "Tag Name",
+    "namePlaceholder": "e.g. JavaScript",
+    "color": "Color",
+    "create": "Create",
+    "save": "Save",
+    "empty": "No tags yet",
+    "emptySub": "Tap + to create your first tag",
+    "cards": "{{count}} cards"
+  },
+  "grade": {
+    "again": "Again",
+    "hard": "Hard",
+    "good": "Good",
+    "easy": "Easy"
+  },
   "card": {
     "new": "New Card",
     "edit": "Edit Card",

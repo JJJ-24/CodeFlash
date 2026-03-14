@@ -22,9 +22,9 @@
 | [001](./001-project-foundation.md) | プロジェクト基盤（DB・ナビゲーション・i18n） | MVP | 完了 | なし |
 | [002](./002-deck-crud.md) | デッキ管理 CRUD | MVP | 完了 | 001 |
 | [003](./003-card-crud.md) | カード管理 CRUD | MVP | 完了 | 001, 002 |
-| [004](./004-tag-management.md) | タグ管理 | MVP | 未着手 | 001, 003 |
+| [004](./004-tag-management.md) | タグ管理 | MVP | 完了 | 001, 003 |
 | [005](./005-card-editor.md) | カードエディタ（Markdown・ブロック） | MVP | 未着手 | 001, 003, 004 |
-| [006](./006-sm2-algorithm.md) | SM-2 間隔反復アルゴリズム | MVP | 未着手 | 001, 003 |
+| [006](./006-sm2-algorithm.md) | SM-2 間隔反復アルゴリズム | MVP | 完了 | 001, 003 |
 | [007](./007-study-screen.md) | 学習画面（通常モード） | MVP | 未着手 | 003, 005, 006 |
 | [008](./008-fullscreen-keyboard.md) | 全画面モード＋Bluetoothキーボード | v1.0 | 未着手 | 007 |
 | [009](./009-code-execution-js.md) | コード実行（JavaScript / TypeScript） | v1.0 | 未着手 | 005 |

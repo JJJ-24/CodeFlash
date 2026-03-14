@@ -23,6 +23,27 @@
     "study": "学習開始",
     "noCards": "カードがまだありません"
   },
+  "tag": {
+    "title": "タグ管理",
+    "new": "新規タグ",
+    "edit": "タグを編集",
+    "delete": "タグを削除",
+    "deleteConfirm": "このタグを削除しますか？\nカードからタグが外れます。",
+    "name": "タグ名",
+    "namePlaceholder": "例: JavaScript",
+    "color": "カラー",
+    "create": "作成",
+    "save": "保存",
+    "empty": "タグがまだありません",
+    "emptySub": "+ ボタンからタグを作成しましょう",
+    "cards": "{{count}} 枚"
+  },
+  "grade": {
+    "again": "もう一度",
+    "hard": "難しい",
+    "good": "普通",
+    "easy": "簡単"
+  },
   "card": {
     "new": "新規カード",
     "edit": "カードを編集",

@@ -16,33 +16,29 @@ SuperMemo SM-2 ベースのカスタム間隔反復アルゴリズムを実装�
 ## Todo
 
 ### アルゴリズム実装
-- [ ] SM-2 コア計算関数（`calculateNextReview(card, grade) → ReviewResult`）
-  - [ ] easeFactor 更新（初期値 2.5、最小 1.3）
-  - [ ] interval 計算（初回:1日、2回目:6日、以降: interval * easeFactor）
-  - [ ] repetitions カウント
-  - [ ] grade=0（もう一度）時のリセット処理
-- [ ] 自己評価 grade マッピング
-  - grade 0 = もう一度（Again）
-  - grade 1 = 難しい（Hard）
-  - grade 2 = 普通（Good）
-  - grade 3 = 簡単（Easy）
-- [ ] アルゴリズムのユニットテスト
+- [x] SM-2 コア計算関数（`calculateNextReview(state, grade) → ReviewResult`）— lib/sm2.ts
+  - [x] easeFactor 更新（初期値 2.5、最小 1.3）
+  - [x] interval 計算（初回:1日、2回目:6日、以降: interval * easeFactor）
+  - [x] repetitions カウント
+  - [x] grade=0（もう一度）時のリセット処理
+  - [x] grade=1（Hard）時はインターバルを0.6倍に縮小
+- [x] 自己評価 grade マッピング（0〜3）
+- [ ] アルゴリズムのユニットテスト（テストフレームワーク未設定）
 
 ### データ層
-- [ ] レビュー記録保存（`INSERT OR REPLACE INTO reviews`）
-- [ ] 今日の復習対象カード取得（`nextReviewDate <= today`）
-- [ ] デッキ単位での復習対象カード取得
-- [ ] タグ単位での復習対象カード取得（デッキ横断）
-- [ ] 新規カードの初期レビューデータ作成
-- [ ] Zustand レビューストア（`useReviewStore`）
+- [x] レビュー記録保存（`INSERT OR REPLACE INTO reviews`）— lib/database/reviews.ts
+- [x] 今日の復習対象カード取得（nextReviewDate <= today または未学習）
+- [x] デッキ単位での復習対象カード取得
+- [x] タグ単位での復習対象カード取得（デッキ横断）
+- [x] Zustand レビューストア（`useReviewStore`）— store/reviews.ts
 
 ### 統計用データ
-- [ ] 今日学習したカード数の取得
-- [ ] 復習スケジュール（今後7日分）の集計
-- [ ] 学習ストリーク計算
+- [x] 今日学習したカード数の取得
+- [x] 復習スケジュール（今後7日分）の集計
+- [x] 学習ストリーク計算
 
 ### i18n
-- [ ] 自己評価ラベルの翻訳キー（もう一度 / 難しい / 普通 / 簡単）
+- [x] 自己評価ラベルの翻訳キー（もう一度 / 難しい / 普通 / 簡単）
 
 ---
 

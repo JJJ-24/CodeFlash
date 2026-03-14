@@ -8,6 +8,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useTheme } from '@/lib/theme';
+
 interface Props {
   front: React.ReactNode;
   back: React.ReactNode;
@@ -17,6 +19,7 @@ interface Props {
 
 export function FlipCard({ front, back, isFlipped, onFlip }: Props) {
   const progress = useSharedValue(0);
+  const theme = useTheme();
 
   useEffect(() => {
     progress.value = withTiming(isFlipped ? 1 : 0, { duration: 320 });
@@ -42,11 +45,11 @@ export function FlipCard({ front, back, isFlipped, onFlip }: Props) {
     <Pressable style={styles.wrapper} onPress={onFlip}>
       <View style={styles.cardContainer}>
         {/* 表面 */}
-        <Animated.View style={[styles.card, styles.cardFront, frontStyle]}>
+        <Animated.View style={[styles.card, { backgroundColor: theme.colors.surface }, frontStyle]}>
           <View style={styles.cardInner}>{front}</View>
         </Animated.View>
         {/* 裏面 */}
-        <Animated.View style={[styles.card, styles.cardBack, backStyle]}>
+        <Animated.View style={[styles.card, { backgroundColor: theme.colors.surface }, backStyle]}>
           <View style={styles.cardInner}>{back}</View>
         </Animated.View>
       </View>
@@ -70,8 +73,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  cardFront: { backgroundColor: '#FFF' },
-  cardBack: { backgroundColor: '#FAFFFE' },
   cardInner: {
     flex: 1,
     padding: 24,

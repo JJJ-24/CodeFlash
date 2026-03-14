@@ -15,6 +15,7 @@ import {
 import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard } from '@/components/study/FlipCard';
 import { useStudySession } from '@/hooks/useStudySession';
+import { useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
 
 const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
@@ -28,6 +29,7 @@ export default function StudySessionScreen() {
   const { deckId, tagId } = useLocalSearchParams<{ deckId?: string; tagId?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade } =
     useStudySession();
 
@@ -54,8 +56,8 @@ export default function StudySessionScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -65,14 +67,18 @@ export default function StudySessionScreen() {
     return (
       <>
         <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '' }} />
-        <View style={styles.completeScreen}>
+        <View style={[styles.completeScreen, { backgroundColor: theme.colors.background }]}>
           <Ionicons name="checkmark-circle" size={80} color="#43A047" />
-          <Text style={styles.completeTitle}>{t('study.complete')}</Text>
-          <Text style={styles.completeCount}>
+          <Text style={[styles.completeTitle, { color: theme.colors.text }]}>{t('study.complete')}</Text>
+          <Text style={[styles.completeCount, { color: theme.colors.textSecondary }]}>
             {t('study.reviewedCount', { count: result.reviewed })}
           </Text>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-            <Text style={styles.backBtnText}>{t('common.ok')}</Text>
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: theme.colors.primary }]}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.backBtnText, { color: theme.colors.primaryText }]}>{t('common.ok')}</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -86,13 +92,13 @@ export default function StudySessionScreen() {
   return (
     <>
       <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '' }} />
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* プログレスバー */}
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { flex: progressRatio }]} />
+        <View style={[styles.progressBar, { backgroundColor: theme.colors.progressBg }]}>
+          <View style={[styles.progressFill, { flex: progressRatio, backgroundColor: theme.colors.primary }]} />
           <View style={{ flex: 1 - progressRatio }} />
         </View>
-        <Text style={styles.progressText}>
+        <Text style={[styles.progressText, { color: theme.colors.textTertiary }]}>
           {t('study.progress', { current: result.reviewed, total: result.totalCards })}
         </Text>
 
@@ -108,7 +114,7 @@ export default function StudySessionScreen() {
             }
             back={
               <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
-                <Text style={styles.faceLabel}>{t('card.back')}</Text>
+                <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
                 <BlocksView blocks={currentCard.backContent} />
                 {/* メモ */}
                 {currentCard.memoContent.length > 0 && (
@@ -120,14 +126,14 @@ export default function StudySessionScreen() {
                       <Ionicons
                         name={showMemo ? 'eye-off-outline' : 'eye-outline'}
                         size={16}
-                        color="#9E9E9E"
+                        color={theme.colors.textTertiary}
                       />
-                      <Text style={styles.memoToggleText}>
+                      <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
                         {showMemo ? t('study.hideMemo') : t('study.showMemo')}
                       </Text>
                     </Pressable>
                     {showMemo && (
-                      <View style={styles.memoContent}>
+                      <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
                         <BlocksView blocks={currentCard.memoContent} />
                       </View>
                     )}
@@ -141,16 +147,19 @@ export default function StudySessionScreen() {
         {/* ヒント or 自己評価ボタン */}
         <View style={styles.bottom}>
           {!isFlipped ? (
-            <Pressable style={styles.flipHint} onPress={() => setIsFlipped(true)}>
-              <Ionicons name="sync-outline" size={18} color="#9E9E9E" />
-              <Text style={styles.flipHintText}>{t('study.tapToFlip')}</Text>
+            <Pressable
+              style={[styles.flipHint, { backgroundColor: theme.colors.surface }]}
+              onPress={() => setIsFlipped(true)}
+            >
+              <Ionicons name="sync-outline" size={18} color={theme.colors.textTertiary} />
+              <Text style={[styles.flipHintText, { color: theme.colors.textTertiary }]}>{t('study.tapToFlip')}</Text>
             </Pressable>
           ) : (
             <View style={styles.gradeRow}>
               {GRADES.map(({ grade, labelKey, color }) => (
                 <TouchableOpacity
                   key={grade}
-                  style={[styles.gradeBtn, { borderColor: color }, grading && styles.gradeBtnDisabled]}
+                  style={[styles.gradeBtn, { borderColor: color, backgroundColor: theme.colors.surface }, grading && styles.gradeBtnDisabled]}
                   onPress={() => handleGrade(grade)}
                   disabled={grading}
                   activeOpacity={0.7}
@@ -167,33 +176,29 @@ export default function StudySessionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F4F8' },
+  container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   progressBar: {
     height: 4,
     flexDirection: 'row',
-    backgroundColor: '#E0E0E0',
   },
-  progressFill: { backgroundColor: '#1976D2' },
+  progressFill: {},
   progressText: {
     fontSize: 12,
-    color: '#9E9E9E',
     textAlign: 'right',
     paddingHorizontal: 20,
     paddingTop: 6,
   },
   cardArea: { flex: 1, paddingHorizontal: 20, paddingVertical: 12 },
   faceContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 8 },
-  faceLabel: { fontSize: 11, fontWeight: '700', color: '#BDBDBD', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  faceLabel: { fontSize: 11, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   memoSection: { marginTop: 20, gap: 8 },
   memoToggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  memoToggleText: { fontSize: 13, color: '#9E9E9E' },
+  memoToggleText: { fontSize: 13 },
   memoContent: {
-    backgroundColor: '#F5F5F5',
     borderRadius: 8,
     padding: 12,
     borderLeftWidth: 3,
-    borderLeftColor: '#E0E0E0',
   },
   bottom: {
     paddingHorizontal: 20,
@@ -206,10 +211,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 16,
-    backgroundColor: '#FFF',
     borderRadius: 12,
   },
-  flipHintText: { fontSize: 15, color: '#9E9E9E' },
+  flipHintText: { fontSize: 15 },
   gradeRow: { flexDirection: 'row', gap: 8 },
   gradeBtn: {
     flex: 1,
@@ -217,7 +221,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     alignItems: 'center',
-    backgroundColor: '#FFF',
   },
   gradeBtnDisabled: { opacity: 0.4 },
   gradeBtnText: { fontSize: 13, fontWeight: '700' },
@@ -226,17 +229,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    backgroundColor: '#F0F4F8',
     padding: 32,
   },
-  completeTitle: { fontSize: 24, fontWeight: '700', color: '#212121' },
-  completeCount: { fontSize: 16, color: '#616161' },
+  completeTitle: { fontSize: 24, fontWeight: '700' },
+  completeCount: { fontSize: 16 },
   backBtn: {
     marginTop: 8,
-    backgroundColor: '#1976D2',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 40,
   },
-  backBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  backBtnText: { fontSize: 16, fontWeight: '700' },
 });

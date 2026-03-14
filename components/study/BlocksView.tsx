@@ -1,6 +1,7 @@
 import Markdown from 'react-native-markdown-display';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import type { Block, CodeBlock, TextBlock } from '@/types';
 
 interface Props {
@@ -8,8 +9,24 @@ interface Props {
 }
 
 export function BlocksView({ blocks }: Props) {
+  const theme = useTheme();
+
+  const markdownStyles = {
+    body: { fontSize: 17, color: theme.colors.text, lineHeight: 26 },
+    heading1: { fontSize: 24, fontWeight: '700' as const, marginBottom: 8 },
+    heading2: { fontSize: 20, fontWeight: '700' as const, marginBottom: 6 },
+    code_inline: {
+      backgroundColor: theme.dark ? '#2C2C2C' : '#F0F0F0',
+      fontFamily: 'monospace',
+      fontSize: 14,
+      color: theme.colors.danger,
+    },
+    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12 },
+    code_block: { fontFamily: 'monospace', fontSize: 14, color: '#D4D4D4' },
+  };
+
   if (blocks.length === 0) {
-    return <Text style={styles.empty}>（内容なし）</Text>;
+    return <Text style={[styles.empty, { color: theme.colors.iconSubtle }]}>（内容なし）</Text>;
   }
 
   return (
@@ -34,8 +51,8 @@ export function BlocksView({ blocks }: Props) {
           );
         }
         return (
-          <View key={i} style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderText}>🖼 画像ブロック</Text>
+          <View key={i} style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
+            <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary }]}>🖼 画像ブロック</Text>
           </View>
         );
       })}
@@ -45,7 +62,7 @@ export function BlocksView({ blocks }: Props) {
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  empty: { fontSize: 14, color: '#BDBDBD', fontStyle: 'italic', textAlign: 'center' },
+  empty: { fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
   textBlock: {},
   codeBlock: {
     backgroundColor: '#1E1E1E',
@@ -69,24 +86,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   imagePlaceholder: {
-    backgroundColor: '#F5F5F5',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
   },
-  imagePlaceholderText: { fontSize: 14, color: '#9E9E9E' },
+  imagePlaceholderText: { fontSize: 14 },
 });
-
-const markdownStyles = {
-  body: { fontSize: 17, color: '#212121', lineHeight: 26 },
-  heading1: { fontSize: 24, fontWeight: '700' as const, marginBottom: 8 },
-  heading2: { fontSize: 20, fontWeight: '700' as const, marginBottom: 6 },
-  code_inline: {
-    backgroundColor: '#F0F0F0',
-    fontFamily: 'monospace',
-    fontSize: 14,
-    color: '#E53935',
-  },
-  fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12 },
-  code_block: { fontFamily: 'monospace', fontSize: 14, color: '#D4D4D4' },
-};

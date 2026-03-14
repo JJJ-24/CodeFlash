@@ -20,11 +20,11 @@
 - [x] ライトテーマ定数
 - [x] ダークテーマ定数
 - [x] `useTheme` カスタムフック（`lib/theme/index.ts`）
-- [ ] Zustand テーマストア（`useThemeStore`）※手動切替時に追加
+- [x] Zustand テーマストア（`useThemeStore`）※手動切替時に追加
 
 ### ダークモード
 - [x] 端末設定に応じた自動切替（`useColorScheme`）
-- [ ] ライト / ダーク / システム連動 の3択設定
+- [x] ライト / ダーク / システム連動 の3択設定
 - [x] タブ画面（4画面）+ タブバー・ヘッダーへのテーマ適用
 - [x] モーダル・詳細画面（deck/new, deck/edit, deck/detail, tags）へのテーマ適用
 - [x] Stack デフォルトヘッダーのテーマ化（app/_layout.tsx）
@@ -35,13 +35,12 @@
 - [ ] 全テキストコンポーネントへの反映
 
 ### 設定画面連携
-- [ ] `app/settings/index.tsx` — 設定画面
-  - [ ] テーマ切替（ライト / ダーク / システム）
-  - [ ] フォントサイズ変更
-- [ ] 設定の永続化（`expo-secure-store` or AsyncStorage）
+- [x] `app/(tabs)/settings.tsx` — テーマ切替（ライト / ダーク / システム）
+- [ ] フォントサイズ変更（設定画面）
+- [x] 設定の永続化（AsyncStorage）
 
 ### i18n
-- [ ] テーマ・設定関連テキストの翻訳キー追加
+- [x] テーマ・設定関連テキストの翻訳キー追加
 
 ---
 

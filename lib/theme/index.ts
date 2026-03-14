@@ -1,5 +1,7 @@
 import { useColorScheme } from 'react-native';
 
+import { useThemeStore } from '@/store/theme';
+
 export interface AppColors {
   background: string;
   surface: string;
@@ -63,6 +65,10 @@ export const darkTheme: AppTheme = {
 };
 
 export function useTheme(): AppTheme {
-  const scheme = useColorScheme();
-  return scheme === 'dark' ? darkTheme : lightTheme;
+  const systemScheme = useColorScheme();
+  const preference = useThemeStore((s) => s.preference);
+
+  if (preference === 'light') return lightTheme;
+  if (preference === 'dark') return darkTheme;
+  return systemScheme === 'dark' ? darkTheme : lightTheme;
 }

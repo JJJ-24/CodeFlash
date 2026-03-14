@@ -23,6 +23,20 @@
     "study": "Start Study",
     "noCards": "No cards yet"
   },
+  "study": {
+    "title": "Study",
+    "selectDeck": "Select a Deck",
+    "dueCards": "{{count}} cards due",
+    "noDue": "Nothing to review today",
+    "noDecks": "No decks yet",
+    "tapToFlip": "Tap to flip",
+    "showMemo": "Memo",
+    "hideMemo": "Hide Memo",
+    "complete": "Session Complete!",
+    "reviewedCount": "Reviewed {{count}} cards",
+    "again": "Again",
+    "progress": "{{current}} / {{total}}"
+  },
   "tag": {
     "title": "Tags",
     "new": "New Tag",

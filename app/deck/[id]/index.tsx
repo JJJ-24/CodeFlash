@@ -116,7 +116,11 @@ export default function DeckDetailScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.studyBtn} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.studyBtn}
+          activeOpacity={0.8}
+          onPress={() => router.push({ pathname: '/study/session', params: { deckId: id } })}
+        >
           <Ionicons name="play-outline" size={20} color="#FFF" />
           <Text style={styles.studyBtnText}>{t('deck.study')}</Text>
         </TouchableOpacity>

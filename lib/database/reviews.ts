@@ -2,6 +2,22 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Review } from '@/types';
 
+/** デッキIDをキー、due 枚数を値とするマップを一括取得 */
+export async function getDueCountPerDeck(
+  db: SQLiteDatabase
+): Promise<Record<string, number>> {
+  const today = todayISO();
+  const rows = await db.getAllAsync<{ deckId: string; count: number }>(
+    `SELECT c.deckId, COUNT(*) as count
+     FROM cards c
+     LEFT JOIN reviews r ON c.id = r.cardId
+     WHERE (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)
+     GROUP BY c.deckId`,
+    [today]
+  );
+  return Object.fromEntries(rows.map((r) => [r.deckId, r.count]));
+}
+
 /** today の ISO 日付文字列（時刻なし）を返す */
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);

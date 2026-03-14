@@ -23,6 +23,20 @@
     "study": "学習開始",
     "noCards": "カードがまだありません"
   },
+  "study": {
+    "title": "学習",
+    "selectDeck": "デッキを選択",
+    "dueCards": "{{count}} 枚が復習対象",
+    "noDue": "今日の復習はありません",
+    "noDecks": "デッキがありません",
+    "tapToFlip": "タップして裏を見る",
+    "showMemo": "メモ",
+    "hideMemo": "メモを隠す",
+    "complete": "学習完了！",
+    "reviewedCount": "{{count}} 枚学習しました",
+    "again": "もう一度",
+    "progress": "{{current}} / {{total}}"
+  },
   "tag": {
     "title": "タグ管理",
     "new": "新規タグ",

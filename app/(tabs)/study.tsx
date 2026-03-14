@@ -1,27 +1,140 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import { getDueCountPerDeck } from '@/lib/database/reviews';
+import { useDeckStore } from '@/store/decks';
+import { getAllDecks } from '@/lib/database/decks';
 
 export default function StudyScreen() {
+  const db = useSQLiteContext();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const { decks, setDecks } = useDeckStore();
+  const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const [loaded, counts] = await Promise.all([
+        getAllDecks(db),
+        getDueCountPerDeck(db),
+      ]);
+      setDecks(loaded);
+      setDueCounts(counts);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (decks.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Ionicons name="book-outline" size={56} color="#CCC" />
+        <Text style={styles.emptyText}>{t('study.noDecks')}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>学習</Text>
-      <Text style={styles.sub}>（007 チケットで実装）</Text>
+      <Text style={styles.sectionTitle}>{t('study.selectDeck')}</Text>
+      <FlatList
+        data={decks}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        renderItem={({ item }) => {
+          const due = dueCounts[item.id] ?? 0;
+          return (
+            <Pressable
+              style={[styles.deckRow, due === 0 && styles.deckRowDimmed]}
+              onPress={() => {
+                if (due === 0) return;
+                router.push({ pathname: '/study/session', params: { deckId: item.id } });
+              }}
+            >
+              <View style={styles.deckInfo}>
+                <Text style={styles.deckName}>{item.name}</Text>
+                <Text style={[styles.dueLabel, due > 0 && styles.dueLabelActive]}>
+                  {due > 0
+                    ? t('study.dueCards', { count: due })
+                    : t('study.noDue')}
+                </Text>
+              </View>
+              {due > 0 && (
+                <View style={styles.dueChip}>
+                  <Text style={styles.dueChipText}>{due}</Text>
+                </View>
+              )}
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={due > 0 ? '#BDBDBD' : '#E0E0E0'}
+              />
+            </Pressable>
+          );
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  emptyText: { fontSize: 16, color: '#9E9E9E' },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9E9E9E',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  list: { paddingHorizontal: 16 },
+  separator: { height: 1, backgroundColor: '#F0F0F0' },
+  deckRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 0,
+    gap: 12,
   },
-  text: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  deckRowDimmed: { opacity: 0.5 },
+  deckInfo: { flex: 1, gap: 3 },
+  deckName: { fontSize: 16, fontWeight: '600', color: '#212121' },
+  dueLabel: { fontSize: 13, color: '#9E9E9E' },
+  dueLabelActive: { color: '#1976D2' },
+  dueChip: {
+    backgroundColor: '#1976D2',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    minWidth: 28,
+    alignItems: 'center',
   },
-  sub: {
-    fontSize: 14,
-    color: '#999',
-  },
+  dueChipText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
 });

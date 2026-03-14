@@ -23,6 +23,7 @@ export default function RootLayout() {
           <Stack.Screen name="deck/[id]/card/new" options={{ presentation: 'modal' }} />
           <Stack.Screen name="deck/[id]/card/[cardId]/edit" options={{ presentation: 'modal' }} />
           <Stack.Screen name="tags/index" options={{ title: '' }} />
+          <Stack.Screen name="study/session" options={{ headerShown: true }} />
         </Stack>
       </SQLiteProvider>
     </Suspense>

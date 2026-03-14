@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
+import { useTheme, type AppTheme } from '@/lib/theme';
 import { getAllDecks } from '@/lib/database/decks';
 import {
   getDeckMasteryList,
@@ -38,9 +39,11 @@ type MasteryItem = { deckId: string; avgEase: number; learnedCount: number };
 function BarChart({
   schedule,
   locale,
+  theme,
 }: {
   schedule: ScheduleItem[];
   locale: string;
+  theme: AppTheme;
 }) {
   const labels = locale.startsWith('ja') ? DAY_LABELS_JA : DAY_LABELS_EN;
   const maxCount = Math.max(...schedule.map((s) => s.count), 1);
@@ -54,9 +57,11 @@ function BarChart({
 
         return (
           <View key={item.date} style={styles.barCol}>
-            <Text style={styles.barCount}>{item.count > 0 ? item.count : ''}</Text>
+            <Text style={[styles.barCount, { color: theme.colors.textSecondary }]}>
+              {item.count > 0 ? item.count : ''}
+            </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: isToday ? '#1976D2' : '#90CAF9' }]} />
-            <Text style={[styles.barLabel, isToday && styles.barLabelToday]}>
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary }, isToday && styles.barLabelToday]}>
               {labels[dayIndex]}
             </Text>
           </View>
@@ -66,7 +71,7 @@ function BarChart({
   );
 }
 
-function DeckMasteryRow({ deck, mastery }: { deck: Deck; mastery: MasteryItem }) {
+function DeckMasteryRow({ deck, mastery, theme }: { deck: Deck; mastery: MasteryItem; theme: AppTheme }) {
   const { t } = useTranslation();
   const pct = masteryPercent(mastery.avgEase);
   const color = masteryColor(pct);
@@ -74,15 +79,15 @@ function DeckMasteryRow({ deck, mastery }: { deck: Deck; mastery: MasteryItem })
   return (
     <View style={styles.masteryRow}>
       <View style={styles.masteryHeader}>
-        <Text style={styles.masteryDeckName} numberOfLines={1}>
+        <Text style={[styles.masteryDeckName, { color: theme.colors.text }]} numberOfLines={1}>
           {deck.name}
         </Text>
         <Text style={[styles.masteryPct, { color }]}>{pct}%</Text>
       </View>
-      <View style={styles.masteryBarBg}>
+      <View style={[styles.masteryBarBg, { backgroundColor: theme.colors.progressBg }]}>
         <View style={[styles.masteryBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
-      <Text style={styles.masterySubLabel}>
+      <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary }]}>
         {t('stats.learned')}: {mastery.learnedCount} {t('stats.cards')}
       </Text>
     </View>
@@ -92,6 +97,7 @@ function DeckMasteryRow({ deck, mastery }: { deck: Deck; mastery: MasteryItem })
 export default function StatsScreen() {
   const db = useSQLiteContext();
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
 
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [todayDue, setTodayDue] = useState(0);
@@ -143,10 +149,14 @@ export default function StatsScreen() {
 
   if (!hasData && total === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="bar-chart-outline" size={72} color="#CCC" />
-        <Text style={styles.emptyText}>{t('stats.empty')}</Text>
-        <Text style={styles.emptySubText}>{t('stats.emptySub')}</Text>
+      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
+        <Ionicons name="bar-chart-outline" size={72} color={theme.colors.iconSubtle} />
+        <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          {t('stats.empty')}
+        </Text>
+        <Text style={[styles.emptySubText, { color: theme.colors.textTertiary }]}>
+          {t('stats.emptySub')}
+        </Text>
       </View>
     );
   }
@@ -155,27 +165,30 @@ export default function StatsScreen() {
   const deckMap = Object.fromEntries(decks.map((d) => [d.id, d]));
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.content}
+    >
       {/* サマリーカード row */}
       <View style={styles.summaryRow}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{todayReviewed}</Text>
-          <Text style={styles.summaryLabel}>{t('stats.todayLearned')}</Text>
-          <Text style={styles.summaryUnit}>{t('stats.cards')}</Text>
+        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.summaryValue, { color: theme.colors.text }]}>{todayReviewed}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>{t('stats.todayLearned')}</Text>
+          <Text style={[styles.summaryUnit, { color: theme.colors.textTertiary }]}>{t('stats.cards')}</Text>
         </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{todayDue}</Text>
-          <Text style={styles.summaryLabel}>{t('stats.dueToday')}</Text>
-          <Text style={styles.summaryUnit}>{t('stats.cards')}</Text>
+        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.summaryValue, { color: theme.colors.text }]}>{todayDue}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>{t('stats.dueToday')}</Text>
+          <Text style={[styles.summaryUnit, { color: theme.colors.textTertiary }]}>{t('stats.cards')}</Text>
         </View>
-        <View style={[styles.summaryCard, streak > 0 && styles.summaryCardHighlight]}>
-          <Text style={[styles.summaryValue, streak > 0 && styles.summaryValueHighlight]}>
+        <View style={[styles.summaryCard, streak > 0 && styles.summaryCardHighlight, !streak && { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.summaryValue, { color: theme.colors.text }, streak > 0 && styles.summaryValueHighlight]}>
             {streak}
           </Text>
-          <Text style={[styles.summaryLabel, streak > 0 && styles.summaryLabelHighlight]}>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }, streak > 0 && styles.summaryLabelHighlight]}>
             {t('stats.streak')}
           </Text>
-          <Text style={[styles.summaryUnit, streak > 0 && styles.summaryLabelHighlight]}>
+          <Text style={[styles.summaryUnit, { color: theme.colors.textTertiary }, streak > 0 && styles.summaryLabelHighlight]}>
             {t('stats.days')}
           </Text>
         </View>
@@ -183,29 +196,31 @@ export default function StatsScreen() {
 
       {/* 7日間バーチャート */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('stats.upcomingSchedule')}</Text>
-        <View style={styles.card}>
-          <BarChart schedule={schedule} locale={i18n.language} />
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+          {t('stats.upcomingSchedule')}
+        </Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <BarChart schedule={schedule} locale={i18n.language} theme={theme} />
         </View>
       </View>
 
       {/* 全体進捗 */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('stats.totalProgress')}</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+          {t('stats.totalProgress')}
+        </Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>
-              {t('stats.learned')}: <Text style={styles.progressNum}>{learned}</Text>
+            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary }]}>
+              {t('stats.learned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{learned}</Text>
             </Text>
-            <Text style={styles.progressLabel}>
-              {t('stats.unlearned')}: <Text style={styles.progressNum}>{unlearned}</Text>
+            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary }]}>
+              {t('stats.unlearned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{unlearned}</Text>
             </Text>
-            <Text style={styles.progressPct}>{learnedPct}%</Text>
+            <Text style={[styles.progressPct, { color: theme.colors.primary }]}>{learnedPct}%</Text>
           </View>
-          <View style={styles.progressBarBg}>
-            <View
-              style={[styles.progressBarFill, { width: `${learnedPct}%` }]}
-            />
+          <View style={[styles.progressBarBg, { backgroundColor: theme.colors.progressBg }]}>
+            <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
           </View>
         </View>
       </View>
@@ -213,15 +228,17 @@ export default function StatsScreen() {
       {/* デッキ別習熟度 */}
       {deckMastery.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('stats.deckMastery')}</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+            {t('stats.deckMastery')}
+          </Text>
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             {deckMastery.map((m, i) => {
               const deck = deckMap[m.deckId];
               if (!deck) return null;
               return (
                 <View key={m.deckId}>
-                  {i > 0 && <View style={styles.divider} />}
-                  <DeckMasteryRow deck={deck} mastery={m} />
+                  {i > 0 && <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />}
+                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} />
                 </View>
               );
             })}
@@ -233,17 +250,16 @@ export default function StatsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1 },
   content: { padding: 16, gap: 4, paddingBottom: 32 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#555' },
-  emptySubText: { fontSize: 14, color: '#999', textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontSize: 18, fontWeight: '600' },
+  emptySubText: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
 
   // Summary row
   summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
   summaryCard: {
     flex: 1,
-    backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
@@ -254,17 +270,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   summaryCardHighlight: { backgroundColor: '#1976D2' },
-  summaryValue: { fontSize: 28, fontWeight: '700', color: '#212121' },
+  summaryValue: { fontSize: 28, fontWeight: '700' },
   summaryValueHighlight: { color: '#FFF' },
   summaryLabelHighlight: { color: 'rgba(255,255,255,0.85)' },
-  summaryLabel: { fontSize: 11, color: '#757575', marginTop: 2, textAlign: 'center' },
-  summaryUnit: { fontSize: 11, color: '#9E9E9E' },
+  summaryLabel: { fontSize: 11, marginTop: 2, textAlign: 'center' },
+  summaryUnit: { fontSize: 11 },
 
   // Section
   section: { marginTop: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
+  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
   card: {
-    backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
@@ -278,25 +293,25 @@ const styles = StyleSheet.create({
   barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: BAR_MAX_HEIGHT + 44 },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
-  barCount: { fontSize: 10, color: '#757575', height: 14 },
-  barLabel: { fontSize: 11, color: '#9E9E9E' },
+  barCount: { fontSize: 10, height: 14 },
+  barLabel: { fontSize: 11 },
   barLabelToday: { color: '#1976D2', fontWeight: '700' },
 
   // Progress
   progressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
-  progressLabel: { fontSize: 13, color: '#555', flex: 1 },
-  progressNum: { fontWeight: '700', color: '#212121' },
-  progressPct: { fontSize: 18, fontWeight: '700', color: '#1976D2' },
-  progressBarBg: { height: 10, backgroundColor: '#E0E0E0', borderRadius: 5, overflow: 'hidden' },
+  progressLabel: { fontSize: 13, flex: 1 },
+  progressNum: { fontWeight: '700' },
+  progressPct: { fontSize: 18, fontWeight: '700' },
+  progressBarBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#1976D2', borderRadius: 5 },
 
   // Deck mastery
   masteryRow: { paddingVertical: 10 },
   masteryHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  masteryDeckName: { fontSize: 14, fontWeight: '600', color: '#212121', flex: 1, marginRight: 8 },
+  masteryDeckName: { fontSize: 14, fontWeight: '600', flex: 1, marginRight: 8 },
   masteryPct: { fontSize: 14, fontWeight: '700' },
-  masteryBarBg: { height: 8, backgroundColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden', marginBottom: 4 },
+  masteryBarBg: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 4 },
   masteryBarFill: { height: '100%', borderRadius: 4 },
-  masterySubLabel: { fontSize: 11, color: '#9E9E9E' },
-  divider: { height: 1, backgroundColor: '#F0F0F0' },
+  masterySubLabel: { fontSize: 11 },
+  divider: { height: 1 },
 });

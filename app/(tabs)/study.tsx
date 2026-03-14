@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import { getDueCountPerDeck } from '@/lib/database/reviews';
 import { useDeckStore } from '@/store/decks';
 import { getAllDecks } from '@/lib/database/decks';
@@ -20,6 +21,7 @@ export default function StudyScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -39,42 +41,48 @@ export default function StudyScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
+      <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator color={theme.colors.primary} />
       </View>
     );
   }
 
   if (decks.length === 0) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="book-outline" size={56} color="#CCC" />
-        <Text style={styles.emptyText}>{t('study.noDecks')}</Text>
+      <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+        <Ionicons name="book-outline" size={56} color={theme.colors.iconSubtle} />
+        <Text style={[styles.emptyText, { color: theme.colors.textTertiary }]}>
+          {t('study.noDecks')}
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionTitle}>{t('study.selectDeck')}</Text>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>
+        {t('study.selectDeck')}
+      </Text>
       <FlatList
         data={decks}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => (
+          <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+        )}
         renderItem={({ item }) => {
           const due = dueCounts[item.id] ?? 0;
           return (
             <Pressable
-              style={[styles.deckRow, due === 0 && styles.deckRowDimmed]}
+              style={[styles.deckRow, { backgroundColor: theme.colors.surface }, due === 0 && styles.deckRowDimmed]}
               onPress={() => {
                 if (due === 0) return;
                 router.push({ pathname: '/study/session', params: { deckId: item.id } });
               }}
             >
               <View style={styles.deckInfo}>
-                <Text style={styles.deckName}>{item.name}</Text>
-                <Text style={[styles.dueLabel, due > 0 && styles.dueLabelActive]}>
+                <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
+                <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, due > 0 && styles.dueLabelActive]}>
                   {due > 0
                     ? t('study.dueCards', { count: due })
                     : t('study.noDue')}
@@ -88,7 +96,7 @@ export default function StudyScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={18}
-                color={due > 0 ? '#BDBDBD' : '#E0E0E0'}
+                color={due > 0 ? theme.colors.iconSubtle : theme.colors.border}
               />
             </Pressable>
           );
@@ -99,13 +107,12 @@ export default function StudyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  emptyText: { fontSize: 16, color: '#9E9E9E' },
+  emptyText: { fontSize: 16 },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9E9E9E',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 8,
@@ -113,20 +120,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   list: { paddingHorizontal: 16 },
-  separator: { height: 1, backgroundColor: '#F0F0F0' },
+  separator: { height: 1 },
   deckRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    borderRadius: 0,
     gap: 12,
   },
   deckRowDimmed: { opacity: 0.5 },
   deckInfo: { flex: 1, gap: 3 },
-  deckName: { fontSize: 16, fontWeight: '600', color: '#212121' },
-  dueLabel: { fontSize: 13, color: '#9E9E9E' },
+  deckName: { fontSize: 16, fontWeight: '600' },
+  dueLabel: { fontSize: 13 },
   dueLabelActive: { color: '#1976D2' },
   dueChip: {
     backgroundColor: '#1976D2',

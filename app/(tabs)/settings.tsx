@@ -3,30 +3,32 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Pressable
-        style={styles.row}
+        style={[styles.row, { backgroundColor: theme.colors.surface }]}
         onPress={() => router.push('/tags')}
       >
-        <Ionicons name="pricetags-outline" size={22} color="#1976D2" />
-        <Text style={styles.rowText}>{t('tag.title')}</Text>
-        <Ionicons name="chevron-forward" size={18} color="#BDBDBD" style={styles.chevron} />
+        <Ionicons name="pricetags-outline" size={22} color={theme.colors.primary} />
+        <Text style={[styles.rowText, { color: theme.colors.text }]}>{t('tag.title')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5', padding: 16 },
+  container: { flex: 1, padding: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -37,6 +39,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  rowText: { flex: 1, fontSize: 16, color: '#212121' },
+  rowText: { flex: 1, fontSize: 16 },
   chevron: { marginLeft: 'auto' },
 });

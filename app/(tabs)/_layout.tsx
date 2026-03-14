@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+import { useTheme } from '@/lib/theme';
+
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 function TabIcon({ name, color, size }: { name: IoniconsName; color: string; size: number }) {
@@ -10,8 +12,20 @@ function TabIcon({ name, color, size }: { name: IoniconsName; color: string; siz
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const theme = useTheme();
+
   return (
-    <Tabs screenOptions={{ headerShown: true }}>
+    <Tabs
+      screenOptions={{
+        headerShown: true,
+        headerStyle: { backgroundColor: theme.colors.surface },
+        headerTintColor: theme.colors.text,
+        headerShadowVisible: false,
+        tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textTertiary,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{

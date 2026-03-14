@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import { deleteDeck, getAllDecks } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
 import type { Deck } from '@/types';
@@ -20,6 +21,7 @@ import type { Deck } from '@/types';
 function DeckCard({ deck, onDelete }: { deck: Deck; onDelete: (id: string) => void }) {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
 
   function confirmDelete() {
     Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
@@ -30,20 +32,22 @@ function DeckCard({ deck, onDelete }: { deck: Deck; onDelete: (id: string) => vo
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: theme.colors.surface }]}
       onPress={() => router.push({ pathname: '/deck/[id]', params: { id: deck.id } })}
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
-        <Text style={styles.deckName} numberOfLines={1}>
+        <Text style={[styles.deckName, { color: theme.colors.text }]} numberOfLines={1}>
           {deck.name}
         </Text>
         {deck.description ? (
-          <Text style={styles.deckDesc} numberOfLines={2}>
+          <Text style={[styles.deckDesc, { color: theme.colors.textSecondary }]} numberOfLines={2}>
             {deck.description}
           </Text>
         ) : null}
-        <Text style={styles.cardCount}>{t('home.cards', { count: deck.cardCount })}</Text>
+        <Text style={[styles.cardCount, { color: theme.colors.textTertiary }]}>
+          {t('home.cards', { count: deck.cardCount })}
+        </Text>
       </View>
       <View style={styles.cardActions}>
         <Pressable
@@ -51,10 +55,10 @@ function DeckCard({ deck, onDelete }: { deck: Deck; onDelete: (id: string) => vo
           hitSlop={8}
           style={styles.iconBtn}
         >
-          <Ionicons name="pencil-outline" size={18} color="#666" />
+          <Ionicons name="pencil-outline" size={18} color={theme.colors.icon} />
         </Pressable>
         <Pressable onPress={confirmDelete} hitSlop={8} style={styles.iconBtn}>
-          <Ionicons name="trash-outline" size={18} color="#E53935" />
+          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
         </Pressable>
       </View>
     </TouchableOpacity>
@@ -65,6 +69,7 @@ export default function HomeScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { decks, setDecks, removeDeck } = useDeckStore();
 
   useEffect(() => {
@@ -77,12 +82,16 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {decks.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="layers-outline" size={72} color="#CCC" />
-          <Text style={styles.emptyText}>{t('home.empty')}</Text>
-          <Text style={styles.emptySubText}>{t('home.emptySub')}</Text>
+          <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
+          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+            {t('home.empty')}
+          </Text>
+          <Text style={[styles.emptySubText, { color: theme.colors.textTertiary }]}>
+            {t('home.emptySub')}
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -104,13 +113,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1 },
   listContent: { padding: 16, gap: 12 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#555' },
-  emptySubText: { fontSize: 14, color: '#999', textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontSize: 18, fontWeight: '600' },
+  emptySubText: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
   card: {
-    backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -122,9 +130,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardContent: { flex: 1 },
-  deckName: { fontSize: 16, fontWeight: '700', color: '#212121', marginBottom: 4 },
-  deckDesc: { fontSize: 13, color: '#757575', marginBottom: 6 },
-  cardCount: { fontSize: 12, color: '#9E9E9E' },
+  deckName: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  deckDesc: { fontSize: 13, marginBottom: 6 },
+  cardCount: { fontSize: 12 },
   cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12 },
   iconBtn: { padding: 4 },
   fab: {

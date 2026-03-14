@@ -44,5 +44,15 @@ export async function updateDeck(
 }
 
 export async function deleteDeck(db: SQLiteDatabase, id: string): Promise<void> {
+  // foreign_keys pragma が未設定のため明示的に関連レコードを削除
+  await db.runAsync(
+    'DELETE FROM reviews WHERE cardId IN (SELECT id FROM cards WHERE deckId = ?)',
+    [id]
+  );
+  await db.runAsync(
+    'DELETE FROM card_tags WHERE cardId IN (SELECT id FROM cards WHERE deckId = ?)',
+    [id]
+  );
+  await db.runAsync('DELETE FROM cards WHERE deckId = ?', [id]);
   await db.runAsync('DELETE FROM decks WHERE id = ?', [id]);
 }

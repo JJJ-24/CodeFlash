@@ -10,7 +10,7 @@
     "edit": "Edit Deck",
     "detail": "Cards",
     "delete": "Delete Deck",
-    "deleteConfirm": "Delete this deck?\nAll associated cards will also be deleted.",
+    "deleteConfirm": "Delete this deck?\nAll associated cards and review history (stats) will also be deleted.",
     "name": "Deck Name",
     "namePlaceholder": "e.g. JavaScript Basics",
     "description": "Description",
@@ -77,6 +77,22 @@
     "study": "Study",
     "stats": "Stats",
     "settings": "Settings"
+  },
+  "stats": {
+    "title": "Statistics",
+    "todayLearned": "Today",
+    "dueToday": "Due Today",
+    "streak": "Streak",
+    "days": "days",
+    "cards": "cards",
+    "upcomingSchedule": "Next 7 Days",
+    "totalProgress": "Overall Progress",
+    "learned": "Learned",
+    "unlearned": "New",
+    "deckMastery": "Deck Mastery",
+    "mastery": "Mastery",
+    "empty": "No study data yet",
+    "emptySub": "Start studying to see your stats here"
   },
   "common": {
     "cancel": "Cancel",

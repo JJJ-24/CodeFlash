@@ -10,7 +10,7 @@
     "edit": "デッキを編集",
     "detail": "カード一覧",
     "delete": "デッキを削除",
-    "deleteConfirm": "このデッキを削除しますか？\n紐付いたカードもすべて削除されます。",
+    "deleteConfirm": "このデッキを削除しますか？\n紐付いたカードと学習履歴（統計）もすべて削除されます。",
     "name": "デッキ名",
     "namePlaceholder": "例: JavaScript 基礎",
     "description": "説明",
@@ -77,6 +77,22 @@
     "study": "学習",
     "stats": "統計",
     "settings": "設定"
+  },
+  "stats": {
+    "title": "統計",
+    "todayLearned": "今日学習",
+    "dueToday": "今日の予定",
+    "streak": "連続学習",
+    "days": "日",
+    "cards": "枚",
+    "upcomingSchedule": "今後7日間の復習予定",
+    "totalProgress": "全体進捗",
+    "learned": "学習済み",
+    "unlearned": "未学習",
+    "deckMastery": "デッキ別習熟度",
+    "mastery": "習熟度",
+    "empty": "まだ学習データがありません",
+    "emptySub": "学習を開始するとここに統計が表示されます"
   },
   "common": {
     "cancel": "キャンセル",

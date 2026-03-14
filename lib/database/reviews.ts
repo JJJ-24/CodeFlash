@@ -121,6 +121,46 @@ export async function getUpcomingSchedule(
   return rows;
 }
 
+/** 全体の今日 due カード数（新規 + 復習） */
+export async function getTodayDueCount(db: SQLiteDatabase): Promise<number> {
+  const today = todayISO();
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM cards c
+     LEFT JOIN reviews r ON c.id = r.cardId
+     WHERE r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?`,
+    [today]
+  );
+  return row?.count ?? 0;
+}
+
+/** 学習済み・未学習カード数 */
+export async function getLearnedUnlearnedCount(
+  db: SQLiteDatabase
+): Promise<{ learned: number; unlearned: number }> {
+  const learnedRow = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM reviews`
+  );
+  const unlearnedRow = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM cards WHERE id NOT IN (SELECT cardId FROM reviews)`
+  );
+  return {
+    learned: learnedRow?.count ?? 0,
+    unlearned: unlearnedRow?.count ?? 0,
+  };
+}
+
+/** デッキ別習熟度（easeFactor 平均 + 学習済み枚数） */
+export async function getDeckMasteryList(
+  db: SQLiteDatabase
+): Promise<{ deckId: string; avgEase: number; learnedCount: number }[]> {
+  return db.getAllAsync<{ deckId: string; avgEase: number; learnedCount: number }>(
+    `SELECT c.deckId, AVG(r.easeFactor) as avgEase, COUNT(*) as learnedCount
+     FROM reviews r
+     JOIN cards c ON r.cardId = c.id
+     GROUP BY c.deckId`
+  );
+}
+
 /**
  * 学習ストリーク日数を計算する
  * 今日から過去に遡り、lastReviewDate に学習記録がある日が連続している日数を返す

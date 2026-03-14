@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -26,18 +27,20 @@ export default function StudyScreen() {
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const [loaded, counts] = await Promise.all([
-        getAllDecks(db),
-        getDueCountPerDeck(db),
-      ]);
-      setDecks(loaded);
-      setDueCounts(counts);
-      setLoading(false);
-    })();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        setLoading(true);
+        const [loaded, counts] = await Promise.all([
+          getAllDecks(db),
+          getDueCountPerDeck(db),
+        ]);
+        setDecks(loaded);
+        setDueCounts(counts);
+        setLoading(false);
+      })();
+    }, [db])
+  );
 
   if (loading) {
     return (

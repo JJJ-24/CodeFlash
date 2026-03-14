@@ -17,6 +17,7 @@ export interface AppColors {
   icon: string;
   iconSubtle: string;
   progressBg: string;
+  codeBackground: string;
 }
 
 export interface AppTheme {
@@ -41,6 +42,7 @@ export const lightTheme: AppTheme = {
     icon: '#666666',
     iconSubtle: '#BDBDBD',
     progressBg: '#E0E0E0',
+    codeBackground: '#2A2A2A',
   },
 };
 
@@ -61,6 +63,7 @@ export const darkTheme: AppTheme = {
     icon: '#9E9E9E',
     iconSubtle: '#555555',
     progressBg: '#333333',
+    codeBackground: '#2A2A2A',
   },
 };
 

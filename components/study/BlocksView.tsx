@@ -21,7 +21,7 @@ export function BlocksView({ blocks }: Props) {
       fontSize: 14,
       color: theme.colors.danger,
     },
-    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12 },
+    fence: { backgroundColor: theme.colors.codeBackground, borderRadius: 6, padding: 12 },
     code_block: { fontFamily: 'monospace', fontSize: 14, color: '#D4D4D4' },
   };
 
@@ -42,7 +42,7 @@ export function BlocksView({ blocks }: Props) {
         if (block.type === 'code') {
           const code = block as CodeBlock;
           return (
-            <View key={i} style={styles.codeBlock}>
+            <View key={i} style={[styles.codeBlock, { backgroundColor: theme.colors.codeBackground }]}>
               <Text style={styles.codeLang}>{code.language}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <Text style={styles.codeText}>{code.content}</Text>
@@ -65,7 +65,6 @@ const styles = StyleSheet.create({
   empty: { fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
   textBlock: {},
   codeBlock: {
-    backgroundColor: '#1E1E1E',
     borderRadius: 8,
     overflow: 'hidden',
   },

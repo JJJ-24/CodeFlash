@@ -38,9 +38,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
   const theme = useTheme();
 
   return (
-    <View style={[styles.container, focused && styles.containerFocused]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused]}>
       {/* ヘッダー: 言語選択 / executable / 削除 */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.dark ? '#333333' : '#2D2D2D' }]}>
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
           <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
           <Text style={styles.langChevron}>▾</Text>
@@ -117,10 +117,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1E1E1E',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#333',
     overflow: 'hidden',
   },
   containerFocused: { borderColor: '#64B5F6' },
@@ -129,7 +127,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#2D2D2D',
     gap: 8,
   },
   langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },

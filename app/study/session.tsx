@@ -97,10 +97,10 @@ export default function StudySessionScreen() {
     if (!keyboardShortcutsEnabled) return;
     if (key === ' ') {
       setIsFlipped((v) => !v);
-    } else if (key === 'ArrowRight' || key === 'Right') {
-      goNext();
-    } else if (key === 'ArrowLeft' || key === 'Left') {
+    } else if (key.toLowerCase() === 'j') {
       goBack();
+    } else if (key.toLowerCase() === 'k') {
+      goNext();
     } else if (key.toLowerCase() === 'm' && isFlipped) {
       setShowMemo((v) => !v);
     } else if (key.toLowerCase() === 'f') {

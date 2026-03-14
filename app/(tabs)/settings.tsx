@@ -11,8 +11,8 @@ import type { ColorSchemePreference } from '@/store/theme';
 const SHORTCUTS = [
   { key: 'Space', descKey: 'settings.shortcutFlip' },
   { key: '1–4',  descKey: 'settings.shortcutGrade' },
-  { key: 'J',    descKey: 'settings.shortcutNext' },
-  { key: 'K',    descKey: 'settings.shortcutPrev' },
+  { key: 'J',    descKey: 'settings.shortcutPrev' },
+  { key: 'K',    descKey: 'settings.shortcutNext' },
   { key: 'M',    descKey: 'settings.shortcutMemo' },
   { key: 'F',    descKey: 'settings.shortcutEscape' },
 ];

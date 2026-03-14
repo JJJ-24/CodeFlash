@@ -13,6 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard } from '@/components/study/FlipCard';
@@ -41,6 +43,26 @@ export default function StudySessionScreen() {
   const [showMemo, setShowMemo] = useState(false);
   const [grading, setGrading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const translateX = useSharedValue(0);
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-10, 10])
+    .onUpdate((e) => {
+      translateX.value = e.translationX * 0.3;
+    })
+    .onEnd((e) => {
+      const swipeLeft  = e.translationX < -80 || e.velocityX < -500;
+      const swipeRight = e.translationX > 80  || e.velocityX > 500;
+      if (swipeLeft)       runOnJS(goNext)();
+      else if (swipeRight) runOnJS(goBack)();
+      translateX.value = withSpring(0);
+    });
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
   const keyboardRef = useRef<TextInput>(null);
   const completeRef = useRef<TextInput>(null);
   const completeReadyRef = useRef(false);
@@ -61,6 +83,7 @@ export default function StudySessionScreen() {
 
   // 新しいカードに移ったらフリップ・メモをリセット
   useEffect(() => {
+    translateX.value = 0;
     setIsFlipped(false);
     setShowMemo(false);
   }, [currentIndex]);
@@ -181,43 +204,47 @@ export default function StudySessionScreen() {
           </Pressable>
 
           {/* コンテンツエリア：タップで裏返す */}
-          <Pressable style={{ flex: 1 }} onPress={() => setIsFlipped((v) => !v)}>
-            <ScrollView
-              contentContainerStyle={styles.fullscreenContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {!isFlipped ? (
-                <BlocksView blocks={currentCard.frontContent} />
-              ) : (
-                <>
-                  <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
-                  <BlocksView blocks={currentCard.backContent} />
-                  {currentCard.memoContent.length > 0 && (
-                    <View style={styles.memoSection}>
-                      <Pressable
-                        style={styles.memoToggle}
-                        onPress={() => setShowMemo((v) => !v)}
-                      >
-                        <Ionicons
-                          name={showMemo ? 'eye-off-outline' : 'eye-outline'}
-                          size={16}
-                          color={theme.colors.textTertiary}
-                        />
-                        <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
-                          {showMemo ? t('study.hideMemo') : t('study.showMemo')}
-                        </Text>
-                      </Pressable>
-                      {showMemo && (
-                        <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
-                          <BlocksView blocks={currentCard.memoContent} />
+          <GestureDetector gesture={panGesture}>
+            <Animated.View style={[{ flex: 1 }, cardAnimStyle]}>
+              <Pressable style={{ flex: 1 }} onPress={() => setIsFlipped((v) => !v)}>
+                <ScrollView
+                  contentContainerStyle={styles.fullscreenContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {!isFlipped ? (
+                    <BlocksView blocks={currentCard.frontContent} />
+                  ) : (
+                    <>
+                      <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
+                      <BlocksView blocks={currentCard.backContent} />
+                      {currentCard.memoContent.length > 0 && (
+                        <View style={styles.memoSection}>
+                          <Pressable
+                            style={styles.memoToggle}
+                            onPress={() => setShowMemo((v) => !v)}
+                          >
+                            <Ionicons
+                              name={showMemo ? 'eye-off-outline' : 'eye-outline'}
+                              size={16}
+                              color={theme.colors.textTertiary}
+                            />
+                            <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+                              {showMemo ? t('study.hideMemo') : t('study.showMemo')}
+                            </Text>
+                          </Pressable>
+                          {showMemo && (
+                            <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
+                              <BlocksView blocks={currentCard.memoContent} />
+                            </View>
+                          )}
                         </View>
                       )}
-                    </View>
+                    </>
                   )}
-                </>
-              )}
-            </ScrollView>
-          </Pressable>
+                </ScrollView>
+              </Pressable>
+            </Animated.View>
+          </GestureDetector>
 
           {isFlipped && (
             <View style={styles.bottom}>
@@ -269,46 +296,48 @@ export default function StudySessionScreen() {
         </Text>
 
         {/* カード */}
-        <View style={styles.cardArea}>
-          <FlipCard
-            isFlipped={isFlipped}
-            onFlip={() => setIsFlipped((v) => !v)}
-            front={
-              <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
-                <BlocksView blocks={currentCard.frontContent} />
-              </ScrollView>
-            }
-            back={
-              <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
-                <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
-                <BlocksView blocks={currentCard.backContent} />
-                {/* メモ */}
-                {currentCard.memoContent.length > 0 && (
-                  <View style={styles.memoSection}>
-                    <Pressable
-                      style={styles.memoToggle}
-                      onPress={() => setShowMemo((v) => !v)}
-                    >
-                      <Ionicons
-                        name={showMemo ? 'eye-off-outline' : 'eye-outline'}
-                        size={16}
-                        color={theme.colors.textTertiary}
-                      />
-                      <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
-                        {showMemo ? t('study.hideMemo') : t('study.showMemo')}
-                      </Text>
-                    </Pressable>
-                    {showMemo && (
-                      <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
-                        <BlocksView blocks={currentCard.memoContent} />
-                      </View>
-                    )}
-                  </View>
-                )}
-              </ScrollView>
-            }
-          />
-        </View>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.cardArea, cardAnimStyle]}>
+            <FlipCard
+              isFlipped={isFlipped}
+              onFlip={() => setIsFlipped((v) => !v)}
+              front={
+                <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                  <BlocksView blocks={currentCard.frontContent} />
+                </ScrollView>
+              }
+              back={
+                <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                  <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
+                  <BlocksView blocks={currentCard.backContent} />
+                  {/* メモ */}
+                  {currentCard.memoContent.length > 0 && (
+                    <View style={styles.memoSection}>
+                      <Pressable
+                        style={styles.memoToggle}
+                        onPress={() => setShowMemo((v) => !v)}
+                      >
+                        <Ionicons
+                          name={showMemo ? 'eye-off-outline' : 'eye-outline'}
+                          size={16}
+                          color={theme.colors.textTertiary}
+                        />
+                        <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+                          {showMemo ? t('study.hideMemo') : t('study.showMemo')}
+                        </Text>
+                      </Pressable>
+                      {showMemo && (
+                        <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
+                          <BlocksView blocks={currentCard.memoContent} />
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </ScrollView>
+              }
+            />
+          </Animated.View>
+        </GestureDetector>
 
         {/* 全画面ボタン（カードエリア右上） */}
         <Pressable

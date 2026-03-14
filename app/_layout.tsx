@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { Suspense } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { useTheme } from '@/lib/theme';
@@ -32,16 +33,18 @@ function RootStack() {
 
 export default function RootLayout() {
   return (
-    <Suspense
-      fallback={
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator />
-        </View>
-      }
-    >
-      <SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
-        <RootStack />
-      </SQLiteProvider>
-    </Suspense>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Suspense
+        fallback={
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator />
+          </View>
+        }
+      >
+        <SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
+          <RootStack />
+        </SQLiteProvider>
+      </Suspense>
+    </GestureHandlerRootView>
   );
 }

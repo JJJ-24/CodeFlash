@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 
+import { useTheme } from '@/lib/theme';
 import type { TextBlock } from '@/types';
 
 interface Props {
@@ -13,13 +14,31 @@ interface Props {
 
 export function TextBlockItem({ block, isPreview, onChange, onDelete }: Props) {
   const [focused, setFocused] = useState(false);
+  const theme = useTheme();
+
+  const markdownStyles = {
+    body: { fontSize: 15, color: theme.colors.text, lineHeight: 22 },
+    heading1: { fontSize: 22, fontWeight: '700' as const, color: theme.colors.text },
+    heading2: { fontSize: 18, fontWeight: '700' as const, color: theme.colors.text },
+    code_inline: {
+      backgroundColor: theme.colors.background,
+      fontFamily: 'monospace',
+      fontSize: 13,
+      color: theme.colors.danger,
+    },
+    fence: { backgroundColor: theme.colors.background, borderRadius: 6, padding: 12 },
+    code_block: { fontFamily: 'monospace', fontSize: 13, color: theme.colors.text },
+  };
 
   return (
-    <View style={[styles.container, focused && styles.containerFocused]}>
-      <View style={styles.header}>
-        <Text style={styles.typeLabel}>T</Text>
+    <View style={[
+      styles.container,
+      { backgroundColor: theme.colors.surface, borderColor: focused ? theme.colors.primary : theme.colors.inputBorder },
+    ]}>
+      <View style={[styles.header, { backgroundColor: theme.dark ? '#252525' : '#FAFAFA', borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]}>T</Text>
         <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteBtn}>
-          <Text style={styles.deleteBtnText}>✕</Text>
+          <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
         </Pressable>
       </View>
 
@@ -28,17 +47,17 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete }: Props) {
           {block.content.trim() ? (
             <Markdown style={markdownStyles}>{block.content}</Markdown>
           ) : (
-            <Text style={styles.placeholder}>（空のテキストブロック）</Text>
+            <Text style={[styles.placeholder, { color: theme.colors.textTertiary }]}>（空のテキストブロック）</Text>
           )}
         </View>
       ) : (
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: theme.colors.text }]}
           value={block.content}
           onChangeText={onChange}
           multiline
           placeholder="テキストを入力（Markdown 記法対応）"
-          placeholderTextColor="#BDBDBD"
+          placeholderTextColor={theme.colors.textTertiary}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           textAlignVertical="top"
@@ -50,48 +69,28 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     overflow: 'hidden',
   },
-  containerFocused: { borderColor: '#1976D2' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#FAFAFA',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
     gap: 8,
   },
-  typeLabel: { fontSize: 12, fontWeight: '700', color: '#9E9E9E', flex: 1 },
+  typeLabel: { fontSize: 12, fontWeight: '700', flex: 1 },
   deleteBtn: { padding: 2 },
-  deleteBtnText: { fontSize: 12, color: '#BDBDBD' },
+  deleteBtnText: { fontSize: 12 },
   input: {
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#212121',
     minHeight: 80,
     lineHeight: 22,
   },
   preview: { paddingHorizontal: 14, paddingVertical: 12 },
-  placeholder: { fontSize: 14, color: '#BDBDBD', fontStyle: 'italic' },
+  placeholder: { fontSize: 14, fontStyle: 'italic' },
 });
-
-const markdownStyles = {
-  body: { fontSize: 15, color: '#212121', lineHeight: 22 },
-  heading1: { fontSize: 22, fontWeight: '700' as const },
-  heading2: { fontSize: 18, fontWeight: '700' as const },
-  code_inline: {
-    backgroundColor: '#F5F5F5',
-    fontFamily: 'monospace',
-    fontSize: 13,
-    color: '#E53935',
-  },
-  fence: { backgroundColor: '#F5F5F5', borderRadius: 6, padding: 12 },
-  code_block: { fontFamily: 'monospace', fontSize: 13 },
-};

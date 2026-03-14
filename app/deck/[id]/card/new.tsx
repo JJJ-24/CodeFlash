@@ -2,9 +2,11 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Pressable, Text } from 'react-native';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData } from '@/components/editor/BlockEditor';
+import { useTheme } from '@/lib/theme';
 import { createCard } from '@/lib/database/cards';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -14,6 +16,7 @@ export default function NewCardScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { addCard } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
   const [saving, setSaving] = useState(false);
@@ -40,7 +43,21 @@ export default function NewCardScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('card.new') }} />
+      <Stack.Screen
+        options={{
+          title: t('card.new'),
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.text,
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.textSecondary }}>
+                {t('common.cancel')}
+              </Text>
+            </Pressable>
+          ),
+        }}
+      />
       <BlockEditor onSave={handleSave} saving={saving} />
     </>
   );

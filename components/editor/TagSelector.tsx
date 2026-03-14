@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import { useTagStore } from '@/store/tags';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 
 export function TagSelector({ selectedTagIds, onChange }: Props) {
   const { tags } = useTagStore();
+  const theme = useTheme();
   const [query, setQuery] = useState('');
 
   const suggestions = query.trim()
@@ -56,20 +58,20 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
 
       {/* 検索入力 */}
       <TextInput
-        style={styles.input}
+        style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text }]}
         value={query}
         onChangeText={setQuery}
         placeholder="タグを検索して追加..."
-        placeholderTextColor="#BDBDBD"
+        placeholderTextColor={theme.colors.textTertiary}
       />
 
       {/* サジェスト */}
       {suggestions.length > 0 && (
-        <View style={styles.suggestions}>
+        <View style={[styles.suggestions, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
           {suggestions.map((tag) => (
-            <Pressable key={tag.id} style={styles.suggestion} onPress={() => select(tag.id)}>
+            <Pressable key={tag.id} style={[styles.suggestion, { borderBottomColor: theme.colors.border }]} onPress={() => select(tag.id)}>
               <View style={[styles.dot, { backgroundColor: tag.color }]} />
-              <Text style={styles.suggestionText}>{tag.name}</Text>
+              <Text style={[styles.suggestionText, { color: theme.colors.text }]}>{tag.name}</Text>
             </Pressable>
           ))}
         </View>
@@ -93,19 +95,14 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, color: '#FFF', fontWeight: '500' },
   chipX: { fontSize: 11, color: 'rgba(255,255,255,0.8)' },
   input: {
-    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 14,
-    color: '#212121',
   },
   suggestions: {
-    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -116,8 +113,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
   },
   dot: { width: 12, height: 12, borderRadius: 6 },
-  suggestionText: { fontSize: 14, color: '#212121' },
+  suggestionText: { fontSize: 14 },
 });

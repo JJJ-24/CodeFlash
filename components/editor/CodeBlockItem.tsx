@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import type { CodeBlock } from '@/types';
 
 const LANGUAGES = [
@@ -34,6 +35,7 @@ interface Props {
 export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
+  const theme = useTheme();
 
   return (
     <View style={[styles.container, focused && styles.containerFocused]}>
@@ -82,27 +84,30 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
       {/* 言語選択モーダル */}
       <Modal visible={langModalVisible} transparent animationType="fade">
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
-          <View style={styles.langModal}>
-            <Text style={styles.langModalTitle}>言語を選択</Text>
-            {LANGUAGES.map((lang) => (
-              <TouchableOpacity
-                key={lang}
-                style={[styles.langOption, block.language === lang && styles.langOptionActive]}
-                onPress={() => {
-                  onChange({ language: lang });
-                  setLangModalVisible(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.langOptionText,
-                    block.language === lang && styles.langOptionTextActive,
-                  ]}
+          <View style={[styles.langModal, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.langModalTitle, { color: theme.colors.text }]}>言語を選択</Text>
+            <ScrollView>
+              {LANGUAGES.map((lang) => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[styles.langOption, block.language === lang && { backgroundColor: theme.colors.primaryLight }]}
+                  onPress={() => {
+                    onChange({ language: lang });
+                    setLangModalVisible(false);
+                  }}
                 >
-                  {LANG_LABELS[lang]}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.langOptionText,
+                      { color: theme.colors.textSecondary },
+                      block.language === lang && { color: theme.colors.primary, fontWeight: '600' },
+                    ]}
+                  >
+                    {LANG_LABELS[lang]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </Pressable>
       </Modal>

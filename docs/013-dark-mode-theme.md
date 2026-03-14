@@ -28,6 +28,7 @@
 - [x] タブ画面（4画面）+ タブバー・ヘッダーへのテーマ適用
 - [x] モーダル・詳細画面（deck/new, deck/edit, deck/detail, tags）へのテーマ適用
 - [x] Stack デフォルトヘッダーのテーマ化（app/_layout.tsx）
+- [x] カード作成・編集画面 + BlockEditor / TextBlockItem / CodeBlockItem / TagSelector へのテーマ適用
 
 ### フォントサイズ
 - [ ] フォントサイズ選択（小 / 中 / 大）

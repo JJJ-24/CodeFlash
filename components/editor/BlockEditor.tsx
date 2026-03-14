@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { CodeBlockItem } from './CodeBlockItem';
 import { TagSelector } from './TagSelector';
 import { TextBlockItem } from './TextBlockItem';
+import { useTheme } from '@/lib/theme';
 import type { Block, CodeBlock, TextBlock } from '@/types';
 
 type Tab = 'front' | 'back' | 'memo';
@@ -57,6 +58,7 @@ interface Props {
 
 export function BlockEditor({ initialData, onSave, saving }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const [activeTab, setActiveTab] = useState<Tab>('front');
   const [isPreview, setIsPreview] = useState(false);
@@ -126,31 +128,31 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* タブバー */}
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.inputBorder }]}>
         {tabs.map((tab) => (
           <Pressable
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+            <Text style={[styles.tabText, { color: theme.colors.textTertiary }, activeTab === tab.key && styles.tabTextActive]}>
               {tab.label}
             </Text>
           </Pressable>
         ))}
         {/* プレビュー切替 */}
         <Pressable
-          style={[styles.previewToggle, isPreview && styles.previewToggleActive]}
+          style={[styles.previewToggle, { backgroundColor: theme.colors.background }, isPreview && { backgroundColor: theme.colors.primaryLight }]}
           onPress={() => setIsPreview((v) => !v)}
         >
-          <Text style={[styles.previewToggleText, isPreview && styles.previewToggleTextActive]}>
+          <Text style={[styles.previewToggleText, { color: theme.colors.textSecondary }, isPreview && styles.previewToggleTextActive]}>
             {isPreview ? '編集' : 'プレビュー'}
           </Text>
         </Pressable>
       </View>
 
       <ScrollView
-        style={styles.scroll}
+        style={[styles.scroll, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
@@ -180,10 +182,10 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
           }
           // ImageBlock: プレースホルダー（011チケットで実装）
           return (
-            <View key={block._key} style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderText}>🖼 画像ブロック（未実装）</Text>
+            <View key={block._key} style={[styles.imagePlaceholder, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
+              <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary }]}>🖼 画像ブロック（未実装）</Text>
               <Pressable onPress={() => deleteBlock(activeTab, block._key)} hitSlop={8}>
-                <Text style={styles.deleteBtnText}>✕</Text>
+                <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
               </Pressable>
             </View>
           );
@@ -193,22 +195,22 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
         {!isPreview && (
           <View style={styles.addArea}>
             {addMenuVisible ? (
-              <View style={styles.addMenu}>
-                <TouchableOpacity style={styles.addMenuItem} onPress={() => addBlock('text')}>
+              <View style={[styles.addMenu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
+                <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('text')}>
                   <Text style={styles.addMenuIcon}>T</Text>
-                  <Text style={styles.addMenuLabel}>テキスト</Text>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>テキスト</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.addMenuItem} onPress={() => addBlock('code')}>
+                <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('code')}>
                   <Text style={styles.addMenuIcon}>{'</>'}</Text>
-                  <Text style={styles.addMenuLabel}>コード</Text>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>コード</Text>
                 </TouchableOpacity>
                 <Pressable onPress={() => setAddMenuVisible(false)} style={styles.addMenuCancel}>
-                  <Text style={styles.addMenuCancelText}>キャンセル</Text>
+                  <Text style={[styles.addMenuCancelText, { color: theme.colors.textTertiary }]}>キャンセル</Text>
                 </Pressable>
               </View>
             ) : (
-              <Pressable style={styles.addBtn} onPress={() => setAddMenuVisible(true)}>
-                <Text style={styles.addBtnText}>＋ ブロックを追加</Text>
+              <Pressable style={[styles.addBtn, { borderColor: theme.colors.iconSubtle }]} onPress={() => setAddMenuVisible(true)}>
+                <Text style={[styles.addBtnText, { color: theme.colors.textTertiary }]}>＋ ブロックを追加</Text>
               </Pressable>
             )}
           </View>
@@ -216,7 +218,7 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
 
         {/* タグ選択 */}
         <View style={styles.tagSection}>
-          <Text style={styles.tagLabel}>{t('tag.title')}</Text>
+          <Text style={[styles.tagLabel, { color: theme.colors.textSecondary }]}>{t('tag.title')}</Text>
           <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
         </View>
 
@@ -237,9 +239,7 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
     paddingHorizontal: 16,
     gap: 0,
   },
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: { borderBottomColor: '#1976D2' },
-  tabText: { fontSize: 14, color: '#9E9E9E', fontWeight: '500' },
+  tabText: { fontSize: 14, fontWeight: '500' },
   tabTextActive: { color: '#1976D2', fontWeight: '700' },
   previewToggle: {
     marginLeft: 'auto',
@@ -258,41 +258,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 6,
     alignSelf: 'center',
-    backgroundColor: '#F5F5F5',
   },
-  previewToggleActive: { backgroundColor: '#E3F2FD' },
-  previewToggleText: { fontSize: 12, color: '#757575' },
+  previewToggleText: { fontSize: 12 },
   previewToggleTextActive: { color: '#1976D2', fontWeight: '600' },
-  scroll: { flex: 1, backgroundColor: '#F5F5F5' },
+  scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
   imagePlaceholder: {
-    backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     borderStyle: 'dashed',
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  imagePlaceholderText: { fontSize: 14, color: '#9E9E9E' },
-  deleteBtnText: { fontSize: 14, color: '#BDBDBD' },
+  imagePlaceholderText: { fontSize: 14 },
+  deleteBtnText: { fontSize: 14 },
   addArea: { marginTop: 4 },
   addBtn: {
     borderWidth: 1.5,
-    borderColor: '#BDBDBD',
     borderStyle: 'dashed',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  addBtnText: { fontSize: 14, color: '#9E9E9E' },
+  addBtnText: { fontSize: 14 },
   addMenu: {
-    backgroundColor: '#FFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     overflow: 'hidden',
   },
   addMenuItem: {
@@ -302,14 +295,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
   },
   addMenuIcon: { fontSize: 16, fontWeight: '700', color: '#1976D2', width: 28, textAlign: 'center' },
-  addMenuLabel: { fontSize: 15, color: '#212121' },
+  addMenuLabel: { fontSize: 15 },
   addMenuCancel: { paddingVertical: 12, alignItems: 'center' },
-  addMenuCancelText: { fontSize: 14, color: '#9E9E9E' },
+  addMenuCancelText: { fontSize: 14 },
   tagSection: { gap: 8 },
-  tagLabel: { fontSize: 14, fontWeight: '600', color: '#424242' },
+  tagLabel: { fontSize: 14, fontWeight: '600' },
   saveBtn: {
     backgroundColor: '#1976D2',
     borderRadius: 12,

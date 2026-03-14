@@ -2,7 +2,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+
+import { useTheme } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData } from '@/components/editor/BlockEditor';
@@ -17,6 +19,7 @@ export default function EditCardScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { updateCard: updateStore } = useCardStore();
+  const theme = useTheme();
 
   const [card, setCard] = useState<Card | null>(null);
   const [initialTagIds, setInitialTagIds] = useState<string[]>([]);
@@ -65,15 +68,29 @@ export default function EditCardScreen() {
 
   if (!card) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+        <ActivityIndicator color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
     <>
-      <Stack.Screen options={{ title: t('card.edit') }} />
+      <Stack.Screen
+        options={{
+          title: t('card.edit'),
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.text,
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.textSecondary }}>
+                {t('common.cancel')}
+              </Text>
+            </Pressable>
+          ),
+        }}
+      />
       <BlockEditor
         initialData={{
           frontBlocks: card.frontContent,

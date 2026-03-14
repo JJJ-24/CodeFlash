@@ -139,7 +139,7 @@ export default function StudySessionScreen() {
           style={styles.hiddenKeyboardInput}
           autoFocus
           caretHidden
-          keyboardType="default"
+          keyboardType="ascii-capable"
           showSoftInputOnFocus={false}
           onKeyPress={({ nativeEvent: { key } }) => {
             if (key === 'Enter') {
@@ -186,7 +186,7 @@ export default function StudySessionScreen() {
           style={styles.hiddenKeyboardInput}
           autoFocus
           caretHidden
-          keyboardType="default"
+          keyboardType="ascii-capable"
           showSoftInputOnFocus={false}
           autoCorrect={false}
           autoCapitalize="none"
@@ -277,7 +277,7 @@ export default function StudySessionScreen() {
         style={styles.hiddenKeyboardInput}
         autoFocus
         caretHidden
-        keyboardType="default"
+        keyboardType="ascii-capable"
         showSoftInputOnFocus={false}
         autoCorrect={false}
         autoCapitalize="none"

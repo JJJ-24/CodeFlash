@@ -23,6 +23,20 @@
     "study": "Start Study",
     "noCards": "No cards yet"
   },
+  "card": {
+    "new": "New Card",
+    "edit": "Edit Card",
+    "delete": "Delete Card",
+    "deleteConfirm": "Delete this card?",
+    "front": "Front",
+    "back": "Back",
+    "memo": "Memo",
+    "create": "Create",
+    "save": "Save",
+    "frontPlaceholder": "Enter front text",
+    "backPlaceholder": "Enter back text",
+    "noContent": "(no content)"
+  },
   "tabs": {
     "home": "Home",
     "study": "Study",

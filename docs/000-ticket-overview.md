@@ -21,7 +21,7 @@
 |---|---|---|---|---|
 | [001](./001-project-foundation.md) | プロジェクト基盤（DB・ナビゲーション・i18n） | MVP | 完了 | なし |
 | [002](./002-deck-crud.md) | デッキ管理 CRUD | MVP | 完了 | 001 |
-| [003](./003-card-crud.md) | カード管理 CRUD | MVP | 未着手 | 001, 002 |
+| [003](./003-card-crud.md) | カード管理 CRUD | MVP | 完了 | 001, 002 |
 | [004](./004-tag-management.md) | タグ管理 | MVP | 未着手 | 001, 003 |
 | [005](./005-card-editor.md) | カードエディタ（Markdown・ブロック） | MVP | 未着手 | 001, 003, 004 |
 | [006](./006-sm2-algorithm.md) | SM-2 間隔反復アルゴリズム | MVP | 未着手 | 001, 003 |

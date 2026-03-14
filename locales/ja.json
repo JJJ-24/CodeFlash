@@ -23,6 +23,20 @@
     "study": "学習開始",
     "noCards": "カードがまだありません"
   },
+  "card": {
+    "new": "新規カード",
+    "edit": "カードを編集",
+    "delete": "カードを削除",
+    "deleteConfirm": "このカードを削除しますか？",
+    "front": "表面",
+    "back": "裏面",
+    "memo": "メモ",
+    "create": "作成",
+    "save": "保存",
+    "frontPlaceholder": "表面のテキストを入力",
+    "backPlaceholder": "裏面のテキストを入力",
+    "noContent": "（内容なし）"
+  },
   "tabs": {
     "home": "ホーム",
     "study": "学習",

@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 
 import { deleteCard, getCardsByDeckId } from '@/lib/database/cards';
-import { deleteDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import type { Block, Card } from '@/types';
@@ -29,7 +28,7 @@ export default function DeckDetailScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
-  const { decks, removeDeck, updateDeck } = useDeckStore();
+  const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard } = useCardStore();
 
   const deck = decks.find((d) => d.id === id) ?? null;
@@ -46,21 +45,6 @@ export default function DeckDetailScreen() {
     }
     loadCards();
   }, []);
-
-  function confirmDeleteDeck() {
-    Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteDeck(db, id);
-          removeDeck(id);
-          router.back();
-        },
-      },
-    ]);
-  }
 
   function confirmDeleteCard(card: Card) {
     Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
@@ -85,24 +69,7 @@ export default function DeckDetailScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: deck.name,
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 16 }}>
-              <Pressable
-                onPress={() => router.push({ pathname: '/deck/[id]/edit', params: { id } })}
-                hitSlop={8}
-              >
-                <Ionicons name="pencil-outline" size={22} color="#1976D2" />
-              </Pressable>
-              <Pressable onPress={confirmDeleteDeck} hitSlop={8}>
-                <Ionicons name="trash-outline" size={22} color="#E53935" />
-              </Pressable>
-            </View>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: deck.name }} />
 
       <View style={styles.container}>
         {deck.description ? (
@@ -144,6 +111,12 @@ export default function DeckDetailScreen() {
                 return (
                   <Pressable
                     style={styles.cardItem}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/deck/[id]/card/[cardId]/edit',
+                        params: { id, cardId: item.id },
+                      })
+                    }
                     onLongPress={() => confirmDeleteCard(item)}
                   >
                     <Text style={styles.cardPreview} numberOfLines={2}>

@@ -43,13 +43,16 @@ lib/
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
 │   └── reviews.ts       # SM-2 レビューデータ操作
 ├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: ja）
+├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors 型定義
 └── sm2.ts               # SM-2 間隔反復アルゴリズム実装
 
 store/                   # Zustand ストア（インメモリキャッシュ）
 ├── decks.ts             # useDeckStore
 ├── cards.ts             # useCardStore
 ├── tags.ts              # useTagStore
-└── reviews.ts           # useReviewStore（学習セッション状態）
+├── reviews.ts           # useReviewStore（学習セッション状態）
+├── theme.ts             # useThemeStore（preference: 'light'|'dark'|'system'、AsyncStorage永続化）
+└── settings.ts          # useSettingsStore（keyboardShortcutsEnabled、AsyncStorage永続化）
 
 components/
 ├── editor/              # BlockEditor, TextBlockItem, CodeBlockItem, TagSelector
@@ -97,6 +100,8 @@ Stack (_layout.tsx)
 - **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` を明示的に先に削除する
 - **SM-2 グレード対応**: `grade 0` = もう一度, `1` = 難しい, `2` = 普通, `3` = 簡単（`lib/sm2.ts` 参照）
 - **i18n**: 端末言語を自動検出し、未対応言語の場合は日本語にフォールバック
+- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。`useThemeStore` で preference を変更する。テーマ色は `theme.colors.*` で参照する（StyleSheet に直書きしない）
+- **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）は画面上に見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。
 
 ### 主要な設定
 
@@ -110,4 +115,4 @@ Stack (_layout.tsx)
 
 `docs/` 配下に機能チケット（000〜020）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
-完了済み: 001〜007（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面）
+完了済み: 001〜008・012・013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・統計画面・ダークモード）

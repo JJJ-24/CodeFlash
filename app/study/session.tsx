@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -8,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -17,6 +19,7 @@ import { FlipCard } from '@/components/study/FlipCard';
 import { useStudySession } from '@/hooks/useStudySession';
 import { useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
+import { useSettingsStore } from '@/store/settings';
 
 const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 0, labelKey: 'grade.again', color: '#E53935' },
@@ -30,16 +33,31 @@ export default function StudySessionScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade } =
+  const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext } =
     useStudySession();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
   const [grading, setGrading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const keyboardRef = useRef<TextInput>(null);
+  const completeRef = useRef<TextInput>(null);
+  const completeReadyRef = useRef(false);
 
   useEffect(() => {
     loadSession({ deckId, tagId });
   }, [deckId, tagId]);
+
+  useEffect(() => {
+    if (completed) {
+      completeReadyRef.current = false;
+      setTimeout(() => {
+        completeRef.current?.focus();
+        setTimeout(() => { completeReadyRef.current = true; }, 200);
+      }, 100);
+    }
+  }, [completed]);
 
   // 新しいカードに移ったらフリップ・メモをリセット
   useEffect(() => {
@@ -47,11 +65,37 @@ export default function StudySessionScreen() {
     setShowMemo(false);
   }, [currentIndex]);
 
+  // 表面に戻ったらメモを隠す
+  useEffect(() => {
+    if (!isFlipped) setShowMemo(false);
+  }, [isFlipped]);
+
+  function handleKeyPress(key: string) {
+    if (!keyboardShortcutsEnabled) return;
+    if (key === ' ') {
+      setIsFlipped((v) => !v);
+    } else if (key === 'ArrowRight' || key === 'Right') {
+      goNext();
+    } else if (key === 'ArrowLeft' || key === 'Left') {
+      goBack();
+    } else if (key.toLowerCase() === 'm' && isFlipped) {
+      setShowMemo((v) => !v);
+    } else if (key.toLowerCase() === 'f') {
+      setIsFullscreen((v) => !v);
+    } else if (isFlipped && !grading) {
+      if (key === '1') handleGrade(0);
+      else if (key === '2') handleGrade(1);
+      else if (key === '3') handleGrade(2);
+      else if (key === '4') handleGrade(3);
+    }
+  }
+
   async function handleGrade(grade: Grade) {
     if (grading) return;
     setGrading(true);
     await submitGrade(grade);
     setGrading(false);
+    keyboardRef.current?.focus();
   }
 
   if (loading) {
@@ -67,6 +111,26 @@ export default function StudySessionScreen() {
     return (
       <>
         <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '' }} />
+        <TextInput
+          ref={completeRef}
+          style={styles.hiddenKeyboardInput}
+          autoFocus
+          caretHidden
+          keyboardType="default"
+          showSoftInputOnFocus={false}
+          onKeyPress={({ nativeEvent: { key } }) => {
+            if (key === 'Enter') {
+              completeReadyRef.current = false;
+              router.back();
+            }
+          }}
+          onBlur={() => {
+            if (completeReadyRef.current) {
+              completeReadyRef.current = false;
+              router.back();
+            }
+          }}
+        />
         <View style={[styles.completeScreen, { backgroundColor: theme.colors.background }]}>
           <Ionicons name="checkmark-circle" size={80} color="#43A047" />
           <Text style={[styles.completeTitle, { color: theme.colors.text }]}>{t('study.complete')}</Text>
@@ -89,9 +153,111 @@ export default function StudySessionScreen() {
 
   const progressRatio = result.totalCards > 0 ? result.reviewed / result.totalCards : 0;
 
+  if (isFullscreen) {
+    return (
+      <>
+        <StatusBar hidden />
+        <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '', headerShown: false }} />
+        <TextInput
+          ref={keyboardRef}
+          style={styles.hiddenKeyboardInput}
+          autoFocus
+          caretHidden
+          keyboardType="default"
+          showSoftInputOnFocus={false}
+          autoCorrect={false}
+          autoCapitalize="none"
+          spellCheck={false}
+          onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
+          onBlur={() => keyboardRef.current?.focus()}
+        />
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+          {/* 終了ボタン（左上） */}
+          <Pressable
+            style={styles.fullscreenExitBtn}
+            onPress={() => setIsFullscreen(false)}
+          >
+            <Ionicons name="contract-outline" size={24} color={theme.colors.iconSubtle} />
+          </Pressable>
+
+          {/* コンテンツエリア：タップで裏返す */}
+          <Pressable style={{ flex: 1 }} onPress={() => setIsFlipped((v) => !v)}>
+            <ScrollView
+              contentContainerStyle={styles.fullscreenContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {!isFlipped ? (
+                <BlocksView blocks={currentCard.frontContent} />
+              ) : (
+                <>
+                  <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
+                  <BlocksView blocks={currentCard.backContent} />
+                  {currentCard.memoContent.length > 0 && (
+                    <View style={styles.memoSection}>
+                      <Pressable
+                        style={styles.memoToggle}
+                        onPress={() => setShowMemo((v) => !v)}
+                      >
+                        <Ionicons
+                          name={showMemo ? 'eye-off-outline' : 'eye-outline'}
+                          size={16}
+                          color={theme.colors.textTertiary}
+                        />
+                        <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+                          {showMemo ? t('study.hideMemo') : t('study.showMemo')}
+                        </Text>
+                      </Pressable>
+                      {showMemo && (
+                        <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
+                          <BlocksView blocks={currentCard.memoContent} />
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </Pressable>
+
+          {isFlipped && (
+            <View style={styles.bottom}>
+              <View style={styles.gradeRow}>
+                {GRADES.map(({ grade, labelKey, color }) => (
+                  <TouchableOpacity
+                    key={grade}
+                    style={[styles.gradeBtn, { borderColor: color, backgroundColor: theme.colors.surface }, grading && styles.gradeBtnDisabled]}
+                    onPress={() => handleGrade(grade)}
+                    disabled={grading}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.gradeBtnText, { color }]}>{t(labelKey)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+      </>
+    );
+  }
+
   return (
     <>
-      <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '' }} />
+      <StatusBar hidden />
+      <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '', headerShown: true }} />
+      <TextInput
+        ref={keyboardRef}
+        style={styles.hiddenKeyboardInput}
+        autoFocus
+        caretHidden
+        keyboardType="default"
+        showSoftInputOnFocus={false}
+        autoCorrect={false}
+        autoCapitalize="none"
+        spellCheck={false}
+        onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
+        onBlur={() => keyboardRef.current?.focus()}
+      />
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* プログレスバー */}
         <View style={[styles.progressBar, { backgroundColor: theme.colors.progressBg }]}>
@@ -144,6 +310,14 @@ export default function StudySessionScreen() {
           />
         </View>
 
+        {/* 全画面ボタン（カードエリア右上） */}
+        <Pressable
+          style={styles.fullscreenBtn}
+          onPress={() => setIsFullscreen(true)}
+        >
+          <Ionicons name="expand-outline" size={22} color={theme.colors.iconSubtle} />
+        </Pressable>
+
         {/* ヒント or 自己評価ボタン */}
         <View style={styles.bottom}>
           {!isFlipped ? (
@@ -177,6 +351,7 @@ export default function StudySessionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   progressBar: {
     height: 4,
@@ -240,4 +415,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   backBtnText: { fontSize: 16, fontWeight: '700' },
+  fullscreenBtn: {
+    position: 'absolute',
+    top: 8,
+    left: 4,
+    padding: 6,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  fullscreenContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  fullscreenExitBtn: {
+    position: 'absolute',
+    top: 48,
+    left: 20,
+    padding: 8,
+    borderRadius: 10,
+    zIndex: 10,
+  },
 });

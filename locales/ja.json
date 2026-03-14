@@ -104,6 +104,15 @@
     "theme": "テーマ",
     "themeLight": "ライト",
     "themeDark": "ダーク",
-    "themeSystem": "システム"
+    "themeSystem": "システム",
+    "keyboard": "キーボードショートカット",
+    "keyboardEnabled": "キーボードショートカットを使用",
+    "keyboardShortcuts": "ショートカット一覧",
+    "shortcutFlip": "カードを裏返す",
+    "shortcutGrade": "採点（もう一度/難しい/普通/簡単）",
+    "shortcutNext": "次のカードへスキップ（評価なし）",
+    "shortcutPrev": "前のカードに戻る",
+    "shortcutMemo": "メモの表示/非表示（裏面のみ）",
+    "shortcutEscape": "全画面モードの切替"
   }
 }

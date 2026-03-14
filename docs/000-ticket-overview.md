@@ -26,7 +26,7 @@
 | [005](./005-card-editor.md) | カードエディタ（Markdown・ブロック） | MVP | 完了 | 001, 003, 004 |
 | [006](./006-sm2-algorithm.md) | SM-2 間隔反復アルゴリズム | MVP | 完了 | 001, 003 |
 | [007](./007-study-screen.md) | 学習画面（通常モード） | MVP | 完了 | 003, 005, 006 |
-| [008](./008-fullscreen-keyboard.md) | 全画面モード＋Bluetoothキーボード | v1.0 | 未着手 | 007 |
+| [008](./008-fullscreen-keyboard.md) | 全画面モード＋Bluetoothキーボード | v1.0 | 完了 | 007 |
 | [009](./009-code-execution-js.md) | コード実行（JavaScript / TypeScript） | v1.0 | 未着手 | 005 |
 | [010](./010-code-execution-python.md) | コード実行（Python / Pyodide） | v1.0 | 未着手 | 009 |
 | [011](./011-image-block.md) | 画像ブロック | v1.0 | 未着手 | 005 |
@@ -106,7 +106,7 @@ graph TD
     style 005 fill:#4CAF50,color:#fff
     style 006 fill:#4CAF50,color:#fff
     style 007 fill:#4CAF50,color:#fff
-    style 008 fill:#2196F3,color:#fff
+    style 008 fill:#4CAF50,color:#fff
     style 009 fill:#2196F3,color:#fff
     style 010 fill:#2196F3,color:#fff
     style 011 fill:#2196F3,color:#fff

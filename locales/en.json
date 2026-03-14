@@ -104,6 +104,15 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeSystem": "System",
+    "keyboard": "Keyboard Shortcuts",
+    "keyboardEnabled": "Enable Keyboard Shortcuts",
+    "keyboardShortcuts": "Shortcut List",
+    "shortcutFlip": "Flip card",
+    "shortcutGrade": "Grade (Again / Hard / Good / Easy)",
+    "shortcutNext": "Skip to next card (no grade)",
+    "shortcutPrev": "Go to previous card",
+    "shortcutMemo": "Toggle memo (back side only)",
+    "shortcutEscape": "Toggle fullscreen"
   }
 }

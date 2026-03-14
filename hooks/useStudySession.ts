@@ -53,6 +53,21 @@ export function useStudySession() {
     [db]
   );
 
+  const goBack = useCallback(() => {
+    if (currentIndex <= 0) return;
+    setCurrentIndex((i) => i - 1);
+    setResult((r) => ({ ...r, reviewed: Math.max(0, r.reviewed - 1) }));
+  }, [currentIndex]);
+
+  const goNext = useCallback(() => {
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= queue.length) {
+      setCompleted(true);
+    } else {
+      setCurrentIndex(nextIndex);
+    }
+  }, [currentIndex, queue.length]);
+
   const submitGrade = useCallback(
     async (grade: Grade) => {
       const card = queue[currentIndex];
@@ -86,5 +101,7 @@ export function useStudySession() {
     result,
     loadSession,
     submitGrade,
+    goBack,
+    goNext,
   };
 }

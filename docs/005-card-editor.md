@@ -16,37 +16,36 @@ Notion風のブロックベースカードエディタを実装する。表面�
 ## Todo
 
 ### エディタ基盤
-- [ ] `react-native-markdown-display` インストール（プレビュー用）
-- [ ] `react-syntax-highlighter` インストール（コードブロック用）
-- [ ] ブロックリスト表示・並び替えコンポーネント
-- [ ] `/` コマンドパレット UI（ブロック種別選択）
-- [ ] 編集 / プレビュー 切替トグル
+- [x] `react-native-markdown-display` インストール（プレビュー用）
+- [ ] `react-syntax-highlighter` インストール（コードブロック用）— v1.0で対応
+- [x] ブロックリスト表示コンポーネント（`components/editor/BlockEditor.tsx`）
+- [x] ブロック追加メニュー UI（テキスト / コード選択）
+- [x] 編集 / プレビュー 切替トグル
 
 ### テキストブロック
-- [ ] テキスト入力コンポーネント（Markdown記法対応）
-- [ ] Markdownプレビューレンダリング（`react-native-markdown-display`）
-- [ ] 太字・斜体・コード等の書式
+- [x] テキスト入力コンポーネント（`components/editor/TextBlockItem.tsx`）
+- [x] Markdownプレビューレンダリング（`react-native-markdown-display`）
+- [x] 太字・斜体・コード・見出し等の書式（Markdown記法）
 
 ### コードブロック
-- [ ] コードブロック入力コンポーネント
-- [ ] 言語プルダウン選択（JavaScript / TypeScript / Python / SQL / C++ 等）
-- [ ] シンタックスハイライト表示（`react-syntax-highlighter`）
-- [ ] `executable` フラグ（コード実行対応フラグ、009 チケットで使用）
+- [x] コードブロック入力コンポーネント（`components/editor/CodeBlockItem.tsx`）
+- [x] 言語選択モーダル（JavaScript / TypeScript / Python / SQL / C++ 等 12言語）
+- [ ] シンタックスハイライト表示 — v1.0で対応（現在はモノスペースフォント表示）
+- [x] `executable` フラグ（Switch UIで切替可能）
 
 ### 画像ブロック（プレースホルダー）
-- [ ] 画像ブロック型定義（011 チケットで実装）
-- [ ] 画像ブロックのプレースホルダー表示
+- [x] 画像ブロックのプレースホルダー表示（011チケットで本実装）
 
 ### 画面 / UI
-- [ ] `app/deck/[id]/card/new.tsx` — 新規カード作成
-- [ ] `app/deck/[id]/card/[cardId]/edit.tsx` — カード編集
-- [ ] 表面 / 裏面 / メモ タブ切替
-- [ ] タグ入力欄（候補サジェスト付き、`useTagStore` 参照）
-- [ ] 保存ボタン（自動保存 or 手動）
-- [ ] 未保存変更の警告（戻る時）
+- [x] `app/deck/[id]/card/new.tsx` — 新規カード作成（BlockEditor使用）
+- [x] `app/deck/[id]/card/[cardId]/edit.tsx` — カード編集（タグ差分更新付き）
+- [x] 表面 / 裏面 / メモ タブ切替
+- [x] タグ入力欄（候補サジェスト付き、`components/editor/TagSelector.tsx`）
+- [x] 保存ボタン（手動）
+- [ ] 未保存変更の警告（戻る時）— 将来対応
 
 ### i18n
-- [ ] エディタ関連テキストの翻訳キー追加
+- [x] エディタ関連テキストは既存キー（card.front/back/memo/save）を使用
 
 ---
 

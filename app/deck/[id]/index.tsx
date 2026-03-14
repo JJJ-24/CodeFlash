@@ -145,6 +145,17 @@ export default function DeckDetailScreen() {
                     <Text style={styles.cardPreview} numberOfLines={2}>
                       {preview || t('card.noContent')}
                     </Text>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/deck/[id]/card/[cardId]/edit',
+                          params: { id, cardId: item.id },
+                        })
+                      }
+                      hitSlop={8}
+                    >
+                      <Ionicons name="pencil-outline" size={18} color="#1976D2" />
+                    </Pressable>
                     <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
                       <Ionicons name="trash-outline" size={18} color="#BDBDBD" />
                     </Pressable>

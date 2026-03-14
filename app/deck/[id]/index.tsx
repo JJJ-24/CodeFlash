@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import { deleteCard, getCardsByDeckId } from '@/lib/database/cards';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -28,6 +29,7 @@ export default function DeckDetailScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard } = useCardStore();
 
@@ -69,17 +71,27 @@ export default function DeckDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: deck.name }} />
+      <Stack.Screen
+        options={{
+          title: deck.name,
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.text,
+        }}
+      />
 
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {deck.description ? (
-          <Text style={styles.description}>{deck.description}</Text>
+          <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
+            {deck.description}
+          </Text>
         ) : null}
 
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{deck.cardCount}</Text>
-            <Text style={styles.statLabel}>{t('home.cards', { count: deck.cardCount })}</Text>
+          <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.statValue, { color: theme.colors.primary }]}>{deck.cardCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
+              {t('home.cards', { count: deck.cardCount })}
+            </Text>
           </View>
         </View>
 
@@ -93,12 +105,16 @@ export default function DeckDetailScreen() {
         </TouchableOpacity>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('deck.detail')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            {t('deck.detail')}
+          </Text>
 
           {deckCards.length === 0 ? (
             <View style={styles.emptyCards}>
-              <Ionicons name="card-outline" size={52} color="#CCC" />
-              <Text style={styles.emptyCardsText}>{t('deck.noCards')}</Text>
+              <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
+              <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary }]}>
+                {t('deck.noCards')}
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -110,7 +126,7 @@ export default function DeckDetailScreen() {
                 const preview = getPreviewText(item.frontContent);
                 return (
                   <Pressable
-                    style={styles.cardItem}
+                    style={[styles.cardItem, { backgroundColor: theme.colors.surface }]}
                     onPress={() =>
                       router.push({
                         pathname: '/deck/[id]/card/[cardId]/edit',
@@ -119,7 +135,7 @@ export default function DeckDetailScreen() {
                     }
                     onLongPress={() => confirmDeleteCard(item)}
                   >
-                    <Text style={styles.cardPreview} numberOfLines={2}>
+                    <Text style={[styles.cardPreview, { color: theme.colors.text }]} numberOfLines={2}>
                       {preview || t('card.noContent')}
                     </Text>
                     <Pressable
@@ -131,10 +147,10 @@ export default function DeckDetailScreen() {
                       }
                       hitSlop={8}
                     >
-                      <Ionicons name="pencil-outline" size={18} color="#1976D2" />
+                      <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
                     </Pressable>
                     <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
-                      <Ionicons name="trash-outline" size={18} color="#BDBDBD" />
+                      <Ionicons name="trash-outline" size={18} color={theme.colors.iconSubtle} />
                     </Pressable>
                   </Pressable>
                 );
@@ -156,11 +172,10 @@ export default function DeckDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5', padding: 20, gap: 16 },
-  description: { fontSize: 15, color: '#616161', lineHeight: 22 },
+  container: { flex: 1, padding: 20, gap: 16 },
+  description: { fontSize: 15, lineHeight: 22 },
   statsRow: { flexDirection: 'row', gap: 12 },
   statItem: {
-    backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -171,8 +186,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  statValue: { fontSize: 26, fontWeight: '700', color: '#1976D2' },
-  statLabel: { fontSize: 12, color: '#9E9E9E', marginTop: 2 },
+  statValue: { fontSize: 26, fontWeight: '700' },
+  statLabel: { fontSize: 12, marginTop: 2 },
   studyBtn: {
     flexDirection: 'row',
     backgroundColor: '#1976D2',
@@ -184,11 +199,10 @@ const styles = StyleSheet.create({
   },
   studyBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
   section: { gap: 12, flex: 1 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#212121' },
+  sectionTitle: { fontSize: 16, fontWeight: '700' },
   emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
-  emptyCardsText: { fontSize: 14, color: '#9E9E9E' },
+  emptyCardsText: { fontSize: 14 },
   cardItem: {
-    backgroundColor: '#FFF',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -201,7 +215,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  cardPreview: { flex: 1, fontSize: 15, color: '#212121', lineHeight: 22 },
+  cardPreview: { flex: 1, fontSize: 15, lineHeight: 22 },
   separator: { height: 8 },
   fab: {
     position: 'absolute',

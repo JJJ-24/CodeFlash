@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import { createTag, deleteTag, getAllTags, updateTag } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 import type { Tag } from '@/types';
@@ -33,6 +34,7 @@ export default function TagsScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { tags, setTags, addTag, updateTag: updateStore, removeTag } = useTagStore();
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -100,32 +102,47 @@ export default function TagsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('tag.title') }} />
+      <Stack.Screen
+        options={{
+          title: t('tag.title'),
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.text,
+        }}
+      />
 
       {tags.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="pricetags-outline" size={56} color="#CCC" />
-          <Text style={styles.emptyText}>{t('tag.empty')}</Text>
-          <Text style={styles.emptySub}>{t('tag.emptySub')}</Text>
+        <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
+          <Ionicons name="pricetags-outline" size={56} color={theme.colors.iconSubtle} />
+          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+            {t('tag.empty')}
+          </Text>
+          <Text style={[styles.emptySub, { color: theme.colors.textTertiary }]}>
+            {t('tag.emptySub')}
+          </Text>
         </View>
       ) : (
         <FlatList
+          style={{ backgroundColor: theme.colors.background }}
           data={tags}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+          )}
           renderItem={({ item }) => (
-            <View style={styles.tagItem}>
+            <View style={[styles.tagItem, { backgroundColor: theme.colors.surface }]}>
               <View style={[styles.colorDot, { backgroundColor: item.color }]} />
               <View style={styles.tagInfo}>
-                <Text style={styles.tagName}>{item.name}</Text>
-                <Text style={styles.tagCount}>{t('tag.cards', { count: item.cardCount })}</Text>
+                <Text style={[styles.tagName, { color: theme.colors.text }]}>{item.name}</Text>
+                <Text style={[styles.tagCount, { color: theme.colors.textTertiary }]}>
+                  {t('tag.cards', { count: item.cardCount })}
+                </Text>
               </View>
               <Pressable onPress={() => openEdit(item)} hitSlop={8} style={styles.iconBtn}>
-                <Ionicons name="pencil-outline" size={18} color="#1976D2" />
+                <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
               </Pressable>
               <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={styles.iconBtn}>
-                <Ionicons name="trash-outline" size={18} color="#E53935" />
+                <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
               </Pressable>
             </View>
           )}
@@ -140,18 +157,20 @@ export default function TagsScreen() {
       {/* タグ作成/編集モーダル */}
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={[styles.flex, { backgroundColor: theme.colors.background }]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
             <Pressable onPress={closeModal}>
-              <Text style={styles.headerBtn}>{t('common.cancel')}</Text>
+              <Text style={[styles.headerBtn, { color: theme.colors.textSecondary }]}>
+                {t('common.cancel')}
+              </Text>
             </Pressable>
-            <Text style={styles.modalTitle}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
               {editTarget ? t('tag.edit') : t('tag.new')}
             </Text>
             <Pressable onPress={handleSave} disabled={!canSave}>
-              <Text style={[styles.headerBtn, styles.primary, !canSave && styles.disabled]}>
+              <Text style={[styles.headerBtn, { color: theme.colors.primary }, !canSave && styles.disabled]}>
                 {editTarget ? t('tag.save') : t('tag.create')}
               </Text>
             </Pressable>
@@ -159,10 +178,13 @@ export default function TagsScreen() {
 
           <View style={styles.modalBody}>
             <View style={styles.field}>
-              <Text style={styles.label}>{t('tag.name')}</Text>
+              <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+                {t('tag.name')}
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text }]}
                 placeholder={t('tag.namePlaceholder')}
+                placeholderTextColor={theme.colors.textTertiary}
                 value={name}
                 onChangeText={setName}
                 autoFocus
@@ -170,7 +192,9 @@ export default function TagsScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>{t('tag.color')}</Text>
+              <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+                {t('tag.color')}
+              </Text>
               <View style={styles.colorGrid}>
                 {PRESET_COLORS.map((c) => (
                   <TouchableOpacity
@@ -191,9 +215,11 @@ export default function TagsScreen() {
             </View>
 
             {/* プレビュー */}
-            <View style={styles.preview}>
+            <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
               <View style={[styles.previewDot, { backgroundColor: color }]} />
-              <Text style={styles.previewName}>{name || t('tag.namePlaceholder')}</Text>
+              <Text style={[styles.previewName, { color: theme.colors.text }]}>
+                {name || t('tag.namePlaceholder')}
+              </Text>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -203,24 +229,24 @@ export default function TagsScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   list: { padding: 16, gap: 0 },
-  separator: { height: 1, backgroundColor: '#F0F0F0' },
+  separator: { height: 1 },
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
   tagInfo: { flex: 1, gap: 2 },
-  tagName: { fontSize: 16, color: '#212121', fontWeight: '500' },
-  tagCount: { fontSize: 12, color: '#9E9E9E' },
+  tagName: { fontSize: 16, fontWeight: '500' },
+  tagCount: { fontSize: 12 },
   iconBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#9E9E9E' },
-  emptySub: { fontSize: 14, color: '#BDBDBD' },
+  emptyText: { fontSize: 18, fontWeight: '600' },
+  emptySub: { fontSize: 14 },
   fab: {
     position: 'absolute',
     right: 20,
@@ -244,24 +270,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
-  modalTitle: { fontSize: 17, fontWeight: '600', color: '#212121' },
-  headerBtn: { fontSize: 16, color: '#555' },
-  primary: { color: '#1976D2', fontWeight: '600' },
+  modalTitle: { fontSize: 17, fontWeight: '600' },
+  headerBtn: { fontSize: 16, fontWeight: '600' },
   disabled: { opacity: 0.35 },
   modalBody: { padding: 20, gap: 20 },
   field: { gap: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: '#424242' },
+  label: { fontSize: 14, fontWeight: '600' },
   input: {
-    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#212121',
   },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   colorCell: {
@@ -282,10 +303,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#F5F5F5',
     borderRadius: 10,
     padding: 14,
   },
   previewDot: { width: 14, height: 14, borderRadius: 7 },
-  previewName: { fontSize: 15, color: '#424242' },
+  previewName: { fontSize: 15 },
 });

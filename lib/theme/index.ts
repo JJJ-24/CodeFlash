@@ -7,8 +7,10 @@ export interface AppColors {
   textSecondary: string;
   textTertiary: string;
   border: string;
+  inputBorder: string;
   primary: string;
   primaryText: string;
+  primaryLight: string;
   danger: string;
   icon: string;
   iconSubtle: string;
@@ -29,8 +31,10 @@ export const lightTheme: AppTheme = {
     textSecondary: '#757575',
     textTertiary: '#9E9E9E',
     border: '#F0F0F0',
+    inputBorder: '#E0E0E0',
     primary: '#1976D2',
     primaryText: '#FFFFFF',
+    primaryLight: '#E3F2FD',
     danger: '#E53935',
     icon: '#666666',
     iconSubtle: '#BDBDBD',
@@ -47,8 +51,10 @@ export const darkTheme: AppTheme = {
     textSecondary: '#AAAAAA',
     textTertiary: '#757575',
     border: '#2C2C2C',
+    inputBorder: '#3A3A3A',
     primary: '#1976D2',
     primaryText: '#FFFFFF',
+    primaryLight: 'rgba(25, 118, 210, 0.15)',
     danger: '#E53935',
     icon: '#9E9E9E',
     iconSubtle: '#555555',

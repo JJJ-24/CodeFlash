@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTheme } from '@/lib/theme';
 import { createDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
 
@@ -21,6 +22,7 @@ export default function NewDeckScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { addDeck } = useDeckStore();
 
   const [name, setName] = useState('');
@@ -52,9 +54,14 @@ export default function NewDeckScreen() {
       <Stack.Screen
         options={{
           title: t('deck.new'),
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.text,
+          headerShadowVisible: false,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={styles.headerBtn}>{t('common.cancel')}</Text>
+              <Text style={[styles.headerBtn, { color: theme.colors.textSecondary }]}>
+                {t('common.cancel')}
+              </Text>
             </Pressable>
           ),
           headerRight: () => (
@@ -63,7 +70,7 @@ export default function NewDeckScreen() {
               disabled={!canSave}
               style={{ paddingHorizontal: 4 }}
             >
-              <Text style={[styles.headerBtn, styles.primary, !canSave && styles.disabled]}>
+              <Text style={[styles.headerBtn, { color: theme.colors.primary }, !canSave && styles.disabled]}>
                 {t('deck.create')}
               </Text>
             </Pressable>
@@ -71,7 +78,7 @@ export default function NewDeckScreen() {
         }}
       />
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[styles.flex, { backgroundColor: theme.colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
@@ -79,10 +86,13 @@ export default function NewDeckScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.field}>
-            <Text style={styles.label}>{t('deck.name')}</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              {t('deck.name')}
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text }]}
               placeholder={t('deck.namePlaceholder')}
+              placeholderTextColor={theme.colors.textTertiary}
               value={name}
               onChangeText={setName}
               autoFocus
@@ -90,10 +100,13 @@ export default function NewDeckScreen() {
             />
           </View>
           <View style={styles.field}>
-            <Text style={styles.label}>{t('deck.description')}</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              {t('deck.description')}
+            </Text>
             <TextInput
-              style={[styles.input, styles.multiline]}
+              style={[styles.input, styles.multiline, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text }]}
               placeholder={t('deck.descriptionPlaceholder')}
+              placeholderTextColor={theme.colors.textTertiary}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -101,21 +114,23 @@ export default function NewDeckScreen() {
             />
           </View>
           <View style={styles.field}>
-            <Text style={styles.label}>{t('deck.language')}</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              {t('deck.language')}
+            </Text>
             <View style={styles.langRow}>
               <TouchableOpacity
-                style={[styles.langBtn, language === 'ja' && styles.langBtnActive]}
+                style={[styles.langBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, language === 'ja' && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight }]}
                 onPress={() => setLanguage('ja')}
               >
-                <Text style={[styles.langBtnText, language === 'ja' && styles.langBtnTextActive]}>
+                <Text style={[styles.langBtnText, { color: theme.colors.textSecondary }, language === 'ja' && { color: theme.colors.primary, fontWeight: '600' }]}>
                   {t('deck.languageJa')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.langBtn, language === 'en' && styles.langBtnActive]}
+                style={[styles.langBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, language === 'en' && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight }]}
                 onPress={() => setLanguage('en')}
               >
-                <Text style={[styles.langBtnText, language === 'en' && styles.langBtnTextActive]}>
+                <Text style={[styles.langBtnText, { color: theme.colors.textSecondary }, language === 'en' && { color: theme.colors.primary, fontWeight: '600' }]}>
                   {t('deck.languageEn')}
                 </Text>
               </TouchableOpacity>
@@ -128,18 +143,16 @@ export default function NewDeckScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   container: { padding: 20, gap: 20 },
   field: { gap: 6 },
-  label: { fontSize: 14, fontWeight: '600', color: '#424242' },
+  label: { fontSize: 14, fontWeight: '600' },
   input: {
-    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#212121',
   },
   multiline: { height: 90, textAlignVertical: 'top' },
   langRow: { flexDirection: 'row', gap: 10 },
@@ -148,14 +161,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FFF',
     alignItems: 'center',
   },
-  langBtnActive: { borderColor: '#1976D2', backgroundColor: '#E3F2FD' },
-  langBtnText: { fontSize: 15, color: '#757575' },
-  langBtnTextActive: { color: '#1976D2', fontWeight: '600' },
-  headerBtn: { fontSize: 16, color: '#555' },
-  primary: { color: '#1976D2', fontWeight: '600' },
+  langBtnText: { fontSize: 15 },
+  headerBtn: { fontSize: 16, fontWeight: '600' },
   disabled: { opacity: 0.35 },
 });

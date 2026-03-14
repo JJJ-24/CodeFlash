@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 
@@ -10,10 +10,18 @@ interface Props {
   isPreview: boolean;
   onChange: (content: string) => void;
   onDelete: () => void;
+  autoFocus?: boolean;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus }: Props) {
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (autoFocus) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, []);
   const theme = useTheme();
 
   const markdownStyles = {
@@ -52,10 +60,12 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete }: Props) {
         </View>
       ) : (
         <TextInput
+          ref={inputRef}
           style={[styles.input, { color: theme.colors.text }]}
           value={block.content}
           onChangeText={onChange}
           multiline
+          autoFocus={autoFocus}
           placeholder="テキストを入力（Markdown 記法対応）"
           placeholderTextColor={theme.colors.textTertiary}
           onFocus={() => setFocused(true)}

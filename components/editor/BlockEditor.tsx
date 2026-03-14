@@ -69,7 +69,7 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
     () => toEditBlocks(initialData?.backBlocks ?? [newTextBlock()])
   );
   const [memoBlocks, setMemoBlocks] = useState<EditBlock[]>(
-    () => toEditBlocks(initialData?.memoBlocks ?? [])
+    () => toEditBlocks(initialData?.memoBlocks ?? [newTextBlock()])
   );
   const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
   const [addMenuVisible, setAddMenuVisible] = useState(false);
@@ -157,7 +157,7 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         {/* ブロック一覧 */}
-        {currentBlocks.map((block) => {
+        {currentBlocks.map((block, index) => {
           if (block.type === 'text') {
             return (
               <TextBlockItem
@@ -166,6 +166,7 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
                 isPreview={isPreview}
                 onChange={(content) => updateBlock(activeTab, block._key, { content })}
                 onDelete={() => deleteBlock(activeTab, block._key)}
+                autoFocus={index === 0}
               />
             );
           }

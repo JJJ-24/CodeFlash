@@ -1,11 +1,12 @@
 import { transform } from 'sucrase';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -81,19 +82,30 @@ function buildSandboxHtml(code: string): string {
 
 interface Props {
   block: CodeBlock;
+  editable?: boolean;
+  editedContent?: string;
+  onContentChange?: (text: string) => void;
+  onEditFocus?: () => void;
+  onEditBlur?: () => void;
 }
 
-export function CodeRunnerView({ block }: Props) {
+export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur }: Props) {
   const theme = useTheme();
   const [status, setStatus] = useState<ExecStatus>('idle');
   const [result, setResult] = useState<ExecResult | null>(null);
   const [htmlSource, setHtmlSource] = useState<string | null>(null);
 
+  useEffect(() => {
+    setStatus('idle');
+    setResult(null);
+    setHtmlSource(null);
+  }, [block.content]);
+
   function handleRun() {
     setStatus('running');
     setResult(null);
 
-    let code = block.content;
+    let code = (editable && editedContent !== undefined) ? editedContent : block.content;
     if (block.language === 'typescript') {
       try {
         code = transform(code, { transforms: ['typescript'] }).code;
@@ -153,10 +165,25 @@ export function CodeRunnerView({ block }: Props) {
         )}
       </View>
 
-      {/* コード表示 */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <Text style={styles.codeText}>{block.content}</Text>
-      </ScrollView>
+      {/* コード表示 / 編集 */}
+      {editable ? (
+        <TextInput
+          style={[styles.codeText, styles.codeInput]}
+          value={editedContent ?? block.content}
+          onChangeText={onContentChange}
+          onFocus={onEditFocus}
+          onBlur={onEditBlur}
+          multiline
+          autoCorrect={false}
+          autoCapitalize="none"
+          spellCheck={false}
+          keyboardType="ascii-capable"
+        />
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <Text style={styles.codeText}>{block.content}</Text>
+        </ScrollView>
+      )}
 
       {/* 実行結果 */}
       {result && (
@@ -264,6 +291,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 12,
     lineHeight: 22,
+  },
+  codeInput: {
+    width: '100%',
+    textAlignVertical: 'top',
   },
   output: {
     borderTopWidth: 1,

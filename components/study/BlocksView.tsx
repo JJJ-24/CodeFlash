@@ -7,9 +7,14 @@ import { CodeRunnerView } from './CodeRunnerView';
 
 interface Props {
   blocks: Block[];
+  editableCode?: boolean;
+  editedContents?: Record<number, string>;
+  onCodeBlockChange?: (index: number, text: string) => void;
+  onEditFocus?: () => void;
+  onEditBlur?: () => void;
 }
 
-export function BlocksView({ blocks }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur }: Props) {
   const theme = useTheme();
 
   const markdownStyles = {
@@ -41,7 +46,17 @@ export function BlocksView({ blocks }: Props) {
           );
         }
         if (block.type === 'code') {
-          return <CodeRunnerView key={i} block={block as CodeBlock} />;
+          return (
+            <CodeRunnerView
+              key={i}
+              block={block as CodeBlock}
+              editable={editableCode}
+              editedContent={editedContents?.[i]}
+              onContentChange={(text) => onCodeBlockChange?.(i, text)}
+              onEditFocus={onEditFocus}
+              onEditBlur={onEditBlur}
+            />
+          );
         }
         return (
           <View key={i} style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>

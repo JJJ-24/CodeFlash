@@ -43,6 +43,9 @@ export default function StudySessionScreen() {
   const [showMemo, setShowMemo] = useState(false);
   const [grading, setGrading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // cardId -> blockIndex -> 編集済みコード
+  const [editedCodeBlocks, setEditedCodeBlocks] = useState<Record<string, Record<number, string>>>({});
+  const codeEditingRef = useRef(false);
 
   const translateX = useSharedValue(0);
 
@@ -73,6 +76,7 @@ export default function StudySessionScreen() {
 
   useEffect(() => {
     if (completed) {
+      setEditedCodeBlocks({});
       completeReadyRef.current = false;
       setTimeout(() => {
         completeRef.current?.focus();
@@ -119,6 +123,13 @@ export default function StudySessionScreen() {
     await submitGrade(grade);
     setGrading(false);
     keyboardRef.current?.focus();
+  }
+
+  function handleCodeBlockChange(cardId: string, blockIndex: number, text: string) {
+    setEditedCodeBlocks((prev) => ({
+      ...prev,
+      [cardId]: { ...(prev[cardId] ?? {}), [blockIndex]: text },
+    }));
   }
 
   if (loading) {
@@ -192,7 +203,7 @@ export default function StudySessionScreen() {
           autoCapitalize="none"
           spellCheck={false}
           onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
-          onBlur={() => keyboardRef.current?.focus()}
+          onBlur={() => { setTimeout(() => { if (!codeEditingRef.current) keyboardRef.current?.focus(); }, 50); }}
         />
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
           {/* 終了ボタン（左上） */}
@@ -212,7 +223,14 @@ export default function StudySessionScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   {!isFlipped ? (
-                    <BlocksView blocks={currentCard.frontContent} />
+                    <BlocksView
+                      blocks={currentCard.frontContent}
+                      editableCode
+                      editedContents={editedCodeBlocks[currentCard.id]}
+                      onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
+                      onEditFocus={() => { codeEditingRef.current = true; }}
+                      onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                    />
                   ) : (
                     <>
                       <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
@@ -283,7 +301,7 @@ export default function StudySessionScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
-        onBlur={() => keyboardRef.current?.focus()}
+        onBlur={() => { setTimeout(() => { if (!codeEditingRef.current) keyboardRef.current?.focus(); }, 50); }}
       />
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* プログレスバー */}
@@ -303,7 +321,14 @@ export default function StudySessionScreen() {
               onFlip={() => setIsFlipped((v) => !v)}
               front={
                 <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
-                  <BlocksView blocks={currentCard.frontContent} />
+                  <BlocksView
+                    blocks={currentCard.frontContent}
+                    editableCode
+                    editedContents={editedCodeBlocks[currentCard.id]}
+                    onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
+                    onEditFocus={() => { codeEditingRef.current = true; }}
+                    onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                  />
                 </ScrollView>
               }
               back={

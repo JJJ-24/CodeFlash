@@ -42,6 +42,10 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
   }, [isEditing]);
 
   function handleRun() {
+    if (isEditing) {
+      setIsEditing(false);
+      onEditBlur?.();
+    }
     const content = (editable && editedContent !== undefined) ? editedContent : block.content;
     run(content, block.language);
   }

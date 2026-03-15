@@ -1,5 +1,5 @@
 import { transform } from 'sucrase';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -94,12 +94,21 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
   const [status, setStatus] = useState<ExecStatus>('idle');
   const [result, setResult] = useState<ExecResult | null>(null);
   const [htmlSource, setHtmlSource] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const codeInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     setStatus('idle');
     setResult(null);
     setHtmlSource(null);
+    setIsEditing(false);
   }, [block.content]);
+
+  useEffect(() => {
+    if (isEditing) {
+      setTimeout(() => codeInputRef.current?.focus(), 50);
+    }
+  }, [isEditing]);
 
   function handleRun() {
     setStatus('running');
@@ -151,28 +160,48 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
           {LANG_LABELS[block.language] ?? block.language}
         </Text>
 
-        {block.executable && (
-          <TouchableOpacity
-            style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
-            onPress={handleRun}
-            disabled={isRunning}
-          >
-            {isRunning
-              ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-              : <Text style={styles.runBtnText}>▶ 実行</Text>
-            }
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerRight}>
+          {editable && (
+            <TouchableOpacity
+              style={[styles.editBtn, isEditing && styles.editBtnActive]}
+              onPress={() => {
+                if (isEditing) {
+                  setIsEditing(false);
+                  onEditBlur?.();
+                } else {
+                  setIsEditing(true);
+                  onEditFocus?.();
+                }
+              }}
+            >
+              <Text style={[styles.editBtnText, isEditing && styles.editBtnTextActive]}>
+                {isEditing ? '完了' : '✏'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {block.executable && (
+            <TouchableOpacity
+              style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
+              onPress={handleRun}
+              disabled={isRunning}
+            >
+              {isRunning
+                ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
+                : <Text style={styles.runBtnText}>▶ 実行</Text>
+              }
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* コード表示 / 編集 */}
-      {editable ? (
+      {editable && isEditing ? (
         <TextInput
+          ref={codeInputRef}
           style={[styles.codeText, styles.codeInput]}
           value={editedContent ?? block.content}
           onChangeText={onContentChange}
-          onFocus={onEditFocus}
-          onBlur={onEditBlur}
           multiline
           autoCorrect={false}
           autoCapitalize="none"
@@ -181,7 +210,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
         />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <Text style={styles.codeText}>{block.content}</Text>
+          <Text style={styles.codeText}>{editedContent ?? block.content}</Text>
         </ScrollView>
       )}
 
@@ -259,10 +288,34 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 4,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   langLabel: {
     fontSize: 11,
     color: '#9CDCFE',
     fontWeight: '600',
+  },
+  editBtn: {
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  editBtnActive: {
+    backgroundColor: '#2A4A2A',
+    borderColor: '#43A047',
+  },
+  editBtnText: {
+    color: '#9CDCFE',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  editBtnTextActive: {
+    color: '#43A047',
   },
   runBtn: {
     backgroundColor: '#1976D2',

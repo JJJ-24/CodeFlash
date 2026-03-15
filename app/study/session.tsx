@@ -186,6 +186,7 @@ export default function StudySessionScreen() {
   if (!currentCard) return null;
 
   const progressRatio = result.totalCards > 0 ? result.reviewed / result.totalCards : 0;
+  const hasMemo = currentCard.memoContent.some((b) => b.content.trim() !== '');
 
   if (isFullscreen) {
     return (
@@ -235,7 +236,7 @@ export default function StudySessionScreen() {
                     <>
                       <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
                       <BlocksView blocks={currentCard.backContent} />
-                      {currentCard.memoContent.length > 0 && (
+                      {hasMemo && (
                         <View style={styles.memoSection}>
                           <Pressable
                             style={styles.memoToggle}
@@ -336,7 +337,7 @@ export default function StudySessionScreen() {
                   <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
                   <BlocksView blocks={currentCard.backContent} />
                   {/* メモ */}
-                  {currentCard.memoContent.length > 0 && (
+                  {hasMemo && (
                     <View style={styles.memoSection}>
                       <Pressable
                         style={styles.memoToggle}

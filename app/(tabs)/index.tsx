@@ -114,7 +114,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { padding: 16, gap: 12 },
+  listContent: { padding: 16, gap: 12, paddingBottom: 96 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { fontSize: 18, fontWeight: '600' },
   emptySubText: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },

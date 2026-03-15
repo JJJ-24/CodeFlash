@@ -176,7 +176,7 @@ export default function DeckDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, gap: 16 },
+  container: { padding: 20, gap: 16, paddingBottom: 96 },
   description: { fontSize: 15, lineHeight: 22 },
   statsRow: { flexDirection: 'row', gap: 12 },
   statItem: {

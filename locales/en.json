@@ -70,7 +70,8 @@
     "save": "Save",
     "frontPlaceholder": "Enter front text",
     "backPlaceholder": "Enter back text",
-    "noContent": "(no content)"
+    "noContent": "(no content)",
+    "frontRequired": "Front side requires at least one text or code block"
   },
   "tabs": {
     "home": "Home",

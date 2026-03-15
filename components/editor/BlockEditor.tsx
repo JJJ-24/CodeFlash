@@ -105,7 +105,10 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
     setAddMenuVisible(false);
   }
 
+  const isFrontEmpty = frontBlocks.every((b) => b.content.trim() === '');
+
   async function handleSave() {
+    if (isFrontEmpty) return;
     await onSave({
       frontBlocks: fromEditBlocks(frontBlocks),
       backBlocks: fromEditBlocks(backBlocks),
@@ -224,10 +227,15 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
         </View>
 
         {/* 保存ボタン */}
+        {isFrontEmpty && (
+          <Text style={[styles.validationError, { color: theme.colors.error ?? '#EF4444' }]}>
+            {t('card.frontRequired')}
+          </Text>
+        )}
         <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+          style={[styles.saveBtn, (saving || isFrontEmpty) && styles.saveBtnDisabled]}
           onPress={handleSave}
-          disabled={saving}
+          disabled={saving || isFrontEmpty}
           activeOpacity={0.8}
         >
           <Text style={styles.saveBtnText}>{saving ? '保存中...' : t('card.save')}</Text>
@@ -312,4 +320,5 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  validationError: { fontSize: 13, textAlign: 'center', marginBottom: -4 },
 });

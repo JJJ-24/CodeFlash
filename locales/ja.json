@@ -70,7 +70,8 @@
     "save": "保存",
     "frontPlaceholder": "表面のテキストを入力",
     "backPlaceholder": "裏面のテキストを入力",
-    "noContent": "（内容なし）"
+    "noContent": "（内容なし）",
+    "frontRequired": "表面にテキストかコードを入力してください"
   },
   "tabs": {
     "home": "ホーム",

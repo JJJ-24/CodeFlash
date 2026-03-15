@@ -1,8 +1,9 @@
 import Markdown from 'react-native-markdown-display';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
 import type { Block, CodeBlock, TextBlock } from '@/types';
+import { CodeRunnerView } from './CodeRunnerView';
 
 interface Props {
   blocks: Block[];
@@ -40,15 +41,7 @@ export function BlocksView({ blocks }: Props) {
           );
         }
         if (block.type === 'code') {
-          const code = block as CodeBlock;
-          return (
-            <View key={i} style={[styles.codeBlock, { backgroundColor: theme.colors.codeBackground }]}>
-              <Text style={styles.codeLang}>{code.language}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <Text style={styles.codeText}>{code.content}</Text>
-              </ScrollView>
-            </View>
-          );
+          return <CodeRunnerView key={i} block={block as CodeBlock} />;
         }
         return (
           <View key={i} style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
@@ -64,26 +57,6 @@ const styles = StyleSheet.create({
   container: { gap: 12 },
   empty: { fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
   textBlock: {},
-  codeBlock: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  codeLang: {
-    fontSize: 11,
-    color: '#9CDCFE',
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 2,
-    fontWeight: '600',
-  },
-  codeText: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    color: '#D4D4D4',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    lineHeight: 22,
-  },
   imagePlaceholder: {
     borderRadius: 8,
     padding: 16,

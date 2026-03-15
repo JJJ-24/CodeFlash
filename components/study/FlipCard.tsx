@@ -44,12 +44,18 @@ export function FlipCard({ front, back, isFlipped, onFlip }: Props) {
   return (
     <Pressable style={styles.wrapper} onPress={onFlip}>
       <View style={styles.cardContainer}>
-        {/* 表面 */}
-        <Animated.View style={[styles.card, { backgroundColor: theme.colors.surface }, frontStyle]}>
+        {/* 表面 — 裏向きのときはタッチを透過させる */}
+        <Animated.View
+          style={[styles.card, { backgroundColor: theme.colors.surface }, frontStyle]}
+          pointerEvents={isFlipped ? 'none' : 'box-none'}
+        >
           <View style={styles.cardInner}>{front}</View>
         </Animated.View>
-        {/* 裏面 */}
-        <Animated.View style={[styles.card, { backgroundColor: theme.colors.surface }, backStyle]}>
+        {/* 裏面 — 表向きのときはタッチを透過させる */}
+        <Animated.View
+          style={[styles.card, { backgroundColor: theme.colors.surface }, backStyle]}
+          pointerEvents={isFlipped ? 'box-none' : 'none'}
+        >
           <View style={styles.cardInner}>{back}</View>
         </Animated.View>
       </View>

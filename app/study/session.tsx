@@ -251,7 +251,7 @@ export default function StudySessionScreen() {
                             </Text>
                           </Pressable>
                           {showMemo && (
-                            <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
+                            <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
                               <BlocksView blocks={currentCard.memoContent} />
                             </View>
                           )}
@@ -352,7 +352,7 @@ export default function StudySessionScreen() {
                         </Text>
                       </Pressable>
                       {showMemo && (
-                        <View style={[styles.memoContent, { backgroundColor: theme.colors.border, borderLeftColor: theme.colors.inputBorder }]}>
+                        <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
                           <BlocksView blocks={currentCard.memoContent} />
                         </View>
                       )}

@@ -67,7 +67,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
         <TextInput
           style={[styles.codeInput, isPreview && styles.codePreview]}
           value={block.content}
-          onChangeText={(v) => onChange({ content: v })}
+          onChangeText={(v) =>
+            onChange({
+              content: v
+                .replace(/[\u201c\u201d]/g, '"')
+                .replace(/[\u2018\u2019]/g, "'"),
+            })
+          }
           multiline
           editable={!isPreview}
           placeholder="コードを入力"

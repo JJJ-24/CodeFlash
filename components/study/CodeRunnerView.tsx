@@ -54,6 +54,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
   useEffect(() => {
     if (editTrigger && editable && !isEditing) {
       setIsEditing(true);
+      clear();
       onEditFocus?.();
     }
   }, [editTrigger]);
@@ -93,6 +94,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
                   handleEditEnd();
                 } else {
                   setIsEditing(true);
+                  clear();
                   onEditFocus?.();
                 }
               }}
@@ -146,12 +148,14 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
         </ScrollView>
       )}
 
-      <ExecutionOutput
-        result={result}
-        htmlSource={htmlSource}
-        onClear={clear}
-        onMessage={handleMessage}
-      />
+      {!isEditing && (
+        <ExecutionOutput
+          result={result}
+          htmlSource={htmlSource}
+          onClear={clear}
+          onMessage={handleMessage}
+        />
+      )}
     </View>
   );
 }

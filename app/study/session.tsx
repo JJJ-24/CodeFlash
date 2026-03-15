@@ -212,7 +212,7 @@ export default function StudySessionScreen() {
           onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
           onBlur={() => { setTimeout(() => { if (!codeEditingRef.current) keyboardRef.current?.focus(); }, 50); }}
         />
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
           {/* 終了ボタン（左上） */}
           <Pressable
             style={styles.fullscreenExitBtn}

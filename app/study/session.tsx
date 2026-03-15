@@ -43,6 +43,8 @@ export default function StudySessionScreen() {
   const [showMemo, setShowMemo] = useState(false);
   const [grading, setGrading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [runTrigger, setRunTrigger] = useState(0);
+  const [editTrigger, setEditTrigger] = useState(0);
   // cardId -> blockIndex -> 編集済みコード
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<Record<string, Record<number, string>>>({});
   const codeEditingRef = useRef(false);
@@ -109,6 +111,10 @@ export default function StudySessionScreen() {
       setShowMemo((v) => !v);
     } else if (key.toLowerCase() === 'f') {
       setIsFullscreen((v) => !v);
+    } else if (key.toLowerCase() === 'r') {
+      setRunTrigger((v) => v + 1);
+    } else if (key.toLowerCase() === 'e') {
+      setEditTrigger((v) => v + 1);
     } else if (isFlipped && !grading) {
       if (key === '1') handleGrade(0);
       else if (key === '2') handleGrade(1);
@@ -231,6 +237,8 @@ export default function StudySessionScreen() {
                       onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
                       onEditFocus={() => { codeEditingRef.current = true; }}
                       onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                      runTrigger={runTrigger}
+                      editTrigger={editTrigger}
                     />
                   ) : (
                     <>
@@ -329,6 +337,8 @@ export default function StudySessionScreen() {
                     onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
                     onEditFocus={() => { codeEditingRef.current = true; }}
                     onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                    runTrigger={runTrigger}
+                    editTrigger={editTrigger}
                   />
                 </ScrollView>
               }

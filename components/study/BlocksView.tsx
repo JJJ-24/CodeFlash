@@ -12,9 +12,11 @@ interface Props {
   onCodeBlockChange?: (index: number, text: string) => void;
   onEditFocus?: () => void;
   onEditBlur?: () => void;
+  runTrigger?: number;
+  editTrigger?: number;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, runTrigger, editTrigger }: Props) {
   const theme = useTheme();
 
   const markdownStyles = {
@@ -55,6 +57,8 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
               onContentChange={(text) => onCodeBlockChange?.(i, text)}
               onEditFocus={onEditFocus}
               onEditBlur={onEditBlur}
+              runTrigger={runTrigger}
+              editTrigger={editTrigger}
             />
           );
         }

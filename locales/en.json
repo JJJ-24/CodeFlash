@@ -122,6 +122,6 @@
     "shortcutNext": "Skip to next card (no grade)",
     "shortcutPrev": "Go to previous card",
     "shortcutMemo": "Toggle memo (back side only)",
-    "shortcutEscape": "Toggle fullscreen"
+    "shortcutFullscreen": "Toggle fullscreen"
   }
 }

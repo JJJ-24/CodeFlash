@@ -13,6 +13,7 @@ import { ExecutionOutput } from '@/components/code/ExecutionOutput';
 import { LANG_LABELS } from '@/lib/code-execution/constants';
 import { useTheme } from '@/lib/theme';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
+import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock } from '@/types';
 
 interface Props {
@@ -22,13 +23,18 @@ interface Props {
   onContentChange?: (text: string) => void;
   onEditFocus?: () => void;
   onEditBlur?: () => void;
+  runTrigger?: number;
+  editTrigger?: number;
 }
 
-export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur }: Props) {
+export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, runTrigger, editTrigger }: Props) {
   const theme = useTheme();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
   const { result, htmlSource, isRunning, run, clear, handleMessage, reset } = useCodeExecution();
   const [isEditing, setIsEditing] = useState(false);
   const codeInputRef = useRef<TextInput>(null);
+  // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
+  const intentionalExitRef = useRef(false);
 
   useEffect(() => {
     reset();
@@ -41,7 +47,27 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
     }
   }, [isEditing]);
 
+  useEffect(() => {
+    if (runTrigger && block.executable) handleRun();
+  }, [runTrigger]);
+
+  useEffect(() => {
+    if (editTrigger && editable && !isEditing) {
+      setIsEditing(true);
+      onEditFocus?.();
+    }
+  }, [editTrigger]);
+
+  // 編集終了のみ（実行なし）- 完了ボタン用
+  function handleEditEnd() {
+    intentionalExitRef.current = true;
+    setIsEditing(false);
+    onEditBlur?.();
+  }
+
+  // 編集終了 + 実行 - ▶実行ボタン・r キー・Shift+Tab（onBlur）用
   function handleRun() {
+    intentionalExitRef.current = true;
     if (isEditing) {
       setIsEditing(false);
       onEditBlur?.();
@@ -64,8 +90,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
               style={[styles.editBtn, isEditing && styles.editBtnActive]}
               onPress={() => {
                 if (isEditing) {
-                  setIsEditing(false);
-                  onEditBlur?.();
+                  handleEditEnd();
                 } else {
                   setIsEditing(true);
                   onEditFocus?.();
@@ -105,6 +130,15 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
           autoCapitalize="none"
           spellCheck={false}
           keyboardType="ascii-capable"
+          showSoftInputOnFocus={!keyboardShortcutsEnabled}
+          onBlur={() => {
+            // Shift+Tab・外タップ等でフォーカスが外れた場合に実行
+            // 完了ボタン・▶実行ボタン経由の場合は intentionalExitRef で防ぐ
+            if (!intentionalExitRef.current) {
+              handleRun();
+            }
+            intentionalExitRef.current = false;
+          }}
         />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>

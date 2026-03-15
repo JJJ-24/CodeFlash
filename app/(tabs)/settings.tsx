@@ -14,7 +14,7 @@ const SHORTCUTS = [
   { key: 'J',    descKey: 'settings.shortcutPrev' },
   { key: 'K',    descKey: 'settings.shortcutNext' },
   { key: 'M',    descKey: 'settings.shortcutMemo' },
-  { key: 'F',    descKey: 'settings.shortcutEscape' },
+  { key: 'F',    descKey: 'settings.shortcutFullscreen' },
 ];
 
 export default function SettingsScreen() {

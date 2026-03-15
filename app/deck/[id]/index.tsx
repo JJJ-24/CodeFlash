@@ -7,6 +7,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -79,7 +80,10 @@ export default function DeckDetailScreen() {
         }}
       />
 
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        contentContainerStyle={styles.container}
+      >
         {deck.description ? (
           <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
             {deck.description}
@@ -158,7 +162,7 @@ export default function DeckDetailScreen() {
             />
           )}
         </View>
-      </View>
+      </ScrollView>
 
       {/* FAB: 新規カード作成 */}
       <Pressable
@@ -172,7 +176,7 @@ export default function DeckDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, gap: 16 },
+  container: { padding: 20, gap: 16 },
   description: { fontSize: 15, lineHeight: 22 },
   statsRow: { flexDirection: 'row', gap: 12 },
   statItem: {
@@ -198,7 +202,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   studyBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-  section: { gap: 12, flex: 1 },
+  section: { gap: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   emptyCardsText: { fontSize: 14 },

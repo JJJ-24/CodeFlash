@@ -11,13 +11,14 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { BlocksView } from '@/components/study/BlocksView';
-import { FlipCard } from '@/components/study/FlipCard';
+import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
 import { useStudySession } from '@/hooks/useStudySession';
 import { useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
@@ -38,6 +39,7 @@ export default function StudySessionScreen() {
   const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext } =
     useStudySession();
   const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { width: screenWidth } = useWindowDimensions();
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
@@ -48,8 +50,34 @@ export default function StudySessionScreen() {
   // cardId -> blockIndex -> 編集済みコード
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<Record<string, Record<number, string>>>({});
   const codeEditingRef = useRef(false);
+  const flipCardRef = useRef<FlipCardRef>(null);
+  const isNavigatingRef = useRef(false);
 
   const translateX = useSharedValue(0);
+  const slideX = useSharedValue(0);
+
+  // JS-thread callbacks for swipe gestures (called via runOnJS — must be named functions)
+  function onSwipedLeft() {
+    flipCardRef.current?.resetInstant();
+    setIsFlipped(false);
+    goNext();
+    translateX.value = 0;
+    slideX.value = screenWidth;
+    slideX.value = withTiming(0, { duration: 180 });
+  }
+
+  function onSwipedRight() {
+    flipCardRef.current?.resetInstant();
+    setIsFlipped(false);
+    goBack();
+    translateX.value = 0;
+    slideX.value = -screenWidth;
+    slideX.value = withTiming(0, { duration: 180 });
+  }
+
+  function cancelSwipe() {
+    translateX.value = withSpring(0);
+  }
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-15, 15])
@@ -60,13 +88,23 @@ export default function StudySessionScreen() {
     .onEnd((e) => {
       const swipeLeft  = e.translationX < -80 || e.velocityX < -500;
       const swipeRight = e.translationX > 80  || e.velocityX > 500;
-      if (swipeLeft)       runOnJS(goNext)();
-      else if (swipeRight) runOnJS(goBack)();
-      translateX.value = withSpring(0);
+      if (swipeLeft) {
+        translateX.value = withTiming(-screenWidth, { duration: 150 }, (finished) => {
+          if (finished) runOnJS(onSwipedLeft)();
+          else runOnJS(cancelSwipe)();
+        });
+      } else if (swipeRight) {
+        translateX.value = withTiming(screenWidth, { duration: 150 }, (finished) => {
+          if (finished) runOnJS(onSwipedRight)();
+          else runOnJS(cancelSwipe)();
+        });
+      } else {
+        translateX.value = withSpring(0);
+      }
     });
 
   const cardAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
+    transform: [{ translateX: translateX.value + slideX.value }],
   }));
   const keyboardRef = useRef<TextInput>(null);
   const completeRef = useRef<TextInput>(null);
@@ -99,14 +137,35 @@ export default function StudySessionScreen() {
     if (!isFlipped) setShowMemo(false);
   }, [isFlipped]);
 
+  function navigateWithSlide(direction: 'next' | 'prev', action?: () => void) {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+
+    const slideOut = direction === 'next' ? -screenWidth : screenWidth;
+    const slideIn  = -slideOut;
+
+    // Slide out; use setTimeout to stay on JS thread and avoid worklet closure issues
+    slideX.value = withTiming(slideOut, { duration: 180 });
+    setTimeout(() => {
+      flipCardRef.current?.resetInstant();
+      setIsFlipped(false);
+      if (action) action();
+      else if (direction === 'next') goNext();
+      else goBack();
+      slideX.value = slideIn;
+      slideX.value = withTiming(0, { duration: 180 });
+      setTimeout(() => { isNavigatingRef.current = false; }, 180);
+    }, 180);
+  }
+
   function handleKeyPress(key: string) {
     if (!keyboardShortcutsEnabled) return;
     if (key === ' ') {
       setIsFlipped((v) => !v);
     } else if (key.toLowerCase() === 'j') {
-      goBack();
+      navigateWithSlide('prev');
     } else if (key.toLowerCase() === 'k') {
-      goNext();
+      navigateWithSlide('next');
     } else if (key.toLowerCase() === 'm' && isFlipped) {
       setShowMemo((v) => !v);
     } else if (key.toLowerCase() === 'f') {
@@ -116,10 +175,10 @@ export default function StudySessionScreen() {
     } else if (key.toLowerCase() === 'e') {
       setEditTrigger((v) => v + 1);
     } else if (isFlipped && !grading) {
-      if (key === '1') handleGrade(0);
-      else if (key === '2') handleGrade(1);
-      else if (key === '3') handleGrade(2);
-      else if (key === '4') handleGrade(3);
+      if (key === '1') handleGradeWithSlide(0);
+      else if (key === '2') handleGradeWithSlide(1);
+      else if (key === '3') handleGradeWithSlide(2);
+      else if (key === '4') handleGradeWithSlide(3);
     }
   }
 
@@ -129,6 +188,11 @@ export default function StudySessionScreen() {
     await submitGrade(grade);
     setGrading(false);
     keyboardRef.current?.focus();
+  }
+
+  function handleGradeWithSlide(grade: Grade) {
+    if (grading) return;
+    navigateWithSlide('next', () => handleGrade(grade));
   }
 
   function handleCodeBlockChange(cardId: string, blockIndex: number, text: string) {
@@ -224,12 +288,14 @@ export default function StudySessionScreen() {
           {/* コンテンツエリア：タップで裏返す */}
           <GestureDetector gesture={panGesture}>
             <Animated.View style={[{ flex: 1 }, cardAnimStyle]}>
-              <Pressable style={{ flex: 1 }} onPress={() => setIsFlipped((v) => !v)}>
-                <ScrollView
-                  contentContainerStyle={styles.fullscreenContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {!isFlipped ? (
+              <FlipCard
+                ref={flipCardRef}
+                isFlipped={isFlipped}
+                onFlip={() => setIsFlipped((v) => !v)}
+                cardStyle={{ borderRadius: 0, shadowOpacity: 0, elevation: 0 }}
+                innerStyle={{ padding: 0, justifyContent: 'flex-start' }}
+                front={
+                  <ScrollView contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                     <BlocksView
                       blocks={currentCard.frontContent}
                       editableCode
@@ -240,36 +306,37 @@ export default function StudySessionScreen() {
                       runTrigger={runTrigger}
                       editTrigger={editTrigger}
                     />
-                  ) : (
-                    <>
-                      <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
-                      <BlocksView blocks={currentCard.backContent} />
-                      {hasMemo && (
-                        <View style={styles.memoSection}>
-                          <Pressable
-                            style={styles.memoToggle}
-                            onPress={() => setShowMemo((v) => !v)}
-                          >
-                            <Ionicons
-                              name={showMemo ? 'eye-off-outline' : 'eye-outline'}
-                              size={16}
-                              color={theme.colors.textTertiary}
-                            />
-                            <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
-                              {showMemo ? t('study.hideMemo') : t('study.showMemo')}
-                            </Text>
-                          </Pressable>
-                          {showMemo && (
-                            <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
-                              <BlocksView blocks={currentCard.memoContent} />
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </>
-                  )}
-                </ScrollView>
-              </Pressable>
+                  </ScrollView>
+                }
+                back={
+                  <ScrollView contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                    <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
+                    <BlocksView blocks={currentCard.backContent} />
+                    {hasMemo && (
+                      <View style={styles.memoSection}>
+                        <Pressable
+                          style={styles.memoToggle}
+                          onPress={() => setShowMemo((v) => !v)}
+                        >
+                          <Ionicons
+                            name={showMemo ? 'eye-off-outline' : 'eye-outline'}
+                            size={16}
+                            color={theme.colors.textTertiary}
+                          />
+                          <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+                            {showMemo ? t('study.hideMemo') : t('study.showMemo')}
+                          </Text>
+                        </Pressable>
+                        {showMemo && (
+                          <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
+                            <BlocksView blocks={currentCard.memoContent} />
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </ScrollView>
+                }
+              />
             </Animated.View>
           </GestureDetector>
 
@@ -280,7 +347,7 @@ export default function StudySessionScreen() {
                   <TouchableOpacity
                     key={grade}
                     style={[styles.gradeBtn, { borderColor: color, backgroundColor: theme.colors.surface }, grading && styles.gradeBtnDisabled]}
-                    onPress={() => handleGrade(grade)}
+                    onPress={() => handleGradeWithSlide(grade)}
                     disabled={grading}
                     activeOpacity={0.7}
                   >
@@ -326,6 +393,7 @@ export default function StudySessionScreen() {
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.cardArea, cardAnimStyle]}>
             <FlipCard
+              ref={flipCardRef}
               isFlipped={isFlipped}
               onFlip={() => setIsFlipped((v) => !v)}
               front={
@@ -399,7 +467,7 @@ export default function StudySessionScreen() {
                 <TouchableOpacity
                   key={grade}
                   style={[styles.gradeBtn, { borderColor: color, backgroundColor: theme.colors.surface }, grading && styles.gradeBtnDisabled]}
-                  onPress={() => handleGrade(grade)}
+                  onPress={() => handleGradeWithSlide(grade)}
                   disabled={grading}
                   activeOpacity={0.7}
                 >

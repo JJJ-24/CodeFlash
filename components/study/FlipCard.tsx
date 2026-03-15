@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { forwardRef, useEffect, useImperativeHandle } from 'react';
+import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -10,58 +10,72 @@ import Animated, {
 
 import { useTheme } from '@/lib/theme';
 
+export interface FlipCardRef {
+  resetInstant: () => void;
+}
+
 interface Props {
   front: React.ReactNode;
   back: React.ReactNode;
   isFlipped: boolean;
   onFlip: () => void;
+  cardStyle?: ViewStyle;
+  innerStyle?: ViewStyle;
 }
 
-export function FlipCard({ front, back, isFlipped, onFlip }: Props) {
-  const progress = useSharedValue(0);
-  const theme = useTheme();
+export const FlipCard = forwardRef<FlipCardRef, Props>(
+  ({ front, back, isFlipped, onFlip, cardStyle, innerStyle }, ref) => {
+    const progress = useSharedValue(0);
+    const theme = useTheme();
 
-  useEffect(() => {
-    progress.value = withTiming(isFlipped ? 1 : 0, { duration: 320 });
-  }, [isFlipped]);
+    useImperativeHandle(ref, () => ({
+      resetInstant: () => { progress.value = 0; },
+    }));
 
-  const frontStyle = useAnimatedStyle(() => {
-    const rotateY = interpolate(progress.value, [0, 1], [0, 180], Extrapolation.CLAMP);
-    return {
-      transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
-      backfaceVisibility: 'hidden',
-    };
-  });
+    useEffect(() => {
+      progress.value = withTiming(isFlipped ? 1 : 0, { duration: 320 });
+    }, [isFlipped]);
 
-  const backStyle = useAnimatedStyle(() => {
-    const rotateY = interpolate(progress.value, [0, 1], [180, 360], Extrapolation.CLAMP);
-    return {
-      transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
-      backfaceVisibility: 'hidden',
-    };
-  });
+    const frontStyle = useAnimatedStyle(() => {
+      const rotateY = interpolate(progress.value, [0, 1], [0, 180], Extrapolation.CLAMP);
+      return {
+        transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
+        backfaceVisibility: 'hidden',
+      };
+    });
 
-  return (
-    <Pressable style={styles.wrapper} onPress={onFlip}>
-      <View style={styles.cardContainer}>
-        {/* 表面 — 裏向きのときはタッチを透過させる */}
-        <Animated.View
-          style={[styles.card, { backgroundColor: theme.colors.surface }, frontStyle]}
-          pointerEvents={isFlipped ? 'none' : 'box-none'}
-        >
-          <View style={styles.cardInner}>{front}</View>
-        </Animated.View>
-        {/* 裏面 — 表向きのときはタッチを透過させる */}
-        <Animated.View
-          style={[styles.card, { backgroundColor: theme.colors.surface }, backStyle]}
-          pointerEvents={isFlipped ? 'box-none' : 'none'}
-        >
-          <View style={styles.cardInner}>{back}</View>
-        </Animated.View>
-      </View>
-    </Pressable>
-  );
-}
+    const backStyle = useAnimatedStyle(() => {
+      const rotateY = interpolate(progress.value, [0, 1], [180, 360], Extrapolation.CLAMP);
+      return {
+        transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
+        backfaceVisibility: 'hidden',
+      };
+    });
+
+    return (
+      <Pressable style={styles.wrapper} onPress={onFlip}>
+        <View style={styles.cardContainer}>
+          {/* 表面 — 裏向きのときはタッチを透過させる */}
+          <Animated.View
+            style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, frontStyle]}
+            pointerEvents={isFlipped ? 'none' : 'box-none'}
+          >
+            <View style={[styles.cardInner, innerStyle]}>{front}</View>
+          </Animated.View>
+          {/* 裏面 — 表向きのときはタッチを透過させる */}
+          <Animated.View
+            style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, backStyle]}
+            pointerEvents={isFlipped ? 'box-none' : 'none'}
+          >
+            <View style={[styles.cardInner, innerStyle]}>{back}</View>
+          </Animated.View>
+        </View>
+      </Pressable>
+    );
+  }
+);
+
+FlipCard.displayName = 'FlipCard';
 
 const styles = StyleSheet.create({
   wrapper: { flex: 1 },

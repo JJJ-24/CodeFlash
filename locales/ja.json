@@ -21,7 +21,8 @@
     "create": "作成",
     "save": "保存",
     "study": "学習開始",
-    "noCards": "カードがまだありません"
+    "noCards": "カードがまだありません",
+    "statTotal": "総数"
   },
   "study": {
     "title": "学習",

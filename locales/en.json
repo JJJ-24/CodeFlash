@@ -21,7 +21,8 @@
     "create": "Create",
     "save": "Save",
     "study": "Start Study",
-    "noCards": "No cards yet"
+    "noCards": "No cards yet",
+    "statTotal": "Total"
   },
   "study": {
     "title": "Study",

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/lib/theme';
 import { deleteCard, getCardsByDeckId, updateCardSortOrders } from '@/lib/database/cards';
+import { getTodayReviewedCountByDeck, getUnlearnedCountByDeck } from '@/lib/database/reviews';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import type { Block, Card } from '@/types';
@@ -33,12 +34,20 @@ export default function DeckDetailScreen() {
   const theme = useTheme();
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
+  const [todayReviewed, setTodayReviewed] = useState(0);
+  const [unlearnedCount, setUnlearnedCount] = useState(0);
 
   const deck = decks.find((d) => d.id === id) ?? null;
 
   const loadCards = useCallback(async () => {
-    const loaded = await getCardsByDeckId(db, id);
+    const [loaded, reviewed, unlearned] = await Promise.all([
+      getCardsByDeckId(db, id),
+      getTodayReviewedCountByDeck(db, id),
+      getUnlearnedCountByDeck(db, id),
+    ]);
     setCards(loaded);
+    setTodayReviewed(reviewed);
+    setUnlearnedCount(unlearned);
   }, [db, id, setCards]);
 
   useEffect(() => {
@@ -92,7 +101,19 @@ export default function DeckDetailScreen() {
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.statValue, { color: theme.colors.primary }]}>{deck.cardCount}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('home.cards', { count: deck.cardCount })}
+            {t('deck.statTotal')}
+          </Text>
+        </View>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.statValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
+            {t('stats.learned')}
+          </Text>
+        </View>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.statValue, { color: theme.colors.textSecondary }]}>{unlearnedCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
+            {t('stats.unlearned')}
           </Text>
         </View>
       </View>
@@ -192,10 +213,10 @@ const styles = StyleSheet.create({
   description: { fontSize: 15, lineHeight: 22 },
   statsRow: { flexDirection: 'row', gap: 12 },
   statItem: {
+    flex: 1,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    minWidth: 90,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,

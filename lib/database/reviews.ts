@@ -40,6 +40,37 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** デッキ別: 今日学習したカード数（lastReviewDate が今日） */
+export async function getTodayReviewedCountByDeck(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<number> {
+  const today = todayISO();
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count
+     FROM reviews r
+     JOIN cards c ON r.cardId = c.id
+     WHERE c.deckId = ? AND substr(r.lastReviewDate, 1, 10) = ?`,
+    [deckId, today]
+  );
+  return row?.count ?? 0;
+}
+
+/** デッキ別: 一度も学習していないカード数 */
+export async function getUnlearnedCountByDeck(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<number> {
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count
+     FROM cards c
+     LEFT JOIN reviews r ON c.id = r.cardId
+     WHERE c.deckId = ? AND r.cardId IS NULL`,
+    [deckId]
+  );
+  return row?.count ?? 0;
+}
+
 /** レビュー記録を保存（なければ INSERT、あれば UPDATE） */
 export async function saveReview(db: SQLiteDatabase, review: Review): Promise<void> {
   await db.runAsync(

@@ -117,10 +117,11 @@ export default function DeckDetailScreen() {
             disabled={count === 0}
           >
             <Text style={[styles.statValue, { color }]}>{count}</Text>
+            <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{label}</Text>
+            <View style={{ height: 4 }} />
             <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="play" size={11} color="#fff" />
             </View>
-            <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{label}</Text>
           </Pressable>
         ))}
       </View>

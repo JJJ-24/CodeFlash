@@ -22,6 +22,7 @@ function RootStack() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="deck/[id]" />
       <Stack.Screen name="deck/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'modal' }} />
       <Stack.Screen name="deck/[id]/card/new" options={{ presentation: 'modal' }} />

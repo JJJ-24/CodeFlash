@@ -233,20 +233,12 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
           <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
         </View>
 
-        {/* 保存ボタン */}
+        {/* 表面が空の場合のバリデーションエラー */}
         {isFrontEmpty && (
           <Text style={[styles.validationError, { color: theme.colors.error ?? '#EF4444' }]}>
             {t('card.frontRequired')}
           </Text>
         )}
-        <TouchableOpacity
-          style={[styles.saveBtn, (saving || isFrontEmpty) && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={saving || isFrontEmpty}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.saveBtnText}>{saving ? '保存中...' : t('card.save')}</Text>
-        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -318,14 +310,5 @@ const styles = StyleSheet.create({
   addMenuCancelText: { fontSize: 14 },
   tagSection: { gap: 8 },
   tagLabel: { fontSize: 14, fontWeight: '600' },
-  saveBtn: {
-    backgroundColor: '#1976D2',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-  validationError: { fontSize: 13, textAlign: 'center', marginBottom: -4 },
+  validationError: { fontSize: 13, textAlign: 'center' },
 });

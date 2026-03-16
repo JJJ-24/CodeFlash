@@ -50,7 +50,8 @@
     "save": "保存",
     "empty": "タグがまだありません",
     "emptySub": "+ ボタンからタグを作成しましょう",
-    "cards": "{{count}} 枚"
+    "cards": "{{count}} 枚",
+    "limitReached": "上限（{{count}}件）に達しました"
   },
   "grade": {
     "again": "もう一度",

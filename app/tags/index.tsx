@@ -43,6 +43,9 @@ export default function TagsScreen() {
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
 
+  const TAG_LIMIT = 12;
+  const isAtLimit = tags.length >= TAG_LIMIT;
+
   useEffect(() => {
     getAllTags(db).then(setTags);
   }, []);
@@ -129,6 +132,11 @@ export default function TagsScreen() {
           ItemSeparatorComponent={() => (
             <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
           )}
+          ListFooterComponent={isAtLimit ? (
+            <Text style={[styles.limitMsg, { color: theme.colors.textTertiary }]}>
+              {t('tag.limitReached', { count: TAG_LIMIT })}
+            </Text>
+          ) : null}
           renderItem={({ item }) => (
             <View style={[styles.tagItem, { backgroundColor: theme.colors.surface }]}>
               <View style={[styles.colorDot, { backgroundColor: item.color }]} />
@@ -150,7 +158,10 @@ export default function TagsScreen() {
       )}
 
       {/* FAB */}
-      <Pressable style={styles.fab} onPress={openCreate}>
+      <Pressable
+        style={[styles.fab, isAtLimit && styles.fabDisabled]}
+        onPress={isAtLimit ? undefined : openCreate}
+      >
         <Ionicons name="add" size={28} color="#FFF" />
       </Pressable>
 
@@ -230,7 +241,7 @@ export default function TagsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  list: { padding: 16, gap: 0 },
+  list: { padding: 16, gap: 0, paddingBottom: 96 },
   separator: { height: 1 },
   tagItem: {
     flexDirection: 'row',
@@ -292,6 +303,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  fabDisabled: { opacity: 0.4 },
+  limitMsg: { textAlign: 'center', fontSize: 13, paddingVertical: 12 },
   colorCellSelected: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

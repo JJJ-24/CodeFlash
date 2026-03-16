@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -34,6 +35,7 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
 export default function StudySessionScreen() {
   const { deckId, tagId } = useLocalSearchParams<{ deckId?: string; tagId?: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { t } = useTranslation();
   const theme = useTheme();
   const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext } =
@@ -123,10 +125,13 @@ export default function StudySessionScreen() {
     if (completed) {
       setEditedCodeBlocks({});
       completeReadyRef.current = false;
+      navigation.setOptions({ headerLeft: () => null });
       setTimeout(() => {
         completeRef.current?.focus();
         setTimeout(() => { completeReadyRef.current = true; }, 200);
       }, 100);
+    } else {
+      navigation.setOptions({ headerLeft: undefined });
     }
   }, [completed]);
 
@@ -223,7 +228,7 @@ export default function StudySessionScreen() {
   if (completed) {
     return (
       <>
-        <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '' }} />
+        <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '', headerBackVisible: false, headerLeft: () => null }} />
         <TextInput
           ref={completeRef}
           style={styles.hiddenKeyboardInput}

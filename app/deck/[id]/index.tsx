@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -50,13 +51,15 @@ export default function DeckDetailScreen() {
     setUnlearnedCount(unlearned);
   }, [db, id, setCards]);
 
-  useEffect(() => {
-    if (!deck) {
-      router.back();
-      return;
-    }
-    loadCards();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (!deck) {
+        router.back();
+        return;
+      }
+      loadCards();
+    }, [loadCards])
+  );
 
   // deck が削除された後（編集モーダルから削除時）に自動で戻る
   const mountedRef = useRef(false);
@@ -80,6 +83,7 @@ export default function DeckDetailScreen() {
           if (deck) {
             updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
           }
+          loadCards();
         },
       },
     ]);

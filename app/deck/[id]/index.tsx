@@ -107,13 +107,13 @@ export default function DeckDetailScreen() {
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.statValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('stats.learned')}
+            {t('stats.learned')}{'\n'}（本日）
           </Text>
         </View>
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.statValue, { color: theme.colors.textSecondary }]}>{unlearnedCount}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('stats.unlearned')}
+            {t('stats.unlearned')}{'\n'}（本日）
           </Text>
         </View>
       </View>
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   statValue: { fontSize: 26, fontWeight: '700' },
-  statLabel: { fontSize: 12, marginTop: 2 },
+  statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
   studyBtn: {
     flexDirection: 'row',
     backgroundColor: '#1976D2',

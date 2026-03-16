@@ -170,7 +170,9 @@ export default function StudySessionScreen() {
       setShowMemo((v) => !v);
     } else if (key.toLowerCase() === 'f') {
       setIsFullscreen((v) => !v);
-    } else if (key.toLowerCase() === 'r') {
+      setEditTrigger(0);
+      setRunTrigger(0);
+    } else if (key === 'Tab') {
       setRunTrigger((v) => v + 1);
     } else if (key.toLowerCase() === 'e') {
       setEditTrigger((v) => v + 1);

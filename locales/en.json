@@ -125,7 +125,6 @@
     "shortcutMemo": "Toggle memo (back side only)",
     "shortcutFullscreen": "Toggle fullscreen",
     "shortcutEdit": "Toggle code block edit mode",
-    "shortcutRun": "Run code",
-    "shortcutRunWhileEditing": "Run code while editing"
+    "shortcutRun": "Run code (works in and out of edit mode)"
   }
 }

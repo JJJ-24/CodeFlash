@@ -16,8 +16,7 @@ const SHORTCUTS = [
   { key: 'M',         descKey: 'settings.shortcutMemo' },
   { key: 'F',         descKey: 'settings.shortcutFullscreen' },
   { key: 'E',         descKey: 'settings.shortcutEdit' },
-  { key: 'R',         descKey: 'settings.shortcutRun' },
-  { key: 'Shift+Tab', descKey: 'settings.shortcutRunWhileEditing' },
+  { key: 'Shift+Tab', descKey: 'settings.shortcutRun' },
 ];
 
 export default function SettingsScreen() {

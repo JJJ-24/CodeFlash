@@ -22,7 +22,7 @@
     "save": "保存",
     "study": "学習開始",
     "noCards": "カードがまだありません",
-    "statTotal": "総数",
+    "statTotal": "カード\n総数",
     "statDue": "要復習",
     "statHint": "ブロックをタップして学習を開始"
   },

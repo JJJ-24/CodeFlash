@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { useTheme } from '@/lib/theme';
+import { useThemeStore } from '@/store/theme';
 
 function RootStack() {
   const theme = useTheme();
@@ -32,6 +33,8 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  const hydrated = useThemeStore((s) => s.hydrated);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Suspense
@@ -42,7 +45,7 @@ export default function RootLayout() {
         }
       >
         <SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
-          <RootStack />
+          {hydrated ? <RootStack /> : <View style={{ flex: 1 }} />}
         </SQLiteProvider>
       </Suspense>
     </GestureHandlerRootView>

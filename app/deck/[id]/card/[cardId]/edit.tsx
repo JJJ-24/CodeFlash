@@ -1,13 +1,13 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
-import type { BlockEditorData } from '@/components/editor/BlockEditor';
+import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
 import { getCardById, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { useCardStore } from '@/store/cards';
@@ -21,6 +21,7 @@ export default function EditCardScreen() {
   const { updateCard: updateStore } = useCardStore();
   const theme = useTheme();
 
+  const editorRef = useRef<BlockEditorRef>(null);
   const [card, setCard] = useState<Card | null>(null);
   const [initialTagIds, setInitialTagIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -89,9 +90,17 @@ export default function EditCardScreen() {
               </Text>
             </Pressable>
           ),
+          headerRight: () => (
+            <Pressable onPress={() => editorRef.current?.save()} disabled={saving} style={{ paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: saving ? theme.colors.textTertiary : theme.colors.primary }}>
+                {t('card.save')}
+              </Text>
+            </Pressable>
+          ),
         }}
       />
       <BlockEditor
+        ref={editorRef}
         initialData={{
           frontBlocks: card.frontContent,
           backBlocks: card.backContent,

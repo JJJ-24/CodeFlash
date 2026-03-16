@@ -1,11 +1,11 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Text } from 'react-native';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
-import type { BlockEditorData } from '@/components/editor/BlockEditor';
+import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
 import { useTheme } from '@/lib/theme';
 import { createCard } from '@/lib/database/cards';
 import { useCardStore } from '@/store/cards';
@@ -19,6 +19,7 @@ export default function NewCardScreen() {
   const theme = useTheme();
   const { addCard } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
+  const editorRef = useRef<BlockEditorRef>(null);
   const [saving, setSaving] = useState(false);
 
   async function handleSave(data: BlockEditorData) {
@@ -56,9 +57,16 @@ export default function NewCardScreen() {
               </Text>
             </Pressable>
           ),
+          headerRight: () => (
+            <Pressable onPress={() => editorRef.current?.save()} disabled={saving} style={{ paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: saving ? theme.colors.textTertiary : theme.colors.primary }}>
+                {t('card.save')}
+              </Text>
+            </Pressable>
+          ),
         }}
       />
-      <BlockEditor onSave={handleSave} saving={saving} />
+      <BlockEditor ref={editorRef} onSave={handleSave} saving={saving} />
     </>
   );
 }

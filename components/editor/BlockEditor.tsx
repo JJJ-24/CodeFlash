@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type Ref, useImperativeHandle, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -50,13 +50,18 @@ export interface BlockEditorData {
   tagIds: string[];
 }
 
+export interface BlockEditorRef {
+  save: () => void;
+}
+
 interface Props {
   initialData?: Partial<BlockEditorData>;
   onSave: (data: BlockEditorData) => Promise<void>;
   saving: boolean;
+  ref?: Ref<BlockEditorRef>;
 }
 
-export function BlockEditor({ initialData, onSave, saving }: Props) {
+export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -116,6 +121,8 @@ export function BlockEditor({ initialData, onSave, saving }: Props) {
       tagIds,
     });
   }
+
+  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'front', label: t('card.front') },

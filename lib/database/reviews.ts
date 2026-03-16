@@ -66,7 +66,8 @@ export async function getDueCardIdsByDeckId(
     `SELECT c.id FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
      WHERE c.deckId = ?
-       AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)`,
+       AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)
+     ORDER BY c.sortOrder ASC`,
     [deckId, today]
   );
   return rows.map((r) => r.id);
@@ -85,7 +86,8 @@ export async function getDueCardIdsByTagId(
      JOIN card_tags ct ON c.id = ct.cardId
      LEFT JOIN reviews r ON c.id = r.cardId
      WHERE ct.tagId = ?
-       AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)`,
+       AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)
+     ORDER BY c.sortOrder ASC`,
     [tagId, today]
   );
   return rows.map((r) => r.id);

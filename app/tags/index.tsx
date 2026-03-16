@@ -129,9 +129,6 @@ export default function TagsScreen() {
           data={tags}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-          )}
           ListFooterComponent={isAtLimit ? (
             <Text style={[styles.limitMsg, { color: theme.colors.textTertiary }]}>
               {t('tag.limitReached', { count: TAG_LIMIT })}
@@ -241,14 +238,19 @@ export default function TagsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  list: { padding: 16, gap: 0, paddingBottom: 96 },
-  separator: { height: 1 },
+  list: { padding: 16, gap: 12, paddingBottom: 96 },
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
   tagInfo: { flex: 1, gap: 2 },

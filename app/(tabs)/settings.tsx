@@ -9,12 +9,15 @@ import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference } from '@/store/theme';
 
 const SHORTCUTS = [
-  { key: 'Space', descKey: 'settings.shortcutFlip' },
-  { key: '1–4',  descKey: 'settings.shortcutGrade' },
-  { key: 'J',    descKey: 'settings.shortcutPrev' },
-  { key: 'K',    descKey: 'settings.shortcutNext' },
-  { key: 'M',    descKey: 'settings.shortcutMemo' },
-  { key: 'F',    descKey: 'settings.shortcutFullscreen' },
+  { key: 'Space',     descKey: 'settings.shortcutFlip' },
+  { key: '1–4',       descKey: 'settings.shortcutGrade' },
+  { key: 'J',         descKey: 'settings.shortcutPrev' },
+  { key: 'K',         descKey: 'settings.shortcutNext' },
+  { key: 'M',         descKey: 'settings.shortcutMemo' },
+  { key: 'F',         descKey: 'settings.shortcutFullscreen' },
+  { key: 'E',         descKey: 'settings.shortcutEdit' },
+  { key: 'R',         descKey: 'settings.shortcutRun' },
+  { key: 'Shift+Tab', descKey: 'settings.shortcutRunWhileEditing' },
 ];
 
 export default function SettingsScreen() {
@@ -64,6 +67,16 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* タグ管理 */}
+      <Pressable
+        style={[styles.row, { backgroundColor: theme.colors.surface }]}
+        onPress={() => router.push('/tags')}
+      >
+        <Ionicons name="pricetags-outline" size={22} color={theme.colors.primary} />
+        <Text style={[styles.rowText, { color: theme.colors.text }]}>{t('tag.title')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
+      </Pressable>
+
       {/* キーボードショートカット ON/OFF */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
@@ -99,16 +112,6 @@ export default function SettingsScreen() {
           ))}
         </View>
       )}
-
-      {/* タグ管理 */}
-      <Pressable
-        style={[styles.row, { backgroundColor: theme.colors.surface }]}
-        onPress={() => router.push('/tags')}
-      >
-        <Ionicons name="pricetags-outline" size={22} color={theme.colors.primary} />
-        <Text style={[styles.rowText, { color: theme.colors.text }]}>{t('tag.title')}</Text>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
-      </Pressable>
     </View>
   );
 }

@@ -122,6 +122,9 @@
     "shortcutNext": "次のカードへスキップ（評価なし）",
     "shortcutPrev": "前のカードに戻る",
     "shortcutMemo": "メモの表示/非表示（裏面のみ）",
-    "shortcutFullscreen": "全画面モードの切替"
+    "shortcutFullscreen": "全画面モードの切替",
+    "shortcutEdit": "コードブロックの編集モード切替",
+    "shortcutRun": "コードを実行",
+    "shortcutRunWhileEditing": "編集中にコードを実行"
   }
 }

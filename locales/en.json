@@ -122,6 +122,9 @@
     "shortcutNext": "Skip to next card (no grade)",
     "shortcutPrev": "Go to previous card",
     "shortcutMemo": "Toggle memo (back side only)",
-    "shortcutFullscreen": "Toggle fullscreen"
+    "shortcutFullscreen": "Toggle fullscreen",
+    "shortcutEdit": "Toggle code block edit mode",
+    "shortcutRun": "Run code",
+    "shortcutRunWhileEditing": "Run code while editing"
   }
 }

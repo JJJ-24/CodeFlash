@@ -33,7 +33,7 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
 ];
 
 export default function StudySessionScreen() {
-  const { deckId, tagId } = useLocalSearchParams<{ deckId?: string; tagId?: string }>();
+  const { deckId, tagId, filter } = useLocalSearchParams<{ deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned' }>();
   const router = useRouter();
   const navigation = useNavigation();
   const { t } = useTranslation();
@@ -118,8 +118,8 @@ export default function StudySessionScreen() {
   const completeReadyRef = useRef(false);
 
   useEffect(() => {
-    loadSession({ deckId, tagId });
-  }, [deckId, tagId]);
+    loadSession({ deckId, tagId, filter });
+  }, [deckId, tagId, filter]);
 
   useEffect(() => {
     if (completed) {

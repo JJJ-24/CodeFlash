@@ -9,7 +9,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -105,40 +104,27 @@ export default function DeckDetailScreen() {
       ) : null}
 
       <View style={styles.statsRow}>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statValue, { color: theme.colors.primary }]}>{deck.cardCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('deck.statTotal')}
-          </Text>
-        </View>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('stats.learned')}{'\n'}（今日）
-          </Text>
-        </View>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statValue, { color: '#F57C00' }]}>{dueCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('deck.statDue')}{'\n'}（今日）
-          </Text>
-        </View>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.statValue, { color: theme.colors.textSecondary }]}>{unlearnedCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('stats.unlearned')}{'\n'}（新規）
-          </Text>
-        </View>
+        {[
+          { count: deck.cardCount, filter: 'all', color: theme.colors.primary, label: t('deck.statTotal') },
+          { count: todayReviewed, filter: 'today', color: '#4CAF50', label: `${t('stats.learned')}\n（今日）` },
+          { count: dueCount, filter: 'due', color: '#F57C00', label: `${t('deck.statDue')}\n（今日）` },
+          { count: unlearnedCount, filter: 'unlearned', color: theme.colors.textSecondary, label: `${t('stats.unlearned')}\n（新規）` },
+        ].map(({ count, filter, color, label }) => (
+          <Pressable
+            key={filter}
+            style={[styles.statItem, { backgroundColor: theme.colors.surface }, count === 0 && styles.statItemDisabled]}
+            onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter } })}
+            disabled={count === 0}
+          >
+            <Text style={[styles.statValue, { color }]}>{count}</Text>
+            <Ionicons name="play-circle-outline" size={14} color={theme.colors.textTertiary} />
+            <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{label}</Text>
+          </Pressable>
+        ))}
       </View>
-
-      <TouchableOpacity
-        style={styles.studyBtn}
-        activeOpacity={0.8}
-        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id } })}
-      >
-        <Ionicons name="play-outline" size={20} color="#FFF" />
-        <Text style={styles.studyBtnText}>{t('deck.study')}</Text>
-      </TouchableOpacity>
+      <Text style={[styles.statHint, { color: theme.colors.textTertiary }]}>
+        {t('deck.statHint')}
+      </Text>
 
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
         {t('deck.detail')}
@@ -238,16 +224,8 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 26, fontWeight: '700' },
   statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
-  studyBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#1976D2',
-    borderRadius: 12,
-    paddingVertical: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  studyBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  statItemDisabled: { opacity: 0.4 },
+  statHint: { fontSize: 11, textAlign: 'center', marginTop: -4 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   emptyCardsText: { fontSize: 14 },

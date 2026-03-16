@@ -117,6 +117,49 @@ export async function getReviewByCardId(
   return db.getFirstAsync<Review>('SELECT * FROM reviews WHERE cardId = ?', [cardId]);
 }
 
+/** デッキ別: 全カードのID */
+export async function getAllCardIdsByDeckId(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<string[]> {
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT c.id FROM cards c WHERE c.deckId = ? ORDER BY c.sortOrder ASC`,
+    [deckId]
+  );
+  return rows.map((r) => r.id);
+}
+
+/** デッキ別: 今日学習済みカードのID */
+export async function getTodayReviewedCardIdsByDeckId(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<string[]> {
+  const today = todayISO();
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT c.id FROM cards c
+     JOIN reviews r ON c.id = r.cardId
+     WHERE c.deckId = ? AND substr(r.lastReviewDate, 1, 10) = ?
+     ORDER BY c.sortOrder ASC`,
+    [deckId, today]
+  );
+  return rows.map((r) => r.id);
+}
+
+/** デッキ別: 一度も学習していないカードのID */
+export async function getUnlearnedCardIdsByDeckId(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<string[]> {
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT c.id FROM cards c
+     LEFT JOIN reviews r ON c.id = r.cardId
+     WHERE c.deckId = ? AND r.cardId IS NULL
+     ORDER BY c.sortOrder ASC`,
+    [deckId]
+  );
+  return rows.map((r) => r.id);
+}
+
 /**
  * デッキ単位で今日の復習対象カードIDを取得
  * 対象: nextReviewDate <= today OR レビュー未登録の新規カード

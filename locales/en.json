@@ -23,7 +23,8 @@
     "study": "Start Study",
     "noCards": "No cards yet",
     "statTotal": "Total",
-    "statDue": "Due"
+    "statDue": "Due",
+    "statHint": "Tap a block to start studying"
   },
   "study": {
     "title": "Study",

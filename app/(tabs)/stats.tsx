@@ -172,24 +172,19 @@ export default function StatsScreen() {
       {/* サマリーカード row */}
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.summaryValue, { color: theme.colors.text }]}>{todayReviewed}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>{t('stats.todayLearned')}</Text>
-          <Text style={[styles.summaryUnit, { color: theme.colors.textTertiary }]}>{t('stats.cards')}</Text>
+          <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.learned')}{'\n'}（今日）</Text>
         </View>
         <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.summaryValue, { color: theme.colors.text }]}>{todayDue}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>{t('stats.dueToday')}</Text>
-          <Text style={[styles.summaryUnit, { color: theme.colors.textTertiary }]}>{t('stats.cards')}</Text>
+          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary }]}>{todayDue}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.unlearned')}{'\n'}（今日）</Text>
         </View>
         <View style={[styles.summaryCard, streak > 0 && styles.summaryCardHighlight, !streak && { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.summaryValue, { color: theme.colors.text }, streak > 0 && styles.summaryValueHighlight]}>
             {streak}
           </Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }, streak > 0 && styles.summaryLabelHighlight]}>
-            {t('stats.streak')}
-          </Text>
-          <Text style={[styles.summaryUnit, { color: theme.colors.textTertiary }, streak > 0 && styles.summaryLabelHighlight]}>
-            {t('stats.days')}
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }, streak > 0 && styles.summaryLabelHighlight]}>
+            {t('stats.streak')}{'\n'}日数
           </Text>
         </View>
       </View>

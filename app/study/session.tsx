@@ -394,9 +394,14 @@ export default function StudySessionScreen() {
           <View style={[styles.progressFill, { flex: progressRatio, backgroundColor: theme.colors.primary }]} />
           <View style={{ flex: 1 - progressRatio }} />
         </View>
-        <Text style={[styles.progressText, { color: theme.colors.textTertiary }]}>
-          {t('study.progress', { current: currentIndex + 1, total: result.totalCards })}
-        </Text>
+        <View style={styles.progressRow}>
+          <View style={[styles.reviewedBadge, { backgroundColor: theme.colors.primary }]}>
+            <Text style={styles.reviewedBadgeText}>{result.reviewed}</Text>
+          </View>
+          <Text style={[styles.progressText, { color: theme.colors.textTertiary }]}>
+            {t('study.progress', { current: currentIndex + 1, total: result.totalCards })}
+          </Text>
+        </View>
 
         {/* カード */}
         <GestureDetector gesture={panGesture}>
@@ -500,11 +505,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   progressFill: {},
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingTop: 6,
+  },
+  reviewedBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewedBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFF',
+  },
   progressText: {
     fontSize: 12,
     textAlign: 'right',
-    paddingHorizontal: 20,
-    paddingTop: 6,
   },
   cardArea: { flex: 1, paddingHorizontal: 20, paddingVertical: 12 },
   faceContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 8 },

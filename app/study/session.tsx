@@ -264,7 +264,7 @@ export default function StudySessionScreen() {
 
   if (!currentCard) return null;
 
-  const progressRatio = result.totalCards > 0 ? result.reviewed / result.totalCards : 0;
+  const progressRatio = result.totalCards > 0 ? (currentIndex + 1) / result.totalCards : 0;
   const hasMemo = currentCard.memoContent.some((b) => b.content.trim() !== '');
 
   if (isFullscreen) {
@@ -395,7 +395,7 @@ export default function StudySessionScreen() {
           <View style={{ flex: 1 - progressRatio }} />
         </View>
         <Text style={[styles.progressText, { color: theme.colors.textTertiary }]}>
-          {t('study.progress', { current: result.reviewed, total: result.totalCards })}
+          {t('study.progress', { current: currentIndex + 1, total: result.totalCards })}
         </Text>
 
         {/* カード */}

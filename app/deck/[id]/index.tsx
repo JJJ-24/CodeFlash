@@ -107,13 +107,13 @@ export default function DeckDetailScreen() {
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.statValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('stats.learned')}{'\n'}（本日）
+            {t('stats.learned')}{'\n'}（今日）
           </Text>
         </View>
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.statValue, { color: theme.colors.textSecondary }]}>{unlearnedCount}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('stats.unlearned')}{'\n'}（本日）
+            {t('stats.unlearned')}{'\n'}（今日）
           </Text>
         </View>
       </View>

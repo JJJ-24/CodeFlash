@@ -35,7 +35,9 @@
     "complete": "Session Complete!",
     "reviewedCount": "Reviewed {{count}} cards",
     "again": "Again",
-    "progress": "{{current}} / {{total}}"
+    "progress": "{{current}} / {{total}}",
+    "selectTag": "Tags",
+    "noTags": "No tags"
   },
   "tag": {
     "title": "Tags",

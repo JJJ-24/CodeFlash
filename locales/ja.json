@@ -35,7 +35,9 @@
     "complete": "学習完了！",
     "reviewedCount": "{{count}} 枚学習しました",
     "again": "もう一度",
-    "progress": "{{current}} / {{total}}"
+    "progress": "{{current}} / {{total}}",
+    "selectTag": "タグ",
+    "noTags": "タグがありません"
   },
   "tag": {
     "title": "タグ管理",

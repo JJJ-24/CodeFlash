@@ -163,6 +163,7 @@ export default function StudyScreen() {
                     router.push({ pathname: '/study/session', params: { tagId: item.id } });
                   }}
                 >
+                  <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
                   <View style={styles.deckInfo}>
                     <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
                     <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, due > 0 && styles.dueLabelActive]}>
@@ -219,4 +220,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dueChipText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  tagColorDot: { width: 16, height: 16, borderRadius: 8 },
 });

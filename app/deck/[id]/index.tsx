@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -48,6 +48,16 @@ export default function DeckDetailScreen() {
     }
     loadCards();
   }, []);
+
+  // deck が削除された後（編集モーダルから削除時）に自動で戻る
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (!deck) router.back();
+  }, [deck]);
 
   function confirmDeleteCard(card: Card) {
     Alert.alert(t('card.delete'), t('card.deleteConfirm'), [

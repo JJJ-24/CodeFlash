@@ -2,23 +2,27 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
-import { getCardById, updateCard } from '@/lib/database/cards';
+import { deleteCard, getCardById, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { useCardStore } from '@/store/cards';
+import { useDeckStore } from '@/store/decks';
 import type { Card } from '@/types';
 
 export default function EditCardScreen() {
-  const { cardId } = useLocalSearchParams<{ cardId: string }>();
+  const { id, cardId } = useLocalSearchParams<{ id: string; cardId: string }>();
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
-  const { updateCard: updateStore } = useCardStore();
+  const { bottom: bottomInset } = useSafeAreaInsets();
+  const { updateCard: updateStore, removeCard } = useCardStore();
+  const { decks, updateDeck } = useDeckStore();
   const theme = useTheme();
 
   const editorRef = useRef<BlockEditorRef>(null);
@@ -67,6 +71,23 @@ export default function EditCardScreen() {
     }
   }
 
+  function confirmDelete() {
+    Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          await deleteCard(db, cardId, id);
+          removeCard(cardId);
+          const deck = decks.find((d) => d.id === id);
+          if (deck) updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
+          router.back();
+        },
+      },
+    ]);
+  }
+
   if (!card) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
@@ -99,17 +120,46 @@ export default function EditCardScreen() {
           ),
         }}
       />
-      <BlockEditor
-        ref={editorRef}
-        initialData={{
-          frontBlocks: card.frontContent,
-          backBlocks: card.backContent,
-          memoBlocks: card.memoContent,
-          tagIds: initialTagIds,
-        }}
-        onSave={handleSave}
-        saving={saving}
-      />
+      <View style={styles.container}>
+        <BlockEditor
+          ref={editorRef}
+          initialData={{
+            frontBlocks: card.frontContent,
+            backBlocks: card.backContent,
+            memoBlocks: card.memoContent,
+            tagIds: initialTagIds,
+          }}
+          onSave={handleSave}
+          saving={saving}
+        />
+        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
+            <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, saving && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving}>
+            <Text style={styles.actionBtnTextLight}>{t('card.save')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  bottomBar: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionBtnDisabled: { opacity: 0.5 },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+});

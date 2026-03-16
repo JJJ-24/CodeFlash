@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,8 +15,10 @@ import {
   View,
 } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useTheme } from '@/lib/theme';
-import { updateDeck } from '@/lib/database/decks';
+import { deleteDeck, updateDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
 
 export default function EditDeckScreen() {
@@ -24,7 +27,8 @@ export default function EditDeckScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { decks, updateDeck: updateStore } = useDeckStore();
+  const { bottom: bottomInset } = useSafeAreaInsets();
+  const { decks, updateDeck: updateStore, removeDeck } = useDeckStore();
 
   const deck = decks.find((d) => d.id === id);
 
@@ -44,6 +48,21 @@ export default function EditDeckScreen() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function confirmDelete() {
+    Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          await deleteDeck(db, id);
+          removeDeck(id);
+          router.back();
+        },
+      },
+    ]);
   }
 
   if (!deck) return null;
@@ -138,6 +157,14 @@ export default function EditDeckScreen() {
             </View>
           </View>
         </ScrollView>
+        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
+            <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]} onPress={handleSave} disabled={!canSave}>
+            <Text style={styles.actionBtnTextLight}>{t('deck.save')}</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </>
   );
@@ -167,4 +194,19 @@ const styles = StyleSheet.create({
   langBtnText: { fontSize: 15 },
   headerBtn: { fontSize: 16, fontWeight: '600' },
   disabled: { opacity: 0.35 },
+  bottomBar: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionBtnDisabled: { opacity: 0.5 },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

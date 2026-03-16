@@ -174,8 +174,9 @@ export default function TagsScreen() {
 
       {/* タグ作成/編集モーダル */}
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
         <KeyboardAvoidingView
-          style={[styles.flex, { backgroundColor: theme.colors.background }]}
+          style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={[styles.modalHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
@@ -240,7 +241,33 @@ export default function TagsScreen() {
               </Text>
             </View>
           </View>
+
         </KeyboardAvoidingView>
+        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+          {editTarget ? (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]}
+              onPress={() => {
+                closeModal();
+                confirmDelete(editTarget);
+              }}
+            >
+              <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.actionBtn} />
+          )}
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]}
+            onPress={handleSave}
+            disabled={!canSave}
+          >
+            <Text style={styles.actionBtnTextLight}>
+              {editTarget ? t('tag.save') : t('tag.create')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        </View>
       </Modal>
     </GestureHandlerRootView>
   );
@@ -333,4 +360,20 @@ const styles = StyleSheet.create({
   },
   previewDot: { width: 14, height: 14, borderRadius: 7 },
   previewName: { fontSize: 15 },
+  bottomBar: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionBtnDisabled: { opacity: 0.5 },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

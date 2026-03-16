@@ -2,7 +2,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
@@ -20,6 +21,7 @@ export default function NewCardScreen() {
   const { addCard } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
   const editorRef = useRef<BlockEditorRef>(null);
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const [saving, setSaving] = useState(false);
 
   async function handleSave(data: BlockEditorData) {
@@ -66,7 +68,36 @@ export default function NewCardScreen() {
           ),
         }}
       />
-      <BlockEditor ref={editorRef} onSave={handleSave} saving={saving} />
+      <View style={styles.container}>
+        <BlockEditor ref={editorRef} onSave={handleSave} saving={saving} />
+        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={() => router.back()}>
+            <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, saving && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving}>
+            <Text style={styles.actionBtnTextLight}>{t('card.save')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  bottomBar: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionBtnDisabled: { opacity: 0.5 },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+});

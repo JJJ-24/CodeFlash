@@ -55,6 +55,7 @@ export default function StudySessionScreen() {
 
   const translateX = useSharedValue(0);
   const slideX = useSharedValue(0);
+  const currentIndexSV = useSharedValue(currentIndex);
 
   // JS-thread callbacks for swipe gestures (called via runOnJS — must be named functions)
   function onSwipedLeft() {
@@ -94,10 +95,14 @@ export default function StudySessionScreen() {
           else runOnJS(cancelSwipe)();
         });
       } else if (swipeRight) {
-        translateX.value = withTiming(screenWidth, { duration: 150 }, (finished) => {
-          if (finished) runOnJS(onSwipedRight)();
-          else runOnJS(cancelSwipe)();
-        });
+        if (currentIndexSV.value === 0) {
+          translateX.value = withSpring(0);
+        } else {
+          translateX.value = withTiming(screenWidth, { duration: 150 }, (finished) => {
+            if (finished) runOnJS(onSwipedRight)();
+            else runOnJS(cancelSwipe)();
+          });
+        }
       } else {
         translateX.value = withSpring(0);
       }
@@ -125,11 +130,12 @@ export default function StudySessionScreen() {
     }
   }, [completed]);
 
-  // 新しいカードに移ったらフリップ・メモをリセット
+  // 新しいカードに移ったらフリップ・メモをリセット、SharedValue を同期
   useEffect(() => {
     translateX.value = 0;
     setIsFlipped(false);
     setShowMemo(false);
+    currentIndexSV.value = currentIndex;
   }, [currentIndex]);
 
   // 表面に戻ったらメモを隠す
@@ -139,6 +145,7 @@ export default function StudySessionScreen() {
 
   function navigateWithSlide(direction: 'next' | 'prev', action?: () => void) {
     if (isNavigatingRef.current) return;
+    if (direction === 'prev' && currentIndex === 0) return;
     isNavigatingRef.current = true;
 
     const slideOut = direction === 'next' ? -screenWidth : screenWidth;

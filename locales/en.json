@@ -22,7 +22,8 @@
     "save": "Save",
     "study": "Start Study",
     "noCards": "No cards yet",
-    "statTotal": "Total"
+    "statTotal": "Total",
+    "statDue": "Due"
   },
   "study": {
     "title": "Study",

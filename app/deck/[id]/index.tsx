@@ -17,7 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/lib/theme';
 import { deleteCard, getCardsByDeckId, updateCardSortOrders } from '@/lib/database/cards';
-import { getTodayReviewedCountByDeck, getUnlearnedCountByDeck } from '@/lib/database/reviews';
+import { getDueCountByDeck, getTodayReviewedCountByDeck, getUnlearnedCountByDeck } from '@/lib/database/reviews';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import type { Block, Card } from '@/types';
@@ -36,18 +36,21 @@ export default function DeckDetailScreen() {
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
+  const [dueCount, setDueCount] = useState(0);
   const [unlearnedCount, setUnlearnedCount] = useState(0);
 
   const deck = decks.find((d) => d.id === id) ?? null;
 
   const loadCards = useCallback(async () => {
-    const [loaded, reviewed, unlearned] = await Promise.all([
+    const [loaded, reviewed, due, unlearned] = await Promise.all([
       getCardsByDeckId(db, id),
       getTodayReviewedCountByDeck(db, id),
+      getDueCountByDeck(db, id),
       getUnlearnedCountByDeck(db, id),
     ]);
     setCards(loaded);
     setTodayReviewed(reviewed);
+    setDueCount(due);
     setUnlearnedCount(unlearned);
   }, [db, id, setCards]);
 
@@ -115,9 +118,15 @@ export default function DeckDetailScreen() {
           </Text>
         </View>
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.statValue, { color: '#F57C00' }]}>{dueCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
+            {t('deck.statDue')}{'\n'}（今日）
+          </Text>
+        </View>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.statValue, { color: theme.colors.textSecondary }]}>{unlearnedCount}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-            {t('stats.unlearned')}{'\n'}（今日）
+            {t('stats.unlearned')}{'\n'}（新規）
           </Text>
         </View>
       </View>

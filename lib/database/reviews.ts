@@ -40,6 +40,22 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** デッキ別: 今日の復習対象カード数（未学習 + 復習期限到来） */
+export async function getDueCountByDeck(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<number> {
+  const today = todayISO();
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count
+     FROM cards c
+     LEFT JOIN reviews r ON c.id = r.cardId
+     WHERE c.deckId = ? AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)`,
+    [deckId, today]
+  );
+  return row?.count ?? 0;
+}
+
 /** デッキ別: 今日学習したカード数（lastReviewDate が今日） */
 export async function getTodayReviewedCountByDeck(
   db: SQLiteDatabase,

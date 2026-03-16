@@ -22,7 +22,8 @@
     "save": "保存",
     "study": "学習開始",
     "noCards": "カードがまだありません",
-    "statTotal": "総数"
+    "statTotal": "総数",
+    "statDue": "要復習"
   },
   "study": {
     "title": "学習",

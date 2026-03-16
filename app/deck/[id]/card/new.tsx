@@ -49,9 +49,6 @@ export default function NewCardScreen() {
       <Stack.Screen
         options={{
           title: t('card.new'),
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
-          headerShadowVisible: false,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
               <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.textSecondary }}>

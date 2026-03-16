@@ -109,8 +109,6 @@ export default function TagsScreen() {
       <Stack.Screen
         options={{
           title: t('tag.title'),
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
         }}
       />
 

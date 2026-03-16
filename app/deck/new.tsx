@@ -54,9 +54,6 @@ export default function NewDeckScreen() {
       <Stack.Screen
         options={{
           title: t('deck.new'),
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
-          headerShadowVisible: false,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
               <Text style={[styles.headerBtn, { color: theme.colors.textSecondary }]}>

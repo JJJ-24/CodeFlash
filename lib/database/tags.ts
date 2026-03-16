@@ -1,14 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Tag } from '@/types';
-
-function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { generateId } from './utils';
 
 /** 全グローバルタグ一覧（使用枚数付き） */
 export async function getAllTags(db: SQLiteDatabase): Promise<(Tag & { cardCount: number })[]> {

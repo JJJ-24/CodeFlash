@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/lib/theme';
 import { createDeck } from '@/lib/database/decks';
@@ -24,6 +25,7 @@ export default function NewDeckScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { addDeck } = useDeckStore();
+  const { bottom: bottomInset } = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -134,6 +136,15 @@ export default function NewDeckScreen() {
             </View>
           </View>
         </ScrollView>
+        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]}
+            onPress={handleCreate}
+            disabled={!canSave}
+          >
+            <Text style={styles.actionBtnTextLight}>{t('deck.create')}</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </>
   );
@@ -163,4 +174,18 @@ const styles = StyleSheet.create({
   langBtnText: { fontSize: 15 },
   headerBtn: { fontSize: 16, fontWeight: '600' },
   disabled: { opacity: 0.35 },
+  bottomBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionBtnDisabled: { opacity: 0.5 },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

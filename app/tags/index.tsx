@@ -242,7 +242,7 @@ export default function TagsScreen() {
 
         </KeyboardAvoidingView>
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
-          {editTarget ? (
+          {editTarget && (
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]}
               onPress={() => {
@@ -252,8 +252,6 @@ export default function TagsScreen() {
             >
               <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
             </TouchableOpacity>
-          ) : (
-            <View style={styles.actionBtn} />
           )}
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]}

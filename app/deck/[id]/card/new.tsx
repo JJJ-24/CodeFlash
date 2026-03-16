@@ -59,7 +59,7 @@ export default function NewCardScreen() {
           headerRight: () => (
             <Pressable onPress={() => editorRef.current?.save()} disabled={saving} style={{ paddingHorizontal: 4 }}>
               <Text style={{ fontSize: 16, fontWeight: '600', color: saving ? theme.colors.textTertiary : theme.colors.primary }}>
-                {t('card.save')}
+                {t('card.create')}
               </Text>
             </Pressable>
           ),
@@ -68,11 +68,8 @@ export default function NewCardScreen() {
       <View style={styles.container}>
         <BlockEditor ref={editorRef} onSave={handleSave} saving={saving} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={() => router.back()}>
-            <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, saving && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving}>
-            <Text style={styles.actionBtnTextLight}>{t('card.save')}</Text>
+            <Text style={styles.actionBtnTextLight}>{t('card.create')}</Text>
           </TouchableOpacity>
         </View>
       </View>

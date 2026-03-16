@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSQLiteContext } from 'expo-sqlite';
 
 import { useTheme } from '@/lib/theme';
+import { getAllTags } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 
 // 全角=2、半角=1 としてカウントし、上限14（全角7文字相当）で省略
@@ -21,8 +24,15 @@ interface Props {
 }
 
 export function TagSelector({ selectedTagIds, onChange }: Props) {
-  const { tags } = useTagStore();
+  const db = useSQLiteContext();
+  const { tags, setTags } = useTagStore();
   const theme = useTheme();
+
+  useEffect(() => {
+    if (tags.length === 0) {
+      getAllTags(db).then(setTags);
+    }
+  }, [db]);
 
   if (tags.length === 0) {
     return (

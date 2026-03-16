@@ -17,7 +17,7 @@ export async function getAllTags(db: SQLiteDatabase): Promise<(Tag & { cardCount
      FROM tags t
      LEFT JOIN card_tags ct ON t.id = ct.tagId
      GROUP BY t.id
-     ORDER BY t.name ASC`
+     ORDER BY t.sortOrder ASC`
   );
 }
 
@@ -31,11 +31,13 @@ export async function createTag(
 ): Promise<Tag> {
   const now = new Date().toISOString();
   const id = generateId();
+  const row = await db.getFirstAsync<{ maxOrder: number | null }>('SELECT MAX(sortOrder) as maxOrder FROM tags');
+  const sortOrder = (row?.maxOrder ?? 0) + 1;
   await db.runAsync(
-    'INSERT INTO tags (id, name, color, createdAt) VALUES (?, ?, ?, ?)',
-    [id, data.name, data.color, now]
+    'INSERT INTO tags (id, name, color, sortOrder, createdAt) VALUES (?, ?, ?, ?, ?)',
+    [id, data.name, data.color, sortOrder, now]
   );
-  return { id, createdAt: now, ...data };
+  return { id, sortOrder, createdAt: now, ...data };
 }
 
 export async function updateTag(
@@ -44,6 +46,14 @@ export async function updateTag(
   data: Pick<Tag, 'name' | 'color'>
 ): Promise<void> {
   await db.runAsync('UPDATE tags SET name = ?, color = ? WHERE id = ?', [data.name, data.color, id]);
+}
+
+export async function updateTagSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.runAsync('UPDATE tags SET sortOrder = ? WHERE id = ?', [i, orderedIds[i]]);
+    }
+  });
 }
 
 export async function deleteTag(db: SQLiteDatabase, id: string): Promise<void> {

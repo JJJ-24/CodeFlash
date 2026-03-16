@@ -8,6 +8,7 @@ interface CardState {
   addCard: (card: Card) => void;
   updateCard: (card: Card) => void;
   removeCard: (id: string) => void;
+  reorderCards: (reordered: Card[]) => void;
 }
 
 export const useCardStore = create<CardState>((set) => ({
@@ -19,4 +20,11 @@ export const useCardStore = create<CardState>((set) => ({
       cards: state.cards.map((c) => (c.id === updated.id ? updated : c)),
     })),
   removeCard: (id) => set((state) => ({ cards: state.cards.filter((c) => c.id !== id) })),
+  reorderCards: (reordered) =>
+    set((state) => ({
+      cards: [
+        ...state.cards.filter((c) => c.deckId !== reordered[0]?.deckId),
+        ...reordered,
+      ],
+    })),
 }));

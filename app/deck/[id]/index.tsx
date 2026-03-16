@@ -5,17 +5,17 @@ import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/lib/theme';
-import { deleteCard, getCardsByDeckId } from '@/lib/database/cards';
+import { deleteCard, getCardsByDeckId, updateCardSortOrders } from '@/lib/database/cards';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import type { Block, Card } from '@/types';
@@ -32,7 +32,7 @@ export default function DeckDetailScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, updateDeck } = useDeckStore();
-  const { cards, setCards, removeCard } = useCardStore();
+  const { cards, setCards, removeCard, reorderCards } = useCardStore();
 
   const deck = decks.find((d) => d.id === id) ?? null;
 
@@ -70,8 +70,49 @@ export default function DeckDetailScreen() {
 
   const deckCards = cards.filter((c) => c.deckId === id);
 
+  const ListHeader = (
+    <View style={styles.header}>
+      {deck.description ? (
+        <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
+          {deck.description}
+        </Text>
+      ) : null}
+
+      <View style={styles.statsRow}>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.statValue, { color: theme.colors.primary }]}>{deck.cardCount}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
+            {t('home.cards', { count: deck.cardCount })}
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.studyBtn}
+        activeOpacity={0.8}
+        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id } })}
+      >
+        <Ionicons name="play-outline" size={20} color="#FFF" />
+        <Text style={styles.studyBtnText}>{t('deck.study')}</Text>
+      </TouchableOpacity>
+
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+        {t('deck.detail')}
+      </Text>
+
+      {deckCards.length === 0 ? (
+        <View style={styles.emptyCards}>
+          <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
+          <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary }]}>
+            {t('deck.noCards')}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Stack.Screen
         options={{
           title: deck.name,
@@ -80,89 +121,51 @@ export default function DeckDetailScreen() {
         }}
       />
 
-      <ScrollView
-        style={{ flex: 1, backgroundColor: theme.colors.background }}
+      <DraggableFlatList
+        data={deckCards}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={ListHeader}
         contentContainerStyle={styles.container}
-      >
-        {deck.description ? (
-          <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
-            {deck.description}
-          </Text>
-        ) : null}
-
-        <View style={styles.statsRow}>
-          <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.statValue, { color: theme.colors.primary }]}>{deck.cardCount}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>
-              {t('home.cards', { count: deck.cardCount })}
-            </Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.studyBtn}
-          activeOpacity={0.8}
-          onPress={() => router.push({ pathname: '/study/session', params: { deckId: id } })}
-        >
-          <Ionicons name="play-outline" size={20} color="#FFF" />
-          <Text style={styles.studyBtnText}>{t('deck.study')}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            {t('deck.detail')}
-          </Text>
-
-          {deckCards.length === 0 ? (
-            <View style={styles.emptyCards}>
-              <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
-              <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary }]}>
-                {t('deck.noCards')}
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={deckCards}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              renderItem={({ item }) => {
-                const preview = getPreviewText(item.frontContent);
-                return (
-                  <Pressable
-                    style={[styles.cardItem, { backgroundColor: theme.colors.surface }]}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/deck/[id]/card/[cardId]/edit',
-                        params: { id, cardId: item.id },
-                      })
-                    }
-                    onLongPress={() => confirmDeleteCard(item)}
-                  >
-                    <Text style={[styles.cardPreview, { color: theme.colors.text }]} numberOfLines={2}>
-                      {preview || t('card.noContent')}
-                    </Text>
-                    <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: '/deck/[id]/card/[cardId]/edit',
-                          params: { id, cardId: item.id },
-                        })
-                      }
-                      hitSlop={8}
-                    >
-                      <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
-                    </Pressable>
-                    <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
-                      <Ionicons name="trash-outline" size={18} color={theme.colors.iconSubtle} />
-                    </Pressable>
-                  </Pressable>
-                );
-              }}
-            />
-          )}
-        </View>
-      </ScrollView>
+        onDragEnd={({ data }) => {
+          reorderCards(data);
+          updateCardSortOrders(db, data.map((c) => c.id));
+        }}
+        renderItem={({ item, drag }: RenderItemParams<Card>) => {
+          const preview = getPreviewText(item.frontContent);
+          return (
+            <ScaleDecorator>
+              <Pressable
+                style={[styles.cardItem, { backgroundColor: theme.colors.surface }]}
+                onPress={() =>
+                  router.push({
+                    pathname: '/deck/[id]/card/[cardId]/edit',
+                    params: { id, cardId: item.id },
+                  })
+                }
+                onLongPress={drag}
+              >
+                <Text style={[styles.cardPreview, { color: theme.colors.text }]} numberOfLines={2}>
+                  {preview || t('card.noContent')}
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: '/deck/[id]/card/[cardId]/edit',
+                      params: { id, cardId: item.id },
+                    })
+                  }
+                  hitSlop={8}
+                >
+                  <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                </Pressable>
+                <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={18} color={theme.colors.iconSubtle} />
+                </Pressable>
+              </Pressable>
+            </ScaleDecorator>
+          );
+        }}
+      />
 
       {/* FAB: 新規カード作成 */}
       <Pressable
@@ -171,12 +174,13 @@ export default function DeckDetailScreen() {
       >
         <Ionicons name="add" size={28} color="#FFF" />
       </Pressable>
-    </>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, gap: 16, paddingBottom: 96 },
+  container: { paddingBottom: 96 },
+  header: { padding: 20, gap: 16 },
   description: { fontSize: 15, lineHeight: 22 },
   statsRow: { flexDirection: 'row', gap: 12 },
   statItem: {
@@ -202,7 +206,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   studyBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-  section: { gap: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   emptyCardsText: { fontSize: 14 },
@@ -210,6 +213,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    marginHorizontal: 20,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -220,7 +225,6 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardPreview: { flex: 1, fontSize: 15, lineHeight: 22 },
-  separator: { height: 8 },
   fab: {
     position: 'absolute',
     right: 20,

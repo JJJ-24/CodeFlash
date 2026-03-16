@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -16,9 +15,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/lib/theme';
-import { createTag, deleteTag, getAllTags, updateTag } from '@/lib/database/tags';
+import { createTag, deleteTag, getAllTags, updateTag, updateTagSortOrders } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 import type { Tag } from '@/types';
 
@@ -35,7 +36,7 @@ export default function TagsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { tags, setTags, addTag, updateTag: updateStore, removeTag } = useTagStore();
+  const { tags, setTags, addTag, updateTag: updateStore, removeTag, reorderTags } = useTagStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editTarget, setEditTarget] = useState<TagWithCount | null>(null);
@@ -104,7 +105,7 @@ export default function TagsScreen() {
   const canSave = !!name.trim() && !saving;
 
   return (
-    <>
+    <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen
         options={{
           title: t('tag.title'),
@@ -124,32 +125,41 @@ export default function TagsScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
+        <DraggableFlatList
           style={{ backgroundColor: theme.colors.background }}
           data={tags}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          onDragEnd={({ data }) => {
+            reorderTags(data);
+            updateTagSortOrders(db, data.map((t) => t.id));
+          }}
           ListFooterComponent={isAtLimit ? (
             <Text style={[styles.limitMsg, { color: theme.colors.textTertiary }]}>
               {t('tag.limitReached', { count: TAG_LIMIT })}
             </Text>
           ) : null}
-          renderItem={({ item }) => (
-            <View style={[styles.tagItem, { backgroundColor: theme.colors.surface }]}>
-              <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-              <View style={styles.tagInfo}>
-                <Text style={[styles.tagName, { color: theme.colors.text }]}>{item.name}</Text>
-                <Text style={[styles.tagCount, { color: theme.colors.textTertiary }]}>
-                  {t('tag.cards', { count: item.cardCount })}
-                </Text>
-              </View>
-              <Pressable onPress={() => openEdit(item)} hitSlop={8} style={styles.iconBtn}>
-                <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+          renderItem={({ item, drag }: RenderItemParams<TagWithCount>) => (
+            <ScaleDecorator>
+              <Pressable
+                style={[styles.tagItem, { backgroundColor: theme.colors.surface }]}
+                onLongPress={drag}
+              >
+                <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                <View style={styles.tagInfo}>
+                  <Text style={[styles.tagName, { color: theme.colors.text }]}>{item.name}</Text>
+                  <Text style={[styles.tagCount, { color: theme.colors.textTertiary }]}>
+                    {t('tag.cards', { count: item.cardCount })}
+                  </Text>
+                </View>
+                <Pressable onPress={() => openEdit(item)} hitSlop={8} style={styles.iconBtn}>
+                  <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                </Pressable>
+                <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={styles.iconBtn}>
+                  <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                </Pressable>
               </Pressable>
-              <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={styles.iconBtn}>
-                <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-              </Pressable>
-            </View>
+            </ScaleDecorator>
           )}
         />
       )}
@@ -232,7 +242,7 @@ export default function TagsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </>
+    </GestureHandlerRootView>
   );
 }
 

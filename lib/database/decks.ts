@@ -11,7 +11,7 @@ function generateId(): string {
 }
 
 export async function getAllDecks(db: SQLiteDatabase): Promise<Deck[]> {
-  return db.getAllAsync<Deck>('SELECT * FROM decks ORDER BY updatedAt DESC');
+  return db.getAllAsync<Deck>('SELECT * FROM decks ORDER BY sortOrder ASC');
 }
 
 export async function getDeckById(db: SQLiteDatabase, id: string): Promise<Deck | null> {
@@ -24,11 +24,13 @@ export async function createDeck(
 ): Promise<Deck> {
   const now = new Date().toISOString();
   const id = generateId();
+  const row = await db.getFirstAsync<{ maxOrder: number | null }>('SELECT MAX(sortOrder) as maxOrder FROM decks');
+  const sortOrder = (row?.maxOrder ?? 0) + 1;
   await db.runAsync(
-    'INSERT INTO decks (id, name, description, language, cardCount, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?)',
-    [id, data.name, data.description, data.language, now, now]
+    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?)',
+    [id, data.name, data.description, data.language, sortOrder, now, now]
   );
-  return { id, cardCount: 0, createdAt: now, updatedAt: now, ...data };
+  return { id, cardCount: 0, sortOrder, createdAt: now, updatedAt: now, ...data };
 }
 
 export async function updateDeck(
@@ -41,6 +43,14 @@ export async function updateDeck(
     'UPDATE decks SET name = ?, description = ?, language = ?, updatedAt = ? WHERE id = ?',
     [data.name, data.description, data.language, now, id]
   );
+}
+
+export async function updateDeckSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.runAsync('UPDATE decks SET sortOrder = ? WHERE id = ?', [i, orderedIds[i]]);
+    }
+  });
 }
 
 export async function deleteDeck(db: SQLiteDatabase, id: string): Promise<void> {

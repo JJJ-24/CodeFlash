@@ -5,20 +5,29 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  FlatList,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/lib/theme';
-import { deleteDeck, getAllDecks } from '@/lib/database/decks';
+import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
 import type { Deck } from '@/types';
 
-function DeckCard({ deck, onDelete }: { deck: Deck; onDelete: (id: string) => void }) {
+function DeckCard({
+  deck,
+  drag,
+  onDelete,
+}: {
+  deck: Deck;
+  drag: () => void;
+  onDelete: (id: string) => void;
+}) {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -34,6 +43,7 @@ function DeckCard({ deck, onDelete }: { deck: Deck; onDelete: (id: string) => vo
     <TouchableOpacity
       style={[styles.card, { backgroundColor: theme.colors.surface }]}
       onPress={() => router.push({ pathname: '/deck/[id]', params: { id: deck.id } })}
+      onLongPress={drag}
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
@@ -70,7 +80,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { decks, setDecks, removeDeck } = useDeckStore();
+  const { decks, setDecks, removeDeck, reorderDecks } = useDeckStore();
 
   useEffect(() => {
     getAllDecks(db).then(setDecks);
@@ -82,7 +92,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {decks.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
@@ -94,11 +104,19 @@ export default function HomeScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
+        <DraggableFlatList
           data={decks}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <DeckCard deck={item} onDelete={handleDelete} />}
           contentContainerStyle={styles.listContent}
+          onDragEnd={({ data }) => {
+            reorderDecks(data);
+            updateDeckSortOrders(db, data.map((d) => d.id));
+          }}
+          renderItem={({ item, drag, isActive }: RenderItemParams<Deck>) => (
+            <ScaleDecorator>
+              <DeckCard deck={item} drag={drag} onDelete={handleDelete} />
+            </ScaleDecorator>
+          )}
         />
       )}
       <TouchableOpacity
@@ -108,7 +126,7 @@ export default function HomeScreen() {
       >
         <Ionicons name="add" size={30} color="#FFF" />
       </TouchableOpacity>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 

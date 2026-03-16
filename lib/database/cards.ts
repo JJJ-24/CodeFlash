@@ -18,6 +18,7 @@ type RawCard = {
   memoContent: string;
   createdAt: string;
   updatedAt: string;
+  sortOrder: number;
 };
 
 function parseBlocks(json: string): Block[] {
@@ -37,12 +38,13 @@ function toCard(raw: RawCard): Card {
     memoContent: parseBlocks(raw.memoContent),
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
+    sortOrder: raw.sortOrder,
   };
 }
 
 export async function getCardsByDeckId(db: SQLiteDatabase, deckId: string): Promise<Card[]> {
   const rows = await db.getAllAsync<RawCard>(
-    'SELECT * FROM cards WHERE deckId = ? ORDER BY createdAt ASC',
+    'SELECT * FROM cards WHERE deckId = ? ORDER BY sortOrder ASC',
     [deckId]
   );
   return rows.map(toCard);
@@ -59,14 +61,20 @@ export async function createCard(
 ): Promise<Card> {
   const now = new Date().toISOString();
   const id = generateId();
+  const row = await db.getFirstAsync<{ maxOrder: number | null }>(
+    'SELECT MAX(sortOrder) as maxOrder FROM cards WHERE deckId = ?',
+    [data.deckId]
+  );
+  const sortOrder = (row?.maxOrder ?? 0) + 1;
   await db.runAsync(
-    'INSERT INTO cards (id, deckId, frontContent, backContent, memoContent, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO cards (id, deckId, frontContent, backContent, memoContent, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [
       id,
       data.deckId,
       JSON.stringify(data.frontContent),
       JSON.stringify(data.backContent),
       JSON.stringify(data.memoContent),
+      sortOrder,
       now,
       now,
     ]
@@ -75,7 +83,7 @@ export async function createCard(
     'UPDATE decks SET cardCount = cardCount + 1, updatedAt = ? WHERE id = ?',
     [now, data.deckId]
   );
-  return { id, createdAt: now, updatedAt: now, ...data };
+  return { id, sortOrder, createdAt: now, updatedAt: now, ...data };
 }
 
 export async function updateCard(
@@ -94,6 +102,14 @@ export async function updateCard(
       id,
     ]
   );
+}
+
+export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.runAsync('UPDATE cards SET sortOrder = ? WHERE id = ?', [i, orderedIds[i]]);
+    }
+  });
 }
 
 export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string): Promise<void> {

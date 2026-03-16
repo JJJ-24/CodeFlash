@@ -50,4 +50,19 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       FOREIGN KEY (cardId) REFERENCES cards(id) ON DELETE CASCADE
     );
   `);
+
+  // sortOrder カラムのマイグレーション（既存ユーザー・新規インストール両対応）
+  const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!cols.some((c) => c.name === 'sortOrder')) {
+    await db.execAsync(`
+      ALTER TABLE decks ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE cards ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE tags  ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0;
+    `);
+    await db.execAsync(`
+      UPDATE decks SET sortOrder = rowid;
+      UPDATE cards SET sortOrder = rowid;
+      UPDATE tags  SET sortOrder = rowid;
+    `);
+  }
 }

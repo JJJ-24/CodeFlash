@@ -8,15 +8,17 @@ interface DeckState {
   addDeck: (deck: Deck) => void;
   updateDeck: (deck: Deck) => void;
   removeDeck: (id: string) => void;
+  reorderDecks: (decks: Deck[]) => void;
 }
 
 export const useDeckStore = create<DeckState>((set) => ({
   decks: [],
   setDecks: (decks) => set({ decks }),
-  addDeck: (deck) => set((state) => ({ decks: [deck, ...state.decks] })),
+  addDeck: (deck) => set((state) => ({ decks: [...state.decks, deck] })),
   updateDeck: (updated) =>
     set((state) => ({
       decks: state.decks.map((d) => (d.id === updated.id ? updated : d)),
     })),
   removeDeck: (id) => set((state) => ({ decks: state.decks.filter((d) => d.id !== id) })),
+  reorderDecks: (decks) => set({ decks }),
 }));

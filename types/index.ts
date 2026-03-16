@@ -30,6 +30,7 @@ export interface Deck {
   cardCount: number;
   createdAt: string;
   updatedAt: string;
+  sortOrder: number;
 }
 
 export interface Card {
@@ -40,6 +41,7 @@ export interface Card {
   memoContent: Block[];
   createdAt: string;
   updatedAt: string;
+  sortOrder: number;
 }
 
 export interface Tag {
@@ -47,6 +49,7 @@ export interface Tag {
   name: string;
   color: string;
   createdAt: string;
+  sortOrder: number;
 }
 
 export interface CardTag {

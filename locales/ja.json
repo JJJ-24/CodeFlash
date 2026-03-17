@@ -130,7 +130,7 @@
     "themeLight": "ライト",
     "themeDark": "ダーク",
     "themeSystem": "システム",
-    "fontSize": "文字サイズ",
+    "fontSize": "文字サイズ（カードテキストのみ）",
     "fontSizeSmall": "小",
     "fontSizeMedium": "中",
     "fontSizeLarge": "大",

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
@@ -39,7 +39,7 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container}>
       {/* テーマ設定 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
@@ -146,12 +146,12 @@ export default function SettingsScreen() {
           ))}
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
+  container: { padding: 16, gap: 12 },
   card: {
     borderRadius: 12,
     paddingHorizontal: 16,

@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -129,6 +130,15 @@ export default function DeckDetailScreen() {
         {t('deck.statHint')}
       </Text>
 
+      <TouchableOpacity
+        style={styles.studyBtn}
+        activeOpacity={0.8}
+        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id } })}
+      >
+        <Ionicons name="play-outline" size={20} color="#FFF" />
+        <Text style={styles.studyBtnText}>{t('deck.study')}</Text>
+      </TouchableOpacity>
+
       <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
         {t('deck.detail')}
       </Text>
@@ -229,6 +239,16 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
   statItemDisabled: { opacity: 0.4 },
   statHint: { fontSize: 11, textAlign: 'center', marginTop: -4 },
+  studyBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#1976D2',
+    borderRadius: 12,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  studyBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   emptyCardsText: { fontSize: 14 },

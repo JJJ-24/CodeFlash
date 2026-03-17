@@ -42,8 +42,13 @@ lib/
 │   ├── cards.ts         # Card CRUD（JSON シリアライズ含む）
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
 │   └── reviews.ts       # SM-2 レビューデータ操作
+├── code-execution/      # コード実行サンドボックス
+│   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成
+│   ├── constants.ts     # LANGUAGES・LANG_LABELS
+│   └── types.ts         # ExecResult・ExecStatus・LogEntry
 ├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: ja）
 ├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors 型定義
+├── image.ts             # resolveImageUri()：画像パス解決
 └── sm2.ts               # SM-2 間隔反復アルゴリズム実装
 
 store/                   # Zustand ストア（インメモリキャッシュ）
@@ -55,11 +60,14 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 └── settings.ts          # useSettingsStore（keyboardShortcutsEnabled、AsyncStorage永続化）
 
 components/
-├── editor/              # BlockEditor, TextBlockItem, CodeBlockItem, TagSelector
-└── study/               # FlipCard（reanimated）, BlocksView（ブロックレンダリング）
+├── code/
+│   └── ExecutionOutput.tsx  # コード実行結果表示（WebView + ログ）
+├── editor/              # BlockEditor, TextBlockItem, CodeBlockItem, ImageBlockItem, TagSelector
+└── study/               # FlipCard（reanimated）, BlocksView, CodeRunnerView, ZoomableImage
 
 hooks/
-└── useStudySession.ts   # 学習セッション管理（キュー管理・SM-2連携）
+├── useStudySession.ts   # 学習セッション管理（キュー管理・SM-2連携）
+└── useCodeExecution.ts  # コード実行状態管理（run/clear/reset/handleMessage）
 
 types/index.ts           # 全ドメイン型（唯一の定義元）
 locales/ja.json          # 日本語翻訳
@@ -94,16 +102,30 @@ Stack (_layout.tsx)
 
 `types/index.ts` がドメイン型の唯一の定義元。ブロックは `TextBlock | CodeBlock | ImageBlock` のユニオン型で、カードの `frontContent / backContent / memoContent` は SQLite に JSON文字列として保存される。
 
+### コード実行アーキテクチャ
+
+`useCodeExecution(onResult?)` フックが状態管理を担う。`run()` が `buildSandboxHtml()` で HTML を生成し、`ExecutionOutput` 内の `WebView` で実行する。WebView からの `postMessage` を `handleMessage()` で受け取り `result` を更新する。`onResult` コールバックは `result` がセットされた直後（50ms 遅延）に呼ばれるため、実行完了後のスクロールなどに使える。Python は Pyodide（CDN）を利用するため `baseUrl` が設定される。
+
 ### 実装上の注意点
 
 - **`generateId()`** は各 `lib/database/*.ts` ファイルにコピーされている（共通モジュールなし）
 - **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` を明示的に先に削除する
 - **SM-2 グレード対応**: `grade 0` = もう一度, `1` = 難しい, `2` = 普通, `3` = 簡単（`lib/sm2.ts` 参照）
 - **i18n**: 端末言語を自動検出し、未対応言語の場合は日本語にフォールバック
-- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。`useThemeStore` で preference を変更する。テーマ色は `theme.colors.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。
-- **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで（AsyncStorage から preference を復元するまで）`<RootStack />` を描画しない。これによりテーマ未確定状態での描画を防いでいる。
-- **モーダルから戻った後のデータ更新**: `app/deck/[id]/index.tsx` は `useFocusEffect` でフォーカス時に DB を再読み込みする。モーダルで作成・編集・削除した後も最新状態が反映される。
-- **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）は画面上に見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。
+- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。テーマ色は `theme.colors.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。
+- **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで `<RootStack />` を描画しない。
+- **モーダルから戻った後のデータ更新**: モーダルを閉じた後に最新データが必要な画面では `useFocusEffect` で DB を再読み込みする（`deck/[id]/index.tsx`・`study/session.tsx` が実例）。
+- **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。
+
+### ジェスチャー実装パターン
+
+react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合わせる際の必須ルール：
+
+- **worklet から JS 関数を呼ぶ**: `onEnd(() => runOnJS(fn)())` の形式を使う。`onEnd(() => fn())` はクラッシュする。
+- **worklet に渡す引数は serializable のみ**: `runOnJS(setState)((v) => !v)` は NG（関数は渡せない）。必ず `const toggle = () => setState(v => !v); runOnJS(toggle)()` のように名前付き関数でラップする。
+- **worklet 内でインライン closure を作らない**: `runOnJS(() => { setA(x); setB(y); })()` はクラッシュする。必ず外で名前付き関数として定義する。
+- **ジェスチャーオブジェクトの安定化**: 複数の `GestureDetector` が入れ子になる場合、内側が外側に優先されるには両方のジェスチャーオブジェクトが安定している必要がある。ハンドラは `useCallback`、ジェスチャーオブジェクトは `useMemo` でメモ化する。
+- **ScrollView と FlipCard の共存**: `FlipCard` の tap ジェスチャーを RNGH の `GestureDetector + Tap` にすることで、ScrollView の縦スクロールと競合しなくなる（旧来の `Pressable` では ScrollView のスクロールが阻害される）。
 
 ### 主要な設定
 
@@ -117,7 +139,9 @@ Stack (_layout.tsx)
 
 `docs/` 配下に機能チケット（000〜020）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
-完了済み: 001〜008・012・013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・統計画面・ダークモード）
+完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）
+
+未着手: 014（iCloud同期）・015（Web版）・016（買い切り課金）・017（App Store申請）・018（SQL/C++実行）・019（マーケットプレイス）・020（AI生成）
 
 ### UI パターン（実装済み画面の慣習）
 

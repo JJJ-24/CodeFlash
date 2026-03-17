@@ -628,7 +628,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingTop: 96,
+    paddingBottom: 40,
   },
   fullscreenExitBtn: {
     position: 'absolute',

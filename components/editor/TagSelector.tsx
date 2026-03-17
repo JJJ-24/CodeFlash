@@ -59,7 +59,7 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
               styles.chip,
               selected
                 ? { backgroundColor: tag.color }
-                : { backgroundColor: theme.colors.background, borderColor: tag.color, borderWidth: 1.5 },
+                : { backgroundColor: theme.colors.background, borderColor: tag.color, borderWidth: 1.5, opacity: 0.45 },
             ]}
             onPress={() => toggle(tag.id)}
           >

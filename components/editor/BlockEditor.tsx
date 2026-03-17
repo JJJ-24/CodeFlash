@@ -1,4 +1,4 @@
-import { type Dispatch, type Ref, type SetStateAction, useEffect, useImperativeHandle, useState } from 'react';
+import { type Dispatch, type Ref, type SetStateAction, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -71,6 +71,7 @@ interface Props {
 export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, ref }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
 
   const [activeTab, setActiveTab] = useState<Tab>('front');
   const [isPreview, setIsPreview] = useState(false);
@@ -176,6 +177,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -202,6 +204,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
                 isPreview={isPreview}
                 onChange={(patch) => updateBlock(activeTab, block._key, patch)}
                 onDelete={() => deleteBlock(activeTab, block._key)}
+                onRunStart={() => scrollRef.current?.scrollToEnd({ animated: true })}
               />
             );
           }

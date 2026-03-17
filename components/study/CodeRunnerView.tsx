@@ -3,7 +3,6 @@ import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
 import { LANG_LABELS } from '@/lib/code-execution/constants';
@@ -28,9 +30,10 @@ interface Props {
   onEditBlur?: () => void;
   runTrigger?: number;
   editTrigger?: number;
+  onRunStart?: () => void;
 }
 
-export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, runTrigger, editTrigger }: Props) {
+export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, runTrigger, editTrigger, onRunStart }: Props) {
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage, reset } = useCodeExecution();
@@ -76,6 +79,23 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
     onEditBlur?.();
   }
 
+  // 編集開始/終了トグル - 編集ボタン用
+  function handleEditToggle() {
+    if (isEditing) {
+      handleEditEnd();
+    } else {
+      setIsEditing(true);
+      clear();
+      onEditFocus?.();
+    }
+  }
+
+  useEffect(() => {
+    if (result) {
+      setTimeout(() => onRunStart?.(), 50);
+    }
+  }, [result]);
+
   // 編集終了 + 実行 - ▶実行ボタン・r キー・Shift+Tab（onBlur）用
   function handleRun() {
     intentionalExitRef.current = true;
@@ -97,35 +117,24 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
 
         <View style={styles.headerRight}>
           {editable && (
-            <TouchableOpacity
-              style={[styles.editBtn, isEditing && styles.editBtnActive]}
-              onPress={() => {
-                if (isEditing) {
-                  handleEditEnd();
-                } else {
-                  setIsEditing(true);
-                  clear();
-                  onEditFocus?.();
-                }
-              }}
-            >
-              <Text style={[styles.editBtnText, isEditing && styles.editBtnTextActive]}>
-                {isEditing ? '完了' : '✏'}
-              </Text>
-            </TouchableOpacity>
+            <GestureDetector gesture={Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleEditToggle)())}>
+              <TouchableOpacity style={[styles.editBtn, isEditing && styles.editBtnActive]} activeOpacity={0.7}>
+                <Text style={[styles.editBtnText, isEditing && styles.editBtnTextActive]}>
+                  {isEditing ? '完了' : '✏'}
+                </Text>
+              </TouchableOpacity>
+            </GestureDetector>
           )}
 
           {block.executable && (
-            <TouchableOpacity
-              style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
-              onPress={handleRun}
-              disabled={isRunning}
-            >
-              {isRunning
-                ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={styles.runBtnText}>▶ 実行</Text>
-              }
-            </TouchableOpacity>
+            <GestureDetector gesture={Gesture.Tap().maxDistance(10).onEnd(() => { if (!isRunning) runOnJS(handleRun)(); })}>
+              <TouchableOpacity style={[styles.runBtn, isRunning && styles.runBtnDisabled]} activeOpacity={0.7} disabled={isRunning}>
+                {isRunning
+                  ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
+                  : <Text style={styles.runBtnText}>▶ 実行</Text>
+                }
+              </TouchableOpacity>
+            </GestureDetector>
           )}
         </View>
       </View>
@@ -158,9 +167,11 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
             <Text style={styles.codeText}>{editedContent ?? block.content}</Text>
           </ScrollView>
         )}
-        <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
-          <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
-        </Pressable>
+        <GestureDetector gesture={Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleCodeCopy)())}>
+          <View style={styles.codeCopyBtn}>
+            <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+          </View>
+        </GestureDetector>
       </View>
 
       {!isEditing && (

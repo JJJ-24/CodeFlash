@@ -16,9 +16,10 @@ interface Props {
   onEditBlur?: () => void;
   runTrigger?: number;
   editTrigger?: number;
+  onCodeRunStart?: () => void;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, runTrigger, editTrigger }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, runTrigger, editTrigger, onCodeRunStart }: Props) {
   const theme = useTheme();
 
   const fs = (size: number) => Math.round(size * theme.fontScale);
@@ -62,6 +63,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
               onEditBlur={onEditBlur}
               runTrigger={runTrigger}
               editTrigger={editTrigger}
+              onRunStart={onCodeRunStart}
             />
           );
         }

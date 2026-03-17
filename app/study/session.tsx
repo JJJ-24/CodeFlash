@@ -60,6 +60,8 @@ export default function StudySessionScreen() {
   const codeEditingRef = useRef(false);
   const flipCardRef = useRef<FlipCardRef>(null);
   const isNavigatingRef = useRef(false);
+  const frontScrollRef = useRef<ScrollView>(null);
+  const backScrollRef = useRef<ScrollView>(null);
 
   const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
   const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
@@ -154,6 +156,8 @@ export default function StudySessionScreen() {
     setIsFlipped(false);
     setShowMemo(false);
     currentIndexSV.value = currentIndex;
+    frontScrollRef.current?.scrollTo({ y: 0, animated: false });
+    backScrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentIndex]);
 
   // 表面に戻ったらメモを隠す
@@ -330,7 +334,7 @@ export default function StudySessionScreen() {
                 cardStyle={{ borderRadius: 0, shadowOpacity: 0, elevation: 0 }}
                 innerStyle={{ padding: 0, justifyContent: 'flex-start' }}
                 front={
-                  <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                  <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                     <BlocksView
                       blocks={currentCard.frontContent}
                       editableCode
@@ -340,12 +344,16 @@ export default function StudySessionScreen() {
                       onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
                       runTrigger={runTrigger}
                       editTrigger={editTrigger}
+                      onCodeRunStart={() => frontScrollRef.current?.scrollToEnd({ animated: true })}
                     />
                   </ScrollView>
                 }
                 back={
-                  <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
-                    <BlocksView blocks={currentCard.backContent} />
+                  <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                    <BlocksView
+                      blocks={currentCard.backContent}
+                      onCodeRunStart={() => backScrollRef.current?.scrollToEnd({ animated: true })}
+                    />
                     {hasMemo && (
                       <View style={styles.memoSection}>
                         <GestureDetector gesture={memoTapGesture}>
@@ -449,7 +457,7 @@ export default function StudySessionScreen() {
               isFlipped={isFlipped}
               onFlip={handleFlip}
               front={
-                <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
                   <BlocksView
                     blocks={currentCard.frontContent}
                     editableCode
@@ -459,12 +467,16 @@ export default function StudySessionScreen() {
                     onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
                     runTrigger={runTrigger}
                     editTrigger={editTrigger}
+                    onCodeRunStart={() => frontScrollRef.current?.scrollToEnd({ animated: true })}
                   />
                 </ScrollView>
               }
               back={
-                <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
-                  <BlocksView blocks={currentCard.backContent} />
+                <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                  <BlocksView
+                    blocks={currentCard.backContent}
+                    onCodeRunStart={() => backScrollRef.current?.scrollToEnd({ animated: true })}
+                  />
                   {/* メモ */}
                   {hasMemo && (
                     <View style={styles.memoSection}>

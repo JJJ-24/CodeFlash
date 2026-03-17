@@ -77,6 +77,7 @@
     "frontPlaceholder": "表面のテキストを入力",
     "backPlaceholder": "裏面のテキストを入力",
     "noContent": "（内容なし）",
+    "codeOnly": "（コードのみ）",
     "frontRequired": "表面にテキストかコードを入力してください"
   },
   "tabs": {

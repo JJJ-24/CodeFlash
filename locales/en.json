@@ -77,6 +77,7 @@
     "frontPlaceholder": "Enter front text",
     "backPlaceholder": "Enter back text",
     "noContent": "(no content)",
+    "codeOnly": "(code only)",
     "frontRequired": "Front side requires at least one text or code block"
   },
   "tabs": {

@@ -176,7 +176,7 @@ export default function DeckDetailScreen() {
                 onLongPress={drag}
               >
                 <Text style={[styles.cardPreview, { color: theme.colors.text }]} numberOfLines={2}>
-                  {preview || t('card.noContent')}
+                  {preview || (item.frontContent.some(b => b.type === 'code') ? t('card.codeOnly') : t('card.noContent'))}
                 </Text>
                 <Pressable
                   onPress={() =>

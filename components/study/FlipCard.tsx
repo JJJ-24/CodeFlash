@@ -1,8 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle } from 'react';
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -52,25 +54,33 @@ export const FlipCard = forwardRef<FlipCardRef, Props>(
       };
     });
 
+    const tapGesture = Gesture.Tap()
+      .maxDistance(10)
+      .onEnd(() => {
+        runOnJS(onFlip)();
+      });
+
     return (
-      <Pressable style={styles.wrapper} onPress={onFlip}>
-        <View style={styles.cardContainer}>
-          {/* 表面 — 裏向きのときはタッチを透過させる */}
-          <Animated.View
-            style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, frontStyle]}
-            pointerEvents={isFlipped ? 'none' : 'box-none'}
-          >
-            <View style={[styles.cardInner, innerStyle]}>{front}</View>
-          </Animated.View>
-          {/* 裏面 — 表向きのときはタッチを透過させる */}
-          <Animated.View
-            style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, backStyle]}
-            pointerEvents={isFlipped ? 'box-none' : 'none'}
-          >
-            <View style={[styles.cardInner, innerStyle]}>{back}</View>
-          </Animated.View>
+      <GestureDetector gesture={tapGesture}>
+        <View style={styles.wrapper}>
+          <View style={styles.cardContainer}>
+            {/* 表面 — 裏向きのときはタッチを透過させる */}
+            <Animated.View
+              style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, frontStyle]}
+              pointerEvents={isFlipped ? 'none' : 'box-none'}
+            >
+              <View style={[styles.cardInner, innerStyle]}>{front}</View>
+            </Animated.View>
+            {/* 裏面 — 表向きのときはタッチを透過させる */}
+            <Animated.View
+              style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, backStyle]}
+              pointerEvents={isFlipped ? 'box-none' : 'none'}
+            >
+              <View style={[styles.cardInner, innerStyle]}>{back}</View>
+            </Animated.View>
+          </View>
         </View>
-      </Pressable>
+      </GestureDetector>
     );
   }
 );

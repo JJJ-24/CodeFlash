@@ -15,6 +15,7 @@ interface Props {
 
 export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus }: Props) {
   const [focused, setFocused] = useState(false);
+  const [inputHeight, setInputHeight] = useState(80);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -62,11 +63,11 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus 
       ) : (
         <TextInput
           ref={inputRef}
-          style={[styles.input, { color: theme.colors.text, fontSize: fs(15) }]}
+          style={[styles.input, { color: theme.colors.text, fontSize: fs(15), height: Math.max(80, inputHeight) }]}
           value={block.content}
           onChangeText={onChange}
           multiline
-          autoFocus={autoFocus}
+          onContentSizeChange={(e) => setInputHeight(e.nativeEvent.contentSize.height + 24)}
           placeholder="テキストを入力（Markdown 記法対応）"
           placeholderTextColor={theme.colors.textTertiary}
           onFocus={() => setFocused(true)}

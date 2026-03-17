@@ -323,7 +323,7 @@ export default function StudySessionScreen() {
                 cardStyle={{ borderRadius: 0, shadowOpacity: 0, elevation: 0 }}
                 innerStyle={{ padding: 0, justifyContent: 'flex-start' }}
                 front={
-                  <ScrollView contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                  <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                     <BlocksView
                       blocks={currentCard.frontContent}
                       editableCode
@@ -337,7 +337,7 @@ export default function StudySessionScreen() {
                   </ScrollView>
                 }
                 back={
-                  <ScrollView contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                  <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                     <BlocksView blocks={currentCard.backContent} />
                     {hasMemo && (
                       <View style={styles.memoSection}>
@@ -443,7 +443,7 @@ export default function StudySessionScreen() {
               isFlipped={isFlipped}
               onFlip={() => setIsFlipped((v) => !v)}
               front={
-                <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
                   <BlocksView
                     blocks={currentCard.frontContent}
                     editableCode
@@ -457,7 +457,7 @@ export default function StudySessionScreen() {
                 </ScrollView>
               }
               back={
-                <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
                   <BlocksView blocks={currentCard.backContent} />
                   {/* メモ */}
                   {hasMemo && (

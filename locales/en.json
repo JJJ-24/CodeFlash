@@ -78,6 +78,7 @@
     "backPlaceholder": "Enter back text",
     "noContent": "(no content)",
     "codeOnly": "(code only)",
+    "noText": "(no text)",
     "frontRequired": "Front side must not be empty",
     "imageBlock": "Image",
     "imageSelect": "Select Image",

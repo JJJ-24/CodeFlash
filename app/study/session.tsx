@@ -324,7 +324,6 @@ export default function StudySessionScreen() {
                 }
                 back={
                   <ScrollView contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
-                    <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
                     <BlocksView blocks={currentCard.backContent} />
                     {hasMemo && (
                       <View style={styles.memoSection}>
@@ -431,7 +430,6 @@ export default function StudySessionScreen() {
               }
               back={
                 <ScrollView contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
-                  <Text style={[styles.faceLabel, { color: theme.colors.iconSubtle }]}>{t('card.back')}</Text>
                   <BlocksView blocks={currentCard.backContent} />
                   {/* メモ */}
                   {hasMemo && (

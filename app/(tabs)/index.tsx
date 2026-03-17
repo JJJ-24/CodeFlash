@@ -91,22 +91,40 @@ export default function HomeScreen() {
     removeDeck(id);
   }
 
+  const StatsHeader = (
+    <View style={styles.statsHeader}>
+      <View style={styles.statsRow}>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.statValue, { color: theme.colors.primary }]}>{decks.length}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{'デッキ\n総数'}</Text>
+        </View>
+      </View>
+      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+        {t('home.title')}
+      </Text>
+    </View>
+  );
+
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {decks.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-            {t('home.empty')}
-          </Text>
-          <Text style={[styles.emptySubText, { color: theme.colors.textTertiary }]}>
-            {t('home.emptySub')}
-          </Text>
-        </View>
+        <>
+          <View style={{ paddingHorizontal: 16 }}>{StatsHeader}</View>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+              {t('home.empty')}
+            </Text>
+            <Text style={[styles.emptySubText, { color: theme.colors.textTertiary }]}>
+              {t('home.emptySub')}
+            </Text>
+          </View>
+        </>
       ) : (
         <DraggableFlatList
           data={decks}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={StatsHeader}
           contentContainerStyle={styles.listContent}
           onDragEnd={({ data }) => {
             reorderDecks(data);
@@ -132,6 +150,23 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  statsHeader: { paddingTop: 4, paddingBottom: 8, gap: 24 },
+  statsRow: {},
+  statItem: {
+    alignSelf: 'flex-start',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    minWidth: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  statValue: { fontSize: 26, fontWeight: '700' },
+  statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '700' },
   listContent: { padding: 16, gap: 12, paddingBottom: 96 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { fontSize: 18, fontWeight: '600' },

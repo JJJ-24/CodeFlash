@@ -129,7 +129,7 @@ export default function DeckDetailScreen() {
         {t('deck.statHint')}
       </Text>
 
-      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
         {t('deck.detail')}
       </Text>
 

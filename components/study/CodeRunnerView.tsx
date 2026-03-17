@@ -186,23 +186,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   langLabel: {
-    fontSize: 11,
+    fontSize: 14,
     color: '#9CDCFE',
     fontWeight: '600',
   },
   editBtn: {
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderWidth: 1,
     borderColor: '#555',
   },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   editBtnText: {
     color: '#9CDCFE',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
   editBtnTextActive: {
@@ -220,9 +220,9 @@ const styles = StyleSheet.create({
   },
   runBtn: {
     backgroundColor: '#1976D2',
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   },
   runBtnText: {
     color: '#FFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
   spinner: {

@@ -24,18 +24,19 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus 
   }, []);
   const theme = useTheme();
 
+  const fs = (size: number) => Math.round(size * theme.fontScale);
   const markdownStyles = {
-    body: { fontSize: 15, color: theme.colors.text, lineHeight: 22 },
-    heading1: { fontSize: 22, fontWeight: '700' as const, color: theme.colors.text },
-    heading2: { fontSize: 18, fontWeight: '700' as const, color: theme.colors.text },
+    body: { fontSize: fs(15), color: theme.colors.text, lineHeight: fs(22) },
+    heading1: { fontSize: fs(22), fontWeight: '700' as const, color: theme.colors.text },
+    heading2: { fontSize: fs(18), fontWeight: '700' as const, color: theme.colors.text },
     code_inline: {
       backgroundColor: theme.colors.background,
       fontFamily: 'monospace',
-      fontSize: 13,
+      fontSize: fs(13),
       color: theme.colors.danger,
     },
     fence: { backgroundColor: theme.colors.background, borderRadius: 6, padding: 12 },
-    code_block: { fontFamily: 'monospace', fontSize: 13, color: theme.colors.text },
+    code_block: { fontFamily: 'monospace', fontSize: fs(13), color: theme.colors.text },
   };
 
   return (
@@ -61,7 +62,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus 
       ) : (
         <TextInput
           ref={inputRef}
-          style={[styles.input, { color: theme.colors.text }]}
+          style={[styles.input, { color: theme.colors.text, fontSize: fs(15) }]}
           value={block.content}
           onChangeText={onChange}
           multiline

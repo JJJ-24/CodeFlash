@@ -1,6 +1,6 @@
 import { useColorScheme } from 'react-native';
 
-import { useThemeStore } from '@/store/theme';
+import { FONT_SCALE, useThemeStore } from '@/store/theme';
 
 export interface AppColors {
   background: string;
@@ -24,9 +24,10 @@ export interface AppColors {
 export interface AppTheme {
   dark: boolean;
   colors: AppColors;
+  fontScale: number;
 }
 
-export const lightTheme: AppTheme = {
+export const lightTheme: Omit<AppTheme, 'fontScale'> = {
   dark: false,
   colors: {
     background: '#F5F5F5',
@@ -48,7 +49,7 @@ export const lightTheme: AppTheme = {
   },
 };
 
-export const darkTheme: AppTheme = {
+export const darkTheme: Omit<AppTheme, 'fontScale'> = {
   dark: true,
   colors: {
     background: '#121212',
@@ -73,8 +74,8 @@ export const darkTheme: AppTheme = {
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);
+  const fontSizePreference = useThemeStore((s) => s.fontSizePreference);
 
-  if (preference === 'light') return lightTheme;
-  if (preference === 'dark') return darkTheme;
-  return systemScheme === 'dark' ? darkTheme : lightTheme;
+  const base = preference === 'light' ? lightTheme : preference === 'dark' ? darkTheme : (systemScheme === 'dark' ? darkTheme : lightTheme);
+  return { ...base, fontScale: FONT_SCALE[fontSizePreference] };
 }

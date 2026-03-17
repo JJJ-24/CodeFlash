@@ -2,29 +2,45 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
 export type ColorSchemePreference = 'light' | 'dark' | 'system';
+export type FontSizePreference = 'small' | 'medium' | 'large';
 
-const STORAGE_KEY = '@codeflash_theme';
+export const FONT_SCALE: Record<FontSizePreference, number> = {
+  small: 0.85,
+  medium: 1.0,
+  large: 1.2,
+};
+
+const THEME_KEY = '@codeflash_theme';
+const FONT_SIZE_KEY = '@codeflash_font_size';
 
 interface ThemeState {
   preference: ColorSchemePreference;
+  fontSizePreference: FontSizePreference;
   hydrated: boolean;
   setPreference: (preference: ColorSchemePreference) => void;
+  setFontSizePreference: (fontSizePreference: FontSizePreference) => void;
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
   preference: 'system',
+  fontSizePreference: 'medium',
   hydrated: false,
   setPreference: (preference) => {
     set({ preference });
-    AsyncStorage.setItem(STORAGE_KEY, preference);
+    AsyncStorage.setItem(THEME_KEY, preference);
+  },
+  setFontSizePreference: (fontSizePreference) => {
+    set({ fontSizePreference });
+    AsyncStorage.setItem(FONT_SIZE_KEY, fontSizePreference);
   },
 }));
 
 // アプリ起動時に保存済みの設定を復元
-AsyncStorage.getItem(STORAGE_KEY).then((value) => {
-  if (value === 'light' || value === 'dark' || value === 'system') {
-    useThemeStore.setState({ preference: value, hydrated: true });
-  } else {
-    useThemeStore.setState({ hydrated: true });
-  }
+Promise.all([
+  AsyncStorage.getItem(THEME_KEY),
+  AsyncStorage.getItem(FONT_SIZE_KEY),
+]).then(([theme, fontSize]) => {
+  const preference = (theme === 'light' || theme === 'dark' || theme === 'system') ? theme : 'system';
+  const fontSizePreference = (fontSize === 'small' || fontSize === 'medium' || fontSize === 'large') ? fontSize : 'medium';
+  useThemeStore.setState({ preference, fontSizePreference, hydrated: true });
 });

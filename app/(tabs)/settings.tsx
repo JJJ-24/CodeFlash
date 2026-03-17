@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useThemeStore } from '@/store/theme';
-import type { ColorSchemePreference } from '@/store/theme';
+import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
 
 const SHORTCUTS = [
   { key: 'Space',     descKey: 'settings.shortcutFlip' },
@@ -23,13 +23,19 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { preference, setPreference } = useThemeStore();
+  const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
   const { keyboardShortcutsEnabled, setKeyboardShortcutsEnabled } = useSettingsStore();
 
   const themeOptions: { value: ColorSchemePreference; labelKey: string }[] = [
     { value: 'light', labelKey: 'settings.themeLight' },
     { value: 'dark', labelKey: 'settings.themeDark' },
     { value: 'system', labelKey: 'settings.themeSystem' },
+  ];
+
+  const fontSizeOptions: { value: FontSizePreference; labelKey: string }[] = [
+    { value: 'small', labelKey: 'settings.fontSizeSmall' },
+    { value: 'medium', labelKey: 'settings.fontSizeMedium' },
+    { value: 'large', labelKey: 'settings.fontSizeLarge' },
   ];
 
   return (
@@ -50,6 +56,35 @@ export default function SettingsScreen() {
                   active && { backgroundColor: theme.colors.surface },
                 ]}
                 onPress={() => setPreference(value)}
+              >
+                <Text
+                  style={[
+                    styles.segmentText,
+                    { color: active ? theme.colors.primary : theme.colors.textSecondary },
+                    active && styles.segmentTextActive,
+                  ]}
+                >
+                  {t(labelKey)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* フォントサイズ設定 */}
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+          {t('settings.fontSize')}
+        </Text>
+        <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+          {fontSizeOptions.map(({ value, labelKey }) => {
+            const active = fontSizePreference === value;
+            return (
+              <Pressable
+                key={value}
+                style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                onPress={() => setFontSizePreference(value)}
               >
                 <Text
                   style={[

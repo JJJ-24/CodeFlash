@@ -185,7 +185,7 @@ export default function DeckDetailScreen() {
                 }
                 onLongPress={drag}
               >
-                <Text style={[styles.cardPreview, { color: theme.colors.text }]} numberOfLines={2}>
+                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: Math.round(15 * theme.fontScale) }]} numberOfLines={2}>
                   {preview || t('card.noText')}
                 </Text>
                 <Pressable

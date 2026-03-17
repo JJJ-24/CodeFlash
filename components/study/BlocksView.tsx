@@ -21,18 +21,19 @@ interface Props {
 export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, runTrigger, editTrigger }: Props) {
   const theme = useTheme();
 
+  const fs = (size: number) => Math.round(size * theme.fontScale);
   const markdownStyles = {
-    body: { fontSize: 17, color: theme.colors.text, lineHeight: 26 },
-    heading1: { fontSize: 24, fontWeight: '700' as const, marginBottom: 8 },
-    heading2: { fontSize: 20, fontWeight: '700' as const, marginBottom: 6 },
+    body: { fontSize: fs(17), color: theme.colors.text, lineHeight: fs(26) },
+    heading1: { fontSize: fs(24), fontWeight: '700' as const, marginBottom: 8 },
+    heading2: { fontSize: fs(20), fontWeight: '700' as const, marginBottom: 6 },
     code_inline: {
       backgroundColor: theme.dark ? '#2C2C2C' : '#F0F0F0',
       fontFamily: 'monospace',
-      fontSize: 14,
+      fontSize: fs(14),
       color: theme.colors.danger,
     },
     fence: { backgroundColor: theme.colors.codeBackground, borderRadius: 6, padding: 12 },
-    code_block: { fontFamily: 'monospace', fontSize: 14, color: '#D4D4D4' },
+    code_block: { fontFamily: 'monospace', fontSize: fs(14), color: '#D4D4D4' },
   };
 
   if (blocks.length === 0) {

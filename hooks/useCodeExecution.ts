@@ -1,5 +1,5 @@
 import { transform } from 'sucrase';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { buildSandboxHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, ExecStatus, LogEntry } from '@/lib/code-execution/types';
@@ -10,11 +10,15 @@ export type { ExecResult, ExecStatus, LogEntry };
  * コード実行の状態管理と実行ロジックを提供するフック。
  * 言語を追加する際は run() 内の言語判定を拡張する。
  */
-export function useCodeExecution() {
+export function useCodeExecution(onResult?: () => void) {
   const [status, setStatus] = useState<ExecStatus>('idle');
   const [result, setResult] = useState<ExecResult | null>(null);
   const [htmlSource, setHtmlSource] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (result) setTimeout(() => onResult?.(), 50);
+  }, [result]);
 
   function run(content: string, language: string) {
     setStatus('running');

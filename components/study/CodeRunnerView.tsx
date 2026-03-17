@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -36,15 +36,9 @@ interface Props {
 export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, runTrigger, editTrigger, onRunStart }: Props) {
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
-  const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage, reset } = useCodeExecution();
+  const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage, reset } = useCodeExecution(onRunStart);
   const [isEditing, setIsEditing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-
-  async function handleCodeCopy() {
-    await Clipboard.setStringAsync(editedContent ?? block.content);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 1000);
-  }
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
   const intentionalExitRef = useRef(false);
@@ -73,14 +67,14 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
   }, [editTrigger]);
 
   // 編集終了のみ（実行なし）- 完了ボタン用
-  function handleEditEnd() {
+  const handleEditEnd = useCallback(() => {
     intentionalExitRef.current = true;
     setIsEditing(false);
     onEditBlur?.();
-  }
+  }, [onEditBlur]);
 
   // 編集開始/終了トグル - 編集ボタン用
-  function handleEditToggle() {
+  const handleEditToggle = useCallback(() => {
     if (isEditing) {
       handleEditEnd();
     } else {
@@ -88,16 +82,10 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
       clear();
       onEditFocus?.();
     }
-  }
-
-  useEffect(() => {
-    if (result) {
-      setTimeout(() => onRunStart?.(), 50);
-    }
-  }, [result]);
+  }, [isEditing, handleEditEnd, clear, onEditFocus]);
 
   // 編集終了 + 実行 - ▶実行ボタン・r キー・Shift+Tab（onBlur）用
-  function handleRun() {
+  const handleRun = useCallback(() => {
     intentionalExitRef.current = true;
     if (isEditing) {
       setIsEditing(false);
@@ -105,7 +93,28 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
     }
     const content = (editable && editedContent !== undefined) ? editedContent : block.content;
     run(content, block.language);
-  }
+  }, [isEditing, editable, editedContent, block.content, block.language, run, onEditBlur]);
+
+  const handleCodeCopy = useCallback(async () => {
+    await Clipboard.setStringAsync(editedContent ?? block.content);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1000);
+  }, [editedContent, block.content]);
+
+  const editGesture = useMemo(
+    () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleEditToggle)()),
+    [handleEditToggle]
+  );
+
+  const runGesture = useMemo(
+    () => Gesture.Tap().maxDistance(10).onEnd(() => { if (!isRunning) runOnJS(handleRun)(); }),
+    [isRunning, handleRun]
+  );
+
+  const copyGesture = useMemo(
+    () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleCodeCopy)()),
+    [handleCodeCopy]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.codeBackground }]}>
@@ -117,7 +126,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
 
         <View style={styles.headerRight}>
           {editable && (
-            <GestureDetector gesture={Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleEditToggle)())}>
+            <GestureDetector gesture={editGesture}>
               <TouchableOpacity style={[styles.editBtn, isEditing && styles.editBtnActive]} activeOpacity={0.7}>
                 <Text style={[styles.editBtnText, isEditing && styles.editBtnTextActive]}>
                   {isEditing ? '完了' : '✏'}
@@ -127,7 +136,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
           )}
 
           {block.executable && (
-            <GestureDetector gesture={Gesture.Tap().maxDistance(10).onEnd(() => { if (!isRunning) runOnJS(handleRun)(); })}>
+            <GestureDetector gesture={runGesture}>
               <TouchableOpacity style={[styles.runBtn, isRunning && styles.runBtnDisabled]} activeOpacity={0.7} disabled={isRunning}>
                 {isRunning
                   ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
@@ -167,7 +176,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
             <Text style={styles.codeText}>{editedContent ?? block.content}</Text>
           </ScrollView>
         )}
-        <GestureDetector gesture={Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleCodeCopy)())}>
+        <GestureDetector gesture={copyGesture}>
           <View style={styles.codeCopyBtn}>
             <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
           </View>

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -32,13 +32,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage } = useCodeExecution();
-
-  useEffect(() => {
-    if (result) {
-      setTimeout(() => onRunStart?.(), 50);
-    }
-  }, [result]);
+  const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage } = useCodeExecution(onRunStart);
   const theme = useTheme();
 
   async function handleCodeCopy() {
@@ -69,7 +63,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           {block.executable && (
             <TouchableOpacity
               style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
-              onPress={() => { run(block.content, block.language); setTimeout(() => onRunStart?.(), 300); }}
+              onPress={() => run(block.content, block.language)}
               disabled={isRunning}
             >
               {isRunning

@@ -65,6 +65,8 @@ export default function StudySessionScreen() {
 
   const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
   const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
+  const handleFrontRunStart = useCallback(() => frontScrollRef.current?.scrollToEnd({ animated: true }), []);
+  const handleBackRunStart = useCallback(() => backScrollRef.current?.scrollToEnd({ animated: true }), []);
   const memoTapGesture = useMemo(
     () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleToggleMemo)()),
     [handleToggleMemo]
@@ -344,7 +346,7 @@ export default function StudySessionScreen() {
                       onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
                       runTrigger={runTrigger}
                       editTrigger={editTrigger}
-                      onCodeRunStart={() => frontScrollRef.current?.scrollToEnd({ animated: true })}
+                      onCodeRunStart={handleFrontRunStart}
                     />
                   </ScrollView>
                 }
@@ -352,7 +354,7 @@ export default function StudySessionScreen() {
                   <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                     <BlocksView
                       blocks={currentCard.backContent}
-                      onCodeRunStart={() => backScrollRef.current?.scrollToEnd({ animated: true })}
+                      onCodeRunStart={handleBackRunStart}
                     />
                     {hasMemo && (
                       <View style={styles.memoSection}>
@@ -467,7 +469,7 @@ export default function StudySessionScreen() {
                     onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
                     runTrigger={runTrigger}
                     editTrigger={editTrigger}
-                    onCodeRunStart={() => frontScrollRef.current?.scrollToEnd({ animated: true })}
+                    onCodeRunStart={handleFrontRunStart}
                   />
                 </ScrollView>
               }
@@ -475,7 +477,7 @@ export default function StudySessionScreen() {
                 <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
                   <BlocksView
                     blocks={currentCard.backContent}
-                    onCodeRunStart={() => backScrollRef.current?.scrollToEnd({ animated: true })}
+                    onCodeRunStart={handleBackRunStart}
                   />
                   {/* メモ */}
                   {hasMemo && (

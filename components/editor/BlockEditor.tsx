@@ -1,4 +1,4 @@
-import { type Dispatch, type Ref, type SetStateAction, useImperativeHandle, useState } from 'react';
+import { type Dispatch, type Ref, type SetStateAction, useEffect, useImperativeHandle, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -63,11 +63,12 @@ export interface BlockEditorRef {
 interface Props {
   initialData?: Partial<BlockEditorData>;
   onSave: (data: BlockEditorData) => Promise<void>;
+  onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
   ref?: Ref<BlockEditorRef>;
 }
 
-export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
+export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, ref }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -120,6 +121,10 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
     if (b.type === 'image') return !b.uri;
     return (b as TextBlock | CodeBlock).content.trim() === '';
   });
+
+  useEffect(() => {
+    onFrontEmptyChange?.(isFrontEmpty);
+  }, [isFrontEmpty]);
 
   async function handleSave() {
     if (isFrontEmpty) return;

@@ -23,6 +23,7 @@ export default function NewCardScreen() {
   const editorRef = useRef<BlockEditorRef>(null);
   const { bottom: bottomInset } = useSafeAreaInsets();
   const [saving, setSaving] = useState(false);
+  const [frontEmpty, setFrontEmpty] = useState(true);
 
   async function handleSave(data: BlockEditorData) {
     setSaving(true);
@@ -57,8 +58,8 @@ export default function NewCardScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPress={() => editorRef.current?.save()} disabled={saving} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: saving ? theme.colors.textTertiary : theme.colors.primary }}>
+            <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }}>
                 {t('card.create')}
               </Text>
             </Pressable>
@@ -66,9 +67,9 @@ export default function NewCardScreen() {
         }}
       />
       <View style={styles.container}>
-        <BlockEditor ref={editorRef} onSave={handleSave} saving={saving} />
+        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, saving && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving}>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Text style={styles.actionBtnTextLight}>{t('card.create')}</Text>
           </TouchableOpacity>
         </View>

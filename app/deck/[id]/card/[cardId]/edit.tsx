@@ -29,6 +29,7 @@ export default function EditCardScreen() {
   const [card, setCard] = useState<Card | null>(null);
   const [initialTagIds, setInitialTagIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [frontEmpty, setFrontEmpty] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -109,8 +110,8 @@ export default function EditCardScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPress={() => editorRef.current?.save()} disabled={saving} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: saving ? theme.colors.textTertiary : theme.colors.primary }}>
+            <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }}>
                 {t('card.save')}
               </Text>
             </Pressable>
@@ -127,13 +128,14 @@ export default function EditCardScreen() {
             tagIds: initialTagIds,
           }}
           onSave={handleSave}
+          onFrontEmptyChange={setFrontEmpty}
           saving={saving}
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
             <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, saving && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving}>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Text style={styles.actionBtnTextLight}>{t('card.save')}</Text>
           </TouchableOpacity>
         </View>

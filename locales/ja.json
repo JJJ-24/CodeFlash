@@ -78,7 +78,13 @@
     "backPlaceholder": "裏面のテキストを入力",
     "noContent": "（内容なし）",
     "codeOnly": "（コードのみ）",
-    "frontRequired": "表面にテキストかコードを入力してください"
+    "frontRequired": "表面にテキストかコードを入力してください",
+    "imageBlock": "画像",
+    "imageSelect": "画像を選択",
+    "imageChange": "変更",
+    "imageAltPlaceholder": "alt テキスト（省略可）",
+    "imageSizeErrorTitle": "画像が大きすぎます",
+    "imageSizeError": "5MB 以下の画像を選択してください"
   },
   "tabs": {
     "home": "ホーム",

@@ -1,4 +1,4 @@
-import { type Ref, useImperativeHandle, useState } from 'react';
+import { type Dispatch, type Ref, type SetStateAction, useImperativeHandle, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,12 +10,14 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 
 import { CodeBlockItem } from './CodeBlockItem';
+import { ImageBlockItem } from './ImageBlockItem';
 import { TagSelector } from './TagSelector';
 import { TextBlockItem } from './TextBlockItem';
 import { useTheme } from '@/lib/theme';
-import type { Block, CodeBlock, TextBlock } from '@/types';
+import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 
 type Tab = 'front' | 'back' | 'memo';
 
@@ -41,6 +43,10 @@ function newTextBlock(): EditBlock {
 
 function newCodeBlock(): EditBlock {
   return { type: 'code', language: 'javascript', content: '', executable: false, _key: makeKey() };
+}
+
+function newImageBlock(): EditBlock {
+  return { type: 'image', uri: '', alt: '', _key: makeKey() };
 }
 
 export interface BlockEditorData {
@@ -85,7 +91,7 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
     memo: memoBlocks,
   };
 
-  const setterByTab: Record<Tab, (blocks: EditBlock[]) => void> = {
+  const setterByTab: Record<Tab, Dispatch<SetStateAction<EditBlock[]>>> = {
     front: setFrontBlocks,
     back: setBackBlocks,
     memo: setMemoBlocks,
@@ -93,7 +99,7 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
 
   function updateBlock(tab: Tab, key: string, patch: Partial<Block>) {
     setterByTab[tab]((prev) =>
-      prev.map((b) => (b._key === key ? { ...b, ...patch } : b))
+      prev.map((b) => (b._key === key ? ({ ...b, ...patch } as EditBlock) : b))
     );
   }
 
@@ -104,13 +110,16 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
     });
   }
 
-  function addBlock(type: 'text' | 'code') {
-    const block = type === 'text' ? newTextBlock() : newCodeBlock();
+  function addBlock(type: 'text' | 'code' | 'image') {
+    const block = type === 'text' ? newTextBlock() : type === 'code' ? newCodeBlock() : newImageBlock();
     setterByTab[activeTab]((prev) => [...prev, block]);
     setAddMenuVisible(false);
   }
 
-  const isFrontEmpty = frontBlocks.every((b) => b.content.trim() === '');
+  const isFrontEmpty = frontBlocks.every((b) => {
+    if (b.type === 'image') return !b.uri;
+    return (b as TextBlock | CodeBlock).content.trim() === '';
+  });
 
   async function handleSave() {
     if (isFrontEmpty) return;
@@ -191,15 +200,16 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
               />
             );
           }
-          // ImageBlock: プレースホルダー（011チケットで実装）
-          return (
-            <View key={block._key} style={[styles.imagePlaceholder, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
-              <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary }]}>🖼 画像ブロック（未実装）</Text>
-              <Pressable onPress={() => deleteBlock(activeTab, block._key)} hitSlop={8}>
-                <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
-              </Pressable>
-            </View>
-          );
+          if (block.type === 'image') {
+            return (
+              <ImageBlockItem
+                key={block._key}
+                block={block as ImageBlock}
+                onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+                onDelete={() => deleteBlock(activeTab, block._key)}
+              />
+            );
+          }
         })}
 
         {/* ブロック追加ボタン */}
@@ -214,6 +224,12 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
                 <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('code')}>
                   <Text style={styles.addMenuIcon}>{'</>'}</Text>
                   <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>コード</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('image')}>
+                  <View style={styles.addMenuIconWrap}>
+                    <Ionicons name="image-outline" size={18} color="#1976D2" />
+                  </View>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>{t('card.imageBlock')}</Text>
                 </TouchableOpacity>
                 <Pressable onPress={() => setAddMenuVisible(false)} style={styles.addMenuCancel}>
                   <Text style={[styles.addMenuCancelText, { color: theme.colors.textTertiary }]}>キャンセル</Text>
@@ -235,7 +251,7 @@ export function BlockEditor({ initialData, onSave, saving, ref }: Props) {
 
         {/* 表面が空の場合のバリデーションエラー */}
         {isFrontEmpty && (
-          <Text style={[styles.validationError, { color: theme.colors.error ?? '#EF4444' }]}>
+          <Text style={[styles.validationError, { color: theme.colors.danger }]}>
             {t('card.frontRequired')}
           </Text>
         )}
@@ -271,17 +287,6 @@ const styles = StyleSheet.create({
   previewToggleTextActive: { color: '#1976D2', fontWeight: '600' },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
-  imagePlaceholder: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  imagePlaceholderText: { fontSize: 14 },
-  deleteBtnText: { fontSize: 14 },
   addArea: { marginTop: 4 },
   addBtn: {
     borderWidth: 1.5,
@@ -305,6 +310,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   addMenuIcon: { fontSize: 16, fontWeight: '700', color: '#1976D2', width: 28, textAlign: 'center' },
+  addMenuIconWrap: { width: 28, alignItems: 'center' },
   addMenuLabel: { fontSize: 15 },
   addMenuCancel: { paddingVertical: 12, alignItems: 'center' },
   addMenuCancelText: { fontSize: 14 },

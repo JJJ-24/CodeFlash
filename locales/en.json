@@ -78,7 +78,13 @@
     "backPlaceholder": "Enter back text",
     "noContent": "(no content)",
     "codeOnly": "(code only)",
-    "frontRequired": "Front side requires at least one text or code block"
+    "frontRequired": "Front side requires at least one text or code block",
+    "imageBlock": "Image",
+    "imageSelect": "Select Image",
+    "imageChange": "Change",
+    "imageAltPlaceholder": "Alt text (optional)",
+    "imageSizeErrorTitle": "Image too large",
+    "imageSizeError": "Please select an image under 5MB"
   },
   "tabs": {
     "home": "Home",

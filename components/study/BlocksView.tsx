@@ -1,9 +1,11 @@
 import Markdown from 'react-native-markdown-display';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { resolveImageUri } from '@/lib/image';
 import { useTheme } from '@/lib/theme';
-import type { Block, CodeBlock, TextBlock } from '@/types';
+import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
+import { ZoomableImage } from './ZoomableImage';
 
 interface Props {
   blocks: Block[];
@@ -62,9 +64,20 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
             />
           );
         }
+        const imgBlock = block as ImageBlock;
+        const imgUri = imgBlock.uri ? resolveImageUri(imgBlock.uri) : null;
         return (
-          <View key={i} style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
-            <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary }]}>🖼 画像ブロック</Text>
+          <View key={i} style={styles.imageBlock}>
+            {imgUri ? (
+              <ZoomableImage uri={imgUri} alt={imgBlock.alt} />
+            ) : (
+              <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
+                <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary }]}>🖼</Text>
+              </View>
+            )}
+            {!!imgBlock.alt && (
+              <Text style={[styles.altText, { color: theme.colors.textTertiary }]}>{imgBlock.alt}</Text>
+            )}
           </View>
         );
       })}
@@ -76,10 +89,12 @@ const styles = StyleSheet.create({
   container: { gap: 12 },
   empty: { fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
   textBlock: {},
+  imageBlock: { gap: 6 },
+  altText: { fontSize: 12, textAlign: 'center', fontStyle: 'italic' },
   imagePlaceholder: {
     borderRadius: 8,
-    padding: 16,
+    padding: 24,
     alignItems: 'center',
   },
-  imagePlaceholderText: { fontSize: 14 },
+  imagePlaceholderText: { fontSize: 24 },
 });

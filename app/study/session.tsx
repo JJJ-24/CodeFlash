@@ -270,7 +270,7 @@ export default function StudySessionScreen() {
   if (!currentCard) return null;
 
   const progressRatio = result.totalCards > 0 ? (currentIndex + 1) / result.totalCards : 0;
-  const hasMemo = currentCard.memoContent.some((b) => b.content.trim() !== '');
+  const hasMemo = currentCard.memoContent.some((b) => b.type !== 'image' && 'content' in b && b.content.trim() !== '' || b.type === 'image' && !!b.uri);
 
   if (isFullscreen) {
     return (

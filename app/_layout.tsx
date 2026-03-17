@@ -1,16 +1,22 @@
 import '@/lib/i18n';
 import { Stack } from 'expo-router';
-import { SQLiteProvider } from 'expo-sqlite';
-import { Suspense } from 'react';
+import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
+import { Suspense, useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
+import { cleanupOrphanImages } from '@/lib/image';
 import { useTheme } from '@/lib/theme';
 import { useThemeStore } from '@/store/theme';
 
 function RootStack() {
   const theme = useTheme();
+  const db = useSQLiteContext();
+
+  useEffect(() => {
+    cleanupOrphanImages(db).catch(() => {});
+  }, []);
 
   return (
     <Stack

@@ -40,7 +40,13 @@
         }
       ],
       "expo-sqlite",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "カードに画像を追加するためフォトライブラリへのアクセスを許可してください。"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

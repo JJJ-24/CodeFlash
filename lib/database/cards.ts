@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { deleteImagesInBlocks } from '@/lib/image';
 import type { Block, Card } from '@/types';
 import { generateId } from './utils';
 
@@ -106,6 +107,12 @@ export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: strin
 }
 
 export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string): Promise<void> {
+  // 画像ブロックのファイルを削除
+  const card = await getCardById(db, id);
+  if (card) {
+    const allBlocks = [...card.frontContent, ...card.backContent, ...card.memoContent];
+    await deleteImagesInBlocks(allBlocks).catch(() => {});
+  }
   // foreign_keys pragma が未設定のため明示的に関連レコードを削除
   await db.runAsync('DELETE FROM card_tags WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM reviews WHERE cardId = ?', [id]);

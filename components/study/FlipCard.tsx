@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -54,11 +54,11 @@ export const FlipCard = forwardRef<FlipCardRef, Props>(
       };
     });
 
-    const tapGesture = Gesture.Tap()
-      .maxDistance(10)
-      .onEnd(() => {
-        runOnJS(onFlip)();
-      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const tapGesture = useMemo(
+      () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(onFlip)()),
+      [onFlip]
+    );
 
     return (
       <GestureDetector gesture={tapGesture}>

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -60,6 +60,13 @@ export default function StudySessionScreen() {
   const codeEditingRef = useRef(false);
   const flipCardRef = useRef<FlipCardRef>(null);
   const isNavigatingRef = useRef(false);
+
+  const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
+  const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
+  const memoTapGesture = useMemo(
+    () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleToggleMemo)()),
+    [handleToggleMemo]
+  );
 
   const translateX = useSharedValue(0);
   const slideX = useSharedValue(0);
@@ -319,7 +326,7 @@ export default function StudySessionScreen() {
               <FlipCard
                 ref={flipCardRef}
                 isFlipped={isFlipped}
-                onFlip={() => setIsFlipped((v) => !v)}
+                onFlip={handleFlip}
                 cardStyle={{ borderRadius: 0, shadowOpacity: 0, elevation: 0 }}
                 innerStyle={{ padding: 0, justifyContent: 'flex-start' }}
                 front={
@@ -341,19 +348,18 @@ export default function StudySessionScreen() {
                     <BlocksView blocks={currentCard.backContent} />
                     {hasMemo && (
                       <View style={styles.memoSection}>
-                        <Pressable
-                          style={styles.memoToggle}
-                          onPress={() => setShowMemo((v) => !v)}
-                        >
-                          <Ionicons
-                            name={showMemo ? 'eye-off-outline' : 'eye-outline'}
-                            size={16}
-                            color={theme.colors.textTertiary}
-                          />
-                          <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
-                            {showMemo ? t('study.hideMemo') : t('study.showMemo')}
-                          </Text>
-                        </Pressable>
+                        <GestureDetector gesture={memoTapGesture}>
+                          <View style={styles.memoToggle}>
+                            <Ionicons
+                              name={showMemo ? 'eye-off-outline' : 'eye-outline'}
+                              size={16}
+                              color={theme.colors.textTertiary}
+                            />
+                            <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+                              {showMemo ? t('study.hideMemo') : t('study.showMemo')}
+                            </Text>
+                          </View>
+                        </GestureDetector>
                         {showMemo && (
                           <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
                             <BlocksView blocks={currentCard.memoContent} />
@@ -441,7 +447,7 @@ export default function StudySessionScreen() {
             <FlipCard
               ref={flipCardRef}
               isFlipped={isFlipped}
-              onFlip={() => setIsFlipped((v) => !v)}
+              onFlip={handleFlip}
               front={
                 <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
                   <BlocksView
@@ -462,19 +468,18 @@ export default function StudySessionScreen() {
                   {/* メモ */}
                   {hasMemo && (
                     <View style={styles.memoSection}>
-                      <Pressable
-                        style={styles.memoToggle}
-                        onPress={() => setShowMemo((v) => !v)}
-                      >
-                        <Ionicons
-                          name={showMemo ? 'eye-off-outline' : 'eye-outline'}
-                          size={16}
-                          color={theme.colors.textTertiary}
-                        />
-                        <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
-                          {showMemo ? t('study.hideMemo') : t('study.showMemo')}
-                        </Text>
-                      </Pressable>
+                      <GestureDetector gesture={memoTapGesture}>
+                        <View style={styles.memoToggle}>
+                          <Ionicons
+                            name={showMemo ? 'eye-off-outline' : 'eye-outline'}
+                            size={16}
+                            color={theme.colors.textTertiary}
+                          />
+                          <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+                            {showMemo ? t('study.hideMemo') : t('study.showMemo')}
+                          </Text>
+                        </View>
+                      </GestureDetector>
                       {showMemo && (
                         <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
                           <BlocksView blocks={currentCard.memoContent} />
@@ -564,8 +569,8 @@ const styles = StyleSheet.create({
   faceContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 8 },
   faceLabel: { fontSize: 11, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   memoSection: { marginTop: 20, gap: 8 },
-  memoToggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  memoToggleText: { fontSize: 13 },
+  memoToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  memoToggleText: { fontSize: 16 },
   memoContent: {
     borderRadius: 8,
     padding: 12,

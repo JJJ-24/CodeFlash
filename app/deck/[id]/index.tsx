@@ -126,9 +126,6 @@ export default function DeckDetailScreen() {
           </Pressable>
         ))}
       </View>
-      <Text style={[styles.statHint, { color: theme.colors.textTertiary }]}>
-        {t('deck.statHint')}
-      </Text>
 
       <TouchableOpacity
         style={styles.studyBtn}

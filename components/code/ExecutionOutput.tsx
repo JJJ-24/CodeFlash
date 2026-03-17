@@ -1,7 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import type { ExecResult } from '@/lib/code-execution/types';
+
+function buildCopyText(result: ExecResult): string {
+  const lines: string[] = [];
+  if (result.errorMessage) lines.push(result.errorMessage);
+  result.logs.forEach(l => lines.push(l.text));
+  return lines.join('\n');
+}
 
 interface Props {
   result: ExecResult | null;
@@ -16,6 +26,15 @@ interface Props {
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
 export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage }: Props) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    if (!result) return;
+    await Clipboard.setStringAsync(buildCopyText(result));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1000);
+  }
+
   return (
     <>
       {result && (
@@ -30,32 +49,36 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
               {result.status === 'timeout' ? '⏱ タイムアウト（5秒）' :
                result.status === 'error'   ? '✕ エラー' : '▶ 出力'}
             </Text>
-            <Pressable onPress={onClear} hitSlop={8}>
+            <Pressable onPress={onClear} hitSlop={8} style={styles.clearBtnWrapper}>
               <Text style={styles.clearBtn}>✕</Text>
             </Pressable>
           </View>
-
-          {result.status === 'error' && result.errorMessage && (
-            <Text style={styles.errorMessage}>{result.errorMessage}</Text>
-          )}
-          {result.status === 'timeout' && (
-            <Text style={styles.errorMessage}>実行が5秒を超えたため中断されました</Text>
-          )}
-          {result.logs.length === 0 && result.status === 'success' && (
-            <Text style={styles.emptyOutput}>（出力なし）</Text>
-          )}
-          {result.logs.map((log, i) => (
-            <Text
-              key={i}
-              style={[
-                styles.logLine,
-                log.type === 'error' && styles.logError,
-                log.type === 'warn'  && styles.logWarn,
-              ]}
-            >
-              {log.text}
-            </Text>
-          ))}
+          <View style={styles.outputContent}>
+            {result.status === 'error' && result.errorMessage && (
+              <Text style={styles.errorMessage}>{result.errorMessage}</Text>
+            )}
+            {result.status === 'timeout' && (
+              <Text style={styles.errorMessage}>実行が5秒を超えたため中断されました</Text>
+            )}
+            {result.logs.length === 0 && result.status === 'success' && (
+              <Text style={styles.emptyOutput}>（出力なし）</Text>
+            )}
+            {result.logs.map((log, i) => (
+              <Text
+                key={i}
+                style={[
+                  styles.logLine,
+                  log.type === 'error' && styles.logError,
+                  log.type === 'warn'  && styles.logWarn,
+                ]}
+              >
+                {log.text}
+              </Text>
+            ))}
+            <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
+              <Ionicons name={copied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -93,6 +116,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 2,
     marginBottom: 4,
   },
   outputTitle: {
@@ -100,6 +124,18 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
   },
+  outputContent: {
+    position: 'relative',
+  },
+  copyBtn: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    padding: 4,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 4,
+  },
+  clearBtnWrapper: { padding: 2 },
   clearBtn: {
     fontSize: 12,
     color: '#4B5563',

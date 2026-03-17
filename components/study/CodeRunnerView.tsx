@@ -1,6 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,6 +35,13 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage, reset } = useCodeExecution();
   const [isEditing, setIsEditing] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  async function handleCodeCopy() {
+    await Clipboard.setStringAsync(editedContent ?? block.content);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1000);
+  }
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
   const intentionalExitRef = useRef(false);
@@ -121,32 +131,37 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
       </View>
 
       {/* コード表示 / 編集 */}
-      {editable && isEditing ? (
-        <TextInput
-          ref={codeInputRef}
-          style={[styles.codeText, styles.codeInput]}
-          value={editedContent ?? block.content}
-          onChangeText={onContentChange}
-          multiline
-          autoCorrect={false}
-          autoCapitalize="none"
-          spellCheck={false}
-          keyboardType="ascii-capable"
-          showSoftInputOnFocus={!keyboardShortcutsEnabled}
-          onBlur={() => {
-            // Shift+Tab・外タップ等でフォーカスが外れた場合に実行
-            // 完了ボタン・▶実行ボタン経由の場合は intentionalExitRef で防ぐ
-            if (!intentionalExitRef.current) {
-              handleRun();
-            }
-            intentionalExitRef.current = false;
-          }}
-        />
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <Text style={styles.codeText}>{editedContent ?? block.content}</Text>
-        </ScrollView>
-      )}
+      <View style={styles.codeArea}>
+        {editable && isEditing ? (
+          <TextInput
+            ref={codeInputRef}
+            style={[styles.codeText, styles.codeInput]}
+            value={editedContent ?? block.content}
+            onChangeText={onContentChange}
+            multiline
+            autoCorrect={false}
+            autoCapitalize="none"
+            spellCheck={false}
+            keyboardType="ascii-capable"
+            showSoftInputOnFocus={!keyboardShortcutsEnabled}
+            onBlur={() => {
+              // Shift+Tab・外タップ等でフォーカスが外れた場合に実行
+              // 完了ボタン・▶実行ボタン経由の場合は intentionalExitRef で防ぐ
+              if (!intentionalExitRef.current) {
+                handleRun();
+              }
+              intentionalExitRef.current = false;
+            }}
+          />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <Text style={styles.codeText}>{editedContent ?? block.content}</Text>
+          </ScrollView>
+        )}
+        <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
+          <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+        </Pressable>
+      </View>
 
       {!isEditing && (
         <ExecutionOutput
@@ -222,6 +237,17 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginHorizontal: 4,
+  },
+  codeArea: {
+    position: 'relative',
+  },
+  codeCopyBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 4,
   },
   codeText: {
     fontFamily: 'monospace',

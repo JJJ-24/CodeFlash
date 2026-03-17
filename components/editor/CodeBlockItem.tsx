@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,8 +30,15 @@ interface Props {
 export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage } = useCodeExecution();
   const theme = useTheme();
+
+  async function handleCodeCopy() {
+    await Clipboard.setStringAsync(block.content);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1000);
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused]}>
@@ -70,29 +79,34 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
       </View>
 
       {/* コード入力エリア */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <TextInput
-          style={[styles.codeInput, isPreview && styles.codePreview]}
-          value={block.content}
-          onChangeText={(v) =>
-            onChange({
-              content: v
-                .replace(/[\u201c\u201d]/g, '"')
-                .replace(/[\u2018\u2019]/g, "'"),
-            })
-          }
-          multiline
-          editable={!isPreview}
-          placeholder="コードを入力"
-          placeholderTextColor="#6B7280"
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          textAlignVertical="top"
-          autoCapitalize="none"
-          autoCorrect={false}
-          spellCheck={false}
-        />
-      </ScrollView>
+      <View style={styles.codeArea}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <TextInput
+            style={[styles.codeInput, isPreview && styles.codePreview]}
+            value={block.content}
+            onChangeText={(v) =>
+              onChange({
+                content: v
+                  .replace(/[\u201c\u201d]/g, '"')
+                  .replace(/[\u2018\u2019]/g, "'"),
+              })
+            }
+            multiline
+            editable={!isPreview}
+            placeholder="コードを入力"
+            placeholderTextColor="#6B7280"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            textAlignVertical="top"
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+          />
+        </ScrollView>
+        <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
+          <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+        </Pressable>
+      </View>
 
       <ExecutionOutput
         result={result}
@@ -170,6 +184,17 @@ const styles = StyleSheet.create({
   spinner: { marginHorizontal: 4 },
   deleteBtn: { padding: 2 },
   deleteBtnText: { fontSize: 12, color: '#616161' },
+  codeArea: {
+    position: 'relative',
+  },
+  codeCopyBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 4,
+  },
   codeInput: {
     paddingHorizontal: 14,
     paddingVertical: 12,

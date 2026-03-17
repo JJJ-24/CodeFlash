@@ -100,7 +100,9 @@ Stack (_layout.tsx)
 - **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` を明示的に先に削除する
 - **SM-2 グレード対応**: `grade 0` = もう一度, `1` = 難しい, `2` = 普通, `3` = 簡単（`lib/sm2.ts` 参照）
 - **i18n**: 端末言語を自動検出し、未対応言語の場合は日本語にフォールバック
-- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。`useThemeStore` で preference を変更する。テーマ色は `theme.colors.*` で参照する（StyleSheet に直書きしない）
+- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。`useThemeStore` で preference を変更する。テーマ色は `theme.colors.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。
+- **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで（AsyncStorage から preference を復元するまで）`<RootStack />` を描画しない。これによりテーマ未確定状態での描画を防いでいる。
+- **モーダルから戻った後のデータ更新**: `app/deck/[id]/index.tsx` は `useFocusEffect` でフォーカス時に DB を再読み込みする。モーダルで作成・編集・削除した後も最新状態が反映される。
 - **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）は画面上に見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。
 
 ### 主要な設定
@@ -116,3 +118,9 @@ Stack (_layout.tsx)
 `docs/` 配下に機能チケット（000〜020）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
 完了済み: 001〜008・012・013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・統計画面・ダークモード）
+
+### UI パターン（実装済み画面の慣習）
+
+- **統計ブロック**: 数字（大・色付き）→ラベル（小・`textTertiary`）→ボタン（青丸に白三角）の縦並び。`theme.colors.surface` 背景・角丸・影付き。`deck/[id]/index.tsx` の `statItem` スタイルが基準。
+- **セクションタイトル**: `fontSize: 16, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。
+- **locales の改行**: ラベルに改行が必要な場合は `"カード\n総数"` のように `\n` を埋め込む（`Text` コンポーネントがそのまま改行として解釈する）。

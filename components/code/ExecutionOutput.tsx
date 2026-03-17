@@ -6,6 +6,7 @@ import type { ExecResult } from '@/lib/code-execution/types';
 interface Props {
   result: ExecResult | null;
   htmlSource: string | null;
+  baseUrl?: string;
   onClear: () => void;
   onMessage: (event: { nativeEvent: { data: string } }) => void;
 }
@@ -14,7 +15,7 @@ interface Props {
  * コード実行結果の表示と hidden WebView（実行エンジン）を担う共有コンポーネント。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, onClear, onMessage }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage }: Props) {
   return (
     <>
       {result && (
@@ -63,12 +64,13 @@ export function ExecutionOutput({ result, htmlSource, onClear, onMessage }: Prop
         <View style={styles.hiddenWebViewContainer} pointerEvents="none">
           <WebView
             style={styles.hiddenWebView}
-            source={{ html: htmlSource }}
+            source={{ html: htmlSource, baseUrl: baseUrl ?? 'about:blank' }}
             onMessage={onMessage}
             javaScriptEnabled
             originWhitelist={['*']}
             scrollEnabled={false}
             allowsInlineMediaPlayback={false}
+            mixedContentMode="always"
           />
         </View>
       )}

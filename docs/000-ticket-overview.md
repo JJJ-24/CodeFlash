@@ -28,7 +28,7 @@
 | [007](./007-study-screen.md) | 学習画面（通常モード） | MVP | 完了 | 003, 005, 006 |
 | [008](./008-fullscreen-keyboard.md) | 全画面モード＋Bluetoothキーボード | v1.0 | 完了 | 007 |
 | [009](./009-code-execution-js.md) | コード実行（JavaScript / TypeScript） | v1.0 | 未着手 | 005 |
-| [010](./010-code-execution-python.md) | コード実行（Python / Pyodide） | v1.0 | 未着手 | 009 |
+| [010](./010-code-execution-python.md) | コード実行（Python / Pyodide） | v1.0 | 完了 | 009 |
 | [011](./011-image-block.md) | 画像ブロック | v1.0 | 未着手 | 005 |
 | [012](./012-statistics-screen.md) | 統計画面 | v1.0 | 未着手 | 006, 007 |
 | [013](./013-dark-mode-theme.md) | ダークモード＆テーマ | v1.0 | 未着手 | 001 |

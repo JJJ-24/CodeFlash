@@ -28,7 +28,7 @@ interface Props {
 export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
-  const { result, htmlSource, isRunning, run, clear, handleMessage } = useCodeExecution();
+  const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage } = useCodeExecution();
   const theme = useTheme();
 
   return (
@@ -97,6 +97,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete }: Props) {
       <ExecutionOutput
         result={result}
         htmlSource={htmlSource}
+        baseUrl={baseUrl}
         onClear={clear}
         onMessage={handleMessage}
       />

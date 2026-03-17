@@ -14,6 +14,7 @@ export function useCodeExecution() {
   const [status, setStatus] = useState<ExecStatus>('idle');
   const [result, setResult] = useState<ExecResult | null>(null);
   const [htmlSource, setHtmlSource] = useState<string | null>(null);
+  const [baseUrl, setBaseUrl] = useState<string | undefined>(undefined);
 
   function run(content: string, language: string) {
     setStatus('running');
@@ -33,6 +34,7 @@ export function useCodeExecution() {
       }
     }
 
+    setBaseUrl(language === 'python' ? 'https://cdn.jsdelivr.net' : undefined);
     setHtmlSource(buildSandboxHtml(code, language));
   }
 
@@ -67,6 +69,7 @@ export function useCodeExecution() {
     status,
     result,
     htmlSource,
+    baseUrl,
     isRunning: status === 'running',
     run,
     clear,

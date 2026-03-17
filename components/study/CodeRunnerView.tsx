@@ -30,7 +30,7 @@ interface Props {
 export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, runTrigger, editTrigger }: Props) {
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
-  const { result, htmlSource, isRunning, run, clear, handleMessage, reset } = useCodeExecution();
+  const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage, reset } = useCodeExecution();
   const [isEditing, setIsEditing] = useState(false);
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
@@ -152,6 +152,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
         <ExecutionOutput
           result={result}
           htmlSource={htmlSource}
+          baseUrl={baseUrl}
           onClear={clear}
           onMessage={handleMessage}
         />

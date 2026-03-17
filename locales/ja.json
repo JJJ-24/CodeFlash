@@ -40,7 +40,8 @@
     "again": "もう一度",
     "progress": "{{current}} / {{total}}",
     "selectTag": "タグ",
-    "noTags": "タグがありません"
+    "noTags": "タグがありません",
+    "listTitle": "学習一覧"
   },
   "tag": {
     "title": "タグ管理",

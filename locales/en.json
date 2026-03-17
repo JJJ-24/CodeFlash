@@ -40,7 +40,8 @@
     "again": "Again",
     "progress": "{{current}} / {{total}}",
     "selectTag": "Tags",
-    "noTags": "No tags"
+    "noTags": "No tags",
+    "listTitle": "Study List"
   },
   "tag": {
     "title": "Tags",

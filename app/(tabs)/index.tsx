@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -81,6 +82,9 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, setDecks, removeDeck, reorderDecks } = useDeckStore();
+  const { width } = useWindowDimensions();
+  // 学習画面の4ブロック幅に合わせる（padding:16×2=32, gap:8×3=24）
+  const blockWidth = (width - 32 - 24) / 4;
 
   useEffect(() => {
     getAllDecks(db).then(setDecks);
@@ -94,7 +98,7 @@ export default function HomeScreen() {
   const StatsHeader = (
     <View style={styles.statsHeader}>
       <View style={styles.statsRow}>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface, width: blockWidth }]}>
           <Text style={[styles.statValue, { color: theme.colors.primary }]}>{decks.length}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{'すべての\nデッキ'}</Text>
         </View>
@@ -153,11 +157,9 @@ const styles = StyleSheet.create({
   statsHeader: { paddingTop: 4, paddingBottom: 8, gap: 24 },
   statsRow: {},
   statItem: {
-    alignSelf: 'flex-start',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    minWidth: 80,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,

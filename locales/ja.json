@@ -22,9 +22,9 @@
     "save": "保存",
     "study": "学習開始",
     "noCards": "カードがまだありません",
-    "statTotal": "カード\n総数",
-    "statDue": "要復習",
-    "statHint": "ブロックをタップして学習を開始"
+    "statTotal": "すべての\nカード",
+    "statDue": "復習",
+    "statHint": "ブロックまたはボタンをタップして学習を開始"
   },
   "study": {
     "title": "学習",

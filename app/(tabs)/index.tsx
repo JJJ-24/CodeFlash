@@ -96,7 +96,7 @@ export default function HomeScreen() {
       <View style={styles.statsRow}>
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.statValue, { color: theme.colors.primary }]}>{decks.length}</Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{'デッキ\n総数'}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{'すべての\nデッキ'}</Text>
         </View>
       </View>
       <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>

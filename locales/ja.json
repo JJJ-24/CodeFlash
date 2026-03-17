@@ -28,7 +28,7 @@
   },
   "study": {
     "title": "学習",
-    "selectDeck": "デッキを選択",
+    "selectDeck": "デッキ",
     "dueCards": "{{count}} 枚が復習対象",
     "noDue": "今日の復習はありません",
     "noDecks": "デッキがありません",

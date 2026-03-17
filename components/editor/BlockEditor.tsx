@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   addMenuLabel: { fontSize: 15 },
   addMenuCancel: { paddingVertical: 12, alignItems: 'center' },
   addMenuCancelText: { fontSize: 14 },
-  tagSection: { gap: 8 },
+  tagSection: { gap: 8, marginTop: 12 },
   tagLabel: { fontSize: 14, fontWeight: '600' },
   validationError: { fontSize: 13, textAlign: 'center' },
 });

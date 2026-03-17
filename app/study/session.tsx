@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -38,8 +38,14 @@ export default function StudySessionScreen() {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext } =
+  const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext, refreshCurrentCard } =
     useStudySession();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshCurrentCard();
+    }, [refreshCurrentCard])
+  );
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
 
@@ -299,6 +305,14 @@ export default function StudySessionScreen() {
             <Ionicons name="contract-outline" size={24} color={theme.colors.iconSubtle} />
           </Pressable>
 
+          {/* 編集ボタン（右上） */}
+          <Pressable
+            style={styles.fullscreenEditBtn}
+            onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
+          >
+            <Ionicons name="create-outline" size={24} color={theme.colors.iconSubtle} />
+          </Pressable>
+
           {/* コンテンツエリア：タップで裏返す */}
           <GestureDetector gesture={panGesture}>
             <Animated.View style={[{ flex: 1 }, cardAnimStyle]}>
@@ -378,7 +392,21 @@ export default function StudySessionScreen() {
   return (
     <>
       <StatusBar hidden />
-      <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '', headerShown: true }} />
+      <Stack.Screen
+        options={{
+          title: t('study.title'),
+          headerBackTitle: '',
+          headerShown: true,
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
+              style={{ paddingHorizontal: 8 }}
+            >
+              <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ),
+        }}
+      />
       <TextInput
         ref={keyboardRef}
         style={styles.hiddenKeyboardInput}
@@ -601,6 +629,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 48,
     left: 20,
+    padding: 8,
+    borderRadius: 10,
+    zIndex: 10,
+  },
+  fullscreenEditBtn: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
     padding: 8,
     borderRadius: 10,
     zIndex: 10,

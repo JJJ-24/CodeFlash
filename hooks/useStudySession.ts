@@ -100,6 +100,15 @@ export function useStudySession() {
     [db, queue, currentIndex, result]
   );
 
+  const refreshCurrentCard = useCallback(async () => {
+    const card = queue[currentIndex];
+    if (!card) return;
+    const updated = await getCardById(db, card.id);
+    if (updated) {
+      setQueue((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+    }
+  }, [db, queue, currentIndex]);
+
   return {
     loading,
     completed,
@@ -110,5 +119,6 @@ export function useStudySession() {
     submitGrade,
     goBack,
     goNext,
+    refreshCurrentCard,
   };
 }

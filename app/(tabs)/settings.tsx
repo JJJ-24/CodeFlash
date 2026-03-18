@@ -49,6 +49,16 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container}>
+      {/* タグ管理 */}
+      <Pressable
+        style={[styles.row, { backgroundColor: theme.colors.surface }]}
+        onPress={() => router.push('/tags')}
+      >
+        <Ionicons name="pricetags-outline" size={22} color={theme.colors.primary} />
+        <Text style={[styles.rowText, { color: theme.colors.text }]}>{t('tag.title')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
+      </Pressable>
+
       {/* テーマ設定 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
@@ -138,16 +148,6 @@ export default function SettingsScreen() {
           })}
         </View>
       </View>
-
-      {/* タグ管理 */}
-      <Pressable
-        style={[styles.row, { backgroundColor: theme.colors.surface }]}
-        onPress={() => router.push('/tags')}
-      >
-        <Ionicons name="pricetags-outline" size={22} color={theme.colors.primary} />
-        <Text style={[styles.rowText, { color: theme.colors.text }]}>{t('tag.title')}</Text>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
-      </Pressable>
 
       {/* キーボードショートカット ON/OFF */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

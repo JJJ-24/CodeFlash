@@ -256,11 +256,11 @@ const styles = StyleSheet.create({
   emptySubText: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
 
   // Summary row
-  summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   summaryCard: {
     flex: 1,
     borderRadius: 12,
-    padding: 14,
+    padding: 16,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -269,10 +269,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   summaryCardHighlight: { backgroundColor: '#1976D2' },
-  summaryValue: { fontSize: 28, fontWeight: '700' },
+  summaryValue: { fontSize: 26, fontWeight: '700' },
   summaryValueHighlight: { color: '#FFF' },
   summaryLabelHighlight: { color: 'rgba(255,255,255,0.85)' },
-  summaryLabel: { fontSize: 11, marginTop: 2, textAlign: 'center' },
+  summaryLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
   summaryUnit: { fontSize: 11 },
 
   // Section

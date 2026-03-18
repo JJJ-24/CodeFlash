@@ -154,7 +154,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  statsHeader: { paddingTop: 4, paddingBottom: 8, gap: 24 },
+  statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
   statsRow: {},
   statItem: {
     borderRadius: 12,
@@ -162,9 +162,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statValue: { fontSize: 26, fontWeight: '700' },
   statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },

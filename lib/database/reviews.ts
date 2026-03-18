@@ -130,6 +130,18 @@ export async function getDueCountPerDeck(
   return Object.fromEntries(rows.map((r) => [r.deckId, r.count]));
 }
 
+/** タグIDをキー、紐付くカード総数を値とするマップを一括取得 */
+export async function getTotalCardCountPerTag(
+  db: SQLiteDatabase
+): Promise<Record<string, number>> {
+  const rows = await db.getAllAsync<{ tagId: string; count: number }>(
+    `SELECT ct.tagId, COUNT(*) as count
+     FROM card_tags ct
+     GROUP BY ct.tagId`
+  );
+  return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
+}
+
 /** today の ISO 日付文字列（時刻なし）を返す */
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);

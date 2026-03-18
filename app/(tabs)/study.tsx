@@ -23,11 +23,13 @@ import {
   getReviewDueCountPerTag,
   getUnlearnedCountPerDeck,
   getUnlearnedCountPerTag,
+  getTotalCardCountPerTag,
 } from '@/lib/database/reviews';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
+import type { Deck, Tag } from '@/types';
 
 type Tab = 'decks' | 'tags';
 type Filter = 'all' | 'learned' | 'review' | 'new';
@@ -52,6 +54,7 @@ export default function StudyScreen() {
   const [reviewDuePerTag, setReviewDuePerTag] = useState<Record<string, number>>({});
   const [unlearnedPerDeck, setUnlearnedPerDeck] = useState<Record<string, number>>({});
   const [unlearnedPerTag, setUnlearnedPerTag] = useState<Record<string, number>>({});
+  const [totalPerTag, setTotalPerTag] = useState<Record<string, number>>({});
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('decks');
@@ -63,7 +66,8 @@ export default function StudyScreen() {
         setLoading(true);
         const [
           loadedDecks, deckCounts, loadedTags, tagCounts,
-          todayDeck, todayTag, reviewDeck, reviewTag, unlearnedDeck, unlearnedTag,
+          todayDeck, todayTag, reviewDeck, reviewTag,
+          unlearnedDeck, unlearnedTag, totalTag,
         ] = await Promise.all([
           getAllDecks(db),
           getDueCountPerDeck(db),
@@ -75,6 +79,7 @@ export default function StudyScreen() {
           getReviewDueCountPerTag(db),
           getUnlearnedCountPerDeck(db),
           getUnlearnedCountPerTag(db),
+          getTotalCardCountPerTag(db),
         ]);
         setDecks(loadedDecks);
         setDueCounts(deckCounts);
@@ -86,39 +91,119 @@ export default function StudyScreen() {
         setReviewDuePerTag(reviewTag);
         setUnlearnedPerDeck(unlearnedDeck);
         setUnlearnedPerTag(unlearnedTag);
+        setTotalPerTag(totalTag);
         setLoading(false);
       })();
     }, [db])
   );
 
-  const totalAll = activeTab === 'decks' ? sumValues(dueCounts) : sumValues(tagDueCounts);
+  // フィルター別: デッキの表示カウント・テキスト・タップ可否を返す
+  function getDeckDisplayInfo(deck: Deck): {
+    count: number;
+    subText: string;
+    subTextActive: boolean;
+    tappable: boolean;
+  } {
+    switch (activeFilter) {
+      case 'all': {
+        const n = deck.cardCount;
+        return {
+          count: n,
+          subText: n > 0 ? `${n}枚がすべてのカード` : 'カードがありません',
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+      case 'learned': {
+        const n = todayReviewedPerDeck[deck.id] ?? 0;
+        return {
+          count: n,
+          subText: n > 0 ? `${n}枚が学習済み対象` : '今日の学習済みはありません',
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+      case 'review': {
+        const n = dueCounts[deck.id] ?? 0;
+        return {
+          count: n,
+          subText: n > 0 ? t('study.dueCards', { count: n }) : t('study.noDue'),
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+      case 'new': {
+        const n = unlearnedPerDeck[deck.id] ?? 0;
+        return {
+          count: n,
+          subText: n > 0 ? `${n}枚が未学習対象` : '未学習はありません',
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+    }
+  }
+
+  // フィルター別: タグの表示カウント・テキスト・タップ可否を返す
+  function getTagDisplayInfo(tag: Tag): {
+    count: number;
+    subText: string;
+    subTextActive: boolean;
+    tappable: boolean;
+  } {
+    switch (activeFilter) {
+      case 'all': {
+        const n = totalPerTag[tag.id] ?? 0;
+        return {
+          count: n,
+          subText: n > 0 ? `${n}枚がすべてのカード` : 'カードがありません',
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+      case 'learned': {
+        const n = todayReviewedPerTag[tag.id] ?? 0;
+        return {
+          count: n,
+          subText: n > 0 ? `${n}枚が学習済み対象` : '今日の学習済みはありません',
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+      case 'review': {
+        const n = tagDueCounts[tag.id] ?? 0;
+        return {
+          count: n,
+          subText: n > 0 ? t('study.dueCards', { count: n }) : t('study.noDue'),
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+      case 'new': {
+        const n = unlearnedPerTag[tag.id] ?? 0;
+        return {
+          count: n,
+          subText: n > 0 ? `${n}枚が未学習対象` : '未学習はありません',
+          subTextActive: n > 0,
+          tappable: n > 0,
+        };
+      }
+    }
+  }
+
+  const totalAll = activeTab === 'decks'
+    ? decks.reduce((s, d) => s + d.cardCount, 0)
+    : sumValues(totalPerTag);
   const totalLearned = activeTab === 'decks' ? sumValues(todayReviewedPerDeck) : sumValues(todayReviewedPerTag);
-  const totalReview = activeTab === 'decks' ? sumValues(reviewDuePerDeck) : sumValues(reviewDuePerTag);
+  const totalReview = activeTab === 'decks' ? sumValues(dueCounts) : sumValues(tagDueCounts);
   const totalNew = activeTab === 'decks' ? sumValues(unlearnedPerDeck) : sumValues(unlearnedPerTag);
 
   const filterBlocks: { key: Filter; value: number; color: string; label: string }[] = [
-    { key: 'all', value: totalAll, color: theme.colors.primary, label: 'すべて' },
+    { key: 'all', value: totalAll, color: theme.colors.primary, label: 'すべての\nカード' },
     { key: 'learned', value: totalLearned, color: '#4CAF50', label: '学習済み\n（今日）' },
     { key: 'review', value: totalReview, color: '#F57C00', label: '復習\n（今日）' },
     { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: '未学習\n（新規）' },
   ];
-
-  function filterDecks() {
-    if (activeFilter === 'learned') return decks.filter((d) => (todayReviewedPerDeck[d.id] ?? 0) > 0);
-    if (activeFilter === 'review') return decks.filter((d) => (reviewDuePerDeck[d.id] ?? 0) > 0);
-    if (activeFilter === 'new') return decks.filter((d) => (unlearnedPerDeck[d.id] ?? 0) > 0);
-    return decks;
-  }
-
-  function filterTags() {
-    if (activeFilter === 'learned') return tags.filter((t) => (todayReviewedPerTag[t.id] ?? 0) > 0);
-    if (activeFilter === 'review') return tags.filter((t) => (reviewDuePerTag[t.id] ?? 0) > 0);
-    if (activeFilter === 'new') return tags.filter((t) => (unlearnedPerTag[t.id] ?? 0) > 0);
-    return tags;
-  }
-
-  const filteredDecks = filterDecks();
-  const filteredTags = filterTags();
 
   if (loading) {
     return (
@@ -183,7 +268,7 @@ export default function StudyScreen() {
 
       {/* デッキタブ */}
       {activeTab === 'decks' && (
-        filteredDecks.length === 0 ? (
+        decks.length === 0 ? (
           <View style={styles.center}>
             <Ionicons name="book-outline" size={56} color={theme.colors.iconSubtle} />
             <Text style={[styles.emptyText, { color: theme.colors.textTertiary }]}>
@@ -192,37 +277,41 @@ export default function StudyScreen() {
           </View>
         ) : (
           <FlatList
-            data={filteredDecks}
+            data={decks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             ItemSeparatorComponent={() => (
               <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
             )}
             renderItem={({ item }) => {
-              const due = dueCounts[item.id] ?? 0;
+              const { count, subText, subTextActive, tappable } = getDeckDisplayInfo(item);
               return (
                 <Pressable
-                  style={[styles.deckRow, { backgroundColor: theme.colors.surface }, due === 0 && styles.deckRowDimmed]}
+                  style={[
+                    styles.deckRow,
+                    { backgroundColor: theme.colors.surface },
+                    !tappable && styles.deckRowDimmed,
+                  ]}
                   onPress={() => {
-                    if (due === 0) return;
+                    if (!tappable) return;
                     router.push({ pathname: '/study/session', params: { deckId: item.id } });
                   }}
                 >
                   <View style={styles.deckInfo}>
                     <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
-                    <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, due > 0 && styles.dueLabelActive]}>
-                      {due > 0 ? t('study.dueCards', { count: due }) : t('study.noDue')}
+                    <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, subTextActive && styles.dueLabelActive]}>
+                      {subText}
                     </Text>
                   </View>
-                  {due > 0 && (
+                  {count > 0 && (
                     <View style={styles.dueChip}>
-                      <Text style={styles.dueChipText}>{due}</Text>
+                      <Text style={styles.dueChipText}>{count}</Text>
                     </View>
                   )}
                   <Ionicons
                     name="chevron-forward"
                     size={18}
-                    color={due > 0 ? theme.colors.iconSubtle : theme.colors.border}
+                    color={tappable ? theme.colors.iconSubtle : theme.colors.border}
                   />
                 </Pressable>
               );
@@ -233,7 +322,7 @@ export default function StudyScreen() {
 
       {/* タグタブ */}
       {activeTab === 'tags' && (
-        filteredTags.length === 0 ? (
+        tags.length === 0 ? (
           <View style={styles.center}>
             <Ionicons name="pricetag-outline" size={56} color={theme.colors.iconSubtle} />
             <Text style={[styles.emptyText, { color: theme.colors.textTertiary }]}>
@@ -242,38 +331,42 @@ export default function StudyScreen() {
           </View>
         ) : (
           <FlatList
-            data={filteredTags}
+            data={tags}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             ItemSeparatorComponent={() => (
               <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
             )}
             renderItem={({ item }) => {
-              const due = tagDueCounts[item.id] ?? 0;
+              const { count, subText, subTextActive, tappable } = getTagDisplayInfo(item);
               return (
                 <Pressable
-                  style={[styles.deckRow, { backgroundColor: theme.colors.surface }, due === 0 && styles.deckRowDimmed]}
+                  style={[
+                    styles.deckRow,
+                    { backgroundColor: theme.colors.surface },
+                    !tappable && styles.deckRowDimmed,
+                  ]}
                   onPress={() => {
-                    if (due === 0) return;
+                    if (!tappable) return;
                     router.push({ pathname: '/study/session', params: { tagId: item.id } });
                   }}
                 >
                   <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
                   <View style={styles.deckInfo}>
                     <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
-                    <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, due > 0 && styles.dueLabelActive]}>
-                      {due > 0 ? t('study.dueCards', { count: due }) : t('study.noDue')}
+                    <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, subTextActive && styles.dueLabelActive]}>
+                      {subText}
                     </Text>
                   </View>
-                  {due > 0 && (
+                  {count > 0 && (
                     <View style={styles.dueChip}>
-                      <Text style={styles.dueChipText}>{due}</Text>
+                      <Text style={styles.dueChipText}>{count}</Text>
                     </View>
                   )}
                   <Ionicons
                     name="chevron-forward"
                     size={18}
-                    color={due > 0 ? theme.colors.iconSubtle : theme.colors.border}
+                    color={tappable ? theme.colors.iconSubtle : theme.colors.border}
                   />
                 </Pressable>
               );

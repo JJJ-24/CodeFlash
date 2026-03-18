@@ -1,5 +1,6 @@
+import { useRef, type RefObject } from 'react';
 import Markdown from 'react-native-markdown-display';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { resolveImageUri } from '@/lib/image';
 import { useTheme } from '@/lib/theme';
@@ -17,10 +18,13 @@ interface Props {
   runTrigger?: number;
   editTrigger?: number;
   onCodeRunStart?: () => void;
+  scrollRef?: RefObject<ScrollView | null>;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, runTrigger, editTrigger, onCodeRunStart }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, runTrigger, editTrigger, onCodeRunStart, scrollRef }: Props) {
   const theme = useTheme();
+  const containerYRef = useRef(0);
+  const blockYPositions = useRef<Record<number, number>>({});
 
   const fs = (size: number) => Math.round(size * theme.fontScale);
   const markdownStyles = {
@@ -42,7 +46,10 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={(e) => { containerYRef.current = e.nativeEvent.layout.y; }}
+    >
       {blocks.map((block, i) => {
         if (block.type === 'text') {
           return (
@@ -53,18 +60,28 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         }
         if (block.type === 'code') {
           return (
-            <CodeRunnerView
+            <View
               key={i}
-              block={block as CodeBlock}
-              editable={editableCode}
-              editedContent={editedContents?.[i]}
-              onContentChange={(text) => onCodeBlockChange?.(i, text)}
-              onEditFocus={onEditFocus}
-              onEditBlur={onEditBlur}
-              runTrigger={runTrigger}
-              editTrigger={editTrigger}
-              onRunStart={onCodeRunStart}
-            />
+              onLayout={(e) => { blockYPositions.current[i] = e.nativeEvent.layout.y; }}
+            >
+              <CodeRunnerView
+                block={block as CodeBlock}
+                editable={editableCode}
+                editedContent={editedContents?.[i]}
+                onContentChange={(text) => onCodeBlockChange?.(i, text)}
+                onEditFocus={onEditFocus}
+                onEditBlur={onEditBlur}
+                runTrigger={runTrigger}
+                editTrigger={editTrigger}
+                onRunStart={() => {
+                  if (scrollRef?.current) {
+                    const y = containerYRef.current + (blockYPositions.current[i] ?? 0);
+                    scrollRef.current.scrollTo({ y, animated: true });
+                  }
+                  onCodeRunStart?.();
+                }}
+              />
+            </View>
           );
         }
         const imgBlock = block as ImageBlock;

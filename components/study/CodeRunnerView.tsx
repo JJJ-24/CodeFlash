@@ -15,6 +15,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
+import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { LANG_LABELS } from '@/lib/code-execution/constants';
 import { useTheme } from '@/lib/theme';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
@@ -173,7 +174,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
           />
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <Text style={styles.codeText}>{editedContent ?? block.content}</Text>
+            <SyntaxHighlightedCode code={editedContent ?? block.content} language={block.language} />
           </ScrollView>
         )}
         <GestureDetector gesture={copyGesture}>

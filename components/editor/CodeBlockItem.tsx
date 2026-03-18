@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
+import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useTheme } from '@/lib/theme';
@@ -81,29 +82,34 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
       {/* コード入力エリア */}
       <View style={styles.codeArea}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TextInput
-            style={[styles.codeInput, isPreview && styles.codePreview]}
-            value={block.content}
-            onChangeText={(v) =>
-              onChange({
-                content: v
-                  .replace(/[\u201c\u201d]/g, '"')
-                  .replace(/[\u2018\u2019]/g, "'"),
-              })
-            }
-            multiline
-            editable={!isPreview}
-            placeholder="コードを入力"
-            placeholderTextColor="#6B7280"
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            textAlignVertical="top"
-            autoCapitalize="none"
-            autoCorrect={false}
-            spellCheck={false}
-          />
-        </ScrollView>
+        {isPreview ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <SyntaxHighlightedCode code={block.content} language={block.language} />
+          </ScrollView>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <TextInput
+              style={styles.codeInput}
+              value={block.content}
+              onChangeText={(v) =>
+                onChange({
+                  content: v
+                    .replace(/[\u201c\u201d]/g, '"')
+                    .replace(/[\u2018\u2019]/g, "'"),
+                })
+              }
+              multiline
+              placeholder="コードを入力"
+              placeholderTextColor="#6B7280"
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              textAlignVertical="top"
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+            />
+          </ScrollView>
+        )}
         <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
           <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
         </Pressable>
@@ -207,7 +213,6 @@ const styles = StyleSheet.create({
     minWidth: '100%',
     lineHeight: 22,
   },
-  codePreview: { color: '#CE9178' },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

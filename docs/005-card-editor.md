@@ -17,7 +17,7 @@ Notion風のブロックベースカードエディタを実装する。表面�
 
 ### エディタ基盤
 - [x] `react-native-markdown-display` インストール（プレビュー用）
-- [ ] `react-syntax-highlighter` インストール（コードブロック用）— v1.0で対応
+- [x] `react-syntax-highlighter` インストール（コードブロック用）— 外部ライブラリ非依存のカスタムトークナイザー（`lib/syntax-highlight.ts`）で実装
 - [x] ブロックリスト表示コンポーネント（`components/editor/BlockEditor.tsx`）
 - [x] ブロック追加メニュー UI（テキスト / コード選択）
 - [x] 編集 / プレビュー 切替トグル
@@ -30,7 +30,7 @@ Notion風のブロックベースカードエディタを実装する。表面�
 ### コードブロック
 - [x] コードブロック入力コンポーネント（`components/editor/CodeBlockItem.tsx`）
 - [x] 言語選択モーダル（JavaScript / TypeScript / Python / SQL / C++ 等 12言語）
-- [ ] シンタックスハイライト表示 — v1.0で対応（現在はモノスペースフォント表示）
+- [x] シンタックスハイライト表示（`lib/syntax-highlight.ts` + `components/study/SyntaxHighlightedCode.tsx`）
 - [x] `executable` フラグ（Switch UIで切替可能）
 
 ### 画像ブロック（プレースホルダー）

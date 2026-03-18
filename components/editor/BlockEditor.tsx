@@ -72,6 +72,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
   const { t } = useTranslation();
   const theme = useTheme();
   const scrollRef = useRef<ScrollView>(null);
+  const blockYPositions = useRef<Record<string, number>>({});
 
   const [activeTab, setActiveTab] = useState<Tab>('front');
   const [isPreview, setIsPreview] = useState(false);
@@ -198,14 +199,21 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
           }
           if (block.type === 'code') {
             return (
-              <CodeBlockItem
+              <View
                 key={block._key}
-                block={block as CodeBlock}
-                isPreview={isPreview}
-                onChange={(patch) => updateBlock(activeTab, block._key, patch)}
-                onDelete={() => deleteBlock(activeTab, block._key)}
-                onRunStart={() => scrollRef.current?.scrollToEnd({ animated: true })}
-              />
+                onLayout={(e) => { blockYPositions.current[block._key] = e.nativeEvent.layout.y; }}
+              >
+                <CodeBlockItem
+                  block={block as CodeBlock}
+                  isPreview={isPreview}
+                  onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+                  onDelete={() => deleteBlock(activeTab, block._key)}
+                  onRunStart={() => {
+                    const y = blockYPositions.current[block._key] ?? 0;
+                    scrollRef.current?.scrollTo({ y, animated: true });
+                  }}
+                />
+              </View>
             );
           }
           if (block.type === 'image') {

@@ -7,6 +7,7 @@ import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
+import type { InitialFilterPreference } from '@/store/settings';
 
 const SHORTCUTS = [
   { key: 'Space',     descKey: 'settings.shortcutFlip' },
@@ -24,7 +25,7 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
-  const { keyboardShortcutsEnabled, setKeyboardShortcutsEnabled } = useSettingsStore();
+  const { keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, initialFilterPreference, setInitialFilterPreference } = useSettingsStore();
 
   const themeOptions: { value: ColorSchemePreference; labelKey: string }[] = [
     { value: 'light', labelKey: 'settings.themeLight' },
@@ -36,6 +37,14 @@ export default function SettingsScreen() {
     { value: 'small', labelKey: 'settings.fontSizeSmall' },
     { value: 'medium', labelKey: 'settings.fontSizeMedium' },
     { value: 'large', labelKey: 'settings.fontSizeLarge' },
+  ];
+
+  const initialFilterOptions: { value: InitialFilterPreference; labelKey: string }[] = [
+    { value: 'all', labelKey: 'settings.initialFilterAll' },
+    // { value: 'learned', labelKey: 'settings.initialFilterLearned' },
+    { value: 'review', labelKey: 'settings.initialFilterReview' },
+    // { value: 'new', labelKey: 'settings.initialFilterNew' },
+    { value: 'none', labelKey: 'settings.initialFilterNone' },
   ];
 
   return (
@@ -85,6 +94,35 @@ export default function SettingsScreen() {
                 key={value}
                 style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
                 onPress={() => setFontSizePreference(value)}
+              >
+                <Text
+                  style={[
+                    styles.segmentText,
+                    { color: active ? theme.colors.primary : theme.colors.textSecondary },
+                    active && styles.segmentTextActive,
+                  ]}
+                >
+                  {t(labelKey)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* 初期表示フィルター設定 */}
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+          {t('settings.initialFilter')}
+        </Text>
+        <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+          {initialFilterOptions.map(({ value, labelKey }) => {
+            const active = initialFilterPreference === value;
+            return (
+              <Pressable
+                key={value}
+                style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                onPress={() => setInitialFilterPreference(value)}
               >
                 <Text
                   style={[

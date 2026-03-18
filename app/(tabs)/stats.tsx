@@ -6,6 +6,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { useTheme, type AppTheme } from '@/lib/theme';
+import { useSettingsStore } from '@/store/settings';
+import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import {
   getDeckMasteryList,
@@ -118,6 +120,7 @@ export default function StatsScreen() {
   const db = useSQLiteContext();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
+  const { initialFilterPreference } = useSettingsStore();
 
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
   const [todayReviewed, setTodayReviewed] = useState(0);
@@ -134,7 +137,11 @@ export default function StatsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setSelectedBlock('due');
+      const blockMap: Record<InitialFilterPreference, BlockKey | null> = {
+        all: 'streak', learned: 'learned', review: 'due', new: 'new', none: null,
+      };
+      const initial = blockMap[initialFilterPreference];
+      if (initial !== null) setSelectedBlock(initial);
       async function load() {
         const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated] =
           await Promise.all([
@@ -174,7 +181,7 @@ export default function StatsScreen() {
         setPast7DaysCreated(fillPast7Days(rawCreated));
       }
       load();
-    }, [db])
+    }, [db, initialFilterPreference])
   );
 
   const hasData = learned > 0 || todayReviewed > 0;

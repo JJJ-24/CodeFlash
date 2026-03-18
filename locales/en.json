@@ -153,6 +153,12 @@
     "shortcutMemo": "Toggle memo (back side only)",
     "shortcutFullscreen": "Toggle fullscreen",
     "shortcutEdit": "Toggle code block edit mode",
-    "shortcutRun": "Run code (works in and out of edit mode)"
+    "shortcutRun": "Run code (works in and out of edit mode)",
+    "initialFilter": "Default Filter (Keep applies to Study & Stats tabs only)",
+    "initialFilterAll": "All",
+    "initialFilterLearned": "Done",
+    "initialFilterReview": "Due",
+    "initialFilterNew": "New",
+    "initialFilterNone": "Keep"
   }
 }

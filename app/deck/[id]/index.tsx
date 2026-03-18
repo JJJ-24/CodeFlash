@@ -27,6 +27,7 @@ import {
 } from '@/lib/database/reviews';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
+import { useSettingsStore } from '@/store/settings';
 import type { Block, Card } from '@/types';
 
 type FilterKey = 'all' | 'today' | 'due' | 'unlearned';
@@ -44,10 +45,16 @@ export default function DeckDetailScreen() {
   const theme = useTheme();
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
+  const { initialFilterPreference } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
   const [unlearnedCount, setUnlearnedCount] = useState(0);
-  const [selectedFilter, setSelectedFilter] = useState<FilterKey>('due');
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>(() => {
+    const filterMap: Record<string, FilterKey> = {
+      all: 'all', learned: 'today', review: 'due', new: 'unlearned', none: 'all',
+    };
+    return filterMap[initialFilterPreference] ?? 'due';
+  });
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
     today: new Set(),

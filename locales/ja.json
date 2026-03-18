@@ -153,6 +153,12 @@
     "shortcutMemo": "メモの表示/非表示（裏面のみ）",
     "shortcutFullscreen": "全画面モードの切替",
     "shortcutEdit": "コードブロックの編集モード切替",
-    "shortcutRun": "コードを実行（編集中・非編集中どちらでも）"
+    "shortcutRun": "コードを実行（編集中・非編集中どちらでも）",
+    "initialFilter": "初期表示フィルター（保持は学習・統計タブのみ）",
+    "initialFilterAll": "すべて",
+    "initialFilterLearned": "済み",
+    "initialFilterReview": "復習",
+    "initialFilterNew": "新規",
+    "initialFilterNone": "保持"
   }
 }

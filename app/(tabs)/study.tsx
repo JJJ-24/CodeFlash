@@ -27,6 +27,8 @@ import {
 } from '@/lib/database/reviews';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
+import { useSettingsStore } from '@/store/settings';
+import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
 import type { Deck, Tag } from '@/types';
@@ -52,6 +54,7 @@ export default function StudyScreen() {
   const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
+  const { initialFilterPreference } = useSettingsStore();
 
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
@@ -69,7 +72,11 @@ export default function StudyScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setActiveFilter('review');
+      const filterMap: Record<InitialFilterPreference, Filter | null> = {
+        all: 'all', learned: 'learned', review: 'review', new: 'new', none: null,
+      };
+      const initial = filterMap[initialFilterPreference];
+      if (initial !== null) setActiveFilter(initial);
       (async () => {
         setLoading(true);
         const [
@@ -102,7 +109,7 @@ export default function StudyScreen() {
         setTotalPerTag(totalTag);
         setLoading(false);
       })();
-    }, [db])
+    }, [db, initialFilterPreference])
   );
 
   // フィルター別: デッキの表示カウント・テキスト・タップ可否を返す

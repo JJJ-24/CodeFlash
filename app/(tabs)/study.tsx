@@ -69,6 +69,7 @@ export default function StudyScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setActiveFilter('review');
       (async () => {
         setLoading(true);
         const [

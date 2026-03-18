@@ -34,6 +34,13 @@ import type { Deck, Tag } from '@/types';
 type Tab = 'decks' | 'tags';
 type Filter = 'all' | 'learned' | 'review' | 'new';
 
+const SESSION_FILTER_MAP: Record<Filter, 'all' | 'today' | 'due' | 'unlearned'> = {
+  all: 'all',
+  learned: 'today',
+  review: 'due',
+  new: 'unlearned',
+};
+
 function sumValues(map: Record<string, number>): number {
   return Object.values(map).reduce((s, v) => s + v, 0);
 }
@@ -294,7 +301,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
-                    router.push({ pathname: '/study/session', params: { deckId: item.id } });
+                    router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter] } });
                   }}
                 >
                   <View style={styles.deckInfo}>
@@ -348,7 +355,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
-                    router.push({ pathname: '/study/session', params: { tagId: item.id } });
+                    router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter] } });
                   }}
                 >
                   <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />

@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { runOnJS, runOnUI, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
@@ -75,24 +75,22 @@ export default function StudySessionScreen() {
   const translateX = useSharedValue(0);
   const slideX = useSharedValue(0);
   const currentIndexSV = useSharedValue(currentIndex);
+  // 1=右からスライドイン, -1=左からスライドイン, 0=アニメーションなし
+  const slideInDirRef = useRef(0);
 
   // JS-thread callbacks for swipe gestures (called via runOnJS — must be named functions)
   function onSwipedLeft() {
     flipCardRef.current?.resetInstant();
     setIsFlipped(false);
+    slideInDirRef.current = 1;
     goNext();
-    translateX.value = 0;
-    slideX.value = screenWidth;
-    slideX.value = withTiming(0, { duration: 180 });
   }
 
   function onSwipedRight() {
     flipCardRef.current?.resetInstant();
     setIsFlipped(false);
+    slideInDirRef.current = -1;
     goBack();
-    translateX.value = 0;
-    slideX.value = -screenWidth;
-    slideX.value = withTiming(0, { duration: 180 });
   }
 
   function cancelSwipe() {
@@ -153,8 +151,28 @@ export default function StudySessionScreen() {
   }, [completed]);
 
   // 新しいカードに移ったらフリップ・メモをリセット、SharedValue を同期
+  // useEffect 内でスライドインを開始することで、React が新カードをコミット済みの状態でアニメーションが始まる
   useEffect(() => {
-    translateX.value = 0;
+    const dir = slideInDirRef.current;
+    slideInDirRef.current = 0;
+    const sw = screenWidth;
+    if (dir !== 0) {
+      // 新カードコンテンツがコミット済み。translateX リセットとスライドインをアトミックに実行
+      runOnUI(() => {
+        'worklet';
+        translateX.value = 0;
+        slideX.value = dir > 0 ? sw : -sw;
+        slideX.value = withTiming(0, { duration: 180 });
+      })();
+      setTimeout(() => { isNavigatingRef.current = false; }, 200);
+    } else {
+      // セッション初期ロード時など: 位置をリセット
+      runOnUI(() => {
+        'worklet';
+        translateX.value = 0;
+        slideX.value = 0;
+      })();
+    }
     setIsFlipped(false);
     setShowMemo(false);
     currentIndexSV.value = currentIndex;
@@ -173,19 +191,17 @@ export default function StudySessionScreen() {
     isNavigatingRef.current = true;
 
     const slideOut = direction === 'next' ? -screenWidth : screenWidth;
-    const slideIn  = -slideOut;
 
-    // Slide out; use setTimeout to stay on JS thread and avoid worklet closure issues
+    // スライドアウト後、slideInDirRef をセットして goNext/goBack を呼ぶ
+    // スライドインは useEffect([currentIndex]) 内で新カードコミット後に開始する
     slideX.value = withTiming(slideOut, { duration: 180 });
     setTimeout(() => {
       flipCardRef.current?.resetInstant();
       setIsFlipped(false);
+      slideInDirRef.current = direction === 'next' ? 1 : -1;
       if (action) action();
       else if (direction === 'next') goNext();
       else goBack();
-      slideX.value = slideIn;
-      slideX.value = withTiming(0, { duration: 180 });
-      setTimeout(() => { isNavigatingRef.current = false; }, 180);
     }, 180);
   }
 
@@ -310,21 +326,22 @@ export default function StudySessionScreen() {
           onBlur={() => { setTimeout(() => { if (!codeEditingRef.current) keyboardRef.current?.focus(); }, 50); }}
         />
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-          {/* 終了ボタン（左上） */}
-          <Pressable
-            style={styles.fullscreenExitBtn}
-            onPress={() => setIsFullscreen(false)}
-          >
-            <Ionicons name="contract-outline" size={24} color={theme.colors.iconSubtle} />
-          </Pressable>
-
-          {/* 編集ボタン（右上） */}
-          <Pressable
-            style={styles.fullscreenEditBtn}
-            onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
-          >
-            <Ionicons name="create-outline" size={24} color={theme.colors.iconSubtle} />
-          </Pressable>
+          {/* ヘッダー行（実体あり、スクロール外） */}
+          <View style={styles.fullscreenHeader}>
+            <Pressable
+              style={styles.fullscreenExitBtn}
+              onPress={() => setIsFullscreen(false)}
+            >
+              <Ionicons name="contract-outline" size={24} color={theme.colors.iconSubtle} />
+            </Pressable>
+            <View style={{ flex: 1 }} />
+            <Pressable
+              style={styles.fullscreenEditBtn}
+              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
+            >
+              <Ionicons name="create-outline" size={24} color={theme.colors.iconSubtle} />
+            </Pressable>
+          </View>
 
           {/* コンテンツエリア：タップで裏返す */}
           <GestureDetector gesture={panGesture}>
@@ -638,27 +655,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     zIndex: 10,
   },
+  fullscreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 48,
+    paddingHorizontal: 12,
+    paddingBottom: 4,
+  },
   fullscreenContent: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: 96,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   fullscreenExitBtn: {
-    position: 'absolute',
-    top: 48,
-    left: 20,
     padding: 8,
     borderRadius: 10,
-    zIndex: 10,
   },
   fullscreenEditBtn: {
-    position: 'absolute',
-    top: 48,
-    right: 20,
     padding: 8,
     borderRadius: 10,
-    zIndex: 10,
   },
 });

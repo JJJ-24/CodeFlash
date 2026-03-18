@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
 import type { ExecResult } from '@/lib/code-execution/types';
@@ -28,12 +30,22 @@ interface Props {
 export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage }: Props) {
   const [copied, setCopied] = useState(false);
 
-  async function handleCopy() {
+  const handleCopy = useCallback(async () => {
     if (!result) return;
     await Clipboard.setStringAsync(buildCopyText(result));
     setCopied(true);
     setTimeout(() => setCopied(false), 1000);
-  }
+  }, [result]);
+
+  const clearGesture = useMemo(
+    () => Gesture.Tap().maxDistance(10).hitSlop(8).onEnd(() => runOnJS(onClear)()),
+    [onClear]
+  );
+
+  const copyGesture = useMemo(
+    () => Gesture.Tap().maxDistance(10).hitSlop(8).onEnd(() => runOnJS(handleCopy)()),
+    [handleCopy]
+  );
 
   return (
     <>
@@ -49,9 +61,11 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
               {result.status === 'timeout' ? '⏱ タイムアウト（5秒）' :
                result.status === 'error'   ? '✕ エラー' : '▶ 出力'}
             </Text>
-            <Pressable onPress={onClear} hitSlop={8} style={styles.clearBtnWrapper}>
-              <Text style={styles.clearBtn}>✕</Text>
-            </Pressable>
+            <GestureDetector gesture={clearGesture}>
+              <View style={styles.clearBtnWrapper}>
+                <Text style={styles.clearBtn}>✕</Text>
+              </View>
+            </GestureDetector>
           </View>
           <View style={styles.outputContent}>
             {result.status === 'error' && result.errorMessage && (
@@ -75,9 +89,11 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
                 {log.text}
               </Text>
             ))}
-            <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
-              <Ionicons name={copied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
-            </Pressable>
+            <GestureDetector gesture={copyGesture}>
+              <View style={styles.copyBtn}>
+                <Ionicons name={copied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+              </View>
+            </GestureDetector>
           </View>
         </View>
       )}

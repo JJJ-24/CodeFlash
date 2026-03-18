@@ -41,9 +41,17 @@ export default function StudySessionScreen() {
   const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext, refreshCurrentCard } =
     useStudySession();
 
+  // モーダル遷移中は onBlur による自動再フォーカスを抑制するためのフラグ
+  const isScreenFocusedRef = useRef(true);
   useFocusEffect(
     useCallback(() => {
+      isScreenFocusedRef.current = true;
       refreshCurrentCard();
+      // モーダルから戻った際にキーボードショートカットを復元
+      setTimeout(() => {
+        if (!codeEditingRef.current) keyboardRef.current?.focus();
+      }, 100);
+      return () => { isScreenFocusedRef.current = false; };
     }, [refreshCurrentCard])
   );
   const { keyboardShortcutsEnabled } = useSettingsStore();
@@ -323,7 +331,7 @@ export default function StudySessionScreen() {
           autoCapitalize="none"
           spellCheck={false}
           onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
-          onBlur={() => { setTimeout(() => { if (!codeEditingRef.current) keyboardRef.current?.focus(); }, 50); }}
+          onBlur={() => { setTimeout(() => { if (!codeEditingRef.current && isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
         />
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
           {/* ヘッダー行（実体あり、スクロール外） */}
@@ -451,7 +459,7 @@ export default function StudySessionScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
-        onBlur={() => { setTimeout(() => { if (!codeEditingRef.current) keyboardRef.current?.focus(); }, 50); }}
+        onBlur={() => { setTimeout(() => { if (!codeEditingRef.current && isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
       />
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* プログレスバー */}

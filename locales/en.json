@@ -23,8 +23,6 @@
     "study": "Start Study",
     "noCards": "No cards yet",
     "noCardsInFilter": "No cards match this filter",
-    "statTotal": "Cards\nTotal",
-    "statDue": "Due",
     "statHint": "Tap a block or button to start studying"
   },
   "study": {
@@ -96,6 +94,7 @@
     "settings": "Settings"
   },
   "stats": {
+    "all": "All",
     "title": "Statistics",
     "todayLearned": "Today",
     "dueToday": "Due Today",
@@ -105,6 +104,7 @@
     "upcomingSchedule": "Next 7 Days",
     "totalProgress": "Overall Progress",
     "learned": "Learned",
+    "statDue": "Due",
     "unlearned": "New",
     "deckMastery": "Deck Mastery",
     "mastery": "Mastery",

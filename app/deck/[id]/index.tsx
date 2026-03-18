@@ -47,7 +47,7 @@ export default function DeckDetailScreen() {
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
   const [unlearnedCount, setUnlearnedCount] = useState(0);
-  const [selectedFilter, setSelectedFilter] = useState<FilterKey>('all');
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>('due');
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
     today: new Set(),
@@ -125,10 +125,10 @@ export default function DeckDetailScreen() {
     : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id));
 
   const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
-    { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('deck.statTotal') },
-    { key: 'today', count: todayReviewed, color: '#4CAF50', label: `${t('stats.learned')}\n（今日）` },
-    { key: 'due', count: dueCount, color: '#F57C00', label: `${t('deck.statDue')}\n（今日）` },
-    { key: 'unlearned', count: unlearnedCount, color: theme.colors.textSecondary, label: `${t('stats.unlearned')}\n（新規）` },
+    { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('stats.all') },
+    { key: 'today', count: todayReviewed, color: '#4CAF50', label: t('stats.learned') },
+    { key: 'due', count: dueCount, color: '#F57C00', label: t('stats.statDue') },
+    { key: 'unlearned', count: unlearnedCount, color: theme.colors.textSecondary, label: t('stats.unlearned') },
   ];
 
   const ListHeader = (

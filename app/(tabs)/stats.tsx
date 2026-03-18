@@ -171,25 +171,25 @@ export default function StatsScreen() {
     >
       {/* サマリーカード row */}
       <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.learned')}{'\n'}（今日）</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.summaryValue, { color: '#F57C00' }]}>{todayDue}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('deck.statDue')}{'\n'}（今日）</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary }]}>{unlearned}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.unlearned')}{'\n'}（新規）</Text>
-        </View>
         <View style={[styles.summaryCard, streak > 0 && styles.summaryCardHighlight, !streak && { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.summaryValue, { color: theme.colors.text }, streak > 0 && styles.summaryValueHighlight]}>
             {streak}
           </Text>
           <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }, streak > 0 && styles.summaryLabelHighlight]}>
-            {t('stats.streak')}{'\n'}日数
+            {t('stats.streak')}
           </Text>
+        </View>
+        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.learned')}</Text>
+        </View>
+        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.summaryValue, { color: '#F57C00' }]}>{todayDue}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.statDue')}</Text>
+        </View>
+        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary }]}>{unlearned}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.unlearned')}</Text>
         </View>
       </View>
 

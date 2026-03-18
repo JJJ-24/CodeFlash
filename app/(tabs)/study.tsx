@@ -65,7 +65,7 @@ export default function StudyScreen() {
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('decks');
-  const [activeFilter, setActiveFilter] = useState<Filter>('all');
+  const [activeFilter, setActiveFilter] = useState<Filter>('review');
 
   useFocusEffect(
     useCallback(() => {
@@ -206,10 +206,10 @@ export default function StudyScreen() {
   const totalNew = activeTab === 'decks' ? sumValues(unlearnedPerDeck) : sumValues(unlearnedPerTag);
 
   const filterBlocks: { key: Filter; value: number; color: string; label: string }[] = [
-    { key: 'all', value: totalAll, color: theme.colors.primary, label: 'すべての\nカード' },
-    { key: 'learned', value: totalLearned, color: '#4CAF50', label: '学習済み\n（今日）' },
-    { key: 'review', value: totalReview, color: '#F57C00', label: '復習\n（今日）' },
-    { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: '未学習\n（新規）' },
+    { key: 'all', value: totalAll, color: theme.colors.primary, label: t('stats.all') },
+    { key: 'learned', value: totalLearned, color: '#4CAF50', label: t('stats.learned') },
+    { key: 'review', value: totalReview, color: '#F57C00', label: t('stats.statDue') },
+    { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('stats.unlearned') },
   ];
 
   if (loading) {

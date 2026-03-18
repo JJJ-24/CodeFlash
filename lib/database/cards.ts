@@ -106,6 +106,25 @@ export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: strin
   });
 }
 
+/** 過去7日間の日別新規カード作成数 */
+export async function getPast7DaysCreatedCount(
+  db: SQLiteDatabase
+): Promise<{ date: string; count: number }[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const start = new Date();
+  start.setDate(start.getDate() - 6);
+  const startISO = start.toISOString().slice(0, 10);
+
+  return db.getAllAsync<{ date: string; count: number }>(
+    `SELECT substr(createdAt, 1, 10) as date, COUNT(*) as count
+     FROM cards
+     WHERE substr(createdAt, 1, 10) BETWEEN ? AND ?
+     GROUP BY date
+     ORDER BY date ASC`,
+    [startISO, today]
+  );
+}
+
 export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string): Promise<void> {
   // 画像ブロックのファイルを削除
   const card = await getCardById(db, id);

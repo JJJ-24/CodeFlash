@@ -113,7 +113,10 @@
     "deckMastery": "デッキ別習熟度",
     "mastery": "習熟度",
     "empty": "まだ学習データがありません",
-    "emptySub": "学習を開始するとここに統計が表示されます"
+    "emptySub": "学習を開始するとここに統計が表示されます",
+    "past7DaysReviewed": "過去7日間の学習履歴",
+    "past7DaysActivity": "過去7日間の学習記録",
+    "past7DaysCreated": "過去7日間の新規カード"
   },
   "code": {
     "run": "実行",

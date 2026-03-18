@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { useTheme, type AppTheme } from '@/lib/theme';
@@ -10,11 +10,14 @@ import { getAllDecks } from '@/lib/database/decks';
 import {
   getDeckMasteryList,
   getLearnedUnlearnedCount,
+  getPast7DaysReviewedCount,
+  getPast7DaysStudyActivity,
   getStudyStreak,
   getTodayDueCount,
   getTodayReviewedCount,
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
+import { getPast7DaysCreatedCount } from '@/lib/database/cards';
 import type { Deck } from '@/types';
 
 const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -35,33 +38,39 @@ function masteryColor(pct: number): string {
 
 type ScheduleItem = { date: string; count: number };
 type MasteryItem = { deckId: string; avgEase: number; learnedCount: number };
+type BlockKey = 'streak' | 'learned' | 'due' | 'new';
 
 function BarChart({
   schedule,
   locale,
   theme,
+  barColor,
+  todayIsLast = false,
 }: {
   schedule: ScheduleItem[];
   locale: string;
   theme: AppTheme;
+  barColor?: string;
+  todayIsLast?: boolean;
 }) {
   const labels = locale.startsWith('ja') ? DAY_LABELS_JA : DAY_LABELS_EN;
   const maxCount = Math.max(...schedule.map((s) => s.count), 1);
+  const color = barColor ?? theme.colors.primary;
 
   return (
     <View style={styles.barChart}>
       {schedule.map((item, i) => {
         const barH = Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, item.count > 0 ? 4 : 0);
         const dayIndex = new Date(item.date + 'T00:00:00').getDay();
-        const isToday = i === 0;
+        const isToday = todayIsLast ? i === schedule.length - 1 : i === 0;
 
         return (
           <View key={item.date} style={styles.barCol}>
             <Text style={[styles.barCount, { color: theme.colors.textSecondary }]}>
               {item.count > 0 ? item.count : ''}
             </Text>
-            <View style={[styles.bar, { height: barH, backgroundColor: isToday ? '#1976D2' : '#90CAF9' }]} />
-            <Text style={[styles.barLabel, { color: theme.colors.textTertiary }, isToday && styles.barLabelToday]}>
+            <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary }, isToday && { color, fontWeight: '700' }]}>
               {labels[dayIndex]}
             </Text>
           </View>
@@ -94,15 +103,30 @@ function DeckMasteryRow({ deck, mastery, theme }: { deck: Deck; mastery: Mastery
   );
 }
 
+/** 過去7日分を昇順で埋める（欠落日は count: 0、今日が最後） */
+function fillPast7Days(rows: ScheduleItem[]): ScheduleItem[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toISOString().slice(0, 10);
+    const found = rows.find((r) => r.date === dateStr);
+    return { date: dateStr, count: found?.count ?? 0 };
+  });
+}
+
 export default function StatsScreen() {
   const db = useSQLiteContext();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
 
+  const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [todayDue, setTodayDue] = useState(0);
   const [streak, setStreak] = useState(0);
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+  const [past7DaysReviewed, setPast7DaysReviewed] = useState<ScheduleItem[]>([]);
+  const [past7DaysActivity, setPast7DaysActivity] = useState<ScheduleItem[]>([]);
+  const [past7DaysCreated, setPast7DaysCreated] = useState<ScheduleItem[]>([]);
   const [learned, setLearned] = useState(0);
   const [unlearned, setUnlearned] = useState(0);
   const [deckMastery, setDeckMastery] = useState<MasteryItem[]>([]);
@@ -110,16 +134,21 @@ export default function StatsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setSelectedBlock('due');
       async function load() {
-        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks] = await Promise.all([
-          getTodayReviewedCount(db),
-          getTodayDueCount(db),
-          getStudyStreak(db),
-          getUpcomingSchedule(db),
-          getLearnedUnlearnedCount(db),
-          getDeckMasteryList(db),
-          getAllDecks(db),
-        ]);
+        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated] =
+          await Promise.all([
+            getTodayReviewedCount(db),
+            getTodayDueCount(db),
+            getStudyStreak(db),
+            getUpcomingSchedule(db),
+            getLearnedUnlearnedCount(db),
+            getDeckMasteryList(db),
+            getAllDecks(db),
+            getPast7DaysReviewedCount(db),
+            getPast7DaysStudyActivity(db),
+            getPast7DaysCreatedCount(db),
+          ]);
 
         setTodayReviewed(reviewed);
         setTodayDue(due);
@@ -129,15 +158,20 @@ export default function StatsScreen() {
         setDeckMastery(mastery);
         setDecks(allDecks);
 
-        // 7日分を埋める（データなし日は count: 0）
-        const filled: ScheduleItem[] = Array.from({ length: 7 }, (_, i) => {
+        // 今後7日分（今日が先頭）
+        const filledSchedule: ScheduleItem[] = Array.from({ length: 7 }, (_, i) => {
           const d = new Date();
           d.setDate(d.getDate() + i);
           const dateStr = d.toISOString().slice(0, 10);
           const found = rawSchedule.find((r) => r.date === dateStr);
           return { date: dateStr, count: found?.count ?? 0 };
         });
-        setSchedule(filled);
+        setSchedule(filledSchedule);
+
+        // 過去7日分（今日が末尾）
+        setPast7DaysReviewed(fillPast7Days(rawReviewed));
+        setPast7DaysActivity(fillPast7Days(rawActivity));
+        setPast7DaysCreated(fillPast7Days(rawCreated));
       }
       load();
     }, [db])
@@ -164,6 +198,22 @@ export default function StatsScreen() {
   // デッキIDでデッキを引く map
   const deckMap = Object.fromEntries(decks.map((d) => [d.id, d]));
 
+  const blockColors: Record<BlockKey, string> = {
+    streak: theme.colors.primary,
+    learned: '#4CAF50',
+    due: '#F57C00',
+    new: theme.colors.textSecondary,
+  };
+
+  const chartConfig: { data: ScheduleItem[]; title: string; color: string; todayIsLast: boolean } =
+    selectedBlock === 'learned'
+      ? { data: past7DaysReviewed, title: t('stats.past7DaysReviewed'), color: '#4CAF50', todayIsLast: true }
+      : selectedBlock === 'streak'
+        ? { data: past7DaysActivity, title: t('stats.past7DaysActivity'), color: theme.colors.primary, todayIsLast: true }
+        : selectedBlock === 'new'
+          ? { data: past7DaysCreated, title: t('stats.past7DaysCreated'), color: theme.colors.textSecondary, todayIsLast: true }
+          : { data: schedule, title: t('stats.upcomingSchedule'), color: '#F57C00', todayIsLast: false };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -171,35 +221,69 @@ export default function StatsScreen() {
     >
       {/* サマリーカード row */}
       <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, streak > 0 && styles.summaryCardHighlight, !streak && { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.summaryValue, { color: theme.colors.text }, streak > 0 && styles.summaryValueHighlight]}>
+        <Pressable
+          style={[
+            styles.summaryCard,
+            { backgroundColor: theme.colors.surface },
+            selectedBlock === 'streak' && { borderWidth: 2, borderColor: blockColors.streak },
+          ]}
+          onPress={() => setSelectedBlock('streak')}
+        >
+          <Text style={[styles.summaryValue, { color: theme.colors.primary }]}>
             {streak}
           </Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }, streak > 0 && styles.summaryLabelHighlight]}>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
             {t('stats.streak')}
           </Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.summaryCard,
+            { backgroundColor: theme.colors.surface },
+            selectedBlock === 'learned' && { borderWidth: 2, borderColor: blockColors.learned },
+          ]}
+          onPress={() => setSelectedBlock('learned')}
+        >
           <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
           <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.learned')}</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.summaryCard,
+            { backgroundColor: theme.colors.surface },
+            selectedBlock === 'due' && { borderWidth: 2, borderColor: blockColors.due },
+          ]}
+          onPress={() => setSelectedBlock('due')}
+        >
           <Text style={[styles.summaryValue, { color: '#F57C00' }]}>{todayDue}</Text>
           <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.statDue')}</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.summaryCard,
+            { backgroundColor: theme.colors.surface },
+            selectedBlock === 'new' && { borderWidth: 2, borderColor: blockColors.new },
+          ]}
+          onPress={() => setSelectedBlock('new')}
+        >
           <Text style={[styles.summaryValue, { color: theme.colors.textSecondary }]}>{unlearned}</Text>
           <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.unlearned')}</Text>
-        </View>
+        </Pressable>
       </View>
 
       {/* 7日間バーチャート */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
-          {t('stats.upcomingSchedule')}
+          {chartConfig.title}
         </Text>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <BarChart schedule={schedule} locale={i18n.language} theme={theme} />
+          <BarChart
+            schedule={chartConfig.data}
+            locale={i18n.language}
+            theme={theme}
+            barColor={chartConfig.color}
+            todayIsLast={chartConfig.todayIsLast}
+          />
         </View>
       </View>
 
@@ -294,7 +378,6 @@ const styles = StyleSheet.create({
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
   barCount: { fontSize: 10, height: 14 },
   barLabel: { fontSize: 11 },
-  barLabelToday: { color: '#1976D2', fontWeight: '700' },
 
   // Progress
   progressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },

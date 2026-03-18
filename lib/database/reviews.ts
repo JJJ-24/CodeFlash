@@ -377,6 +377,33 @@ export async function getDeckMasteryList(
   );
 }
 
+/** 過去7日間の日別学習済みカード数 */
+export async function getPast7DaysReviewedCount(
+  db: SQLiteDatabase
+): Promise<{ date: string; count: number }[]> {
+  const today = todayISO();
+  const start = new Date();
+  start.setDate(start.getDate() - 6);
+  const startISO = start.toISOString().slice(0, 10);
+
+  return db.getAllAsync<{ date: string; count: number }>(
+    `SELECT substr(lastReviewDate, 1, 10) as date, COUNT(*) as count
+     FROM reviews
+     WHERE substr(lastReviewDate, 1, 10) BETWEEN ? AND ?
+     GROUP BY date
+     ORDER BY date ASC`,
+    [startISO, today]
+  );
+}
+
+/** 過去7日間の学習活動（学習あり=1、なし=0） */
+export async function getPast7DaysStudyActivity(
+  db: SQLiteDatabase
+): Promise<{ date: string; count: number }[]> {
+  const rows = await getPast7DaysReviewedCount(db);
+  return rows.map((r) => ({ date: r.date, count: r.count > 0 ? 1 : 0 }));
+}
+
 /**
  * 学習ストリーク日数を計算する
  * 今日から過去に遡り、lastReviewDate に学習記録がある日が連続している日数を返す

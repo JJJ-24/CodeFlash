@@ -113,7 +113,10 @@
     "deckMastery": "Deck Mastery",
     "mastery": "Mastery",
     "empty": "No study data yet",
-    "emptySub": "Start studying to see your stats here"
+    "emptySub": "Start studying to see your stats here",
+    "past7DaysReviewed": "Last 7 Days Reviewed",
+    "past7DaysActivity": "Last 7 Days Activity",
+    "past7DaysCreated": "Last 7 Days New Cards"
   },
   "code": {
     "run": "Run",

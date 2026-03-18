@@ -17,10 +17,19 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/lib/theme';
 import { deleteCard, getCardsByDeckId, updateCardSortOrders } from '@/lib/database/cards';
-import { getDueCountByDeck, getTodayReviewedCountByDeck, getUnlearnedCountByDeck } from '@/lib/database/reviews';
+import {
+  getDueCardIdsByDeckId,
+  getDueCountByDeck,
+  getTodayReviewedCardIdsByDeckId,
+  getTodayReviewedCountByDeck,
+  getUnlearnedCardIdsByDeckId,
+  getUnlearnedCountByDeck,
+} from '@/lib/database/reviews';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import type { Block, Card } from '@/types';
+
+type FilterKey = 'all' | 'today' | 'due' | 'unlearned';
 
 function getPreviewText(blocks: Block[]): string {
   const first = blocks.find((b) => b.type === 'text');
@@ -38,20 +47,36 @@ export default function DeckDetailScreen() {
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
   const [unlearnedCount, setUnlearnedCount] = useState(0);
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>('all');
+  const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
+    all: new Set(),
+    today: new Set(),
+    due: new Set(),
+    unlearned: new Set(),
+  });
 
   const deck = decks.find((d) => d.id === id) ?? null;
 
   const loadCards = useCallback(async () => {
-    const [loaded, reviewed, due, unlearned] = await Promise.all([
+    const [loaded, reviewed, due, unlearned, todayIds, dueIds, unlearnedIds] = await Promise.all([
       getCardsByDeckId(db, id),
       getTodayReviewedCountByDeck(db, id),
       getDueCountByDeck(db, id),
       getUnlearnedCountByDeck(db, id),
+      getTodayReviewedCardIdsByDeckId(db, id),
+      getDueCardIdsByDeckId(db, id),
+      getUnlearnedCardIdsByDeckId(db, id),
     ]);
     setCards(loaded);
     setTodayReviewed(reviewed);
     setDueCount(due);
     setUnlearnedCount(unlearned);
+    setFilterCardIds({
+      all: new Set(loaded.map((c) => c.id)),
+      today: new Set(todayIds),
+      due: new Set(dueIds),
+      unlearned: new Set(unlearnedIds),
+    });
   }, [db, id, setCards]);
 
   useFocusEffect(
@@ -95,6 +120,16 @@ export default function DeckDetailScreen() {
   if (!deck) return null;
 
   const deckCards = cards.filter((c) => c.deckId === id);
+  const displayedCards = selectedFilter === 'all'
+    ? deckCards
+    : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id));
+
+  const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
+    { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('deck.statTotal') },
+    { key: 'today', count: todayReviewed, color: '#4CAF50', label: `${t('stats.learned')}\n（今日）` },
+    { key: 'due', count: dueCount, color: '#F57C00', label: `${t('deck.statDue')}\n（今日）` },
+    { key: 'unlearned', count: unlearnedCount, color: theme.colors.textSecondary, label: `${t('stats.unlearned')}\n（新規）` },
+  ];
 
   const ListHeader = (
     <View style={styles.header}>
@@ -105,32 +140,29 @@ export default function DeckDetailScreen() {
       ) : null}
 
       <View style={styles.statsRow}>
-        {[
-          { count: deck.cardCount, filter: 'all', color: theme.colors.primary, label: t('deck.statTotal') },
-          { count: todayReviewed, filter: 'today', color: '#4CAF50', label: `${t('stats.learned')}\n（今日）` },
-          { count: dueCount, filter: 'due', color: '#F57C00', label: `${t('deck.statDue')}\n（今日）` },
-          { count: unlearnedCount, filter: 'unlearned', color: theme.colors.textSecondary, label: `${t('stats.unlearned')}\n（新規）` },
-        ].map(({ count, filter, color, label }) => (
-          <Pressable
-            key={filter}
-            style={[styles.statItem, { backgroundColor: theme.colors.surface }, count === 0 && styles.statItemDisabled]}
-            onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter } })}
-            disabled={count === 0}
-          >
-            <Text style={[styles.statValue, { color }]}>{count}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{label}</Text>
-            <View style={{ height: 4 }} />
-            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="play" size={11} color="#fff" />
-            </View>
-          </Pressable>
-        ))}
+        {filterItems.map(({ key, count, color, label }) => {
+          const isSelected = selectedFilter === key;
+          return (
+            <Pressable
+              key={key}
+              style={[
+                styles.statItem,
+                { backgroundColor: theme.colors.surface },
+                isSelected && { borderWidth: 2, borderColor: color },
+              ]}
+              onPress={() => setSelectedFilter(key)}
+            >
+              <Text style={[styles.statValue, { color }]}>{count}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <TouchableOpacity
         style={styles.studyBtn}
         activeOpacity={0.8}
-        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id } })}
+        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: selectedFilter } })}
       >
         <Ionicons name="play" size={20} color="#FFF" />
         <Text style={styles.studyBtnText}>{t('deck.study')}</Text>
@@ -140,11 +172,11 @@ export default function DeckDetailScreen() {
         {t('deck.detail')}
       </Text>
 
-      {deckCards.length === 0 ? (
+      {displayedCards.length === 0 ? (
         <View style={styles.emptyCards}>
           <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
           <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary }]}>
-            {t('deck.noCards')}
+            {selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
           </Text>
         </View>
       ) : null}
@@ -160,11 +192,12 @@ export default function DeckDetailScreen() {
       />
 
       <DraggableFlatList
-        data={deckCards}
+        data={displayedCards}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={ListHeader}
         contentContainerStyle={styles.container}
         onDragEnd={({ data }) => {
+          if (selectedFilter !== 'all') return;
           reorderCards(data);
           updateCardSortOrders(db, data.map((c) => c.id));
         }}
@@ -220,7 +253,7 @@ const styles = StyleSheet.create({
   container: { paddingBottom: 96 },
   header: { padding: 20, gap: 16 },
   description: { fontSize: 15, lineHeight: 22 },
-  statsRow: { flexDirection: 'row', gap: 12 },
+  statsRow: { flexDirection: 'row', gap: 8 },
   statItem: {
     flex: 1,
     borderRadius: 12,
@@ -234,8 +267,6 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 26, fontWeight: '700' },
   statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
-  statItemDisabled: { opacity: 0.4 },
-  statHint: { fontSize: 11, textAlign: 'center', marginTop: -4 },
   studyBtn: {
     flexDirection: 'row',
     backgroundColor: '#1976D2',

@@ -22,6 +22,7 @@
     "save": "保存",
     "study": "学習開始",
     "noCards": "カードがまだありません",
+    "noCardsInFilter": "このフィルターに該当するカードがありません",
     "statTotal": "すべての\nカード",
     "statDue": "復習",
     "statHint": "ブロックまたはボタンをタップして学習を開始"

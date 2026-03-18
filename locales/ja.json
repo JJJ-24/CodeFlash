@@ -40,7 +40,9 @@
     "progress": "{{current}} / {{total}}",
     "selectTag": "タグ",
     "noTags": "タグがありません",
-    "listTitle": "学習一覧"
+    "listTitle": "学習一覧",
+    "noTarget": "対象のカードはありません",
+    "targetCards": "{{count}}枚が対象です"
   },
   "tag": {
     "title": "タグ管理",

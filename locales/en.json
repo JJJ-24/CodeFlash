@@ -40,7 +40,9 @@
     "progress": "{{current}} / {{total}}",
     "selectTag": "Tags",
     "noTags": "No tags",
-    "listTitle": "Study List"
+    "listTitle": "Study List",
+    "noTarget": "No cards to study",
+    "targetCards": "{{count}} cards to study"
   },
   "tag": {
     "title": "Tags",

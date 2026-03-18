@@ -114,39 +114,19 @@ export default function StudyScreen() {
     switch (activeFilter) {
       case 'all': {
         const n = deck.cardCount;
-        return {
-          count: n,
-          subText: n > 0 ? `${n}枚がすべてのカード` : 'カードがありません',
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'learned': {
         const n = todayReviewedPerDeck[deck.id] ?? 0;
-        return {
-          count: n,
-          subText: n > 0 ? `${n}枚が学習済み対象` : '今日の学習済みはありません',
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'review': {
         const n = dueCounts[deck.id] ?? 0;
-        return {
-          count: n,
-          subText: n > 0 ? t('study.dueCards', { count: n }) : t('study.noDue'),
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'new': {
         const n = unlearnedPerDeck[deck.id] ?? 0;
-        return {
-          count: n,
-          subText: n > 0 ? `${n}枚が未学習対象` : '未学習はありません',
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
     }
   }
@@ -161,39 +141,19 @@ export default function StudyScreen() {
     switch (activeFilter) {
       case 'all': {
         const n = totalPerTag[tag.id] ?? 0;
-        return {
-          count: n,
-          subText: n > 0 ? `${n}枚がすべてのカード` : 'カードがありません',
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'learned': {
         const n = todayReviewedPerTag[tag.id] ?? 0;
-        return {
-          count: n,
-          subText: n > 0 ? `${n}枚が学習済み対象` : '今日の学習済みはありません',
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'review': {
         const n = tagDueCounts[tag.id] ?? 0;
-        return {
-          count: n,
-          subText: n > 0 ? t('study.dueCards', { count: n }) : t('study.noDue'),
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'new': {
         const n = unlearnedPerTag[tag.id] ?? 0;
-        return {
-          count: n,
-          subText: n > 0 ? `${n}枚が未学習対象` : '未学習はありません',
-          subTextActive: n > 0,
-          tappable: n > 0,
-        };
+        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
     }
   }
@@ -306,9 +266,11 @@ export default function StudyScreen() {
                 >
                   <View style={styles.deckInfo}>
                     <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
-                    <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, subTextActive && styles.dueLabelActive]}>
-                      {subText}
-                    </Text>
+                    {!subTextActive && (
+                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }]}>
+                        {subText}
+                      </Text>
+                    )}
                   </View>
                   {count > 0 && (
                     <View style={styles.dueChip}>
@@ -361,9 +323,11 @@ export default function StudyScreen() {
                   <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
                   <View style={styles.deckInfo}>
                     <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
-                    <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }, subTextActive && styles.dueLabelActive]}>
-                      {subText}
-                    </Text>
+                    {!subTextActive && (
+                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }]}>
+                        {subText}
+                      </Text>
+                    )}
                   </View>
                   {count > 0 && (
                     <View style={styles.dueChip}>

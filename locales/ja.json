@@ -87,7 +87,9 @@
     "imageChange": "変更",
     "imageAltPlaceholder": "alt テキスト（省略可）",
     "imageSizeErrorTitle": "画像が大きすぎます",
-    "imageSizeError": "5MB 以下の画像を選択してください"
+    "imageSizeError": "5MB 以下の画像を選択してください",
+    "reorderDisabledTitle": "並び替えできません",
+    "reorderDisabledMessage": "「すべて」表示のときのみ並び替えが可能です"
   },
   "tabs": {
     "home": "ホーム",

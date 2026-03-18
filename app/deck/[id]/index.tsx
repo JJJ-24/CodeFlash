@@ -213,7 +213,16 @@ export default function DeckDetailScreen() {
                     params: { id, cardId: item.id },
                   })
                 }
-                onLongPress={drag}
+                onLongPress={() => {
+                  if (selectedFilter !== 'all') {
+                    Alert.alert(
+                      t('card.reorderDisabledTitle'),
+                      t('card.reorderDisabledMessage')
+                    );
+                    return;
+                  }
+                  drag();
+                }}
               >
                 <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: Math.round(15 * theme.fontScale) }]} numberOfLines={2}>
                   {preview || t('card.noText')}

@@ -87,7 +87,9 @@
     "imageChange": "Change",
     "imageAltPlaceholder": "Alt text (optional)",
     "imageSizeErrorTitle": "Image too large",
-    "imageSizeError": "Please select an image under 5MB"
+    "imageSizeError": "Please select an image under 5MB",
+    "reorderDisabledTitle": "Cannot Reorder",
+    "reorderDisabledMessage": "Reordering is only available in the \"All\" view"
   },
   "tabs": {
     "home": "Home",

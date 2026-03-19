@@ -61,6 +61,7 @@ export default function StudySessionScreen() {
   const [showMemo, setShowMemo] = useState(false);
   const [grading, setGrading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedCodeBlockIdx, setSelectedCodeBlockIdx] = useState<number | null>(null);
   const [runTrigger, setRunTrigger] = useState(0);
   const [editTrigger, setEditTrigger] = useState(0);
   // cardId -> blockIndex -> 編集済みコード
@@ -181,6 +182,9 @@ export default function StudySessionScreen() {
     }
     setIsFlipped(false);
     setShowMemo(false);
+    setSelectedCodeBlockIdx(null);
+    setRunTrigger(0);
+    setEditTrigger(0);
     currentIndexSV.value = currentIndex;
     frontScrollRef.current?.scrollTo({ y: 0, animated: false });
     backScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -213,8 +217,22 @@ export default function StudySessionScreen() {
 
   function handleKeyPress(key: string) {
     if (!keyboardShortcutsEnabled) return;
+    const codeCount = currentCard?.frontContent.filter(b => b.type === 'code').length ?? 0;
+
     if (key === ' ') {
       setIsFlipped((v) => !v);
+    } else if (key === 'Tab') {
+      if (codeCount > 0) {
+        setEditTrigger(0);
+        setRunTrigger(0);
+        setSelectedCodeBlockIdx(prev =>
+          prev === null ? 0 : (prev + 1) % codeCount
+        );
+      }
+    } else if (key.toLowerCase() === 'r') {
+      if (selectedCodeBlockIdx !== null) {
+        setRunTrigger((v) => v + 1);
+      }
     } else if (key.toLowerCase() === 'j') {
       navigateWithSlide('prev');
     } else if (key.toLowerCase() === 'k') {
@@ -225,10 +243,10 @@ export default function StudySessionScreen() {
       setIsFullscreen((v) => !v);
       setEditTrigger(0);
       setRunTrigger(0);
-    } else if (key === 'Tab') {
-      setRunTrigger((v) => v + 1);
     } else if (key.toLowerCase() === 'e') {
-      setEditTrigger((v) => v + 1);
+      if (selectedCodeBlockIdx !== null) {
+        setEditTrigger((v) => v + 1);
+      }
     } else if (isFlipped && !grading) {
       if (key === '1') handleGradeWithSlide(0);
       else if (key === '2') handleGradeWithSlide(1);
@@ -336,7 +354,13 @@ export default function StudySessionScreen() {
           <View style={styles.fullscreenHeader}>
             <Pressable
               style={styles.fullscreenExitBtn}
-              onPress={() => setIsFullscreen(false)}
+              onPress={() => {
+                codeEditingRef.current = false;
+                setIsFullscreen(false);
+                setEditTrigger(0);
+                setRunTrigger(0);
+                setTimeout(() => { keyboardRef.current?.focus(); }, 100);
+              }}
             >
               <Ionicons name="contract-outline" size={24} color={theme.colors.iconSubtle} />
             </Pressable>
@@ -361,14 +385,17 @@ export default function StudySessionScreen() {
                 front={
                   <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                     <BlocksView
+                      key={currentCard.id}
                       blocks={currentCard.frontContent}
                       editableCode
                       editedContents={editedCodeBlocks[currentCard.id]}
                       onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
                       onEditFocus={() => { codeEditingRef.current = true; }}
                       onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                      onSelectCodeBlock={setSelectedCodeBlockIdx}
                       runTrigger={runTrigger}
                       editTrigger={editTrigger}
+                      selectedCodeBlockIdx={selectedCodeBlockIdx}
                       scrollRef={frontScrollRef}
                     />
                   </ScrollView>
@@ -484,14 +511,17 @@ export default function StudySessionScreen() {
               front={
                 <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
                   <BlocksView
+                    key={currentCard.id}
                     blocks={currentCard.frontContent}
                     editableCode
                     editedContents={editedCodeBlocks[currentCard.id]}
                     onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
                     onEditFocus={() => { codeEditingRef.current = true; }}
                     onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                    onSelectCodeBlock={setSelectedCodeBlockIdx}
                     runTrigger={runTrigger}
                     editTrigger={editTrigger}
+                    selectedCodeBlockIdx={selectedCodeBlockIdx}
                     scrollRef={frontScrollRef}
                   />
                 </ScrollView>
@@ -533,7 +563,13 @@ export default function StudySessionScreen() {
         {/* 全画面ボタン（カードエリア右上） */}
         <Pressable
           style={styles.fullscreenBtn}
-          onPress={() => setIsFullscreen(true)}
+          onPress={() => {
+            codeEditingRef.current = false;
+            setIsFullscreen(true);
+            setEditTrigger(0);
+            setRunTrigger(0);
+            setTimeout(() => { keyboardRef.current?.focus(); }, 100);
+          }}
         >
           <Ionicons name="expand-outline" size={22} color={theme.colors.iconSubtle} />
         </Pressable>

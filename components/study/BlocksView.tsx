@@ -1,4 +1,4 @@
-import { useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import Markdown from 'react-native-markdown-display';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -17,14 +17,56 @@ interface Props {
   onEditBlur?: () => void;
   runTrigger?: number;
   editTrigger?: number;
+  selectedCodeBlockIdx?: number | null;
+  onSelectCodeBlock?: (codeBlockIdx: number) => void;
   onCodeRunStart?: () => void;
   scrollRef?: RefObject<ScrollView | null>;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, runTrigger, editTrigger, onCodeRunStart, scrollRef }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef }: Props) {
   const theme = useTheme();
   const containerYRef = useRef(0);
   const blockYPositions = useRef<Record<number, number>>({});
+  // 現在編集中のブロック index（blocks 配列上の i）を管理
+  const editingBlockIdxRef = useRef<number | null>(null);
+  const [exitEditTriggers, setExitEditTriggers] = useState<Record<number, number>>({});
+
+  function handleEditRequest(blockIdx: number) {
+    const prev = editingBlockIdxRef.current;
+    if (prev !== null && prev !== blockIdx) {
+      setExitEditTriggers(t => ({ ...t, [prev]: (t[prev] ?? 0) + 1 }));
+    }
+    editingBlockIdxRef.current = blockIdx;
+    onSelectCodeBlock?.(codeBlockIndexMap[blockIdx]);
+  }
+
+  // Tab キーでブロックが切り替わったら、そのブロックが画面内に入るようスクロール
+  useEffect(() => {
+    if (selectedCodeBlockIdx == null) return;
+    let blockArrayIdx: number | undefined;
+    let codeIdx = 0;
+    for (let i = 0; i < blocks.length; i++) {
+      if (blocks[i].type === 'code') {
+        if (codeIdx === selectedCodeBlockIdx) { blockArrayIdx = i; break; }
+        codeIdx++;
+      }
+    }
+    if (blockArrayIdx === undefined) return;
+    if (scrollRef?.current) {
+      const y = containerYRef.current + (blockYPositions.current[blockArrayIdx] ?? 0);
+      scrollRef.current.scrollTo({ y, animated: true });
+    }
+  }, [selectedCodeBlockIdx]);
+
+  function handleEditBlur(blockIdx: number) {
+    if (editingBlockIdxRef.current === blockIdx) {
+      // このブロックが最後の編集ブロック → session に編集終了を通知
+      editingBlockIdxRef.current = null;
+      onEditBlur?.();
+    }
+    // 別ブロックが既に編集を引き継いでいる場合は session に通知しない
+    // （onEditBlur 内の keyboardRef.focus() が新ブロックの TextInput を blur させるため）
+  }
 
   const fs = (size: number) => Math.round(size * theme.fontScale);
   const markdownStyles = {
@@ -44,6 +86,12 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   if (blocks.length === 0) {
     return <Text style={[styles.empty, { color: theme.colors.iconSubtle }]}>（内容なし）</Text>;
   }
+
+  const codeBlockIndexMap: Record<number, number> = {};
+  let codeIdx = 0;
+  blocks.forEach((block, i) => {
+    if (block.type === 'code') codeBlockIndexMap[i] = codeIdx++;
+  });
 
   return (
     <View
@@ -70,9 +118,13 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 editedContent={editedContents?.[i]}
                 onContentChange={(text) => onCodeBlockChange?.(i, text)}
                 onEditFocus={onEditFocus}
-                onEditBlur={onEditBlur}
-                runTrigger={runTrigger}
-                editTrigger={editTrigger}
+                onEditBlur={() => handleEditBlur(i)}
+                onEditRequest={() => handleEditRequest(i)}
+                onSelectRequest={() => onSelectCodeBlock?.(codeBlockIndexMap[i])}
+                exitEditTrigger={exitEditTriggers[i]}
+                runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}
+                editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}
+                isSelected={codeBlockIndexMap[i] === selectedCodeBlockIdx}
                 onRunStart={() => {
                   if (scrollRef?.current) {
                     const y = containerYRef.current + (blockYPositions.current[i] ?? 0);

@@ -29,12 +29,16 @@ interface Props {
   onContentChange?: (text: string) => void;
   onEditFocus?: () => void;
   onEditBlur?: () => void;
+  onEditRequest?: () => void;
+  onSelectRequest?: () => void;
+  exitEditTrigger?: number;
   runTrigger?: number;
   editTrigger?: number;
+  isSelected?: boolean;
   onRunStart?: () => void;
 }
 
-export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, runTrigger, editTrigger, onRunStart }: Props) {
+export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, onEditRequest, onSelectRequest, exitEditTrigger, runTrigger, editTrigger, isSelected, onRunStart }: Props) {
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage, reset } = useCodeExecution(onRunStart);
@@ -61,40 +65,49 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
 
   useEffect(() => {
     if (editTrigger && editable && !isEditing) {
+      onEditRequest?.();
       setIsEditing(true);
       clear();
       onEditFocus?.();
     }
   }, [editTrigger]);
 
-  // 編集終了のみ（実行なし）- 完了ボタン用
+  // 編集終了のみ（実行なし）- 完了ボタン・exitEditTrigger 用
   const handleEditEnd = useCallback(() => {
     intentionalExitRef.current = true;
     setIsEditing(false);
     onEditBlur?.();
   }, [onEditBlur]);
 
+  // 外部からの強制終了（別ブロックが編集開始した時）
+  useEffect(() => {
+    if (exitEditTrigger) handleEditEnd();
+  }, [exitEditTrigger]);
+
   // 編集開始/終了トグル - 編集ボタン用
   const handleEditToggle = useCallback(() => {
     if (isEditing) {
       handleEditEnd();
     } else {
+      onEditRequest?.();
       setIsEditing(true);
       clear();
       onEditFocus?.();
     }
-  }, [isEditing, handleEditEnd, clear, onEditFocus]);
+  }, [isEditing, handleEditEnd, clear, onEditFocus, onEditRequest]);
 
   // 編集終了 + 実行 - ▶実行ボタン・r キー・Shift+Tab（onBlur）用
   const handleRun = useCallback(() => {
-    intentionalExitRef.current = true;
+    onSelectRequest?.();
     if (isEditing) {
+      // 編集中の場合のみ onBlur 二重実行防止フラグをセット
+      intentionalExitRef.current = true;
       setIsEditing(false);
       onEditBlur?.();
     }
     const content = (editable && editedContent !== undefined) ? editedContent : block.content;
     run(content, block.language);
-  }, [isEditing, editable, editedContent, block.content, block.language, run, onEditBlur]);
+  }, [isEditing, editable, editedContent, block.content, block.language, run, onEditBlur, onSelectRequest]);
 
   const handleCodeCopy = useCallback(async () => {
     await Clipboard.setStringAsync(editedContent ?? block.content);
@@ -118,7 +131,13 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground }]}>
+    <View style={[
+      styles.container,
+      { backgroundColor: theme.colors.codeBackground },
+      isRunning  && { borderWidth: 2, borderColor: '#43A047' },
+      isEditing  && { borderWidth: 2, borderColor: '#FB8C00' },
+      isSelected && !isEditing && !isRunning && { borderWidth: 2, borderColor: theme.colors.primary },
+    ]}>
       {/* ヘッダー */}
       <View style={styles.header}>
         <Text style={styles.langLabel}>
@@ -163,13 +182,25 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
             spellCheck={false}
             keyboardType="ascii-capable"
             showSoftInputOnFocus={!keyboardShortcutsEnabled}
-            onBlur={() => {
-              // Shift+Tab・外タップ等でフォーカスが外れた場合に実行
-              // 完了ボタン・▶実行ボタン経由の場合は intentionalExitRef で防ぐ
-              if (!intentionalExitRef.current) {
+            onFocus={() => { intentionalExitRef.current = false; }}
+            onKeyPress={({ nativeEvent: { key } }) => {
+              // 編集中に Tab キーが押された場合は onBlur での実行を抑制する
+              if (key === 'Tab') {
+                intentionalExitRef.current = true;
+              } else if (key === 'Escape') {
+                // 編集中 Escape = 編集終了 + 実行
                 handleRun();
               }
-              intentionalExitRef.current = false;
+            }}
+            onBlur={() => {
+              // 外タップ等でフォーカスが外れた場合に実行
+              // 完了ボタン・▶実行ボタン・Tab キー経由の場合は intentionalExitRef で防ぐ
+              setTimeout(() => {
+                if (!intentionalExitRef.current) {
+                  handleRun();
+                }
+                intentionalExitRef.current = false;
+              }, 50);
             }}
           />
         ) : (

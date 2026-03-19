@@ -38,7 +38,7 @@ export function useStudySession() {
         let cardIds: string[] = [];
         const filter = params.filter ?? 'due';
         if (params.deckId) {
-          if (filter === 'all')       cardIds = await getAllCardIdsByDeckId(db, params.deckId);
+          if (filter === 'all')            cardIds = await getAllCardIdsByDeckId(db, params.deckId);
           else if (filter === 'today')     cardIds = await getTodayReviewedCardIdsByDeckId(db, params.deckId);
           else if (filter === 'unlearned') cardIds = await getUnlearnedCardIdsByDeckId(db, params.deckId);
           else                             cardIds = await getDueCardIdsByDeckId(db, params.deckId);
@@ -86,18 +86,10 @@ export function useStudySession() {
 
       await saveReview(db, { cardId: card.id, ...reviewResult });
 
-      const reviewed = result.reviewed + 1;
-      const nextIndex = currentIndex + 1;
-
-      if (nextIndex >= queue.length) {
-        setResult({ totalCards: result.totalCards, reviewed });
-        setCompleted(true);
-      } else {
-        setResult({ totalCards: result.totalCards, reviewed });
-        setCurrentIndex(nextIndex);
-      }
+      setResult((r) => ({ ...r, reviewed: r.reviewed + 1 }));
+      goNext();
     },
-    [db, queue, currentIndex, result]
+    [db, queue, currentIndex, goNext]
   );
 
   const refreshCurrentCard = useCallback(async () => {

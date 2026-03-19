@@ -1,5 +1,5 @@
 import { transform } from 'sucrase';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { buildSandboxHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, ExecStatus, LogEntry } from '@/lib/code-execution/types';
@@ -16,8 +16,12 @@ export function useCodeExecution(onResult?: () => void) {
   const [htmlSource, setHtmlSource] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState<string | undefined>(undefined);
 
+  // 常に最新の onResult を参照するため ref で保持
+  const onResultRef = useRef(onResult);
+  useEffect(() => { onResultRef.current = onResult; });
+
   useEffect(() => {
-    if (result) setTimeout(() => onResult?.(), 50);
+    if (result) setTimeout(() => onResultRef.current?.(), 50);
   }, [result]);
 
   function run(content: string, language: string) {

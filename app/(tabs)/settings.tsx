@@ -21,6 +21,42 @@ const SHORTCUTS = [
   { key: 'E',     descKey: 'settings.shortcutEdit' },
 ];
 
+interface SegmentedCardProps<T extends string> {
+  label: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}
+
+function SegmentedCard<T extends string>({ label, options, value, onChange }: SegmentedCardProps<T>) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
+      <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+        {options.map(({ value: optValue, label: optLabel }) => {
+          const active = value === optValue;
+          return (
+            <Pressable
+              key={optValue}
+              style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+              onPress={() => onChange(optValue)}
+            >
+              <Text style={[
+                styles.segmentText,
+                { color: active ? theme.colors.primary : theme.colors.textSecondary },
+                active && styles.segmentTextActive,
+              ]}>
+                {optLabel}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -28,117 +64,40 @@ export default function SettingsScreen() {
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
   const { keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, initialFilterPreference, setInitialFilterPreference } = useSettingsStore();
 
-  const themeOptions: { value: ColorSchemePreference; labelKey: string }[] = [
-    { value: 'light', labelKey: 'settings.themeLight' },
-    { value: 'dark', labelKey: 'settings.themeDark' },
-    { value: 'system', labelKey: 'settings.themeSystem' },
-  ];
-
-  const fontSizeOptions: { value: FontSizePreference; labelKey: string }[] = [
-    { value: 'small', labelKey: 'settings.fontSizeSmall' },
-    { value: 'medium', labelKey: 'settings.fontSizeMedium' },
-    { value: 'large', labelKey: 'settings.fontSizeLarge' },
-  ];
-
-  const initialFilterOptions: { value: InitialFilterPreference; labelKey: string }[] = [
-    { value: 'all', labelKey: 'settings.initialFilterAll' },
-    // { value: 'learned', labelKey: 'settings.initialFilterLearned' },
-    { value: 'review', labelKey: 'settings.initialFilterReview' },
-    // { value: 'new', labelKey: 'settings.initialFilterNew' },
-    { value: 'none', labelKey: 'settings.initialFilterNone' },
-  ];
-
   return (
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container}>
-      {/* テーマ設定 */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-          {t('settings.theme')}
-        </Text>
-        <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
-          {themeOptions.map(({ value, labelKey }) => {
-            const active = preference === value;
-            return (
-              <Pressable
-                key={value}
-                style={[
-                  styles.segment,
-                  active && { backgroundColor: theme.colors.surface },
-                ]}
-                onPress={() => setPreference(value)}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    { color: active ? theme.colors.primary : theme.colors.textSecondary },
-                    active && styles.segmentTextActive,
-                  ]}
-                >
-                  {t(labelKey)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <SegmentedCard
+        label={t('settings.theme')}
+        options={[
+          { value: 'light' as ColorSchemePreference, label: t('settings.themeLight') },
+          { value: 'dark' as ColorSchemePreference,  label: t('settings.themeDark') },
+          { value: 'system' as ColorSchemePreference, label: t('settings.themeSystem') },
+        ]}
+        value={preference}
+        onChange={setPreference}
+      />
 
-      {/* フォントサイズ設定 */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-          {t('settings.fontSize')}
-        </Text>
-        <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
-          {fontSizeOptions.map(({ value, labelKey }) => {
-            const active = fontSizePreference === value;
-            return (
-              <Pressable
-                key={value}
-                style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
-                onPress={() => setFontSizePreference(value)}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    { color: active ? theme.colors.primary : theme.colors.textSecondary },
-                    active && styles.segmentTextActive,
-                  ]}
-                >
-                  {t(labelKey)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <SegmentedCard
+        label={t('settings.fontSize')}
+        options={[
+          { value: 'small' as FontSizePreference,  label: t('settings.fontSizeSmall') },
+          { value: 'medium' as FontSizePreference, label: t('settings.fontSizeMedium') },
+          { value: 'large' as FontSizePreference,  label: t('settings.fontSizeLarge') },
+        ]}
+        value={fontSizePreference}
+        onChange={setFontSizePreference}
+      />
 
-      {/* 初期表示フィルター設定 */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-          {t('settings.initialFilter')}
-        </Text>
-        <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
-          {initialFilterOptions.map(({ value, labelKey }) => {
-            const active = initialFilterPreference === value;
-            return (
-              <Pressable
-                key={value}
-                style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
-                onPress={() => setInitialFilterPreference(value)}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    { color: active ? theme.colors.primary : theme.colors.textSecondary },
-                    active && styles.segmentTextActive,
-                  ]}
-                >
-                  {t(labelKey)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      <SegmentedCard
+        label={t('settings.initialFilter')}
+        options={[
+          { value: 'all' as InitialFilterPreference,    label: t('settings.initialFilterAll') },
+          { value: 'review' as InitialFilterPreference, label: t('settings.initialFilterReview') },
+          { value: 'none' as InitialFilterPreference,   label: t('settings.initialFilterNone') },
+        ]}
+        value={initialFilterPreference}
+        onChange={setInitialFilterPreference}
+      />
 
       {/* タグ管理 */}
       <Pressable

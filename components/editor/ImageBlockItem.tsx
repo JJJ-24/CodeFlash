@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { BlockItemHeader } from './BlockItemHeader';
 import { pickAndSaveImage, resolveImageUri } from '@/lib/image';
 import { useTheme } from '@/lib/theme';
 import type { ImageBlock } from '@/types';
@@ -45,30 +45,18 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
-      {/* ヘッダー */}
-      <View style={[styles.header, { backgroundColor: theme.dark ? '#252525' : '#FAFAFA', borderBottomColor: theme.colors.border }]}>
-        {onDragStart ? (
-          <Pressable style={styles.headerDragArea} onLongPress={onDragStart} delayLongPress={500}>
-            <Ionicons name="image-outline" size={14} color={theme.colors.textTertiary} style={styles.typeLabel} />
-          </Pressable>
-        ) : (
-          <View style={styles.headerDragArea}>
-            <Ionicons name="image-outline" size={14} color={theme.colors.textTertiary} style={styles.typeLabel} />
-          </View>
-        )}
-        {!collapsed && (
-          <Pressable
-            onPress={() => Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
-              { text: t('common.cancel'), style: 'cancel' },
-              { text: t('common.delete'), style: 'destructive', onPress: onDelete },
-            ])}
-            hitSlop={8}
-            style={styles.deleteBtnWrapper}
-          >
-            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
-          </Pressable>
-        )}
-      </View>
+      <BlockItemHeader
+        onDragStart={onDragStart}
+        onDelete={onDelete}
+        collapsed={collapsed}
+        style={{
+          backgroundColor: theme.dark ? '#252525' : '#FAFAFA',
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        }}
+      >
+        <Ionicons name="image-outline" size={14} color={theme.colors.textTertiary} style={styles.typeLabel} />
+      </BlockItemHeader>
 
       {collapsed ? (
         <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}>
@@ -139,18 +127,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    gap: 8,
-  },
-  headerDragArea: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   typeLabel: { fontSize: 12, fontWeight: '700' },
-  deleteBtnWrapper: { padding: 6 },
-  deleteBtnText: { fontSize: 16 },
   imageArea: {
     paddingHorizontal: 12,
     paddingTop: 10,

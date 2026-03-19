@@ -1,10 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -16,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { BlockItemHeader } from './BlockItemHeader';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
@@ -34,7 +33,6 @@ interface Props {
 }
 
 export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed }: Props) {
-  const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -50,85 +48,41 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused]}>
-      {/* ヘッダー: 言語選択 / executable / 実行 / 削除 */}
-      <View style={[styles.header, { backgroundColor: theme.dark ? '#333333' : '#2D2D2D' }]}>
-        {onDragStart ? (
-          <Pressable style={styles.headerDragArea} onLongPress={onDragStart} delayLongPress={500}>
-            <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-              <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
-              <Text style={styles.langChevron}>▾</Text>
-            </Pressable>
+      <BlockItemHeader
+        onDragStart={onDragStart}
+        onDelete={onDelete}
+        collapsed={collapsed}
+        style={{ backgroundColor: theme.dark ? '#333333' : '#2D2D2D' }}
+      >
+        <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
+          <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
+          <Text style={styles.langChevron}>▾</Text>
+        </Pressable>
 
-            <View style={styles.headerRight}>
-              <Text style={styles.execLabel}>実行</Text>
-              <Switch
-                value={block.executable}
-                onValueChange={(v) => onChange({ executable: v })}
-                trackColor={{ true: '#1976D2' }}
-                thumbColor="#FFF"
-                style={styles.execSwitch}
-              />
+        <View style={styles.headerRight}>
+          <Text style={styles.execLabel}>実行</Text>
+          <Switch
+            value={block.executable}
+            onValueChange={(v) => onChange({ executable: v })}
+            trackColor={{ true: '#1976D2' }}
+            thumbColor="#FFF"
+            style={styles.execSwitch}
+          />
 
-              {block.executable && (
-                <TouchableOpacity
-                  style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
-                  onPress={() => run(block.content, block.language)}
-                  disabled={isRunning}
-                >
-                  {isRunning
-                    ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                    : <Text style={styles.runBtnText}>▶ 実行</Text>
-                  }
-                </TouchableOpacity>
-              )}
-            </View>
-          </Pressable>
-        ) : (
-          <View style={styles.headerDragArea}>
-            <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-              <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
-              <Text style={styles.langChevron}>▾</Text>
-            </Pressable>
-
-            <View style={styles.headerRight}>
-              <Text style={styles.execLabel}>実行</Text>
-              <Switch
-                value={block.executable}
-                onValueChange={(v) => onChange({ executable: v })}
-                trackColor={{ true: '#1976D2' }}
-                thumbColor="#FFF"
-                style={styles.execSwitch}
-              />
-
-              {block.executable && (
-                <TouchableOpacity
-                  style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
-                  onPress={() => run(block.content, block.language)}
-                  disabled={isRunning}
-                >
-                  {isRunning
-                    ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                    : <Text style={styles.runBtnText}>▶ 実行</Text>
-                  }
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
-
-        {!collapsed && (
-          <Pressable
-            onPress={() => Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
-              { text: t('common.cancel'), style: 'cancel' },
-              { text: t('common.delete'), style: 'destructive', onPress: onDelete },
-            ])}
-            hitSlop={8}
-            style={styles.deleteBtn}
-          >
-            <Text style={styles.deleteBtnText}>✕</Text>
-          </Pressable>
-        )}
-      </View>
+          {block.executable && (
+            <TouchableOpacity
+              style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
+              onPress={() => run(block.content, block.language)}
+              disabled={isRunning}
+            >
+              {isRunning
+                ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
+                : <Text style={styles.runBtnText}>▶ 実行</Text>
+              }
+            </TouchableOpacity>
+          )}
+        </View>
+      </BlockItemHeader>
 
       {/* コード入力エリア */}
       {collapsed ? (
@@ -222,13 +176,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   containerFocused: { borderColor: '#64B5F6' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
   langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   langText: { fontSize: 14, color: '#9CDCFE', fontWeight: '600' },
   langChevron: { fontSize: 12, color: '#9CDCFE' },
@@ -247,9 +194,6 @@ const styles = StyleSheet.create({
   runBtnDisabled: { backgroundColor: '#555' },
   runBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
   spinner: { marginHorizontal: 4 },
-  headerDragArea: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  deleteBtn: { padding: 6 },
-  deleteBtnText: { fontSize: 16, color: '#616161' },
   codeArea: {
     position: 'relative',
   },

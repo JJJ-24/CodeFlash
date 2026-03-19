@@ -37,7 +37,9 @@
       "Bash(npm run build:*)",
       "Bash(npm ls:*)",
       "Bash(npx:*)",
-      "Bash(ls -la /Users/jjj24/Program/Udemy/expo/code_flash-card/app/\\\\\\(tabs\\\\\\))"
+      "Bash(ls -la /Users/jjj24/Program/Udemy/expo/code_flash-card/app/\\\\\\(tabs\\\\\\))",
+      "Bash(git log:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [
       "Bash(sudo:*)",

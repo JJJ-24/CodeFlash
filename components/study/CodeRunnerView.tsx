@@ -191,7 +191,14 @@ export function CodeRunnerView({
       ]}
     >
       {/* ヘッダー */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          isRunning && { backgroundColor: '#1E5024' },
+          isEditing && { backgroundColor: '#4A3400' },
+          isSelected && !isEditing && !isRunning && { backgroundColor: '#1A3050' },
+        ]}
+      >
         <Text style={styles.langLabel}>
           {LANG_LABELS[block.language] ?? block.language}
         </Text>

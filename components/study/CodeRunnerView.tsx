@@ -193,11 +193,11 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
               }
             }}
             onBlur={() => {
-              // 外タップ等でフォーカスが外れた場合に実行
+              // 外タップ等でフォーカスが外れた場合は編集終了のみ（実行しない）
               // 完了ボタン・▶実行ボタン・Tab キー経由の場合は intentionalExitRef で防ぐ
               setTimeout(() => {
                 if (!intentionalExitRef.current) {
-                  handleRun();
+                  handleEditEnd();
                 }
                 intentionalExitRef.current = false;
               }, 50);

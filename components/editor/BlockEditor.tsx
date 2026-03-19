@@ -1,9 +1,8 @@
-import { type Dispatch, type Ref, type SetStateAction, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type Dispatch, type Ref, type SetStateAction, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,6 +10,13 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  NestableScrollContainer,
+  NestableDraggableFlatList,
+  ScaleDecorator,
+  type RenderItemParams,
+  type DragEndParams,
+} from 'react-native-draggable-flatlist';
 
 import { CodeBlockItem } from './CodeBlockItem';
 import { ImageBlockItem } from './ImageBlockItem';
@@ -71,7 +77,7 @@ interface Props {
 export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, ref }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<any>(null);
   const blockYPositions = useRef<Record<string, number>>({});
 
   const [activeTab, setActiveTab] = useState<Tab>('front');
@@ -87,6 +93,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
   );
   const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
   const [addMenuVisible, setAddMenuVisible] = useState(false);
+  const [isSortMode, setIsSortMode] = useState(false);
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -119,6 +126,10 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
     setAddMenuVisible(false);
   }
 
+  function handleDragEnd({ data }: DragEndParams<EditBlock>) {
+    setterByTab[activeTab](data);
+  }
+
   const isFrontEmpty = frontBlocks.every((b) => {
     if (b.type === 'image') return !b.uri;
     return (b as TextBlock | CodeBlock).content.trim() === '';
@@ -148,6 +159,62 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
 
   const currentBlocks = blocksByTab[activeTab];
 
+  const renderBlock = useCallback(({ item: block, drag, getIndex }: RenderItemParams<EditBlock>) => {
+    const index = getIndex() ?? 0;
+    const collapsed = isSortMode;
+    const sortDrag = isSortMode ? drag : undefined;
+
+    if (block.type === 'text') {
+      return (
+        <ScaleDecorator activeScale={1.02}>
+          <TextBlockItem
+            block={block as TextBlock}
+            isPreview={isPreview}
+            onChange={(content) => updateBlock(activeTab, block._key, { content })}
+            onDelete={() => deleteBlock(activeTab, block._key)}
+            autoFocus={index === 0}
+            onDragStart={sortDrag}
+            collapsed={collapsed}
+          />
+        </ScaleDecorator>
+      );
+    }
+    if (block.type === 'code') {
+      return (
+        <ScaleDecorator activeScale={1.02}>
+          <View onLayout={(e) => { blockYPositions.current[block._key] = e.nativeEvent.layout.y; }}>
+            <CodeBlockItem
+              block={block as CodeBlock}
+              isPreview={isPreview}
+              onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+              onDelete={() => deleteBlock(activeTab, block._key)}
+              onRunStart={() => {
+                const y = blockYPositions.current[block._key] ?? 0;
+                scrollRef.current?.scrollTo({ y, animated: true });
+              }}
+              onDragStart={sortDrag}
+              collapsed={collapsed}
+            />
+          </View>
+        </ScaleDecorator>
+      );
+    }
+    if (block.type === 'image') {
+      return (
+        <ScaleDecorator activeScale={1.02}>
+          <ImageBlockItem
+            block={block as ImageBlock}
+            onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+            onDelete={() => deleteBlock(activeTab, block._key)}
+            onDragStart={sortDrag}
+            collapsed={collapsed}
+          />
+        </ScaleDecorator>
+      );
+    }
+    return null;
+  }, [isPreview, activeTab, isSortMode]);
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -166,6 +233,17 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
             </Text>
           </Pressable>
         ))}
+        {/* 並替モードトグル */}
+        <Pressable
+          style={[styles.sortToggle, { backgroundColor: theme.colors.background }, isSortMode && { backgroundColor: theme.colors.primaryLight }]}
+          onPress={() => setIsSortMode((v) => !v)}
+        >
+          <Ionicons
+            name="reorder-three-outline"
+            size={18}
+            color={isSortMode ? theme.colors.primary : theme.colors.textSecondary}
+          />
+        </Pressable>
         {/* プレビュー切替 */}
         <Pressable
           style={[styles.previewToggle, { backgroundColor: theme.colors.background }, isPreview && { backgroundColor: theme.colors.primaryLight }]}
@@ -177,56 +255,22 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
         </Pressable>
       </View>
 
-      <ScrollView
+      <NestableScrollContainer
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
         {/* ブロック一覧 */}
-        {currentBlocks.map((block, index) => {
-          if (block.type === 'text') {
-            return (
-              <TextBlockItem
-                key={block._key}
-                block={block as TextBlock}
-                isPreview={isPreview}
-                onChange={(content) => updateBlock(activeTab, block._key, { content })}
-                onDelete={() => deleteBlock(activeTab, block._key)}
-                autoFocus={index === 0}
-              />
-            );
-          }
-          if (block.type === 'code') {
-            return (
-              <View
-                key={block._key}
-                onLayout={(e) => { blockYPositions.current[block._key] = e.nativeEvent.layout.y; }}
-              >
-                <CodeBlockItem
-                  block={block as CodeBlock}
-                  isPreview={isPreview}
-                  onChange={(patch) => updateBlock(activeTab, block._key, patch)}
-                  onDelete={() => deleteBlock(activeTab, block._key)}
-                  onRunStart={() => {
-                    const y = blockYPositions.current[block._key] ?? 0;
-                    scrollRef.current?.scrollTo({ y, animated: true });
-                  }}
-                />
-              </View>
-            );
-          }
-          if (block.type === 'image') {
-            return (
-              <ImageBlockItem
-                key={block._key}
-                block={block as ImageBlock}
-                onChange={(patch) => updateBlock(activeTab, block._key, patch)}
-                onDelete={() => deleteBlock(activeTab, block._key)}
-              />
-            );
-          }
-        })}
+        <NestableDraggableFlatList
+          key={activeTab}
+          data={currentBlocks}
+          keyExtractor={(item) => item._key}
+          renderItem={renderBlock}
+          onDragEnd={handleDragEnd}
+          activationDistance={isSortMode ? 2 : 10000}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        />
 
         {/* ブロック追加ボタン */}
         {!isPreview && (
@@ -271,7 +315,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
             {t('card.frontRequired')}
           </Text>
         )}
-      </ScrollView>
+      </NestableScrollContainer>
     </KeyboardAvoidingView>
   );
 }
@@ -292,12 +336,21 @@ const styles = StyleSheet.create({
   tabActive: { borderBottomColor: '#1976D2' },
   tabText: { fontSize: 14, fontWeight: '500' },
   tabTextActive: { color: '#1976D2', fontWeight: '700' },
-  previewToggle: {
+  sortToggle: {
     marginLeft: 'auto',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    alignSelf: 'center',
+  },
+  previewToggle: {
+    marginLeft: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 6,
     alignSelf: 'center',
+    minWidth: 80,
+    alignItems: 'center',
   },
   previewToggleText: { fontSize: 12 },
   previewToggleTextActive: { color: '#1976D2', fontWeight: '600' },

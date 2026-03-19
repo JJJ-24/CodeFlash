@@ -31,8 +31,8 @@ function RootStack() {
       <Stack.Screen name="deck/[id]" />
       <Stack.Screen name="deck/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="deck/[id]/card/new" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="deck/[id]/card/[cardId]/edit" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="deck/[id]/card/new" options={{ presentation: 'modal', gestureEnabled: false }} />
+      <Stack.Screen name="deck/[id]/card/[cardId]/edit" options={{ presentation: 'modal', gestureEnabled: false }} />
       <Stack.Screen name="tags/index" options={{ title: '' }} />
       <Stack.Screen name="study/session" options={{ headerShown: true }} />
     </Stack>

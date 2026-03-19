@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 
 import { useTheme } from '@/lib/theme';
@@ -11,9 +12,12 @@ interface Props {
   onChange: (content: string) => void;
   onDelete: () => void;
   autoFocus?: boolean;
+  onDragStart?: () => void;
+  collapsed?: boolean;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed }: Props) {
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
@@ -45,13 +49,37 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus 
       { backgroundColor: theme.colors.surface, borderColor: focused ? theme.colors.primary : theme.colors.inputBorder },
     ]}>
       <View style={[styles.header, { backgroundColor: theme.dark ? '#252525' : '#FAFAFA', borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]}>T</Text>
-        <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteBtn}>
-          <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
-        </Pressable>
+        {onDragStart ? (
+          <Pressable style={styles.headerDragArea} onLongPress={onDragStart} delayLongPress={500}>
+            <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]}>T</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.headerDragArea}>
+            <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]}>T</Text>
+          </View>
+        )}
+        {!collapsed && (
+          <Pressable
+            onPress={() => Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.delete'), style: 'destructive', onPress: onDelete },
+            ])}
+            hitSlop={8}
+            style={styles.deleteBtn}
+          >
+            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
+          </Pressable>
+        )}
       </View>
 
-      {isPreview ? (
+      {collapsed ? (
+        <Text
+          style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}
+          numberOfLines={2}
+        >
+          {block.content || '（空のテキストブロック）'}
+        </Text>
+      ) : isPreview ? (
         <View style={styles.preview}>
           {block.content.trim() ? (
             <Markdown style={markdownStyles}>{block.content}</Markdown>
@@ -88,13 +116,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     gap: 8,
   },
-  typeLabel: { fontSize: 12, fontWeight: '700', flex: 1 },
-  deleteBtn: { padding: 2 },
-  deleteBtnText: { fontSize: 12 },
+  headerDragArea: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  typeLabel: { fontSize: 12, fontWeight: '700' },
+  deleteBtn: { padding: 6 },
+  deleteBtnText: { fontSize: 16 },
   input: {
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -104,4 +133,10 @@ const styles = StyleSheet.create({
   },
   preview: { paddingHorizontal: 14, paddingVertical: 12 },
   placeholder: { fontSize: 14, fontStyle: 'italic' },
+  collapsedPreview: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13,
+    lineHeight: 20,
+  },
 });

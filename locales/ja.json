@@ -89,7 +89,9 @@
     "imageSizeErrorTitle": "画像が大きすぎます",
     "imageSizeError": "5MB 以下の画像を選択してください",
     "reorderDisabledTitle": "並び替えできません",
-    "reorderDisabledMessage": "「すべて」表示のときのみ並び替えが可能です"
+    "reorderDisabledMessage": "「すべて」表示のときのみ並び替えが可能です",
+    "deleteBlock": "ブロックを削除",
+    "deleteBlockConfirm": "このブロックを削除しますか？"
   },
   "tabs": {
     "home": "ホーム",

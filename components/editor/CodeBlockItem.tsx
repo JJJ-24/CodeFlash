@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -27,13 +29,17 @@ interface Props {
   onChange: (patch: Partial<CodeBlock>) => void;
   onDelete: () => void;
   onRunStart?: () => void;
+  onDragStart?: () => void;
+  collapsed?: boolean;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed }: Props) {
+  const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage } = useCodeExecution(onRunStart);
+
   const theme = useTheme();
 
   async function handleCodeCopy() {
@@ -46,82 +52,134 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused]}>
       {/* ヘッダー: 言語選択 / executable / 実行 / 削除 */}
       <View style={[styles.header, { backgroundColor: theme.dark ? '#333333' : '#2D2D2D' }]}>
-        <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-          <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
-          <Text style={styles.langChevron}>▾</Text>
-        </Pressable>
+        {onDragStart ? (
+          <Pressable style={styles.headerDragArea} onLongPress={onDragStart} delayLongPress={500}>
+            <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
+              <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
+              <Text style={styles.langChevron}>▾</Text>
+            </Pressable>
 
-        <View style={styles.headerRight}>
-          <Text style={styles.execLabel}>実行</Text>
-          <Switch
-            value={block.executable}
-            onValueChange={(v) => onChange({ executable: v })}
-            trackColor={{ true: '#1976D2' }}
-            thumbColor="#FFF"
-            style={styles.execSwitch}
-          />
+            <View style={styles.headerRight}>
+              <Text style={styles.execLabel}>実行</Text>
+              <Switch
+                value={block.executable}
+                onValueChange={(v) => onChange({ executable: v })}
+                trackColor={{ true: '#1976D2' }}
+                thumbColor="#FFF"
+                style={styles.execSwitch}
+              />
 
-          {block.executable && (
-            <TouchableOpacity
-              style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
-              onPress={() => run(block.content, block.language)}
-              disabled={isRunning}
-            >
-              {isRunning
-                ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={styles.runBtnText}>▶ 実行</Text>
-              }
-            </TouchableOpacity>
-          )}
-        </View>
+              {block.executable && (
+                <TouchableOpacity
+                  style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
+                  onPress={() => run(block.content, block.language)}
+                  disabled={isRunning}
+                >
+                  {isRunning
+                    ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
+                    : <Text style={styles.runBtnText}>▶ 実行</Text>
+                  }
+                </TouchableOpacity>
+              )}
+            </View>
+          </Pressable>
+        ) : (
+          <View style={styles.headerDragArea}>
+            <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
+              <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
+              <Text style={styles.langChevron}>▾</Text>
+            </Pressable>
 
-        <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteBtn}>
-          <Text style={styles.deleteBtnText}>✕</Text>
-        </Pressable>
+            <View style={styles.headerRight}>
+              <Text style={styles.execLabel}>実行</Text>
+              <Switch
+                value={block.executable}
+                onValueChange={(v) => onChange({ executable: v })}
+                trackColor={{ true: '#1976D2' }}
+                thumbColor="#FFF"
+                style={styles.execSwitch}
+              />
+
+              {block.executable && (
+                <TouchableOpacity
+                  style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
+                  onPress={() => run(block.content, block.language)}
+                  disabled={isRunning}
+                >
+                  {isRunning
+                    ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
+                    : <Text style={styles.runBtnText}>▶ 実行</Text>
+                  }
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {!collapsed && (
+          <Pressable
+            onPress={() => Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.delete'), style: 'destructive', onPress: onDelete },
+            ])}
+            hitSlop={8}
+            style={styles.deleteBtn}
+          >
+            <Text style={styles.deleteBtnText}>✕</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* コード入力エリア */}
-      <View style={styles.codeArea}>
-        {isPreview ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <SyntaxHighlightedCode code={block.content} language={block.language} />
-          </ScrollView>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <TextInput
-              style={styles.codeInput}
-              value={block.content}
-              onChangeText={(v) =>
-                onChange({
-                  content: v
-                    .replace(/[\u201c\u201d]/g, '"')
-                    .replace(/[\u2018\u2019]/g, "'"),
-                })
-              }
-              multiline
-              placeholder="コードを入力"
-              placeholderTextColor="#6B7280"
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              textAlignVertical="top"
-              autoCapitalize="none"
-              autoCorrect={false}
-              spellCheck={false}
-            />
-          </ScrollView>
-        )}
-        <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
-          <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
-        </Pressable>
-      </View>
+      {collapsed ? (
+        <Text style={styles.collapsedPreview} numberOfLines={2}>
+          {block.content || '（空のコードブロック）'}
+        </Text>
+      ) : (
+        <>
+          <View style={styles.codeArea}>
+            {isPreview ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <SyntaxHighlightedCode code={block.content} language={block.language} />
+              </ScrollView>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <TextInput
+                  style={styles.codeInput}
+                  value={block.content}
+                  onChangeText={(v) =>
+                    onChange({
+                      content: v
+                        .replace(/[\u201c\u201d]/g, '"')
+                        .replace(/[\u2018\u2019]/g, "'"),
+                    })
+                  }
+                  multiline
+                  placeholder="コードを入力"
+                  placeholderTextColor="#6B7280"
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  textAlignVertical="top"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                />
+              </ScrollView>
+            )}
+            <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
+              <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+            </Pressable>
+          </View>
 
-      <ExecutionOutput
-        result={result}
-        htmlSource={htmlSource}
-        baseUrl={baseUrl}
-        onClear={clear}
-        onMessage={handleMessage}
-      />
+          <ExecutionOutput
+            result={result}
+            htmlSource={htmlSource}
+            baseUrl={baseUrl}
+            onClear={clear}
+            onMessage={handleMessage}
+          />
+        </>
+      )}
 
       {/* 言語選択モーダル */}
       <Modal visible={langModalVisible} transparent animationType="fade">
@@ -189,6 +247,7 @@ const styles = StyleSheet.create({
   runBtnDisabled: { backgroundColor: '#555' },
   runBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
   spinner: { marginHorizontal: 4 },
+  headerDragArea: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   deleteBtn: { padding: 6 },
   deleteBtnText: { fontSize: 16, color: '#616161' },
   codeArea: {
@@ -234,4 +293,12 @@ const styles = StyleSheet.create({
   },
   langOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
   langOptionText: { fontSize: 15 },
+  collapsedPreview: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#9E9E9E',
+    fontFamily: 'monospace',
+  },
 });

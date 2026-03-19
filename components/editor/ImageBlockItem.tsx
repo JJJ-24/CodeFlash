@@ -1,14 +1,15 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { pickAndSaveImage, resolveImageUri } from '@/lib/image';
@@ -19,11 +20,14 @@ interface Props {
   block: ImageBlock;
   onChange: (patch: Partial<ImageBlock>) => void;
   onDelete: () => void;
+  onDragStart?: () => void;
+  collapsed?: boolean;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collapsed }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+
   const [picking, setPicking] = useState(false);
 
   async function handlePick() {
@@ -43,63 +47,88 @@ export function ImageBlockItem({ block, onChange, onDelete }: Props) {
     <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
       {/* ヘッダー */}
       <View style={[styles.header, { backgroundColor: theme.dark ? '#252525' : '#FAFAFA', borderBottomColor: theme.colors.border }]}>
-        <Ionicons name="image-outline" size={14} color={theme.colors.textTertiary} style={styles.typeLabel} />
-        <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteBtnWrapper}>
-          <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
-        </Pressable>
+        {onDragStart ? (
+          <Pressable style={styles.headerDragArea} onLongPress={onDragStart} delayLongPress={500}>
+            <Ionicons name="image-outline" size={14} color={theme.colors.textTertiary} style={styles.typeLabel} />
+          </Pressable>
+        ) : (
+          <View style={styles.headerDragArea}>
+            <Ionicons name="image-outline" size={14} color={theme.colors.textTertiary} style={styles.typeLabel} />
+          </View>
+        )}
+        {!collapsed && (
+          <Pressable
+            onPress={() => Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.delete'), style: 'destructive', onPress: onDelete },
+            ])}
+            hitSlop={8}
+            style={styles.deleteBtnWrapper}
+          >
+            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
+          </Pressable>
+        )}
       </View>
 
-      {/* 画像エリア */}
-      {hasImage && imageUri ? (
-        <View style={styles.imageArea}>
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.image}
-            contentFit="contain"
-            transition={200}
-            accessibilityLabel={block.alt || undefined}
-          />
-          <Pressable
-            style={[styles.changeBtn, { backgroundColor: theme.colors.primaryLight }]}
-            onPress={handlePick}
-            disabled={picking}
-          >
-            {picking ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-            ) : (
-              <Text style={[styles.changeBtnText, { color: theme.colors.primary }]}>
-                {t('card.imageChange')}
-              </Text>
-            )}
-          </Pressable>
-        </View>
+      {collapsed ? (
+        <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}>
+          {hasImage ? '📷 画像' : '（画像未選択）'}
+        </Text>
       ) : (
-        <Pressable
-          style={[styles.pickBtn, { borderColor: theme.colors.iconSubtle, backgroundColor: theme.colors.background }]}
-          onPress={handlePick}
-          disabled={picking}
-        >
-          {picking ? (
-            <ActivityIndicator color={theme.colors.primary} />
+        <>
+          {/* 画像エリア */}
+          {hasImage && imageUri ? (
+            <View style={styles.imageArea}>
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.image}
+                contentFit="contain"
+                transition={200}
+                accessibilityLabel={block.alt || undefined}
+              />
+              <Pressable
+                style={[styles.changeBtn, { backgroundColor: theme.colors.primaryLight }]}
+                onPress={handlePick}
+                disabled={picking}
+              >
+                {picking ? (
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                ) : (
+                  <Text style={[styles.changeBtnText, { color: theme.colors.primary }]}>
+                    {t('card.imageChange')}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
           ) : (
-            <>
-              <Text style={[styles.pickBtnIcon, { color: theme.colors.textTertiary }]}>📷</Text>
-              <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary }]}>
-                {t('card.imageSelect')}
-              </Text>
-            </>
+            <Pressable
+              style={[styles.pickBtn, { borderColor: theme.colors.iconSubtle, backgroundColor: theme.colors.background }]}
+              onPress={handlePick}
+              disabled={picking}
+            >
+              {picking ? (
+                <ActivityIndicator color={theme.colors.primary} />
+              ) : (
+                <>
+                  <Text style={[styles.pickBtnIcon, { color: theme.colors.textTertiary }]}>📷</Text>
+                  <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary }]}>
+                    {t('card.imageSelect')}
+                  </Text>
+                </>
+              )}
+            </Pressable>
           )}
-        </Pressable>
-      )}
 
-      {/* alt テキスト */}
-      <TextInput
-        style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder }]}
-        value={block.alt}
-        onChangeText={(alt) => onChange({ alt })}
-        placeholder={t('card.imageAltPlaceholder')}
-        placeholderTextColor={theme.colors.textTertiary}
-      />
+          {/* alt テキスト */}
+          <TextInput
+            style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder }]}
+            value={block.alt}
+            onChangeText={(alt) => onChange({ alt })}
+            placeholder={t('card.imageAltPlaceholder')}
+            placeholderTextColor={theme.colors.textTertiary}
+          />
+        </>
+      )}
     </View>
   );
 }
@@ -114,13 +143,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     gap: 8,
   },
-  typeLabel: { fontSize: 12, fontWeight: '700', flex: 1 },
-  deleteBtnWrapper: { padding: 2 },
-  deleteBtnText: { fontSize: 12 },
+  headerDragArea: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  typeLabel: { fontSize: 12, fontWeight: '700' },
+  deleteBtnWrapper: { padding: 6 },
+  deleteBtnText: { fontSize: 16 },
   imageArea: {
     paddingHorizontal: 12,
     paddingTop: 10,
@@ -158,5 +188,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
+  },
+  collapsedPreview: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13,
+    lineHeight: 20,
   },
 });

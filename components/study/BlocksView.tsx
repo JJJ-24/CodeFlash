@@ -53,8 +53,8 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     }
     if (blockArrayIdx === undefined) return;
     if (scrollRef?.current) {
-      const y = containerYRef.current + (blockYPositions.current[blockArrayIdx] ?? 0);
-      scrollRef.current.scrollTo({ y, animated: true });
+      const y = containerYRef.current + (blockYPositions.current[blockArrayIdx] ?? 0) - 8;
+      scrollRef.current.scrollTo({ y: Math.max(0, y), animated: true });
     }
   }, [selectedCodeBlockIdx]);
 

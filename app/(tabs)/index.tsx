@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -85,6 +85,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   // 学習画面の4ブロック幅に合わせる（padding:16×2=32, gap:8×3=24）
   const blockWidth = (width - 32 - 24) / 4;
+  const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
 
   useEffect(() => {
     getAllDecks(db).then(setDecks);
@@ -98,10 +99,17 @@ export default function HomeScreen() {
   const StatsHeader = (
     <View style={styles.statsHeader}>
       <View style={styles.statsRow}>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface, width: blockWidth }]}>
+        <Pressable
+          style={[
+            styles.statItem,
+            { backgroundColor: theme.colors.surface, width: blockWidth },
+            selectedFilter === 'all' && { borderWidth: 2, borderColor: theme.colors.primary },
+          ]}
+          onPress={() => setSelectedFilter('all')}
+        >
           <Text style={[styles.statValue, { color: theme.colors.primary }]}>{decks.length}</Text>
           <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{t('stats.all')}</Text>
-        </View>
+        </Pressable>
       </View>
       <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
         {t('home.title')}

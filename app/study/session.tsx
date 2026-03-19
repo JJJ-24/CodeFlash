@@ -392,7 +392,7 @@ export default function StudySessionScreen() {
                       onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
                       onEditFocus={() => { codeEditingRef.current = true; }}
                       onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                      onSelectCodeBlock={setSelectedCodeBlockIdx}
+                      onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setEditTrigger(0); }}
                       runTrigger={runTrigger}
                       editTrigger={editTrigger}
                       selectedCodeBlockIdx={selectedCodeBlockIdx}
@@ -518,7 +518,7 @@ export default function StudySessionScreen() {
                     onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
                     onEditFocus={() => { codeEditingRef.current = true; }}
                     onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                    onSelectCodeBlock={setSelectedCodeBlockIdx}
+                    onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setEditTrigger(0); }}
                     runTrigger={runTrigger}
                     editTrigger={editTrigger}
                     selectedCodeBlockIdx={selectedCodeBlockIdx}

@@ -58,6 +58,14 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     }
   }, [selectedCodeBlockIdx]);
 
+  // 実行ボタンが押されたとき、別のブロックが編集中なら終了させる
+  function handleRunRequest(blockIdx: number) {
+    const prev = editingBlockIdxRef.current;
+    if (prev !== null && prev !== blockIdx) {
+      setExitEditTriggers(t => ({ ...t, [prev]: (t[prev] ?? 0) + 1 }));
+    }
+  }
+
   function handleEditBlur(blockIdx: number) {
     if (editingBlockIdxRef.current === blockIdx) {
       // このブロックが最後の編集ブロック → session に編集終了を通知
@@ -121,6 +129,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 onEditBlur={() => handleEditBlur(i)}
                 onEditRequest={() => handleEditRequest(i)}
                 onSelectRequest={() => onSelectCodeBlock?.(codeBlockIndexMap[i])}
+                onRunRequest={() => handleRunRequest(i)}
                 exitEditTrigger={exitEditTriggers[i]}
                 runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}
                 editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}

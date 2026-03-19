@@ -31,6 +31,7 @@ interface Props {
   onEditBlur?: () => void;
   onEditRequest?: () => void;
   onSelectRequest?: () => void;
+  onRunRequest?: () => void;
   exitEditTrigger?: number;
   runTrigger?: number;
   editTrigger?: number;
@@ -38,7 +39,7 @@ interface Props {
   onRunStart?: () => void;
 }
 
-export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, onEditRequest, onSelectRequest, exitEditTrigger, runTrigger, editTrigger, isSelected, onRunStart }: Props) {
+export function CodeRunnerView({ block, editable, editedContent, onContentChange, onEditFocus, onEditBlur, onEditRequest, onSelectRequest, onRunRequest, exitEditTrigger, runTrigger, editTrigger, isSelected, onRunStart }: Props) {
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage, reset } = useCodeExecution(onRunStart);
@@ -96,8 +97,9 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
     }
   }, [isEditing, handleEditEnd, clear, onEditFocus, onEditRequest]);
 
-  // 編集終了 + 実行 - ▶実行ボタン・r キー・Shift+Tab（onBlur）用
+  // 編集終了 + 実行 - ▶実行ボタン・r キー・Escape キー用
   const handleRun = useCallback(() => {
+    onRunRequest?.();
     onSelectRequest?.();
     if (isEditing) {
       // 編集中の場合のみ onBlur 二重実行防止フラグをセット
@@ -107,7 +109,7 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
     }
     const content = (editable && editedContent !== undefined) ? editedContent : block.content;
     run(content, block.language);
-  }, [isEditing, editable, editedContent, block.content, block.language, run, onEditBlur, onSelectRequest]);
+  }, [isEditing, editable, editedContent, block.content, block.language, run, onEditBlur, onSelectRequest, onRunRequest]);
 
   const handleCodeCopy = useCallback(async () => {
     await Clipboard.setStringAsync(editedContent ?? block.content);

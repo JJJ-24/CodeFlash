@@ -10,14 +10,15 @@ import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
 import type { InitialFilterPreference } from '@/store/settings';
 
 const SHORTCUTS = [
-  { key: 'Space',     descKey: 'settings.shortcutFlip' },
-  { key: '1–4',       descKey: 'settings.shortcutGrade' },
-  { key: 'J',         descKey: 'settings.shortcutPrev' },
-  { key: 'K',         descKey: 'settings.shortcutNext' },
-  { key: 'M',         descKey: 'settings.shortcutMemo' },
-  { key: 'F',         descKey: 'settings.shortcutFullscreen' },
-  { key: 'E',         descKey: 'settings.shortcutEdit' },
-  { key: 'Shift+Tab', descKey: 'settings.shortcutRun' },
+  { key: 'Space', descKey: 'settings.shortcutFlip' },
+  { key: '1–4',   descKey: 'settings.shortcutGrade' },
+  { key: 'J',     descKey: 'settings.shortcutPrev' },
+  { key: 'K',     descKey: 'settings.shortcutNext' },
+  { key: 'M',     descKey: 'settings.shortcutMemo' },
+  { key: 'F',     descKey: 'settings.shortcutFullscreen' },
+  { key: 'Tab',   descKey: 'settings.shortcutSelectBlock' },
+  { key: 'R',     descKey: 'settings.shortcutRun' },
+  { key: 'E',     descKey: 'settings.shortcutEdit' },
 ];
 
 export default function SettingsScreen() {

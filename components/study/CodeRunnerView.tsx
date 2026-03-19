@@ -185,13 +185,11 @@ export function CodeRunnerView({ block, editable, editedContent, onContentChange
             keyboardType="ascii-capable"
             showSoftInputOnFocus={!keyboardShortcutsEnabled}
             onFocus={() => { intentionalExitRef.current = false; }}
-            onKeyPress={({ nativeEvent: { key } }) => {
+            onKeyPress={({ nativeEvent }) => {
+              const { key } = nativeEvent;
               // 編集中に Tab キーが押された場合は onBlur での実行を抑制する
               if (key === 'Tab') {
                 intentionalExitRef.current = true;
-              } else if (key === 'Escape') {
-                // 編集中 Escape = 編集終了 + 実行
-                handleRun();
               }
             }}
             onBlur={() => {

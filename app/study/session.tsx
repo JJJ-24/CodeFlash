@@ -227,6 +227,7 @@ export default function StudySessionScreen() {
     if (!isFlipped) setShowMemo(false);
   }, [isFlipped]);
 
+
   function navigateWithSlide(direction: 'next' | 'prev', action?: () => void) {
     if (isNavigatingRef.current) return;
     if (direction === 'prev' && currentIndex === 0) return;
@@ -278,6 +279,16 @@ export default function StudySessionScreen() {
     } else if (key.toLowerCase() === 'e') {
       if (selectedCodeBlockIdx !== null) {
         setEditTrigger((v) => v + 1);
+      }
+    } else if (key.toLowerCase() === 'b') {
+      router.back();
+    } else if (key.toLowerCase() === 'l') {
+      if (cardLinks.length > 0) {
+        setShowLinksModal(true);
+      }
+    } else if (key.toLowerCase() === 'p') {
+      if (currentCard) {
+        router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`);
       }
     } else if (isFlipped && !grading) {
       if (key === '1') handleGradeWithSlide(0);

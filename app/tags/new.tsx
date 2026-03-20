@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -77,7 +78,7 @@ export default function NewTagScreen() {
         style={[styles.flex, { backgroundColor: theme.colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.body}>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
               {t('tag.name')}
@@ -115,7 +116,7 @@ export default function NewTagScreen() {
               {name || t('tag.namePlaceholder')}
             </Text>
           </View>
-        </View>
+        </ScrollView>
 
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity

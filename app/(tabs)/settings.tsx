@@ -19,6 +19,9 @@ const SHORTCUTS = [
   { key: 'Tab',   descKey: 'settings.shortcutSelectBlock' },
   { key: 'R',     descKey: 'settings.shortcutRun' },
   { key: 'E',     descKey: 'settings.shortcutEdit' },
+  { key: 'B',     descKey: 'settings.shortcutBack' },
+  { key: 'L',     descKey: 'settings.shortcutLinks' },
+  { key: 'P',     descKey: 'settings.shortcutPencil' },
 ];
 
 interface SegmentedCardProps<T extends string> {

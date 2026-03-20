@@ -121,7 +121,7 @@ export default function HomeScreen() {
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {decks.length === 0 ? (
         <>
-          <View style={{ paddingHorizontal: 16 }}>{StatsHeader}</View>
+          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>{StatsHeader}</View>
           <View style={styles.emptyContainer}>
             <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>

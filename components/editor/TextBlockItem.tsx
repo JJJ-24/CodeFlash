@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import Markdown from 'react-native-markdown-display';
+import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 
 import { BlockItemHeader } from './BlockItemHeader';
+
+const markdownItLinkify = MarkdownIt({ linkify: true });
 import { useTheme } from '@/lib/theme';
 import type { TextBlock } from '@/types';
 
@@ -42,6 +44,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     },
     fence: { backgroundColor: theme.colors.background, borderRadius: 6, padding: 12 },
     code_block: { fontFamily: 'monospace', fontSize: fs(13), color: theme.colors.text },
+    link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
 
@@ -75,7 +78,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       ) : isPreview ? (
         <View style={styles.preview}>
           {block.content.trim() ? (
-            <Markdown style={markdownStyles}>{block.content}</Markdown>
+            <Markdown markdownit={markdownItLinkify} style={markdownStyles}>{block.content}</Markdown>
           ) : (
             <Text style={[styles.placeholder, { color: theme.colors.textTertiary }]}>（空のテキストブロック）</Text>
           )}

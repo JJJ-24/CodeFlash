@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import Markdown from 'react-native-markdown-display';
+import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { resolveImageUri } from '@/lib/image';
+
+const markdownItLinkify = MarkdownIt({ linkify: true });
 import { useTheme } from '@/lib/theme';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
@@ -89,6 +91,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     },
     fence: { backgroundColor: theme.colors.codeBackground, borderRadius: 6, padding: 12 },
     code_block: { fontFamily: 'monospace', fontSize: fs(14), color: '#D4D4D4' },
+    link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
   };
 
   if (blocks.length === 0) {
@@ -110,7 +113,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         if (block.type === 'text') {
           return (
             <View key={i} style={styles.textBlock}>
-              <Markdown style={markdownStyles}>{(block as TextBlock).content}</Markdown>
+              <Markdown markdownit={markdownItLinkify} style={markdownStyles}>{(block as TextBlock).content}</Markdown>
             </View>
           );
         }

@@ -10,13 +10,25 @@ interface Props {
   onDelete: () => void;
   collapsed?: boolean;
   style?: StyleProp<ViewStyle>;
+  isEmpty?: boolean;
+  isLast?: boolean;
 }
 
-export function BlockItemHeader({ children, onDragStart, onDelete, collapsed, style }: Props) {
+export function BlockItemHeader({ children, onDragStart, onDelete, collapsed, style, isEmpty, isLast }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
   function confirmDelete() {
+    if (isLast) {
+      Alert.alert(t('card.deleteBlock'), t('card.deleteBlockRequired'), [
+        { text: t('common.ok') },
+      ]);
+      return;
+    }
+    if (isEmpty) {
+      onDelete();
+      return;
+    }
     Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('common.delete'), style: 'destructive', onPress: onDelete },

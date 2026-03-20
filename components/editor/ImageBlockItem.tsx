@@ -22,9 +22,10 @@ interface Props {
   onDelete: () => void;
   onDragStart?: () => void;
   collapsed?: boolean;
+  isLast?: boolean;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collapsed }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collapsed, isLast }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -42,6 +43,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
 
   const hasImage = !!block.uri;
   const imageUri = hasImage ? resolveImageUri(block.uri) : null;
+  const isEmpty = !block.uri;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
@@ -49,6 +51,8 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
         onDragStart={onDragStart}
         onDelete={onDelete}
         collapsed={collapsed}
+        isEmpty={isEmpty}
+        isLast={isLast}
         style={{
           backgroundColor: theme.dark ? '#252525' : '#FAFAFA',
           borderBottomWidth: 1,

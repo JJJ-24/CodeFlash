@@ -91,7 +91,8 @@
     "reorderDisabledTitle": "Cannot Reorder",
     "reorderDisabledMessage": "Reordering is only available in the \"All\" view",
     "deleteBlock": "Delete Block",
-    "deleteBlockConfirm": "Delete this block?"
+    "deleteBlockConfirm": "Delete this block?",
+    "deleteBlockRequired": "At least one block is required"
   },
   "tabs": {
     "home": "Home",

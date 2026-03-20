@@ -114,10 +114,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
   }
 
   function deleteBlock(tab: Tab, key: string) {
-    setterByTab[tab]((prev) => {
-      const next = prev.filter((b) => b._key !== key);
-      return next.length > 0 ? next : [newTextBlock()];
-    });
+    setterByTab[tab]((prev) => prev.filter((b) => b._key !== key));
   }
 
   function addBlock(type: 'text' | 'code' | 'image') {
@@ -138,6 +135,14 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
   useEffect(() => {
     onFrontEmptyChange?.(isFrontEmpty);
   }, [isFrontEmpty]);
+
+  useEffect(() => {
+    if (addMenuVisible) {
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    }
+  }, [addMenuVisible]);
 
   async function handleSave() {
     if (isFrontEmpty) return;
@@ -163,6 +168,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
     const index = getIndex() ?? 0;
     const collapsed = isSortMode;
     const sortDrag = isSortMode ? drag : undefined;
+    const isLast = currentBlocks.length === 1;
 
     if (block.type === 'text') {
       return (
@@ -175,6 +181,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
             autoFocus={index === 0}
             onDragStart={sortDrag}
             collapsed={collapsed}
+            isLast={isLast}
           />
         </ScaleDecorator>
       );
@@ -194,6 +201,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
               }}
               onDragStart={sortDrag}
               collapsed={collapsed}
+              isLast={isLast}
             />
           </View>
         </ScaleDecorator>
@@ -208,12 +216,13 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
             onDelete={() => deleteBlock(activeTab, block._key)}
             onDragStart={sortDrag}
             collapsed={collapsed}
+            isLast={isLast}
           />
         </ScaleDecorator>
       );
     }
     return null;
-  }, [isPreview, activeTab, isSortMode]);
+  }, [isPreview, activeTab, isSortMode, currentBlocks.length]);
 
   return (
     <KeyboardAvoidingView

@@ -30,13 +30,15 @@ interface Props {
   onRunStart?: () => void;
   onDragStart?: () => void;
   collapsed?: boolean;
+  isLast?: boolean;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed, isLast }: Props) {
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const { result, htmlSource, baseUrl, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
+  const isEmpty = block.content.trim() === '';
 
   const theme = useTheme();
 
@@ -52,6 +54,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         onDragStart={onDragStart}
         onDelete={onDelete}
         collapsed={collapsed}
+        isEmpty={isEmpty}
+        isLast={isLast}
         style={{ backgroundColor: theme.dark ? '#333333' : '#2D2D2D' }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>

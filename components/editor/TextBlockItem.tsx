@@ -14,13 +14,15 @@ interface Props {
   autoFocus?: boolean;
   onDragStart?: () => void;
   collapsed?: boolean;
+  isLast?: boolean;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed, isLast }: Props) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const theme = useTheme();
   const fs = (size: number) => Math.round(size * theme.fontScale);
+  const isEmpty = block.content.trim() === '';
 
   useEffect(() => {
     if (autoFocus) {
@@ -52,6 +54,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         onDragStart={onDragStart}
         onDelete={onDelete}
         collapsed={collapsed}
+        isEmpty={isEmpty}
+        isLast={isLast}
         style={{
           backgroundColor: theme.dark ? '#252525' : '#FAFAFA',
           borderBottomWidth: 1,

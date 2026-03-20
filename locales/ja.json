@@ -91,7 +91,8 @@
     "reorderDisabledTitle": "並び替えできません",
     "reorderDisabledMessage": "「すべて」表示のときのみ並び替えが可能です",
     "deleteBlock": "ブロックを削除",
-    "deleteBlockConfirm": "このブロックを削除しますか？"
+    "deleteBlockConfirm": "このブロックを削除しますか？",
+    "deleteBlockRequired": "ブロックは1つ以上必要です"
   },
   "tabs": {
     "home": "ホーム",

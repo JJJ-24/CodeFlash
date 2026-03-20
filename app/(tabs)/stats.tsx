@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { useTheme, type AppTheme } from '@/lib/theme';
@@ -82,13 +82,13 @@ function BarChart({
   );
 }
 
-function DeckMasteryRow({ deck, mastery, theme }: { deck: Deck; mastery: MasteryItem; theme: AppTheme }) {
+function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery: MasteryItem; theme: AppTheme; onPress: () => void }) {
   const { t } = useTranslation();
   const pct = masteryPercent(mastery.avgEase);
   const color = masteryColor(pct);
 
   return (
-    <View style={styles.masteryRow}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.masteryRow, pressed && { opacity: 0.7 }]}>
       <View style={styles.masteryHeader}>
         <Text style={[styles.masteryDeckName, { color: theme.colors.text }]} numberOfLines={1}>
           {deck.name}
@@ -101,7 +101,7 @@ function DeckMasteryRow({ deck, mastery, theme }: { deck: Deck; mastery: Mastery
       <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary }]}>
         {t('stats.learned')}: {mastery.learnedCount} {t('stats.cards')}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -123,6 +123,7 @@ export default function StatsScreen() {
   const { initialFilterPreference } = useSettingsStore();
 
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
+  const [selectedMastery, setSelectedMastery] = useState<MasteryItem | null>(null);
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [todayDue, setTodayDue] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -321,20 +322,43 @@ export default function StatsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
             {t('stats.deckMastery')}
           </Text>
-          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-            {deckMastery.map((m, i) => {
+          <View style={styles.deckMasteryList}>
+            {deckMastery.map((m) => {
               const deck = deckMap[m.deckId];
               if (!deck) return null;
               return (
-                <View key={m.deckId}>
-                  {i > 0 && <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />}
-                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} />
+                <View key={m.deckId} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => setSelectedMastery(m)} />
                 </View>
               );
             })}
           </View>
         </View>
       )}
+
+      {/* デッキ詳細モーダル（プレースホルダー） */}
+      <Modal
+        visible={selectedMastery !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedMastery(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedMastery(null)}>
+          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                {deckMap[selectedMastery?.deckId ?? '']?.name ?? ''}
+              </Text>
+              <Pressable onPress={() => setSelectedMastery(null)} style={styles.modalCloseBtn}>
+                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+              </Pressable>
+            </View>
+            <View style={{ padding: 16 }}>
+              <Text style={{ color: theme.colors.textTertiary }}>{/* 表示内容は後で追加 */}</Text>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -395,6 +419,7 @@ const styles = StyleSheet.create({
   progressBarFill: { height: '100%', backgroundColor: '#1976D2', borderRadius: 5 },
 
   // Deck mastery
+  deckMasteryList: { gap: 8 },
   masteryRow: { paddingVertical: 10 },
   masteryHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   masteryDeckName: { fontSize: 14, fontWeight: '600', flex: 1, marginRight: 8 },
@@ -403,4 +428,11 @@ const styles = StyleSheet.create({
   masteryBarFill: { height: '100%', borderRadius: 4 },
   masterySubLabel: { fontSize: 11 },
   divider: { height: 1 },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 32, maxHeight: '70%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
+  modalTitle: { fontSize: 17, fontWeight: '700' },
+  modalCloseBtn: { padding: 4 },
 });

@@ -4,12 +4,14 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { useTheme, type AppTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import {
+  getDeckGradeDistribution,
   getDeckMasteryList,
   getLearnedUnlearnedCount,
   getPast7DaysReviewedCount,
@@ -41,6 +43,105 @@ function masteryColor(pct: number): string {
 type ScheduleItem = { date: string; count: number };
 type MasteryItem = { deckId: string; avgEase: number; learnedCount: number };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
+type GradeDistribution = { again: number; hard: number; normal: number; easy: number; unlearned: number };
+
+// ──────────────────────────────────────────────
+// SVG Pie Chart
+// ──────────────────────────────────────────────
+const PIE_SIZE = 160;
+const PIE_R = PIE_SIZE / 2;
+const PIE_INNER_R = PIE_R * 0.42; // ドーナツの穴の半径
+const PIE_CX = PIE_SIZE / 2;
+const PIE_CY = PIE_SIZE / 2;
+
+function polarToCart(angleDeg: number): { x: number; y: number } {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: PIE_CX + PIE_R * Math.cos(rad), y: PIE_CY + PIE_R * Math.sin(rad) };
+}
+
+function arcPath(startDeg: number, endDeg: number): string {
+  // Full circle special case
+  if (Math.abs(endDeg - startDeg) >= 359.9) {
+    return `M ${PIE_CX} ${PIE_CY - PIE_R} A ${PIE_R} ${PIE_R} 0 1 1 ${PIE_CX - 0.01} ${PIE_CY - PIE_R} Z`;
+  }
+  const s = polarToCart(startDeg);
+  const e = polarToCart(endDeg);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${PIE_CX} ${PIE_CY} L ${s.x} ${s.y} A ${PIE_R} ${PIE_R} 0 ${large} 1 ${e.x} ${e.y} Z`;
+}
+
+type PieSlice = { value: number; color: string; label: string };
+
+function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: AppTheme }) {
+  const { t } = useTranslation();
+  const total = dist.again + dist.hard + dist.normal + dist.easy + dist.unlearned;
+  if (total === 0) return null;
+
+  // 学習画面のボタン色と統一
+  const slices: PieSlice[] = [
+    { value: dist.again,     color: '#E53935', label: t('grade.again') },
+    { value: dist.hard,      color: '#FB8C00', label: t('grade.hard') },
+    { value: dist.normal,    color: '#43A047', label: t('grade.good') },
+    { value: dist.easy,      color: '#1976D2', label: t('grade.easy') },
+    { value: dist.unlearned, color: '#9E9E9E', label: t('stats.unlearned') },
+  ].filter((s) => s.value > 0);
+
+  let cumDeg = 0;
+
+  return (
+    <View style={pieStyles.container}>
+      <Svg width={PIE_SIZE} height={PIE_SIZE}>
+        {/* Background circle */}
+        <Circle cx={PIE_CX} cy={PIE_CY} r={PIE_R} fill={theme.colors.progressBg} />
+        {slices.map((slice) => {
+          const sweepDeg = (slice.value / total) * 360;
+          const path = arcPath(cumDeg, cumDeg + sweepDeg);
+          cumDeg += sweepDeg;
+          return <Path key={slice.label} d={path} fill={slice.color} />;
+        })}
+        {/* ドーナツの穴 */}
+        <Circle cx={PIE_CX} cy={PIE_CY} r={PIE_INNER_R} fill={theme.colors.surface} />
+        {/* 中央: トータルカード数 */}
+        <SvgText
+          x={PIE_CX}
+          y={PIE_CY + 8}
+          textAnchor="middle"
+          fontSize={24}
+          fontWeight="700"
+          fill={theme.colors.primary}
+        >
+          {total}
+        </SvgText>
+      </Svg>
+      {/* Legend */}
+      <View style={pieStyles.legend}>
+        {slices.map((slice) => {
+          const pct = Math.round((slice.value / total) * 100);
+          return (
+            <View key={slice.label} style={pieStyles.legendRow}>
+              <View style={[pieStyles.legendDot, { backgroundColor: slice.color }]} />
+              <Text style={[pieStyles.legendLabel, { color: theme.colors.textSecondary }]}>
+                {slice.label}
+              </Text>
+              <Text style={[pieStyles.legendValue, { color: theme.colors.text }]}>
+                {slice.value}枚 ({pct}%)
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const pieStyles = StyleSheet.create({
+  container: { alignItems: 'center', gap: 16, paddingVertical: 8 },
+  legend: { alignSelf: 'stretch', gap: 6 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendLabel: { flex: 1, fontSize: 13 },
+  legendValue: { fontSize: 13, fontWeight: '600' },
+});
 
 function BarChart({
   schedule,
@@ -124,6 +225,7 @@ export default function StatsScreen() {
 
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
   const [selectedMastery, setSelectedMastery] = useState<MasteryItem | null>(null);
+  const [gradeDistribution, setGradeDistribution] = useState<GradeDistribution | null>(null);
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [todayDue, setTodayDue] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -202,6 +304,13 @@ export default function StatsScreen() {
       </View>
     );
   }
+
+  const openMasteryModal = useCallback(async (m: MasteryItem) => {
+    setSelectedMastery(m);
+    setGradeDistribution(null);
+    const dist = await getDeckGradeDistribution(db, m.deckId);
+    setGradeDistribution(dist);
+  }, [db]);
 
   // デッキIDでデッキを引く map
   const deckMap = Object.fromEntries(decks.map((d) => [d.id, d]));
@@ -328,7 +437,7 @@ export default function StatsScreen() {
               if (!deck) return null;
               return (
                 <View key={m.deckId} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => setSelectedMastery(m)} />
+                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => openMasteryModal(m)} />
                 </View>
               );
             })}
@@ -353,8 +462,14 @@ export default function StatsScreen() {
                 <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
               </Pressable>
             </View>
-            <View style={{ padding: 16 }}>
-              <Text style={{ color: theme.colors.textTertiary }}>{/* 表示内容は後で追加 */}</Text>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+              {gradeDistribution ? (
+                <GradeDistPieChart dist={gradeDistribution} theme={theme} />
+              ) : (
+                <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
+                  読み込み中...
+                </Text>
+              )}
             </View>
           </Pressable>
         </Pressable>

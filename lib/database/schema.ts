@@ -65,4 +65,10 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       UPDATE tags  SET sortOrder = rowid;
     `);
   }
+
+  // lastGrade カラムのマイグレーション（0=もう一度, 1=難しい, 2=普通, 3=簡単）
+  const reviewCols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(reviews)');
+  if (!reviewCols.some((c) => c.name === 'lastGrade')) {
+    await db.execAsync(`ALTER TABLE reviews ADD COLUMN lastGrade INTEGER NOT NULL DEFAULT 2;`);
+  }
 }

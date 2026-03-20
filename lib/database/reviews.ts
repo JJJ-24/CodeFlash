@@ -197,14 +197,15 @@ export async function getUnlearnedCountByDeck(
 /** レビュー記録を保存（なければ INSERT、あれば UPDATE） */
 export async function saveReview(db: SQLiteDatabase, review: Review): Promise<void> {
   await db.runAsync(
-    `INSERT INTO reviews (cardId, easeFactor, interval, repetitions, nextReviewDate, lastReviewDate)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO reviews (cardId, easeFactor, interval, repetitions, nextReviewDate, lastReviewDate, lastGrade)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(cardId) DO UPDATE SET
        easeFactor     = excluded.easeFactor,
        interval       = excluded.interval,
        repetitions    = excluded.repetitions,
        nextReviewDate = excluded.nextReviewDate,
-       lastReviewDate = excluded.lastReviewDate`,
+       lastReviewDate = excluded.lastReviewDate,
+       lastGrade      = excluded.lastGrade`,
     [
       review.cardId,
       review.easeFactor,
@@ -212,6 +213,7 @@ export async function saveReview(db: SQLiteDatabase, review: Review): Promise<vo
       review.repetitions,
       review.nextReviewDate,
       review.lastReviewDate,
+      review.lastGrade,
     ]
   );
 }
@@ -365,7 +367,35 @@ export async function getLearnedUnlearnedCount(
   };
 }
 
-/** デッキ別習熟度（easeFactor 平均 + 学習済み枚数） */
+/** デッキ別：カードの直近評価分布（lastGrade ベース） */
+export async function getDeckGradeDistribution(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<{ again: number; hard: number; normal: number; easy: number; unlearned: number }> {
+  const rows = await db.getAllAsync<{ category: string; count: number }>(
+    `SELECT
+       CASE
+         WHEN r.cardId IS NULL THEN 'unlearned'
+         WHEN r.lastGrade = 0  THEN 'again'
+         WHEN r.lastGrade = 1  THEN 'hard'
+         WHEN r.lastGrade = 3  THEN 'easy'
+         ELSE 'normal'
+       END as category,
+       COUNT(*) as count
+     FROM cards c
+     LEFT JOIN reviews r ON c.id = r.cardId
+     WHERE c.deckId = ?
+     GROUP BY category`,
+    [deckId]
+  );
+  const result = { again: 0, hard: 0, normal: 0, easy: 0, unlearned: 0 };
+  for (const row of rows) {
+    if (row.category in result) result[row.category as keyof typeof result] = row.count;
+  }
+  return result;
+}
+
+/** デッキ別習熟度（easeFactor 平均 + 学習済み枚数）、ホーム画面のデッキ順に返す */
 export async function getDeckMasteryList(
   db: SQLiteDatabase
 ): Promise<{ deckId: string; avgEase: number; learnedCount: number }[]> {
@@ -373,7 +403,9 @@ export async function getDeckMasteryList(
     `SELECT c.deckId, AVG(r.easeFactor) as avgEase, COUNT(*) as learnedCount
      FROM reviews r
      JOIN cards c ON r.cardId = c.id
-     GROUP BY c.deckId`
+     JOIN decks d ON c.deckId = d.id
+     GROUP BY c.deckId
+     ORDER BY d.sortOrder ASC`
   );
 }
 

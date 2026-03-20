@@ -64,4 +64,5 @@ export interface Review {
   repetitions: number;
   nextReviewDate: string;
   lastReviewDate: string;
+  lastGrade: number; // 0=もう一度, 1=難しい, 2=普通, 3=簡単
 }

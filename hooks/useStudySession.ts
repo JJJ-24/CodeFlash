@@ -84,7 +84,7 @@ export function useStudySession() {
       const state = existing ?? { ...INITIAL_REVIEW_STATE };
       const reviewResult = calculateNextReview(state, grade);
 
-      await saveReview(db, { cardId: card.id, ...reviewResult });
+      await saveReview(db, { cardId: card.id, ...reviewResult, lastGrade: grade });
 
       setResult((r) => ({ ...r, reviewed: r.reviewed + 1 }));
       goNext();

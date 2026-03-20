@@ -21,7 +21,7 @@
 - [x] デッキ詳細取得（`SELECT * FROM decks WHERE id = ?`）
 - [x] デッキ更新（name, description, language）
 - [x] デッキ削除（カスケード: 紐付きカード・レビューも削除）
-- [ ] cardCount の自動更新（カード追加/削除時にトリガー）
+- [x] cardCount の自動更新（カード追加/削除時にトリガー）
 - [x] Zustand デッキストア（`useDeckStore`）
 
 ### 画面 / UI

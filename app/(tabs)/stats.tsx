@@ -351,15 +351,15 @@ export default function StatsScreen() {
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.surface },
+            { backgroundColor: theme.colors.primary },
             selectedBlock === 'streak' && { borderWidth: 2, borderColor: blockColors.streak },
           ]}
           onPress={() => setSelectedBlock('streak')}
         >
-          <Text style={[styles.summaryValue, { color: theme.colors.primary }]}>
+          <Text style={[styles.summaryValue, { color: '#FFF' }]}>
             {streak}
           </Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>
+          <Text style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center' }]}>
             {t('stats.streak')}
           </Text>
         </Pressable>

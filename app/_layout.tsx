@@ -25,9 +25,10 @@ function RootStack() {
         headerTintColor: theme.colors.text,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: theme.colors.background },
+        headerBackTitle: '',
       }}
     >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '' }} />
       <Stack.Screen name="deck/[id]" />
       <Stack.Screen name="deck/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'modal' }} />

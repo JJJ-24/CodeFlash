@@ -367,6 +367,31 @@ export async function getLearnedUnlearnedCount(
   };
 }
 
+/** 全カード：直近評価分布（lastGrade ベース） */
+export async function getAllGradeDistribution(
+  db: SQLiteDatabase
+): Promise<{ again: number; hard: number; normal: number; easy: number; unlearned: number }> {
+  const rows = await db.getAllAsync<{ category: string; count: number }>(
+    `SELECT
+       CASE
+         WHEN r.cardId IS NULL THEN 'unlearned'
+         WHEN r.lastGrade = 0  THEN 'again'
+         WHEN r.lastGrade = 1  THEN 'hard'
+         WHEN r.lastGrade = 3  THEN 'easy'
+         ELSE 'normal'
+       END as category,
+       COUNT(*) as count
+     FROM cards c
+     LEFT JOIN reviews r ON c.id = r.cardId
+     GROUP BY category`
+  );
+  const result = { again: 0, hard: 0, normal: 0, easy: 0, unlearned: 0 };
+  for (const row of rows) {
+    if (row.category in result) result[row.category as keyof typeof result] = row.count;
+  }
+  return result;
+}
+
 /** デッキ別：カードの直近評価分布（lastGrade ベース） */
 export async function getDeckGradeDistribution(
   db: SQLiteDatabase,

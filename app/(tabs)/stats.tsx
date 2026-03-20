@@ -11,6 +11,7 @@ import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import {
+  getAllGradeDistribution,
   getDeckGradeDistribution,
   getDeckMasteryList,
   getLearnedUnlearnedCount,
@@ -226,6 +227,8 @@ export default function StatsScreen() {
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
   const [selectedMastery, setSelectedMastery] = useState<MasteryItem | null>(null);
   const [gradeDistribution, setGradeDistribution] = useState<GradeDistribution | null>(null);
+  const [showTotalModal, setShowTotalModal] = useState(false);
+  const [totalDistribution, setTotalDistribution] = useState<GradeDistribution | null>(null);
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [todayDue, setTodayDue] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -310,6 +313,13 @@ export default function StatsScreen() {
     setGradeDistribution(null);
     const dist = await getDeckGradeDistribution(db, m.deckId);
     setGradeDistribution(dist);
+  }, [db]);
+
+  const openTotalModal = useCallback(async () => {
+    setShowTotalModal(true);
+    setTotalDistribution(null);
+    const dist = await getAllGradeDistribution(db);
+    setTotalDistribution(dist);
   }, [db]);
 
   // デッキIDでデッキを引く map
@@ -409,7 +419,10 @@ export default function StatsScreen() {
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
           {t('stats.totalProgress')}
         </Text>
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Pressable
+          style={({ pressed }) => [styles.card, { backgroundColor: theme.colors.surface }, pressed && { opacity: 0.7 }]}
+          onPress={openTotalModal}
+        >
           <View style={styles.progressHeader}>
             <Text style={[styles.progressLabel, { color: theme.colors.textSecondary }]}>
               {t('stats.learned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{learned}</Text>
@@ -422,7 +435,7 @@ export default function StatsScreen() {
           <View style={[styles.progressBarBg, { backgroundColor: theme.colors.progressBg }]}>
             <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
           </View>
-        </View>
+        </Pressable>
       </View>
 
       {/* デッキ別習熟度 */}
@@ -445,7 +458,37 @@ export default function StatsScreen() {
         </View>
       )}
 
-      {/* デッキ詳細モーダル（プレースホルダー） */}
+      {/* 全体進捗モーダル */}
+      <Modal
+        visible={showTotalModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTotalModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowTotalModal(false)}>
+          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                {t('stats.totalProgress')}
+              </Text>
+              <Pressable onPress={() => setShowTotalModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+              </Pressable>
+            </View>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+              {totalDistribution ? (
+                <GradeDistPieChart dist={totalDistribution} theme={theme} />
+              ) : (
+                <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
+                  読み込み中...
+                </Text>
+              )}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* デッキ詳細モーダル */}
       <Modal
         visible={selectedMastery !== null}
         transparent

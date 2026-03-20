@@ -1,4 +1,6 @@
 // 言語を追加する際はここだけ更新する
+export const EXECUTABLE_LANGUAGES: string[] = ['javascript', 'typescript', 'python'];
+
 export const LANGUAGES = [
   'javascript', 'typescript', 'python', 'sql',
   'cpp', 'java', 'swift', 'bash', 'json', 'html', 'css', 'text',

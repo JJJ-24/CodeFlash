@@ -79,6 +79,10 @@ export function CodeRunnerView({
   }, [block.content]);
 
   useEffect(() => {
+    if (!block.executable) reset();
+  }, [block.executable]);
+
+  useEffect(() => {
     if (isEditing) {
       setTimeout(() => codeInputRef.current?.focus(), 50);
     }

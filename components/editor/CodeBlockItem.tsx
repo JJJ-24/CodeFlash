@@ -17,7 +17,7 @@ import {
 import { BlockItemHeader } from './BlockItemHeader';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
-import { LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
+import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useTheme } from '@/lib/theme';
 import type { CodeBlock } from '@/types';
@@ -36,7 +36,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const { result, htmlSource, baseUrl, isRunning, run, clear, handleMessage } = useCodeExecution(onRunStart);
+  const { result, htmlSource, baseUrl, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
 
   const theme = useTheme();
 
@@ -60,14 +60,18 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         </Pressable>
 
         <View style={styles.headerRight}>
-          <Text style={styles.execLabel}>実行</Text>
-          <Switch
-            value={block.executable}
-            onValueChange={(v) => onChange({ executable: v })}
-            trackColor={{ true: '#1976D2' }}
-            thumbColor="#FFF"
-            style={styles.execSwitch}
-          />
+          {EXECUTABLE_LANGUAGES.includes(block.language) && (
+            <>
+              <Text style={styles.execLabel}>実行</Text>
+              <Switch
+                value={block.executable}
+                onValueChange={(v) => onChange({ executable: v })}
+                trackColor={{ true: '#1976D2' }}
+                thumbColor="#FFF"
+                style={styles.execSwitch}
+              />
+            </>
+          )}
 
           {block.executable && (
             <TouchableOpacity
@@ -146,7 +150,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   key={lang}
                   style={[styles.langOption, block.language === lang && { backgroundColor: theme.colors.primaryLight }]}
                   onPress={() => {
-                    onChange({ language: lang });
+                    if (!EXECUTABLE_LANGUAGES.includes(lang)) reset();
+                    onChange({
+                      language: lang,
+                      ...(!EXECUTABLE_LANGUAGES.includes(lang) && { executable: false }),
+                    });
                     setLangModalVisible(false);
                   }}
                 >

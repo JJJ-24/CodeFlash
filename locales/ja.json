@@ -42,7 +42,9 @@
     "noTags": "タグがありません",
     "listTitle": "学習一覧",
     "noTarget": "対象のカードはありません",
-    "targetCards": "{{count}}枚が対象です"
+    "targetCards": "{{count}}枚が対象です",
+    "links": "リンク",
+    "linksTitle": "リンク一覧"
   },
   "tag": {
     "title": "タグ管理",

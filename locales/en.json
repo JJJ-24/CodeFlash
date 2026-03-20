@@ -42,7 +42,9 @@
     "noTags": "No tags",
     "listTitle": "Study List",
     "noTarget": "No cards to study",
-    "targetCards": "{{count}} cards to study"
+    "targetCards": "{{count}} cards to study",
+    "links": "Links",
+    "linksTitle": "Links"
   },
   "tag": {
     "title": "Tags",

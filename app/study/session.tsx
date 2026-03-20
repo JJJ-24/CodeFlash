@@ -6,6 +6,9 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  FlatList,
+  Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,7 +26,29 @@ import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
 import { useStudySession } from '@/hooks/useStudySession';
 import { useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
+import type { Block, TextBlock } from '@/types';
 import { useSettingsStore } from '@/store/settings';
+
+type LinkItem = { text: string; url: string };
+
+function extractLinks(blocks: Block[]): LinkItem[] {
+  const links: LinkItem[] = [];
+  const seen = new Set<string>();
+  for (const block of blocks) {
+    if (block.type !== 'text') continue;
+    const content = (block as TextBlock).content;
+    const mdRe = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+    let m: RegExpExecArray | null;
+    while ((m = mdRe.exec(content)) !== null) {
+      if (!seen.has(m[2])) { seen.add(m[2]); links.push({ text: m[1], url: m[2] }); }
+    }
+    const urlRe = /(?<!\()https?:\/\/[^\s)]+/g;
+    while ((m = urlRe.exec(content)) !== null) {
+      if (!seen.has(m[0])) { seen.add(m[0]); links.push({ text: m[0], url: m[0] }); }
+    }
+  }
+  return links;
+}
 
 const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 0, labelKey: 'grade.again', color: '#E53935' },
@@ -61,6 +86,7 @@ export default function StudySessionScreen() {
   const [showMemo, setShowMemo] = useState(false);
   const [grading, setGrading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedCodeBlockIdx, setSelectedCodeBlockIdx] = useState<number | null>(null);
   const [runTrigger, setRunTrigger] = useState(0);
   const [editTrigger, setEditTrigger] = useState(0);
@@ -74,9 +100,15 @@ export default function StudySessionScreen() {
 
   const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
   const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
+
   const memoTapGesture = useMemo(
     () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleToggleMemo)()),
     [handleToggleMemo]
+  );
+
+  const cardLinks = useMemo(
+    () => extractLinks([...(currentCard?.frontContent ?? []), ...(currentCard?.backContent ?? [])]),
+    [currentCard]
   );
 
   const translateX = useSharedValue(0);
@@ -365,6 +397,15 @@ export default function StudySessionScreen() {
               <Ionicons name="contract-outline" size={24} color={theme.colors.iconSubtle} />
             </Pressable>
             <View style={{ flex: 1 }} />
+            {cardLinks.length > 0 && (
+              <Pressable
+                style={styles.fullscreenEditBtn}
+                onPress={() => setShowLinksModal(true)}
+                accessibilityLabel={t('study.links')}
+              >
+                <Ionicons name="link-outline" size={24} color={theme.colors.iconSubtle} />
+              </Pressable>
+            )}
             <Pressable
               style={styles.fullscreenEditBtn}
               onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
@@ -451,6 +492,43 @@ export default function StudySessionScreen() {
             </View>
           )}
         </View>
+
+        {/* リンク一覧モーダル（全画面モード） */}
+        <Modal
+          visible={showLinksModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowLinksModal(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowLinksModal(false)}>
+            <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('study.linksTitle')}</Text>
+                <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
+                  <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+                </Pressable>
+              </View>
+              <FlatList
+                data={cardLinks}
+                keyExtractor={(item) => item.url}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
+                    onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.linkText, { color: theme.colors.text }]} numberOfLines={1}>{item.text}</Text>
+                      {item.text !== item.url && (
+                        <Text style={[styles.linkUrl, { color: theme.colors.textTertiary }]} numberOfLines={1}>{item.url}</Text>
+                      )}
+                    </View>
+                    <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
+                  </Pressable>
+                )}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
       </>
     );
   }
@@ -464,12 +542,23 @@ export default function StudySessionScreen() {
           headerBackTitle: '',
           headerShown: true,
           headerRight: () => (
-            <Pressable
-              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
-              style={{ paddingHorizontal: 8 }}
-            >
-              <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {cardLinks.length > 0 && (
+                <Pressable
+                  onPress={() => setShowLinksModal(true)}
+                  style={{ paddingHorizontal: 8 }}
+                  accessibilityLabel={t('study.links')}
+                >
+                  <Ionicons name="link-outline" size={22} color={theme.colors.primary} />
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
+                style={{ paddingHorizontal: 8 }}
+              >
+                <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -601,6 +690,43 @@ export default function StudySessionScreen() {
           )}
         </View>
       </View>
+
+      {/* リンク一覧モーダル */}
+      <Modal
+        visible={showLinksModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLinksModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLinksModal(false)}>
+          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('study.linksTitle')}</Text>
+              <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={cardLinks}
+              keyExtractor={(item) => item.url}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
+                  onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.linkText, { color: theme.colors.text }]} numberOfLines={1}>{item.text}</Text>
+                    {item.text !== item.url && (
+                      <Text style={[styles.linkUrl, { color: theme.colors.textTertiary }]} numberOfLines={1}>{item.url}</Text>
+                    )}
+                  </View>
+                  <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
+                </Pressable>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -718,5 +844,46 @@ const styles = StyleSheet.create({
   fullscreenEditBtn: {
     padding: 8,
     borderRadius: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 32,
+    maxHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  linkText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  linkUrl: {
+    fontSize: 12,
+    marginTop: 2,
   },
 });

@@ -36,6 +36,7 @@ function masteryPercent(avgEase: number): number {
 }
 
 function masteryColor(pct: number): string {
+  if (pct >= 90) return '#1976D2';
   if (pct >= 70) return '#4CAF50';
   if (pct >= 40) return '#FF9800';
   return '#E53935';

@@ -8,8 +8,8 @@
 ## Todo
 
 - [x] `docs/` ディレクトリ作成
-- [x] フェーズ別チケット一覧表の作成（001〜020）
-- [x] 各チケットファイルの作成（001〜020）
+- [x] フェーズ別チケット一覧表の作成（001〜021）
+- [x] 各チケットファイルの作成（001〜021）
 - [x] Mermaid 依存関係図の作成（フェーズ別色分け）
 - [x] 並行開発可能ラウンド表の作成（MVP）
 
@@ -36,6 +36,7 @@
 | [015](./015-web-version.md) | Web 版（カード作成専用） | v1.1 | 未着手 | 005 |
 | [016](./016-in-app-purchase.md) | 買い切り課金 | v1.1 | 未着手 | 007, 012, 013 |
 | [017](./017-app-store-submission.md) | App Store 申請 | v1.1 | 未着手 | 016 |
+| [021](./021-json-export-import.md) | JSONエクスポート/インポート | v1.1 | 未着手 | 001, 002, 003, 004 |
 | [018](./018-code-execution-sql-cpp.md) | コード実行（SQL / C++） | 将来 | 未着手 | 009 |
 | [019](./019-deck-marketplace.md) | デッキ マーケットプレイス | 将来 | 未着手 | 002, 003 |
 | [020](./020-ai-card-generation.md) | AI カード自動生成 | 将来 | 未着手 | 003, 005 |
@@ -78,6 +79,13 @@ graph TD
 
     001 --> 013[013 ダークモード]
 
+    001 --> 021[021 JSONエクスポート/インポート]
+    002 --> 021
+    003 --> 021
+    004 --> 021
+    021 --> 014
+    021 --> 015
+
     001 --> 014[014 iCloud同期]
     002 --> 014
     003 --> 014
@@ -116,6 +124,7 @@ graph TD
     style 015 fill:#FF9800,color:#fff
     style 016 fill:#FF9800,color:#fff
     style 017 fill:#FF9800,color:#fff
+    style 021 fill:#FF9800,color:#fff
     style 018 fill:#9E9E9E,color:#fff
     style 019 fill:#9E9E9E,color:#fff
     style 020 fill:#9E9E9E,color:#fff

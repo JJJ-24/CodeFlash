@@ -179,7 +179,11 @@
     "importTitle": "インポート",
     "importSubtitle": "JSONファイルからデータを読み込む",
     "importConfirmTitle": "インポートの確認",
-    "importConfirmMessage": "既存データは上書きされます。続けますか？",
+    "importConfirmMessage": "インポート方法を選択してください。",
+    "importMerge": "マージ（追加・上書き）",
+    "importReplace": "すべて置き換え",
+    "importReplaceConfirmTitle": "本当に置き換えますか？",
+    "importReplaceConfirmMessage": "現在のデッキ・カード・タグ・学習履歴がすべて削除され、インポートファイルのデータに置き換わります。この操作は元に戻せません。",
     "importSuccess": "インポートが完了しました",
     "importError": "インポートに失敗しました",
     "importInvalidFile": "ファイルの形式が正しくありません"

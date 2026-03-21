@@ -179,7 +179,11 @@
     "importTitle": "Import",
     "importSubtitle": "Load data from a JSON file",
     "importConfirmTitle": "Confirm Import",
-    "importConfirmMessage": "Existing data will be overwritten. Continue?",
+    "importConfirmMessage": "Select how to import.",
+    "importMerge": "Merge (Add & Overwrite)",
+    "importReplace": "Replace All",
+    "importReplaceConfirmTitle": "Are you sure?",
+    "importReplaceConfirmMessage": "All current decks, cards, tags, and study history will be deleted and replaced with the imported data. This cannot be undone.",
     "importSuccess": "Import completed",
     "importError": "Import failed",
     "importInvalidFile": "Invalid file format"

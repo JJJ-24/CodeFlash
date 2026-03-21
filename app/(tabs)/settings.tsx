@@ -96,29 +96,49 @@ export default function SettingsScreen() {
     if (result.canceled || result.assets.length === 0) return;
     const fileUri = result.assets[0].uri;
 
+    const doImport = async (mode: 'merge' | 'replace') => {
+      try {
+        setLoading(true);
+        await importDatabase(db, fileUri, mode);
+        const [decks, tags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
+        setDecks(decks);
+        setTags(tags);
+        Alert.alert(t('dataManagement.importSuccess'));
+      } catch (e) {
+        const msg = e instanceof Error && e.message === 'INVALID_FORMAT'
+          ? t('dataManagement.importInvalidFile')
+          : t('dataManagement.importError');
+        Alert.alert(msg);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     Alert.alert(
       t('dataManagement.importConfirmTitle'),
       t('dataManagement.importConfirmMessage'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('common.ok'),
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await importDatabase(db, fileUri);
-              const [decks, tags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
-              setDecks(decks);
-              setTags(tags);
-              Alert.alert(t('dataManagement.importSuccess'));
-            } catch (e) {
-              const msg = e instanceof Error && e.message === 'INVALID_FORMAT'
-                ? t('dataManagement.importInvalidFile')
-                : t('dataManagement.importError');
-              Alert.alert(msg);
-            } finally {
-              setLoading(false);
-            }
+          text: t('dataManagement.importMerge'),
+          onPress: () => doImport('merge'),
+        },
+        {
+          text: t('dataManagement.importReplace'),
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              t('dataManagement.importReplaceConfirmTitle'),
+              t('dataManagement.importReplaceConfirmMessage'),
+              [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('dataManagement.importReplace'),
+                  style: 'destructive',
+                  onPress: () => doImport('replace'),
+                },
+              ]
+            );
           },
         },
       ]

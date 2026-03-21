@@ -3,7 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { ExportData } from './export';
 
-export async function importDatabase(db: SQLiteDatabase, fileUri: string): Promise<void> {
+export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 'merge' | 'replace' = 'merge'): Promise<void> {
   const json = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' });
   const data: ExportData = JSON.parse(json);
 
@@ -21,6 +21,14 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string): Promi
   }
 
   await db.withTransactionAsync(async () => {
+    if (mode === 'replace') {
+      await db.runAsync('DELETE FROM reviews');
+      await db.runAsync('DELETE FROM card_tags');
+      await db.runAsync('DELETE FROM cards');
+      await db.runAsync('DELETE FROM decks');
+      await db.runAsync('DELETE FROM tags');
+    }
+
     for (const deck of data.decks) {
       await db.runAsync(
         'INSERT OR REPLACE INTO decks (id, name, description, language, cardCount, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',

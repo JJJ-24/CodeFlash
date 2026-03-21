@@ -32,6 +32,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
   const [picking, setPicking] = useState(false);
   const [focused, setFocused] = useState(false);
   const prevCollapsedRef = useRef(collapsed);
+  const altInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!collapsed && prevCollapsedRef.current) {
@@ -44,7 +45,10 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
     setPicking(true);
     try {
       const uri = await pickAndSaveImage();
-      if (uri) onChange({ uri });
+      if (uri) {
+        onChange({ uri });
+        setTimeout(() => altInputRef.current?.focus(), 100);
+      }
     } finally {
       setPicking(false);
     }
@@ -122,6 +126,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
 
           {/* alt テキスト */}
           <TextInput
+            ref={altInputRef}
             style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder }]}
             value={block.alt}
             onChangeText={(alt) => onChange({ alt })}

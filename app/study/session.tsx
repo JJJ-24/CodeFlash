@@ -241,6 +241,9 @@ export default function StudySessionScreen() {
     setTimeout(() => {
       flipCardRef.current?.resetInstant();
       setIsFlipped(false);
+      setRunTrigger(0);
+      setEditTrigger(0);
+      setSelectedCodeBlockIdx(null);
       slideInDirRef.current = direction === 'next' ? 1 : -1;
       if (action) action();
       else if (direction === 'next') goNext();
@@ -455,6 +458,7 @@ export default function StudySessionScreen() {
                 back={
                   <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                     <BlocksView
+                      key={currentCard.id}
                       blocks={currentCard.backContent}
                       scrollRef={backScrollRef}
                     />
@@ -629,6 +633,7 @@ export default function StudySessionScreen() {
               back={
                 <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
                   <BlocksView
+                    key={currentCard.id}
                     blocks={currentCard.backContent}
                     scrollRef={backScrollRef}
                   />

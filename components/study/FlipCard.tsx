@@ -27,7 +27,7 @@ interface Props {
 
 export const FlipCard = forwardRef<FlipCardRef, Props>(
   ({ front, back, isFlipped, onFlip, cardStyle, innerStyle }, ref) => {
-    const progress = useSharedValue(0);
+    const progress = useSharedValue(isFlipped ? 1 : 0);
     const theme = useTheme();
 
     useImperativeHandle(ref, () => ({

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -39,8 +39,16 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [codeCopied, setCodeCopied] = useState(false);
   const { result, htmlSource, baseUrl, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
+  const prevCollapsedRef = useRef(collapsed);
 
   const theme = useTheme();
+
+  useEffect(() => {
+    if (prevCollapsedRef.current === true && collapsed === false) {
+      setFocused(false);
+    }
+    prevCollapsedRef.current = collapsed;
+  }, [collapsed]);
 
   async function handleCodeCopy() {
     await Clipboard.setStringAsync(block.content);

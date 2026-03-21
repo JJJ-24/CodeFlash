@@ -38,11 +38,12 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }, []);
 
   useEffect(() => {
-    if (collapsed) {
+    if (prevCollapsedRef.current === true && collapsed === false) {
       setFocused(false);
-    } else if (prevCollapsedRef.current === true && pendingFocusRef.current) {
-      pendingFocusRef.current = false;
-      setTimeout(() => inputRef.current?.focus(), 80);
+      if (pendingFocusRef.current) {
+        pendingFocusRef.current = false;
+        setTimeout(() => inputRef.current?.focus(), 80);
+      }
     }
     prevCollapsedRef.current = collapsed;
   }, [collapsed]);

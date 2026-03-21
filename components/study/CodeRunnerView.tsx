@@ -214,14 +214,11 @@ export function CodeRunnerView({
                 style={[styles.editBtn, isEditing && styles.editBtnActive]}
                 activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.editBtnText,
-                    isEditing && styles.editBtnTextActive,
-                  ]}
-                >
-                  {isEditing ? "完了" : "✏"}
-                </Text>
+                {isEditing ? (
+                  <Text style={[styles.editBtnText, styles.editBtnTextActive]}>完了</Text>
+                ) : (
+                  <Ionicons name="pencil" size={15} color="#9CDCFE" />
+                )}
               </TouchableOpacity>
             </GestureDetector>
           )}

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -30,6 +30,15 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
   const theme = useTheme();
 
   const [picking, setPicking] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const prevCollapsedRef = useRef(collapsed);
+
+  useEffect(() => {
+    if (!collapsed && prevCollapsedRef.current) {
+      setFocused(false);
+    }
+    prevCollapsedRef.current = collapsed;
+  }, [collapsed]);
 
   async function handlePick() {
     setPicking(true);
@@ -46,7 +55,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
   const isEmpty = !block.uri;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: focused ? theme.colors.primary : theme.colors.inputBorder }]}>
       <BlockItemHeader
         onDragStart={onDragStart}
         onDelete={onDelete}
@@ -118,6 +127,8 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
             onChangeText={(alt) => onChange({ alt })}
             placeholder={t('card.imageAltPlaceholder')}
             placeholderTextColor={theme.colors.textTertiary}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
           />
         </>
       )}

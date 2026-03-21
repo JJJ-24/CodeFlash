@@ -182,6 +182,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
             onDragStart={sortDrag}
             collapsed={collapsed}
             isLast={isLast}
+            onCollapsedDoubleTap={() => setIsSortMode(false)}
           />
         </ScaleDecorator>
       );

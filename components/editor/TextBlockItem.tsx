@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 
 import { BlockItemHeader } from './BlockItemHeader';
@@ -17,11 +17,16 @@ interface Props {
   onDragStart?: () => void;
   collapsed?: boolean;
   isLast?: boolean;
+  onCollapsedDoubleTap?: () => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed, isLast }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed, isLast, onCollapsedDoubleTap }: Props) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const doubleTapCountRef = useRef(0);
+  const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingFocusRef = useRef(false);
+  const prevCollapsedRef = useRef(collapsed);
   const theme = useTheme();
   const fs = (size: number) => Math.round(size * theme.fontScale);
   const isEmpty = block.content.trim() === '';
@@ -31,6 +36,30 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, []);
+
+  useEffect(() => {
+    if (collapsed) {
+      setFocused(false);
+    } else if (prevCollapsedRef.current === true && pendingFocusRef.current) {
+      pendingFocusRef.current = false;
+      setTimeout(() => inputRef.current?.focus(), 80);
+    }
+    prevCollapsedRef.current = collapsed;
+  }, [collapsed]);
+
+  function handleCollapsedPress() {
+    doubleTapCountRef.current += 1;
+    if (doubleTapCountRef.current === 1) {
+      doubleTapTimerRef.current = setTimeout(() => {
+        doubleTapCountRef.current = 0;
+      }, 300);
+    } else if (doubleTapCountRef.current >= 2) {
+      if (doubleTapTimerRef.current) clearTimeout(doubleTapTimerRef.current);
+      doubleTapCountRef.current = 0;
+      pendingFocusRef.current = true;
+      onCollapsedDoubleTap?.();
+    }
+  }
 
   const markdownStyles = useMemo(() => ({
     body: { fontSize: fs(15), color: theme.colors.text, lineHeight: fs(22) },
@@ -69,12 +98,14 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       </BlockItemHeader>
 
       {collapsed ? (
-        <Text
-          style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}
-          numberOfLines={2}
-        >
-          {block.content || '（空のテキストブロック）'}
-        </Text>
+        <Pressable onPress={handleCollapsedPress}>
+          <Text
+            style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}
+            numberOfLines={2}
+          >
+            {block.content || '（空のテキストブロック）'}
+          </Text>
+        </Pressable>
       ) : isPreview ? (
         <View style={styles.preview}>
           {block.content.trim() ? (

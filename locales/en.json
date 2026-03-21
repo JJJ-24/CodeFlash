@@ -169,5 +169,19 @@
     "initialFilterReview": "Due",
     "initialFilterNew": "New",
     "initialFilterNone": "Keep"
+  },
+  "dataManagement": {
+    "title": "Data Management",
+    "exportTitle": "Export",
+    "exportSubtitle": "Save all data to a JSON file",
+    "exportSuccess": "Export completed",
+    "exportError": "Export failed",
+    "importTitle": "Import",
+    "importSubtitle": "Load data from a JSON file",
+    "importConfirmTitle": "Confirm Import",
+    "importConfirmMessage": "Existing data will be overwritten. Continue?",
+    "importSuccess": "Import completed",
+    "importError": "Import failed",
+    "importInvalidFile": "Invalid file format"
   }
 }

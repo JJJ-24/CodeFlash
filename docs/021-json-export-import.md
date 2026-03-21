@@ -18,33 +18,33 @@
 ## Todo
 
 ### エクスポート
-- [ ] `lib/export.ts` — DB全体をJSONにシリアライズする関数
-  - [ ] decks / cards（Block[] JSON含む）/ tags / card_tags / reviews を収集
-  - [ ] フォーマットバージョン番号を付与（将来の互換性管理用）
-- [ ] `expo-file-system` でJSONファイルをキャッシュディレクトリに書き出し
-- [ ] `expo-sharing` でiOS共有シート（AirDrop / Files / メール等）を呼び出し
+- [x] `lib/export.ts` — DB全体をJSONにシリアライズする関数
+  - [x] decks / cards（Block[] JSON含む）/ tags / card_tags / reviews を収集
+  - [x] フォーマットバージョン番号を付与（将来の互換性管理用）
+- [x] `expo-file-system` でJSONファイルをキャッシュディレクトリに書き出し
+- [x] `expo-sharing` でiOS共有シート（AirDrop / Files / メール等）を呼び出し
 
 ### インポート
-- [ ] `lib/import.ts` — JSONをパースしてDBに書き込む関数
-  - [ ] フォーマットバージョンチェック
-  - [ ] データ検証（必須フィールド・型チェック）
-  - [ ] 既存データとのマージ方針: 同一id存在時は上書き（last-write-wins）
-  - [ ] decks → cards → tags → card_tags → reviews の順で挿入
-- [ ] `expo-document-picker` でJSONファイルを選択
-- [ ] インポート完了後にZustandストア全体を再読み込み
+- [x] `lib/import.ts` — JSONをパースしてDBに書き込む関数
+  - [x] フォーマットバージョンチェック
+  - [x] データ検証（必須フィールド・型チェック）
+  - [x] 既存データとのマージ方針: 同一id存在時は上書き（last-write-wins）
+  - [x] decks → cards → tags → card_tags → reviews の順で挿入
+- [x] `expo-document-picker` でJSONファイルを選択
+- [x] インポート完了後にZustandストア全体を再読み込み
 
 ### UI
-- [ ] 設定画面（`app/(tabs)/settings.tsx`）に「データ管理」セクションを追加
-  - [ ] 「エクスポート」ボタン（全データをJSONで書き出し）
-  - [ ] 「インポート」ボタン（JSONファイルを選択して読み込み）
-- [ ] インポート前に確認ダイアログ（既存データが上書きされる旨）
-- [ ] 処理中インジケーター（ActivityIndicator）
-- [ ] 完了/エラー時のフィードバック（Alert）
+- [x] 設定画面（`app/(tabs)/settings.tsx`）に「データ管理」セクションを追加
+  - [x] 「エクスポート」ボタン（全データをJSONで書き出し）
+  - [x] 「インポート」ボタン（JSONファイルを選択して読み込み）
+- [x] インポート前に確認ダイアログ（既存データが上書きされる旨）
+- [x] 処理中インジケーター（ActivityIndicator）
+- [x] 完了/エラー時のフィードバック（Alert）
 
 ### i18n
-- [ ] `locales/ja.json` / `locales/en.json` に翻訳キー追加
-  - [ ] export.title, export.success, export.error
-  - [ ] import.title, import.confirm, import.success, import.error, import.invalidFile
+- [x] `locales/ja.json` / `locales/en.json` に翻訳キー追加
+  - [x] export.title, export.success, export.error
+  - [x] import.title, import.confirm, import.success, import.error, import.invalidFile
 
 ---
 

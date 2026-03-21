@@ -1,10 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useState } from 'react';
 
+import { getAllDecks } from '@/lib/database/decks';
+import { getAllTags } from '@/lib/database/tags';
+import { exportDatabase } from '@/lib/export';
+import { importDatabase } from '@/lib/import';
 import { useTheme } from '@/lib/theme';
+import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
+import { useTagStore } from '@/store/tags';
 import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
 import type { InitialFilterPreference } from '@/store/settings';
@@ -64,8 +73,57 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const db = useSQLiteContext();
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
   const { keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, initialFilterPreference, setInitialFilterPreference } = useSettingsStore();
+  const { setDecks } = useDeckStore();
+  const { setTags } = useTagStore();
+  const [loading, setLoading] = useState(false);
+
+  async function handleExport() {
+    try {
+      setLoading(true);
+      await exportDatabase(db);
+    } catch {
+      Alert.alert(t('dataManagement.exportError'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleImport() {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+    if (result.canceled || result.assets.length === 0) return;
+    const fileUri = result.assets[0].uri;
+
+    Alert.alert(
+      t('dataManagement.importConfirmTitle'),
+      t('dataManagement.importConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.ok'),
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await importDatabase(db, fileUri);
+              const [decks, tags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
+              setDecks(decks);
+              setTags(tags);
+              Alert.alert(t('dataManagement.importSuccess'));
+            } catch (e) {
+              const msg = e instanceof Error && e.message === 'INVALID_FORMAT'
+                ? t('dataManagement.importInvalidFile')
+                : t('dataManagement.importError');
+              Alert.alert(msg);
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container}>
@@ -127,6 +185,35 @@ export default function SettingsScreen() {
             trackColor={{ true: theme.colors.primary }}
           />
         </View>
+      </View>
+
+      {/* データ管理 */}
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+          {t('dataManagement.title')}
+        </Text>
+        {loading ? (
+          <ActivityIndicator color={theme.colors.primary} />
+        ) : (
+          <>
+            <Pressable style={styles.dataRow} onPress={handleExport}>
+              <Ionicons name="arrow-up-circle-outline" size={22} color={theme.colors.primary} />
+              <View style={styles.dataRowText}>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text }]}>{t('dataManagement.exportTitle')}</Text>
+                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary }]}>{t('dataManagement.exportSubtitle')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+            </Pressable>
+            <Pressable style={styles.dataRow} onPress={handleImport}>
+              <Ionicons name="arrow-down-circle-outline" size={22} color={theme.colors.primary} />
+              <View style={styles.dataRowText}>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text }]}>{t('dataManagement.importTitle')}</Text>
+                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary }]}>{t('dataManagement.importSubtitle')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+            </Pressable>
+          </>
+        )}
       </View>
 
       {/* ショートカット一覧 */}
@@ -215,4 +302,13 @@ const styles = StyleSheet.create({
   },
   keyBadgeText: { fontSize: 13, fontWeight: '600', fontFamily: 'monospace' },
   shortcutDesc: { fontSize: 13, flex: 1 },
+  dataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  dataRowText: { flex: 1 },
+  dataRowTitle: { fontSize: 15, fontWeight: '500' },
+  dataRowSub: { fontSize: 12, marginTop: 2 },
 });

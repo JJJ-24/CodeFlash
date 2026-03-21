@@ -169,5 +169,19 @@
     "initialFilterReview": "復習",
     "initialFilterNew": "新規",
     "initialFilterNone": "保持"
+  },
+  "dataManagement": {
+    "title": "データ管理",
+    "exportTitle": "エクスポート",
+    "exportSubtitle": "全データをJSONファイルに書き出す",
+    "exportSuccess": "エクスポートが完了しました",
+    "exportError": "エクスポートに失敗しました",
+    "importTitle": "インポート",
+    "importSubtitle": "JSONファイルからデータを読み込む",
+    "importConfirmTitle": "インポートの確認",
+    "importConfirmMessage": "既存データは上書きされます。続けますか？",
+    "importSuccess": "インポートが完了しました",
+    "importError": "インポートに失敗しました",
+    "importInvalidFile": "ファイルの形式が正しくありません"
   }
 }

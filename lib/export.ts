@@ -30,7 +30,10 @@ export async function exportDatabase(db: SQLiteDatabase): Promise<void> {
   };
 
   const json = JSON.stringify(data, null, 2);
-  const fileUri = FileSystem.cacheDirectory + 'codeflash-backup.json';
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  const fileUri = FileSystem.cacheDirectory + `codeflash-backup-${timestamp}.json`;
   await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' });
   await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'CodeFlash バックアップ' });
 }

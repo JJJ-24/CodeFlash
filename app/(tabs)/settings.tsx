@@ -146,7 +146,8 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container}>
+    <View style={{ flex: 1 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container} pointerEvents={loading ? 'none' : 'auto'}>
       <SegmentedCard
         label={t('settings.theme')}
         options={[
@@ -190,23 +191,6 @@ export default function SettingsScreen() {
         <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
       </Pressable>
 
-      {/* キーボードショートカット ON/OFF */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-          {t('settings.keyboard')}
-        </Text>
-        <View style={styles.switchRow}>
-          <Text style={[styles.switchLabel, { color: theme.colors.text }]}>
-            {t('settings.keyboardEnabled')}
-          </Text>
-          <Switch
-            value={keyboardShortcutsEnabled}
-            onValueChange={setKeyboardShortcutsEnabled}
-            trackColor={{ true: theme.colors.primary }}
-          />
-        </View>
-      </View>
-
       {/* データ管理 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
@@ -236,6 +220,23 @@ export default function SettingsScreen() {
         )}
       </View>
 
+      {/* キーボードショートカット ON/OFF */}
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+          {t('settings.keyboard')}
+        </Text>
+        <View style={styles.switchRow}>
+          <Text style={[styles.switchLabel, { color: theme.colors.text }]}>
+            {t('settings.keyboardEnabled')}
+          </Text>
+          <Switch
+            value={keyboardShortcutsEnabled}
+            onValueChange={setKeyboardShortcutsEnabled}
+            trackColor={{ true: theme.colors.primary }}
+          />
+        </View>
+      </View>
+
       {/* ショートカット一覧 */}
       {keyboardShortcutsEnabled && (
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -255,6 +256,8 @@ export default function SettingsScreen() {
         </View>
       )}
     </ScrollView>
+    {loading && <View style={styles.loadingOverlay} onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} />}
+    </View>
   );
 }
 
@@ -331,4 +334,8 @@ const styles = StyleSheet.create({
   dataRowText: { flex: 1 },
   dataRowTitle: { fontSize: 15, fontWeight: '500' },
   dataRowSub: { fontSize: 12, marginTop: 2 },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+  },
 });

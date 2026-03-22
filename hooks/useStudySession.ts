@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { getCardById } from '@/lib/database/cards';
@@ -27,6 +27,12 @@ export function useStudySession() {
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [result, setResult] = useState<SessionResult>({ totalCards: 0, reviewed: 0 });
+
+  // レンダーごとに同期 — useFocusEffect から呼ばれる refreshCurrentCard が常に最新値を参照できる
+  const queueRef = useRef<Card[]>([]);
+  const currentIndexRef = useRef(0);
+  queueRef.current = queue;
+  currentIndexRef.current = currentIndex;
 
   const loadSession = useCallback(
     async (params: { deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned' }) => {
@@ -93,13 +99,27 @@ export function useStudySession() {
   );
 
   const refreshCurrentCard = useCallback(async () => {
-    const card = queue[currentIndex];
+    const currentQueue = queueRef.current;
+    const idx = currentIndexRef.current;
+    const card = currentQueue[idx];
     if (!card) return;
     const updated = await getCardById(db, card.id);
     if (updated) {
       setQueue((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+    } else {
+      // カードが削除された — queue から除去して遷移先を決定
+      const newQueue = currentQueue.filter((c) => c.id !== card.id);
+      if (newQueue.length === 0) {
+        setQueue([]);
+        setCompleted(true);
+      } else {
+        const newIndex = Math.min(idx, newQueue.length - 1);
+        setQueue(newQueue);
+        setCurrentIndex(newIndex);
+        setResult((r) => ({ ...r, totalCards: newQueue.length }));
+      }
     }
-  }, [db, queue, currentIndex]);
+  }, [db]);
 
   return {
     loading,

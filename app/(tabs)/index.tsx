@@ -58,7 +58,7 @@ function DeckCard({
         ) : null}
       </View>
       <View style={styles.cardActions}>
-        <View style={styles.countBadge}>
+        <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
           <Text style={styles.countBadgeText}>{deck.cardCount}</Text>
         </View>
         <Pressable
@@ -198,7 +198,6 @@ const styles = StyleSheet.create({
   cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12, alignItems: 'center' },
   iconBtn: { padding: 4 },
   countBadge: {
-    backgroundColor: '#6B7280',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 3,

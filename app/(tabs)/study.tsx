@@ -281,7 +281,7 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={styles.dueChip}>
+                    <View style={[styles.dueChip, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={styles.dueChipText}>{count}</Text>
                     </View>
                   )}
@@ -338,7 +338,7 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={styles.dueChip}>
+                    <View style={[styles.dueChip, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={styles.dueChipText}>{count}</Text>
                     </View>
                   )}

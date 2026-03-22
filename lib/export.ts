@@ -10,6 +10,7 @@ export type ExportData = {
   tags: Record<string, unknown>[];
   card_tags: { cardId: string; tagId: string }[];
   reviews: Record<string, unknown>[];
+  review_logs: { cardId: string; reviewedDate: string }[];
 };
 
 export async function exportDatabase(db: SQLiteDatabase): Promise<void> {
@@ -18,6 +19,7 @@ export async function exportDatabase(db: SQLiteDatabase): Promise<void> {
   const tags = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM tags ORDER BY sortOrder ASC');
   const card_tags = await db.getAllAsync<{ cardId: string; tagId: string }>('SELECT * FROM card_tags');
   const reviews = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM reviews');
+  const review_logs = await db.getAllAsync<{ cardId: string; reviewedDate: string }>('SELECT * FROM review_logs');
 
   const data: ExportData = {
     version: 1,
@@ -27,6 +29,7 @@ export async function exportDatabase(db: SQLiteDatabase): Promise<void> {
     tags,
     card_tags,
     reviews,
+    review_logs,
   };
 
   const json = JSON.stringify(data, null, 2);

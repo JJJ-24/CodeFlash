@@ -15,13 +15,15 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
     !Array.isArray(data.cards) ||
     !Array.isArray(data.tags) ||
     !Array.isArray(data.card_tags) ||
-    !Array.isArray(data.reviews)
+    !Array.isArray(data.reviews) ||
+    (data.review_logs !== undefined && !Array.isArray(data.review_logs))
   ) {
     throw new Error('INVALID_FORMAT');
   }
 
   await db.withTransactionAsync(async () => {
     if (mode === 'replace') {
+      await db.runAsync('DELETE FROM review_logs');
       await db.runAsync('DELETE FROM reviews');
       await db.runAsync('DELETE FROM card_tags');
       await db.runAsync('DELETE FROM cards');
@@ -93,6 +95,16 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
           review.lastReviewDate as string,
           (review.lastGrade as number) ?? 2,
         ]
+      );
+    }
+
+    for (const log of (data.review_logs ?? [])) {
+      await db.runAsync(
+        // replace: 全削除済みなので OR REPLACE、merge: 既存日付は維持するため OR IGNORE
+        mode === 'replace'
+          ? 'INSERT OR REPLACE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)'
+          : 'INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)',
+        [log.cardId, log.reviewedDate]
       );
     }
   });

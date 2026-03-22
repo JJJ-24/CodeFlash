@@ -72,7 +72,7 @@
     "new": "New Card",
     "edit": "Edit Card",
     "delete": "Delete Card",
-    "deleteConfirm": "Delete this card?",
+    "deleteConfirm": "Delete this card?\nStudy history will also be deleted, which may affect your streak.",
     "front": "Front",
     "back": "Back",
     "memo": "Memo",

@@ -1,21 +1,21 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Review } from '@/types';
-import { todayISO } from './utils';
+import { todayISO, todayLocalRange } from './utils';
 
 /** タグIDをキー、due 枚数を値とするマップを一括取得 */
 export async function getDueCountPerTag(
   db: SQLiteDatabase
 ): Promise<Record<string, number>> {
-  const today = todayISO();
+  const { end } = todayLocalRange();
   const rows = await db.getAllAsync<{ tagId: string; count: number }>(
     `SELECT ct.tagId, COUNT(*) as count
      FROM card_tags ct
      JOIN cards c ON ct.cardId = c.id
      LEFT JOIN reviews r ON r.cardId = c.id
-     WHERE r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?
+     WHERE r.cardId IS NULL OR r.nextReviewDate < ?
      GROUP BY ct.tagId`,
-    [today]
+    [end]
   );
   return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
 }
@@ -24,14 +24,14 @@ export async function getDueCountPerTag(
 export async function getTodayReviewedCountPerDeck(
   db: SQLiteDatabase
 ): Promise<Record<string, number>> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ deckId: string; count: number }>(
     `SELECT c.deckId, COUNT(*) as count
      FROM reviews r
      JOIN cards c ON r.cardId = c.id
-     WHERE substr(r.lastReviewDate, 1, 10) = ?
+     WHERE r.lastReviewDate >= ? AND r.lastReviewDate < ?
      GROUP BY c.deckId`,
-    [today]
+    [start, end]
   );
   return Object.fromEntries(rows.map((r) => [r.deckId, r.count]));
 }
@@ -40,15 +40,15 @@ export async function getTodayReviewedCountPerDeck(
 export async function getTodayReviewedCountPerTag(
   db: SQLiteDatabase
 ): Promise<Record<string, number>> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ tagId: string; count: number }>(
     `SELECT ct.tagId, COUNT(*) as count
      FROM reviews r
      JOIN cards c ON r.cardId = c.id
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE substr(r.lastReviewDate, 1, 10) = ?
+     WHERE r.lastReviewDate >= ? AND r.lastReviewDate < ?
      GROUP BY ct.tagId`,
-    [today]
+    [start, end]
   );
   return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
 }
@@ -57,14 +57,14 @@ export async function getTodayReviewedCountPerTag(
 export async function getDueCountPerDeck(
   db: SQLiteDatabase
 ): Promise<Record<string, number>> {
-  const today = todayISO();
+  const { end } = todayLocalRange();
   const rows = await db.getAllAsync<{ deckId: string; count: number }>(
     `SELECT c.deckId, COUNT(*) as count
      FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)
+     WHERE (r.cardId IS NULL OR r.nextReviewDate < ?)
      GROUP BY c.deckId`,
-    [today]
+    [end]
   );
   return Object.fromEntries(rows.map((r) => [r.deckId, r.count]));
 }
@@ -86,13 +86,13 @@ export async function getDueCountByDeck(
   db: SQLiteDatabase,
   deckId: string
 ): Promise<number> {
-  const today = todayISO();
+  const { end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count
      FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE c.deckId = ? AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)`,
-    [deckId, today]
+     WHERE c.deckId = ? AND (r.cardId IS NULL OR r.nextReviewDate < ?)`,
+    [deckId, end]
   );
   return row?.count ?? 0;
 }
@@ -102,13 +102,13 @@ export async function getTodayReviewedCountByDeck(
   db: SQLiteDatabase,
   deckId: string
 ): Promise<number> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count
      FROM reviews r
      JOIN cards c ON r.cardId = c.id
-     WHERE c.deckId = ? AND substr(r.lastReviewDate, 1, 10) = ?`,
-    [deckId, today]
+     WHERE c.deckId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ?`,
+    [deckId, start, end]
   );
   return row?.count ?? 0;
 }
@@ -166,33 +166,33 @@ export async function getTodayReviewedCardIdsByDeckId(
   db: SQLiteDatabase,
   deckId: string
 ): Promise<string[]> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT c.id FROM cards c
      JOIN reviews r ON c.id = r.cardId
-     WHERE c.deckId = ? AND substr(r.lastReviewDate, 1, 10) = ?
+     WHERE c.deckId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ?
      ORDER BY c.sortOrder ASC`,
-    [deckId, today]
+    [deckId, start, end]
   );
   return rows.map((r) => r.id);
 }
 
 /**
  * デッキ単位で今日の復習対象カードIDを取得
- * 対象: nextReviewDate <= today OR レビュー未登録の新規カード
+ * 対象: nextReviewDate < 翌日ローカル0時(UTC) OR レビュー未登録の新規カード
  */
 export async function getDueCardIdsByDeckId(
   db: SQLiteDatabase,
   deckId: string
 ): Promise<string[]> {
-  const today = todayISO();
+  const { end } = todayLocalRange();
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT c.id FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
      WHERE c.deckId = ?
-       AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)
+       AND (r.cardId IS NULL OR r.nextReviewDate < ?)
      ORDER BY c.sortOrder ASC`,
-    [deckId, today]
+    [deckId, end]
   );
   return rows.map((r) => r.id);
 }
@@ -204,25 +204,25 @@ export async function getDueCardIdsByTagId(
   db: SQLiteDatabase,
   tagId: string
 ): Promise<string[]> {
-  const today = todayISO();
+  const { end } = todayLocalRange();
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT c.id FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
      LEFT JOIN reviews r ON c.id = r.cardId
      WHERE ct.tagId = ?
-       AND (r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?)
+       AND (r.cardId IS NULL OR r.nextReviewDate < ?)
      ORDER BY c.sortOrder ASC`,
-    [tagId, today]
+    [tagId, end]
   );
   return rows.map((r) => r.id);
 }
 
 /** 今日学習したカード数（lastReviewDate が今日のもの） */
 export async function getTodayReviewedCount(db: SQLiteDatabase): Promise<number> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM reviews WHERE substr(lastReviewDate, 1, 10) = ?`,
-    [today]
+    `SELECT COUNT(*) as count FROM reviews WHERE lastReviewDate >= ? AND lastReviewDate < ?`,
+    [start, end]
   );
   return row?.count ?? 0;
 }
@@ -249,12 +249,12 @@ export async function getUpcomingSchedule(
 
 /** 全体の今日 due カード数（新規 + 復習） */
 export async function getTodayDueCount(db: SQLiteDatabase): Promise<number> {
-  const today = todayISO();
+  const { end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ?`,
-    [today]
+     WHERE r.cardId IS NULL OR r.nextReviewDate < ?`,
+    [end]
   );
   return row?.count ?? 0;
 }
@@ -372,24 +372,36 @@ export async function getPast7DaysStudyActivity(
 /**
  * 学習ストリーク日数を計算する
  * 今日から過去に遡り、lastReviewDate に学習記録がある日が連続している日数を返す
+ * UTC ISO で保存された lastReviewDate をローカル日付に変換して比較する
  */
 export async function getStudyStreak(db: SQLiteDatabase): Promise<number> {
-  const rows = await db.getAllAsync<{ date: string }>(
-    `SELECT DISTINCT substr(lastReviewDate, 1, 10) as date
-     FROM reviews
-     ORDER BY date DESC`
+  const rows = await db.getAllAsync<{ lastReviewDate: string }>(
+    `SELECT DISTINCT lastReviewDate FROM reviews`
   );
 
   if (rows.length === 0) return 0;
 
-  const dates = rows.map((r) => r.date);
-  const today = todayISO();
-  let streak = 0;
-  const current = new Date(today);
+  // UTC ISO 文字列をローカル YYYY-MM-DD に変換して Set に格納
+  const localDateSet = new Set(
+    rows.map((r) => {
+      const d = new Date(r.lastReviewDate);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    })
+  );
 
-  for (let i = 0; i < dates.length; i++) {
-    const expected = current.toISOString().slice(0, 10);
-    if (dates[i] === expected) {
+  let streak = 0;
+  const current = new Date(); // ローカル現在時刻から逆算
+
+  for (let i = 0; i < 365; i++) {
+    const y = current.getFullYear();
+    const m = String(current.getMonth() + 1).padStart(2, '0');
+    const day = String(current.getDate()).padStart(2, '0');
+    const localDate = `${y}-${m}-${day}`;
+
+    if (localDateSet.has(localDate)) {
       streak++;
       current.setDate(current.getDate() - 1);
     } else {

@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { deleteImagesInBlocks } from '@/lib/image';
 import type { Block, Card } from '@/types';
-import { generateId, todayISO } from './utils';
+import { generateId, todayISO, todayLocalRange } from './utils';
 
 type RawCard = {
   id: string;
@@ -108,54 +108,54 @@ export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: strin
 
 /** 今日作成したカード数（全デッキ合計） */
 export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM cards WHERE substr(createdAt, 1, 10) = ?`,
-    [today]
+    `SELECT COUNT(*) as count FROM cards WHERE createdAt >= ? AND createdAt < ?`,
+    [start, end]
   );
   return row?.count ?? 0;
 }
 
 /** 今日作成したカード数（デッキ別マップ） */
 export async function getTodayCreatedCountPerDeck(db: SQLiteDatabase): Promise<Record<string, number>> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ deckId: string; count: number }>(
-    `SELECT deckId, COUNT(*) as count FROM cards WHERE substr(createdAt, 1, 10) = ? GROUP BY deckId`,
-    [today]
+    `SELECT deckId, COUNT(*) as count FROM cards WHERE createdAt >= ? AND createdAt < ? GROUP BY deckId`,
+    [start, end]
   );
   return Object.fromEntries(rows.map(r => [r.deckId, r.count]));
 }
 
 /** 今日作成したカード数（タグ別マップ） */
 export async function getTodayCreatedCountPerTag(db: SQLiteDatabase): Promise<Record<string, number>> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ tagId: string; count: number }>(
     `SELECT ct.tagId, COUNT(*) as count
      FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE substr(c.createdAt, 1, 10) = ?
+     WHERE c.createdAt >= ? AND c.createdAt < ?
      GROUP BY ct.tagId`,
-    [today]
+    [start, end]
   );
   return Object.fromEntries(rows.map(r => [r.tagId, r.count]));
 }
 
 /** 今日作成したカード数（デッキ単体） */
 export async function getTodayCreatedCountByDeck(db: SQLiteDatabase, deckId: string): Promise<number> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND substr(createdAt, 1, 10) = ?`,
-    [deckId, today]
+    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ?`,
+    [deckId, start, end]
   );
   return row?.count ?? 0;
 }
 
 /** 今日作成したカードID一覧（デッキ単体） */
 export async function getTodayCreatedCardIdsByDeckId(db: SQLiteDatabase, deckId: string): Promise<string[]> {
-  const today = todayISO();
+  const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ id: string }>(
-    `SELECT id FROM cards WHERE deckId = ? AND substr(createdAt, 1, 10) = ? ORDER BY sortOrder ASC`,
-    [deckId, today]
+    `SELECT id FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ? ORDER BY sortOrder ASC`,
+    [deckId, start, end]
   );
   return rows.map(r => r.id);
 }

@@ -220,25 +220,8 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* キーボードショートカット ON/OFF */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-          {t('settings.keyboard')}
-        </Text>
-        <View style={styles.switchRow}>
-          <Text style={[styles.switchLabel, { color: theme.colors.text }]}>
-            {t('settings.keyboardEnabled')}
-          </Text>
-          <Switch
-            value={keyboardShortcutsEnabled}
-            onValueChange={setKeyboardShortcutsEnabled}
-            trackColor={{ true: theme.colors.primary }}
-          />
-        </View>
-      </View>
-
       {/* ショートカット一覧 */}
-      {keyboardShortcutsEnabled && (
+      {(
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
             {t('settings.keyboardShortcuts')}

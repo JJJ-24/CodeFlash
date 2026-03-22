@@ -56,11 +56,11 @@ function DeckCard({
             {deck.description}
           </Text>
         ) : null}
-        <Text style={[styles.cardCount, { color: theme.colors.textTertiary }]}>
-          {t('home.cards', { count: deck.cardCount })}
-        </Text>
       </View>
       <View style={styles.cardActions}>
+        <View style={styles.countBadge}>
+          <Text style={styles.countBadgeText}>{deck.cardCount}</Text>
+        </View>
         <Pressable
           onPress={() => router.push({ pathname: '/deck/[id]/edit', params: { id: deck.id } })}
           hitSlop={8}
@@ -194,10 +194,18 @@ const styles = StyleSheet.create({
   },
   cardContent: { flex: 1 },
   deckName: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  deckDesc: { fontSize: 13, marginBottom: 6 },
-  cardCount: { fontSize: 12 },
-  cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12 },
+  deckDesc: { fontSize: 13, marginBottom: 4 },
+  cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12, alignItems: 'center' },
   iconBtn: { padding: 4 },
+  countBadge: {
+    backgroundColor: '#6B7280',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  countBadgeText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
   fab: {
     position: 'absolute',
     right: 24,

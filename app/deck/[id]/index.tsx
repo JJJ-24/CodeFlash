@@ -16,14 +16,18 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/lib/theme';
-import { deleteCard, getCardsByDeckId, updateCardSortOrders } from '@/lib/database/cards';
+import {
+  deleteCard,
+  getCardsByDeckId,
+  getTodayCreatedCardIdsByDeckId,
+  getTodayCreatedCountByDeck,
+  updateCardSortOrders,
+} from '@/lib/database/cards';
 import {
   getDueCardIdsByDeckId,
   getDueCountByDeck,
   getTodayReviewedCardIdsByDeckId,
   getTodayReviewedCountByDeck,
-  getUnlearnedCardIdsByDeckId,
-  getUnlearnedCountByDeck,
 } from '@/lib/database/reviews';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -48,7 +52,7 @@ export default function DeckDetailScreen() {
   const { initialFilterPreference } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
-  const [unlearnedCount, setUnlearnedCount] = useState(0);
+  const [todayCreatedCount, setTodayCreatedCount] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(() => {
     const filterMap: Record<string, FilterKey> = {
       all: 'all', learned: 'today', review: 'due', new: 'unlearned', none: 'all',
@@ -65,24 +69,24 @@ export default function DeckDetailScreen() {
   const deck = decks.find((d) => d.id === id) ?? null;
 
   const loadCards = useCallback(async () => {
-    const [loaded, reviewed, due, unlearned, todayIds, dueIds, unlearnedIds] = await Promise.all([
+    const [loaded, reviewed, due, todayCreated, todayIds, dueIds, todayCreatedIds] = await Promise.all([
       getCardsByDeckId(db, id),
       getTodayReviewedCountByDeck(db, id),
       getDueCountByDeck(db, id),
-      getUnlearnedCountByDeck(db, id),
+      getTodayCreatedCountByDeck(db, id),
       getTodayReviewedCardIdsByDeckId(db, id),
       getDueCardIdsByDeckId(db, id),
-      getUnlearnedCardIdsByDeckId(db, id),
+      getTodayCreatedCardIdsByDeckId(db, id),
     ]);
     setCards(loaded);
     setTodayReviewed(reviewed);
     setDueCount(due);
-    setUnlearnedCount(unlearned);
+    setTodayCreatedCount(todayCreated);
     setFilterCardIds({
       all: new Set(loaded.map((c) => c.id)),
       today: new Set(todayIds),
       due: new Set(dueIds),
-      unlearned: new Set(unlearnedIds),
+      unlearned: new Set(todayCreatedIds),
     });
   }, [db, id, setCards]);
 
@@ -135,7 +139,7 @@ export default function DeckDetailScreen() {
     { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('stats.all') },
     { key: 'today', count: todayReviewed, color: '#4CAF50', label: t('stats.learned') },
     { key: 'due', count: dueCount, color: '#F57C00', label: t('stats.statDue') },
-    { key: 'unlearned', count: unlearnedCount, color: theme.colors.textSecondary, label: t('stats.unlearned') },
+    { key: 'unlearned', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 
   const ListHeader = (

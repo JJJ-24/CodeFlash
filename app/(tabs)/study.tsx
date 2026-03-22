@@ -21,10 +21,12 @@ import {
   getTodayReviewedCountPerTag,
   getReviewDueCountPerDeck,
   getReviewDueCountPerTag,
-  getUnlearnedCountPerDeck,
-  getUnlearnedCountPerTag,
   getTotalCardCountPerTag,
 } from '@/lib/database/reviews';
+import {
+  getTodayCreatedCountPerDeck,
+  getTodayCreatedCountPerTag,
+} from '@/lib/database/cards';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
@@ -62,8 +64,8 @@ export default function StudyScreen() {
   const [todayReviewedPerTag, setTodayReviewedPerTag] = useState<Record<string, number>>({});
   const [reviewDuePerDeck, setReviewDuePerDeck] = useState<Record<string, number>>({});
   const [reviewDuePerTag, setReviewDuePerTag] = useState<Record<string, number>>({});
-  const [unlearnedPerDeck, setUnlearnedPerDeck] = useState<Record<string, number>>({});
-  const [unlearnedPerTag, setUnlearnedPerTag] = useState<Record<string, number>>({});
+  const [todayCreatedPerDeck, setTodayCreatedPerDeck] = useState<Record<string, number>>({});
+  const [todayCreatedPerTag, setTodayCreatedPerTag] = useState<Record<string, number>>({});
   const [totalPerTag, setTotalPerTag] = useState<Record<string, number>>({});
 
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export default function StudyScreen() {
         const [
           loadedDecks, deckCounts, loadedTags, tagCounts,
           todayDeck, todayTag, reviewDeck, reviewTag,
-          unlearnedDeck, unlearnedTag, totalTag,
+          createdDeck, createdTag, totalTag,
         ] = await Promise.all([
           getAllDecks(db),
           getDueCountPerDeck(db),
@@ -92,8 +94,8 @@ export default function StudyScreen() {
           getTodayReviewedCountPerTag(db),
           getReviewDueCountPerDeck(db),
           getReviewDueCountPerTag(db),
-          getUnlearnedCountPerDeck(db),
-          getUnlearnedCountPerTag(db),
+          getTodayCreatedCountPerDeck(db),
+          getTodayCreatedCountPerTag(db),
           getTotalCardCountPerTag(db),
         ]);
         setDecks(loadedDecks);
@@ -104,8 +106,8 @@ export default function StudyScreen() {
         setTodayReviewedPerTag(todayTag);
         setReviewDuePerDeck(reviewDeck);
         setReviewDuePerTag(reviewTag);
-        setUnlearnedPerDeck(unlearnedDeck);
-        setUnlearnedPerTag(unlearnedTag);
+        setTodayCreatedPerDeck(createdDeck);
+        setTodayCreatedPerTag(createdTag);
         setTotalPerTag(totalTag);
         setLoading(false);
       })();
@@ -133,7 +135,7 @@ export default function StudyScreen() {
         return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'new': {
-        const n = unlearnedPerDeck[deck.id] ?? 0;
+        const n = todayCreatedPerDeck[deck.id] ?? 0;
         return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
     }
@@ -160,7 +162,7 @@ export default function StudyScreen() {
         return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
       case 'new': {
-        const n = unlearnedPerTag[tag.id] ?? 0;
+        const n = todayCreatedPerTag[tag.id] ?? 0;
         return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
       }
     }
@@ -171,13 +173,13 @@ export default function StudyScreen() {
     : sumValues(totalPerTag);
   const totalLearned = activeTab === 'decks' ? sumValues(todayReviewedPerDeck) : sumValues(todayReviewedPerTag);
   const totalReview = activeTab === 'decks' ? sumValues(dueCounts) : sumValues(tagDueCounts);
-  const totalNew = activeTab === 'decks' ? sumValues(unlearnedPerDeck) : sumValues(unlearnedPerTag);
+  const totalNew = activeTab === 'decks' ? sumValues(todayCreatedPerDeck) : sumValues(todayCreatedPerTag);
 
   const filterBlocks: { key: Filter; value: number; color: string; label: string }[] = [
     { key: 'all', value: totalAll, color: theme.colors.primary, label: t('stats.all') },
     { key: 'learned', value: totalLearned, color: '#4CAF50', label: t('stats.learned') },
     { key: 'review', value: totalReview, color: '#F57C00', label: t('stats.statDue') },
-    { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('stats.unlearned') },
+    { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 
   if (loading) {

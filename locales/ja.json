@@ -120,6 +120,7 @@
     "learned": "学習済み",
     "statDue": "復習",
     "unlearned": "新規",
+    "newToday": "今日の\n新規",
     "deckMastery": "デッキ別習熟度",
     "mastery": "習熟度",
     "empty": "まだ学習データがありません",

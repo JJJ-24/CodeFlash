@@ -1,14 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { getCardById } from '@/lib/database/cards';
+import { getCardById, getTodayCreatedCardIdsByDeckId } from '@/lib/database/cards';
 import {
   getAllCardIdsByDeckId,
   getDueCardIdsByDeckId,
   getDueCardIdsByTagId,
   getReviewByCardId,
   getTodayReviewedCardIdsByDeckId,
-  getUnlearnedCardIdsByDeckId,
   saveReview,
 } from '@/lib/database/reviews';
 import { calculateNextReview, INITIAL_REVIEW_STATE } from '@/lib/sm2';
@@ -46,7 +45,7 @@ export function useStudySession() {
         if (params.deckId) {
           if (filter === 'all')            cardIds = await getAllCardIdsByDeckId(db, params.deckId);
           else if (filter === 'today')     cardIds = await getTodayReviewedCardIdsByDeckId(db, params.deckId);
-          else if (filter === 'unlearned') cardIds = await getUnlearnedCardIdsByDeckId(db, params.deckId);
+          else if (filter === 'unlearned') cardIds = await getTodayCreatedCardIdsByDeckId(db, params.deckId);
           else                             cardIds = await getDueCardIdsByDeckId(db, params.deckId);
         } else if (params.tagId) {
           cardIds = await getDueCardIdsByTagId(db, params.tagId);

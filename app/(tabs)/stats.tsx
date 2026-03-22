@@ -22,7 +22,7 @@ import {
   getTodayReviewedCount,
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
-import { getPast7DaysCreatedCount } from '@/lib/database/cards';
+import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import type { Deck } from '@/types';
 
 const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -239,6 +239,7 @@ export default function StatsScreen() {
   const [past7DaysCreated, setPast7DaysCreated] = useState<ScheduleItem[]>([]);
   const [learned, setLearned] = useState(0);
   const [unlearned, setUnlearned] = useState(0);
+  const [todayCreated, setTodayCreated] = useState(0);
   const [deckMastery, setDeckMastery] = useState<MasteryItem[]>([]);
   const [decks, setDecks] = useState<Deck[]>([]);
 
@@ -250,7 +251,7 @@ export default function StatsScreen() {
       const initial = blockMap[initialFilterPreference];
       if (initial !== null) setSelectedBlock(initial);
       async function load() {
-        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated] =
+        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday] =
           await Promise.all([
             getTodayReviewedCount(db),
             getTodayDueCount(db),
@@ -262,6 +263,7 @@ export default function StatsScreen() {
             getPast7DaysReviewedCount(db),
             getPast7DaysStudyActivity(db),
             getPast7DaysCreatedCount(db),
+            getTodayCreatedCount(db),
           ]);
 
         setTodayReviewed(reviewed);
@@ -269,6 +271,7 @@ export default function StatsScreen() {
         setStreak(s);
         setLearned(counts.learned);
         setUnlearned(counts.unlearned);
+        setTodayCreated(createdToday);
         setDeckMastery(mastery);
         setDecks(allDecks);
 
@@ -394,8 +397,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('new')}
         >
-          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary }]}>{unlearned}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.unlearned')}</Text>
+          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary }]}>{todayCreated}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.newToday')}</Text>
         </Pressable>
       </View>
 

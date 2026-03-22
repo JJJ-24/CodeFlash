@@ -79,6 +79,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
   const theme = useTheme();
   const scrollRef = useRef<any>(null);
   const blockYPositions = useRef<Record<string, number>>({});
+  const blockViewRefs = useRef<Record<string, View | null>>({});
 
   const [activeTab, setActiveTab] = useState<Tab>('front');
   const [isPreview, setIsPreview] = useState(false);
@@ -190,15 +191,30 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
     if (block.type === 'code') {
       return (
         <ScaleDecorator activeScale={1.02}>
-          <View onLayout={(e) => { blockYPositions.current[block._key] = e.nativeEvent.layout.y; }}>
+          <View ref={(r) => { blockViewRefs.current[block._key] = r; }}>
             <CodeBlockItem
               block={block as CodeBlock}
               isPreview={isPreview}
               onChange={(patch) => updateBlock(activeTab, block._key, patch)}
               onDelete={() => deleteBlock(activeTab, block._key)}
               onRunStart={() => {
-                const y = blockYPositions.current[block._key] ?? 0;
-                scrollRef.current?.scrollTo({ y, animated: true });
+                const blockView = blockViewRefs.current[block._key];
+                if (!blockView || !scrollRef.current) return;
+                // measureLayout で scrollRef 基準の正確な座標を取得
+                blockView.measureLayout(
+                  scrollRef.current,
+                  (_x, y, _w, h) => {
+                    // ブロック下端が画面内に収まるようにスクロール（300px 余白）
+                    scrollRef.current?.scrollTo({
+                      y: Math.max(0, y + h - 300),
+                      animated: true,
+                    });
+                  },
+                  () => {
+                    // measureLayout 失敗時は末尾へスクロール
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }
+                );
               }}
               onDragStart={sortDrag}
               collapsed={collapsed}

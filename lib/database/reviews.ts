@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Review } from '@/types';
+import { todayISO } from './utils';
 
 /** タグIDをキー、due 枚数を値とするマップを一括取得 */
 export async function getDueCountPerTag(
@@ -35,36 +36,6 @@ export async function getTodayReviewedCountPerDeck(
   return Object.fromEntries(rows.map((r) => [r.deckId, r.count]));
 }
 
-/** デッキIDをキー、復習due（学習済みで期限到来）カード数を値とするマップを一括取得 */
-export async function getReviewDueCountPerDeck(
-  db: SQLiteDatabase
-): Promise<Record<string, number>> {
-  const today = todayISO();
-  const rows = await db.getAllAsync<{ deckId: string; count: number }>(
-    `SELECT c.deckId, COUNT(*) as count
-     FROM cards c
-     JOIN reviews r ON c.id = r.cardId
-     WHERE substr(r.nextReviewDate, 1, 10) <= ?
-     GROUP BY c.deckId`,
-    [today]
-  );
-  return Object.fromEntries(rows.map((r) => [r.deckId, r.count]));
-}
-
-/** デッキIDをキー、未学習カード数を値とするマップを一括取得 */
-export async function getUnlearnedCountPerDeck(
-  db: SQLiteDatabase
-): Promise<Record<string, number>> {
-  const rows = await db.getAllAsync<{ deckId: string; count: number }>(
-    `SELECT c.deckId, COUNT(*) as count
-     FROM cards c
-     LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE r.cardId IS NULL
-     GROUP BY c.deckId`
-  );
-  return Object.fromEntries(rows.map((r) => [r.deckId, r.count]));
-}
-
 /** タグIDをキー、今日学習済みカード数を値とするマップを一括取得 */
 export async function getTodayReviewedCountPerTag(
   db: SQLiteDatabase
@@ -78,38 +49,6 @@ export async function getTodayReviewedCountPerTag(
      WHERE substr(r.lastReviewDate, 1, 10) = ?
      GROUP BY ct.tagId`,
     [today]
-  );
-  return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
-}
-
-/** タグIDをキー、復習due（学習済みで期限到来）カード数を値とするマップを一括取得 */
-export async function getReviewDueCountPerTag(
-  db: SQLiteDatabase
-): Promise<Record<string, number>> {
-  const today = todayISO();
-  const rows = await db.getAllAsync<{ tagId: string; count: number }>(
-    `SELECT ct.tagId, COUNT(*) as count
-     FROM cards c
-     JOIN reviews r ON c.id = r.cardId
-     JOIN card_tags ct ON c.id = ct.cardId
-     WHERE substr(r.nextReviewDate, 1, 10) <= ?
-     GROUP BY ct.tagId`,
-    [today]
-  );
-  return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
-}
-
-/** タグIDをキー、未学習カード数を値とするマップを一括取得 */
-export async function getUnlearnedCountPerTag(
-  db: SQLiteDatabase
-): Promise<Record<string, number>> {
-  const rows = await db.getAllAsync<{ tagId: string; count: number }>(
-    `SELECT ct.tagId, COUNT(*) as count
-     FROM cards c
-     LEFT JOIN reviews r ON c.id = r.cardId
-     JOIN card_tags ct ON c.id = ct.cardId
-     WHERE r.cardId IS NULL
-     GROUP BY ct.tagId`
   );
   return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
 }
@@ -142,11 +81,6 @@ export async function getTotalCardCountPerTag(
   return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
 }
 
-/** today の ISO 日付文字列（時刻なし）を返す */
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 /** デッキ別: 今日の復習対象カード数（未学習 + 復習期限到来） */
 export async function getDueCountByDeck(
   db: SQLiteDatabase,
@@ -175,21 +109,6 @@ export async function getTodayReviewedCountByDeck(
      JOIN cards c ON r.cardId = c.id
      WHERE c.deckId = ? AND substr(r.lastReviewDate, 1, 10) = ?`,
     [deckId, today]
-  );
-  return row?.count ?? 0;
-}
-
-/** デッキ別: 一度も学習していないカード数 */
-export async function getUnlearnedCountByDeck(
-  db: SQLiteDatabase,
-  deckId: string
-): Promise<number> {
-  const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count
-     FROM cards c
-     LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE c.deckId = ? AND r.cardId IS NULL`,
-    [deckId]
   );
   return row?.count ?? 0;
 }
@@ -254,21 +173,6 @@ export async function getTodayReviewedCardIdsByDeckId(
      WHERE c.deckId = ? AND substr(r.lastReviewDate, 1, 10) = ?
      ORDER BY c.sortOrder ASC`,
     [deckId, today]
-  );
-  return rows.map((r) => r.id);
-}
-
-/** デッキ別: 一度も学習していないカードのID */
-export async function getUnlearnedCardIdsByDeckId(
-  db: SQLiteDatabase,
-  deckId: string
-): Promise<string[]> {
-  const rows = await db.getAllAsync<{ id: string }>(
-    `SELECT c.id FROM cards c
-     LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE c.deckId = ? AND r.cardId IS NULL
-     ORDER BY c.sortOrder ASC`,
-    [deckId]
   );
   return rows.map((r) => r.id);
 }

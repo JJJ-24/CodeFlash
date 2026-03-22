@@ -19,8 +19,6 @@ import {
   getDueCountPerTag,
   getTodayReviewedCountPerDeck,
   getTodayReviewedCountPerTag,
-  getReviewDueCountPerDeck,
-  getReviewDueCountPerTag,
   getTotalCardCountPerTag,
 } from '@/lib/database/reviews';
 import {
@@ -62,8 +60,6 @@ export default function StudyScreen() {
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
   const [todayReviewedPerDeck, setTodayReviewedPerDeck] = useState<Record<string, number>>({});
   const [todayReviewedPerTag, setTodayReviewedPerTag] = useState<Record<string, number>>({});
-  const [reviewDuePerDeck, setReviewDuePerDeck] = useState<Record<string, number>>({});
-  const [reviewDuePerTag, setReviewDuePerTag] = useState<Record<string, number>>({});
   const [todayCreatedPerDeck, setTodayCreatedPerDeck] = useState<Record<string, number>>({});
   const [todayCreatedPerTag, setTodayCreatedPerTag] = useState<Record<string, number>>({});
   const [totalPerTag, setTotalPerTag] = useState<Record<string, number>>({});
@@ -83,7 +79,7 @@ export default function StudyScreen() {
         setLoading(true);
         const [
           loadedDecks, deckCounts, loadedTags, tagCounts,
-          todayDeck, todayTag, reviewDeck, reviewTag,
+          todayDeck, todayTag,
           createdDeck, createdTag, totalTag,
         ] = await Promise.all([
           getAllDecks(db),
@@ -92,8 +88,6 @@ export default function StudyScreen() {
           getDueCountPerTag(db),
           getTodayReviewedCountPerDeck(db),
           getTodayReviewedCountPerTag(db),
-          getReviewDueCountPerDeck(db),
-          getReviewDueCountPerTag(db),
           getTodayCreatedCountPerDeck(db),
           getTodayCreatedCountPerTag(db),
           getTotalCardCountPerTag(db),
@@ -104,8 +98,6 @@ export default function StudyScreen() {
         setTagDueCounts(tagCounts);
         setTodayReviewedPerDeck(todayDeck);
         setTodayReviewedPerTag(todayTag);
-        setReviewDuePerDeck(reviewDeck);
-        setReviewDuePerTag(reviewTag);
         setTodayCreatedPerDeck(createdDeck);
         setTodayCreatedPerTag(createdTag);
         setTotalPerTag(totalTag);
@@ -397,7 +389,6 @@ const styles = StyleSheet.create({
   deckInfo: { flex: 1, gap: 3 },
   deckName: { fontSize: 16, fontWeight: '600' },
   dueLabel: { fontSize: 13 },
-  dueLabelActive: { color: '#1976D2' },
   dueChip: {
     backgroundColor: '#1976D2',
     borderRadius: 12,

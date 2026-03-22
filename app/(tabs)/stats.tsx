@@ -294,6 +294,20 @@ export default function StatsScreen() {
     }, [db, initialFilterPreference])
   );
 
+  const openMasteryModal = useCallback(async (m: MasteryItem) => {
+    setSelectedMastery(m);
+    setGradeDistribution(null);
+    const dist = await getDeckGradeDistribution(db, m.deckId);
+    setGradeDistribution(dist);
+  }, [db]);
+
+  const openTotalModal = useCallback(async () => {
+    setShowTotalModal(true);
+    setTotalDistribution(null);
+    const dist = await getAllGradeDistribution(db);
+    setTotalDistribution(dist);
+  }, [db]);
+
   const hasData = learned > 0 || todayReviewed > 0;
   const total = learned + unlearned;
   const learnedPct = total > 0 ? Math.round((learned / total) * 100) : 0;
@@ -311,20 +325,6 @@ export default function StatsScreen() {
       </View>
     );
   }
-
-  const openMasteryModal = useCallback(async (m: MasteryItem) => {
-    setSelectedMastery(m);
-    setGradeDistribution(null);
-    const dist = await getDeckGradeDistribution(db, m.deckId);
-    setGradeDistribution(dist);
-  }, [db]);
-
-  const openTotalModal = useCallback(async () => {
-    setShowTotalModal(true);
-    setTotalDistribution(null);
-    const dist = await getAllGradeDistribution(db);
-    setTotalDistribution(dist);
-  }, [db]);
 
   // デッキIDでデッキを引く map
   const deckMap = Object.fromEntries(decks.map((d) => [d.id, d]));
@@ -545,12 +545,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  summaryCardHighlight: { backgroundColor: '#1976D2' },
   summaryValue: { fontSize: 26, fontWeight: '700' },
-  summaryValueHighlight: { color: '#FFF' },
-  summaryLabelHighlight: { color: 'rgba(255,255,255,0.85)' },
   summaryLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
-  summaryUnit: { fontSize: 11 },
 
   // Section
   section: { marginTop: 16 },
@@ -589,7 +585,6 @@ const styles = StyleSheet.create({
   masteryBarBg: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 4 },
   masteryBarFill: { height: '100%', borderRadius: 4 },
   masterySubLabel: { fontSize: 11 },
-  divider: { height: 1 },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },

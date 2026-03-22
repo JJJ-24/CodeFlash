@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
 
 import { getAllDecks } from '@/lib/database/decks';
@@ -75,7 +75,7 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const db = useSQLiteContext();
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
-  const { keyboardShortcutsEnabled, setKeyboardShortcutsEnabled, initialFilterPreference, setInitialFilterPreference } = useSettingsStore();
+  const { initialFilterPreference, setInitialFilterPreference } = useSettingsStore();
   const { setDecks } = useDeckStore();
   const { setTags } = useTagStore();
   const [loading, setLoading] = useState(false);
@@ -221,23 +221,21 @@ export default function SettingsScreen() {
       </View>
 
       {/* ショートカット一覧 */}
-      {(
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-            {t('settings.keyboardShortcuts')}
-          </Text>
-          {SHORTCUTS.map(({ key, descKey }) => (
-            <View key={key} style={styles.shortcutRow}>
-              <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                <Text style={[styles.keyBadgeText, { color: theme.colors.text }]}>{key}</Text>
-              </View>
-              <Text style={[styles.shortcutDesc, { color: theme.colors.textSecondary }]}>
-                {t(descKey)}
-              </Text>
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+          {t('settings.keyboardShortcuts')}
+        </Text>
+        {SHORTCUTS.map(({ key, descKey }) => (
+          <View key={key} style={styles.shortcutRow}>
+            <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+              <Text style={[styles.keyBadgeText, { color: theme.colors.text }]}>{key}</Text>
             </View>
-          ))}
-        </View>
-      )}
+            <Text style={[styles.shortcutDesc, { color: theme.colors.textSecondary }]}>
+              {t(descKey)}
+            </Text>
+          </View>
+        ))}
+      </View>
     </ScrollView>
     {loading && <View style={styles.loadingOverlay} onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} />}
     </View>
@@ -287,12 +285,6 @@ const styles = StyleSheet.create({
   },
   rowText: { flex: 1, fontSize: 16 },
   chevron: { marginLeft: 'auto' },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  switchLabel: { fontSize: 15, flex: 1 },
   shortcutRow: {
     flexDirection: 'row',
     alignItems: 'center',

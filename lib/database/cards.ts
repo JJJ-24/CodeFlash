@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { deleteImagesInBlocks } from '@/lib/image';
 import type { Block, Card } from '@/types';
-import { generateId } from './utils';
+import { generateId, todayISO } from './utils';
 
 type RawCard = {
   id: string;
@@ -108,7 +108,7 @@ export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: strin
 
 /** 今日作成したカード数（全デッキ合計） */
 export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count FROM cards WHERE substr(createdAt, 1, 10) = ?`,
     [today]
@@ -118,7 +118,7 @@ export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> 
 
 /** 今日作成したカード数（デッキ別マップ） */
 export async function getTodayCreatedCountPerDeck(db: SQLiteDatabase): Promise<Record<string, number>> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const rows = await db.getAllAsync<{ deckId: string; count: number }>(
     `SELECT deckId, COUNT(*) as count FROM cards WHERE substr(createdAt, 1, 10) = ? GROUP BY deckId`,
     [today]
@@ -128,7 +128,7 @@ export async function getTodayCreatedCountPerDeck(db: SQLiteDatabase): Promise<R
 
 /** 今日作成したカード数（タグ別マップ） */
 export async function getTodayCreatedCountPerTag(db: SQLiteDatabase): Promise<Record<string, number>> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const rows = await db.getAllAsync<{ tagId: string; count: number }>(
     `SELECT ct.tagId, COUNT(*) as count
      FROM cards c
@@ -142,7 +142,7 @@ export async function getTodayCreatedCountPerTag(db: SQLiteDatabase): Promise<Re
 
 /** 今日作成したカード数（デッキ単体） */
 export async function getTodayCreatedCountByDeck(db: SQLiteDatabase, deckId: string): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND substr(createdAt, 1, 10) = ?`,
     [deckId, today]
@@ -152,7 +152,7 @@ export async function getTodayCreatedCountByDeck(db: SQLiteDatabase, deckId: str
 
 /** 今日作成したカードID一覧（デッキ単体） */
 export async function getTodayCreatedCardIdsByDeckId(db: SQLiteDatabase, deckId: string): Promise<string[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT id FROM cards WHERE deckId = ? AND substr(createdAt, 1, 10) = ? ORDER BY sortOrder ASC`,
     [deckId, today]
@@ -164,7 +164,7 @@ export async function getTodayCreatedCardIdsByDeckId(db: SQLiteDatabase, deckId:
 export async function getPast7DaysCreatedCount(
   db: SQLiteDatabase
 ): Promise<{ date: string; count: number }[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const start = new Date();
   start.setDate(start.getDate() - 6);
   const startISO = start.toISOString().slice(0, 10);

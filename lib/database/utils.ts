@@ -5,3 +5,7 @@ export function generateId(): string {
     return v.toString(16);
   });
 }
+
+export function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}

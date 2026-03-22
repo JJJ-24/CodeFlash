@@ -21,8 +21,8 @@ import type { InitialFilterPreference } from '@/store/settings';
 const SHORTCUTS = [
   { key: 'Space', descKey: 'settings.shortcutFlip' },
   { key: '1–4',   descKey: 'settings.shortcutGrade' },
-  { key: 'J',     descKey: 'settings.shortcutPrev' },
-  { key: 'K',     descKey: 'settings.shortcutNext' },
+  { key: 'J',     descKey: 'settings.shortcutNext' },
+  { key: 'K',     descKey: 'settings.shortcutPrev' },
   { key: 'M',     descKey: 'settings.shortcutMemo' },
   { key: 'F',     descKey: 'settings.shortcutFullscreen' },
   { key: 'Tab',   descKey: 'settings.shortcutSelectBlock' },

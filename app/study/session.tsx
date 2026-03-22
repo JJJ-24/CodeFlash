@@ -270,9 +270,9 @@ export default function StudySessionScreen() {
         setRunTrigger((v) => v + 1);
       }
     } else if (key.toLowerCase() === 'j') {
-      navigateWithSlide('prev');
-    } else if (key.toLowerCase() === 'k') {
       navigateWithSlide('next');
+    } else if (key.toLowerCase() === 'k') {
+      navigateWithSlide('prev');
     } else if (key.toLowerCase() === 'm' && isFlipped) {
       setShowMemo((v) => !v);
     } else if (key.toLowerCase() === 'f') {

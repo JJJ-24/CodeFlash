@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { resolveImageUri } from '@/lib/image';
 
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef }: Props) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const containerYRef = useRef(0);
   const blockYPositions = useRef<Record<number, number>>({});
@@ -95,7 +97,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   };
 
   if (blocks.length === 0) {
-    return <Text style={[styles.empty, { color: theme.colors.iconSubtle }]}>（内容なし）</Text>;
+    return <Text style={[styles.empty, { color: theme.colors.iconSubtle }]}>{t('card.noContent')}</Text>;
   }
 
   const codeBlockIndexMap: Record<number, number> = {};

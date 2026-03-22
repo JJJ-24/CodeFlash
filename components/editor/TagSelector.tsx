@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/lib/theme';
 import { getAllTags } from '@/lib/database/tags';
@@ -27,6 +28,7 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
   const db = useSQLiteContext();
   const { tags, setTags } = useTagStore();
   const theme = useTheme();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (tags.length === 0) {
@@ -36,7 +38,7 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
 
   if (tags.length === 0) {
     return (
-      <Text style={[styles.empty, { color: theme.colors.textTertiary }]}>タグがありません</Text>
+      <Text style={[styles.empty, { color: theme.colors.textTertiary }]}>{t('study.noTags')}</Text>
     );
   }
 

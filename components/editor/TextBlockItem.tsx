@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
+import { useTranslation } from 'react-i18next';
 
 import { BlockItemHeader } from './BlockItemHeader';
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed, isLast, onCollapsedDoubleTap }: Props) {
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const doubleTapCountRef = useRef(0);
@@ -104,7 +106,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
             style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}
             numberOfLines={2}
           >
-            {block.content || '（空のテキストブロック）'}
+            {block.content || t('card.emptyTextBlock')}
           </Text>
         </Pressable>
       ) : isPreview ? (
@@ -112,7 +114,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           {block.content.trim() ? (
             <Markdown markdownit={markdownItLinkify} style={markdownStyles}>{block.content}</Markdown>
           ) : (
-            <Text style={[styles.placeholder, { color: theme.colors.textTertiary }]}>（空のテキストブロック）</Text>
+            <Text style={[styles.placeholder, { color: theme.colors.textTertiary }]}>{t('card.emptyTextBlock')}</Text>
           )}
         </View>
       ) : (
@@ -123,7 +125,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           onChangeText={onChange}
           multiline
           scrollEnabled={false}
-          placeholder="テキストを入力（Markdown 記法対応）"
+          placeholder={t('card.textBlockPlaceholder')}
           placeholderTextColor={theme.colors.textTertiary}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

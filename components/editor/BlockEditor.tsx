@@ -260,7 +260,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
           onPress={() => setIsPreview((v) => !v)}
         >
           <Text style={[styles.previewToggleText, { color: theme.colors.textSecondary }, isPreview && styles.previewToggleTextActive]}>
-            {isPreview ? '編集' : 'プレビュー'}
+            {isPreview ? t('common.edit') : t('editor.preview')}
           </Text>
         </Pressable>
       </View>
@@ -289,11 +289,11 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
               <View style={[styles.addMenu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
                 <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('text')}>
                   <Text style={styles.addMenuIcon}>T</Text>
-                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>テキスト</Text>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>{t('editor.textBlock')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('code')}>
                   <Text style={styles.addMenuIcon}>{'</>'}</Text>
-                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>コード</Text>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>{t('editor.codeBlock')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('image')}>
                   <View style={styles.addMenuIconWrap}>
@@ -302,12 +302,12 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
                   <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>{t('card.imageBlock')}</Text>
                 </TouchableOpacity>
                 <Pressable onPress={() => setAddMenuVisible(false)} style={styles.addMenuCancel}>
-                  <Text style={[styles.addMenuCancelText, { color: theme.colors.textTertiary }]}>キャンセル</Text>
+                  <Text style={[styles.addMenuCancelText, { color: theme.colors.textTertiary }]}>{t('common.cancel')}</Text>
                 </Pressable>
               </View>
             ) : (
               <Pressable style={[styles.addBtn, { borderColor: theme.colors.iconSubtle }]} onPress={() => setAddMenuVisible(true)}>
-                <Text style={[styles.addBtnText, { color: theme.colors.textTertiary }]}>＋ ブロックを追加</Text>
+                <Text style={[styles.addBtnText, { color: theme.colors.textTertiary }]}>{t('editor.addBlock')}</Text>
               </Pressable>
             )}
           </View>

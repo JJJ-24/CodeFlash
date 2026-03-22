@@ -94,7 +94,12 @@
     "reorderDisabledMessage": "Reordering is only available in the \"All\" view",
     "deleteBlock": "Delete Block",
     "deleteBlockConfirm": "Delete this block?",
-    "deleteBlockRequired": "At least one block is required"
+    "deleteBlockRequired": "At least one block is required",
+    "emptyTextBlock": "(empty text block)",
+    "emptyCodeBlock": "(empty code block)",
+    "textBlockPlaceholder": "Enter text (Markdown supported)",
+    "codePlaceholder": "Enter code",
+    "imageNoSelection": "(no image selected)"
   },
   "tabs": {
     "home": "Home",
@@ -125,6 +130,7 @@
   },
   "code": {
     "run": "Run",
+    "done": "Done",
     "output": "▶ Output",
     "error": "✕ Error",
     "timeout": "⏱ Timeout (5s)",
@@ -137,7 +143,15 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "ok": "OK"
+    "ok": "OK",
+    "loading": "Loading..."
+  },
+  "editor": {
+    "textBlock": "Text",
+    "codeBlock": "Code",
+    "addBlock": "+ Add Block",
+    "preview": "Preview",
+    "selectLanguage": "Select Language"
   },
   "settings": {
     "theme": "Theme",

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
@@ -28,6 +29,7 @@ interface Props {
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
 export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage }: Props) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -58,8 +60,8 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
         >
           <View style={styles.outputHeader}>
             <Text style={styles.outputTitle}>
-              {result.status === 'timeout' ? '⏱ タイムアウト（5秒）' :
-               result.status === 'error'   ? '✕ エラー' : '▶ 出力'}
+              {result.status === 'timeout' ? t('code.timeout') :
+               result.status === 'error'   ? t('code.error') : t('code.output')}
             </Text>
             <GestureDetector gesture={clearGesture}>
               <View style={styles.clearBtnWrapper}>
@@ -72,10 +74,10 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
               <Text style={styles.errorMessage}>{result.errorMessage}</Text>
             )}
             {result.status === 'timeout' && (
-              <Text style={styles.errorMessage}>実行が5秒を超えたため中断されました</Text>
+              <Text style={styles.errorMessage}>{t('code.timeoutMessage')}</Text>
             )}
             {result.logs.length === 0 && result.status === 'success' && (
-              <Text style={styles.emptyOutput}>（出力なし）</Text>
+              <Text style={styles.emptyOutput}>{t('code.empty')}</Text>
             )}
             {result.logs.map((log, i) => (
               <Text

@@ -77,7 +77,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
 
       {collapsed ? (
         <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}>
-          {hasImage ? '📷 画像' : '（画像未選択）'}
+          {hasImage ? `📷 ${t('card.imageBlock')}` : t('card.imageNoSelection')}
         </Text>
       ) : (
         <>

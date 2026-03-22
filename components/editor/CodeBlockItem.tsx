@@ -14,6 +14,8 @@ import {
   View,
 } from 'react-native';
 
+import { useTranslation } from 'react-i18next';
+
 import { BlockItemHeader } from './BlockItemHeader';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
@@ -34,6 +36,7 @@ interface Props {
 }
 
 export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed, isLast }: Props) {
+  const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -74,7 +77,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         <View style={styles.headerRight}>
           {EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
-              <Text style={styles.execLabel}>実行</Text>
+              <Text style={styles.execLabel}>{t('code.run')}</Text>
               <Switch
                 value={block.executable}
                 onValueChange={(v) => onChange({ executable: v })}
@@ -93,7 +96,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             >
               {isRunning
                 ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={styles.runBtnText}>▶ 実行</Text>
+                : <Text style={styles.runBtnText}>{'▶ ' + t('code.run')}</Text>
               }
             </TouchableOpacity>
           )}
@@ -103,7 +106,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       {/* コード入力エリア */}
       {collapsed ? (
         <Text style={styles.collapsedPreview} numberOfLines={2}>
-          {block.content || '（空のコードブロック）'}
+          {block.content || t('card.emptyCodeBlock')}
         </Text>
       ) : (
         <>
@@ -125,7 +128,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                     })
                   }
                   multiline
-                  placeholder="コードを入力"
+                  placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
@@ -155,7 +158,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       <Modal visible={langModalVisible} transparent animationType="fade">
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
           <View style={[styles.langModal, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.langModalTitle, { color: theme.colors.text }]}>言語を選択</Text>
+            <Text style={[styles.langModalTitle, { color: theme.colors.text }]}>{t('editor.selectLanguage')}</Text>
             <ScrollView>
               {LANGUAGES.map((lang) => (
                 <TouchableOpacity

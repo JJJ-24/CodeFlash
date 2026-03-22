@@ -126,7 +126,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
                 {slice.label}
               </Text>
               <Text style={[pieStyles.legendValue, { color: theme.colors.text }]}>
-                {slice.value}枚 ({pct}%)
+                {slice.value} {t('stats.cards')} ({pct}%)
               </Text>
             </View>
           );
@@ -481,7 +481,7 @@ export default function StatsScreen() {
                 <GradeDistPieChart dist={totalDistribution} theme={theme} />
               ) : (
                 <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
-                  読み込み中...
+                  {t('common.loading')}
                 </Text>
               )}
             </View>
@@ -511,7 +511,7 @@ export default function StatsScreen() {
                 <GradeDistPieChart dist={gradeDistribution} theme={theme} />
               ) : (
                 <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
-                  読み込み中...
+                  {t('common.loading')}
                 </Text>
               )}
             </View>

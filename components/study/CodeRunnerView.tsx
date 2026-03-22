@@ -14,6 +14,8 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
+import { useTranslation } from "react-i18next";
+
 import { ExecutionOutput } from "@/components/code/ExecutionOutput";
 import { SyntaxHighlightedCode } from "@/components/study/SyntaxHighlightedCode";
 import { useCodeExecution } from "@/hooks/useCodeExecution";
@@ -55,6 +57,7 @@ export function CodeRunnerView({
   isSelected,
   onRunStart,
 }: Props) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const {
@@ -215,7 +218,7 @@ export function CodeRunnerView({
                 activeOpacity={0.7}
               >
                 {isEditing ? (
-                  <Text style={[styles.editBtnText, styles.editBtnTextActive]}>完了</Text>
+                  <Text style={[styles.editBtnText, styles.editBtnTextActive]}>{t('code.done')}</Text>
                 ) : (
                   <Ionicons name="pencil" size={15} color="#9CDCFE" />
                 )}
@@ -237,7 +240,7 @@ export function CodeRunnerView({
                     style={styles.spinner}
                   />
                 ) : (
-                  <Text style={styles.runBtnText}>▶ 実行</Text>
+                  <Text style={styles.runBtnText}>{'▶ ' + t('code.run')}</Text>
                 )}
               </TouchableOpacity>
             </GestureDetector>

@@ -135,6 +135,7 @@ export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string)
   // foreign_keys pragma が未設定のため明示的に関連レコードを削除
   await db.runAsync('DELETE FROM card_tags WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM reviews WHERE cardId = ?', [id]);
+  await db.runAsync('DELETE FROM review_logs WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM cards WHERE id = ?', [id]);
   const now = new Date().toISOString();
   await db.runAsync(

@@ -216,6 +216,10 @@ export async function saveReview(db: SQLiteDatabase, review: Review): Promise<vo
       review.lastGrade,
     ]
   );
+  await db.runAsync(
+    `INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)`,
+    [review.cardId, review.lastReviewDate.slice(0, 10)]
+  );
 }
 
 /** カードのレビュー記録を取得（未学習なら null） */
@@ -444,11 +448,11 @@ export async function getPast7DaysReviewedCount(
   const startISO = start.toISOString().slice(0, 10);
 
   return db.getAllAsync<{ date: string; count: number }>(
-    `SELECT substr(lastReviewDate, 1, 10) as date, COUNT(*) as count
-     FROM reviews
-     WHERE substr(lastReviewDate, 1, 10) BETWEEN ? AND ?
-     GROUP BY date
-     ORDER BY date ASC`,
+    `SELECT reviewedDate as date, COUNT(*) as count
+     FROM review_logs
+     WHERE reviewedDate BETWEEN ? AND ?
+     GROUP BY reviewedDate
+     ORDER BY reviewedDate ASC`,
     [startISO, today]
   );
 }

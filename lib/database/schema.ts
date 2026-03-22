@@ -49,6 +49,12 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       lastReviewDate TEXT    NOT NULL,
       FOREIGN KEY (cardId) REFERENCES cards(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS review_logs (
+      cardId       TEXT NOT NULL,
+      reviewedDate TEXT NOT NULL,
+      PRIMARY KEY (cardId, reviewedDate)
+    );
   `);
 
   // sortOrder カラムのマイグレーション（既存ユーザー・新規インストール両対応）

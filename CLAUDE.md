@@ -38,6 +38,7 @@ app/                     # Expo Router ルート（ファイル = 画面）
 lib/
 ├── database/            # SQLite CRUD 関数（entity ごとにファイル分離）
 │   ├── schema.ts        # テーブル定義 + migrateDbIfNeeded()
+│   ├── utils.ts         # generateId()・todayISO() の共通ユーティリティ
 │   ├── decks.ts         # Deck CRUD
 │   ├── cards.ts         # Card CRUD（JSON シリアライズ含む）
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
@@ -57,7 +58,7 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 ├── tags.ts              # useTagStore
 ├── reviews.ts           # useReviewStore（学習セッション状態）
 ├── theme.ts             # useThemeStore（preference: 'light'|'dark'|'system'、AsyncStorage永続化）
-└── settings.ts          # useSettingsStore（keyboardShortcutsEnabled、AsyncStorage永続化）
+└── settings.ts          # useSettingsStore（keyboardShortcutsEnabled・initialFilterPreference、AsyncStorage永続化）
 
 components/
 ├── code/
@@ -109,16 +110,18 @@ Stack (_layout.tsx)
 
 ### 実装上の注意点
 
-- **`generateId()`** は各 `lib/database/*.ts` ファイルにコピーされている（共通モジュールなし）
-- **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` を明示的に先に削除する
+- **`lib/database/utils.ts`**: `generateId()` と `todayISO()` をエクスポート。全 DB ファイルはここから import する。新しい DB ファイルを作る際も同様。
+- **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` / `review_logs` を明示的に先に削除する
 - **SM-2 グレード対応**: `grade 0` = もう一度, `1` = 難しい, `2` = 普通, `3` = 簡単（`lib/sm2.ts` 参照）
 - **i18n**: 端末言語を自動検出し、未対応言語の場合は日本語にフォールバック
 - **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。テーマ色は `theme.colors.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。
 - **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで `<RootStack />` を描画しない。
 - **モーダルから戻った後のデータ更新**: モーダルを閉じた後に最新データが必要な画面では `useFocusEffect` で DB を再読み込みする（`deck/[id]/index.tsx`・`study/session.tsx` が実例）。
-- **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。ただし Bluetooth キーボードではシステム言語が日本語のままのため `ascii-capable` だけでは不十分な場合がある（根本解決は未対応）。
+- **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。キー割り当ては Vim 慣習（`J` = 次のカード、`K` = 前のカード）。矢印キーは iOS の `onKeyPress` では検知できないため未対応。
 - **ホーム画面のフィルターブロック**: `app/(tabs)/index.tsx` の `selectedFilter` は将来のブロック追加（タグ別フィルタ等）を想定した拡張ポイント。現状は `'all'` のみ。型は `useState<'all'>` のユニオン型を拡張して対応する。
 - **CodeRunnerView のヘッダー色**: 状態（選択中・編集中・実行中）に応じてヘッダー背景色が変わる（選択: `#1A3050`、編集: `#4A3400`、実行: `#1E5024`）。ボーダー色と連動しているため、状態管理を変更する際は両方を確認する。
+- **「新規」フィルターの意味**: 学習タブ・カード一覧・統計タブの「新規」ブロックは「今日作成したカード数」を表す。学習してもカウントは減らず、翌日に 0 にリセットされる。内部フィルターキーは `'unlearned'` のままだが、実際のクエリは `getTodayCreatedCardIdsByDeckId` を使う。
+- **エクスポート/インポート**: `lib/export.ts` と `lib/import.ts` が担当。`review_logs` テーブルも含めて全テーブルをエクスポートする。インポートは `merge`（`INSERT OR IGNORE`）と `replace`（全削除後に挿入）の2モード。
 
 ### ジェスチャー実装パターン
 
@@ -142,12 +145,13 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 `docs/` 配下に機能チケット（000〜020）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
-完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更などを実施。
+完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリングなどを実施。
 
 未着手: 014（iCloud同期）・015（Web版）・016（買い切り課金）・017（App Store申請）・018（SQL/C++実行）・019（マーケットプレイス）・020（AI生成）
 
 ### UI パターン（実装済み画面の慣習）
 
-- **統計ブロック**: 数字（大・色付き）→ラベル（小・`textTertiary`）→ボタン（青丸に白三角）の縦並び。`theme.colors.surface` 背景・角丸・影付き。`deck/[id]/index.tsx` の `statItem` スタイルが基準。
+- **統計ブロック**: 数字（大・色付き）→ラベル（小・`textTertiary`）の縦並び。`theme.colors.surface` 背景・角丸・影付き。`deck/[id]/index.tsx` の `statItem` スタイルが基準。
+- **バッジ色**: 「復習」（due）= 青（`#1976D2`）、それ以外のフィルター = グレー（ライト: `#8B949E`、ダーク: `#4B5563`）。`theme.dark` で分岐する。
 - **セクションタイトル**: `fontSize: 16, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。
 - **locales の改行**: ラベルに改行が必要な場合は `"カード\n総数"` のように `\n` を埋め込む（`Text` コンポーネントがそのまま改行として解釈する）。

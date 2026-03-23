@@ -23,6 +23,7 @@ import { ImageBlockItem } from './ImageBlockItem';
 import { TagSelector } from './TagSelector';
 import { TextBlockItem } from './TextBlockItem';
 import { useTheme } from '@/lib/theme';
+import { useSettingsStore } from '@/store/settings';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 
 type Tab = 'front' | 'back' | 'memo';
@@ -48,7 +49,8 @@ function newTextBlock(): EditBlock {
 }
 
 function newCodeBlock(): EditBlock {
-  return { type: 'code', language: 'javascript', content: '', executable: false, _key: makeKey() };
+  const lang = useSettingsStore.getState().lastSelectedCodeLanguage;
+  return { type: 'code', language: lang, content: '', executable: false, _key: makeKey() };
 }
 
 function newImageBlock(): EditBlock {

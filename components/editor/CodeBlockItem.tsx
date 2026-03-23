@@ -22,6 +22,7 @@ import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode'
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useTheme } from '@/lib/theme';
+import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock } from '@/types';
 
 interface Props {
@@ -170,6 +171,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       language: lang,
                       ...(!EXECUTABLE_LANGUAGES.includes(lang) && { executable: false }),
                     });
+                    useSettingsStore.getState().setLastSelectedCodeLanguage(lang);
                     setLangModalVisible(false);
                   }}
                 >

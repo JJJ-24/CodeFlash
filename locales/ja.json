@@ -125,9 +125,9 @@
     "mastery": "習熟度",
     "empty": "まだ学習データがありません",
     "emptySub": "学習を開始するとここに統計が表示されます",
-    "past7DaysReviewed": "過去7日間の学習履歴",
-    "past7DaysActivity": "過去7日間の学習記録",
-    "past7DaysCreated": "過去7日間の新規カード"
+    "past7DaysReviewed": "過去7日間の学習済み",
+    "past7DaysActivity": "過去7日間の学習日数",
+    "past7DaysCreated": "過去7日間の新規作成"
   },
   "code": {
     "run": "実行",
@@ -181,7 +181,7 @@
     "initialFilter": "初期表示フィルター",
     "initialFilterAll": "すべて",
     "initialFilterLearned": "済み",
-    "initialFilterReview": "復習",
+    "initialFilterReview": "学習予定",
     "initialFilterNew": "新規",
     "initialFilterNone": "保持",
     "initialFilterNoneAlertTitle": "「保持」について",

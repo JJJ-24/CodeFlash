@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { tokenize, type TokenType } from '@/lib/syntax-highlight';
+import { useTheme } from '@/lib/theme';
 
 const TOKEN_COLORS: Record<TokenType, string> = {
   keyword:     '#569CD6',
@@ -19,10 +20,11 @@ interface Props {
 }
 
 export function SyntaxHighlightedCode({ code, language }: Props) {
+  const theme = useTheme();
   const tokens = useMemo(() => tokenize(code, language), [code, language]);
 
   return (
-    <Text style={styles.base}>
+    <Text style={[styles.base, { fontSize: theme.fontSize.md, lineHeight: theme.fontSize.md * 1.5 }]}>
       {tokens.map((token, idx) => (
         <Text key={idx} style={{ color: TOKEN_COLORS[token.type] }}>
           {token.text}
@@ -35,7 +37,6 @@ export function SyntaxHighlightedCode({ code, language }: Props) {
 const styles = StyleSheet.create({
   base: {
     fontFamily: 'monospace',
-    fontSize: 14,
     lineHeight: 22,
     paddingHorizontal: 12,
     paddingBottom: 12,

@@ -108,7 +108,7 @@ export default function HomeScreen() {
           onPress={() => setSelectedFilter('all')}
         >
           <Text style={[styles.statValue, { color: theme.colors.primary, fontSize: theme.fontSize.xxl }]}>{decks.length}</Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>{t('stats.all')}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('stats.all')}</Text>
         </Pressable>
       </View>
       <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>

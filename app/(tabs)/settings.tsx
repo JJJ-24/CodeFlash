@@ -203,16 +203,16 @@ export default function SettingsScreen() {
             <Pressable style={styles.dataRow} onPress={handleExport}>
               <Ionicons name="arrow-up-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.exportTitle')}</Text>
-                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.exportSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.exportTitle')}</Text>
+                {/* <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.exportSubtitle')}</Text> */}
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleImport}>
               <Ionicons name="arrow-down-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.importTitle')}</Text>
-                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.importSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.importTitle')}</Text>
+                {/* <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.importSubtitle')}</Text> */}
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>

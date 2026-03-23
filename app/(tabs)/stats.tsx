@@ -175,7 +175,7 @@ function BarChart({
               {item.count > 0 ? item.count : ''}
             </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />
-            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }, isToday && { color, fontWeight: '700' }]}>
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }, isToday && { color, fontWeight: '700' }]}>
               {labels[dayIndex]}
             </Text>
           </View>

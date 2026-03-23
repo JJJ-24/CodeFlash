@@ -48,7 +48,7 @@ lib/
 │   ├── constants.ts     # LANGUAGES・LANG_LABELS
 │   └── types.ts         # ExecResult・ExecStatus・LogEntry
 ├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: ja）
-├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors 型定義
+├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors・AppFontSize 型定義
 ├── image.ts             # resolveImageUri()：画像パス解決
 └── sm2.ts               # SM-2 間隔反復アルゴリズム実装
 
@@ -58,7 +58,7 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 ├── tags.ts              # useTagStore
 ├── reviews.ts           # useReviewStore（学習セッション状態）
 ├── theme.ts             # useThemeStore（preference: 'light'|'dark'|'system'、AsyncStorage永続化）
-└── settings.ts          # useSettingsStore（keyboardShortcutsEnabled・initialFilterPreference、AsyncStorage永続化）
+└── settings.ts          # useSettingsStore（initialFilterPreference・lastSelectedCodeLanguage、AsyncStorage永続化）
 
 components/
 ├── code/
@@ -110,11 +110,12 @@ Stack (_layout.tsx)
 
 ### 実装上の注意点
 
-- **`lib/database/utils.ts`**: `generateId()` と `todayISO()` をエクスポート。全 DB ファイルはここから import する。新しい DB ファイルを作る際も同様。
+- **`lib/database/utils.ts`**: `generateId()`・`todayISO()`・`localDateStr(d: Date)` をエクスポート。全 DB ファイルはここから import する。新しい DB ファイルを作る際も同様。日付集計は `toISOString().slice(0,10)` が UTC 日付を返すため、ローカル日付が必要な箇所は `localDateStr()` を使う。
 - **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` / `review_logs` を明示的に先に削除する
 - **SM-2 グレード対応**: `grade 0` = もう一度, `1` = 難しい, `2` = 普通, `3` = 簡単（`lib/sm2.ts` 参照）
 - **i18n**: 端末言語を自動検出し、未対応言語の場合は日本語にフォールバック
-- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。テーマ色は `theme.colors.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。
+- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。テーマ色は `theme.colors.*`、フォントサイズは `theme.fontSize.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。
+- **フォントサイズシステム**: `AppFontSize` は `xs(12)/sm(14)/md(16)/lg(18)/xl(20)/xxl(26)` の6段階（medium設定時）。`store/theme.ts` の `fontSizePreference`（small=0.85×/medium=1.0×/large=1.2×）で全体スケールされる。StyleSheet の静的 fontSize は使わず、必ずインラインスタイルで `{ fontSize: theme.fontSize.md }` のように指定する。
 - **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで `<RootStack />` を描画しない。
 - **モーダルから戻った後のデータ更新**: モーダルを閉じた後に最新データが必要な画面では `useFocusEffect` で DB を再読み込みする（`deck/[id]/index.tsx`・`study/session.tsx` が実例）。
 - **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。キー割り当ては Vim 慣習（`J` = 次のカード、`K` = 前のカード）。矢印キーは iOS の `onKeyPress` では検知できないため未対応。`Tab` キーは iPadOS がシステムフォーカス移動（UIFocusSystem）に使用するため `onKeyPress` で検知不可。コードブロック選択には `T` キーを使用。
@@ -151,7 +152,8 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 ### UI パターン（実装済み画面の慣習）
 
-- **統計ブロック**: 数字（大・色付き）→ラベル（小・`textTertiary`）の縦並び。`theme.colors.surface` 背景・角丸・影付き。`deck/[id]/index.tsx` の `statItem` スタイルが基準。
+- **統計ブロック**: 数字（`theme.fontSize.xxl`・色付き）→ラベル（`theme.fontSize.xs`・`textSecondary`）の縦並び。`theme.colors.surface` 背景・角丸・影付き。`deck/[id]/index.tsx` の `statItem` スタイルが基準。
 - **バッジ色**: 「復習」（due）= 青（`#1976D2`）、それ以外のフィルター = グレー（ライト: `#8B949E`、ダーク: `#4B5563`）。`theme.dark` で分岐する。
-- **セクションタイトル**: `fontSize: 16, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。
+- **セクションタイトル**: `theme.fontSize.lg, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。
+- **コードブロック（学習画面）**: `components/study/SyntaxHighlightedCode.tsx` は `theme.fontSize.md` を使用。フォントサイズ設定に連動する。
 - **locales の改行**: ラベルに改行が必要な場合は `"カード\n総数"` のように `\n` を埋め込む（`Text` コンポーネントがそのまま改行として解釈する）。

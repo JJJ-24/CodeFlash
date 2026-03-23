@@ -72,7 +72,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
           borderBottomColor: theme.colors.border,
         }}
       >
-        <Ionicons name="image-outline" size={14} color={theme.colors.textTertiary} style={styles.typeLabel} />
+        <Ionicons name="image-outline" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
       </BlockItemHeader>
 
       {collapsed ? (
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  typeLabel: { fontSize: 12, fontWeight: '700' },
+  typeLabel: {},
   imageArea: {
     paddingHorizontal: 12,
     paddingTop: 10,

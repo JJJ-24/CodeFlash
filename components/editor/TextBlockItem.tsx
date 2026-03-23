@@ -96,7 +96,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           borderBottomColor: theme.colors.border,
         }}
       >
-        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>T</Text>
+        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.lg }]}>T</Text>
       </BlockItemHeader>
 
       {collapsed ? (

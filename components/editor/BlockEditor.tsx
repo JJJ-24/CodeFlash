@@ -388,14 +388,7 @@ export function BlockEditor({
                   ]}
                   onPress={() => addBlock("text")}
                 >
-                  <Text
-                    style={[
-                      styles.addMenuIcon,
-                      { fontSize: theme.fontSize.lg },
-                    ]}
-                  >
-                    T
-                  </Text>
+                  <Text style={styles.addMenuIcon}>T</Text>
                   <Text
                     style={[
                       styles.addMenuLabel,
@@ -412,14 +405,7 @@ export function BlockEditor({
                   ]}
                   onPress={() => addBlock("code")}
                 >
-                  <Text
-                    style={[
-                      styles.addMenuIcon,
-                      { fontSize: theme.fontSize.lg },
-                    ]}
-                  >
-                    {"</>"}
-                  </Text>
+                  <Text style={styles.addMenuIcon}>{"</>"}</Text>
                   <Text
                     style={[
                       styles.addMenuLabel,
@@ -437,7 +423,7 @@ export function BlockEditor({
                   onPress={() => addBlock("image")}
                 >
                   <View style={styles.addMenuIconWrap}>
-                    <Ionicons name="image-outline" size={18} color="#1976D2" />
+                    <Ionicons name="image-outline" size={22} color="#1976D2" />
                   </View>
                   <Text
                     style={[
@@ -582,10 +568,11 @@ const styles = StyleSheet.create({
   addMenuIcon: {
     fontWeight: "700",
     color: "#1976D2",
-    width: 28,
+    fontSize: 18,
+    width: 36,
     textAlign: "center",
   },
-  addMenuIconWrap: { width: 28, alignItems: "center" },
+  addMenuIconWrap: { width: 36, alignItems: "center" },
   addMenuLabel: {},
   addMenuCancel: { paddingVertical: 12, alignItems: "center" },
   addMenuCancelText: {},

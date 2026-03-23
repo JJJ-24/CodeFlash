@@ -44,7 +44,7 @@ function SegmentedCard<T extends string>({ label, options, value, onChange }: Se
   const theme = useTheme();
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-      <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{label}</Text>
       <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
         {options.map(({ value: optValue, label: optLabel }) => {
           const active = value === optValue;
@@ -56,7 +56,7 @@ function SegmentedCard<T extends string>({ label, options, value, onChange }: Se
             >
               <Text style={[
                 styles.segmentText,
-                { color: active ? theme.colors.primary : theme.colors.textSecondary },
+                { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.md },
                 active && styles.segmentTextActive,
               ]}>
                 {optLabel}
@@ -187,13 +187,13 @@ export default function SettingsScreen() {
         onPress={() => router.push('/tags')}
       >
         <Ionicons name="pricetags-outline" size={22} color={theme.colors.primary} />
-        <Text style={[styles.rowText, { color: theme.colors.text }]}>{t('tag.title')}</Text>
+        <Text style={[styles.rowText, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('tag.title')}</Text>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
       </Pressable>
 
       {/* データ管理 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
           {t('dataManagement.title')}
         </Text>
         {loading ? (
@@ -203,16 +203,16 @@ export default function SettingsScreen() {
             <Pressable style={styles.dataRow} onPress={handleExport}>
               <Ionicons name="arrow-up-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text }]}>{t('dataManagement.exportTitle')}</Text>
-                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary }]}>{t('dataManagement.exportSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.exportTitle')}</Text>
+                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.exportSubtitle')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleImport}>
               <Ionicons name="arrow-down-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text }]}>{t('dataManagement.importTitle')}</Text>
-                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary }]}>{t('dataManagement.importSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.importTitle')}</Text>
+                <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.importSubtitle')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
@@ -222,15 +222,15 @@ export default function SettingsScreen() {
 
       {/* ショートカット一覧 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
           {t('settings.keyboardShortcuts')}
         </Text>
         {SHORTCUTS.map(({ key, descKey }) => (
           <View key={key} style={styles.shortcutRow}>
             <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-              <Text style={[styles.keyBadgeText, { color: theme.colors.text }]}>{key}</Text>
+              <Text style={[styles.keyBadgeText, { color: theme.colors.text, fontSize: theme.fontSize.sm }]}>{key}</Text>
             </View>
-            <Text style={[styles.shortcutDesc, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.shortcutDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
               {t(descKey)}
             </Text>
           </View>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  sectionLabel: { fontSize: 13, fontWeight: '600' },
+  sectionLabel: { fontWeight: '600' },
   segmented: {
     flexDirection: 'row',
     borderRadius: 8,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
   },
-  segmentText: { fontSize: 14 },
+  segmentText: {},
   segmentTextActive: { fontWeight: '700' },
   row: {
     flexDirection: 'row',
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  rowText: { flex: 1, fontSize: 16 },
+  rowText: { flex: 1 },
   chevron: { marginLeft: 'auto' },
   shortcutRow: {
     flexDirection: 'row',
@@ -298,8 +298,8 @@ const styles = StyleSheet.create({
     minWidth: 44,
     alignItems: 'center',
   },
-  keyBadgeText: { fontSize: 13, fontWeight: '600', fontFamily: 'monospace' },
-  shortcutDesc: { fontSize: 13, flex: 1 },
+  keyBadgeText: { fontWeight: '600', fontFamily: 'monospace' },
+  shortcutDesc: { flex: 1 },
   dataRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   dataRowText: { flex: 1 },
-  dataRowTitle: { fontSize: 15, fontWeight: '500' },
-  dataRowSub: { fontSize: 12, marginTop: 2 },
+  dataRowTitle: { fontWeight: '500' },
+  dataRowSub: { marginTop: 2 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',

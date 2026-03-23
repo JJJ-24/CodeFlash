@@ -145,7 +145,7 @@ export default function DeckDetailScreen() {
   const ListHeader = (
     <View style={styles.header}>
       {deck.description ? (
-        <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.description, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
           {deck.description}
         </Text>
       ) : null}
@@ -163,8 +163,8 @@ export default function DeckDetailScreen() {
               ]}
               onPress={() => setSelectedFilter(key)}
             >
-              <Text style={[styles.statValue, { color }]}>{count}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{label}</Text>
+              <Text style={[styles.statValue, { color, fontSize: theme.fontSize.xxl }]}>{count}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>{label}</Text>
             </Pressable>
           );
         })}
@@ -176,17 +176,17 @@ export default function DeckDetailScreen() {
         onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: selectedFilter } })}
       >
         <Ionicons name="play" size={20} color="#FFF" />
-        <Text style={styles.studyBtnText}>{t('deck.study')}</Text>
+        <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]}>{t('deck.study')}</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
         {t('deck.detail')}
       </Text>
 
       {displayedCards.length === 0 ? (
         <View style={styles.emptyCards}>
           <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary }]}>
+          <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
             {selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
           </Text>
         </View>
@@ -235,7 +235,7 @@ export default function DeckDetailScreen() {
                   drag();
                 }}
               >
-                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: Math.round(15 * theme.fontScale) }]} numberOfLines={2}>
+                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={2}>
                   {preview || t('card.noText')}
                 </Text>
                 <Pressable
@@ -272,7 +272,7 @@ export default function DeckDetailScreen() {
 const styles = StyleSheet.create({
   container: { paddingBottom: 96 },
   header: { padding: 20, gap: 16 },
-  description: { fontSize: 15, lineHeight: 22 },
+  description: { lineHeight: 22 },
   statsRow: { flexDirection: 'row', gap: 8 },
   statItem: {
     flex: 1,
@@ -285,8 +285,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  statValue: { fontSize: 26, fontWeight: '700' },
-  statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
+  statValue: { fontWeight: '700' },
+  statLabel: { marginTop: 2, textAlign: 'center' },
   studyBtn: {
     flexDirection: 'row',
     backgroundColor: '#1976D2',
@@ -296,10 +296,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  studyBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-  sectionTitle: { fontSize: 16, fontWeight: '700' },
+  studyBtnText: { fontWeight: '700', color: '#FFF' },
+  sectionTitle: { fontWeight: '700' },
   emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
-  emptyCardsText: { fontSize: 14 },
+  emptyCardsText: {},
   cardItem: {
     borderRadius: 10,
     paddingHorizontal: 16,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  cardPreview: { flex: 1, fontSize: 15, lineHeight: 22 },
+  cardPreview: { flex: 1, lineHeight: 22 },
   fab: {
     position: 'absolute',
     right: 20,

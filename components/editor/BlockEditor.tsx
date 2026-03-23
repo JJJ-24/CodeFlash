@@ -256,7 +256,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabText, { color: theme.colors.textTertiary }, activeTab === tab.key && styles.tabTextActive]}>
+            <Text style={[styles.tabText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }, activeTab === tab.key && styles.tabTextActive]}>
               {tab.label}
             </Text>
           </Pressable>
@@ -277,7 +277,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
           style={[styles.previewToggle, { backgroundColor: theme.colors.background }, isPreview && { backgroundColor: theme.colors.primaryLight }]}
           onPress={() => setIsPreview((v) => !v)}
         >
-          <Text style={[styles.previewToggleText, { color: theme.colors.textSecondary }, isPreview && styles.previewToggleTextActive]}>
+          <Text style={[styles.previewToggleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }, isPreview && styles.previewToggleTextActive]}>
             {isPreview ? t('common.edit') : t('editor.preview')}
           </Text>
         </Pressable>
@@ -307,26 +307,26 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
             {addMenuVisible ? (
               <View style={[styles.addMenu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
                 <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('text')}>
-                  <Text style={styles.addMenuIcon}>T</Text>
-                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>{t('editor.textBlock')}</Text>
+                  <Text style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]}>T</Text>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('editor.textBlock')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('code')}>
-                  <Text style={styles.addMenuIcon}>{'</>'}</Text>
-                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>{t('editor.codeBlock')}</Text>
+                  <Text style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]}>{'</>'}</Text>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('editor.codeBlock')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.addMenuItem, { borderBottomColor: theme.colors.border }]} onPress={() => addBlock('image')}>
                   <View style={styles.addMenuIconWrap}>
                     <Ionicons name="image-outline" size={18} color="#1976D2" />
                   </View>
-                  <Text style={[styles.addMenuLabel, { color: theme.colors.text }]}>{t('card.imageBlock')}</Text>
+                  <Text style={[styles.addMenuLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('card.imageBlock')}</Text>
                 </TouchableOpacity>
                 <Pressable onPress={() => setAddMenuVisible(false)} style={styles.addMenuCancel}>
-                  <Text style={[styles.addMenuCancelText, { color: theme.colors.textTertiary }]}>{t('common.cancel')}</Text>
+                  <Text style={[styles.addMenuCancelText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>{t('common.cancel')}</Text>
                 </Pressable>
               </View>
             ) : (
               <Pressable style={[styles.addBtn, { borderColor: theme.colors.iconSubtle }]} onPress={() => setAddMenuVisible(true)}>
-                <Text style={[styles.addBtnText, { color: theme.colors.textTertiary }]}>{t('editor.addBlock')}</Text>
+                <Text style={[styles.addBtnText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>{t('editor.addBlock')}</Text>
               </Pressable>
             )}
           </View>
@@ -334,13 +334,13 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
 
         {/* タグ選択 */}
         <View style={styles.tagSection}>
-          <Text style={[styles.tagLabel, { color: theme.colors.textSecondary }]}>{t('tag.title')}</Text>
+          <Text style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>{t('tag.title')}</Text>
           <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
         </View>
 
         {/* 表面が空の場合のバリデーションエラー */}
         {isFrontEmpty && (
-          <Text style={[styles.validationError, { color: theme.colors.danger }]}>
+          <Text style={[styles.validationError, { color: theme.colors.danger, fontSize: theme.fontSize.sm }]}>
             {t('card.frontRequired')}
           </Text>
         )}
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: { borderBottomColor: '#1976D2' },
-  tabText: { fontSize: 14, fontWeight: '500' },
+  tabText: { fontWeight: '500' },
   tabTextActive: { color: '#1976D2', fontWeight: '700' },
   sortToggle: {
     marginLeft: 'auto',
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
     alignItems: 'center',
   },
-  previewToggleText: { fontSize: 12 },
+  previewToggleText: {},
   previewToggleTextActive: { color: '#1976D2', fontWeight: '600' },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
-  addBtnText: { fontSize: 14 },
+  addBtnText: {},
   addMenu: {
     borderRadius: 10,
     borderWidth: 1,
@@ -407,12 +407,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
   },
-  addMenuIcon: { fontSize: 16, fontWeight: '700', color: '#1976D2', width: 28, textAlign: 'center' },
+  addMenuIcon: { fontWeight: '700', color: '#1976D2', width: 28, textAlign: 'center' },
   addMenuIconWrap: { width: 28, alignItems: 'center' },
-  addMenuLabel: { fontSize: 15 },
+  addMenuLabel: {},
   addMenuCancel: { paddingVertical: 12, alignItems: 'center' },
-  addMenuCancelText: { fontSize: 14 },
+  addMenuCancelText: {},
   tagSection: { gap: 8, marginTop: 12 },
-  tagLabel: { fontSize: 14, fontWeight: '600' },
-  validationError: { fontSize: 13, textAlign: 'center' },
+  tagLabel: { fontWeight: '600' },
+  validationError: { textAlign: 'center' },
 });

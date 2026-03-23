@@ -38,7 +38,7 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
 
   if (tags.length === 0) {
     return (
-      <Text style={[styles.empty, { color: theme.colors.textTertiary }]}>{t('study.noTags')}</Text>
+      <Text style={[styles.empty, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>{t('study.noTags')}</Text>
     );
   }
 
@@ -66,7 +66,7 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
             onPress={() => toggle(tag.id)}
           >
             {!selected && <View style={[styles.dot, { backgroundColor: tag.color }]} />}
-            <Text style={[styles.chipText, { color: selected ? '#FFF' : theme.colors.text }]}>
+            <Text style={[styles.chipText, { color: selected ? '#FFF' : theme.colors.text, fontSize: theme.fontSize.sm }]}>
               {truncateTag(tag.name)}
             </Text>
           </Pressable>
@@ -87,6 +87,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  chipText: { fontSize: 13, fontWeight: '500' },
-  empty: { fontSize: 13 },
+  chipText: { fontWeight: '500' },
+  empty: {},
 });

@@ -122,10 +122,10 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           return (
             <View key={slice.label} style={pieStyles.legendRow}>
               <View style={[pieStyles.legendDot, { backgroundColor: slice.color }]} />
-              <Text style={[pieStyles.legendLabel, { color: theme.colors.textSecondary }]}>
+              <Text style={[pieStyles.legendLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
                 {slice.label}
               </Text>
-              <Text style={[pieStyles.legendValue, { color: theme.colors.text }]}>
+              <Text style={[pieStyles.legendValue, { color: theme.colors.text, fontSize: theme.fontSize.sm }]}>
                 {slice.value} {t('stats.cards')} ({pct}%)
               </Text>
             </View>
@@ -141,8 +141,8 @@ const pieStyles = StyleSheet.create({
   legend: { alignSelf: 'stretch', gap: 6 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { flex: 1, fontSize: 13 },
-  legendValue: { fontSize: 13, fontWeight: '600' },
+  legendLabel: { flex: 1 },
+  legendValue: { fontWeight: '600' },
 });
 
 function BarChart({
@@ -171,11 +171,11 @@ function BarChart({
 
         return (
           <View key={item.date} style={styles.barCol}>
-            <Text style={[styles.barCount, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>
               {item.count > 0 ? item.count : ''}
             </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />
-            <Text style={[styles.barLabel, { color: theme.colors.textTertiary }, isToday && { color, fontWeight: '700' }]}>
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }, isToday && { color, fontWeight: '700' }]}>
               {labels[dayIndex]}
             </Text>
           </View>
@@ -193,15 +193,15 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.masteryRow, pressed && { opacity: 0.7 }]}>
       <View style={styles.masteryHeader}>
-        <Text style={[styles.masteryDeckName, { color: theme.colors.text }]} numberOfLines={1}>
+        <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>
           {deck.name}
         </Text>
-        <Text style={[styles.masteryPct, { color }]}>{pct}%</Text>
+        <Text style={[styles.masteryPct, { color, fontSize: theme.fontSize.md }]}>{pct}%</Text>
       </View>
       <View style={[styles.masteryBarBg, { backgroundColor: theme.colors.progressBg }]}>
         <View style={[styles.masteryBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
-      <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary }]}>
+      <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>
         {t('stats.learned')}: {mastery.learnedCount} {t('stats.cards')}
       </Text>
     </Pressable>
@@ -324,10 +324,10 @@ export default function StatsScreen() {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
         <Ionicons name="bar-chart-outline" size={72} color={theme.colors.iconSubtle} />
-        <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
           {t('stats.empty')}
         </Text>
-        <Text style={[styles.emptySubText, { color: theme.colors.textTertiary }]}>
+        <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
           {t('stats.emptySub')}
         </Text>
       </View>
@@ -368,10 +368,10 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('streak')}
         >
-          <Text style={[styles.summaryValue, { color: '#FFF' }]}>
+          <Text style={[styles.summaryValue, { color: '#FFF', fontSize: theme.fontSize.xxl }]}>
             {streak}
           </Text>
-          <Text style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center' }]}>
+          <Text style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]}>
             {t('stats.streak')}
           </Text>
         </Pressable>
@@ -383,8 +383,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('learned')}
         >
-          <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>{todayReviewed}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.learned')}</Text>
+          <Text style={[styles.summaryValue, { color: '#4CAF50', fontSize: theme.fontSize.xxl }]}>{todayReviewed}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.learned')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -394,8 +394,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('due')}
         >
-          <Text style={[styles.summaryValue, { color: '#F57C00' }]}>{todayDue}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.statDue')}</Text>
+          <Text style={[styles.summaryValue, { color: '#F57C00', fontSize: theme.fontSize.xxl }]}>{todayDue}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.statDue')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -405,14 +405,14 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('new')}
         >
-          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary }]}>{todayCreated}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center' }]}>{t('stats.newToday')}</Text>
+          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xxl }]}>{todayCreated}</Text>
+          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.newToday')}</Text>
         </Pressable>
       </View>
 
       {/* 7日間バーチャート */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
           {chartConfig.title}
         </Text>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -428,7 +428,7 @@ export default function StatsScreen() {
 
       {/* 全体進捗 */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
           {t('stats.totalProgress')}
         </Text>
         <Pressable
@@ -436,13 +436,13 @@ export default function StatsScreen() {
           onPress={openTotalModal}
         >
           <View style={styles.progressHeader}>
-            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
               {t('stats.learned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{learned}</Text>
             </Text>
-            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
               {t('stats.unlearned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{unlearned}</Text>
             </Text>
-            <Text style={[styles.progressPct, { color: theme.colors.primary }]}>{learnedPct}%</Text>
+            <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]}>{learnedPct}%</Text>
           </View>
           <View style={[styles.progressBarBg, { backgroundColor: theme.colors.progressBg }]}>
             <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
@@ -453,7 +453,7 @@ export default function StatsScreen() {
       {/* デッキ別習熟度 */}
       {deckMastery.length > 0 && (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
             {t('stats.deckMastery')}
           </Text>
           <View style={styles.deckMasteryList}>
@@ -480,7 +480,7 @@ export default function StatsScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowTotalModal(false)}>
           <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
                 {t('stats.totalProgress')}
               </Text>
               <Pressable onPress={() => setShowTotalModal(false)} style={styles.modalCloseBtn}>
@@ -510,7 +510,7 @@ export default function StatsScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setSelectedMastery(null)}>
           <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
                 {deckMap[selectedMastery?.deckId ?? '']?.name ?? ''}
               </Text>
               <Pressable onPress={() => setSelectedMastery(null)} style={styles.modalCloseBtn}>
@@ -537,8 +537,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, gap: 4, paddingBottom: 32 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { fontSize: 18, fontWeight: '600' },
-  emptySubText: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontWeight: '600' },
+  emptySubText: { textAlign: 'center', paddingHorizontal: 40 },
 
   // Summary row
   summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
@@ -553,12 +553,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  summaryValue: { fontSize: 26, fontWeight: '700' },
-  summaryLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
+  summaryValue: { fontWeight: '700' },
+  summaryLabel: { marginTop: 2, textAlign: 'center' },
 
   // Section
   section: { marginTop: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  sectionTitle: { fontWeight: '600', marginBottom: 8 },
   card: {
     borderRadius: 12,
     padding: 16,
@@ -573,14 +573,14 @@ const styles = StyleSheet.create({
   barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: BAR_MAX_HEIGHT + 44 },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
-  barCount: { fontSize: 10, height: 14 },
-  barLabel: { fontSize: 11 },
+  barCount: { height: 14 },
+  barLabel: {},
 
   // Progress
   progressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
-  progressLabel: { fontSize: 13, flex: 1 },
+  progressLabel: { flex: 1 },
   progressNum: { fontWeight: '700' },
-  progressPct: { fontSize: 18, fontWeight: '700' },
+  progressPct: { fontWeight: '700' },
   progressBarBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#1976D2', borderRadius: 5 },
 
@@ -588,16 +588,16 @@ const styles = StyleSheet.create({
   deckMasteryList: { gap: 8 },
   masteryRow: { paddingVertical: 10 },
   masteryHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  masteryDeckName: { fontSize: 14, fontWeight: '600', flex: 1, marginRight: 8 },
-  masteryPct: { fontSize: 14, fontWeight: '700' },
+  masteryDeckName: { fontWeight: '600', flex: 1, marginRight: 8 },
+  masteryPct: { fontWeight: '700' },
   masteryBarBg: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 4 },
   masteryBarFill: { height: '100%', borderRadius: 4 },
-  masterySubLabel: { fontSize: 11 },
+  masterySubLabel: {},
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 32, maxHeight: '70%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
-  modalTitle: { fontSize: 17, fontWeight: '700' },
+  modalTitle: { fontWeight: '700' },
   modalCloseBtn: { padding: 4 },
 });

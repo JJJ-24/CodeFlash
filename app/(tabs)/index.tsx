@@ -48,18 +48,18 @@ function DeckCard({
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
-        <Text style={[styles.deckName, { color: theme.colors.text }]} numberOfLines={1}>
+        <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1}>
           {deck.name}
         </Text>
         {deck.description ? (
-          <Text style={[styles.deckDesc, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+          <Text style={[styles.deckDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} numberOfLines={2}>
             {deck.description}
           </Text>
         ) : null}
       </View>
       <View style={styles.cardActions}>
         <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E', marginRight: 8 }]}>
-          <Text style={styles.countBadgeText}>{deck.cardCount}</Text>
+          <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{deck.cardCount}</Text>
         </View>
         <Pressable
           onPress={() => router.push({ pathname: '/deck/[id]/edit', params: { id: deck.id } })}
@@ -107,11 +107,11 @@ export default function HomeScreen() {
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text style={[styles.statValue, { color: theme.colors.primary }]}>{decks.length}</Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textTertiary }]}>{t('stats.all')}</Text>
+          <Text style={[styles.statValue, { color: theme.colors.primary, fontSize: theme.fontSize.xxl }]}>{decks.length}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>{t('stats.all')}</Text>
         </Pressable>
       </View>
-      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
         {t('home.title')}
       </Text>
     </View>
@@ -124,10 +124,10 @@ export default function HomeScreen() {
           <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>{StatsHeader}</View>
           <View style={styles.emptyContainer}>
             <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
               {t('home.empty')}
             </Text>
-            <Text style={[styles.emptySubText, { color: theme.colors.textTertiary }]}>
+            <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
               {t('home.emptySub')}
             </Text>
           </View>
@@ -174,13 +174,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  statValue: { fontSize: 26, fontWeight: '700' },
-  statLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
-  sectionTitle: { fontSize: 16, fontWeight: '700' },
+  statValue: { fontWeight: '700' },
+  statLabel: { marginTop: 2, textAlign: 'center' },
+  sectionTitle: { fontWeight: '700' },
   listContent: { padding: 16, gap: 12, paddingBottom: 96 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { fontSize: 18, fontWeight: '600' },
-  emptySubText: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontWeight: '600' },
+  emptySubText: { textAlign: 'center', paddingHorizontal: 40 },
   card: {
     borderRadius: 12,
     padding: 16,
@@ -193,8 +193,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardContent: { flex: 1 },
-  deckName: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  deckDesc: { fontSize: 13, marginBottom: 4 },
+  deckName: { fontWeight: '700', marginBottom: 4 },
+  deckDesc: { marginBottom: 4 },
   cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12, alignItems: 'center' },
   iconBtn: { padding: 4 },
   countBadge: {
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     minWidth: 28,
     alignItems: 'center',
   },
-  countBadgeText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  countBadgeText: { fontWeight: '700', color: '#FFF' },
   fab: {
     position: 'absolute',
     right: 24,

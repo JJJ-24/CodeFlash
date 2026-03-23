@@ -21,10 +21,22 @@ export interface AppColors {
   memoBackground: string;
 }
 
+export interface AppFontSize {
+  xs: number;   // 12 — バーチャートラベル等の極小テキスト
+  sm: number;   // 14 — サブラベル・説明文
+  md: number;   // 16 — 本文・デッキ名等
+  lg: number;   // 18 — セクションタイトル・モーダルタイトル
+  xl: number;   // 20 — 大見出し
+  xxl: number;  // 26 — 統計数値
+}
+
+const BASE_FONT_SIZE: AppFontSize = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20, xxl: 26 };
+
 export interface AppTheme {
   dark: boolean;
   colors: AppColors;
   fontScale: number;
+  fontSize: AppFontSize;
 }
 
 export const lightTheme: Omit<AppTheme, 'fontScale'> = {
@@ -77,5 +89,17 @@ export function useTheme(): AppTheme {
   const fontSizePreference = useThemeStore((s) => s.fontSizePreference);
 
   const base = preference === 'light' ? lightTheme : preference === 'dark' ? darkTheme : (systemScheme === 'dark' ? darkTheme : lightTheme);
-  return { ...base, fontScale: FONT_SCALE[fontSizePreference] };
+  const scale = FONT_SCALE[fontSizePreference];
+  return {
+    ...base,
+    fontScale: scale,
+    fontSize: {
+      xs:  Math.round(BASE_FONT_SIZE.xs  * scale),
+      sm:  Math.round(BASE_FONT_SIZE.sm  * scale),
+      md:  Math.round(BASE_FONT_SIZE.md  * scale),
+      lg:  Math.round(BASE_FONT_SIZE.lg  * scale),
+      xl:  Math.round(BASE_FONT_SIZE.xl  * scale),
+      xxl: Math.round(BASE_FONT_SIZE.xxl * scale),
+    },
+  };
 }

@@ -30,7 +30,6 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   const pendingFocusRef = useRef(false);
   const prevCollapsedRef = useRef(collapsed);
   const theme = useTheme();
-  const fs = (size: number) => Math.round(size * theme.fontScale);
   const isEmpty = block.content.trim() === '';
 
   useEffect(() => {
@@ -65,17 +64,17 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }
 
   const markdownStyles = useMemo(() => ({
-    body: { fontSize: fs(15), color: theme.colors.text, lineHeight: fs(22) },
-    heading1: { fontSize: fs(22), fontWeight: '700' as const, color: theme.colors.text },
-    heading2: { fontSize: fs(18), fontWeight: '700' as const, color: theme.colors.text },
+    body: { fontSize: theme.fontSize.md, color: theme.colors.text, lineHeight: theme.fontSize.md * 1.5 },
+    heading1: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text },
+    heading2: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text },
     code_inline: {
       backgroundColor: theme.colors.background,
       fontFamily: 'monospace',
-      fontSize: fs(13),
+      fontSize: theme.fontSize.sm,
       color: theme.colors.danger,
     },
     fence: { backgroundColor: theme.colors.background, borderRadius: 6, padding: 12 },
-    code_block: { fontFamily: 'monospace', fontSize: fs(13), color: theme.colors.text },
+    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text },
     link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
@@ -97,13 +96,13 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           borderBottomColor: theme.colors.border,
         }}
       >
-        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]}>T</Text>
+        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>T</Text>
       </BlockItemHeader>
 
       {collapsed ? (
         <Pressable onPress={handleCollapsedPress}>
           <Text
-            style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}
+            style={[styles.collapsedPreview, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}
             numberOfLines={2}
           >
             {block.content || t('card.emptyTextBlock')}
@@ -114,13 +113,13 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           {block.content.trim() ? (
             <Markdown markdownit={markdownItLinkify} style={markdownStyles}>{block.content}</Markdown>
           ) : (
-            <Text style={[styles.placeholder, { color: theme.colors.textTertiary }]}>{t('card.emptyTextBlock')}</Text>
+            <Text style={[styles.placeholder, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>{t('card.emptyTextBlock')}</Text>
           )}
         </View>
       ) : (
         <TextInput
           ref={inputRef}
-          style={[styles.input, { color: theme.colors.text, fontSize: fs(15) }]}
+          style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
           value={block.content}
           onChangeText={onChange}
           multiline
@@ -142,20 +141,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  typeLabel: { fontSize: 12, fontWeight: '700' },
+  typeLabel: { fontWeight: '700' },
   input: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 15,
     minHeight: 80,
     lineHeight: 22,
   },
   preview: { paddingHorizontal: 14, paddingVertical: 12 },
-  placeholder: { fontSize: 14, fontStyle: 'italic' },
+  placeholder: { fontStyle: 'italic' },
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 13,
     lineHeight: 20,
   },
 });

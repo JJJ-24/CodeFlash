@@ -71,14 +71,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         style={{ backgroundColor: theme.dark ? '#333333' : '#2D2D2D' }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-          <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
-          <Text style={styles.langChevron}>▾</Text>
+          <Text style={[styles.langText, { fontSize: theme.fontSize.md }]}>{LANG_LABELS[block.language] ?? block.language}</Text>
+          <Text style={[styles.langChevron, { fontSize: theme.fontSize.xs }]}>▾</Text>
         </Pressable>
 
         <View style={styles.headerRight}>
           {EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
-              <Text style={styles.execLabel}>{t('code.run')}</Text>
+              <Text style={[styles.execLabel, { fontSize: theme.fontSize.sm }]}>{t('code.run')}</Text>
               <Switch
                 value={block.executable}
                 onValueChange={(v) => onChange({ executable: v })}
@@ -97,7 +97,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             >
               {isRunning
                 ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={styles.runBtnText}>{'▶ ' + t('code.run')}</Text>
+                : <Text style={[styles.runBtnText, { fontSize: theme.fontSize.md }]}>{'▶ ' + t('code.run')}</Text>
               }
             </TouchableOpacity>
           )}
@@ -106,7 +106,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
       {/* コード入力エリア */}
       {collapsed ? (
-        <Text style={styles.collapsedPreview} numberOfLines={2}>
+        <Text style={[styles.collapsedPreview, { fontSize: theme.fontSize.sm }]} numberOfLines={2}>
           {block.content || t('card.emptyCodeBlock')}
         </Text>
       ) : (
@@ -119,7 +119,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <TextInput
-                  style={styles.codeInput}
+                  style={[styles.codeInput, { fontSize: theme.fontSize.md }]}
                   value={block.content}
                   onChangeText={(v) =>
                     onChange({
@@ -159,7 +159,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       <Modal visible={langModalVisible} transparent animationType="fade">
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
           <View style={[styles.langModal, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.langModalTitle, { color: theme.colors.text }]}>{t('editor.selectLanguage')}</Text>
+            <Text style={[styles.langModalTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('editor.selectLanguage')}</Text>
             <ScrollView>
               {LANGUAGES.map((lang) => (
                 <TouchableOpacity
@@ -178,7 +178,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   <Text
                     style={[
                       styles.langOptionText,
-                      { color: theme.colors.textSecondary },
+                      { color: theme.colors.textSecondary, fontSize: theme.fontSize.md },
                       block.language === lang && { color: theme.colors.primary, fontWeight: '600' },
                     ]}
                   >
@@ -202,10 +202,10 @@ const styles = StyleSheet.create({
   },
   containerFocused: { borderColor: '#64B5F6' },
   langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  langText: { fontSize: 14, color: '#9CDCFE', fontWeight: '600' },
-  langChevron: { fontSize: 12, color: '#9CDCFE' },
+  langText: { color: '#9CDCFE', fontWeight: '600' },
+  langChevron: { color: '#9CDCFE' },
   headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-  execLabel: { fontSize: 13, color: '#9E9E9E' },
+  execLabel: { color: '#9E9E9E' },
   execSwitch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] },
   runBtn: {
     backgroundColor: '#1976D2',
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   runBtnDisabled: { backgroundColor: '#555' },
-  runBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  runBtnText: { color: '#FFF', fontWeight: '600' },
   spinner: { marginHorizontal: 4 },
   codeArea: {
     position: 'relative',
@@ -233,7 +233,6 @@ const styles = StyleSheet.create({
   codeInput: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 14,
     color: '#D4D4D4',
     fontFamily: 'monospace',
     minHeight: 100,
@@ -255,17 +254,15 @@ const styles = StyleSheet.create({
     maxHeight: 400,
   },
   langModalTitle: {
-    fontSize: 14,
     fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
   },
   langOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
-  langOptionText: { fontSize: 15 },
+  langOptionText: {},
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 13,
     lineHeight: 20,
     color: '#9E9E9E',
     fontFamily: 'monospace',

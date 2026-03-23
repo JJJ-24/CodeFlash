@@ -62,10 +62,10 @@ export default function TagsScreen() {
       {tags.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
           <Ionicons name="pricetags-outline" size={56} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
             {t('tag.empty')}
           </Text>
-          <Text style={[styles.emptySub, { color: theme.colors.textTertiary }]}>
+          <Text style={[styles.emptySub, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
             {t('tag.emptySub')}
           </Text>
         </View>
@@ -80,7 +80,7 @@ export default function TagsScreen() {
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
           ListFooterComponent={isAtLimit ? (
-            <Text style={[styles.limitMsg, { color: theme.colors.textTertiary }]}>
+            <Text style={[styles.limitMsg, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
               {t('tag.limitReached', { count: TAG_LIMIT })}
             </Text>
           ) : null}
@@ -93,8 +93,8 @@ export default function TagsScreen() {
               >
                 <View style={[styles.colorDot, { backgroundColor: item.color }]} />
                 <View style={styles.tagInfo}>
-                  <Text style={[styles.tagName, { color: theme.colors.text }]}>{item.name}</Text>
-                  <Text style={[styles.tagCount, { color: theme.colors.textTertiary }]}>
+                  <Text style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                  <Text style={[styles.tagCount, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>
                     {t('tag.cards', { count: item.cardCount })}
                   </Text>
                 </View>
@@ -139,12 +139,12 @@ const styles = StyleSheet.create({
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
   tagInfo: { flex: 1, gap: 2 },
-  tagName: { fontSize: 16, fontWeight: '500' },
-  tagCount: { fontSize: 12 },
+  tagName: { fontWeight: '500' },
+  tagCount: {},
   iconBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyText: { fontSize: 18, fontWeight: '600' },
-  emptySub: { fontSize: 14 },
+  emptyText: { fontWeight: '600' },
+  emptySub: {},
   fab: {
     position: 'absolute',
     right: 20,
@@ -162,5 +162,5 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   fabDisabled: { opacity: 0.4 },
-  limitMsg: { textAlign: 'center', fontSize: 13, paddingVertical: 12 },
+  limitMsg: { textAlign: 'center', paddingVertical: 12 },
 });

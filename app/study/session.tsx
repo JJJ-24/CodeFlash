@@ -356,8 +356,8 @@ export default function StudySessionScreen() {
         />
         <View style={[styles.completeScreen, { backgroundColor: theme.colors.background }]}>
           <Ionicons name="checkmark-circle" size={80} color="#43A047" />
-          <Text style={[styles.completeTitle, { color: theme.colors.text }]}>{t('study.complete')}</Text>
-          <Text style={[styles.completeCount, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.completeTitle, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{t('study.complete')}</Text>
+          <Text style={[styles.completeCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
             {t('study.reviewedCount', { count: result.reviewed })}
           </Text>
           <TouchableOpacity
@@ -365,7 +365,7 @@ export default function StudySessionScreen() {
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <Text style={[styles.backBtnText, { color: theme.colors.primaryText }]}>{t('common.ok')}</Text>
+            <Text style={[styles.backBtnText, { color: theme.colors.primaryText, fontSize: theme.fontSize.lg }]}>{t('common.ok')}</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -471,7 +471,7 @@ export default function StudySessionScreen() {
                               size={16}
                               color={theme.colors.textTertiary}
                             />
-                            <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+                            <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.lg }]}>
                               {showMemo ? t('study.hideMemo') : t('study.showMemo')}
                             </Text>
                           </View>
@@ -500,7 +500,7 @@ export default function StudySessionScreen() {
                     disabled={grading}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.gradeBtnText, { color }]}>{t(labelKey)}</Text>
+                    <Text style={[styles.gradeBtnText, { color, fontSize: theme.fontSize.sm }]}>{t(labelKey)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -518,7 +518,7 @@ export default function StudySessionScreen() {
           <Pressable style={styles.modalOverlay} onPress={() => setShowLinksModal(false)}>
             <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('study.linksTitle')}</Text>
+                <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
                 <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
                   <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
                 </Pressable>
@@ -532,9 +532,9 @@ export default function StudySessionScreen() {
                     onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.linkText, { color: theme.colors.text }]} numberOfLines={1}>{item.text}</Text>
+                      <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>{item.text}</Text>
                       {item.text !== item.url && (
-                        <Text style={[styles.linkUrl, { color: theme.colors.textTertiary }]} numberOfLines={1}>{item.url}</Text>
+                        <Text style={[styles.linkUrl, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1}>{item.url}</Text>
                       )}
                     </View>
                     <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
@@ -598,9 +598,9 @@ export default function StudySessionScreen() {
         </View>
         <View style={styles.progressRow}>
           <View style={[styles.reviewedBadge, { backgroundColor: theme.colors.primary }]}>
-            <Text style={styles.reviewedBadgeText}>{result.reviewed}</Text>
+            <Text style={[styles.reviewedBadgeText, { fontSize: theme.fontSize.xs }]}>{result.reviewed}</Text>
           </View>
-          <Text style={[styles.progressText, { color: theme.colors.textTertiary }]}>
+          <Text style={[styles.progressText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>
             {t('study.progress', { current: currentIndex + 1, total: result.totalCards })}
           </Text>
         </View>
@@ -687,7 +687,7 @@ export default function StudySessionScreen() {
               onPress={() => setIsFlipped(true)}
             >
               <Ionicons name="sync-outline" size={18} color={theme.colors.textTertiary} />
-              <Text style={[styles.flipHintText, { color: theme.colors.textTertiary }]}>{t('study.tapToFlip')}</Text>
+              <Text style={[styles.flipHintText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>{t('study.tapToFlip')}</Text>
             </Pressable>
           ) : (
             <View style={styles.gradeRow}>
@@ -699,7 +699,7 @@ export default function StudySessionScreen() {
                   disabled={grading}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.gradeBtnText, { color }]}>{t(labelKey)}</Text>
+                  <Text style={[styles.gradeBtnText, { color, fontSize: theme.fontSize.sm }]}>{t(labelKey)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -717,7 +717,7 @@ export default function StudySessionScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowLinksModal(false)}>
           <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('study.linksTitle')}</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
               <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
                 <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
               </Pressable>
@@ -772,20 +772,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reviewedBadgeText: {
-    fontSize: 12,
     fontWeight: '700',
     color: '#FFF',
   },
   progressText: {
-    fontSize: 12,
     textAlign: 'right',
   },
   cardArea: { flex: 1, paddingHorizontal: 20, paddingVertical: 12 },
   faceContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 8 },
-  faceLabel: { fontSize: 11, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  faceLabel: { fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   memoSection: { marginTop: 20, gap: 8 },
   memoToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
-  memoToggleText: { fontSize: 16 },
+  memoToggleText: {},
   memoContent: {
     borderRadius: 8,
     padding: 12,
@@ -804,7 +802,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
   },
-  flipHintText: { fontSize: 15 },
+  flipHintText: {},
   gradeRow: { flexDirection: 'row', gap: 8 },
   gradeBtn: {
     flex: 1,
@@ -814,7 +812,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gradeBtnDisabled: { opacity: 0.4 },
-  gradeBtnText: { fontSize: 13, fontWeight: '700' },
+  gradeBtnText: { fontWeight: '700' },
   completeScreen: {
     flex: 1,
     alignItems: 'center',
@@ -822,15 +820,15 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 32,
   },
-  completeTitle: { fontSize: 24, fontWeight: '700' },
-  completeCount: { fontSize: 16 },
+  completeTitle: { fontWeight: '700' },
+  completeCount: {},
   backBtn: {
     marginTop: 8,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 40,
   },
-  backBtnText: { fontSize: 16, fontWeight: '700' },
+  backBtnText: { fontWeight: '700' },
   fullscreenBtn: {
     position: 'absolute',
     top: 8,
@@ -880,7 +878,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   modalTitle: {
-    fontSize: 17,
     fontWeight: '700',
   },
   modalCloseBtn: {
@@ -895,11 +892,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   linkText: {
-    fontSize: 15,
     fontWeight: '500',
   },
   linkUrl: {
-    fontSize: 12,
     marginTop: 2,
   },
 });

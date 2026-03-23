@@ -104,14 +104,14 @@ export default function EditCardScreen() {
           title: t('card.edit'),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.textSecondary }}>
+              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.textSecondary }}>
                 {t('common.cancel')}
               </Text>
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }}>
+              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }}>
                 {t('card.save')}
               </Text>
             </Pressable>
@@ -133,10 +133,10 @@ export default function EditCardScreen() {
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
-            <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('common.delete')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
-            <Text style={styles.actionBtnTextLight}>{t('card.save')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('card.save')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -160,5 +160,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
 });

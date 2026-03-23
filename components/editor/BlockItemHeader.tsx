@@ -46,7 +46,7 @@ export function BlockItemHeader({ children, onDragStart, onDelete, collapsed, st
       )}
       {!collapsed && (
         <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
-          <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
+          <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle, fontSize: theme.fontSize.lg }]}>✕</Text>
         </Pressable>
       )}
     </View>
@@ -63,5 +63,5 @@ const styles = StyleSheet.create({
   },
   dragArea: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   deleteBtn: { padding: 6 },
-  deleteBtnText: { fontSize: 16 },
+  deleteBtnText: {},
 });

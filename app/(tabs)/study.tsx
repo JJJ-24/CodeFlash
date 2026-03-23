@@ -199,15 +199,15 @@ export default function StudyScreen() {
                 ]}
                 onPress={() => setActiveFilter(block.key)}
               >
-                <Text style={[styles.summaryValue, { color: block.color }]}>{block.value}</Text>
-                <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.summaryValue, { color: block.color, fontSize: theme.fontSize.xxl }]}>{block.value}</Text>
+                <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
                   {block.label}
                 </Text>
               </Pressable>
             );
           })}
         </View>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
           {t('study.listTitle')}
         </Text>
       </View>
@@ -226,7 +226,7 @@ export default function StudyScreen() {
             <Text
               style={[
                 styles.tabText,
-                { color: activeTab === tab ? theme.colors.primary : theme.colors.textTertiary },
+                { color: activeTab === tab ? theme.colors.primary : theme.colors.textTertiary, fontSize: theme.fontSize.md },
               ]}
             >
               {t(tab === 'decks' ? 'study.selectDeck' : 'study.selectTag')}
@@ -240,7 +240,7 @@ export default function StudyScreen() {
         decks.length === 0 ? (
           <View style={styles.center}>
             <Ionicons name="book-outline" size={56} color={theme.colors.iconSubtle} />
-            <Text style={[styles.emptyText, { color: theme.colors.textTertiary }]}>
+            <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
               {t('study.noDecks')}
             </Text>
           </View>
@@ -267,16 +267,16 @@ export default function StudyScreen() {
                   }}
                 >
                   <View style={styles.deckInfo}>
-                    <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
+                    <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
                     {!subTextActive && (
-                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }]}>
+                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
                         {subText}
                       </Text>
                     )}
                   </View>
                   {count > 0 && (
                     <View style={[styles.dueChip, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={styles.dueChipText}>{count}</Text>
+                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]}>{count}</Text>
                     </View>
                   )}
                   <Ionicons
@@ -296,7 +296,7 @@ export default function StudyScreen() {
         tags.length === 0 ? (
           <View style={styles.center}>
             <Ionicons name="pricetag-outline" size={56} color={theme.colors.iconSubtle} />
-            <Text style={[styles.emptyText, { color: theme.colors.textTertiary }]}>
+            <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
               {t('study.noTags')}
             </Text>
           </View>
@@ -324,16 +324,16 @@ export default function StudyScreen() {
                 >
                   <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
                   <View style={styles.deckInfo}>
-                    <Text style={[styles.deckName, { color: theme.colors.text }]}>{item.name}</Text>
+                    <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
                     {!subTextActive && (
-                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary }]}>
+                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
                         {subText}
                       </Text>
                     )}
                   </View>
                   {count > 0 && (
                     <View style={[styles.dueChip, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={styles.dueChipText}>{count}</Text>
+                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]}>{count}</Text>
                     </View>
                   )}
                   <Ionicons
@@ -354,7 +354,7 @@ export default function StudyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  emptyText: { fontSize: 16 },
+  emptyText: {},
 
   filterSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 24 },
   summaryRow: { flexDirection: 'row', gap: 8 },
@@ -369,13 +369,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  summaryValue: { fontSize: 26, fontWeight: '700' },
-  summaryLabel: { fontSize: 12, marginTop: 2, textAlign: 'center' },
-  sectionTitle: { fontSize: 16, fontWeight: '700' },
+  summaryValue: { fontWeight: '700' },
+  summaryLabel: { marginTop: 2, textAlign: 'center' },
+  sectionTitle: { fontWeight: '700' },
 
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  tabText: { fontSize: 14, fontWeight: '600' },
+  tabText: { fontWeight: '600' },
   list: { paddingHorizontal: 16 },
   separator: { height: 1 },
   deckRow: {
@@ -387,8 +387,8 @@ const styles = StyleSheet.create({
   },
   deckRowDimmed: { opacity: 0.5 },
   deckInfo: { flex: 1, gap: 3 },
-  deckName: { fontSize: 16, fontWeight: '600' },
-  dueLabel: { fontSize: 13 },
+  deckName: { fontWeight: '600' },
+  dueLabel: {},
   dueChip: {
     backgroundColor: '#1976D2',
     borderRadius: 12,
@@ -397,6 +397,6 @@ const styles = StyleSheet.create({
     minWidth: 28,
     alignItems: 'center',
   },
-  dueChipText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  dueChipText: { fontWeight: '700', color: '#FFF' },
   tagColorDot: { width: 16, height: 16, borderRadius: 8 },
 });

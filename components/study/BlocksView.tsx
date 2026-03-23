@@ -31,6 +31,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   const theme = useTheme();
   const containerYRef = useRef(0);
   const blockYPositions = useRef<Record<number, number>>({});
+  const blockHeights = useRef<Record<number, number>>({});
   // 現在編集中のブロック index（blocks 配列上の i）を管理
   const editingBlockIdxRef = useRef<number | null>(null);
   const [exitEditTriggers, setExitEditTriggers] = useState<Record<number, number>>({});
@@ -123,7 +124,10 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
           return (
             <View
               key={i}
-              onLayout={(e) => { blockYPositions.current[i] = e.nativeEvent.layout.y; }}
+              onLayout={(e) => {
+                blockYPositions.current[i] = e.nativeEvent.layout.y;
+                blockHeights.current[i] = e.nativeEvent.layout.height;
+              }}
             >
               <CodeRunnerView
                 block={block as CodeBlock}
@@ -140,11 +144,14 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}
                 isSelected={codeBlockIndexMap[i] === selectedCodeBlockIdx}
                 onRunStart={() => {
-                  if (scrollRef?.current) {
-                    const y = containerYRef.current + (blockYPositions.current[i] ?? 0);
-                    scrollRef.current.scrollTo({ y, animated: true });
-                  }
                   onCodeRunStart?.();
+                  if (!scrollRef?.current) return;
+                  // 出力レイアウト更新後（300ms）にブロック下端が見える位置へスクロール
+                  setTimeout(() => {
+                    const y = containerYRef.current + (blockYPositions.current[i] ?? 0);
+                    const h = blockHeights.current[i] ?? 0;
+                    scrollRef.current?.scrollTo({ y: Math.max(0, y + h - 300), animated: true });
+                  }, 300);
                 }}
               />
             </View>

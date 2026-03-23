@@ -257,7 +257,7 @@ export default function StudySessionScreen() {
 
     if (key === ' ') {
       setIsFlipped((v) => !v);
-    } else if (key === 'Tab') {
+    } else if (key === 't' || key === 'T') {
       if (codeCount > 0) {
         setEditTrigger(0);
         setRunTrigger(0);

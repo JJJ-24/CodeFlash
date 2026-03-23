@@ -25,7 +25,7 @@ const SHORTCUTS = [
   { key: 'K',     descKey: 'settings.shortcutPrev' },
   { key: 'M',     descKey: 'settings.shortcutMemo' },
   { key: 'F',     descKey: 'settings.shortcutFullscreen' },
-  { key: 'Tab',   descKey: 'settings.shortcutSelectBlock' },
+  { key: 'T',     descKey: 'settings.shortcutSelectBlock' },
   { key: 'R',     descKey: 'settings.shortcutRun' },
   { key: 'E',     descKey: 'settings.shortcutEdit' },
   { key: 'B',     descKey: 'settings.shortcutBack' },

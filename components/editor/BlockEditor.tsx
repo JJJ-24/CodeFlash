@@ -1,5 +1,6 @@
 import { type Dispatch, type Ref, type SetStateAction, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
+  findNodeHandle,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -202,9 +203,11 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
               onRunStart={() => {
                 const blockView = blockViewRefs.current[block._key];
                 if (!blockView || !scrollRef.current) return;
+                const scrollNode = findNodeHandle(scrollRef.current);
+                if (!scrollNode) return;
                 // measureLayout で scrollRef 基準の正確な座標を取得
                 blockView.measureLayout(
-                  scrollRef.current,
+                  scrollNode,
                   (_x, y, _w, h) => {
                     // ブロック下端が画面内に収まるようにスクロール（300px 余白）
                     scrollRef.current?.scrollTo({

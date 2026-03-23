@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { deleteImagesInBlocks } from '@/lib/image';
 import type { Block, Card } from '@/types';
-import { generateId, todayISO, todayLocalRange } from './utils';
+import { generateId, localDateStr, todayLocalRange } from './utils';
 
 type RawCard = {
   id: string;
@@ -160,23 +160,33 @@ export async function getTodayCreatedCardIdsByDeckId(db: SQLiteDatabase, deckId:
   return rows.map(r => r.id);
 }
 
-/** 過去7日間の日別新規カード作成数 */
+/** 過去7日間の日別新規カード作成数（ローカル日付ベース） */
 export async function getPast7DaysCreatedCount(
   db: SQLiteDatabase
 ): Promise<{ date: string; count: number }[]> {
-  const today = todayISO();
-  const start = new Date();
-  start.setDate(start.getDate() - 6);
-  const startISO = start.toISOString().slice(0, 10);
+  // ローカル7日前の0時〜翌日0時をUTC ISOで範囲指定
+  const startLocal = new Date();
+  startLocal.setDate(startLocal.getDate() - 6);
+  startLocal.setHours(0, 0, 0, 0);
+  const endLocal = new Date();
+  endLocal.setDate(endLocal.getDate() + 1);
+  endLocal.setHours(0, 0, 0, 0);
 
-  return db.getAllAsync<{ date: string; count: number }>(
-    `SELECT substr(createdAt, 1, 10) as date, COUNT(*) as count
-     FROM cards
-     WHERE substr(createdAt, 1, 10) BETWEEN ? AND ?
-     GROUP BY date
-     ORDER BY date ASC`,
-    [startISO, today]
+  const rows = await db.getAllAsync<{ createdAt: string }>(
+    `SELECT createdAt FROM cards WHERE createdAt >= ? AND createdAt < ?`,
+    [startLocal.toISOString(), endLocal.toISOString()]
   );
+
+  // ローカル日付でグループ化
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const d = localDateStr(new Date(row.createdAt));
+    map.set(d, (map.get(d) ?? 0) + 1);
+  }
+
+  return Array.from(map.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string): Promise<void> {

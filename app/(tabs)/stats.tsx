@@ -208,12 +208,20 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
   );
 }
 
+/** Date をローカル YYYY-MM-DD 文字列に変換 */
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /** 過去7日分を昇順で埋める（欠落日は count: 0、今日が最後） */
 function fillPast7Days(rows: ScheduleItem[]): ScheduleItem[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = toLocalDateStr(d);
     const found = rows.find((r) => r.date === dateStr);
     return { date: dateStr, count: found?.count ?? 0 };
   });
@@ -279,7 +287,7 @@ export default function StatsScreen() {
         const filledSchedule: ScheduleItem[] = Array.from({ length: 7 }, (_, i) => {
           const d = new Date();
           d.setDate(d.getDate() + i);
-          const dateStr = d.toISOString().slice(0, 10);
+          const dateStr = toLocalDateStr(d);
           const found = rawSchedule.find((r) => r.date === dateStr);
           return { date: dateStr, count: found?.count ?? 0 };
         });

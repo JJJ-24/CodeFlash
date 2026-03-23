@@ -28,3 +28,11 @@ export function todayLocalRange(): { start: string; end: string } {
   const to = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
   return { start: from.toISOString(), end: to.toISOString() };
 }
+
+/** Date オブジェクトをローカル日付の YYYY-MM-DD 文字列に変換する */
+export function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}

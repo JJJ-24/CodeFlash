@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Review } from '@/types';
-import { todayISO, todayLocalRange } from './utils';
+import { localDateStr, todayISO, todayLocalRange } from './utils';
 
 /** タグIDをキー、due 枚数を値とするマップを一括取得 */
 export async function getDueCountPerTag(
@@ -342,23 +342,34 @@ export async function getDeckMasteryList(
   );
 }
 
-/** 過去7日間の日別学習済みカード数 */
+/** 過去7日間の日別学習済みカード数（ローカル日付ベース） */
 export async function getPast7DaysReviewedCount(
   db: SQLiteDatabase
 ): Promise<{ date: string; count: number }[]> {
-  const today = todayISO();
-  const start = new Date();
-  start.setDate(start.getDate() - 6);
-  const startISO = start.toISOString().slice(0, 10);
+  // ローカル7日前の0時〜翌日0時をUTC ISOで範囲指定
+  const startLocal = new Date();
+  startLocal.setDate(startLocal.getDate() - 6);
+  startLocal.setHours(0, 0, 0, 0);
+  const endLocal = new Date();
+  endLocal.setDate(endLocal.getDate() + 1);
+  endLocal.setHours(0, 0, 0, 0);
 
-  return db.getAllAsync<{ date: string; count: number }>(
-    `SELECT reviewedDate as date, COUNT(*) as count
-     FROM review_logs
-     WHERE reviewedDate BETWEEN ? AND ?
-     GROUP BY reviewedDate
-     ORDER BY reviewedDate ASC`,
-    [startISO, today]
+  // reviews.lastReviewDate (UTC ISO) からローカル日付でグループ化
+  // cardId でユニークなので1カード1日1カウント
+  const rows = await db.getAllAsync<{ lastReviewDate: string }>(
+    `SELECT lastReviewDate FROM reviews WHERE lastReviewDate >= ? AND lastReviewDate < ?`,
+    [startLocal.toISOString(), endLocal.toISOString()]
   );
+
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const d = localDateStr(new Date(row.lastReviewDate));
+    map.set(d, (map.get(d) ?? 0) + 1);
+  }
+
+  return Array.from(map.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** 過去7日間の学習活動（学習あり=1、なし=0） */

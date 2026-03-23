@@ -92,11 +92,9 @@ export default function TagsScreen() {
                 onLongPress={drag}
               >
                 <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-                <View style={styles.tagInfo}>
-                  <Text style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
-                  <Text style={[styles.tagCount, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>
-                    {t('tag.cards', { count: item.cardCount })}
-                  </Text>
+                <Text style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
+                  <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{item.cardCount}</Text>
                 </View>
                 <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.iconBtn}>
                   <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
@@ -138,9 +136,15 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
-  tagInfo: { flex: 1, gap: 2 },
-  tagName: { fontWeight: '500' },
-  tagCount: {},
+  tagName: { flex: 1, fontWeight: '500' },
+  countBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  countBadgeText: { fontWeight: '700', color: '#FFF' },
   iconBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { fontWeight: '600' },

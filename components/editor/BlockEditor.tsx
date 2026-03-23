@@ -11,7 +11,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  findNodeHandle,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -102,7 +101,8 @@ export function BlockEditor({
   const { t } = useTranslation();
   const theme = useTheme();
   const scrollRef = useRef<any>(null);
-  const blockViewRefs = useRef<Record<string, View | null>>({});
+  const flatListY = useRef(0);
+  const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
 
   const [activeTab, setActiveTab] = useState<Tab>("front");
   const [isPreview, setIsPreview] = useState(false);
@@ -223,8 +223,11 @@ export function BlockEditor({
         return (
           <ScaleDecorator activeScale={1.02}>
             <View
-              ref={(r) => {
-                blockViewRefs.current[block._key] = r;
+              onLayout={(e) => {
+                blockPositions.current[block._key] = {
+                  y: e.nativeEvent.layout.y,
+                  h: e.nativeEvent.layout.height,
+                };
               }}
             >
               <CodeBlockItem
@@ -233,22 +236,15 @@ export function BlockEditor({
                 onChange={(patch) => updateBlock(activeTab, block._key, patch)}
                 onDelete={() => deleteBlock(activeTab, block._key)}
                 onRunStart={() => {
-                  const blockView = blockViewRefs.current[block._key];
-                  if (!blockView || !scrollRef.current) return;
-                  const scrollNode = findNodeHandle(scrollRef.current);
-                  if (!scrollNode) return;
-                  blockView.measureLayout(
-                    scrollNode,
-                    (_x, y, _w, h) => {
-                      scrollRef.current?.scrollTo({
-                        y: Math.max(0, y + h - 300),
-                        animated: true,
-                      });
-                    },
-                    () => {
-                      scrollRef.current?.scrollToEnd({ animated: true });
-                    },
-                  );
+                  // 出力レイアウト更新後（300ms）にブロック下端が見える位置へスクロール
+                  setTimeout(() => {
+                    const pos = blockPositions.current[block._key];
+                    if (!pos || !scrollRef.current) return;
+                    scrollRef.current?.scrollTo({
+                      y: Math.max(0, flatListY.current + pos.y + pos.h - 300),
+                      animated: true,
+                    });
+                  }, 300);
                 }}
                 onDragStart={sortDrag}
                 collapsed={collapsed}
@@ -369,6 +365,7 @@ export function BlockEditor({
           activationDistance={isSortMode ? 2 : 10000}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           keyboardShouldPersistTaps="handled"
+          onLayout={(e) => { flatListY.current = e.nativeEvent.layout.y; }}
         />
 
         {/* ブロック追加ボタン */}

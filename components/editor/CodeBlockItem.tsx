@@ -61,14 +61,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused, isRunning && styles.containerRunning]}>
       <BlockItemHeader
         onDragStart={onDragStart}
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}
         isLast={isLast}
-        style={{ backgroundColor: theme.dark ? '#333333' : '#2D2D2D' }}
+        style={{ backgroundColor: isRunning ? '#1E5024' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
           <Text style={[styles.langText, { fontSize: theme.fontSize.md }]}>{LANG_LABELS[block.language] ?? block.language}</Text>
@@ -201,6 +201,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   containerFocused: { borderColor: '#64B5F6' },
+  containerRunning: { borderColor: '#43A047', borderWidth: 2 },
   langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   langText: { color: '#9CDCFE', fontWeight: '600' },
   langChevron: { color: '#9CDCFE' },

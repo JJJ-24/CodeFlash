@@ -289,7 +289,7 @@ export default function StatsScreen() {
           d.setDate(d.getDate() + i);
           const dateStr = toLocalDateStr(d);
           const found = rawSchedule.find((r) => r.date === dateStr);
-          return { date: dateStr, count: found?.count ?? 0 };
+          return { date: dateStr, count: i === 0 ? due : (found?.count ?? 0) };
         });
         setSchedule(filledSchedule);
 

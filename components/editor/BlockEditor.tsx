@@ -296,6 +296,7 @@ export function BlockEditor({ initialData, onSave, onFrontEmptyChange, saving, r
           onDragEnd={handleDragEnd}
           activationDistance={isSortMode ? 2 : 10000}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          keyboardShouldPersistTaps="handled"
         />
 
         {/* ブロック追加ボタン */}

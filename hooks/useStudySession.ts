@@ -1,13 +1,15 @@
 import { useCallback, useRef, useState } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 
-import { getCardById, getTodayCreatedCardIdsByDeckId } from '@/lib/database/cards';
+import { getCardById, getTodayCreatedCardIdsByDeckId, getTodayCreatedCardIdsByTagId } from '@/lib/database/cards';
 import {
   getAllCardIdsByDeckId,
+  getAllCardIdsByTagId,
   getDueCardIdsByDeckId,
   getDueCardIdsByTagId,
   getReviewByCardId,
   getTodayReviewedCardIdsByDeckId,
+  getTodayReviewedCardIdsByTagId,
   saveReview,
 } from '@/lib/database/reviews';
 import { calculateNextReview, INITIAL_REVIEW_STATE } from '@/lib/sm2';
@@ -48,7 +50,10 @@ export function useStudySession() {
           else if (filter === 'unlearned') cardIds = await getTodayCreatedCardIdsByDeckId(db, params.deckId);
           else                             cardIds = await getDueCardIdsByDeckId(db, params.deckId);
         } else if (params.tagId) {
-          cardIds = await getDueCardIdsByTagId(db, params.tagId);
+          if (filter === 'all')            cardIds = await getAllCardIdsByTagId(db, params.tagId);
+          else if (filter === 'today')     cardIds = await getTodayReviewedCardIdsByTagId(db, params.tagId);
+          else if (filter === 'unlearned') cardIds = await getTodayCreatedCardIdsByTagId(db, params.tagId);
+          else                             cardIds = await getDueCardIdsByTagId(db, params.tagId);
         }
 
         const cards = (

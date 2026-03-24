@@ -217,6 +217,38 @@ export async function getDueCardIdsByTagId(
   return rows.map((r) => r.id);
 }
 
+/** タグ別: 全カードのID（デッキ横断） */
+export async function getAllCardIdsByTagId(
+  db: SQLiteDatabase,
+  tagId: string
+): Promise<string[]> {
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT c.id FROM cards c
+     JOIN card_tags ct ON c.id = ct.cardId
+     WHERE ct.tagId = ?
+     ORDER BY c.sortOrder ASC`,
+    [tagId]
+  );
+  return rows.map((r) => r.id);
+}
+
+/** タグ別: 今日学習済みカードのID（デッキ横断） */
+export async function getTodayReviewedCardIdsByTagId(
+  db: SQLiteDatabase,
+  tagId: string
+): Promise<string[]> {
+  const { start, end } = todayLocalRange();
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT c.id FROM cards c
+     JOIN card_tags ct ON c.id = ct.cardId
+     JOIN reviews r ON c.id = r.cardId
+     WHERE ct.tagId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ?
+     ORDER BY c.sortOrder ASC`,
+    [tagId, start, end]
+  );
+  return rows.map((r) => r.id);
+}
+
 /** 今日学習したカード数（lastReviewDate が今日のもの） */
 export async function getTodayReviewedCount(db: SQLiteDatabase): Promise<number> {
   const { start, end } = todayLocalRange();

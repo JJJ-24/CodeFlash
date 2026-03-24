@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -67,16 +67,21 @@ export default function StudyScreen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('decks');
   const [activeFilter, setActiveFilter] = useState<Filter>('review');
+  const fromSessionRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      const filterMap: Record<InitialFilterPreference, Filter | null> = {
-        all: 'all', learned: 'learned', review: 'review', new: 'new', none: null,
-      };
-      const initial = filterMap[initialFilterPreference];
-      if (initial !== null) setActiveFilter(initial);
+      if (!fromSessionRef.current) {
+        const filterMap: Record<InitialFilterPreference, Filter | null> = {
+          all: 'all', learned: 'learned', review: 'review', new: 'new', none: null,
+        };
+        const initial = filterMap[initialFilterPreference];
+        if (initial !== null) setActiveFilter(initial);
+      }
+      const isFromSession = fromSessionRef.current;
+      fromSessionRef.current = false;
       (async () => {
-        setLoading(true);
+        if (!isFromSession) setLoading(true);
         const [
           loadedDecks, deckCounts, loadedTags, tagCounts,
           todayDeck, todayTag,
@@ -263,6 +268,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
+                    fromSessionRef.current = true;
                     router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter] } });
                   }}
                 >
@@ -319,6 +325,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
+                    fromSessionRef.current = true;
                     router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter] } });
                   }}
                 >

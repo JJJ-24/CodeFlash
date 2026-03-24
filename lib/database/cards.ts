@@ -160,6 +160,19 @@ export async function getTodayCreatedCardIdsByDeckId(db: SQLiteDatabase, deckId:
   return rows.map(r => r.id);
 }
 
+/** 今日作成したカードID一覧（タグ横断） */
+export async function getTodayCreatedCardIdsByTagId(db: SQLiteDatabase, tagId: string): Promise<string[]> {
+  const { start, end } = todayLocalRange();
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT c.id FROM cards c
+     JOIN card_tags ct ON c.id = ct.cardId
+     WHERE ct.tagId = ? AND c.createdAt >= ? AND c.createdAt < ?
+     ORDER BY c.sortOrder ASC`,
+    [tagId, start, end]
+  );
+  return rows.map(r => r.id);
+}
+
 /** 過去7日間の日別新規カード作成数（ローカル日付ベース） */
 export async function getPast7DaysCreatedCount(
   db: SQLiteDatabase

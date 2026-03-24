@@ -31,6 +31,18 @@ const BAR_MAX_HEIGHT = 60;
 const EASE_MIN = 1.3;
 const EASE_MAX = 3.0;
 
+type MedalInfo = { name: 'trophy' | 'ribbon' | 'diamond'; color: string } | null;
+function getStreakMedal(streak: number): MedalInfo {
+  if (streak >= 365) return { name: 'diamond',  color: '#00BCD4' };
+  if (streak >= 300) return { name: 'trophy',   color: '#FFD700' };
+  if (streak >= 200) return { name: 'trophy',   color: '#C0C0C0' };
+  if (streak >= 100) return { name: 'trophy',   color: '#CD7F32' };
+  if (streak >= 30)  return { name: 'ribbon',   color: '#FFD700' };
+  if (streak >= 10)  return { name: 'ribbon',   color: '#C0C0C0' };
+  if (streak >= 3)   return { name: 'ribbon',   color: '#CD7F32' };
+  return null;
+}
+
 function masteryPercent(avgEase: number): number {
   return Math.round(((avgEase - EASE_MIN) / (EASE_MAX - EASE_MIN)) * 100);
 }
@@ -371,6 +383,7 @@ export default function StatsScreen() {
           <Text style={[styles.summaryValue, { color: '#FFF', fontSize: theme.fontSize.xxl }]}>
             {streak}
           </Text>
+          {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={theme.fontSize.xl} color={m.color} /> : null; })()}
           <Text style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]}>
             {t('stats.streak')}
           </Text>

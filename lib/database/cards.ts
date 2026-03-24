@@ -36,6 +36,17 @@ function toCard(raw: RawCard): Card {
   };
 }
 
+export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promise<Card[]> {
+  const rows = await db.getAllAsync<RawCard>(
+    `SELECT c.* FROM cards c
+     JOIN card_tags ct ON c.id = ct.cardId
+     WHERE ct.tagId = ?
+     ORDER BY c.sortOrder ASC`,
+    [tagId]
+  );
+  return rows.map(toCard);
+}
+
 export async function getCardsByDeckId(db: SQLiteDatabase, deckId: string): Promise<Card[]> {
   const rows = await db.getAllAsync<RawCard>(
     'SELECT * FROM cards WHERE deckId = ? ORDER BY sortOrder ASC',

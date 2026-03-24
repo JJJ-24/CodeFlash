@@ -83,6 +83,7 @@
     "noContent": "（内容なし）",
     "codeOnly": "（コードのみ）",
     "noText": "（テキストなし）",
+    "list": "カード一覧",
     "frontRequired": "表面は必ず入力してください",
     "imageBlock": "画像",
     "imageSelect": "画像を選択",

@@ -88,7 +88,7 @@ export default function TagsScreen() {
             <ScaleDecorator>
               <Pressable
                 style={[styles.tagItem, { backgroundColor: theme.colors.surface }]}
-                onPress={() => router.push(`/tags/${item.id}/edit`)}
+                onPress={() => router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } })}
                 onLongPress={drag}
               >
                 <View style={[styles.colorDot, { backgroundColor: item.color }]} />

@@ -83,6 +83,7 @@
     "noContent": "(no content)",
     "codeOnly": "(code only)",
     "noText": "(no text)",
+    "list": "Card List",
     "frontRequired": "Front side must not be empty",
     "imageBlock": "Image",
     "imageSelect": "Select Image",

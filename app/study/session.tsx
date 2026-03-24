@@ -26,7 +26,7 @@ import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
 import { useStudySession } from '@/hooks/useStudySession';
 import { useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
-import type { Block, TextBlock } from '@/types';
+import type { Block, CodeBlock, TextBlock } from '@/types';
 import { useSettingsStore } from '@/store/settings';
 
 type LinkItem = { text: string; url: string };
@@ -34,17 +34,24 @@ type LinkItem = { text: string; url: string };
 function extractLinks(blocks: Block[]): LinkItem[] {
   const links: LinkItem[] = [];
   const seen = new Set<string>();
+  const urlRe = /(?<!\()https?:\/\/[^\s)]+/g;
   for (const block of blocks) {
-    if (block.type !== 'text') continue;
-    const content = (block as TextBlock).content;
-    const mdRe = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
-    let m: RegExpExecArray | null;
-    while ((m = mdRe.exec(content)) !== null) {
-      if (!seen.has(m[2])) { seen.add(m[2]); links.push({ text: m[1], url: m[2] }); }
-    }
-    const urlRe = /(?<!\()https?:\/\/[^\s)]+/g;
-    while ((m = urlRe.exec(content)) !== null) {
-      if (!seen.has(m[0])) { seen.add(m[0]); links.push({ text: m[0], url: m[0] }); }
+    if (block.type === 'text') {
+      const content = (block as TextBlock).content;
+      const mdRe = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+      let m: RegExpExecArray | null;
+      while ((m = mdRe.exec(content)) !== null) {
+        if (!seen.has(m[2])) { seen.add(m[2]); links.push({ text: m[1], url: m[2] }); }
+      }
+      while ((m = urlRe.exec(content)) !== null) {
+        if (!seen.has(m[0])) { seen.add(m[0]); links.push({ text: m[0], url: m[0] }); }
+      }
+    } else if (block.type === 'code') {
+      const content = (block as CodeBlock).content;
+      let m: RegExpExecArray | null;
+      while ((m = urlRe.exec(content)) !== null) {
+        if (!seen.has(m[0])) { seen.add(m[0]); links.push({ text: m[0], url: m[0] }); }
+      }
     }
   }
   return links;
@@ -107,7 +114,7 @@ export default function StudySessionScreen() {
   );
 
   const cardLinks = useMemo(
-    () => extractLinks([...(currentCard?.frontContent ?? []), ...(currentCard?.backContent ?? [])]),
+    () => extractLinks([...(currentCard?.frontContent ?? []), ...(currentCard?.backContent ?? []), ...(currentCard?.memoContent ?? [])]),
     [currentCard]
   );
 

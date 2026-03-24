@@ -3,6 +3,8 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { ExportData } from './export';
 
+const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
+
 export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 'merge' | 'replace' = 'merge'): Promise<void> {
   const json = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' });
   const data: ExportData = JSON.parse(json);
@@ -108,4 +110,15 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
       );
     }
   });
+
+  // 画像データが含まれる場合はファイルとして書き出す
+  if (data.imageData && Object.keys(data.imageData).length > 0) {
+    const dirInfo = await FileSystem.getInfoAsync(IMAGE_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(IMAGE_DIR, { intermediates: true });
+    }
+    for (const [filename, base64] of Object.entries(data.imageData)) {
+      await FileSystem.writeAsStringAsync(IMAGE_DIR + filename, base64, { encoding: 'base64' });
+    }
+  }
 }

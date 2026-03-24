@@ -202,6 +202,14 @@
     "importReplaceConfirmMessage": "All current decks, cards, tags, and study history will be deleted and replaced with the imported data. This cannot be undone.",
     "importSuccess": "Import completed",
     "importError": "Import failed",
-    "importInvalidFile": "Invalid file format"
+    "importInvalidFile": "Invalid file format",
+    "exportImageTitle": "Include Images?",
+    "exportImageMessage": "Would you like to include images in the export?\nIncluding images allows them to be restored on other devices, but increases file size.",
+    "exportWithImages": "Include (Full Backup)",
+    "exportWithoutImages": "Exclude (Lightweight)",
+    "exportLargeSizeTitle": "Large File Warning",
+    "exportLargeSizeMessage": "Including images will result in approximately {{size}} MB. Continue?",
+    "exportPerfWarnMessage": "Including images will result in approximately {{size}} MB.\nThis may affect export and import performance. Continue?",
+    "exportContinue": "Continue"
   }
 }

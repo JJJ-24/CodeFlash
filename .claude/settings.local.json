@@ -39,7 +39,8 @@
       "Bash(npx:*)",
       "Bash(ls -la /Users/jjj24/Program/Udemy/expo/code_flash-card/app/\\\\\\(tabs\\\\\\))",
       "Bash(git log:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [
       "Bash(sudo:*)",

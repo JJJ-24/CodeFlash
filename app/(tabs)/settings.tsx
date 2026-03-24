@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
-import { exportDatabase } from '@/lib/export';
+import { estimateImageExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
 import { useTheme } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
@@ -80,15 +80,62 @@ export default function SettingsScreen() {
   const { setTags } = useTagStore();
   const [loading, setLoading] = useState(false);
 
-  async function handleExport() {
+  async function doExport(includeImages: boolean) {
     try {
       setLoading(true);
-      await exportDatabase(db);
+      await exportDatabase(db, includeImages);
     } catch {
       Alert.alert(t('dataManagement.exportError'));
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleExportWithImages() {
+    try {
+      setLoading(true);
+      const sizeBytes = await estimateImageExportSize(db);
+      setLoading(false);
+      const WARN_BYTES = 10 * 1024 * 1024;
+      const PERF_WARN_BYTES = 50 * 1024 * 1024;
+      const sizeMB = ((sizeBytes * 4) / 3 / 1024 / 1024).toFixed(1);
+      if (sizeBytes > PERF_WARN_BYTES) {
+        Alert.alert(
+          t('dataManagement.exportLargeSizeTitle'),
+          t('dataManagement.exportPerfWarnMessage', { size: sizeMB }),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('dataManagement.exportContinue'), onPress: () => doExport(true) },
+          ]
+        );
+      } else if (sizeBytes > WARN_BYTES) {
+        Alert.alert(
+          t('dataManagement.exportLargeSizeTitle'),
+          t('dataManagement.exportLargeSizeMessage', { size: sizeMB }),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('dataManagement.exportContinue'), onPress: () => doExport(true) },
+          ]
+        );
+      } else {
+        await doExport(true);
+      }
+    } catch {
+      setLoading(false);
+      Alert.alert(t('dataManagement.exportError'));
+    }
+  }
+
+  function handleExport() {
+    Alert.alert(
+      t('dataManagement.exportImageTitle'),
+      t('dataManagement.exportImageMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('dataManagement.exportWithoutImages'), onPress: () => doExport(false) },
+        { text: t('dataManagement.exportWithImages'), onPress: handleExportWithImages },
+      ]
+    );
   }
 
   async function handleImport() {

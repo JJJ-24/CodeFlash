@@ -22,7 +22,7 @@
     "save": "保存",
     "study": "学習開始",
     "noCards": "カードがまだありません",
-    "noCardsInFilter": "このフィルターに該当するカードがありません",
+    "noCardsInFilter": "該当するカードはありません",
     "statHint": "ブロックまたはボタンをタップして学習を開始"
   },
   "study": {

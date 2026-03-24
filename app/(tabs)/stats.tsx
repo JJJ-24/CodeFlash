@@ -138,11 +138,11 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
 
 const pieStyles = StyleSheet.create({
   container: { alignItems: 'center', gap: 16, paddingVertical: 8 },
-  legend: { alignSelf: 'stretch', gap: 6 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legend: { alignItems: 'center', gap: 6 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 220 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { flex: 1 },
-  legendValue: { fontWeight: '600' },
+  legendValue: { fontWeight: '600', textAlign: 'right' },
 });
 
 function BarChart({

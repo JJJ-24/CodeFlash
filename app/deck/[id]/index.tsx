@@ -258,6 +258,11 @@ export default function DeckDetailScreen() {
         }}
       />
 
+      {/* FAB: 戻る */}
+      <Pressable style={styles.fabBack} onPress={() => router.back()}>
+        <Ionicons name="chevron-back" size={28} color="#FFF" />
+      </Pressable>
+
       {/* FAB: 新規カード作成 */}
       <Pressable
         style={styles.fab}
@@ -316,6 +321,22 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardPreview: { flex: 1, lineHeight: 22 },
+  fabBack: {
+    position: 'absolute',
+    left: 20,
+    bottom: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1976D2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   fab: {
     position: 'absolute',
     right: 20,

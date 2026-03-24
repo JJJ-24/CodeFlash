@@ -108,6 +108,11 @@ export default function TagsScreen() {
         />
       )}
 
+      {/* FAB: 戻る */}
+      <Pressable style={styles.fabBack} onPress={() => router.back()}>
+        <Ionicons name="chevron-back" size={28} color="#FFF" />
+      </Pressable>
+
       {/* FAB */}
       <Pressable
         style={[styles.fab, isAtLimit && styles.fabDisabled]}
@@ -149,6 +154,22 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { fontWeight: '600' },
   emptySub: {},
+  fabBack: {
+    position: 'absolute',
+    left: 20,
+    bottom: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1976D2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   fab: {
     position: 'absolute',
     right: 20,

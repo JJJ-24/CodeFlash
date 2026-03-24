@@ -39,7 +39,7 @@ export interface AppTheme {
   fontSize: AppFontSize;
 }
 
-export const lightTheme: Omit<AppTheme, 'fontScale'> = {
+export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
   dark: false,
   colors: {
     background: '#F5F5F5',
@@ -61,7 +61,7 @@ export const lightTheme: Omit<AppTheme, 'fontScale'> = {
   },
 };
 
-export const darkTheme: Omit<AppTheme, 'fontScale'> = {
+export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
   dark: true,
   colors: {
     background: '#121212',

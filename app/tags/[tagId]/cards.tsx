@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
-import { getCardsByTagId } from '@/lib/database/cards';
+import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
 import { getAllTags } from '@/lib/database/tags';
 import type { Card, Tag, TextBlock } from '@/types';
 
@@ -36,6 +37,20 @@ export default function TagCardsScreen() {
 
   const [cards, setCards] = useState<Card[]>([]);
   const [tag, setTag] = useState<Tag | null>(null);
+
+  function confirmDeleteCard(card: Card) {
+    Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          await deleteCard(db, card.id, card.deckId);
+          setCards((prev) => prev.filter((c) => c.id !== card.id));
+        },
+      },
+    ]);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -93,6 +108,9 @@ export default function TagCardsScreen() {
                   {preview || t('card.noText')}
                 </Text>
                 <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={18} color={theme.colors.iconSubtle} />
+                </Pressable>
               </Pressable>
             );
           }}

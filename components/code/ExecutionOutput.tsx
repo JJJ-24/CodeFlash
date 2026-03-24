@@ -8,6 +8,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
 import type { ExecResult } from '@/lib/code-execution/types';
+import { useTheme } from '@/lib/theme';
 
 function buildCopyText(result: ExecResult): string {
   const lines: string[] = [];
@@ -30,6 +31,7 @@ interface Props {
  */
 export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage }: Props) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -59,7 +61,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
           ]}
         >
           <View style={styles.outputHeader}>
-            <Text style={styles.outputTitle}>
+            <Text style={[styles.outputTitle, { fontSize: theme.fontSize.xs }]}>
               {result.status === 'timeout' ? t('code.timeout') :
                result.status === 'error'   ? t('code.error') : t('code.output')}
             </Text>
@@ -71,19 +73,20 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
           </View>
           <View style={styles.outputContent}>
             {result.status === 'error' && result.errorMessage && (
-              <Text style={styles.errorMessage}>{result.errorMessage}</Text>
+              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]}>{result.errorMessage}</Text>
             )}
             {result.status === 'timeout' && (
-              <Text style={styles.errorMessage}>{t('code.timeoutMessage')}</Text>
+              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]}>{t('code.timeoutMessage')}</Text>
             )}
             {result.logs.length === 0 && result.status === 'success' && (
-              <Text style={styles.emptyOutput}>{t('code.empty')}</Text>
+              <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]}>{t('code.empty')}</Text>
             )}
             {result.logs.map((log, i) => (
               <Text
                 key={i}
                 style={[
                   styles.logLine,
+                  { fontSize: theme.fontSize.md },
                   log.type === 'error' && styles.logError,
                   log.type === 'warn'  && styles.logWarn,
                 ]}
@@ -138,7 +141,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   outputTitle: {
-    fontSize: 11,
     color: '#6B7280',
     fontWeight: '600',
   },
@@ -155,12 +157,10 @@ const styles = StyleSheet.create({
   },
   clearBtnWrapper: { padding: 2 },
   clearBtn: {
-    fontSize: 12,
     color: '#4B5563',
   },
   logLine: {
     fontFamily: 'monospace',
-    fontSize: 13,
     color: '#E5E7EB',
     lineHeight: 20,
   },
@@ -172,13 +172,11 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     fontFamily: 'monospace',
-    fontSize: 13,
     color: '#F87171',
     lineHeight: 20,
   },
   emptyOutput: {
     fontFamily: 'monospace',
-    fontSize: 13,
     color: '#4B5563',
     fontStyle: 'italic',
   },

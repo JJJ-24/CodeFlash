@@ -44,7 +44,11 @@
     "noTarget": "No cards to study",
     "targetCards": "{{count}} cards to study",
     "links": "Links",
-    "linksTitle": "Links"
+    "linksTitle": "Links",
+    "filterDescAll": "All cards",
+    "filterDescLearned": "Studied today",
+    "filterDescReview": "Due for review (incl. new)",
+    "filterDescNew": "Created today"
   },
   "tag": {
     "title": "Tags",
@@ -118,8 +122,8 @@
     "cards": "cards",
     "upcomingSchedule": "Next 7 Days",
     "totalProgress": "Overall Progress",
-    "learned": "Learned",
-    "statDue": "Due",
+    "learned": "Done",
+    "statDue": "Review",
     "unlearned": "New",
     "newToday": "New",
     "deckMastery": "Deck Mastery",

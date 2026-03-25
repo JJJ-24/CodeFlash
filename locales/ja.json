@@ -44,7 +44,11 @@
     "noTarget": "対象のカードはありません",
     "targetCards": "{{count}}枚が対象です",
     "links": "リンク",
-    "linksTitle": "リンク一覧"
+    "linksTitle": "リンク一覧",
+    "filterDescAll": "すべてのカード",
+    "filterDescLearned": "今日学習したカード",
+    "filterDescReview": "復習が必要なカード（新規含む）",
+    "filterDescNew": "今日作成したカード"
   },
   "tag": {
     "title": "タグ管理",
@@ -118,8 +122,8 @@
     "cards": "枚",
     "upcomingSchedule": "今後7日間の学習予定",
     "totalProgress": "全体進捗",
-    "learned": "学習済み",
-    "statDue": "学習予定",
+    "learned": "済み",
+    "statDue": "復習",
     "unlearned": "新規",
     "newToday": "新規",
     "deckMastery": "デッキ別習熟度",

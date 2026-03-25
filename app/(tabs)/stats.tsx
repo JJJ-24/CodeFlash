@@ -6,7 +6,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useFocusEffect } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
-import { useTheme, type AppTheme } from '@/lib/theme';
+import { useTheme, type AppTheme, FILTER_COLORS } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -49,7 +49,7 @@ function masteryPercent(avgEase: number): number {
 
 function masteryColor(pct: number): string {
   if (pct >= 90) return '#1976D2';
-  if (pct >= 70) return '#4CAF50';
+  if (pct >= 70) return FILTER_COLORS.learned;
   if (pct >= 40) return '#FF9800';
   return '#E53935';
 }
@@ -351,19 +351,19 @@ export default function StatsScreen() {
 
   const blockColors: Record<BlockKey, string> = {
     streak: theme.colors.primary,
-    learned: '#4CAF50',
-    due: '#F57C00',
+    learned: FILTER_COLORS.learned,
+    due: FILTER_COLORS.due,
     new: theme.colors.textSecondary,
   };
 
   const chartConfig: { data: ScheduleItem[]; title: string; color: string; todayIsLast: boolean } =
     selectedBlock === 'learned'
-      ? { data: past7DaysReviewed, title: t('stats.past7DaysReviewed'), color: '#4CAF50', todayIsLast: true }
+      ? { data: past7DaysReviewed, title: t('stats.past7DaysReviewed'), color: FILTER_COLORS.learned, todayIsLast: true }
       : selectedBlock === 'streak'
         ? { data: past7DaysActivity, title: t('stats.past7DaysActivity'), color: theme.colors.primary, todayIsLast: true }
         : selectedBlock === 'new'
           ? { data: past7DaysCreated, title: t('stats.past7DaysCreated'), color: theme.colors.textSecondary, todayIsLast: true }
-          : { data: schedule, title: t('stats.upcomingSchedule'), color: '#F57C00', todayIsLast: false };
+          : { data: schedule, title: t('stats.upcomingSchedule'), color: FILTER_COLORS.due, todayIsLast: false };
 
   return (
     <ScrollView
@@ -396,7 +396,7 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('learned')}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#4CAF50', fontSize: theme.fontSize.xxl }]}>{todayReviewed}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: theme.fontSize.xxl }]}>{todayReviewed}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.learned')}</Text>
         </Pressable>
         <Pressable
@@ -407,7 +407,7 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('due')}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#F57C00', fontSize: theme.fontSize.xxl }]}>{todayDue}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: theme.fontSize.xxl }]}>{todayDue}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.statDue')}</Text>
         </Pressable>
         <Pressable
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
 
   // Section
   section: { marginTop: 16 },
-  sectionTitle: { fontWeight: '600', marginBottom: 8 },
+  sectionTitle: { fontWeight: '700', marginBottom: 8 },
   card: {
     borderRadius: 12,
     padding: 16,

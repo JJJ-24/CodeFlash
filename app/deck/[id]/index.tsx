@@ -15,7 +15,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, FILTER_COLORS } from '@/lib/theme';
 import {
   deleteCard,
   getCardsByDeckId,
@@ -137,8 +137,8 @@ export default function DeckDetailScreen() {
 
   const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
     { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('stats.all') },
-    { key: 'today', count: todayReviewed, color: '#4CAF50', label: t('stats.learned') },
-    { key: 'due', count: dueCount, color: '#F57C00', label: t('stats.statDue') },
+    { key: 'today', count: todayReviewed, color: FILTER_COLORS.learned, label: t('stats.learned') },
+    { key: 'due', count: dueCount, color: FILTER_COLORS.due, label: t('stats.statDue') },
     { key: 'unlearned', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 
@@ -286,9 +286,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statValue: { fontWeight: '700' },
   statLabel: { marginTop: 2, textAlign: 'center' },

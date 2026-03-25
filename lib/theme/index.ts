@@ -83,6 +83,11 @@ export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
   },
 };
 
+export const FILTER_COLORS = {
+  learned: '#4CAF50',
+  due: '#F57C00',
+} as const;
+
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);

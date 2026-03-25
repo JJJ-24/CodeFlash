@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, FILTER_COLORS } from '@/lib/theme';
 import {
   getDueCountPerDeck,
   getDueCountPerTag,
@@ -174,8 +174,8 @@ export default function StudyScreen() {
 
   const filterBlocks: { key: Filter; value: number; color: string; label: string }[] = [
     { key: 'all', value: totalAll, color: theme.colors.primary, label: t('stats.all') },
-    { key: 'learned', value: totalLearned, color: '#4CAF50', label: t('stats.learned') },
-    { key: 'review', value: totalReview, color: '#F57C00', label: t('stats.statDue') },
+    { key: 'learned', value: totalLearned, color: FILTER_COLORS.learned, label: t('stats.learned') },
+    { key: 'review', value: totalReview, color: FILTER_COLORS.due, label: t('stats.statDue') },
     { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 

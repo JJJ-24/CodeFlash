@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   FlatList,
   Linking,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -121,6 +120,8 @@ export default function StudySessionScreen() {
   const translateX = useSharedValue(0);
   const slideX = useSharedValue(0);
   const currentIndexSV = useSharedValue(currentIndex);
+  const linksSheetY = useSharedValue(500);
+  const linksOverlayOpacity = useSharedValue(0);
   // 1=右からスライドイン, -1=左からスライドイン, 0=アニメーションなし
   const slideInDirRef = useRef(0);
 
@@ -174,6 +175,12 @@ export default function StudySessionScreen() {
   const cardAnimStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value + slideX.value }],
   }));
+  const linksSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: linksSheetY.value }],
+  }));
+  const linksOverlayStyle = useAnimatedStyle(() => ({
+    opacity: linksOverlayOpacity.value,
+  }));
   const keyboardRef = useRef<TextInput>(null);
   const completeRef = useRef<TextInput>(null);
   const completeReadyRef = useRef(false);
@@ -181,6 +188,16 @@ export default function StudySessionScreen() {
   useEffect(() => {
     loadSession({ deckId, tagId, filter });
   }, [deckId, tagId, filter]);
+
+  useEffect(() => {
+    if (showLinksModal) {
+      linksOverlayOpacity.value = withTiming(1, { duration: 200 });
+      linksSheetY.value = withTiming(0, { duration: 250 });
+    } else {
+      linksOverlayOpacity.value = withTiming(0, { duration: 200 });
+      linksSheetY.value = withTiming(500, { duration: 250 });
+    }
+  }, [showLinksModal]);
 
   useEffect(() => {
     if (completed) {
@@ -298,7 +315,7 @@ export default function StudySessionScreen() {
       router.back();
     } else if (key.toLowerCase() === 'l') {
       if (cardLinks.length > 0) {
-        setShowLinksModal(true);
+        setShowLinksModal((v) => !v);
       }
     } else if (key.toLowerCase() === 'p') {
       if (currentCard) {
@@ -529,42 +546,41 @@ export default function StudySessionScreen() {
           )}
         </View>
 
-        {/* リンク一覧モーダル（全画面モード） */}
-        <Modal
-          visible={showLinksModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowLinksModal(false)}
+        {/* リンク一覧オーバーレイ（全画面モード） */}
+        <View
+          pointerEvents={showLinksModal ? 'box-none' : 'none'}
+          style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
         >
-          <Pressable style={styles.modalOverlay} onPress={() => setShowLinksModal(false)}>
-            <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
-                <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
-                  <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+          <Animated.View style={[StyleSheet.absoluteFillObject, linksOverlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowLinksModal(false)} />
+          </Animated.View>
+          <Animated.View style={[linksSheetStyle, styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
+              <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={cardLinks}
+              keyExtractor={(item) => item.url}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
+                  onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>{item.text}</Text>
+                    {item.text !== item.url && (
+                      <Text style={[styles.linkUrl, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1}>{item.url}</Text>
+                    )}
+                  </View>
+                  <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
                 </Pressable>
-              </View>
-              <FlatList
-                data={cardLinks}
-                keyExtractor={(item) => item.url}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
-                    onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>{item.text}</Text>
-                      {item.text !== item.url && (
-                        <Text style={[styles.linkUrl, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1}>{item.url}</Text>
-                      )}
-                    </View>
-                    <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
-                  </Pressable>
-                )}
-              />
-            </Pressable>
-          </Pressable>
-        </Modal>
+              )}
+            />
+          </Animated.View>
+        </View>
       </>
     );
   }
@@ -737,42 +753,41 @@ export default function StudySessionScreen() {
         </View>
       </View>
 
-      {/* リンク一覧モーダル */}
-      <Modal
-        visible={showLinksModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLinksModal(false)}
+      {/* リンク一覧オーバーレイ */}
+      <View
+        pointerEvents={showLinksModal ? 'box-none' : 'none'}
+        style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLinksModal(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
-              <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+        <Animated.View style={[StyleSheet.absoluteFillObject, linksOverlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowLinksModal(false)} />
+        </Animated.View>
+        <Animated.View style={[linksSheetStyle, styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
+            <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
+              <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+            </Pressable>
+          </View>
+          <FlatList
+            data={cardLinks}
+            keyExtractor={(item) => item.url}
+            renderItem={({ item }) => (
+              <Pressable
+                style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
+                onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.linkText, { color: theme.colors.text }]} numberOfLines={1}>{item.text}</Text>
+                  {item.text !== item.url && (
+                    <Text style={[styles.linkUrl, { color: theme.colors.textTertiary }]} numberOfLines={1}>{item.url}</Text>
+                  )}
+                </View>
+                <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
               </Pressable>
-            </View>
-            <FlatList
-              data={cardLinks}
-              keyExtractor={(item) => item.url}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
-                  onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.linkText, { color: theme.colors.text }]} numberOfLines={1}>{item.text}</Text>
-                    {item.text !== item.url && (
-                      <Text style={[styles.linkUrl, { color: theme.colors.textTertiary }]} numberOfLines={1}>{item.url}</Text>
-                    )}
-                  </View>
-                  <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
-                </Pressable>
-              )}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+            )}
+          />
+        </Animated.View>
+      </View>
     </>
   );
 }

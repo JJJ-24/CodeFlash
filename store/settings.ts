@@ -4,8 +4,10 @@ import { create } from 'zustand';
 const STORAGE_KEY = '@codeflash_keyboard_shortcuts';
 const FILTER_STORAGE_KEY = '@codeflash_initial_filter';
 const LANG_STORAGE_KEY = '@codeflash_last_code_language';
+const DECK_FILTER_STORAGE_KEY = '@codeflash_last_deck_detail_filter';
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
+export type DeckDetailFilter = 'all' | 'learned' | 'review' | 'new';
 
 interface SettingsState {
   keyboardShortcutsEnabled: boolean;
@@ -14,6 +16,8 @@ interface SettingsState {
   setInitialFilterPreference: (v: InitialFilterPreference) => void;
   lastSelectedCodeLanguage: string;
   setLastSelectedCodeLanguage: (v: string) => void;
+  lastDeckDetailFilter: DeckDetailFilter;
+  setLastDeckDetailFilter: (v: DeckDetailFilter) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -32,6 +36,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ lastSelectedCodeLanguage: v });
     AsyncStorage.setItem(LANG_STORAGE_KEY, v);
   },
+  lastDeckDetailFilter: 'review',
+  setLastDeckDetailFilter: (v) => {
+    set({ lastDeckDetailFilter: v });
+    AsyncStorage.setItem(DECK_FILTER_STORAGE_KEY, v);
+  },
 }));
 
 AsyncStorage.getItem(STORAGE_KEY).then((value) => {
@@ -49,5 +58,11 @@ AsyncStorage.getItem(FILTER_STORAGE_KEY).then((value) => {
 AsyncStorage.getItem(LANG_STORAGE_KEY).then((value) => {
   if (value !== null) {
     useSettingsStore.setState({ lastSelectedCodeLanguage: value });
+  }
+});
+
+AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY).then((value) => {
+  if (value !== null) {
+    useSettingsStore.setState({ lastDeckDetailFilter: value as DeckDetailFilter });
   }
 });

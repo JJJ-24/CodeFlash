@@ -32,9 +32,10 @@ import {
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
+import type { DeckDetailFilter } from '@/store/settings';
 import type { Block, Card } from '@/types';
 
-type FilterKey = 'all' | 'learned' | 'review' | 'new';
+type FilterKey = DeckDetailFilter;
 
 function getPreviewText(blocks: Block[]): string {
   const first = blocks.find((b) => b.type === 'text');
@@ -49,13 +50,14 @@ export default function DeckDetailScreen() {
   const theme = useTheme();
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
-  const { initialFilterPreference } = useSettingsStore();
+  const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
   const [todayCreatedCount, setTodayCreatedCount] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(() => {
+    if (initialFilterPreference === 'none') return lastDeckDetailFilter;
     const filterMap: Record<string, FilterKey> = {
-      all: 'all', learned: 'learned', review: 'review', new: 'new', none: 'all',
+      all: 'all', learned: 'learned', review: 'review', new: 'new',
     };
     return filterMap[initialFilterPreference] ?? 'review';
   });
@@ -161,7 +163,10 @@ export default function DeckDetailScreen() {
                 { backgroundColor: theme.colors.surface },
                 isSelected && { borderWidth: 2, borderColor: color },
               ]}
-              onPress={() => setSelectedFilter(key)}
+              onPress={() => {
+                setSelectedFilter(key);
+                if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
+              }}
             >
               <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statValue, { color, fontSize: theme.fontSize.xxl }]}>{count}</Text>
               <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{label}</Text>

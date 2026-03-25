@@ -183,7 +183,7 @@
     "shortcutBack": "Go back",
     "shortcutLinks": "Toggle link list",
     "shortcutPencil": "Edit card",
-    "initialFilter": "Default Filter (Keep applies to Study & Stats tabs only)",
+    "initialFilter": "Default Filter",
     "initialFilterAll": "All",
     "initialFilterLearned": "Done",
     "initialFilterReview": "Due",

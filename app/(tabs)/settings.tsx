@@ -225,16 +225,7 @@ export default function SettingsScreen() {
           { value: 'none' as InitialFilterPreference,   label: t('settings.initialFilterNone') },
         ]}
         value={initialFilterPreference}
-        onChange={(v) => {
-          setInitialFilterPreference(v);
-          if (v === 'none') {
-            Alert.alert(
-              t('settings.initialFilterNoneAlertTitle'),
-              t('settings.initialFilterNoneAlertMessage'),
-              [{ text: t('common.ok') }]
-            );
-          }
-        }}
+        onChange={setInitialFilterPreference}
       />
 
       {/* タグ管理 */}

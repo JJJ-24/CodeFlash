@@ -1,0 +1,91 @@
+diff --git a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
+index 7c88afc..172df12 100644
+--- a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
+@@ -11,6 +11,7 @@ import {
+   FlatListProps,
+   LayoutChangeEvent,
+   InteractionManager,
++  View,
+ } from "react-native";
+ import {
+   FlatList,
+@@ -374,9 +375,9 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+       layoutAnimationDisabled={layoutAnimationDisabled}
+     >
+       <GestureDetector gesture={panGesture}>
+-        <Animated.View
++        <View
+           style={props.containerStyle}
+-          ref={containerRef}
++          ref={containerRef as React.RefObject<View>}
+           onLayout={onContainerLayout}
+         >
+           {props.renderPlaceholder && (
+@@ -404,7 +405,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+               scrollOffset={scrollOffset}
+             />
+           )}
+-        </Animated.View>
++        </View>
+       </GestureDetector>
+     </DraggableFlatListProvider>
+   );
+diff --git a/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx b/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx
+index 1559352..ba27c4f 100644
+--- a/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx
+@@ -1,5 +1,5 @@
+ import React, { useRef, useState } from "react";
+-import { findNodeHandle, LogBox } from "react-native";
++import { LogBox } from "react-native";
+ import Animated, {
+   useDerivedValue,
+   useSharedValue,
+@@ -48,8 +48,6 @@ function NestableDraggableFlatListInner<T>(
+   });
+ 
+   const onListContainerLayout = useStableCallback(async ({ containerRef }) => {
+-    const nodeHandle = findNodeHandle(scrollableRef.current);
+-
+     const onSuccess = (_x: number, y: number) => {
+       listVerticalOffset.value = y;
+     };
+@@ -57,7 +55,7 @@ function NestableDraggableFlatListInner<T>(
+       console.log("## nested draggable list measure fail");
+     };
+     //@ts-ignore
+-    containerRef.current.measureLayout(nodeHandle, onSuccess, onFail);
++    containerRef.current.measureLayout(scrollableRef.current, onSuccess, onFail);
+   });
+ 
+   const onDragBegin: DraggableFlatListProps<T>["onDragBegin"] = useStableCallback(
+diff --git a/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx b/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx
+index 49bee06..42c30f2 100644
+--- a/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx
+@@ -1,5 +1,6 @@
+ import React, { useContext, useEffect } from "react";
+ import { useMemo, useRef } from "react";
++import { View } from "react-native";
+ import { FlatList } from "react-native-gesture-handler";
+ import Animated, { type SharedValue, useSharedValue, WithSpringConfig } from "react-native-reanimated";
+ import { DEFAULT_PROPS } from "../constants";
+@@ -11,7 +12,7 @@ type RefContextValue<T> = {
+   animationConfigRef: SharedValue<WithSpringConfig>;
+   cellDataRef: React.MutableRefObject<Map<string, CellData>>;
+   keyToIndexRef: React.MutableRefObject<Map<string, number>>;
+-  containerRef: React.RefObject<Animated.View>;
++  containerRef: React.RefObject<View>;
+   flatlistRef: React.RefObject<FlatList<T>> | React.ForwardedRef<FlatList<T>>;
+   scrollViewRef: React.RefObject<Animated.ScrollView>;
+ };
+@@ -65,7 +66,7 @@ function useSetupRefs<T>({
+ 
+   const cellDataRef = useRef(new Map<string, CellData>());
+   const keyToIndexRef = useRef(new Map<string, number>());
+-  const containerRef = useRef<Animated.View>(null);
++  const containerRef = useRef<View>(null);
+   const flatlistRefInternal = useRef<FlatList<T>>(null);
+   const flatlistRef = flatListRefProp || flatlistRefInternal;
+   const scrollViewRef = useRef<Animated.ScrollView>(null);

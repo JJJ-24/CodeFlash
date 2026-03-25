@@ -5,7 +5,6 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { localDateStr } from '@/lib/database/utils';
 import { FILTER_COLORS, useTheme } from '@/lib/theme';
 
-const WEEKS = 26;
 const CELL_SIZE = 11;
 const CELL_GAP = 2;
 const CELL_STEP = CELL_SIZE + CELL_GAP;
@@ -23,7 +22,7 @@ interface Props {
   weeks?: number;
 }
 
-export default function ActivityHeatmap({ data, weeks = WEEKS }: Props) {
+export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
   const theme = useTheme();
   const { i18n } = useTranslation();
   const scrollRef = useRef<ScrollView>(null);
@@ -67,69 +66,78 @@ export default function ActivityHeatmap({ data, weeks = WEEKS }: Props) {
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 0);
-  }, []);
+  }, [weeks]);
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 4 }}
-    >
+    <View style={styles.heatmapWrapper}>
+      {/* 曜日ラベル（スクロール固定） */}
       <View>
-        <View style={[styles.monthRow, { marginLeft: DAY_LABEL_WIDTH }]}>
-          {monthLabels.map(({ colIndex, label }) => (
+        <View style={styles.monthRowSpacer} />
+        <View style={[styles.dayLabelCol, { width: DAY_LABEL_WIDTH }]}>
+          {dayLabels.map((label, i) => (
             <Text
-              key={colIndex}
-              style={[
-                styles.monthLabel,
-                { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, left: colIndex * CELL_STEP },
-              ]}
+              key={i}
+              style={[styles.dayLabel, { color: theme.colors.textTertiary, fontSize: 9, height: CELL_STEP }]}
             >
-              {label}
+              {i % 2 === 0 ? label : ''}
             </Text>
           ))}
         </View>
+      </View>
 
-        <View style={styles.grid}>
-          <View style={[styles.dayLabelCol, { width: DAY_LABEL_WIDTH }]}>
-            {dayLabels.map((label, i) => (
+      {/* 月ラベル + セルグリッド（横スクロール） */}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 4 }}
+      >
+        <View>
+          <View style={styles.monthRow}>
+            {monthLabels.map(({ colIndex, label }) => (
               <Text
-                key={i}
-                style={[styles.dayLabel, { color: theme.colors.textTertiary, fontSize: 9, height: CELL_STEP }]}
+                key={colIndex}
+                style={[
+                  styles.monthLabel,
+                  { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, left: colIndex * CELL_STEP },
+                ]}
               >
-                {i % 2 === 0 ? label : ''}
+                {label}
               </Text>
             ))}
           </View>
 
-          {columns.map((col, colIdx) => (
-            <View key={colIdx} style={styles.col}>
-              {col.map(({ date, count }, rowIdx) => (
-                <View
-                  key={rowIdx}
-                  style={[
-                    styles.cell,
-                    {
-                      backgroundColor: getCellColor(count, theme.colors.border),
-                      width: CELL_SIZE,
-                      height: CELL_SIZE,
-                      marginBottom: CELL_GAP,
-                      marginRight: colIdx < weeks - 1 ? CELL_GAP : 0,
-                      opacity: date > today ? 0 : 1,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-          ))}
+          <View style={styles.grid}>
+            {columns.map((col, colIdx) => (
+              <View key={colIdx} style={styles.col}>
+                {col.map(({ date, count }, rowIdx) => (
+                  <View
+                    key={rowIdx}
+                    style={[
+                      styles.cell,
+                      {
+                        backgroundColor: getCellColor(count, theme.colors.border),
+                        width: CELL_SIZE,
+                        height: CELL_SIZE,
+                        marginBottom: CELL_GAP,
+                        marginRight: colIdx < weeks - 1 ? CELL_GAP : 0,
+                        opacity: date > today ? 0 : 1,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  heatmapWrapper: { flexDirection: 'row' },
+  monthRowSpacer: { height: 16 },
   monthRow: { flexDirection: 'row', height: 16, position: 'relative' },
   monthLabel: { position: 'absolute', fontWeight: '500' },
   grid: { flexDirection: 'row' },

@@ -275,7 +275,7 @@ export default function StatsScreen() {
       if (initial !== null) setSelectedBlock(initial);
       async function load() {
         const heatmapStart = new Date();
-        heatmapStart.setDate(heatmapStart.getDate() - 24 * 7);
+        heatmapStart.setDate(heatmapStart.getDate() - 52 * 7);
         const heatmapStartStr = toLocalDateStr(heatmapStart);
 
         const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap] =
@@ -455,7 +455,7 @@ export default function StatsScreen() {
           {t('stats.activityHeatmap')}
         </Text>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <ActivityHeatmap data={heatmapData} weeks={24} />
+          <ActivityHeatmap data={heatmapData} />
         </View>
       </View>
 

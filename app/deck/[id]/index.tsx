@@ -34,7 +34,7 @@ import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 import type { Block, Card } from '@/types';
 
-type FilterKey = 'all' | 'today' | 'due' | 'unlearned';
+type FilterKey = 'all' | 'learned' | 'review' | 'new';
 
 function getPreviewText(blocks: Block[]): string {
   const first = blocks.find((b) => b.type === 'text');
@@ -55,15 +55,15 @@ export default function DeckDetailScreen() {
   const [todayCreatedCount, setTodayCreatedCount] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(() => {
     const filterMap: Record<string, FilterKey> = {
-      all: 'all', learned: 'today', review: 'due', new: 'unlearned', none: 'all',
+      all: 'all', learned: 'learned', review: 'review', new: 'new', none: 'all',
     };
-    return filterMap[initialFilterPreference] ?? 'due';
+    return filterMap[initialFilterPreference] ?? 'review';
   });
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
-    today: new Set(),
-    due: new Set(),
-    unlearned: new Set(),
+    learned: new Set(),
+    review: new Set(),
+    new: new Set(),
   });
 
   const deck = decks.find((d) => d.id === id) ?? null;
@@ -84,9 +84,9 @@ export default function DeckDetailScreen() {
     setTodayCreatedCount(todayCreated);
     setFilterCardIds({
       all: new Set(loaded.map((c) => c.id)),
-      today: new Set(todayIds),
-      due: new Set(dueIds),
-      unlearned: new Set(todayCreatedIds),
+      learned: new Set(todayIds),
+      review: new Set(dueIds),
+      new: new Set(todayCreatedIds),
     });
   }, [db, id, setCards]);
 
@@ -137,9 +137,9 @@ export default function DeckDetailScreen() {
 
   const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
     { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('stats.all') },
-    { key: 'today', count: todayReviewed, color: FILTER_COLORS.learned, label: t('stats.learned') },
-    { key: 'due', count: dueCount, color: FILTER_COLORS.due, label: t('stats.statDue') },
-    { key: 'unlearned', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },
+    { key: 'learned', count: todayReviewed, color: FILTER_COLORS.learned, label: t('stats.learned') },
+    { key: 'review', count: dueCount, color: FILTER_COLORS.due, label: t('stats.statDue') },
+    { key: 'new', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 
   const ListHeader = (

@@ -111,58 +111,28 @@ export default function StudyScreen() {
     }, [db, initialFilterPreference])
   );
 
-  // フィルター別: デッキの表示カウント・テキスト・タップ可否を返す
-  function getDeckDisplayInfo(deck: Deck): {
-    count: number;
-    subText: string;
-    subTextActive: boolean;
-    tappable: boolean;
-  } {
-    switch (activeFilter) {
-      case 'all': {
-        const n = deck.cardCount;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-      case 'learned': {
-        const n = todayReviewedPerDeck[deck.id] ?? 0;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-      case 'review': {
-        const n = dueCounts[deck.id] ?? 0;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-      case 'new': {
-        const n = todayCreatedPerDeck[deck.id] ?? 0;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-    }
+  function makeDisplayInfo(n: number) {
+    return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
   }
 
-  // フィルター別: タグの表示カウント・テキスト・タップ可否を返す
-  function getTagDisplayInfo(tag: Tag): {
-    count: number;
-    subText: string;
-    subTextActive: boolean;
-    tappable: boolean;
-  } {
-    switch (activeFilter) {
-      case 'all': {
-        const n = totalPerTag[tag.id] ?? 0;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-      case 'learned': {
-        const n = todayReviewedPerTag[tag.id] ?? 0;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-      case 'review': {
-        const n = tagDueCounts[tag.id] ?? 0;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-      case 'new': {
-        const n = todayCreatedPerTag[tag.id] ?? 0;
-        return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
-      }
-    }
+  function getDeckDisplayInfo(deck: Deck) {
+    const counts: Record<Filter, number> = {
+      all: deck.cardCount,
+      learned: todayReviewedPerDeck[deck.id] ?? 0,
+      review: dueCounts[deck.id] ?? 0,
+      new: todayCreatedPerDeck[deck.id] ?? 0,
+    };
+    return makeDisplayInfo(counts[activeFilter]);
+  }
+
+  function getTagDisplayInfo(tag: Tag) {
+    const counts: Record<Filter, number> = {
+      all: totalPerTag[tag.id] ?? 0,
+      learned: todayReviewedPerTag[tag.id] ?? 0,
+      review: tagDueCounts[tag.id] ?? 0,
+      new: todayCreatedPerTag[tag.id] ?? 0,
+    };
+    return makeDisplayInfo(counts[activeFilter]);
   }
 
   const totalAll = activeTab === 'decks'

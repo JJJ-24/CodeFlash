@@ -177,7 +177,7 @@
     "shortcutRun": "選択中のコードブロックを実行",
     "shortcutEdit": "選択中のコードブロックを編集",
     "shortcutBack": "前の画面に戻る",
-    "shortcutLinks": "リンク一覧を開く",
+    "shortcutLinks": "リンク一覧の表示/非表示",
     "shortcutPencil": "カードを編集",
     "initialFilter": "初期表示フィルター",
     "initialFilterAll": "すべて",

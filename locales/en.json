@@ -177,7 +177,7 @@
     "shortcutRun": "Run selected code block",
     "shortcutEdit": "Edit selected code block",
     "shortcutBack": "Go back",
-    "shortcutLinks": "Open link list",
+    "shortcutLinks": "Toggle link list",
     "shortcutPencil": "Edit card",
     "initialFilter": "Default Filter (Keep applies to Study & Stats tabs only)",
     "initialFilterAll": "All",

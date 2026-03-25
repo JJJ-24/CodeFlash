@@ -179,9 +179,14 @@ export default function DeckDetailScreen() {
         <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]}>{t('deck.study')}</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-        {t('deck.detail')}
-      </Text>
+      <View style={styles.sectionTitleRow}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+          {t('deck.detail')}
+        </Text>
+        <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+          {({ all: t('study.filterDescAll'), learned: t('study.filterDescLearned'), review: t('study.filterDescReview'), new: t('study.filterDescNew') } as Record<FilterKey, string>)[selectedFilter]}
+        </Text>
+      </View>
 
       {displayedCards.length === 0 ? (
         <View style={styles.emptyCards}>
@@ -303,6 +308,8 @@ const styles = StyleSheet.create({
   },
   studyBtnText: { fontWeight: '700', color: '#FFF' },
   sectionTitle: { fontWeight: '700' },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16 },
+  filterDesc: { flexShrink: 1 },
   emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   emptyCardsText: {},
   cardItem: {

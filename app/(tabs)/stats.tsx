@@ -380,11 +380,11 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('streak')}
         >
-          <Text style={[styles.summaryValue, { color: '#FFF', fontSize: theme.fontSize.xxl }]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#FFF', fontSize: theme.fontSize.xxl }]}>
             {streak}
           </Text>
           {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={theme.fontSize.xl} color={m.color} /> : null; })()}
-          <Text style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]}>
             {t('stats.streak')}
           </Text>
         </Pressable>
@@ -396,8 +396,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('learned')}
         >
-          <Text style={[styles.summaryValue, { color: '#4CAF50', fontSize: theme.fontSize.xxl }]}>{todayReviewed}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.learned')}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#4CAF50', fontSize: theme.fontSize.xxl }]}>{todayReviewed}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.learned')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -407,8 +407,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('due')}
         >
-          <Text style={[styles.summaryValue, { color: '#F57C00', fontSize: theme.fontSize.xxl }]}>{todayDue}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.statDue')}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#F57C00', fontSize: theme.fontSize.xxl }]}>{todayDue}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.statDue')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -418,8 +418,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => setSelectedBlock('new')}
         >
-          <Text style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xxl }]}>{todayCreated}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.newToday')}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xxl }]}>{todayCreated}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.newToday')}</Text>
         </Pressable>
       </View>
 

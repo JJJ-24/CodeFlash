@@ -163,8 +163,8 @@ export default function DeckDetailScreen() {
               ]}
               onPress={() => setSelectedFilter(key)}
             >
-              <Text style={[styles.statValue, { color, fontSize: theme.fontSize.xxl }]}>{count}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{label}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statValue, { color, fontSize: theme.fontSize.xxl }]}>{count}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{label}</Text>
             </Pressable>
           );
         })}

@@ -92,7 +92,7 @@ export default function TagsScreen() {
                 onLongPress={drag}
               >
                 <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-                <Text style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
                 <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                   <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{item.cardCount}</Text>
                 </View>

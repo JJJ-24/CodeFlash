@@ -273,7 +273,7 @@ export default function StudyScreen() {
                   }}
                 >
                   <View style={styles.deckInfo}>
-                    <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                    <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
                     {!subTextActive && (
                       <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
                         {subText}
@@ -331,7 +331,7 @@ export default function StudyScreen() {
                 >
                   <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
                   <View style={styles.deckInfo}>
-                    <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                    <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
                     {!subTextActive && (
                       <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
                         {subText}

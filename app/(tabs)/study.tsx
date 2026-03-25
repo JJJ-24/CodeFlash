@@ -142,6 +142,13 @@ export default function StudyScreen() {
   const totalReview = activeTab === 'decks' ? sumValues(dueCounts) : sumValues(tagDueCounts);
   const totalNew = activeTab === 'decks' ? sumValues(todayCreatedPerDeck) : sumValues(todayCreatedPerTag);
 
+  const filterDescMap: Record<Filter, string> = {
+    all: t('study.filterDescAll'),
+    learned: t('study.filterDescLearned'),
+    review: t('study.filterDescReview'),
+    new: t('study.filterDescNew'),
+  };
+
   const filterBlocks: { key: Filter; value: number; color: string; label: string }[] = [
     { key: 'all', value: totalAll, color: theme.colors.primary, label: t('stats.all') },
     { key: 'learned', value: totalLearned, color: FILTER_COLORS.learned, label: t('stats.learned') },
@@ -186,19 +193,9 @@ export default function StudyScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
             {t('study.listTitle')}
           </Text>
-          {(() => {
-            const filterDescMap: Record<Filter, string> = {
-              all: t('study.filterDescAll'),
-              learned: t('study.filterDescLearned'),
-              review: t('study.filterDescReview'),
-              new: t('study.filterDescNew'),
-            };
-            return (
-              <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
-                {filterDescMap[activeFilter]}
-              </Text>
-            );
-          })()}
+          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+            {filterDescMap[activeFilter]}
+          </Text>
         </View>
       </View>
 

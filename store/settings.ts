@@ -7,7 +7,7 @@ const LANG_STORAGE_KEY = '@codeflash_last_code_language';
 const DECK_FILTER_STORAGE_KEY = '@codeflash_last_deck_detail_filter';
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
-export type DeckDetailFilter = 'all' | 'learned' | 'review' | 'new';
+export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
 
 interface SettingsState {
   keyboardShortcutsEnabled: boolean;

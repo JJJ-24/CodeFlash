@@ -144,6 +144,13 @@ export default function DeckDetailScreen() {
     { key: 'new', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 
+  const filterDescMap: Record<FilterKey, string> = {
+    all: t('study.filterDescAll'),
+    learned: t('study.filterDescLearned'),
+    review: t('study.filterDescReview'),
+    new: t('study.filterDescNew'),
+  };
+
   const ListHeader = (
     <View style={styles.header}>
       {deck.description ? (
@@ -189,7 +196,7 @@ export default function DeckDetailScreen() {
           {t('deck.detail')}
         </Text>
         <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
-          {({ all: t('study.filterDescAll'), learned: t('study.filterDescLearned'), review: t('study.filterDescReview'), new: t('study.filterDescNew') } as Record<FilterKey, string>)[selectedFilter]}
+          {filterDescMap[selectedFilter]}
         </Text>
       </View>
 

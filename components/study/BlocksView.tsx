@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -82,20 +82,31 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   }
 
   const fs = (size: number) => Math.round(size * theme.fontScale);
-  const markdownStyles = {
+  const markdownStyles = useMemo(() => ({
     body: { fontSize: fs(17), color: theme.colors.text, lineHeight: fs(26) },
     heading1: { fontSize: fs(24), fontWeight: '700' as const, marginBottom: 8 },
     heading2: { fontSize: fs(20), fontWeight: '700' as const, marginBottom: 6 },
+    strong: { fontWeight: 'bold' as const },
+    em: { fontStyle: 'italic' as const },
     code_inline: {
       backgroundColor: theme.dark ? '#2C2C2C' : '#F0F0F0',
       fontFamily: 'monospace',
       fontSize: fs(14),
       color: theme.colors.danger,
     },
-    fence: { backgroundColor: theme.colors.codeBackground, borderRadius: 6, padding: 12 },
-    code_block: { fontFamily: 'monospace', fontSize: fs(14), color: '#D4D4D4' },
+    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: fs(14) },
+    code_block: { fontFamily: 'monospace', fontSize: fs(14), color: '#D4D4D4', backgroundColor: '#1E1E1E' },
     link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
-  };
+    blockquote: {
+      backgroundColor: theme.dark ? '#2A2A2A' : '#F0F0F0',
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.textSecondary,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      marginVertical: 4,
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [theme]);
 
   if (blocks.length === 0) {
     return <Text style={[styles.empty, { color: theme.colors.iconSubtle }]}>{t('card.noContent')}</Text>;

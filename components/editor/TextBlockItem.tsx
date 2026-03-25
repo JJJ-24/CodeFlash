@@ -67,15 +67,25 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     body: { fontSize: theme.fontSize.md, color: theme.colors.text, lineHeight: theme.fontSize.md * 1.5 },
     heading1: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text },
     heading2: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text },
+    strong: { fontWeight: 'bold' as const },
+    em: { fontStyle: 'italic' as const },
     code_inline: {
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.dark ? '#2C2C2C' : '#F0F0F0',
       fontFamily: 'monospace',
       fontSize: theme.fontSize.sm,
       color: theme.colors.danger,
     },
-    fence: { backgroundColor: theme.colors.background, borderRadius: 6, padding: 12 },
-    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text },
+    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: theme.fontSize.sm },
+    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: '#1E1E1E' },
     link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
+    blockquote: {
+      backgroundColor: theme.dark ? '#2A2A2A' : '#F0F0F0',
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.textSecondary,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      marginVertical: 4,
+    },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
 

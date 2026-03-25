@@ -332,7 +332,7 @@ export function BlockEditor({
             { backgroundColor: theme.colors.background },
             isPreview && { backgroundColor: theme.colors.primaryLight },
           ]}
-          onPress={() => setIsPreview((v) => !v)}
+          onPress={() => { setIsPreview((v) => !v); setIsSortMode(false); }}
         >
           <Text
             style={[

@@ -40,7 +40,8 @@
       "Bash(ls -la /Users/jjj24/Program/Udemy/expo/code_flash-card/app/\\\\\\(tabs\\\\\\))",
       "Bash(git log:*)",
       "Bash(git checkout:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(git diff:*)"
     ],
     "deny": [
       "Bash(sudo:*)",

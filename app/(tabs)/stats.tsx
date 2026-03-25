@@ -12,6 +12,7 @@ import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import {
   getAllGradeDistribution,
+  getDailyReviewCounts,
   getDeckGradeDistribution,
   getDeckMasteryList,
   getLearnedUnlearnedCount,
@@ -22,6 +23,7 @@ import {
   getTodayReviewedCount,
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
+import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import type { Deck } from '@/types';
 
@@ -262,6 +264,7 @@ export default function StatsScreen() {
   const [todayCreated, setTodayCreated] = useState(0);
   const [deckMastery, setDeckMastery] = useState<MasteryItem[]>([]);
   const [decks, setDecks] = useState<Deck[]>([]);
+  const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -271,7 +274,11 @@ export default function StatsScreen() {
       const initial = blockMap[initialFilterPreference];
       if (initial !== null) setSelectedBlock(initial);
       async function load() {
-        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday] =
+        const heatmapStart = new Date();
+        heatmapStart.setDate(heatmapStart.getDate() - 24 * 7);
+        const heatmapStartStr = toLocalDateStr(heatmapStart);
+
+        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap] =
           await Promise.all([
             getTodayReviewedCount(db),
             getTodayDueCount(db),
@@ -284,6 +291,7 @@ export default function StatsScreen() {
             getPast7DaysStudyActivity(db),
             getPast7DaysCreatedCount(db),
             getTodayCreatedCount(db),
+            getDailyReviewCounts(db, heatmapStartStr),
           ]);
 
         setTodayReviewed(reviewed);
@@ -309,6 +317,8 @@ export default function StatsScreen() {
         setPast7DaysReviewed(fillPast7Days(rawReviewed));
         setPast7DaysActivity(fillPast7Days(rawActivity));
         setPast7DaysCreated(fillPast7Days(rawCreated));
+
+        setHeatmapData(rawHeatmap);
       }
       load();
     }, [db, initialFilterPreference])
@@ -436,6 +446,16 @@ export default function StatsScreen() {
             barColor={chartConfig.color}
             todayIsLast={chartConfig.todayIsLast}
           />
+        </View>
+      </View>
+
+      {/* 学習履歴（草グラフ） */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+          {t('stats.activityHeatmap')}
+        </Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <ActivityHeatmap data={heatmapData} weeks={24} />
         </View>
       </View>
 

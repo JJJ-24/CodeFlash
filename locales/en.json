@@ -132,7 +132,8 @@
     "emptySub": "Start studying to see your stats here",
     "past7DaysReviewed": "Last 7 Days Reviewed",
     "past7DaysActivity": "Last 7 Days Activity",
-    "past7DaysCreated": "Last 7 Days New Cards"
+    "past7DaysCreated": "Last 7 Days New Cards",
+    "activityHeatmap": "Activity"
   },
   "code": {
     "run": "Run",

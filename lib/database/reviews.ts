@@ -412,6 +412,21 @@ export async function getPast7DaysStudyActivity(
   return rows.map((r) => ({ date: r.date, count: r.count > 0 ? 1 : 0 }));
 }
 
+/** 指定日以降の日別学習枚数（review_logs ベース） */
+export async function getDailyReviewCounts(
+  db: SQLiteDatabase,
+  startDate: string
+): Promise<{ date: string; count: number }[]> {
+  return db.getAllAsync<{ date: string; count: number }>(
+    `SELECT reviewedDate AS date, COUNT(*) AS count
+     FROM review_logs
+     WHERE reviewedDate >= ?
+     GROUP BY reviewedDate
+     ORDER BY reviewedDate`,
+    [startDate]
+  );
+}
+
 /**
  * 学習ストリーク日数を計算する
  * 今日から過去に遡り、lastReviewDate に学習記録がある日が連続している日数を返す

@@ -67,7 +67,16 @@ export default function TagCardsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: tag?.name ?? '' }} />
+      <Stack.Screen
+        options={{
+          title: tag?.name ?? '',
+          headerRight: () => (
+            <Pressable onPress={() => { router.dismissAll(); router.navigate('/(tabs)/'); }} style={{ width: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="home-outline" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ),
+        }}
+      />
 
       {cards.length === 0 ? (
         <View style={styles.empty}>

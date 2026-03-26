@@ -56,6 +56,14 @@ export default function TagsScreen() {
       <Stack.Screen
         options={{
           title: t('tag.title'),
+          headerRight: () => (
+            <Pressable
+              onPress={() => { router.dismissAll(); router.navigate('/(tabs)/'); }}
+              style={{ width: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="home-outline" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ),
         }}
       />
 

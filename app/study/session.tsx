@@ -342,8 +342,8 @@ export default function StudySessionScreen() {
     navigateWithSlide('next', () => handleGrade(grade));
   }
 
-  function handleCodeBlockChange(cardId: string, blockIndex: number, text: string, side: 'front' | 'back' = 'front') {
-    const key = side === 'back' ? cardId + '_back' : cardId;
+  function handleCodeBlockChange(cardId: string, blockIndex: number, text: string, side: 'front' | 'back' | 'memo' = 'front') {
+    const key = side === 'back' ? cardId + '_back' : side === 'memo' ? cardId + '_memo' : cardId;
     setEditedCodeBlocks((prev) => ({
       ...prev,
       [key]: { ...(prev[key] ?? {}), [blockIndex]: text },
@@ -516,7 +516,14 @@ export default function StudySessionScreen() {
                         </GestureDetector>
                         {showMemo && (
                           <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
-                            <BlocksView blocks={currentCard.memoContent} />
+                            <BlocksView
+                              blocks={currentCard.memoContent}
+                              editableCode
+                              editedContents={editedCodeBlocks[currentCard.id + '_memo']}
+                              onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'memo')}
+                              onEditFocus={() => { codeEditingRef.current = true; }}
+                              onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                            />
                           </View>
                         )}
                       </View>
@@ -700,7 +707,14 @@ export default function StudySessionScreen() {
                       </GestureDetector>
                       {showMemo && (
                         <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
-                          <BlocksView blocks={currentCard.memoContent} />
+                          <BlocksView
+                            blocks={currentCard.memoContent}
+                            editableCode
+                            editedContents={editedCodeBlocks[currentCard.id + '_memo']}
+                            onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'memo')}
+                            onEditFocus={() => { codeEditingRef.current = true; }}
+                            onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                          />
                         </View>
                       )}
                     </View>

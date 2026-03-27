@@ -105,6 +105,7 @@ export function BlockEditor({
   const scrollRef = useRef<any>(null);
   const flatListY = useRef(0);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
+  const blockViewRefs = useRef<Map<string, View | null>>(new Map());
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [isPreview, setIsPreview] = useState(false);
@@ -225,6 +226,10 @@ export function BlockEditor({
         return (
           <ScaleDecorator activeScale={1.02}>
             <View
+              ref={(r) => {
+                if (r) blockViewRefs.current.set(block._key, r);
+                else blockViewRefs.current.delete(block._key);
+              }}
               onLayout={(e) => {
                 blockPositions.current[block._key] = {
                   y: e.nativeEvent.layout.y,
@@ -239,13 +244,25 @@ export function BlockEditor({
                 onDelete={() => deleteBlock(activeTab, block._key)}
                 onRunStart={() => {
                   // 出力レイアウト更新後（300ms）にブロック下端が見える位置へスクロール
+                  // measureLayout でリアルタイム位置を取得（onLayout のキャッシュは NestableDraggableFlatList では更新されないため）
                   setTimeout(() => {
-                    const pos = blockPositions.current[block._key];
-                    if (!pos || !scrollRef.current) return;
-                    scrollRef.current?.scrollTo({
-                      y: Math.max(0, flatListY.current + pos.y + pos.h - 300),
-                      animated: true,
-                    });
+                    const viewRef = blockViewRefs.current.get(block._key);
+                    if (!viewRef || !scrollRef.current) return;
+                    viewRef.measureLayout(
+                      scrollRef.current as any,
+                      (x, y, w, h) => {
+                        scrollRef.current?.scrollTo({ y: Math.max(0, y + h - 300), animated: true });
+                      },
+                      () => {
+                        // フォールバック: キャッシュを使用
+                        const pos = blockPositions.current[block._key];
+                        if (!pos) return;
+                        scrollRef.current?.scrollTo({
+                          y: Math.max(0, flatListY.current + pos.y + pos.h - 300),
+                          animated: true,
+                        });
+                      }
+                    );
                   }, 300);
                 }}
                 onDragStart={sortDrag}

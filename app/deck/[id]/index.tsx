@@ -223,6 +223,7 @@ export default function DeckDetailScreen() {
       <Stack.Screen
         options={{
           title: deck.name,
+          headerBackTitle: '',
         }}
       />
 

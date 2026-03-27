@@ -26,6 +26,7 @@ function RootStack() {
         headerShadowVisible: false,
         contentStyle: { backgroundColor: theme.colors.background },
         headerBackTitle: '',
+        headerBackButtonDisplayMode: 'minimal',
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '' }} />

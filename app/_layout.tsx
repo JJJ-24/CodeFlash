@@ -2,7 +2,7 @@ import '@/lib/i18n';
 import { Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
@@ -43,9 +43,13 @@ function RootStack() {
 
 export default function RootLayout() {
   const hydrated = useThemeStore((s) => s.hydrated);
+  const preference = useThemeStore((s) => s.preference);
+  const colorScheme = useColorScheme();
+  const isDark = preference === 'dark' || (preference === 'system' && colorScheme === 'dark');
+  const surfaceColor = isDark ? '#1E1E1E' : '#FFFFFF';
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: surfaceColor }}>
       <Suspense
         fallback={
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -54,7 +58,7 @@ export default function RootLayout() {
         }
       >
         <SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
-          {hydrated ? <RootStack /> : <View style={{ flex: 1 }} />}
+          {hydrated ? <RootStack /> : <View style={{ flex: 1, backgroundColor: surfaceColor }} />}
         </SQLiteProvider>
       </Suspense>
     </GestureHandlerRootView>

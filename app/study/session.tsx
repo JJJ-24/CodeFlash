@@ -94,6 +94,7 @@ export default function StudySessionScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedCodeBlockIdx, setSelectedCodeBlockIdx] = useState<number | null>(null);
+  const [selectedCodeBlockSide, setSelectedCodeBlockSide] = useState<'front' | 'back' | 'memo' | null>(null);
   const [runTrigger, setRunTrigger] = useState(0);
   const [editTrigger, setEditTrigger] = useState(0);
   // cardId -> blockIndex -> 編集済みコード
@@ -239,6 +240,7 @@ export default function StudySessionScreen() {
     setIsFlipped(false);
     setShowMemo(false);
     setSelectedCodeBlockIdx(null);
+    setSelectedCodeBlockSide(null);
     setRunTrigger(0);
     setEditTrigger(0);
     currentIndexSV.value = currentIndex;
@@ -250,6 +252,7 @@ export default function StudySessionScreen() {
   useEffect(() => {
     if (!isFlipped) setShowMemo(false);
     setSelectedCodeBlockIdx(null);
+    setSelectedCodeBlockSide(null);
     setRunTrigger(0);
     setEditTrigger(0);
   }, [isFlipped]);
@@ -271,6 +274,7 @@ export default function StudySessionScreen() {
       setRunTrigger(0);
       setEditTrigger(0);
       setSelectedCodeBlockIdx(null);
+      setSelectedCodeBlockSide(null);
       slideInDirRef.current = direction === 'next' ? 1 : -1;
       if (action) action();
       else if (direction === 'next') goNext();
@@ -280,18 +284,43 @@ export default function StudySessionScreen() {
 
   function handleKeyPress(key: string) {
     if (!keyboardShortcutsEnabled) return;
-    const activeBlocks = isFlipped ? currentCard?.backContent : currentCard?.frontContent;
-    const codeCount = activeBlocks?.filter(b => b.type === 'code').length ?? 0;
 
     if (key === ' ') {
       setIsFlipped((v) => !v);
     } else if (key === 't' || key === 'T') {
-      if (codeCount > 0) {
-        setEditTrigger(0);
-        setRunTrigger(0);
-        setSelectedCodeBlockIdx(prev =>
-          prev === null ? 0 : (prev + 1) % codeCount
-        );
+      if (!isFlipped) {
+        // 表面: 表面のコードブロックのみサイクル
+        const frontCodeCount = currentCard?.frontContent.filter(b => b.type === 'code').length ?? 0;
+        if (frontCodeCount > 0) {
+          setEditTrigger(0);
+          setRunTrigger(0);
+          setSelectedCodeBlockSide('front');
+          setSelectedCodeBlockIdx(prev => prev === null ? 0 : (prev + 1) % frontCodeCount);
+        }
+      } else {
+        // 裏面: 裏面＋メモのコードブロックを通しでサイクル
+        const backCodeCount = currentCard?.backContent.filter(b => b.type === 'code').length ?? 0;
+        const memoCodeCount = currentCard?.memoContent.filter(b => b.type === 'code').length ?? 0;
+        const totalCodeCount = backCodeCount + memoCodeCount;
+        if (totalCodeCount > 0) {
+          setEditTrigger(0);
+          setRunTrigger(0);
+          // 現在の combined index（back: 0〜backCodeCount-1、memo: backCodeCount〜）
+          let currentCombined: number | null = null;
+          if (selectedCodeBlockIdx !== null) {
+            if (selectedCodeBlockSide === 'back') currentCombined = selectedCodeBlockIdx;
+            else if (selectedCodeBlockSide === 'memo') currentCombined = backCodeCount + selectedCodeBlockIdx;
+          }
+          const nextCombined = currentCombined === null ? 0 : (currentCombined + 1) % totalCodeCount;
+          if (nextCombined < backCodeCount) {
+            setSelectedCodeBlockSide('back');
+            setSelectedCodeBlockIdx(nextCombined);
+          } else {
+            setSelectedCodeBlockSide('memo');
+            setShowMemo(true); // メモを自動展開
+            setSelectedCodeBlockIdx(nextCombined - backCodeCount);
+          }
+        }
       }
     } else if (key.toLowerCase() === 'r') {
       if (selectedCodeBlockIdx !== null) {
@@ -476,7 +505,7 @@ export default function StudySessionScreen() {
                       onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
                       onEditFocus={() => { codeEditingRef.current = true; }}
                       onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                      onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setEditTrigger(0); }}
+                      onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide(isFlipped ? 'back' : 'front'); setEditTrigger(0); }}
                       runTrigger={!isFlipped ? runTrigger : undefined}
                       editTrigger={!isFlipped ? editTrigger : undefined}
                       selectedCodeBlockIdx={!isFlipped ? selectedCodeBlockIdx : null}
@@ -494,10 +523,10 @@ export default function StudySessionScreen() {
                       onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'back')}
                       onEditFocus={() => { codeEditingRef.current = true; }}
                       onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                      onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setEditTrigger(0); }}
-                      runTrigger={isFlipped ? runTrigger : undefined}
-                      editTrigger={isFlipped ? editTrigger : undefined}
-                      selectedCodeBlockIdx={isFlipped ? selectedCodeBlockIdx : null}
+                      onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide(isFlipped ? 'back' : 'front'); setEditTrigger(0); }}
+                      runTrigger={isFlipped && selectedCodeBlockSide === 'back' ? runTrigger : undefined}
+                      editTrigger={isFlipped && selectedCodeBlockSide === 'back' ? editTrigger : undefined}
+                      selectedCodeBlockIdx={isFlipped && selectedCodeBlockSide === 'back' ? selectedCodeBlockIdx : null}
                       scrollRef={backScrollRef}
                     />
                     {hasMemo && (
@@ -523,6 +552,11 @@ export default function StudySessionScreen() {
                               onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'memo')}
                               onEditFocus={() => { codeEditingRef.current = true; }}
                               onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                              onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide('memo'); setEditTrigger(0); }}
+                              runTrigger={showMemo && selectedCodeBlockSide === 'memo' ? runTrigger : undefined}
+                              editTrigger={showMemo && selectedCodeBlockSide === 'memo' ? editTrigger : undefined}
+                              selectedCodeBlockIdx={showMemo && selectedCodeBlockSide === 'memo' ? selectedCodeBlockIdx : null}
+                              scrollRef={backScrollRef}
                             />
                           </View>
                         )}
@@ -684,10 +718,10 @@ export default function StudySessionScreen() {
                     onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'back')}
                     onEditFocus={() => { codeEditingRef.current = true; }}
                     onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                    onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setEditTrigger(0); }}
-                    runTrigger={isFlipped ? runTrigger : undefined}
-                    editTrigger={isFlipped ? editTrigger : undefined}
-                    selectedCodeBlockIdx={isFlipped ? selectedCodeBlockIdx : null}
+                    onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide('back'); setEditTrigger(0); }}
+                    runTrigger={isFlipped && selectedCodeBlockSide === 'back' ? runTrigger : undefined}
+                    editTrigger={isFlipped && selectedCodeBlockSide === 'back' ? editTrigger : undefined}
+                    selectedCodeBlockIdx={isFlipped && selectedCodeBlockSide === 'back' ? selectedCodeBlockIdx : null}
                     scrollRef={backScrollRef}
                   />
                   {/* メモ */}
@@ -714,6 +748,11 @@ export default function StudySessionScreen() {
                             onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'memo')}
                             onEditFocus={() => { codeEditingRef.current = true; }}
                             onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                            onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide('memo'); setEditTrigger(0); }}
+                            runTrigger={showMemo && selectedCodeBlockSide === 'memo' ? runTrigger : undefined}
+                            editTrigger={showMemo && selectedCodeBlockSide === 'memo' ? editTrigger : undefined}
+                            selectedCodeBlockIdx={showMemo && selectedCodeBlockSide === 'memo' ? selectedCodeBlockIdx : null}
+                            scrollRef={backScrollRef}
                           />
                         </View>
                       )}

@@ -348,7 +348,8 @@ export default function StudySessionScreen() {
       }
     } else if (key.toLowerCase() === 'p') {
       if (currentCard) {
-        router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`);
+        const tab = isFlipped ? 'back' : 'front';
+        router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${tab}`);
       }
     } else if (isFlipped && !grading) {
       if (key === '1') handleGradeWithSlide(0);
@@ -480,7 +481,7 @@ export default function StudySessionScreen() {
             )}
             <Pressable
               style={styles.fullscreenEditBtn}
-              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
+              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? 'back' : 'front'}`)}
             >
               <Ionicons name="create-outline" size={24} color={theme.colors.iconSubtle} />
             </Pressable>
@@ -646,7 +647,7 @@ export default function StudySessionScreen() {
                 </Pressable>
               )}
               <Pressable
-                onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit`)}
+                onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? 'back' : 'front'}`)}
                 style={{ paddingHorizontal: 8 }}
               >
                 <Ionicons name="create-outline" size={22} color={theme.colors.primary} />

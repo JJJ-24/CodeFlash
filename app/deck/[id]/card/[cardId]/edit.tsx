@@ -16,7 +16,7 @@ import { useDeckStore } from '@/store/decks';
 import type { Card } from '@/types';
 
 export default function EditCardScreen() {
-  const { id, cardId } = useLocalSearchParams<{ id: string; cardId: string }>();
+  const { id, cardId, tab } = useLocalSearchParams<{ id: string; cardId: string; tab?: string }>();
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
@@ -127,6 +127,7 @@ export default function EditCardScreen() {
             memoBlocks: card.memoContent,
             tagIds: initialTagIds,
           }}
+          initialTab={tab === 'back' || tab === 'memo' ? tab : undefined}
           onSave={handleSave}
           onFrontEmptyChange={setFrontEmpty}
           saving={saving}

@@ -85,6 +85,7 @@ export interface BlockEditorRef {
 
 interface Props {
   initialData?: Partial<BlockEditorData>;
+  initialTab?: Tab;
   onSave: (data: BlockEditorData) => Promise<void>;
   onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
@@ -93,6 +94,7 @@ interface Props {
 
 export function BlockEditor({
   initialData,
+  initialTab,
   onSave,
   onFrontEmptyChange,
   saving,
@@ -104,7 +106,7 @@ export function BlockEditor({
   const flatListY = useRef(0);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
 
-  const [activeTab, setActiveTab] = useState<Tab>("front");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [isPreview, setIsPreview] = useState(false);
   const [frontBlocks, setFrontBlocks] = useState<EditBlock[]>(() =>
     toEditBlocks(initialData?.frontBlocks ?? [newTextBlock()]),

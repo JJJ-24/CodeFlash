@@ -19,9 +19,10 @@ interface Props {
   collapsed?: boolean;
   isLast?: boolean;
   onCollapsedDoubleTap?: () => void;
+  onFocusInput?: () => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed, isLast, onCollapsedDoubleTap }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed, isLast, onCollapsedDoubleTap, onFocusInput }: Props) {
   const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -136,7 +137,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           scrollEnabled={false}
           placeholder={t('card.textBlockPlaceholder')}
           placeholderTextColor={theme.colors.textTertiary}
-          onFocus={() => setFocused(true)}
+          onFocus={() => { setFocused(true); onFocusInput?.(); }}
           onBlur={() => setFocused(false)}
           textAlignVertical="top"
         />

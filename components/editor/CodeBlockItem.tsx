@@ -34,9 +34,10 @@ interface Props {
   onDragStart?: () => void;
   collapsed?: boolean;
   isLast?: boolean;
+  onFocusInput?: () => void;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed, isLast }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed, isLast, onFocusInput }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -131,7 +132,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   multiline
                   placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
-                  onFocus={() => setFocused(true)}
+                  onFocus={() => { setFocused(true); onFocusInput?.(); }}
                   onBlur={() => setFocused(false)}
                   textAlignVertical="top"
                   autoCapitalize="none"

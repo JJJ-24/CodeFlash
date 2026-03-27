@@ -23,9 +23,10 @@ interface Props {
   onDragStart?: () => void;
   collapsed?: boolean;
   isLast?: boolean;
+  onFocusInput?: () => void;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collapsed, isLast }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collapsed, isLast, onFocusInput }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -132,7 +133,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
             onChangeText={(alt) => onChange({ alt })}
             placeholder={t('card.imageAltPlaceholder')}
             placeholderTextColor={theme.colors.textTertiary}
-            onFocus={() => setFocused(true)}
+            onFocus={() => { setFocused(true); onFocusInput?.(); }}
             onBlur={() => setFocused(false)}
           />
         </>

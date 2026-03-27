@@ -206,19 +206,40 @@ export function BlockEditor({
       if (block.type === "text") {
         return (
           <ScaleDecorator activeScale={1.02}>
-            <TextBlockItem
-              block={block as TextBlock}
-              isPreview={isPreview}
-              onChange={(content) =>
-                updateBlock(activeTab, block._key, { content })
-              }
-              onDelete={() => deleteBlock(activeTab, block._key)}
-              autoFocus={index === 0}
-              onDragStart={sortDrag}
-              collapsed={collapsed}
-              isLast={isLast}
-              onCollapsedDoubleTap={() => setIsSortMode(false)}
-            />
+            <View
+              ref={(r) => {
+                if (r) blockViewRefs.current.set(block._key, r);
+                else blockViewRefs.current.delete(block._key);
+              }}
+            >
+              <TextBlockItem
+                block={block as TextBlock}
+                isPreview={isPreview}
+                onChange={(content) =>
+                  updateBlock(activeTab, block._key, { content })
+                }
+                onDelete={() => deleteBlock(activeTab, block._key)}
+                autoFocus={index === 0}
+                onDragStart={sortDrag}
+                collapsed={collapsed}
+                isLast={isLast}
+                onCollapsedDoubleTap={() => setIsSortMode(false)}
+                onFocusInput={() => {
+                  // キーボード表示アニメーション完了後（300ms）にブロックが見える位置へスクロール
+                  setTimeout(() => {
+                    const viewRef = blockViewRefs.current.get(block._key);
+                    if (!viewRef || !scrollRef.current) return;
+                    viewRef.measureLayout(
+                      scrollRef.current as any,
+                      (x, y, w, h) => {
+                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+                      },
+                      () => {}
+                    );
+                  }, 300);
+                }}
+              />
+            </View>
           </ScaleDecorator>
         );
       }
@@ -268,6 +289,19 @@ export function BlockEditor({
                 onDragStart={sortDrag}
                 collapsed={collapsed}
                 isLast={isLast}
+                onFocusInput={() => {
+                  setTimeout(() => {
+                    const viewRef = blockViewRefs.current.get(block._key);
+                    if (!viewRef || !scrollRef.current) return;
+                    viewRef.measureLayout(
+                      scrollRef.current as any,
+                      (x, y, w, h) => {
+                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+                      },
+                      () => {}
+                    );
+                  }, 300);
+                }}
               />
             </View>
           </ScaleDecorator>
@@ -276,14 +310,34 @@ export function BlockEditor({
       if (block.type === "image") {
         return (
           <ScaleDecorator activeScale={1.02}>
-            <ImageBlockItem
-              block={block as ImageBlock}
-              onChange={(patch) => updateBlock(activeTab, block._key, patch)}
-              onDelete={() => deleteBlock(activeTab, block._key)}
-              onDragStart={sortDrag}
-              collapsed={collapsed}
-              isLast={isLast}
-            />
+            <View
+              ref={(r) => {
+                if (r) blockViewRefs.current.set(block._key, r);
+                else blockViewRefs.current.delete(block._key);
+              }}
+            >
+              <ImageBlockItem
+                block={block as ImageBlock}
+                onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+                onDelete={() => deleteBlock(activeTab, block._key)}
+                onDragStart={sortDrag}
+                collapsed={collapsed}
+                isLast={isLast}
+                onFocusInput={() => {
+                  setTimeout(() => {
+                    const viewRef = blockViewRefs.current.get(block._key);
+                    if (!viewRef || !scrollRef.current) return;
+                    viewRef.measureLayout(
+                      scrollRef.current as any,
+                      (x, y, w, h) => {
+                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+                      },
+                      () => {}
+                    );
+                  }, 300);
+                }}
+              />
+            </View>
           </ScaleDecorator>
         );
       }

@@ -9,6 +9,7 @@ import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
 import { useTheme } from '@/lib/theme';
 import { createCard } from '@/lib/database/cards';
+import { addTagToCard } from '@/lib/database/tags';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 
@@ -34,6 +35,7 @@ export default function NewCardScreen() {
         backContent: data.backBlocks,
         memoContent: data.memoBlocks,
       });
+      await Promise.all(data.tagIds.map((tagId) => addTagToCard(db, card.id, tagId)));
       addCard(card);
       const deck = decks.find((d) => d.id === deckId);
       if (deck) {

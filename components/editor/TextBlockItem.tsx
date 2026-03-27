@@ -15,14 +15,15 @@ interface Props {
   onChange: (content: string) => void;
   onDelete: () => void;
   autoFocus?: boolean;
-  onDragStart?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   collapsed?: boolean;
   isLast?: boolean;
   onCollapsedDoubleTap?: () => void;
   onFocusInput?: () => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onDragStart, collapsed, isLast, onCollapsedDoubleTap, onFocusInput }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, isLast, onCollapsedDoubleTap, onFocusInput }: Props) {
   const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -96,7 +97,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       { backgroundColor: theme.colors.surface, borderColor: focused ? theme.colors.primary : theme.colors.inputBorder },
     ]}>
       <BlockItemHeader
-        onDragStart={onDragStart}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}

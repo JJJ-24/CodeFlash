@@ -31,13 +31,14 @@ interface Props {
   onChange: (patch: Partial<CodeBlock>) => void;
   onDelete: () => void;
   onRunStart?: () => void;
-  onDragStart?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   collapsed?: boolean;
   isLast?: boolean;
   onFocusInput?: () => void;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onDragStart, collapsed, isLast, onFocusInput }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, isLast, onFocusInput }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -64,11 +65,12 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused, isRunning && styles.containerRunning]}>
       <BlockItemHeader
-        onDragStart={onDragStart}
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}
         isLast={isLast}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
         style={{ backgroundColor: isRunning ? '#1E5024' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>

@@ -20,13 +20,14 @@ interface Props {
   block: ImageBlock;
   onChange: (patch: Partial<ImageBlock>) => void;
   onDelete: () => void;
-  onDragStart?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   collapsed?: boolean;
   isLast?: boolean;
   onFocusInput?: () => void;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collapsed, isLast, onFocusInput }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, isLast, onFocusInput }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -62,7 +63,8 @@ export function ImageBlockItem({ block, onChange, onDelete, onDragStart, collaps
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: focused ? theme.colors.primary : theme.colors.inputBorder }]}>
       <BlockItemHeader
-        onDragStart={onDragStart}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}

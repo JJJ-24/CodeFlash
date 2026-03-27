@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -14,18 +13,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  NestableDraggableFlatList,
-  NestableScrollContainer,
-  ScaleDecorator,
-  type DragEndParams,
-  type RenderItemParams,
-} from "react-native-draggable-flatlist";
 
 import { useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
@@ -102,8 +95,7 @@ export function BlockEditor({
 }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const scrollRef = useRef<any>(null);
-  const flatListY = useRef(0);
+  const scrollRef = useRef<ScrollView>(null);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
   const blockViewRefs = useRef<Map<string, View | null>>(new Map());
 
@@ -155,8 +147,17 @@ export function BlockEditor({
     setAddMenuVisible(false);
   }
 
-  function handleDragEnd({ data }: DragEndParams<EditBlock>) {
-    setterByTab[activeTab](data);
+  function moveBlock(tab: Tab, key: string, direction: 'up' | 'down') {
+    setterByTab[tab]((prev) => {
+      const idx = prev.findIndex((b) => b._key === key);
+      if (idx === -1) return prev;
+      if (direction === 'up' && idx === 0) return prev;
+      if (direction === 'down' && idx === prev.length - 1) return prev;
+      const next = [...prev];
+      const target = direction === 'up' ? idx - 1 : idx + 1;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
   }
 
   const isFrontEmpty = frontBlocks.every((b) => {
@@ -196,154 +197,143 @@ export function BlockEditor({
 
   const currentBlocks = blocksByTab[activeTab];
 
-  const renderBlock = useCallback(
-    ({ item: block, drag, getIndex }: RenderItemParams<EditBlock>) => {
-      const index = getIndex() ?? 0;
-      const collapsed = isSortMode;
-      const sortDrag = isSortMode ? drag : undefined;
-      const isLast = currentBlocks.length === 1;
+  const footerContent = (
+    <>
+      {/* ブロック追加ボタン */}
+      {!isPreview && (
+        <View style={styles.addArea}>
+          {addMenuVisible ? (
+            <View
+              style={[
+                styles.addMenu,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.inputBorder,
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.addMenuItem,
+                  { borderBottomColor: theme.colors.border },
+                ]}
+                onPress={() => addBlock("text")}
+              >
+                <Text style={styles.addMenuIcon}>T</Text>
+                <Text
+                  style={[
+                    styles.addMenuLabel,
+                    { color: theme.colors.text, fontSize: theme.fontSize.md },
+                  ]}
+                >
+                  {t("editor.textBlock")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.addMenuItem,
+                  { borderBottomColor: theme.colors.border },
+                ]}
+                onPress={() => addBlock("code")}
+              >
+                <Text style={styles.addMenuIcon}>{"</>"}</Text>
+                <Text
+                  style={[
+                    styles.addMenuLabel,
+                    { color: theme.colors.text, fontSize: theme.fontSize.md },
+                  ]}
+                >
+                  {t("editor.codeBlock")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.addMenuItem,
+                  { borderBottomColor: theme.colors.border },
+                ]}
+                onPress={() => addBlock("image")}
+              >
+                <View style={styles.addMenuIconWrap}>
+                  <Ionicons name="image-outline" size={22} color="#1976D2" />
+                </View>
+                <Text
+                  style={[
+                    styles.addMenuLabel,
+                    { color: theme.colors.text, fontSize: theme.fontSize.md },
+                  ]}
+                >
+                  {t("card.imageBlock")}
+                </Text>
+              </TouchableOpacity>
+              <Pressable
+                onPress={() => setAddMenuVisible(false)}
+                style={styles.addMenuCancel}
+              >
+                <Text
+                  style={[
+                    styles.addMenuCancelText,
+                    {
+                      color: theme.colors.textTertiary,
+                      fontSize: theme.fontSize.md,
+                    },
+                  ]}
+                >
+                  {t("common.cancel")}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              style={[
+                styles.addBtn,
+                { borderColor: theme.colors.iconSubtle },
+              ]}
+              onPress={() => setAddMenuVisible(true)}
+            >
+              <Text
+                style={[
+                  styles.addBtnText,
+                  {
+                    color: theme.colors.textTertiary,
+                    fontSize: theme.fontSize.md,
+                  },
+                ]}
+              >
+                {t("editor.addBlock")}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
-      if (block.type === "text") {
-        return (
-          <ScaleDecorator activeScale={1.02}>
-            <View
-              ref={(r) => {
-                if (r) blockViewRefs.current.set(block._key, r);
-                else blockViewRefs.current.delete(block._key);
-              }}
-            >
-              <TextBlockItem
-                block={block as TextBlock}
-                isPreview={isPreview}
-                onChange={(content) =>
-                  updateBlock(activeTab, block._key, { content })
-                }
-                onDelete={() => deleteBlock(activeTab, block._key)}
-                autoFocus={index === 0}
-                onDragStart={sortDrag}
-                collapsed={collapsed}
-                isLast={isLast}
-                onCollapsedDoubleTap={() => setIsSortMode(false)}
-                onFocusInput={() => {
-                  // キーボード表示アニメーション完了後（300ms）にブロックが見える位置へスクロール
-                  setTimeout(() => {
-                    const viewRef = blockViewRefs.current.get(block._key);
-                    if (!viewRef || !scrollRef.current) return;
-                    viewRef.measureLayout(
-                      scrollRef.current as any,
-                      (x, y, w, h) => {
-                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
-                      },
-                      () => {}
-                    );
-                  }, 300);
-                }}
-              />
-            </View>
-          </ScaleDecorator>
-        );
-      }
-      if (block.type === "code") {
-        return (
-          <ScaleDecorator activeScale={1.02}>
-            <View
-              ref={(r) => {
-                if (r) blockViewRefs.current.set(block._key, r);
-                else blockViewRefs.current.delete(block._key);
-              }}
-              onLayout={(e) => {
-                blockPositions.current[block._key] = {
-                  y: e.nativeEvent.layout.y,
-                  h: e.nativeEvent.layout.height,
-                };
-              }}
-            >
-              <CodeBlockItem
-                block={block as CodeBlock}
-                isPreview={isPreview}
-                onChange={(patch) => updateBlock(activeTab, block._key, patch)}
-                onDelete={() => deleteBlock(activeTab, block._key)}
-                onRunStart={() => {
-                  // 出力レイアウト更新後（300ms）にブロック下端が見える位置へスクロール
-                  // measureLayout でリアルタイム位置を取得（onLayout のキャッシュは NestableDraggableFlatList では更新されないため）
-                  setTimeout(() => {
-                    const viewRef = blockViewRefs.current.get(block._key);
-                    if (!viewRef || !scrollRef.current) return;
-                    viewRef.measureLayout(
-                      scrollRef.current as any,
-                      (x, y, w, h) => {
-                        scrollRef.current?.scrollTo({ y: Math.max(0, y + h - 300), animated: true });
-                      },
-                      () => {
-                        // フォールバック: キャッシュを使用
-                        const pos = blockPositions.current[block._key];
-                        if (!pos) return;
-                        scrollRef.current?.scrollTo({
-                          y: Math.max(0, flatListY.current + pos.y + pos.h - 300),
-                          animated: true,
-                        });
-                      }
-                    );
-                  }, 300);
-                }}
-                onDragStart={sortDrag}
-                collapsed={collapsed}
-                isLast={isLast}
-                onFocusInput={() => {
-                  setTimeout(() => {
-                    const viewRef = blockViewRefs.current.get(block._key);
-                    if (!viewRef || !scrollRef.current) return;
-                    viewRef.measureLayout(
-                      scrollRef.current as any,
-                      (x, y, w, h) => {
-                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
-                      },
-                      () => {}
-                    );
-                  }, 300);
-                }}
-              />
-            </View>
-          </ScaleDecorator>
-        );
-      }
-      if (block.type === "image") {
-        return (
-          <ScaleDecorator activeScale={1.02}>
-            <View
-              ref={(r) => {
-                if (r) blockViewRefs.current.set(block._key, r);
-                else blockViewRefs.current.delete(block._key);
-              }}
-            >
-              <ImageBlockItem
-                block={block as ImageBlock}
-                onChange={(patch) => updateBlock(activeTab, block._key, patch)}
-                onDelete={() => deleteBlock(activeTab, block._key)}
-                onDragStart={sortDrag}
-                collapsed={collapsed}
-                isLast={isLast}
-                onFocusInput={() => {
-                  setTimeout(() => {
-                    const viewRef = blockViewRefs.current.get(block._key);
-                    if (!viewRef || !scrollRef.current) return;
-                    viewRef.measureLayout(
-                      scrollRef.current as any,
-                      (x, y, w, h) => {
-                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
-                      },
-                      () => {}
-                    );
-                  }, 300);
-                }}
-              />
-            </View>
-          </ScaleDecorator>
-        );
-      }
-      return null;
-    },
-    [isPreview, activeTab, isSortMode, currentBlocks.length],
+      {/* タグ選択 */}
+      <View style={styles.tagSection}>
+        <Text
+          style={[
+            styles.tagLabel,
+            {
+              color: theme.colors.textSecondary,
+              fontSize: theme.fontSize.md,
+            },
+          ]}
+        >
+          {t("tag.title")}
+        </Text>
+        <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
+      </View>
+
+      {/* 表面が空の場合のバリデーションエラー */}
+      {isFrontEmpty && (
+        <Text
+          style={[
+            styles.validationError,
+            { color: theme.colors.danger, fontSize: theme.fontSize.sm },
+          ]}
+        >
+          {t("card.frontRequired")}
+        </Text>
+      )}
+    </>
   );
 
   return (
@@ -422,160 +412,100 @@ export function BlockEditor({
         </Pressable>
       </View>
 
-      <NestableScrollContainer
+      <ScrollView
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ブロック一覧 */}
-        <NestableDraggableFlatList
-          key={activeTab}
-          data={currentBlocks}
-          keyExtractor={(item) => item._key}
-          renderItem={renderBlock}
-          onDragEnd={handleDragEnd}
-          activationDistance={isSortMode ? 2 : 10000}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          keyboardShouldPersistTaps="handled"
-          onLayout={(e) => { flatListY.current = e.nativeEvent.layout.y; }}
-        />
-
-        {/* ブロック追加ボタン */}
-        {!isPreview && (
-          <View style={styles.addArea}>
-            {addMenuVisible ? (
-              <View
-                style={[
-                  styles.addMenu,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.inputBorder,
-                  },
-                ]}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.addMenuItem,
-                    { borderBottomColor: theme.colors.border },
-                  ]}
-                  onPress={() => addBlock("text")}
-                >
-                  <Text style={styles.addMenuIcon}>T</Text>
-                  <Text
-                    style={[
-                      styles.addMenuLabel,
-                      { color: theme.colors.text, fontSize: theme.fontSize.md },
-                    ]}
-                  >
-                    {t("editor.textBlock")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.addMenuItem,
-                    { borderBottomColor: theme.colors.border },
-                  ]}
-                  onPress={() => addBlock("code")}
-                >
-                  <Text style={styles.addMenuIcon}>{"</>"}</Text>
-                  <Text
-                    style={[
-                      styles.addMenuLabel,
-                      { color: theme.colors.text, fontSize: theme.fontSize.md },
-                    ]}
-                  >
-                    {t("editor.codeBlock")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.addMenuItem,
-                    { borderBottomColor: theme.colors.border },
-                  ]}
-                  onPress={() => addBlock("image")}
-                >
-                  <View style={styles.addMenuIconWrap}>
-                    <Ionicons name="image-outline" size={22} color="#1976D2" />
-                  </View>
-                  <Text
-                    style={[
-                      styles.addMenuLabel,
-                      { color: theme.colors.text, fontSize: theme.fontSize.md },
-                    ]}
-                  >
-                    {t("card.imageBlock")}
-                  </Text>
-                </TouchableOpacity>
-                <Pressable
-                  onPress={() => setAddMenuVisible(false)}
-                  style={styles.addMenuCancel}
-                >
-                  <Text
-                    style={[
-                      styles.addMenuCancelText,
-                      {
-                        color: theme.colors.textTertiary,
-                        fontSize: theme.fontSize.md,
-                      },
-                    ]}
-                  >
-                    {t("common.cancel")}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                style={[
-                  styles.addBtn,
-                  { borderColor: theme.colors.iconSubtle },
-                ]}
-                onPress={() => setAddMenuVisible(true)}
-              >
-                <Text
-                  style={[
-                    styles.addBtnText,
-                    {
-                      color: theme.colors.textTertiary,
-                      fontSize: theme.fontSize.md,
-                    },
-                  ]}
-                >
-                  {t("editor.addBlock")}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        )}
-
-        {/* タグ選択 */}
-        <View style={styles.tagSection}>
-          <Text
-            style={[
-              styles.tagLabel,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.fontSize.md,
-              },
-            ]}
-          >
-            {t("tag.title")}
-          </Text>
-          <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
-        </View>
-
-        {/* 表面が空の場合のバリデーションエラー */}
-        {isFrontEmpty && (
-          <Text
-            style={[
-              styles.validationError,
-              { color: theme.colors.danger, fontSize: theme.fontSize.sm },
-            ]}
-          >
-            {t("card.frontRequired")}
-          </Text>
-        )}
-      </NestableScrollContainer>
+        {currentBlocks.map((block, index) => {
+          const isLast = currentBlocks.length === 1;
+          const moveUp = isSortMode && index > 0 ? () => moveBlock(activeTab, block._key, 'up') : undefined;
+          const moveDown = isSortMode && index < currentBlocks.length - 1 ? () => moveBlock(activeTab, block._key, 'down') : undefined;
+          return (
+            <View
+              key={block._key}
+              ref={(r) => {
+                if (r) blockViewRefs.current.set(block._key, r);
+                else blockViewRefs.current.delete(block._key);
+              }}
+              onLayout={(e) => {
+                blockPositions.current[block._key] = {
+                  y: e.nativeEvent.layout.y,
+                  h: e.nativeEvent.layout.height,
+                };
+              }}
+            >
+              {block.type === "text" && (
+                <TextBlockItem
+                  block={block as TextBlock}
+                  isPreview={isPreview}
+                  onChange={(content) => updateBlock(activeTab, block._key, { content })}
+                  onDelete={() => deleteBlock(activeTab, block._key)}
+                  autoFocus={index === 0}
+                  onMoveUp={moveUp}
+                  onMoveDown={moveDown}
+                  collapsed={isSortMode}
+                  isLast={isLast}
+                  onCollapsedDoubleTap={() => setIsSortMode(false)}
+                  onFocusInput={() => {
+                    setTimeout(() => {
+                      const pos = blockPositions.current[block._key];
+                      if (!pos || !scrollRef.current) return;
+                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
+                    }, 300);
+                  }}
+                />
+              )}
+              {block.type === "code" && (
+                <CodeBlockItem
+                  block={block as CodeBlock}
+                  isPreview={isPreview}
+                  onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+                  onDelete={() => deleteBlock(activeTab, block._key)}
+                  onMoveUp={moveUp}
+                  onMoveDown={moveDown}
+                  collapsed={isSortMode}
+                  isLast={isLast}
+                  onRunStart={() => {
+                    setTimeout(() => {
+                      const pos = blockPositions.current[block._key];
+                      if (!pos || !scrollRef.current) return;
+                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - 300), animated: true });
+                    }, 300);
+                  }}
+                  onFocusInput={() => {
+                    setTimeout(() => {
+                      const pos = blockPositions.current[block._key];
+                      if (!pos || !scrollRef.current) return;
+                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
+                    }, 300);
+                  }}
+                />
+              )}
+              {block.type === "image" && (
+                <ImageBlockItem
+                  block={block as ImageBlock}
+                  onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+                  onDelete={() => deleteBlock(activeTab, block._key)}
+                  onMoveUp={moveUp}
+                  onMoveDown={moveDown}
+                  collapsed={isSortMode}
+                  isLast={isLast}
+                  onFocusInput={() => {
+                    setTimeout(() => {
+                      const pos = blockPositions.current[block._key];
+                      if (!pos || !scrollRef.current) return;
+                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
+                    }, 300);
+                  }}
+                />
+              )}
+            </View>
+          );
+        })}
+        {footerContent}
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

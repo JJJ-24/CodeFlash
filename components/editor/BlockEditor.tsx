@@ -97,7 +97,6 @@ export function BlockEditor({
   const theme = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
-  const blockViewRefs = useRef<Map<string, View | null>>(new Map());
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [isPreview, setIsPreview] = useState(false);
@@ -113,6 +112,8 @@ export function BlockEditor({
   const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
   const [addMenuVisible, setAddMenuVisible] = useState(false);
   const [isSortMode, setIsSortMode] = useState(false);
+  const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
+  const [moveCount, setMoveCount] = useState(0);
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -148,16 +149,27 @@ export function BlockEditor({
   }
 
   function moveBlock(tab: Tab, key: string, direction: 'up' | 'down') {
+    const blocks = blocksByTab[tab];
+    const idx = blocks.findIndex((b) => b._key === key);
+    if (idx === -1) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === blocks.length - 1) return;
+
+    setSelectedBlockKey(key);
+    setMoveCount((c) => c + 1);
     setterByTab[tab]((prev) => {
-      const idx = prev.findIndex((b) => b._key === key);
-      if (idx === -1) return prev;
-      if (direction === 'up' && idx === 0) return prev;
-      if (direction === 'down' && idx === prev.length - 1) return prev;
       const next = [...prev];
       const target = direction === 'up' ? idx - 1 : idx + 1;
       [next[idx], next[target]] = [next[target], next[idx]];
       return next;
     });
+    // レイアウト更新後に移動先ブロックへスクロール
+    setTimeout(() => {
+      const pos = blockPositions.current[key];
+      if (pos && scrollRef.current) {
+        scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 60), animated: true });
+      }
+    }, 150);
   }
 
   const isFrontEmpty = frontBlocks.every((b) => {
@@ -168,6 +180,10 @@ export function BlockEditor({
   useEffect(() => {
     onFrontEmptyChange?.(isFrontEmpty);
   }, [isFrontEmpty]);
+
+  useEffect(() => {
+    if (!isSortMode) setSelectedBlockKey(null);
+  }, [isSortMode]);
 
   useEffect(() => {
     if (addMenuVisible) {
@@ -422,13 +438,10 @@ export function BlockEditor({
           const isLast = currentBlocks.length === 1;
           const moveUp = isSortMode && index > 0 ? () => moveBlock(activeTab, block._key, 'up') : undefined;
           const moveDown = isSortMode && index < currentBlocks.length - 1 ? () => moveBlock(activeTab, block._key, 'down') : undefined;
+          const flashTrigger = selectedBlockKey === block._key ? moveCount : 0;
           return (
             <View
               key={block._key}
-              ref={(r) => {
-                if (r) blockViewRefs.current.set(block._key, r);
-                else blockViewRefs.current.delete(block._key);
-              }}
               onLayout={(e) => {
                 blockPositions.current[block._key] = {
                   y: e.nativeEvent.layout.y,
@@ -446,6 +459,7 @@ export function BlockEditor({
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
+                  flashTrigger={flashTrigger}
                   isLast={isLast}
                   onCollapsedDoubleTap={() => setIsSortMode(false)}
                   onFocusInput={() => {
@@ -466,6 +480,7 @@ export function BlockEditor({
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
+                  flashTrigger={flashTrigger}
                   isLast={isLast}
                   onRunStart={() => {
                     setTimeout(() => {
@@ -491,6 +506,7 @@ export function BlockEditor({
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
+                  flashTrigger={flashTrigger}
                   isLast={isLast}
                   onFocusInput={() => {
                     setTimeout(() => {

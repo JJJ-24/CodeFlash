@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
@@ -18,12 +18,13 @@ interface Props {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   collapsed?: boolean;
+  flashTrigger?: number;
   isLast?: boolean;
   onCollapsedDoubleTap?: () => void;
   onFocusInput?: () => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, isLast, onCollapsedDoubleTap, onFocusInput }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onCollapsedDoubleTap, onFocusInput }: Props) {
   const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -31,8 +32,16 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFocusRef = useRef(false);
   const prevCollapsedRef = useRef(collapsed);
+  const flashAnim = useRef(new Animated.Value(0)).current;
   const theme = useTheme();
   const isEmpty = block.content.trim() === '';
+
+  useEffect(() => {
+    if (flashTrigger > 0) {
+      flashAnim.setValue(1);
+      Animated.timing(flashAnim, { toValue: 0, duration: 600, useNativeDriver: true }).start();
+    }
+  }, [flashTrigger]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -94,7 +103,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   return (
     <View style={[
       styles.container,
-      { backgroundColor: theme.colors.surface, borderColor: focused ? theme.colors.primary : theme.colors.inputBorder },
+      { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : (!collapsed && focused ? theme.colors.primary : theme.colors.inputBorder) },
     ]}>
       <BlockItemHeader
         onMoveUp={onMoveUp}
@@ -144,6 +153,10 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           textAlignVertical="top"
         />
       )}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}
+        pointerEvents="none"
+      />
     </View>
   );
 }

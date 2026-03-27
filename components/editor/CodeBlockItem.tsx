@@ -3,6 +3,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Modal,
   Pressable,
   ScrollView,
@@ -34,11 +35,12 @@ interface Props {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   collapsed?: boolean;
+  flashTrigger?: number;
   isLast?: boolean;
   onFocusInput?: () => void;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, isLast, onFocusInput }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -46,6 +48,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const { result, htmlSource, baseUrl, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
   const prevCollapsedRef = useRef(collapsed);
+  const flashAnim = useRef(new Animated.Value(0)).current;
 
   const theme = useTheme();
 
@@ -56,6 +59,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     prevCollapsedRef.current = collapsed;
   }, [collapsed]);
 
+  useEffect(() => {
+    if (flashTrigger > 0) {
+      flashAnim.setValue(1);
+      Animated.timing(flashAnim, { toValue: 0, duration: 600, useNativeDriver: true }).start();
+    }
+  }, [flashTrigger]);
+
   async function handleCodeCopy() {
     await Clipboard.setStringAsync(block.content);
     setCodeCopied(true);
@@ -63,7 +73,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: theme.dark ? '#3A3A3A' : '#333' }, focused && styles.containerFocused, isRunning && styles.containerRunning]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: flashTrigger > 0 ? theme.colors.primary : (theme.dark ? '#3A3A3A' : '#333') }, !collapsed && focused && styles.containerFocused, isRunning && styles.containerRunning]}>
       <BlockItemHeader
         onDelete={onDelete}
         collapsed={collapsed}
@@ -79,7 +89,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         </Pressable>
 
         <View style={styles.headerRight}>
-          {EXECUTABLE_LANGUAGES.includes(block.language) && (
+          {!collapsed && EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
               <Text style={[styles.execLabel, { fontSize: theme.fontSize.sm }]}>{t('code.run')}</Text>
               <Switch
@@ -92,7 +102,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </>
           )}
 
-          {block.executable && (
+          {!collapsed && block.executable && (
             <TouchableOpacity
               style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
               onPress={() => run(block.content, block.language)}
@@ -193,6 +203,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           </View>
         </Pressable>
       </Modal>
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}
+        pointerEvents="none"
+      />
     </View>
   );
 }

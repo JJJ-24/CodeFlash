@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -23,11 +24,12 @@ interface Props {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   collapsed?: boolean;
+  flashTrigger?: number;
   isLast?: boolean;
   onFocusInput?: () => void;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, isLast, onFocusInput }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -35,6 +37,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const [focused, setFocused] = useState(false);
   const prevCollapsedRef = useRef(collapsed);
   const altInputRef = useRef<TextInput>(null);
+  const flashAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!collapsed && prevCollapsedRef.current) {
@@ -42,6 +45,13 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
     }
     prevCollapsedRef.current = collapsed;
   }, [collapsed]);
+
+  useEffect(() => {
+    if (flashTrigger > 0) {
+      flashAnim.setValue(1);
+      Animated.timing(flashAnim, { toValue: 0, duration: 600, useNativeDriver: true }).start();
+    }
+  }, [flashTrigger]);
 
   async function handlePick() {
     setPicking(true);
@@ -61,7 +71,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const isEmpty = !block.uri;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: focused ? theme.colors.primary : theme.colors.inputBorder }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : (!collapsed && focused ? theme.colors.primary : theme.colors.inputBorder) }]}>
       <BlockItemHeader
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
@@ -140,6 +150,10 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
           />
         </>
       )}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}
+        pointerEvents="none"
+      />
     </View>
   );
 }

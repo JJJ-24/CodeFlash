@@ -37,6 +37,13 @@ import type { Block, Card } from '@/types';
 
 type FilterKey = DeckDetailFilter;
 
+const SESSION_FILTER_MAP: Record<FilterKey, 'all' | 'today' | 'due' | 'unlearned'> = {
+  all: 'all',
+  learned: 'today',
+  review: 'due',
+  new: 'unlearned',
+};
+
 function getPreviewText(blocks: Block[]): string {
   const first = blocks.find((b) => b.type === 'text');
   return first?.content?.trim() ?? '';
@@ -185,7 +192,7 @@ export default function DeckDetailScreen() {
       <TouchableOpacity
         style={styles.studyBtn}
         activeOpacity={0.8}
-        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: selectedFilter } })}
+        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
       >
         <Ionicons name="play" size={20} color="#FFF" />
         <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]}>{t('deck.study')}</Text>

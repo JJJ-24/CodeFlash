@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { resolveImageUri } from '@/lib/image';
-
-const markdownItLinkify = MarkdownIt({ linkify: true });
 import { useTheme } from '@/lib/theme';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
+
+const markdownItLinkify = MarkdownIt({ linkify: true });
 
 interface Props {
   blocks: Block[];
@@ -29,6 +30,7 @@ interface Props {
 export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const { suppress } = useFlipSuppress();
   const containerYRef = useRef(0);
   const blockYPositions = useRef<Record<number, number>>({});
   const blockHeights = useRef<Record<number, number>>({});
@@ -108,6 +110,23 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
 
+  const linkRule = useMemo(() => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    link: (node: any, children: any) => (
+      <Pressable
+        key={node.key}
+        onLongPress={() => {
+          suppress();
+          Linking.openURL(node.attributes.href);
+        }}
+        delayLongPress={400}
+        style={({ pressed }) => pressed ? { backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 3 } : undefined}
+      >
+        <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }}>{children}</Text>
+      </Pressable>
+    ),
+  }), [suppress]);
+
   if (blocks.length === 0) {
     return <Text style={[styles.empty, { color: theme.colors.iconSubtle }]}>{t('card.noContent')}</Text>;
   }
@@ -127,7 +146,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         if (block.type === 'text') {
           return (
             <View key={i} style={styles.textBlock}>
-              <Markdown markdownit={markdownItLinkify} style={markdownStyles} onLinkPress={() => false}>{(block as TextBlock).content}</Markdown>
+              <Markdown markdownit={markdownItLinkify} style={markdownStyles} onLinkPress={() => false} rules={linkRule}>{(block as TextBlock).content}</Markdown>
             </View>
           );
         }

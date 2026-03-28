@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { useTheme } from '@/lib/theme';
 
 export interface FlipCardRef {
@@ -29,6 +30,7 @@ export const FlipCard = forwardRef<FlipCardRef, Props>(
   ({ front, back, isFlipped, onFlip, cardStyle, innerStyle }, ref) => {
     const progress = useSharedValue(isFlipped ? 1 : 0);
     const theme = useTheme();
+    const { suppressedRef } = useFlipSuppress();
 
     useImperativeHandle(ref, () => ({
       resetInstant: () => { progress.value = 0; },
@@ -54,10 +56,14 @@ export const FlipCard = forwardRef<FlipCardRef, Props>(
       };
     });
 
+    const handleTap = useCallback(() => {
+      if (!suppressedRef.current) onFlip();
+    }, [onFlip, suppressedRef]);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const tapGesture = useMemo(
-      () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(onFlip)()),
-      [onFlip]
+      () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleTap)()),
+      [handleTap]
     );
 
     return (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
@@ -100,6 +100,19 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
 
+  const linkRule = useMemo(() => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    link: (node: any, children: any) => (
+      <Pressable
+        key={node.key}
+        onPress={() => Linking.openURL(node.attributes.href)}
+        style={({ pressed }) => pressed ? { backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 3 } : undefined}
+      >
+        <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }}>{children}</Text>
+      </Pressable>
+    ),
+  }), []);
+
   return (
     <View style={[
       styles.container,
@@ -133,7 +146,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       ) : isPreview ? (
         <View style={styles.preview}>
           {block.content.trim() ? (
-            <Markdown markdownit={markdownItLinkify} style={markdownStyles}>{block.content}</Markdown>
+            <Markdown markdownit={markdownItLinkify} style={markdownStyles} rules={linkRule}>{block.content}</Markdown>
           ) : (
             <Text style={[styles.placeholder, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>{t('card.emptyTextBlock')}</Text>
           )}

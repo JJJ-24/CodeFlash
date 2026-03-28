@@ -23,6 +23,7 @@ import Animated, { runOnJS, runOnUI, useAnimatedStyle, useSharedValue, withSprin
 import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
 import { useStudySession } from '@/hooks/useStudySession';
+import { FlipSuppressContext } from '@/lib/FlipSuppressContext';
 import { useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
 import type { Block, CodeBlock, TextBlock } from '@/types';
@@ -103,6 +104,11 @@ export default function StudySessionScreen() {
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<Record<string, Record<number, string>>>({});
   const codeEditingRef = useRef(false);
   const flipCardRef = useRef<FlipCardRef>(null);
+  const suppressedRef = useRef(false);
+  const suppress = useCallback(() => {
+    suppressedRef.current = true;
+    setTimeout(() => { suppressedRef.current = false; }, 300);
+  }, []);
   const isNavigatingRef = useRef(false);
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
@@ -502,6 +508,7 @@ export default function StudySessionScreen() {
           {/* コンテンツエリア：タップで裏返す */}
           <GestureDetector gesture={panGesture}>
             <Animated.View style={[{ flex: 1 }, cardAnimStyle]}>
+              <FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
               <FlipCard
                 ref={flipCardRef}
                 isFlipped={isFlipped}
@@ -578,6 +585,7 @@ export default function StudySessionScreen() {
                   </ScrollView>
                 }
               />
+              </FlipSuppressContext.Provider>
             </Animated.View>
           </GestureDetector>
 
@@ -699,6 +707,7 @@ export default function StudySessionScreen() {
         {/* カード */}
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.cardArea, cardAnimStyle]}>
+            <FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
             <FlipCard
               ref={flipCardRef}
               isFlipped={isFlipped}
@@ -774,6 +783,7 @@ export default function StudySessionScreen() {
                 </ScrollView>
               }
             />
+            </FlipSuppressContext.Provider>
           </Animated.View>
         </GestureDetector>
 

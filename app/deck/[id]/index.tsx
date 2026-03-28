@@ -159,7 +159,7 @@ export default function DeckDetailScreen() {
   };
 
   const ListHeader = (
-    <View style={styles.header}>
+    <>
       {deck.description ? (
         <Text style={[styles.description, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
           {deck.description}
@@ -207,15 +207,7 @@ export default function DeckDetailScreen() {
         </Text>
       </View>
 
-      {displayedCards.length === 0 ? (
-        <View style={styles.emptyCards}>
-          <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
-            {selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
-          </Text>
-        </View>
-      ) : null}
-    </View>
+    </>
   );
 
   return (
@@ -227,17 +219,28 @@ export default function DeckDetailScreen() {
         }}
       />
 
-      <DraggableFlatList
-        data={displayedCards}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={ListHeader}
-        contentContainerStyle={styles.container}
-        onDragEnd={({ data }) => {
-          if (selectedFilter !== 'all') return;
-          reorderCards(data);
-          updateCardSortOrders(db, data.map((c) => c.id));
-        }}
-        renderItem={({ item, drag }: RenderItemParams<Card>) => {
+      <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+        {ListHeader}
+      </View>
+
+      {displayedCards.length === 0 ? (
+        <View style={styles.emptyCards}>
+          <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
+          <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
+            {selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
+          </Text>
+        </View>
+      ) : (
+        <DraggableFlatList
+          data={displayedCards}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.container}
+          onDragEnd={({ data }) => {
+            if (selectedFilter !== 'all') return;
+            reorderCards(data);
+            updateCardSortOrders(db, data.map((c) => c.id));
+          }}
+          renderItem={({ item, drag }: RenderItemParams<Card>) => {
           const preview = getPreviewText(item.frontContent);
           return (
             <ScaleDecorator>
@@ -281,7 +284,8 @@ export default function DeckDetailScreen() {
             </ScaleDecorator>
           );
         }}
-      />
+        />
+      )}
 
       {/* FAB: 戻る */}
       <Pressable style={styles.fabBack} onPress={() => router.back()}>

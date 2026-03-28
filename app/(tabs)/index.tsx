@@ -119,24 +119,23 @@ export default function HomeScreen() {
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
+        {StatsHeader}
+      </View>
       {decks.length === 0 ? (
-        <>
-          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>{StatsHeader}</View>
-          <View style={styles.emptyContainer}>
-            <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-              {t('home.empty')}
-            </Text>
-            <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
-              {t('home.emptySub')}
-            </Text>
-          </View>
-        </>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
+          <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+            {t('home.empty')}
+          </Text>
+          <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+            {t('home.emptySub')}
+          </Text>
+        </View>
       ) : (
         <DraggableFlatList
           data={decks}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={StatsHeader}
           contentContainerStyle={styles.listContent}
           onDragEnd={({ data }) => {
             reorderDecks(data);
@@ -162,6 +161,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  fixedHeader: { paddingHorizontal: 16, paddingTop: 16 },
   statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
   statsRow: {},
   statItem: {

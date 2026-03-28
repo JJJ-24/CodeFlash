@@ -298,7 +298,7 @@ export default function StatsScreen() {
 
         setTodayReviewed(reviewed);
         setTodayDue(due);
-        setStreak(1000);
+        setStreak(s);
         setLearned(counts.learned);
         setUnlearned(counts.unlearned);
         setTodayCreated(createdToday);
@@ -378,12 +378,9 @@ export default function StatsScreen() {
           : { data: schedule, title: t('stats.upcomingSchedule'), color: FILTER_COLORS.due, todayIsLast: false };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
-    >
-      {/* サマリーカード row */}
-      <View style={styles.summaryRow}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.summaryRow}>
         <Pressable
           style={[
             styles.summaryCard,
@@ -433,7 +430,9 @@ export default function StatsScreen() {
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xxl }]}>{todayCreated}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.newToday')}</Text>
         </Pressable>
+        </View>
       </View>
+      <ScrollView contentContainerStyle={styles.content}>
 
       {/* 7日間バーチャート */}
       <View style={styles.section}>
@@ -564,13 +563,15 @@ export default function StatsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, gap: 4, paddingBottom: 32 },
+  summarySection: { paddingHorizontal: 16, paddingTop: 16 },
+  content: { paddingHorizontal: 16, paddingBottom: 32, gap: 4 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { fontWeight: '600' },
   emptySubText: { textAlign: 'center', paddingHorizontal: 40 },

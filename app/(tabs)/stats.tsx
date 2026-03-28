@@ -296,7 +296,7 @@ export default function StatsScreen() {
 
         setTodayReviewed(reviewed);
         setTodayDue(due);
-        setStreak(s);
+        setStreak(30000);
         setLearned(counts.learned);
         setUnlearned(counts.unlearned);
         setTodayCreated(createdToday);
@@ -393,10 +393,10 @@ export default function StatsScreen() {
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#FFF', fontSize: theme.fontSize.xxl }]}>
             {streak}
           </Text>
-          {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={theme.fontSize.xl} color={m.color} /> : null; })()}
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]}>
             {t('stats.streak')}
           </Text>
+          {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={theme.fontSize.xl} color={m.color} style={styles.streakMedalBadge} /> : null; })()}
         </Pressable>
         <Pressable
           style={[
@@ -580,6 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    overflow: 'visible',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
@@ -588,6 +589,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: { fontWeight: '700' },
   summaryLabel: { marginTop: 2, textAlign: 'center' },
+  streakMedalBadge: { position: 'absolute', top: 2, right: 2 },
 
   // Section
   section: { marginTop: 16 },

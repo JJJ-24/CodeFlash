@@ -9,10 +9,12 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { FlatList } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme, FILTER_COLORS } from '@/lib/theme';
@@ -68,6 +70,11 @@ export default function DeckDetailScreen() {
     };
     return filterMap[initialFilterPreference] ?? 'review';
   });
+  const keyboardRef = useRef<TextInput>(null);
+  const isScreenFocusedRef = useRef(false);
+  const listRef = useRef<FlatList<Card>>(null);
+  const scrollOffsetRef = useRef(0);
+  const SCROLL_STEP = 200;
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
     learned: new Set(),
@@ -105,7 +112,10 @@ export default function DeckDetailScreen() {
         router.back();
         return;
       }
+      isScreenFocusedRef.current = true;
       loadCards();
+      setTimeout(() => keyboardRef.current?.focus(), 100);
+      return () => { isScreenFocusedRef.current = false; };
     }, [loadCards])
   );
 
@@ -212,6 +222,42 @@ export default function DeckDetailScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <TextInput
+        ref={keyboardRef}
+        style={styles.hiddenKeyboardInput}
+        caretHidden
+        keyboardType="ascii-capable"
+        showSoftInputOnFocus={false}
+        autoCorrect={false}
+        autoCapitalize="none"
+        spellCheck={false}
+        onKeyPress={({ nativeEvent: { key } }) => {
+          if (key === ' ') {
+            router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
+          } else if (key === '1') {
+            setSelectedFilter('all');
+            if (initialFilterPreference === 'none') setLastDeckDetailFilter('all');
+          } else if (key === '2') {
+            setSelectedFilter('learned');
+            if (initialFilterPreference === 'none') setLastDeckDetailFilter('learned');
+          } else if (key === '3') {
+            setSelectedFilter('review');
+            if (initialFilterPreference === 'none') setLastDeckDetailFilter('review');
+          } else if (key === '4') {
+            setSelectedFilter('new');
+            if (initialFilterPreference === 'none') setLastDeckDetailFilter('new');
+          } else if (key.toLowerCase() === 'b') {
+            router.back();
+          } else if (key.toLowerCase() === 'u') {
+            listRef.current?.scrollToOffset({ offset: Math.max(0, scrollOffsetRef.current - SCROLL_STEP), animated: true });
+          } else if (key.toLowerCase() === 'd') {
+            listRef.current?.scrollToOffset({ offset: scrollOffsetRef.current + SCROLL_STEP, animated: true });
+          } else if (key.toLowerCase() === 'n') {
+            router.push({ pathname: '/deck/[id]/card/new', params: { id } });
+          }
+        }}
+        onBlur={() => { setTimeout(() => { if (isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
+      />
       <Stack.Screen
         options={{
           title: deck.name,
@@ -233,9 +279,11 @@ export default function DeckDetailScreen() {
         </View>
       ) : (
         <DraggableFlatList
+          ref={listRef}
           data={displayedCards}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.container}
+          onScrollOffsetChange={(offset) => { scrollOffsetRef.current = offset; }}
           onDragEnd={({ data }) => {
             if (selectedFilter !== 'all') return;
             reorderCards(data);
@@ -306,6 +354,7 @@ export default function DeckDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   container: { paddingBottom: 96 },
   header: { padding: 20, gap: 16 },
   description: { lineHeight: 22 },

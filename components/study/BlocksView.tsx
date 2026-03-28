@@ -127,7 +127,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         if (block.type === 'text') {
           return (
             <View key={i} style={styles.textBlock}>
-              <Markdown markdownit={markdownItLinkify} style={markdownStyles}>{(block as TextBlock).content}</Markdown>
+              <Markdown markdownit={markdownItLinkify} style={markdownStyles} onLinkPress={() => false}>{(block as TextBlock).content}</Markdown>
             </View>
           );
         }

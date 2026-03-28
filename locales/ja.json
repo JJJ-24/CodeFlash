@@ -191,9 +191,7 @@
     "initialFilterLearned": "済み",
     "initialFilterReview": "復習",
     "initialFilterNew": "新規",
-    "initialFilterNone": "保持",
-    "initialFilterNoneAlertTitle": "「保持」について",
-    "initialFilterNoneAlertMessage": "\n学習・統計タブ：前回の選択を維持\nカード一覧　　：初期表示は「すべて」"
+    "initialFilterNone": "保持"
   },
   "dataManagement": {
     "title": "データ管理",

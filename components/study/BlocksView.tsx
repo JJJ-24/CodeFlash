@@ -1,5 +1,22 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+function LinkPressable({ href, suppress, children }: { href: string; suppress: () => void; children: React.ReactNode }) {
+  const [highlighted, setHighlighted] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const DELAY = 400;
+  return (
+    <Pressable
+      onPressIn={() => { timerRef.current = setTimeout(() => setHighlighted(true), DELAY); }}
+      onPressOut={() => { if (timerRef.current) clearTimeout(timerRef.current); setHighlighted(false); }}
+      onLongPress={() => { suppress(); Linking.openURL(href); }}
+      delayLongPress={DELAY}
+      style={highlighted ? { backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 3 } : undefined}
+    >
+      <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }}>{children}</Text>
+    </Pressable>
+  );
+}
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
@@ -113,17 +130,9 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   const linkRule = useMemo(() => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     link: (node: any, children: any) => (
-      <Pressable
-        key={node.key}
-        onLongPress={() => {
-          suppress();
-          Linking.openURL(node.attributes.href);
-        }}
-        delayLongPress={400}
-        style={({ pressed }) => pressed ? { backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 3 } : undefined}
-      >
-        <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }}>{children}</Text>
-      </Pressable>
+      <LinkPressable key={node.key} href={node.attributes.href} suppress={suppress}>
+        {children}
+      </LinkPressable>
     ),
   }), [suppress]);
 

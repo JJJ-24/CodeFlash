@@ -34,7 +34,7 @@ export default function EditDeckScreen() {
 
   const [name, setName] = useState(deck?.name ?? '');
   const [description, setDescription] = useState(deck?.description ?? '');
-  const [language, setLanguage] = useState<'ja' | 'en'>((deck?.language as 'ja' | 'en') ?? 'ja');
+  const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
@@ -129,29 +129,6 @@ export default function EditDeckScreen() {
               multiline
               numberOfLines={3}
             />
-          </View>
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
-              {t('deck.language')}
-            </Text>
-            <View style={styles.langRow}>
-              <TouchableOpacity
-                style={[styles.langBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, language === 'ja' && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight }]}
-                onPress={() => setLanguage('ja')}
-              >
-                <Text style={[styles.langBtnText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }, language === 'ja' && { color: theme.colors.primary, fontWeight: '600' }]}>
-                  {t('deck.languageJa')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.langBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, language === 'en' && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight }]}
-                onPress={() => setLanguage('en')}
-              >
-                <Text style={[styles.langBtnText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }, language === 'en' && { color: theme.colors.primary, fontWeight: '600' }]}>
-                  {t('deck.languageEn')}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </ScrollView>
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>

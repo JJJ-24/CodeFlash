@@ -122,6 +122,7 @@ export default function HomeScreen() {
       <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
         {StatsHeader}
       </View>
+      <View style={{ flex: 1 }}>
       {decks.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
@@ -148,6 +149,7 @@ export default function HomeScreen() {
           )}
         />
       )}
+      </View>
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push({ pathname: '/deck/new' })}

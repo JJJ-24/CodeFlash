@@ -223,6 +223,7 @@ export default function DeckDetailScreen() {
         {ListHeader}
       </View>
 
+      <View style={{ flex: 1 }}>
       {displayedCards.length === 0 ? (
         <View style={styles.emptyCards}>
           <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
@@ -286,6 +287,7 @@ export default function DeckDetailScreen() {
         }}
         />
       )}
+      </View>
 
       {/* FAB: 戻る */}
       <Pressable style={styles.fabBack} onPress={() => router.back()}>

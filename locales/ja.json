@@ -22,8 +22,7 @@
     "save": "保存",
     "study": "学習開始",
     "noCards": "カードがまだありません",
-    "noCardsInFilter": "該当するカードはありません",
-    "statHint": "ブロックまたはボタンをタップして学習を開始"
+    "noCardsInFilter": "該当するカードはありません"
   },
   "study": {
     "title": "学習",
@@ -191,7 +190,7 @@
     "initialFilterLearned": "済み",
     "initialFilterReview": "復習",
     "initialFilterNew": "新規",
-    "initialFilterNone": "保持"
+    "initialFilterNone": "直近"
   },
   "dataManagement": {
     "title": "データ管理",

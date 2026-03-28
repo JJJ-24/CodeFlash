@@ -20,14 +20,13 @@
     "languageEn": "English",
     "create": "Create",
     "save": "Save",
-    "study": "Start Study",
+    "study": "Start Studying",
     "noCards": "No cards yet",
-    "noCardsInFilter": "No matching cards",
-    "statHint": "Tap a block or button to start studying"
+    "noCardsInFilter": "No matching cards"
   },
   "study": {
     "title": "Study",
-    "selectDeck": "Select a Deck",
+    "selectDeck": "Decks",
     "dueCards": "{{count}} cards due",
     "noDue": "Nothing to review today",
     "noDecks": "No decks yet",
@@ -47,8 +46,8 @@
     "linksTitle": "Links",
     "filterDescAll": "All cards",
     "filterDescLearned": "Studied today",
-    "filterDescReview": "Due for review (incl. new)",
-    "filterDescNew": "Created today"
+    "filterDescReview": "Due cards (includes new cards)",
+    "filterDescNew": "New cards today"
   },
   "tag": {
     "title": "Tags",
@@ -76,7 +75,7 @@
     "new": "New Card",
     "edit": "Edit Card",
     "delete": "Delete Card",
-    "deleteConfirm": "Delete this card?\nStudy history will also be deleted, which may affect your streak.",
+    "deleteConfirm": "Delete this card?\nAssociated study history will also be deleted, which may affect your streak.",
     "front": "Front",
     "back": "Back",
     "memo": "Memo",
@@ -123,14 +122,14 @@
     "upcomingSchedule": "Next 7 Days",
     "totalProgress": "Overall Progress",
     "learned": "Done",
-    "statDue": "Review",
+    "statDue": "Due",
     "unlearned": "New",
     "newToday": "New",
     "deckMastery": "Deck Mastery",
     "mastery": "Mastery",
     "empty": "No study data yet",
     "emptySub": "Start studying to see your stats here",
-    "past7DaysReviewed": "Last 7 Days Reviewed",
+    "past7DaysReviewed": "Last 7 Days Studied",
     "past7DaysActivity": "Last 7 Days Activity",
     "past7DaysCreated": "Last 7 Days New Cards",
     "activityHeatmap": "Activity"
@@ -191,7 +190,7 @@
     "initialFilterLearned": "Done",
     "initialFilterReview": "Due",
     "initialFilterNew": "New",
-    "initialFilterNone": "Keep"
+    "initialFilterNone": "Last"
   },
   "dataManagement": {
     "title": "Data Management",
@@ -206,7 +205,7 @@
     "importMerge": "Merge (Add & Overwrite)",
     "importReplace": "Replace All",
     "importReplaceConfirmTitle": "Are you sure?",
-    "importReplaceConfirmMessage": "All current decks, cards, tags, and study history will be deleted and replaced with the imported data. This cannot be undone.",
+    "importReplaceConfirmMessage": "All current decks, cards, tags, and study history will be deleted and replaced with the imported data. \nThis cannot be undone.",
     "importSuccess": "Import completed",
     "importError": "Import failed",
     "importInvalidFile": "Invalid file format",

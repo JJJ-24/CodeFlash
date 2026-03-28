@@ -181,6 +181,8 @@
     "shortcutSelectBlock": "Cycle through code blocks",
     "shortcutRun": "Run selected code block",
     "shortcutEdit": "Edit selected code block",
+    "shortcutScrollUp": "Scroll up",
+    "shortcutScrollDown": "Scroll down",
     "shortcutBack": "Go back",
     "shortcutLinks": "Toggle link list",
     "shortcutPencil": "Edit card",

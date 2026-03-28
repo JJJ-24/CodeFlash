@@ -28,6 +28,8 @@ const SHORTCUTS = [
   { key: 'T',     descKey: 'settings.shortcutSelectBlock' },
   { key: 'R',     descKey: 'settings.shortcutRun' },
   { key: 'E',     descKey: 'settings.shortcutEdit' },
+  { key: 'U',     descKey: 'settings.shortcutScrollUp' },
+  { key: 'D',     descKey: 'settings.shortcutScrollDown' },
   { key: 'B',     descKey: 'settings.shortcutBack' },
   { key: 'L',     descKey: 'settings.shortcutLinks' },
   { key: 'P',     descKey: 'settings.shortcutPencil' },

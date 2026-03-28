@@ -56,6 +56,8 @@ function extractLinks(blocks: Block[]): LinkItem[] {
   return links;
 }
 
+const SCROLL_STEP = 200;
+
 const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 0, labelKey: 'grade.again', color: '#E53935' },
   { grade: 1, labelKey: 'grade.hard',  color: '#FB8C00' },
@@ -104,6 +106,8 @@ export default function StudySessionScreen() {
   const isNavigatingRef = useRef(false);
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
+  const frontScrollYRef = useRef(0);
+  const backScrollYRef = useRef(0);
 
   const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
   const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
@@ -340,6 +344,14 @@ export default function StudySessionScreen() {
       if (selectedCodeBlockIdx !== null) {
         setEditTrigger((v) => v + 1);
       }
+    } else if (key.toLowerCase() === 'u') {
+      const ref = isFlipped ? backScrollRef : frontScrollRef;
+      const y = isFlipped ? backScrollYRef.current : frontScrollYRef.current;
+      ref.current?.scrollTo({ y: Math.max(0, y - SCROLL_STEP), animated: true });
+    } else if (key.toLowerCase() === 'd') {
+      const ref = isFlipped ? backScrollRef : frontScrollRef;
+      const y = isFlipped ? backScrollYRef.current : frontScrollYRef.current;
+      ref.current?.scrollTo({ y: y + SCROLL_STEP, animated: true });
     } else if (key.toLowerCase() === 'b') {
       router.back();
     } else if (key.toLowerCase() === 'l') {
@@ -497,7 +509,7 @@ export default function StudySessionScreen() {
                 cardStyle={{ borderRadius: 0, shadowOpacity: 0, elevation: 0 }}
                 innerStyle={{ padding: 0, justifyContent: 'flex-start' }}
                 front={
-                  <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                  <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false} onScroll={(e) => { frontScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
                     <BlocksView
                       key={currentCard.id}
                       blocks={currentCard.frontContent}
@@ -515,7 +527,7 @@ export default function StudySessionScreen() {
                   </ScrollView>
                 }
                 back={
-                  <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                  <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false} onScroll={(e) => { backScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
                     <BlocksView
                       key={currentCard.id}
                       blocks={currentCard.backContent}
@@ -692,7 +704,7 @@ export default function StudySessionScreen() {
               isFlipped={isFlipped}
               onFlip={handleFlip}
               front={
-                <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false} onScroll={(e) => { frontScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
                   <BlocksView
                     key={currentCard.id}
                     blocks={currentCard.frontContent}
@@ -710,7 +722,7 @@ export default function StudySessionScreen() {
                 </ScrollView>
               }
               back={
-                <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false}>
+                <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false} onScroll={(e) => { backScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
                   <BlocksView
                     key={currentCard.id}
                     blocks={currentCard.backContent}

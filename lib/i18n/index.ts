@@ -12,8 +12,8 @@ i18n.use(initReactI18next).init({
     ja: { translation: ja },
     en: { translation: en },
   },
-  lng: ['ja', 'en'].includes(deviceLang) ? deviceLang : 'ja',
-  fallbackLng: 'ja',
+  lng: ['ja', 'en'].includes(deviceLang) ? deviceLang : 'en',
+  fallbackLng: 'en',
   initImmediate: false,
   interpolation: { escapeValue: false },
 });

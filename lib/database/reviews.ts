@@ -137,7 +137,7 @@ export async function saveReview(db: SQLiteDatabase, review: Review): Promise<vo
   );
   await db.runAsync(
     `INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)`,
-    [review.cardId, review.lastReviewDate.slice(0, 10)]
+    [review.cardId, localDateStr(new Date(review.lastReviewDate))]
   );
 }
 

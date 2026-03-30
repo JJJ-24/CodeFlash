@@ -103,7 +103,17 @@
     "emptyCodeBlock": "(empty code block)",
     "textBlockPlaceholder": "Enter text (Markdown supported)",
     "codePlaceholder": "Enter code",
-    "imageNoSelection": "(no image selected)"
+    "imageNoSelection": "(no image selected)",
+    "select": "Select",
+    "cancelSelect": "Cancel",
+    "selectedCount": "{{count}} selected",
+    "moveToDeck": "Move",
+    "moveConfirmTitle": "Move to Deck",
+    "moveConfirmMessage": "Move {{count}} card(s) to \"{{deckName}}\"?",
+    "selectDeckTitle": "Select Destination Deck",
+    "noDeckToMove": "No other decks available",
+    "deleteSelected": "Delete",
+    "deleteSelectedConfirm": "Delete {{count}} card(s)?\nAssociated study history will also be deleted."
   },
   "tabs": {
     "home": "Home",

@@ -213,6 +213,36 @@ export async function getPast7DaysCreatedCount(
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+export async function moveCardsToDeck(
+  db: SQLiteDatabase,
+  cardIds: string[],
+  fromDeckId: string,
+  toDeckId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.withTransactionAsync(async () => {
+    const row = await db.getFirstAsync<{ maxOrder: number | null }>(
+      'SELECT MAX(sortOrder) as maxOrder FROM cards WHERE deckId = ?',
+      [toDeckId]
+    );
+    let nextOrder = (row?.maxOrder ?? 0) + 1;
+    for (const cardId of cardIds) {
+      await db.runAsync(
+        'UPDATE cards SET deckId = ?, sortOrder = ?, updatedAt = ? WHERE id = ?',
+        [toDeckId, nextOrder++, now, cardId]
+      );
+    }
+    await db.runAsync(
+      'UPDATE decks SET cardCount = MAX(cardCount - ?, 0), updatedAt = ? WHERE id = ?',
+      [cardIds.length, now, fromDeckId]
+    );
+    await db.runAsync(
+      'UPDATE decks SET cardCount = cardCount + ?, updatedAt = ? WHERE id = ?',
+      [cardIds.length, now, toDeckId]
+    );
+  });
+}
+
 export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string): Promise<void> {
   // 画像ブロックのファイルを削除
   const card = await getCardById(db, id);

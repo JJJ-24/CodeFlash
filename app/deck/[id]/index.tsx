@@ -6,6 +6,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -14,7 +16,6 @@ import {
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
-import { FlatList } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme, FILTER_COLORS } from '@/lib/theme';
@@ -23,6 +24,7 @@ import {
   getCardsByDeckId,
   getTodayCreatedCardIdsByDeckId,
   getTodayCreatedCountByDeck,
+  moveCardsToDeck,
   updateCardSortOrders,
 } from '@/lib/database/cards';
 import {
@@ -35,7 +37,7 @@ import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 import type { DeckDetailFilter } from '@/store/settings';
-import type { Block, Card } from '@/types';
+import type { Block, Card, Deck } from '@/types';
 
 type FilterKey = DeckDetailFilter;
 
@@ -58,7 +60,7 @@ export default function DeckDetailScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, updateDeck } = useDeckStore();
-  const { cards, setCards, removeCard, reorderCards } = useCardStore();
+  const { cards, setCards, removeCard, reorderCards, updateCard } = useCardStore();
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
@@ -75,6 +77,9 @@ export default function DeckDetailScreen() {
   const listRef = useRef<FlatList<Card>>(null);
   const scrollOffsetRef = useRef(0);
   const SCROLL_STEP = 200;
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
     learned: new Set(),
@@ -145,6 +150,63 @@ export default function DeckDetailScreen() {
         },
       },
     ]);
+  }
+
+  function handleDeleteSelected() {
+    Alert.alert(
+      t('card.delete'),
+      t('card.deleteSelectedConfirm', { count: selectedCardIds.size }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            const ids = Array.from(selectedCardIds);
+            for (const cardId of ids) {
+              await deleteCard(db, cardId, id as string);
+              removeCard(cardId);
+            }
+            if (deck) {
+              updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
+            }
+            setSelectionMode(false);
+            setSelectedCardIds(new Set());
+            await loadCards();
+          },
+        },
+      ]
+    );
+  }
+
+  function handleMoveToDeck(targetDeck: Deck) {
+    setShowDeckPicker(false);
+    Alert.alert(
+      t('card.moveConfirmTitle'),
+      t('card.moveConfirmMessage', { count: selectedCardIds.size, deckName: targetDeck.name }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.ok'),
+          onPress: async () => {
+            const ids = Array.from(selectedCardIds);
+            await moveCardsToDeck(db, ids, id as string, targetDeck.id);
+            ids.forEach((cardId) => {
+              const card = cards.find((c) => c.id === cardId);
+              if (card) updateCard({ ...card, deckId: targetDeck.id });
+            });
+            if (deck) {
+              updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
+            }
+            const tgt = decks.find((d) => d.id === targetDeck.id);
+            if (tgt) updateDeck({ ...tgt, cardCount: tgt.cardCount + ids.length });
+            setSelectionMode(false);
+            setSelectedCardIds(new Set());
+            await loadCards();
+          },
+        },
+      ]
+    );
   }
 
   if (!deck) return null;
@@ -262,6 +324,20 @@ export default function DeckDetailScreen() {
         options={{
           title: deck.name,
           headerBackTitle: '',
+          headerRight: () => (
+            <Pressable
+              onPress={() => {
+                setSelectionMode((v) => !v);
+                setSelectedCardIds(new Set());
+                setShowDeckPicker(false);
+              }}
+              style={{ paddingHorizontal: 4 }}
+            >
+              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '600' }}>
+                {selectionMode ? t('card.cancelSelect') : t('card.select')}
+              </Text>
+            </Pressable>
+          ),
         }}
       />
 
@@ -282,26 +358,45 @@ export default function DeckDetailScreen() {
           ref={listRef}
           data={displayedCards}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
           onScrollOffsetChange={(offset) => { scrollOffsetRef.current = offset; }}
           onDragEnd={({ data }) => {
+            if (selectionMode) return;
             if (selectedFilter !== 'all') return;
             reorderCards(data);
             updateCardSortOrders(db, data.map((c) => c.id));
           }}
           renderItem={({ item, drag }: RenderItemParams<Card>) => {
           const preview = getPreviewText(item.frontContent);
+          const isSelected = selectedCardIds.has(item.id);
+          function toggleSelect() {
+            setSelectedCardIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(item.id)) next.delete(item.id);
+              else next.add(item.id);
+              return next;
+            });
+          }
           return (
             <ScaleDecorator>
               <Pressable
-                style={[styles.cardItem, { backgroundColor: theme.colors.surface }]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/deck/[id]/card/[cardId]/edit',
-                    params: { id, cardId: item.id },
-                  })
-                }
+                style={[
+                  styles.cardItem,
+                  { backgroundColor: theme.colors.surface },
+                  selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+                ]}
+                onPress={() => {
+                  if (selectionMode) {
+                    toggleSelect();
+                  } else {
+                    router.push({
+                      pathname: '/deck/[id]/card/[cardId]/edit',
+                      params: { id, cardId: item.id },
+                    });
+                  }
+                }}
                 onLongPress={() => {
+                  if (selectionMode) return;
                   if (selectedFilter !== 'all') {
                     Alert.alert(
                       t('card.reorderDisabledTitle'),
@@ -312,23 +407,34 @@ export default function DeckDetailScreen() {
                   drag();
                 }}
               >
+                {selectionMode && (
+                  <Ionicons
+                    name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
+                  />
+                )}
                 <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={2}>
                   {preview || t('card.noText')}
                 </Text>
-                <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: '/deck/[id]/card/[cardId]/edit',
-                      params: { id, cardId: item.id },
-                    })
-                  }
-                  hitSlop={8}
-                >
-                  <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
-                </Pressable>
-                <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color={theme.colors.iconSubtle} />
-                </Pressable>
+                {!selectionMode && (
+                  <>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/deck/[id]/card/[cardId]/edit',
+                          params: { id, cardId: item.id },
+                        })
+                      }
+                      hitSlop={8}
+                    >
+                      <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                    </Pressable>
+                    <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
+                      <Ionicons name="trash-outline" size={18} color={theme.colors.iconSubtle} />
+                    </Pressable>
+                  </>
+                )}
               </Pressable>
             </ScaleDecorator>
           );
@@ -337,18 +443,88 @@ export default function DeckDetailScreen() {
       )}
       </View>
 
-      {/* FAB: 戻る */}
-      <Pressable style={styles.fabBack} onPress={() => router.back()}>
-        <Ionicons name="chevron-back" size={28} color="#FFF" />
-      </Pressable>
+      {selectionMode ? (
+        <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }}>
+            {t('card.selectedCount', { count: selectedCardIds.size })}
+          </Text>
+          <View style={styles.selectionActions}>
+            <Pressable
+              style={[styles.moveBtn, { backgroundColor: '#C62828' }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
+              onPress={handleDeleteSelected}
+              disabled={selectedCardIds.size === 0}
+            >
+              <Ionicons name="trash-outline" size={18} color="#FFF" />
+              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }}>
+                {t('card.deleteSelected')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.moveBtn, { backgroundColor: theme.colors.primary }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
+              onPress={() => setShowDeckPicker(true)}
+              disabled={selectedCardIds.size === 0}
+            >
+              <Ionicons name="arrow-forward-circle-outline" size={18} color="#FFF" />
+              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }}>
+                {t('card.moveToDeck')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* FAB: 戻る */}
+          <Pressable style={styles.fabBack} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={28} color="#FFF" />
+          </Pressable>
 
-      {/* FAB: 新規カード作成 */}
-      <Pressable
-        style={styles.fab}
-        onPress={() => router.push({ pathname: '/deck/[id]/card/new', params: { id } })}
+          {/* FAB: 新規カード作成 */}
+          <Pressable
+            style={styles.fab}
+            onPress={() => router.push({ pathname: '/deck/[id]/card/new', params: { id } })}
+          >
+            <Ionicons name="add" size={28} color="#FFF" />
+          </Pressable>
+        </>
+      )}
+
+      <Modal
+        visible={showDeckPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDeckPicker(false)}
       >
-        <Ionicons name="add" size={28} color="#FFF" />
-      </Pressable>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowDeckPicker(false)}>
+          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+              {t('card.selectDeckTitle')}
+            </Text>
+            {decks.filter((d) => d.id !== id).length === 0 ? (
+              <Text style={{ color: theme.colors.textSecondary, padding: 20, fontSize: theme.fontSize.md }}>
+                {t('card.noDeckToMove')}
+              </Text>
+            ) : (
+              <FlatList
+                data={decks.filter((d) => d.id !== id)}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={[styles.deckPickerItem, { borderBottomColor: theme.colors.border }]}
+                    onPress={() => handleMoveToDeck(item)}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: '500', fontSize: theme.fontSize.md }}>
+                      {item.name}
+                    </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}>
+                      {item.cardCount}枚
+                    </Text>
+                  </Pressable>
+                )}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -434,5 +610,51 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 5,
+  },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 36,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  selectionActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  moveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 16,
+    paddingBottom: 36,
+    maxHeight: '60%',
+  },
+  modalTitle: {
+    fontWeight: '700',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  deckPickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });

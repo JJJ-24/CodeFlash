@@ -38,6 +38,7 @@ function RootStack() {
       <Stack.Screen name="tags/index" options={{ title: '' }} />
       <Stack.Screen name="tags/[tagId]/cards" />
       <Stack.Screen name="study/session" options={{ headerShown: true, title: '' }} />
+      <Stack.Screen name="search" />
     </Stack>
   );
 }

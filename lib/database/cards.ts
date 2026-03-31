@@ -47,6 +47,14 @@ export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promis
   return rows.map(toCard);
 }
 
+export async function searchCards(db: SQLiteDatabase, query: string): Promise<Card[]> {
+  const rows = await db.getAllAsync<RawCard>(
+    'SELECT * FROM cards WHERE frontContent LIKE ? ORDER BY updatedAt DESC LIMIT 100',
+    [`%${query}%`]
+  );
+  return rows.map(toCard);
+}
+
 export async function getCardsByDeckId(db: SQLiteDatabase, deckId: string): Promise<Card[]> {
   const rows = await db.getAllAsync<RawCard>(
     'SELECT * FROM cards WHERE deckId = ? ORDER BY sortOrder ASC',

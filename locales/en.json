@@ -115,7 +115,9 @@
     "selectAll": "Select All",
     "deleteSelected": "Delete",
     "deleteSelectedConfirm": "Delete {{count}} card(s)?\nAssociated study history will also be deleted.",
-    "newCardDeckTitle": "Select Deck"
+    "newCardDeckTitle": "Select Deck",
+    "searchPlaceholder": "Search cards...",
+    "searchNoResults": "No cards found"
   },
   "tabs": {
     "home": "Home",
@@ -162,7 +164,8 @@
     "delete": "Delete",
     "edit": "Edit",
     "ok": "OK",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "search": "Search"
   },
   "editor": {
     "textBlock": "Text",

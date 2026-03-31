@@ -115,7 +115,9 @@
     "selectAll": "全選択",
     "deleteSelected": "選択削除",
     "deleteSelectedConfirm": "{{count}}件のカードを削除しますか？\n紐づく学習履歴も削除されます。",
-    "newCardDeckTitle": "作成先デッキを選択"
+    "newCardDeckTitle": "作成先デッキを選択",
+    "searchPlaceholder": "カードを検索...",
+    "searchNoResults": "一致するカードはありません"
   },
   "tabs": {
     "home": "ホーム",
@@ -162,7 +164,8 @@
     "delete": "削除",
     "edit": "編集",
     "ok": "OK",
-    "loading": "読み込み中..."
+    "loading": "読み込み中...",
+    "search": "検索"
   },
   "editor": {
     "textBlock": "テキスト",

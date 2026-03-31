@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Pressable } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
 
@@ -13,6 +14,7 @@ function TabIcon({ name, color, size }: { name: IoniconsName; color: string; siz
 export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
 
   return (
     <Tabs
@@ -33,6 +35,12 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="home-outline" color={color} size={size} />
           ),
+          headerRight: () => (
+            <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
+              <Ionicons name="search-outline" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ),
+          headerRightContainerStyle: { paddingRight: 8, paddingLeft: 24 },
         }}
       />
       <Tabs.Screen

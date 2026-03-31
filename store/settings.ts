@@ -16,6 +16,11 @@ export const SESSION_FILTER_MAP: Record<DeckDetailFilter, 'all' | 'today' | 'due
   new:     'unlearned',
 };
 
+/** 'none' は null を返す。それ以外は DeckDetailFilter としてそのまま返す */
+export function preferenceToFilter(pref: InitialFilterPreference): DeckDetailFilter | null {
+  return pref === 'none' ? null : pref;
+}
+
 interface SettingsState {
   keyboardShortcutsEnabled: boolean;
   setKeyboardShortcutsEnabled: (v: boolean) => void;

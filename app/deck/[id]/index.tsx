@@ -37,7 +37,7 @@ import {
 } from '@/lib/database/reviews';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
-import { useSettingsStore, SESSION_FILTER_MAP } from '@/store/settings';
+import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
 import type { DeckDetailFilter } from '@/store/settings';
 import type { Block, Card, Deck } from '@/types';
 
@@ -61,13 +61,9 @@ export default function DeckDetailScreen() {
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
   const [todayCreatedCount, setTodayCreatedCount] = useState(0);
-  const [selectedFilter, setSelectedFilter] = useState<FilterKey>(() => {
-    if (initialFilterPreference === 'none') return lastDeckDetailFilter;
-    const filterMap: Record<string, FilterKey> = {
-      all: 'all', learned: 'learned', review: 'review', new: 'new',
-    };
-    return filterMap[initialFilterPreference] ?? 'review';
-  });
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>(
+    () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
+  );
   const keyboardRef = useRef<TextInput>(null);
   const isScreenFocusedRef = useRef(false);
   const listRef = useRef<FlatList<Card>>(null);

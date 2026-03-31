@@ -27,8 +27,7 @@ import {
 } from '@/lib/database/cards';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
-import { useSettingsStore, SESSION_FILTER_MAP } from '@/store/settings';
-import type { InitialFilterPreference } from '@/store/settings';
+import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
 import type { Deck, Tag } from '@/types';
@@ -65,10 +64,7 @@ export default function StudyScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!fromSessionRef.current) {
-        const filterMap: Record<InitialFilterPreference, Filter | null> = {
-          all: 'all', learned: 'learned', review: 'review', new: 'new', none: null,
-        };
-        const initial = filterMap[initialFilterPreference];
+        const initial = preferenceToFilter(initialFilterPreference);
         if (initial !== null) setActiveFilter(initial);
       }
       const isFromSession = fromSessionRef.current;

@@ -36,7 +36,9 @@
 | [015](./015-web-version.md) | Web 版（カード作成専用） | v1.1 | 未着手 | 005 |
 | [016](./016-in-app-purchase.md) | 買い切り課金 | v1.1 | 未着手 | 007, 012, 013 |
 | [017](./017-app-store-submission.md) | App Store 申請 | v1.1 | 未着手 | 016 |
-| [021](./021-json-export-import.md) | JSONエクスポート/インポート | v1.1 | 未着手 | 001, 002, 003, 004 |
+| [021](./021-json-export-import.md) | JSONエクスポート/インポート | v1.1 | 完了 | 001, 002, 003, 004 |
+| [022](./022-card-search.md) | カード全文検索 | v1.1 | 完了 | 001, 002, 003 |
+| [023](./023-notification-reminder.md) | 通知リマインダー | v1.1 | 完了 | 001, 013 |
 | [018](./018-code-execution-sql-cpp.md) | コード実行（SQL / C++） | 将来 | 未着手 | 009 |
 | [019](./019-deck-marketplace.md) | デッキ マーケットプレイス | 将来 | 未着手 | 002, 003 |
 | [020](./020-ai-card-generation.md) | AI カード自動生成 | 将来 | 未着手 | 003, 005 |
@@ -86,6 +88,13 @@ graph TD
     021 --> 014
     021 --> 015
 
+    001 --> 022[022 カード全文検索]
+    002 --> 022
+    003 --> 022
+
+    001 --> 023[023 通知リマインダー]
+    013 --> 023
+
     001 --> 014[014 iCloud同期]
     002 --> 014
     003 --> 014
@@ -124,7 +133,9 @@ graph TD
     style 015 fill:#FF9800,color:#fff
     style 016 fill:#FF9800,color:#fff
     style 017 fill:#FF9800,color:#fff
-    style 021 fill:#FF9800,color:#fff
+    style 021 fill:#4CAF50,color:#fff
+    style 022 fill:#4CAF50,color:#fff
+    style 023 fill:#4CAF50,color:#fff
     style 018 fill:#9E9E9E,color:#fff
     style 019 fill:#9E9E9E,color:#fff
     style 020 fill:#9E9E9E,color:#fff

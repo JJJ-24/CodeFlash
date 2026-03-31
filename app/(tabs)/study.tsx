@@ -27,7 +27,7 @@ import {
 } from '@/lib/database/cards';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
-import { useSettingsStore } from '@/store/settings';
+import { useSettingsStore, SESSION_FILTER_MAP } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
@@ -35,13 +35,6 @@ import type { Deck, Tag } from '@/types';
 
 type Tab = 'decks' | 'tags';
 type Filter = 'all' | 'learned' | 'review' | 'new';
-
-const SESSION_FILTER_MAP: Record<Filter, 'all' | 'today' | 'due' | 'unlearned'> = {
-  all: 'all',
-  learned: 'today',
-  review: 'due',
-  new: 'unlearned',
-};
 
 function sumValues(map: Record<string, number>): number {
   return Object.values(map).reduce((s, v) => s + v, 0);

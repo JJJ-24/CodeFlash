@@ -6,7 +6,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useFocusEffect } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
-import { useTheme, type AppTheme, FILTER_COLORS } from '@/lib/theme';
+import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -95,12 +95,11 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
   const total = dist.again + dist.hard + dist.normal + dist.easy + dist.unlearned;
   if (total === 0) return null;
 
-  // 学習画面のボタン色と統一
   const slices: PieSlice[] = [
-    { value: dist.again,     color: '#E53935', label: t('grade.again') },
-    { value: dist.hard,      color: '#FB8C00', label: t('grade.hard') },
-    { value: dist.normal,    color: '#43A047', label: t('grade.good') },
-    { value: dist.easy,      color: '#1976D2', label: t('grade.easy') },
+    { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
+    { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
+    { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
+    { value: dist.easy,      color: GRADE_COLORS.easy,  label: t('grade.easy') },
     { value: dist.unlearned, color: '#9E9E9E', label: t('stats.unlearned') },
   ].filter((s) => s.value > 0);
 

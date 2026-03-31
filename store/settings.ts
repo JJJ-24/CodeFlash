@@ -9,6 +9,13 @@ const DECK_FILTER_STORAGE_KEY = '@codeflash_last_deck_detail_filter';
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
 
+export const SESSION_FILTER_MAP: Record<DeckDetailFilter, 'all' | 'today' | 'due' | 'unlearned'> = {
+  all:     'all',
+  learned: 'today',
+  review:  'due',
+  new:     'unlearned',
+};
+
 interface SettingsState {
   keyboardShortcutsEnabled: boolean;
   setKeyboardShortcutsEnabled: (v: boolean) => void;

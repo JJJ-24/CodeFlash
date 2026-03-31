@@ -88,6 +88,13 @@ export const FILTER_COLORS = {
   due: '#F57C00',
 } as const;
 
+export const GRADE_COLORS = {
+  again: '#E53935',
+  hard:  '#FB8C00',
+  good:  '#43A047',
+  easy:  '#1976D2',
+} as const;
+
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);

@@ -25,7 +25,7 @@ import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
 import { useStudySession } from '@/hooks/useStudySession';
 import { FlipSuppressContext } from '@/lib/FlipSuppressContext';
-import { useTheme } from '@/lib/theme';
+import { GRADE_COLORS, useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
 import type { Block, CodeBlock, TextBlock } from '@/types';
 import { useSettingsStore } from '@/store/settings';
@@ -65,10 +65,10 @@ function extractLinks(blocks: Block[]): LinkItem[] {
 const SCROLL_STEP = 200;
 
 const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
-  { grade: 0, labelKey: 'grade.again', color: '#E53935' },
-  { grade: 1, labelKey: 'grade.hard',  color: '#FB8C00' },
-  { grade: 2, labelKey: 'grade.good',  color: '#43A047' },
-  { grade: 3, labelKey: 'grade.easy',  color: '#1976D2' },
+  { grade: 0, labelKey: 'grade.again', color: GRADE_COLORS.again },
+  { grade: 1, labelKey: 'grade.hard',  color: GRADE_COLORS.hard  },
+  { grade: 2, labelKey: 'grade.good',  color: GRADE_COLORS.good  },
+  { grade: 3, labelKey: 'grade.easy',  color: GRADE_COLORS.easy  },
 ];
 
 export default function StudySessionScreen() {

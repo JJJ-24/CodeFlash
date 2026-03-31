@@ -37,18 +37,11 @@ import {
 } from '@/lib/database/reviews';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
-import { useSettingsStore } from '@/store/settings';
+import { useSettingsStore, SESSION_FILTER_MAP } from '@/store/settings';
 import type { DeckDetailFilter } from '@/store/settings';
 import type { Block, Card, Deck } from '@/types';
 
 type FilterKey = DeckDetailFilter;
-
-const SESSION_FILTER_MAP: Record<FilterKey, 'all' | 'today' | 'due' | 'unlearned'> = {
-  all: 'all',
-  learned: 'today',
-  review: 'due',
-  new: 'unlearned',
-};
 
 function getPreviewText(blocks: Block[]): string {
   const first = blocks.find((b) => b.type === 'text');

@@ -190,6 +190,8 @@
     "shortcutFullscreen": "全画面モードの切替",
     "shortcutSelectBlock": "コードブロックを順番に選択",
     "shortcutFocusBlock": "フォーカスを次のコードブロックへ移動",
+    "shortcutFocusBlockPrev": "フォーカスを前のコードブロックへ移動",
+    "shortcutFocusCardPrev": "フォーカスを前のカードへ移動",
     "shortcutRun": "選択中のコードブロックを実行",
     "shortcutEdit": "選択中のコードブロックを編集",
     "shortcutScrollUp": "上にスクロール",

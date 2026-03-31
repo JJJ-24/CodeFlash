@@ -108,6 +108,7 @@ export default function StudySessionScreen() {
     { key: 'M',    descKey: 'settings.shortcutMemo' },
     { key: 'F',    descKey: 'settings.shortcutFullscreen' },
     { key: 'T',    descKey: 'settings.shortcutFocusBlock' },
+    { key: 'Y',    descKey: 'settings.shortcutFocusBlockPrev' },
     { key: 'R',    descKey: 'settings.shortcutRun' },
     { key: 'E',    descKey: 'settings.shortcutEdit' },
     { key: 'U',    descKey: 'settings.shortcutScrollUp' },
@@ -317,15 +318,37 @@ export default function StudySessionScreen() {
 
     if (key === ' ') {
       setIsFlipped((v) => !v);
-    } else if (key === 't' || key === 'T') {
+    } else if (key === 't' || key === 'T' || key === 'y' || key === 'Y') {
+      const forward = key === 't' || key === 'T';
       if (!isFlipped) {
         // 表面: 表面のコードブロックのみサイクル
         const frontCodeCount = currentCard?.frontContent.filter(b => b.type === 'code').length ?? 0;
         if (frontCodeCount > 0) {
           setEditTrigger(0);
           setRunTrigger(0);
-          setSelectedCodeBlockSide('front');
-          setSelectedCodeBlockIdx(prev => prev === null ? 0 : (prev + 1) % frontCodeCount);
+          if (forward) {
+            if (selectedCodeBlockIdx === null) {
+              setSelectedCodeBlockSide('front');
+              setSelectedCodeBlockIdx(0);
+            } else if (selectedCodeBlockIdx === frontCodeCount - 1) {
+              setSelectedCodeBlockSide(null);
+              setSelectedCodeBlockIdx(null);
+            } else {
+              setSelectedCodeBlockSide('front');
+              setSelectedCodeBlockIdx(selectedCodeBlockIdx + 1);
+            }
+          } else {
+            if (selectedCodeBlockIdx === null) {
+              setSelectedCodeBlockSide('front');
+              setSelectedCodeBlockIdx(frontCodeCount - 1);
+            } else if (selectedCodeBlockIdx === 0) {
+              setSelectedCodeBlockSide(null);
+              setSelectedCodeBlockIdx(null);
+            } else {
+              setSelectedCodeBlockSide('front');
+              setSelectedCodeBlockIdx(selectedCodeBlockIdx - 1);
+            }
+          }
         }
       } else {
         // 裏面: 裏面＋メモのコードブロックを通しでサイクル
@@ -341,14 +364,34 @@ export default function StudySessionScreen() {
             if (selectedCodeBlockSide === 'back') currentCombined = selectedCodeBlockIdx;
             else if (selectedCodeBlockSide === 'memo') currentCombined = backCodeCount + selectedCodeBlockIdx;
           }
-          const nextCombined = currentCombined === null ? 0 : (currentCombined + 1) % totalCodeCount;
-          if (nextCombined < backCodeCount) {
-            setSelectedCodeBlockSide('back');
-            setSelectedCodeBlockIdx(nextCombined);
+          const applyIndex = (combined: number) => {
+            if (combined < backCodeCount) {
+              setSelectedCodeBlockSide('back');
+              setSelectedCodeBlockIdx(combined);
+            } else {
+              setSelectedCodeBlockSide('memo');
+              setShowMemo(true);
+              setSelectedCodeBlockIdx(combined - backCodeCount);
+            }
+          };
+          if (forward) {
+            if (currentCombined === null) {
+              applyIndex(0);
+            } else if (currentCombined === totalCodeCount - 1) {
+              setSelectedCodeBlockSide(null);
+              setSelectedCodeBlockIdx(null);
+            } else {
+              applyIndex(currentCombined + 1);
+            }
           } else {
-            setSelectedCodeBlockSide('memo');
-            setShowMemo(true); // メモを自動展開
-            setSelectedCodeBlockIdx(nextCombined - backCodeCount);
+            if (currentCombined === null) {
+              applyIndex(totalCodeCount - 1);
+            } else if (currentCombined === 0) {
+              setSelectedCodeBlockSide(null);
+              setSelectedCodeBlockIdx(null);
+            } else {
+              applyIndex(currentCombined - 1);
+            }
           }
         }
       }

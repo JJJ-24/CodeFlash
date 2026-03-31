@@ -89,6 +89,7 @@ export default function DeckDetailScreen() {
     { key: 'Space', descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
     { key: 'T',    descKey: 'settings.shortcutFocusCard' },
+    { key: 'Y',    descKey: 'settings.shortcutFocusCardPrev' },
     { key: 'P',    descKey: 'settings.shortcutEditCard' },
     { key: 'N',    descKey: 'settings.shortcutNewCard' },
     { key: 'S',    descKey: 'settings.shortcutToggleSelect' },
@@ -98,6 +99,7 @@ export default function DeckDetailScreen() {
   ];
   const DECK_SHORTCUTS_SELECT = [
     { key: 'T',     descKey: 'settings.shortcutFocusCard' },
+    { key: 'Y',     descKey: 'settings.shortcutFocusCardPrev' },
     { key: 'Space', descKey: 'settings.shortcutToggleCheck' },
     { key: 'A',     descKey: 'settings.shortcutSelectAll' },
     { key: 'M',     descKey: 'settings.shortcutMoveSelected' },
@@ -326,9 +328,17 @@ export default function DeckDetailScreen() {
         onKeyPress={({ nativeEvent: { key } }) => {
           if (selectionMode) {
             if (key.toLowerCase() === 't') {
-              const next = focusedCardIndex === null ? 0 : (focusedCardIndex + 1) % displayedCards.length;
+              const next = focusedCardIndex === null ? 0
+                : focusedCardIndex === displayedCards.length - 1 ? null
+                : focusedCardIndex + 1;
               setFocusedCardIndex(next);
-              listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+              if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+            } else if (key.toLowerCase() === 'y') {
+              const prev = focusedCardIndex === null ? displayedCards.length - 1
+                : focusedCardIndex === 0 ? null
+                : focusedCardIndex - 1;
+              setFocusedCardIndex(prev);
+              if (prev !== null) listRef.current?.scrollToIndex({ index: prev, animated: true, viewPosition: 0.5 });
             } else if (key === ' ') {
               if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
                 const cardId = displayedCards[focusedCardIndex].id;
@@ -376,9 +386,19 @@ export default function DeckDetailScreen() {
             if (initialFilterPreference === 'none') setLastDeckDetailFilter('new');
           } else if (key.toLowerCase() === 't') {
             if (displayedCards.length > 0) {
-              const next = focusedCardIndex === null ? 0 : (focusedCardIndex + 1) % displayedCards.length;
+              const next = focusedCardIndex === null ? 0
+                : focusedCardIndex === displayedCards.length - 1 ? null
+                : focusedCardIndex + 1;
               setFocusedCardIndex(next);
-              listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+              if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+            }
+          } else if (key.toLowerCase() === 'y') {
+            if (displayedCards.length > 0) {
+              const prev = focusedCardIndex === null ? displayedCards.length - 1
+                : focusedCardIndex === 0 ? null
+                : focusedCardIndex - 1;
+              setFocusedCardIndex(prev);
+              if (prev !== null) listRef.current?.scrollToIndex({ index: prev, animated: true, viewPosition: 0.5 });
             }
           } else if (key.toLowerCase() === 'p') {
             if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {

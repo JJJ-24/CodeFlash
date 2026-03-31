@@ -190,6 +190,8 @@
     "shortcutFullscreen": "Toggle fullscreen",
     "shortcutSelectBlock": "Cycle through code blocks",
     "shortcutFocusBlock": "Move focus to next code block",
+    "shortcutFocusBlockPrev": "Move focus to previous code block",
+    "shortcutFocusCardPrev": "Move focus to previous card",
     "shortcutRun": "Run selected code block",
     "shortcutEdit": "Edit selected code block",
     "shortcutScrollUp": "Scroll up",

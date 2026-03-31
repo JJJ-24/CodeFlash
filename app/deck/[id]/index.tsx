@@ -273,8 +273,10 @@ export default function DeckDetailScreen() {
                 styles.statItem,
                 { backgroundColor: theme.colors.surface },
                 isSelected && { borderWidth: 2, borderColor: color },
+                selectionMode && { opacity: 0.5 },
               ]}
               onPress={() => {
+                if (selectionMode) return;
                 setSelectedFilter(key);
                 if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
               }}
@@ -287,8 +289,9 @@ export default function DeckDetailScreen() {
       </View>
 
       <TouchableOpacity
-        style={styles.studyBtn}
+        style={[styles.studyBtn, selectionMode && { opacity: 0.5 }]}
         activeOpacity={0.8}
+        disabled={selectionMode}
         onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
       >
         <Ionicons name="play" size={20} color="#FFF" />

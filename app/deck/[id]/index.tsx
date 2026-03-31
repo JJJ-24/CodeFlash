@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -60,6 +61,7 @@ export default function DeckDetailScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, updateCard } = useCardStore();
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter } = useSettingsStore();
@@ -411,9 +413,9 @@ export default function DeckDetailScreen() {
           headerTitle: () => (
             <Pressable
               onPress={() => setShowShortcutsModal(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: screenWidth * 0.5 }}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} numberOfLines={1}>
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
                 {deck.name}
               </Text>
               <MaterialIcons name="keyboard" size={18} color={theme.colors.textSecondary} />

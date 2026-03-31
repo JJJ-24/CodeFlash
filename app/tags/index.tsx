@@ -17,9 +17,7 @@ import { useCallback } from 'react';
 import { useTheme } from '@/lib/theme';
 import { deleteTag, getAllTags, updateTagSortOrders } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
-import type { Tag } from '@/types';
-
-type TagWithCount = Tag & { cardCount: number };
+import type { TagWithCount } from '@/store/tags';
 
 export default function TagsScreen() {
   const db = useSQLiteContext();

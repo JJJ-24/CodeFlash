@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import type { Tag } from '@/types';
 
-type TagWithCount = Tag & { cardCount: number };
+export type TagWithCount = Tag & { cardCount: number };
 
 interface TagState {
   tags: TagWithCount[];

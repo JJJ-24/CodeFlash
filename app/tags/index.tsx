@@ -117,13 +117,13 @@ export default function TagsScreen() {
       )}
 
       {/* FAB: 戻る */}
-      <Pressable style={styles.fabBack} onPress={() => router.back()}>
+      <Pressable style={[styles.fabBack, { backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={28} color="#FFF" />
       </Pressable>
 
       {/* FAB */}
       <Pressable
-        style={[styles.fab, isAtLimit && styles.fabDisabled]}
+        style={[styles.fab, { backgroundColor: theme.colors.primary }, isAtLimit && styles.fabDisabled]}
         onPress={isAtLimit ? undefined : () => router.push('/tags/new')}
       >
         <Ionicons name="add" size={28} color="#FFF" />
@@ -169,7 +169,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1976D2',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -185,7 +184,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1976D2',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

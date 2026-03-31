@@ -151,7 +151,7 @@ export default function HomeScreen() {
       )}
       </View>
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         onPress={() => router.push({ pathname: '/deck/new' })}
         activeOpacity={0.8}
       >
@@ -214,7 +214,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1976D2',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

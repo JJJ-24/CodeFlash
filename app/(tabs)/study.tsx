@@ -256,7 +256,7 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={[styles.dueChip, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
+                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]}>{count}</Text>
                     </View>
                   )}
@@ -314,7 +314,7 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={[styles.dueChip, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
+                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]}>{count}</Text>
                     </View>
                   )}
@@ -374,7 +374,6 @@ const styles = StyleSheet.create({
   deckName: { fontWeight: '600' },
   dueLabel: {},
   dueChip: {
-    backgroundColor: '#1976D2',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 3,

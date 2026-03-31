@@ -315,7 +315,7 @@ export default function DeckDetailScreen() {
       </View>
 
       <TouchableOpacity
-        style={[styles.studyBtn, selectionMode && { opacity: 0.5 }]}
+        style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, selectionMode && { opacity: 0.5 }]}
         activeOpacity={0.8}
         disabled={selectionMode}
         onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
@@ -563,13 +563,13 @@ export default function DeckDetailScreen() {
       ) : (
         <>
           {/* FAB: 戻る */}
-          <Pressable style={[styles.fab, { left: 20 }]} onPress={() => router.back()}>
+          <Pressable style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={28} color="#FFF" />
           </Pressable>
 
           {/* FAB: 新規カード作成 */}
           <Pressable
-            style={[styles.fab, { right: 20 }]}
+            style={[styles.fab, { right: 20, backgroundColor: theme.colors.primary }]}
             onPress={() => router.push({ pathname: '/deck/[id]/card/new', params: { id } })}
           >
             <Ionicons name="add" size={28} color="#FFF" />
@@ -678,7 +678,6 @@ const styles = StyleSheet.create({
   statLabel: { marginTop: 2, textAlign: 'center' },
   studyBtn: {
     flexDirection: 'row',
-    backgroundColor: '#1976D2',
     borderRadius: 12,
     paddingVertical: 14,
     justifyContent: 'center',
@@ -713,7 +712,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1976D2',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

@@ -104,6 +104,7 @@ export default function StudySessionScreen() {
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<Record<string, Record<number, string>>>({});
   const codeEditingRef = useRef(false);
   const flipCardRef = useRef<FlipCardRef>(null);
+  // コードブロックのボタンタップがFlipCardに伝播して意図せず裏返るのを防ぐ（300ms抑制）
   const suppressedRef = useRef(false);
   const suppress = useCallback(() => {
     suppressedRef.current = true;

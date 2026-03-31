@@ -18,6 +18,7 @@ export function useSwipeGesture({ screenWidth, currentIndex, goNext, goBack, fli
   const slideX = useSharedValue(0);
   const currentIndexSV = useSharedValue(currentIndex);
   const slideInDirRef = useRef(0);
+  // カード遷移アニメーション中に navigateWithSlide の二重発火を防ぐ
   const isNavigatingRef = useRef(false);
 
   // JS-thread callbacks for swipe gestures (called via runOnJS — must be named functions)

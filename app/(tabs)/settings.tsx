@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
-import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -58,7 +57,6 @@ function SegmentedCard<T extends string>({ label, options, value, onChange }: Se
 }
 
 export default function SettingsScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
   const db = useSQLiteContext();
@@ -277,16 +275,6 @@ export default function SettingsScreen() {
         onChange={setInitialFilterPreference}
       />
 
-      {/* タグ管理 */}
-      <Pressable
-        style={[styles.row, { backgroundColor: theme.colors.surface }]}
-        onPress={() => router.push('/tags')}
-      >
-        <Ionicons name="pricetags-outline" size={22} color={theme.colors.primary} />
-        <Text style={[styles.rowText, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('tag.title')}</Text>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} style={styles.chevron} />
-      </Pressable>
-
       {/* データ管理 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
@@ -348,22 +336,7 @@ const styles = StyleSheet.create({
   },
   segmentText: {},
   segmentTextActive: { fontWeight: '700' },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  rowText: { flex: 1 },
-  chevron: { marginLeft: 'auto' },
-  dataRow: {
+dataRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,

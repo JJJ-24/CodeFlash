@@ -151,6 +151,13 @@ export default function HomeScreen() {
       )}
       </View>
       <TouchableOpacity
+        style={[styles.fabLeft, { backgroundColor: theme.colors.surface }]}
+        onPress={() => router.push('/tags')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="pricetags-outline" size={24} color={theme.colors.primary} />
+      </TouchableOpacity>
+      <TouchableOpacity
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         onPress={() => router.push({ pathname: '/deck/new' })}
         activeOpacity={0.8}
@@ -221,5 +228,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 6,
+  },
+  fabLeft: {
+    position: 'absolute',
+    left: 24,
+    bottom: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

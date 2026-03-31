@@ -20,22 +20,6 @@ import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
 import type { InitialFilterPreference } from '@/store/settings';
 
-const SHORTCUTS = [
-  { key: 'Space', descKey: 'settings.shortcutFlip' },
-  { key: '1–4',   descKey: 'settings.shortcutGrade' },
-  { key: 'J',     descKey: 'settings.shortcutNext' },
-  { key: 'K',     descKey: 'settings.shortcutPrev' },
-  { key: 'M',     descKey: 'settings.shortcutMemo' },
-  { key: 'F',     descKey: 'settings.shortcutFullscreen' },
-  { key: 'T',     descKey: 'settings.shortcutSelectBlock' },
-  { key: 'R',     descKey: 'settings.shortcutRun' },
-  { key: 'E',     descKey: 'settings.shortcutEdit' },
-  { key: 'U',     descKey: 'settings.shortcutScrollUp' },
-  { key: 'D',     descKey: 'settings.shortcutScrollDown' },
-  { key: 'B',     descKey: 'settings.shortcutBack' },
-  { key: 'L',     descKey: 'settings.shortcutLinks' },
-  { key: 'P',     descKey: 'settings.shortcutPencil' },
-];
 
 interface SegmentedCardProps<T extends string> {
   label: string;
@@ -274,10 +258,9 @@ export default function SettingsScreen() {
             <DateTimePicker
               value={notificationTimeDate}
               mode="time"
-              display="spinner"
+              display="compact"
               onChange={handleNotificationTimeChange}
-              style={styles.timePicker}
-              textColor={theme.colors.text}
+              themeVariant={theme.dark ? 'dark' : 'light'}
             />
           </View>
         )}
@@ -331,22 +314,6 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* ショートカット一覧 */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
-          {t('settings.keyboardShortcuts')}
-        </Text>
-        {SHORTCUTS.map(({ key, descKey }) => (
-          <View key={key} style={styles.shortcutRow}>
-            <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-              <Text style={[styles.keyBadgeText, { color: theme.colors.text, fontSize: theme.fontSize.sm }]}>{key}</Text>
-            </View>
-            <Text style={[styles.shortcutDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
-              {t(descKey)}
-            </Text>
-          </View>
-        ))}
-      </View>
     </ScrollView>
     {loading && <View style={styles.loadingOverlay} onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} />}
     </View>
@@ -396,21 +363,6 @@ const styles = StyleSheet.create({
   },
   rowText: { flex: 1 },
   chevron: { marginLeft: 'auto' },
-  shortcutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
-  },
-  keyBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    minWidth: 44,
-    alignItems: 'center',
-  },
-  keyBadgeText: { fontWeight: '600', fontFamily: 'monospace' },
-  shortcutDesc: { flex: 1 },
   dataRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -430,5 +382,4 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   notificationLabel: { flex: 1 },
-  timePicker: { height: 120, flex: 1 },
 });

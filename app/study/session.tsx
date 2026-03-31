@@ -29,6 +29,8 @@ import { useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
 import type { Block, CodeBlock, TextBlock } from '@/types';
 import { useSettingsStore } from '@/store/settings';
+import { useDeckStore } from '@/store/decks';
+import { useTagStore } from '@/store/tags';
 
 type LinkItem = { text: string; url: string };
 
@@ -93,6 +95,13 @@ export default function StudySessionScreen() {
   );
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
+  const { decks } = useDeckStore();
+  const { tags } = useTagStore();
+  const sessionTitle = deckId
+    ? (decks.find((d) => d.id === deckId)?.name ?? t('study.title'))
+    : tagId
+    ? (tags.find((tg) => tg.id === tagId)?.name ?? t('study.title'))
+    : t('study.title');
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
@@ -718,10 +727,10 @@ export default function StudySessionScreen() {
           headerTitle: () => (
             <Pressable
               onPress={() => setShowShortcutsModal(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: screenWidth * 0.5 }}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }}>
-                {t('study.title')}
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
+                {sessionTitle}
               </Text>
               {keyboardShortcutsEnabled && (
                 <MaterialIcons name="keyboard" size={18} color={theme.colors.textSecondary} />

@@ -107,7 +107,7 @@ export default function StudySessionScreen() {
     { key: 'K',    descKey: 'settings.shortcutPrev' },
     { key: 'M',    descKey: 'settings.shortcutMemo' },
     { key: 'F',    descKey: 'settings.shortcutFullscreen' },
-    { key: 'T',    descKey: 'settings.shortcutSelectBlock' },
+    { key: 'T',    descKey: 'settings.shortcutFocusBlock' },
     { key: 'R',    descKey: 'settings.shortcutRun' },
     { key: 'E',    descKey: 'settings.shortcutEdit' },
     { key: 'U',    descKey: 'settings.shortcutScrollUp' },

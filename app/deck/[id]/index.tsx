@@ -89,11 +89,11 @@ export default function DeckDetailScreen() {
     { key: 'Space', descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
     { key: 'T',    descKey: 'settings.shortcutFocusCard' },
-    { key: 'E',    descKey: 'settings.shortcutEditCard' },
+    { key: 'P',    descKey: 'settings.shortcutEditCard' },
     { key: 'N',    descKey: 'settings.shortcutNewCard' },
     { key: 'S',    descKey: 'settings.shortcutToggleSelect' },
     { key: 'U',    descKey: 'settings.shortcutScrollUp' },
-    { key: 'D',    descKey: 'settings.shortcutScrollDown' },
+    { key: 'D',    descKey: 'settings.shortcutScrollDownDelete' },
     { key: 'B',    descKey: 'settings.shortcutBack' },
   ];
   const DECK_SHORTCUTS_SELECT = [
@@ -102,7 +102,7 @@ export default function DeckDetailScreen() {
     { key: 'A',     descKey: 'settings.shortcutSelectAll' },
     { key: 'M',     descKey: 'settings.shortcutMoveSelected' },
     { key: 'D',     descKey: 'settings.shortcutDeleteSelected' },
-    { key: 'S / C', descKey: 'settings.shortcutToggleSelect' },
+    { key: 'S / C', descKey: 'settings.shortcutExitSelect' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
@@ -380,7 +380,7 @@ export default function DeckDetailScreen() {
               setFocusedCardIndex(next);
               listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
             }
-          } else if (key.toLowerCase() === 'e') {
+          } else if (key.toLowerCase() === 'p') {
             if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
               router.push({
                 pathname: '/deck/[id]/card/[cardId]/edit',

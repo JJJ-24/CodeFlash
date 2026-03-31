@@ -57,6 +57,7 @@ eas build:configure   # eas.json を生成（プラットフォームは iOS を
 ```
 
 生成される `eas.json` の例:
+
 ```json
 {
   "cli": {
@@ -87,25 +88,25 @@ eas build:configure   # eas.json を生成（プラットフォームは iOS を
 2. 「マイ App」→「＋」→「新規 App」
 3. 以下を入力：
 
-| 項目 | 例 |
-|------|-----|
-| プラットフォーム | iOS |
-| 名前 | CodeFlash |
-| 主要言語 | 日本語 |
-| バンドル ID | com.jjj24.codeflash |
-| SKU | codeflash（任意の一意な文字列） |
-| ユーザーアクセス | フルアクセス |
+| 項目             | 例                              |
+| ---------------- | ------------------------------- |
+| プラットフォーム | iOS                             |
+| 名前             | CodeFlash                       |
+| 主要言語         | 日本語                          |
+| バンドル ID      | com.jjj24.codeflash             |
+| SKU              | codeflash（任意の一意な文字列） |
+| ユーザーアクセス | フルアクセス                    |
 
 ### Step 4: アセット準備
 
 App Store 申請に必要なスクリーンショット：
 
-| デバイス | サイズ | 必須 |
-|----------|--------|------|
-| iPhone 6.7" (iPhone 15 Pro Max等) | 1290 × 2796 px | ✅ 必須 |
-| iPhone 6.5" (iPhone 14 Plus等) | 1242 × 2688 px | 推奨 |
-| iPhone 5.5" (iPhone 8 Plus等) | 1242 × 2208 px | 推奨 |
-| iPad Pro 12.9" | 2048 × 2732 px | タブレット対応の場合 |
+| デバイス                          | サイズ         | 必須                 |
+| --------------------------------- | -------------- | -------------------- |
+| iPhone 6.7" (iPhone 15 Pro Max等) | 1290 × 2796 px | ✅ 必須              |
+| iPhone 6.5" (iPhone 14 Plus等)    | 1242 × 2688 px | 推奨                 |
+| iPhone 5.5" (iPhone 8 Plus等)     | 1242 × 2208 px | 推奨                 |
+| iPad Pro 12.9"                    | 2048 × 2732 px | タブレット対応の場合 |
 
 - 各サイズ最低1枚・最大10枚
 - シミュレーターのスクリーンショットでも可
@@ -162,13 +163,13 @@ App Store Connect で新しいビルドを選択して審査提出。
 
 ## このアプリ固有の情報
 
-| 項目 | 値 |
-|------|-----|
-| アプリ名 | CodeFlash |
-| Bundle ID | com.jjj24.codeflash |
-| Expo Project ID | b5f52568-524c-4fda-b674-fe895cb21a14 |
-| Expo Owner | jjj24 |
-| 初回 buildNumber | 1 |
+| 項目             | 値                                   |
+| ---------------- | ------------------------------------ |
+| アプリ名         | CodeFlash                            |
+| Bundle ID        | com.jjj24.codeflash                  |
+| Expo Project ID  | b5f52568-524c-4fda-b674-fe895cb21a14 |
+| Expo Owner       | jjj24                                |
+| 初回 buildNumber | 1                                    |
 
 ---
 

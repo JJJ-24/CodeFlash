@@ -9,6 +9,7 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -81,13 +82,23 @@ export default function DeckDetailScreen() {
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  const DECK_SHORTCUTS = [
+  const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null);
+  const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space', descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
     { key: 'N',    descKey: 'settings.shortcutNewCard' },
+    { key: 'S',    descKey: 'settings.shortcutToggleSelect' },
     { key: 'U',    descKey: 'settings.shortcutScrollUp' },
     { key: 'D',    descKey: 'settings.shortcutScrollDown' },
     { key: 'B',    descKey: 'settings.shortcutBack' },
+  ];
+  const DECK_SHORTCUTS_SELECT = [
+    { key: 'T',     descKey: 'settings.shortcutFocusCard' },
+    { key: 'Space', descKey: 'settings.shortcutToggleCheck' },
+    { key: 'A',     descKey: 'settings.shortcutSelectAll' },
+    { key: 'M',     descKey: 'settings.shortcutMoveSelected' },
+    { key: 'D',     descKey: 'settings.shortcutDeleteSelected' },
+    { key: 'S / C', descKey: 'settings.shortcutToggleSelect' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
@@ -181,6 +192,7 @@ export default function DeckDetailScreen() {
             }
             setSelectionMode(false);
             setSelectedCardIds(new Set());
+            setFocusedCardIndex(null);
             await loadCards();
           },
         },
@@ -211,6 +223,7 @@ export default function DeckDetailScreen() {
             if (tgt) updateDeck({ ...tgt, cardCount: tgt.cardCount + ids.length });
             setSelectionMode(false);
             setSelectedCardIds(new Set());
+            setFocusedCardIndex(null);
             await loadCards();
           },
         },
@@ -303,6 +316,38 @@ export default function DeckDetailScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
+          if (selectionMode) {
+            if (key.toLowerCase() === 't') {
+              const next = focusedCardIndex === null ? 0 : (focusedCardIndex + 1) % displayedCards.length;
+              setFocusedCardIndex(next);
+              listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+            } else if (key === ' ') {
+              if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+                const cardId = displayedCards[focusedCardIndex].id;
+                setSelectedCardIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(cardId)) next.delete(cardId); else next.add(cardId);
+                  return next;
+                });
+              }
+            } else if (key.toLowerCase() === 'a') {
+              if (selectedCardIds.size === displayedCards.length) {
+                setSelectedCardIds(new Set());
+              } else {
+                setSelectedCardIds(new Set(displayedCards.map((c) => c.id)));
+              }
+            } else if (key.toLowerCase() === 'm') {
+              if (selectedCardIds.size > 0) setShowDeckPicker(true);
+            } else if (key.toLowerCase() === 'd') {
+              if (selectedCardIds.size > 0) handleDeleteSelected();
+            } else if (key.toLowerCase() === 's' || key.toLowerCase() === 'c') {
+              setSelectionMode(false);
+              setSelectedCardIds(new Set());
+              setFocusedCardIndex(null);
+              setShowDeckPicker(false);
+            }
+            return;
+          }
           if (key === ' ') {
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           } else if (key === '1') {
@@ -325,6 +370,11 @@ export default function DeckDetailScreen() {
             listRef.current?.scrollToOffset({ offset: scrollOffsetRef.current + SCROLL_STEP, animated: true });
           } else if (key.toLowerCase() === 'n') {
             router.push({ pathname: '/deck/[id]/card/new', params: { id } });
+          } else if (key.toLowerCase() === 's') {
+            setSelectionMode((v) => !v);
+            setSelectedCardIds(new Set());
+            setFocusedCardIndex(null);
+            setShowDeckPicker(false);
           }
         }}
         onBlur={() => { setTimeout(() => { if (isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
@@ -348,6 +398,7 @@ export default function DeckDetailScreen() {
               onPress={() => {
                 setSelectionMode((v) => !v);
                 setSelectedCardIds(new Set());
+                setFocusedCardIndex(null);
                 setShowDeckPicker(false);
               }}
               style={{ paddingHorizontal: 4 }}
@@ -379,15 +430,17 @@ export default function DeckDetailScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
           onScrollOffsetChange={(offset) => { scrollOffsetRef.current = offset; }}
+          onScrollToIndexFailed={() => {}}
           onDragEnd={({ data }) => {
             if (selectionMode) return;
             if (selectedFilter !== 'all') return;
             reorderCards(data);
             updateCardSortOrders(db, data.map((c) => c.id));
           }}
-          renderItem={({ item, drag }: RenderItemParams<Card>) => {
+          renderItem={({ item, drag, getIndex }: RenderItemParams<Card>) => {
           const preview = getPreviewText(item.frontContent);
           const isSelected = selectedCardIds.has(item.id);
+          const isFocused = selectionMode && focusedCardIndex !== null && getIndex() === focusedCardIndex;
           function toggleSelect() {
             setSelectedCardIds((prev) => {
               const next = new Set(prev);
@@ -403,6 +456,7 @@ export default function DeckDetailScreen() {
                   styles.cardItem,
                   { backgroundColor: theme.colors.surface },
                   selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+                  selectionMode && isFocused && !isSelected && { borderWidth: 2, borderColor: '#F57C00' },
                 ]}
                 onPress={() => {
                   if (selectionMode) {
@@ -550,25 +604,38 @@ export default function DeckDetailScreen() {
         animationType="slide"
         onRequestClose={() => setShowShortcutsModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowShortcutsModal(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowShortcutsModal(false)} />
+          <View style={[styles.shortcutsSheet, { backgroundColor: theme.colors.surface }]}>
             <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
               {t('settings.keyboardShortcuts')}
             </Text>
-            {DECK_SHORTCUTS.map(({ key, descKey }) => (
-              <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
-                <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                  <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
-                    {key}
-                  </Text>
+            <ScrollView>
+              <Text style={[styles.shortcutSection, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+                {t('settings.shortcutNormalMode')}
+              </Text>
+              {DECK_SHORTCUTS_NORMAL.map(({ key, descKey }) => (
+                <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
+                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>{key}</Text>
+                  </View>
+                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>{t(descKey)}</Text>
                 </View>
-                <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
-                  {t(descKey)}
-                </Text>
-              </View>
-            ))}
-          </Pressable>
-        </Pressable>
+              ))}
+              <Text style={[styles.shortcutSection, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 8 }]}>
+                {t('settings.shortcutSelectMode')}
+              </Text>
+              {DECK_SHORTCUTS_SELECT.map(({ key, descKey }) => (
+                <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
+                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>{key}</Text>
+                  </View>
+                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>{t(descKey)}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
     </GestureHandlerRootView>
   );
@@ -701,6 +768,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  shortcutsSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 16,
+    paddingBottom: 36,
+    maxHeight: '75%',
+  },
+  shortcutSection: {
+    fontWeight: '700',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   shortcutRow: {
     flexDirection: 'row',

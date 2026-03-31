@@ -27,6 +27,7 @@ import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import type { Deck } from '@/types';
 
+const HEATMAP_WEEKS = 52; // 約1年分
 const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 const DAY_LABELS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BAR_MAX_HEIGHT = 60;
@@ -276,7 +277,7 @@ export default function StatsScreen() {
       if (initial !== null) setSelectedBlock(initial);
       async function load() {
         const heatmapStart = new Date();
-        heatmapStart.setDate(heatmapStart.getDate() - 52 * 7);
+        heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
         const heatmapStartStr = toLocalDateStr(heatmapStart);
 
         const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap] =

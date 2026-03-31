@@ -37,7 +37,7 @@ function RootStack() {
       <Stack.Screen name="deck/[id]/card/[cardId]/edit" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="tags/index" options={{ title: '' }} />
       <Stack.Screen name="tags/[tagId]/cards" />
-      <Stack.Screen name="study/session" options={{ headerShown: true }} />
+      <Stack.Screen name="study/session" options={{ headerShown: true, title: '' }} />
     </Stack>
   );
 }

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -98,6 +99,23 @@ export default function StudySessionScreen() {
   const [grading, setGrading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const STUDY_SHORTCUTS = [
+    { key: 'Space', descKey: 'settings.shortcutFlip' },
+    { key: '1–4',  descKey: 'settings.shortcutGrade' },
+    { key: 'J',    descKey: 'settings.shortcutNext' },
+    { key: 'K',    descKey: 'settings.shortcutPrev' },
+    { key: 'M',    descKey: 'settings.shortcutMemo' },
+    { key: 'F',    descKey: 'settings.shortcutFullscreen' },
+    { key: 'T',    descKey: 'settings.shortcutSelectBlock' },
+    { key: 'R',    descKey: 'settings.shortcutRun' },
+    { key: 'E',    descKey: 'settings.shortcutEdit' },
+    { key: 'U',    descKey: 'settings.shortcutScrollUp' },
+    { key: 'D',    descKey: 'settings.shortcutScrollDown' },
+    { key: 'B',    descKey: 'settings.shortcutBack' },
+    { key: 'L',    descKey: 'settings.shortcutLinks' },
+    { key: 'P',    descKey: 'settings.shortcutPencil' },
+  ];
   const [selectedCodeBlockIdx, setSelectedCodeBlockIdx] = useState<number | null>(null);
   const [selectedCodeBlockSide, setSelectedCodeBlockSide] = useState<'front' | 'back' | 'memo' | null>(null);
   const [runTrigger, setRunTrigger] = useState(0);
@@ -654,7 +672,19 @@ export default function StudySessionScreen() {
       <StatusBar hidden />
       <Stack.Screen
         options={{
-          title: t('study.title'),
+          headerTitle: () => (
+            <Pressable
+              onPress={() => setShowShortcutsModal(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }}>
+                {t('study.title')}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={18} color={theme.colors.textSecondary} />
+              )}
+            </Pressable>
+          ),
           headerBackTitle: '',
           headerShown: true,
           headerRight: () => (
@@ -866,6 +896,36 @@ export default function StudySessionScreen() {
           />
         </Animated.View>
       </View>
+
+      <Modal
+        visible={showShortcutsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowShortcutsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowShortcutsModal(false)} />
+          <View style={[styles.shortcutsSheet, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.shortcutsTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+              {t('settings.keyboardShortcuts')}
+            </Text>
+            <ScrollView>
+              {STUDY_SHORTCUTS.map((item) => (
+                <View key={item.key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
+                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
+                      {item.key}
+                    </Text>
+                  </View>
+                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
+                    {t(item.descKey)}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -1019,5 +1079,32 @@ const styles = StyleSheet.create({
   },
   linkUrl: {
     marginTop: 2,
+  },
+  shortcutsSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 16,
+    paddingBottom: 36,
+    maxHeight: '70%',
+  },
+  shortcutsTitle: {
+    fontWeight: '700',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  shortcutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  keyBadge: {
+    minWidth: 48,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignItems: 'center',
   },
 });

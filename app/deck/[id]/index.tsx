@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -80,6 +80,15 @@ export default function DeckDetailScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [showDeckPicker, setShowDeckPicker] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const DECK_SHORTCUTS = [
+    { key: 'Space', descKey: 'settings.shortcutStartStudy' },
+    { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
+    { key: 'N',    descKey: 'settings.shortcutNewCard' },
+    { key: 'U',    descKey: 'settings.shortcutScrollUp' },
+    { key: 'D',    descKey: 'settings.shortcutScrollDown' },
+    { key: 'B',    descKey: 'settings.shortcutBack' },
+  ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
     learned: new Set(),
@@ -322,7 +331,17 @@ export default function DeckDetailScreen() {
       />
       <Stack.Screen
         options={{
-          title: deck.name,
+          headerTitle: () => (
+            <Pressable
+              onPress={() => setShowShortcutsModal(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} numberOfLines={1}>
+                {deck.name}
+              </Text>
+              <MaterialIcons name="keyboard" size={18} color={theme.colors.textSecondary} />
+            </Pressable>
+          ),
           headerBackTitle: '',
           headerRight: () => (
             <Pressable
@@ -525,6 +544,32 @@ export default function DeckDetailScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+      <Modal
+        visible={showShortcutsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowShortcutsModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowShortcutsModal(false)}>
+          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+              {t('settings.keyboardShortcuts')}
+            </Text>
+            {DECK_SHORTCUTS.map(({ key, descKey }) => (
+              <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
+                <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                  <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
+                    {key}
+                  </Text>
+                </View>
+                <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
+                  {t(descKey)}
+                </Text>
+              </View>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -656,5 +701,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  shortcutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  keyBadge: {
+    minWidth: 48,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignItems: 'center',
   },
 });

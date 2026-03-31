@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import {
 import { useTheme } from '@/lib/theme';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
 import { getAllTags } from '@/lib/database/tags';
+import { useDeckStore } from '@/store/decks';
 import type { Card, Tag, TextBlock } from '@/types';
 
 function getPreviewText(blocks: Card['frontContent']): string {
@@ -34,9 +36,11 @@ export default function TagCardsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const { decks } = useDeckStore();
 
   const [cards, setCards] = useState<Card[]>([]);
   const [tag, setTag] = useState<Tag | null>(null);
+  const [showDeckPicker, setShowDeckPicker] = useState(false);
 
   function confirmDeleteCard(card: Card) {
     Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
@@ -67,16 +71,7 @@ export default function TagCardsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: tag?.name ?? '',
-          headerRight: () => (
-            <Pressable onPress={() => { router.dismissAll(); router.navigate('/(tabs)/'); }} style={{ width: 44, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="home-outline" size={22} color={theme.colors.primary} />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: tag?.name ?? '' }} />
 
       {cards.length === 0 ? (
         <View style={styles.empty}>
@@ -130,6 +125,56 @@ export default function TagCardsScreen() {
       <Pressable style={[styles.fabBack, { backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={28} color="#FFF" />
       </Pressable>
+
+      {/* FAB: 新規カード作成 */}
+      <Pressable
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        onPress={() => setShowDeckPicker(true)}
+      >
+        <Ionicons name="add" size={28} color="#FFF" />
+      </Pressable>
+
+      {/* デッキ選択モーダル */}
+      <Modal
+        visible={showDeckPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDeckPicker(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowDeckPicker(false)}>
+          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+              {t('card.newCardDeckTitle')}
+            </Text>
+            {decks.length === 0 ? (
+              <Text style={[styles.noDeckText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+                {t('study.noDecks')}
+              </Text>
+            ) : (
+              <FlatList
+                data={decks}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={[styles.deckPickerItem, { borderBottomColor: theme.colors.border }]}
+                    onPress={() => {
+                      setShowDeckPicker(false);
+                      router.push({ pathname: '/deck/[id]/card/new', params: { id: item.id, tagId } });
+                    }}
+                  >
+                    <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+                      {item.name}
+                    </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}>
+                      {t('home.cards', { count: item.cardCount })}
+                    </Text>
+                  </Pressable>
+                )}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -164,4 +209,45 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 16,
+    paddingBottom: 36,
+  },
+  modalTitle: {
+    fontWeight: '700',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  deckPickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  deckPickerName: { fontWeight: '600' },
+  noDeckText: { paddingHorizontal: 20, paddingVertical: 16 },
 });

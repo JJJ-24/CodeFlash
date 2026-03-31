@@ -114,7 +114,8 @@
     "noDeckToMove": "No other decks available",
     "selectAll": "Select All",
     "deleteSelected": "Delete",
-    "deleteSelectedConfirm": "Delete {{count}} card(s)?\nAssociated study history will also be deleted."
+    "deleteSelectedConfirm": "Delete {{count}} card(s)?\nAssociated study history will also be deleted.",
+    "newCardDeckTitle": "Select Deck"
   },
   "tabs": {
     "home": "Home",

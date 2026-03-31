@@ -51,19 +51,7 @@ export default function TagsScreen() {
 
   return (
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: t('tag.title'),
-          headerRight: () => (
-            <Pressable
-              onPress={() => { router.dismissAll(); router.navigate('/(tabs)/'); }}
-              style={{ width: 44, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Ionicons name="home-outline" size={22} color={theme.colors.primary} />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: t('tag.title') }} />
 
       {tags.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>

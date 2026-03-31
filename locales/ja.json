@@ -114,7 +114,8 @@
     "noDeckToMove": "移動先のデッキがありません",
     "selectAll": "全選択",
     "deleteSelected": "選択削除",
-    "deleteSelectedConfirm": "{{count}}件のカードを削除しますか？\n紐づく学習履歴も削除されます。"
+    "deleteSelectedConfirm": "{{count}}件のカードを削除しますか？\n紐づく学習履歴も削除されます。",
+    "newCardDeckTitle": "作成先デッキを選択"
   },
   "tabs": {
     "home": "ホーム",

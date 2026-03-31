@@ -14,7 +14,7 @@ import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 
 export default function NewCardScreen() {
-  const { id: deckId } = useLocalSearchParams<{ id: string }>();
+  const { id: deckId, tagId } = useLocalSearchParams<{ id: string; tagId?: string }>();
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
@@ -69,7 +69,7 @@ export default function NewCardScreen() {
         }}
       />
       <View style={styles.container}>
-        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} />
+        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} initialData={tagId ? { tagIds: [tagId] } : undefined} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('card.create')}</Text>

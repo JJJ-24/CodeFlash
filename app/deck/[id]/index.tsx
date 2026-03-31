@@ -179,6 +179,20 @@ export default function DeckDetailScreen() {
     ]);
   }
 
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedCardIds(new Set());
+    setFocusedCardIndex(null);
+    setShowDeckPicker(false);
+  }
+
+  function navigateToCardEdit(cardId: string) {
+    router.push({
+      pathname: '/deck/[id]/card/[cardId]/edit',
+      params: { id, cardId },
+    });
+  }
+
   function handleDeleteSelected() {
     Alert.alert(
       t('card.delete'),
@@ -197,9 +211,7 @@ export default function DeckDetailScreen() {
             if (deck) {
               updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
             }
-            setSelectionMode(false);
-            setSelectedCardIds(new Set());
-            setFocusedCardIndex(null);
+            exitSelectionMode();
             await loadCards();
           },
         },
@@ -228,9 +240,7 @@ export default function DeckDetailScreen() {
             }
             const tgt = decks.find((d) => d.id === targetDeck.id);
             if (tgt) updateDeck({ ...tgt, cardCount: tgt.cardCount + ids.length });
-            setSelectionMode(false);
-            setSelectedCardIds(new Set());
-            setFocusedCardIndex(null);
+            exitSelectionMode();
             await loadCards();
           },
         },
@@ -244,6 +254,25 @@ export default function DeckDetailScreen() {
   const displayedCards = selectedFilter === 'all'
     ? deckCards
     : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id));
+
+  const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
+
+  function moveFocus(direction: 'next' | 'prev') {
+    if (displayedCards.length === 0) return;
+    const next = direction === 'next'
+      ? (focusedCardIndex === null ? 0 : focusedCardIndex === displayedCards.length - 1 ? null : focusedCardIndex + 1)
+      : (focusedCardIndex === null ? displayedCards.length - 1 : focusedCardIndex === 0 ? null : focusedCardIndex - 1);
+    setFocusedCardIndex(next);
+    if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+  }
+
+  function toggleSelectAll() {
+    if (selectedCardIds.size === displayedCards.length) {
+      setSelectedCardIds(new Set());
+    } else {
+      setSelectedCardIds(new Set(displayedCards.map((c) => c.id)));
+    }
+  }
 
   const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
     { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('stats.all') },
@@ -326,20 +355,11 @@ export default function DeckDetailScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
+          const k = key.toLowerCase();
           if (selectionMode) {
-            if (key.toLowerCase() === 't') {
-              const next = focusedCardIndex === null ? 0
-                : focusedCardIndex === displayedCards.length - 1 ? null
-                : focusedCardIndex + 1;
-              setFocusedCardIndex(next);
-              if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
-            } else if (key.toLowerCase() === 'y') {
-              const prev = focusedCardIndex === null ? displayedCards.length - 1
-                : focusedCardIndex === 0 ? null
-                : focusedCardIndex - 1;
-              setFocusedCardIndex(prev);
-              if (prev !== null) listRef.current?.scrollToIndex({ index: prev, animated: true, viewPosition: 0.5 });
-            } else if (key === ' ') {
+            if (k === 't') { moveFocus('next'); }
+            else if (k === 'y') { moveFocus('prev'); }
+            else if (key === ' ') {
               if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
                 const cardId = displayedCards[focusedCardIndex].id;
                 setSelectedCardIds((prev) => {
@@ -348,82 +368,41 @@ export default function DeckDetailScreen() {
                   return next;
                 });
               }
-            } else if (key.toLowerCase() === 'a') {
-              if (selectedCardIds.size === displayedCards.length) {
-                setSelectedCardIds(new Set());
-              } else {
-                setSelectedCardIds(new Set(displayedCards.map((c) => c.id)));
-              }
-            } else if (key.toLowerCase() === 'm') {
-              if (selectedCardIds.size > 0) setShowDeckPicker(true);
-            } else if (key.toLowerCase() === 'd') {
-              if (selectedCardIds.size > 0) handleDeleteSelected();
-            } else if (key.toLowerCase() === 's' || key.toLowerCase() === 'c') {
-              setSelectionMode(false);
-              setSelectedCardIds(new Set());
-              setFocusedCardIndex(null);
-              setShowDeckPicker(false);
             }
+            else if (k === 'a') { toggleSelectAll(); }
+            else if (k === 'm') { if (selectedCardIds.size > 0) setShowDeckPicker(true); }
+            else if (k === 'd') { if (selectedCardIds.size > 0) handleDeleteSelected(); }
+            else if (k === 's' || k === 'c') { exitSelectionMode(); }
             return;
           }
           if (key === ' ') {
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
-          } else if (key === '1') {
-            setSelectedFilter('all');
+          } else if (FILTER_KEY_MAP[key]) {
+            const f = FILTER_KEY_MAP[key];
+            setSelectedFilter(f);
             setFocusedCardIndex(null);
-            if (initialFilterPreference === 'none') setLastDeckDetailFilter('all');
-          } else if (key === '2') {
-            setSelectedFilter('learned');
-            setFocusedCardIndex(null);
-            if (initialFilterPreference === 'none') setLastDeckDetailFilter('learned');
-          } else if (key === '3') {
-            setSelectedFilter('review');
-            setFocusedCardIndex(null);
-            if (initialFilterPreference === 'none') setLastDeckDetailFilter('review');
-          } else if (key === '4') {
-            setSelectedFilter('new');
-            setFocusedCardIndex(null);
-            if (initialFilterPreference === 'none') setLastDeckDetailFilter('new');
-          } else if (key.toLowerCase() === 't') {
-            if (displayedCards.length > 0) {
-              const next = focusedCardIndex === null ? 0
-                : focusedCardIndex === displayedCards.length - 1 ? null
-                : focusedCardIndex + 1;
-              setFocusedCardIndex(next);
-              if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
-            }
-          } else if (key.toLowerCase() === 'y') {
-            if (displayedCards.length > 0) {
-              const prev = focusedCardIndex === null ? displayedCards.length - 1
-                : focusedCardIndex === 0 ? null
-                : focusedCardIndex - 1;
-              setFocusedCardIndex(prev);
-              if (prev !== null) listRef.current?.scrollToIndex({ index: prev, animated: true, viewPosition: 0.5 });
-            }
-          } else if (key.toLowerCase() === 'p') {
+            if (initialFilterPreference === 'none') setLastDeckDetailFilter(f);
+          } else if (k === 't') { moveFocus('next'); }
+          else if (k === 'y') { moveFocus('prev'); }
+          else if (k === 'p') {
             if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              router.push({
-                pathname: '/deck/[id]/card/[cardId]/edit',
-                params: { id, cardId: displayedCards[focusedCardIndex].id },
-              });
+              navigateToCardEdit(displayedCards[focusedCardIndex].id);
             }
-          } else if (key.toLowerCase() === 'b') {
-            router.back();
-          } else if (key.toLowerCase() === 'u') {
+          } else if (k === 'b') { router.back(); }
+          else if (k === 'u') {
             listRef.current?.scrollToOffset({ offset: Math.max(0, scrollOffsetRef.current - SCROLL_STEP), animated: true });
-          } else if (key.toLowerCase() === 'd') {
+          } else if (k === 'd') {
             if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
               confirmDeleteCard(displayedCards[focusedCardIndex]);
             } else {
               listRef.current?.scrollToOffset({ offset: scrollOffsetRef.current + SCROLL_STEP, animated: true });
             }
-          } else if (key.toLowerCase() === 'n') {
+          } else if (k === 'n') {
             router.push({ pathname: '/deck/[id]/card/new', params: { id } });
-          } else if (key.toLowerCase() === 's') {
+          } else if (k === 's') {
             setSelectionMode((v) => !v);
             setSelectedCardIds(new Set());
             setFocusedCardIndex(null);
-            setShowDeckPicker(false);
           }
         }}
         onBlur={() => { setTimeout(() => { if (isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
@@ -445,10 +424,13 @@ export default function DeckDetailScreen() {
           headerRight: () => (
             <Pressable
               onPress={() => {
-                setSelectionMode((v) => !v);
-                setSelectedCardIds(new Set());
-                setFocusedCardIndex(null);
-                setShowDeckPicker(false);
+                if (selectionMode) {
+                  exitSelectionMode();
+                } else {
+                  setSelectionMode(true);
+                  setSelectedCardIds(new Set());
+                  setFocusedCardIndex(null);
+                }
               }}
               style={{ paddingHorizontal: 4 }}
             >
@@ -474,7 +456,7 @@ export default function DeckDetailScreen() {
         </View>
       ) : (
         <DraggableFlatList
-          ref={listRef}
+          ref={listRef as any}
           data={displayedCards}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
@@ -512,10 +494,7 @@ export default function DeckDetailScreen() {
                   if (selectionMode) {
                     toggleSelect();
                   } else {
-                    router.push({
-                      pathname: '/deck/[id]/card/[cardId]/edit',
-                      params: { id, cardId: item.id },
-                    });
+                    navigateToCardEdit(item.id);
                   }
                 }}
                 onLongPress={() => {
@@ -543,12 +522,7 @@ export default function DeckDetailScreen() {
                 {!selectionMode && (
                   <>
                     <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: '/deck/[id]/card/[cardId]/edit',
-                          params: { id, cardId: item.id },
-                        })
-                      }
+                      onPress={() => navigateToCardEdit(item.id)}
                       hitSlop={8}
                     >
                       <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
@@ -568,15 +542,7 @@ export default function DeckDetailScreen() {
 
       {selectionMode ? (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
-          <Pressable
-            onPress={() => {
-              if (selectedCardIds.size === displayedCards.length) {
-                setSelectedCardIds(new Set());
-              } else {
-                setSelectedCardIds(new Set(displayedCards.map((c) => c.id)));
-              }
-            }}
-          >
+          <Pressable onPress={toggleSelectAll}>
             <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }}>
               {selectedCardIds.size === displayedCards.length ? t('card.cancelSelect') : t('card.selectAll')}
             </Text>
@@ -604,13 +570,13 @@ export default function DeckDetailScreen() {
       ) : (
         <>
           {/* FAB: 戻る */}
-          <Pressable style={styles.fabBack} onPress={() => router.back()}>
+          <Pressable style={[styles.fab, { left: 20 }]} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={28} color="#FFF" />
           </Pressable>
 
           {/* FAB: 新規カード作成 */}
           <Pressable
-            style={styles.fab}
+            style={[styles.fab, { right: 20 }]}
             onPress={() => router.push({ pathname: '/deck/[id]/card/new', params: { id } })}
           >
             <Ionicons name="add" size={28} color="#FFF" />
@@ -625,7 +591,7 @@ export default function DeckDetailScreen() {
         onRequestClose={() => setShowDeckPicker(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowDeckPicker(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface, maxHeight: '60%' }]}>
             <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
               {t('card.selectDeckTitle')}
             </Text>
@@ -663,7 +629,7 @@ export default function DeckDetailScreen() {
       >
         <View style={styles.modalOverlay}>
           <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowShortcutsModal(false)} />
-          <View style={[styles.shortcutsSheet, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface, maxHeight: '75%' }]}>
             <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
               {t('settings.keyboardShortcuts')}
             </Text>
@@ -748,25 +714,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardPreview: { flex: 1, lineHeight: 22 },
-  fabBack: {
-    position: 'absolute',
-    left: 20,
-    bottom: 32,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1976D2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-  },
   fab: {
     position: 'absolute',
-    right: 20,
     bottom: 32,
     width: 56,
     height: 56,
@@ -793,14 +742,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  moveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
   iconBtn: {
     width: 44,
     height: 44,
@@ -818,7 +759,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingTop: 16,
     paddingBottom: 36,
-    maxHeight: '60%',
   },
   modalTitle: {
     fontWeight: '700',
@@ -832,13 +772,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  shortcutsSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 16,
-    paddingBottom: 36,
-    maxHeight: '75%',
   },
   shortcutSection: {
     fontWeight: '700',

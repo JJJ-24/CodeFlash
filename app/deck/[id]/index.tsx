@@ -548,29 +548,36 @@ export default function DeckDetailScreen() {
 
       {selectionMode ? (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+          <Pressable
+            onPress={() => {
+              if (selectedCardIds.size === displayedCards.length) {
+                setSelectedCardIds(new Set());
+              } else {
+                setSelectedCardIds(new Set(displayedCards.map((c) => c.id)));
+              }
+            }}
+          >
+            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }}>
+              {selectedCardIds.size === displayedCards.length ? t('card.cancelSelect') : t('card.selectAll')}
+            </Text>
+          </Pressable>
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }}>
             {t('card.selectedCount', { count: selectedCardIds.size })}
           </Text>
           <View style={styles.selectionActions}>
             <Pressable
-              style={[styles.moveBtn, { backgroundColor: '#C62828' }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
+              style={[styles.iconBtn, { backgroundColor: '#C62828' }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
               onPress={handleDeleteSelected}
               disabled={selectedCardIds.size === 0}
             >
-              <Ionicons name="trash-outline" size={18} color="#FFF" />
-              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }}>
-                {t('card.deleteSelected')}
-              </Text>
+              <Ionicons name="trash-outline" size={22} color="#FFF" />
             </Pressable>
             <Pressable
-              style={[styles.moveBtn, { backgroundColor: theme.colors.primary }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
+              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
               onPress={() => setShowDeckPicker(true)}
               disabled={selectedCardIds.size === 0}
             >
-              <Ionicons name="arrow-forward-circle-outline" size={18} color="#FFF" />
-              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }}>
-                {t('card.moveToDeck')}
-              </Text>
+              <Ionicons name="arrow-forward-circle-outline" size={22} color="#FFF" />
             </Pressable>
           </View>
         </View>
@@ -773,6 +780,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,

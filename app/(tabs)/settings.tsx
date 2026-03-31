@@ -1,15 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useState } from 'react';
 
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
 import { estimateImageExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
+import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
 import { useTheme } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
@@ -77,10 +79,40 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const db = useSQLiteContext();
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
-  const { initialFilterPreference, setInitialFilterPreference } = useSettingsStore();
+  const {
+    initialFilterPreference, setInitialFilterPreference,
+    notificationEnabled, notificationHour, notificationMinute,
+    setNotificationEnabled, setNotificationTime,
+  } = useSettingsStore();
   const { setDecks } = useDeckStore();
   const { setTags } = useTagStore();
   const [loading, setLoading] = useState(false);
+
+  async function handleNotificationToggle(value: boolean) {
+    if (value) {
+      const granted = await requestPermission();
+      if (!granted) {
+        Alert.alert(t('notification.permissionDenied'), t('notification.permissionDeniedMessage'));
+        return;
+      }
+      setNotificationEnabled(true);
+      await scheduleDailyReminder(notificationHour, notificationMinute).catch(() => {});
+    } else {
+      setNotificationEnabled(false);
+      await cancelAllReminders().catch(() => {});
+    }
+  }
+
+  async function handleNotificationTimeChange(_: unknown, date?: Date) {
+    if (!date) return;
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    setNotificationTime(hour, minute);
+    await scheduleDailyReminder(hour, minute).catch(() => {});
+  }
+
+  const notificationTimeDate = new Date();
+  notificationTimeDate.setHours(notificationHour, notificationMinute, 0, 0);
 
   async function doExport(includeImages: boolean) {
     try {
@@ -218,6 +250,38 @@ export default function SettingsScreen() {
         value={fontSizePreference}
         onChange={setFontSizePreference}
       />
+
+      {/* 通知 */}
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+          {t('notification.title')}
+        </Text>
+        <View style={styles.notificationRow}>
+          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+            {t('notification.dailyReminder')}
+          </Text>
+          <Switch
+            value={notificationEnabled}
+            onValueChange={handleNotificationToggle}
+            trackColor={{ true: theme.colors.primary }}
+          />
+        </View>
+        {notificationEnabled && (
+          <View style={styles.notificationRow}>
+            <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+              {t('notification.reminderTime')}
+            </Text>
+            <DateTimePicker
+              value={notificationTimeDate}
+              mode="time"
+              display="spinner"
+              onChange={handleNotificationTimeChange}
+              style={styles.timePicker}
+              textColor={theme.colors.text}
+            />
+          </View>
+        )}
+      </View>
 
       <SegmentedCard
         label={t('settings.initialFilter')}
@@ -359,4 +423,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
   },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  notificationLabel: { flex: 1 },
+  timePicker: { height: 120, flex: 1 },
 });

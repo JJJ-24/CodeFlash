@@ -5,6 +5,9 @@ const STORAGE_KEY = '@codeflash_keyboard_shortcuts';
 const FILTER_STORAGE_KEY = '@codeflash_initial_filter';
 const LANG_STORAGE_KEY = '@codeflash_last_code_language';
 const DECK_FILTER_STORAGE_KEY = '@codeflash_last_deck_detail_filter';
+const NOTIFICATION_ENABLED_KEY = '@codeflash_notification_enabled';
+const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
+const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
@@ -30,6 +33,11 @@ interface SettingsState {
   setLastSelectedCodeLanguage: (v: string) => void;
   lastDeckDetailFilter: DeckDetailFilter;
   setLastDeckDetailFilter: (v: DeckDetailFilter) => void;
+  notificationEnabled: boolean;
+  notificationHour: number;
+  notificationMinute: number;
+  setNotificationEnabled: (v: boolean) => void;
+  setNotificationTime: (hour: number, minute: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -52,6 +60,18 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setLastDeckDetailFilter: (v) => {
     set({ lastDeckDetailFilter: v });
     AsyncStorage.setItem(DECK_FILTER_STORAGE_KEY, v);
+  },
+  notificationEnabled: false,
+  notificationHour: 9,
+  notificationMinute: 0,
+  setNotificationEnabled: (v) => {
+    set({ notificationEnabled: v });
+    AsyncStorage.setItem(NOTIFICATION_ENABLED_KEY, String(v));
+  },
+  setNotificationTime: (hour, minute) => {
+    set({ notificationHour: hour, notificationMinute: minute });
+    AsyncStorage.setItem(NOTIFICATION_HOUR_KEY, String(hour));
+    AsyncStorage.setItem(NOTIFICATION_MINUTE_KEY, String(minute));
   },
 }));
 
@@ -77,4 +97,20 @@ AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY).then((value) => {
   if (value !== null) {
     useSettingsStore.setState({ lastDeckDetailFilter: value as DeckDetailFilter });
   }
+});
+
+AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY).then((value) => {
+  if (value !== null) {
+    useSettingsStore.setState({ notificationEnabled: value === 'true' });
+  }
+});
+
+Promise.all([
+  AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
+  AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
+]).then(([hour, minute]) => {
+  const update: Partial<{ notificationHour: number; notificationMinute: number }> = {};
+  if (hour !== null) update.notificationHour = Number(hour);
+  if (minute !== null) update.notificationMinute = Number(minute);
+  if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 });

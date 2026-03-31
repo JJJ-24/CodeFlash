@@ -224,6 +224,13 @@
     "initialFilterNew": "New",
     "initialFilterNone": "Last"
   },
+  "notification": {
+    "title": "Notifications",
+    "dailyReminder": "Daily Reminder",
+    "reminderTime": "Time",
+    "permissionDenied": "Notifications Not Allowed",
+    "permissionDeniedMessage": "Please enable notifications in the Settings app"
+  },
   "dataManagement": {
     "title": "Data Management",
     "exportTitle": "Export",

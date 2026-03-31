@@ -2,21 +2,38 @@ import '@/lib/i18n';
 import { Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect } from 'react';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, AppState, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
+import { cancelAllReminders, scheduleDailyReminder } from '@/lib/notifications';
 import { useTheme } from '@/lib/theme';
+import { useSettingsStore } from '@/store/settings';
 import { useThemeStore } from '@/store/theme';
 
 function RootStack() {
   const theme = useTheme();
   const db = useSQLiteContext();
+  const { notificationEnabled, notificationHour, notificationMinute } = useSettingsStore();
 
   useEffect(() => {
     cleanupOrphanImages(db).catch(() => {});
   }, []);
+
+  // アプリがフォアグラウンドに戻るたびに通知を再スケジュール（OS による消去に対応）
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        if (notificationEnabled) {
+          scheduleDailyReminder(notificationHour, notificationMinute).catch(() => {});
+        } else {
+          cancelAllReminders().catch(() => {});
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [notificationEnabled, notificationHour, notificationMinute]);
 
   return (
     <Stack

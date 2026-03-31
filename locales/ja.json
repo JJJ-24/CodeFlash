@@ -224,6 +224,13 @@
     "initialFilterNew": "新規",
     "initialFilterNone": "直近"
   },
+  "notification": {
+    "title": "通知",
+    "dailyReminder": "毎日のリマインダー",
+    "reminderTime": "時刻",
+    "permissionDenied": "通知が許可されていません",
+    "permissionDeniedMessage": "設定アプリから通知を許可してください"
+  },
   "dataManagement": {
     "title": "データ管理",
     "exportTitle": "エクスポート",

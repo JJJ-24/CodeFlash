@@ -223,11 +223,9 @@
   "dataManagement": {
     "title": "Data Management",
     "exportTitle": "Export",
-    "exportSubtitle": "Save all data to a JSON file",
     "exportSuccess": "Export completed",
     "exportError": "Export failed",
     "importTitle": "Import",
-    "importSubtitle": "Load data from a JSON file",
     "importConfirmTitle": "Confirm Import",
     "importConfirmMessage": "Select how to import.",
     "importMerge": "Merge (Add & Overwrite)",

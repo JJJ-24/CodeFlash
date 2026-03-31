@@ -223,11 +223,9 @@
   "dataManagement": {
     "title": "データ管理",
     "exportTitle": "エクスポート",
-    "exportSubtitle": "全データをJSONファイルに書き出す",
     "exportSuccess": "エクスポートが完了しました",
     "exportError": "エクスポートに失敗しました",
     "importTitle": "インポート",
-    "importSubtitle": "JSONファイルからデータを読み込む",
     "importConfirmTitle": "インポートの確認",
     "importConfirmMessage": "インポート方法を選択してください。",
     "importMerge": "マージ（追加・上書き）",

@@ -253,7 +253,6 @@ export default function SettingsScreen() {
               <Ionicons name="arrow-up-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
                 <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.exportTitle')}</Text>
-                {/* <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.exportSubtitle')}</Text> */}
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
@@ -261,7 +260,6 @@ export default function SettingsScreen() {
               <Ionicons name="arrow-down-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
                 <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.importTitle')}</Text>
-                {/* <Text style={[styles.dataRowSub, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('dataManagement.importSubtitle')}</Text> */}
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
@@ -357,7 +355,6 @@ const styles = StyleSheet.create({
   },
   dataRowText: { flex: 1 },
   dataRowTitle: { fontWeight: '500' },
-  dataRowSub: { marginTop: 2 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',

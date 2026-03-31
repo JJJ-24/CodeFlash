@@ -128,6 +128,7 @@ export default function EditCardScreen() {
             tagIds: initialTagIds,
           }}
           initialTab={tab === 'back' || tab === 'memo' ? tab : undefined}
+          deckName={decks.find((d) => d.id === id)?.name}
           onSave={handleSave}
           onFrontEmptyChange={setFrontEmpty}
           saving={saving}

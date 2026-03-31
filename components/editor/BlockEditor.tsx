@@ -79,6 +79,7 @@ export interface BlockEditorRef {
 interface Props {
   initialData?: Partial<BlockEditorData>;
   initialTab?: Tab;
+  deckName?: string;
   onSave: (data: BlockEditorData) => Promise<void>;
   onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
@@ -88,9 +89,10 @@ interface Props {
 export function BlockEditor({
   initialData,
   initialTab,
+  deckName,
   onSave,
   onFrontEmptyChange,
-  saving,
+  saving: _saving,
   ref,
 }: Props) {
   const { t } = useTranslation();
@@ -337,6 +339,18 @@ export function BlockEditor({
         </Text>
         <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
       </View>
+
+      {/* デッキ名 */}
+      {deckName != null && (
+        <View style={[styles.deckRow, { borderColor: theme.colors.border }]}>
+          <Text style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+            {t("deck.name")}
+          </Text>
+          <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg, paddingLeft: 8 }]}>
+            {deckName}
+          </Text>
+        </View>
+      )}
 
       {/* 表面が空の場合のバリデーションエラー */}
       {isFrontEmpty && (
@@ -597,5 +611,7 @@ const styles = StyleSheet.create({
   addMenuCancelText: {},
   tagSection: { gap: 8, marginTop: 12 },
   tagLabel: { fontWeight: "600" },
+  deckRow: { gap: 4, marginTop: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  deckName: { fontWeight: "600" },
   validationError: { textAlign: "center" },
 });

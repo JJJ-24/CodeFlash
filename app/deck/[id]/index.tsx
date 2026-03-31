@@ -86,6 +86,8 @@ export default function DeckDetailScreen() {
   const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space', descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
+    { key: 'T',    descKey: 'settings.shortcutFocusCard' },
+    { key: 'E',    descKey: 'settings.shortcutEditCard' },
     { key: 'N',    descKey: 'settings.shortcutNewCard' },
     { key: 'S',    descKey: 'settings.shortcutToggleSelect' },
     { key: 'U',    descKey: 'settings.shortcutScrollUp' },
@@ -163,6 +165,7 @@ export default function DeckDetailScreen() {
         onPress: async () => {
           await deleteCard(db, card.id, id);
           removeCard(card.id);
+          setFocusedCardIndex(null);
           if (deck) {
             updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
           }
@@ -352,22 +355,43 @@ export default function DeckDetailScreen() {
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           } else if (key === '1') {
             setSelectedFilter('all');
+            setFocusedCardIndex(null);
             if (initialFilterPreference === 'none') setLastDeckDetailFilter('all');
           } else if (key === '2') {
             setSelectedFilter('learned');
+            setFocusedCardIndex(null);
             if (initialFilterPreference === 'none') setLastDeckDetailFilter('learned');
           } else if (key === '3') {
             setSelectedFilter('review');
+            setFocusedCardIndex(null);
             if (initialFilterPreference === 'none') setLastDeckDetailFilter('review');
           } else if (key === '4') {
             setSelectedFilter('new');
+            setFocusedCardIndex(null);
             if (initialFilterPreference === 'none') setLastDeckDetailFilter('new');
+          } else if (key.toLowerCase() === 't') {
+            if (displayedCards.length > 0) {
+              const next = focusedCardIndex === null ? 0 : (focusedCardIndex + 1) % displayedCards.length;
+              setFocusedCardIndex(next);
+              listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+            }
+          } else if (key.toLowerCase() === 'e') {
+            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+              router.push({
+                pathname: '/deck/[id]/card/[cardId]/edit',
+                params: { id, cardId: displayedCards[focusedCardIndex].id },
+              });
+            }
           } else if (key.toLowerCase() === 'b') {
             router.back();
           } else if (key.toLowerCase() === 'u') {
             listRef.current?.scrollToOffset({ offset: Math.max(0, scrollOffsetRef.current - SCROLL_STEP), animated: true });
           } else if (key.toLowerCase() === 'd') {
-            listRef.current?.scrollToOffset({ offset: scrollOffsetRef.current + SCROLL_STEP, animated: true });
+            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+              confirmDeleteCard(displayedCards[focusedCardIndex]);
+            } else {
+              listRef.current?.scrollToOffset({ offset: scrollOffsetRef.current + SCROLL_STEP, animated: true });
+            }
           } else if (key.toLowerCase() === 'n') {
             router.push({ pathname: '/deck/[id]/card/new', params: { id } });
           } else if (key.toLowerCase() === 's') {
@@ -440,7 +464,7 @@ export default function DeckDetailScreen() {
           renderItem={({ item, drag, getIndex }: RenderItemParams<Card>) => {
           const preview = getPreviewText(item.frontContent);
           const isSelected = selectedCardIds.has(item.id);
-          const isFocused = selectionMode && focusedCardIndex !== null && getIndex() === focusedCardIndex;
+          const isFocused = focusedCardIndex !== null && getIndex() === focusedCardIndex;
           function toggleSelect() {
             setSelectedCardIds((prev) => {
               const next = new Set(prev);
@@ -457,6 +481,7 @@ export default function DeckDetailScreen() {
                   { backgroundColor: theme.colors.surface },
                   selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
                   selectionMode && isFocused && !isSelected && { borderWidth: 2, borderColor: '#F57C00' },
+                  !selectionMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                 ]}
                 onPress={() => {
                   if (selectionMode) {

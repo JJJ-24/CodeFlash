@@ -622,11 +622,11 @@ export default function DeckDetailScreen() {
                     style={[styles.deckPickerItem, { borderBottomColor: theme.colors.border }]}
                     onPress={() => handleMoveToDeck(item)}
                   >
-                    <Text style={{ color: theme.colors.text, fontWeight: '500', fontSize: theme.fontSize.md }}>
+                    <Text style={{ color: theme.colors.text, fontWeight: '500', fontSize: theme.fontSize.md, flex: 1, marginRight: 8 }} numberOfLines={1}>
                       {item.name}
                     </Text>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}>
-                      {item.cardCount}枚
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }}>
+                      {t('home.cards', { count: item.cardCount })}
                     </Text>
                   </Pressable>
                 )}

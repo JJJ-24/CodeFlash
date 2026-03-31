@@ -80,7 +80,7 @@ export default function TagCardsScreen() {
 
       {cards.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="card-outline" size={56} color={theme.colors.iconSubtle} />
+          <Ionicons name="card-outline" size={64} color={theme.colors.iconSubtle} />
           <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
             {t('deck.noCards')}
           </Text>

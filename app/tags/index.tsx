@@ -69,7 +69,7 @@ export default function TagsScreen() {
 
       {tags.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
-          <Ionicons name="pricetags-outline" size={56} color={theme.colors.iconSubtle} />
+          <Ionicons name="pricetags-outline" size={64} color={theme.colors.iconSubtle} />
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
             {t('tag.empty')}
           </Text>

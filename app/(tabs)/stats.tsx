@@ -346,7 +346,7 @@ export default function StatsScreen() {
   if (!hasData && total === 0) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
-        <Ionicons name="bar-chart-outline" size={72} color={theme.colors.iconSubtle} />
+        <Ionicons name="bar-chart-outline" size={64} color={theme.colors.iconSubtle} />
         <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
           {t('stats.empty')}
         </Text>

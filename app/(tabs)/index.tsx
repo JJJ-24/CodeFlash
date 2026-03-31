@@ -125,7 +125,7 @@ export default function HomeScreen() {
       <View style={{ flex: 1 }}>
       {decks.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="layers-outline" size={72} color={theme.colors.iconSubtle} />
+          <Ionicons name="layers-outline" size={64} color={theme.colors.iconSubtle} />
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
             {t('home.empty')}
           </Text>

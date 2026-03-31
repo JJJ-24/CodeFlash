@@ -442,7 +442,7 @@ export default function DeckDetailScreen() {
       <View style={{ flex: 1 }}>
       {displayedCards.length === 0 ? (
         <View style={styles.emptyCards}>
-          <Ionicons name="card-outline" size={52} color={theme.colors.iconSubtle} />
+          <Ionicons name="card-outline" size={64} color={theme.colors.iconSubtle} />
           <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
             {selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
           </Text>

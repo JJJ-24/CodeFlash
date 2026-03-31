@@ -219,7 +219,7 @@ export default function StudyScreen() {
       {activeTab === 'decks' && (
         decks.length === 0 ? (
           <View style={styles.center}>
-            <Ionicons name="book-outline" size={56} color={theme.colors.iconSubtle} />
+            <Ionicons name="book-outline" size={64} color={theme.colors.iconSubtle} />
             <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
               {t('study.noDecks')}
             </Text>
@@ -276,7 +276,7 @@ export default function StudyScreen() {
       {activeTab === 'tags' && (
         tags.length === 0 ? (
           <View style={styles.center}>
-            <Ionicons name="pricetag-outline" size={56} color={theme.colors.iconSubtle} />
+            <Ionicons name="pricetag-outline" size={64} color={theme.colors.iconSubtle} />
             <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
               {t('study.noTags')}
             </Text>

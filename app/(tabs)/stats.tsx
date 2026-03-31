@@ -64,6 +64,39 @@ type MasteryItem = { deckId: string; avgEase: number; learnedCount: number };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
 type GradeDistribution = { again: number; hard: number; normal: number; easy: number; unlearned: number };
 
+// DB から一括取得する統計データ
+interface StatsData {
+  todayReviewed: number;
+  todayDue: number;
+  streak: number;
+  learned: number;
+  unlearned: number;
+  todayCreated: number;
+  schedule: ScheduleItem[];
+  past7DaysReviewed: ScheduleItem[];
+  past7DaysActivity: ScheduleItem[];
+  past7DaysCreated: ScheduleItem[];
+  deckMastery: MasteryItem[];
+  decks: Deck[];
+  heatmapData: { date: string; count: number }[];
+}
+
+const INITIAL_STATS: StatsData = {
+  todayReviewed: 0,
+  todayDue: 0,
+  streak: 0,
+  learned: 0,
+  unlearned: 0,
+  todayCreated: 0,
+  schedule: [],
+  past7DaysReviewed: [],
+  past7DaysActivity: [],
+  past7DaysCreated: [],
+  deckMastery: [],
+  decks: [],
+  heatmapData: [],
+};
+
 // ──────────────────────────────────────────────
 // SVG Pie Chart
 // ──────────────────────────────────────────────
@@ -254,19 +287,10 @@ export default function StatsScreen() {
   const [gradeDistribution, setGradeDistribution] = useState<GradeDistribution | null>(null);
   const [showTotalModal, setShowTotalModal] = useState(false);
   const [totalDistribution, setTotalDistribution] = useState<GradeDistribution | null>(null);
-  const [todayReviewed, setTodayReviewed] = useState(0);
-  const [todayDue, setTodayDue] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
-  const [past7DaysReviewed, setPast7DaysReviewed] = useState<ScheduleItem[]>([]);
-  const [past7DaysActivity, setPast7DaysActivity] = useState<ScheduleItem[]>([]);
-  const [past7DaysCreated, setPast7DaysCreated] = useState<ScheduleItem[]>([]);
-  const [learned, setLearned] = useState(0);
-  const [unlearned, setUnlearned] = useState(0);
-  const [todayCreated, setTodayCreated] = useState(0);
-  const [deckMastery, setDeckMastery] = useState<MasteryItem[]>([]);
-  const [decks, setDecks] = useState<Deck[]>([]);
-  const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([]);
+  const [stats, setStats] = useState<StatsData>(INITIAL_STATS);
+  const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
+          schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
+          deckMastery, decks, heatmapData } = stats;
 
   useFocusEffect(
     useCallback(() => {
@@ -296,15 +320,6 @@ export default function StatsScreen() {
             getDailyReviewCounts(db, heatmapStartStr),
           ]);
 
-        setTodayReviewed(reviewed);
-        setTodayDue(due);
-        setStreak(s);
-        setLearned(counts.learned);
-        setUnlearned(counts.unlearned);
-        setTodayCreated(createdToday);
-        setDeckMastery(mastery);
-        setDecks(allDecks);
-
         // 今後7日分（今日が先頭）
         const filledSchedule: ScheduleItem[] = Array.from({ length: 7 }, (_, i) => {
           const d = new Date();
@@ -313,14 +328,22 @@ export default function StatsScreen() {
           const found = rawSchedule.find((r) => r.date === dateStr);
           return { date: dateStr, count: i === 0 ? due : (found?.count ?? 0) };
         });
-        setSchedule(filledSchedule);
 
-        // 過去7日分（今日が末尾）
-        setPast7DaysReviewed(fillPast7Days(rawReviewed));
-        setPast7DaysActivity(fillPast7Days(rawActivity));
-        setPast7DaysCreated(fillPast7Days(rawCreated));
-
-        setHeatmapData(rawHeatmap);
+        setStats({
+          todayReviewed: reviewed,
+          todayDue: due,
+          streak: s,
+          learned: counts.learned,
+          unlearned: counts.unlearned,
+          todayCreated: createdToday,
+          schedule: filledSchedule,
+          past7DaysReviewed: fillPast7Days(rawReviewed),
+          past7DaysActivity: fillPast7Days(rawActivity),
+          past7DaysCreated: fillPast7Days(rawCreated),
+          deckMastery: mastery,
+          decks: allDecks,
+          heatmapData: rawHeatmap,
+        });
       }
       load();
     }, [db, initialFilterPreference])

@@ -6,9 +6,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  FlatList,
-  Linking,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,49 +15,23 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, runOnUI, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 
 import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
+import { LinksSheet } from '@/components/study/LinksSheet';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { useCodeBlockSelection } from '@/hooks/useCodeBlockSelection';
 import { useStudySession } from '@/hooks/useStudySession';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { FlipSuppressContext } from '@/lib/FlipSuppressContext';
+import { extractLinks } from '@/lib/study/extractLinks';
 import { GRADE_COLORS, useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
-import type { Block, CodeBlock, TextBlock } from '@/types';
 import { useSettingsStore } from '@/store/settings';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
-
-type LinkItem = { text: string; url: string };
-
-function extractLinks(blocks: Block[]): LinkItem[] {
-  const links: LinkItem[] = [];
-  const seen = new Set<string>();
-  // markdown リンク [text](url) を先にマッチさせることで、括弧内の URL が生URLとして重複抽出されるのを防ぐ
-  const combinedRe = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|https?:\/\/[^\s)]+/g;
-  const urlRe = /https?:\/\/[^\s)]+/g;
-  for (const block of blocks) {
-    if (block.type === 'text') {
-      const content = (block as TextBlock).content;
-      let m: RegExpExecArray | null;
-      combinedRe.lastIndex = 0;
-      while ((m = combinedRe.exec(content)) !== null) {
-        const url = m[2] ?? m[0];
-        const text = m[1] ?? m[0];
-        if (!seen.has(url)) { seen.add(url); links.push({ text, url }); }
-      }
-    } else if (block.type === 'code') {
-      const content = (block as CodeBlock).content;
-      let m: RegExpExecArray | null;
-      urlRe.lastIndex = 0;
-      while ((m = urlRe.exec(content)) !== null) {
-        if (!seen.has(m[0])) { seen.add(m[0]); links.push({ text: m[0], url: m[0] }); }
-      }
-    }
-  }
-  return links;
-}
 
 const SCROLL_STEP = 200;
 
@@ -69,6 +40,24 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 1, labelKey: 'grade.hard',  color: GRADE_COLORS.hard  },
   { grade: 2, labelKey: 'grade.good',  color: GRADE_COLORS.good  },
   { grade: 3, labelKey: 'grade.easy',  color: GRADE_COLORS.easy  },
+];
+
+const STUDY_SHORTCUTS = [
+  { key: 'Space', descKey: 'settings.shortcutFlip' },
+  { key: '1–4',  descKey: 'settings.shortcutGrade' },
+  { key: 'J',    descKey: 'settings.shortcutNext' },
+  { key: 'K',    descKey: 'settings.shortcutPrev' },
+  { key: 'M',    descKey: 'settings.shortcutMemo' },
+  { key: 'F',    descKey: 'settings.shortcutFullscreen' },
+  { key: 'T',    descKey: 'settings.shortcutFocusBlock' },
+  { key: 'Y',    descKey: 'settings.shortcutFocusBlockPrev' },
+  { key: 'R',    descKey: 'settings.shortcutRun' },
+  { key: 'E',    descKey: 'settings.shortcutEdit' },
+  { key: 'U',    descKey: 'settings.shortcutScrollUp' },
+  { key: 'D',    descKey: 'settings.shortcutScrollDown' },
+  { key: 'B',    descKey: 'settings.shortcutBack' },
+  { key: 'L',    descKey: 'settings.shortcutLinks' },
+  { key: 'P',    descKey: 'settings.shortcutPencil' },
 ];
 
 export default function StudySessionScreen() {
@@ -93,6 +82,7 @@ export default function StudySessionScreen() {
       return () => { isScreenFocusedRef.current = false; };
     }, [refreshCurrentCard])
   );
+
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
   const { decks } = useDeckStore();
@@ -109,27 +99,7 @@ export default function StudySessionScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  const STUDY_SHORTCUTS = [
-    { key: 'Space', descKey: 'settings.shortcutFlip' },
-    { key: '1–4',  descKey: 'settings.shortcutGrade' },
-    { key: 'J',    descKey: 'settings.shortcutNext' },
-    { key: 'K',    descKey: 'settings.shortcutPrev' },
-    { key: 'M',    descKey: 'settings.shortcutMemo' },
-    { key: 'F',    descKey: 'settings.shortcutFullscreen' },
-    { key: 'T',    descKey: 'settings.shortcutFocusBlock' },
-    { key: 'Y',    descKey: 'settings.shortcutFocusBlockPrev' },
-    { key: 'R',    descKey: 'settings.shortcutRun' },
-    { key: 'E',    descKey: 'settings.shortcutEdit' },
-    { key: 'U',    descKey: 'settings.shortcutScrollUp' },
-    { key: 'D',    descKey: 'settings.shortcutScrollDown' },
-    { key: 'B',    descKey: 'settings.shortcutBack' },
-    { key: 'L',    descKey: 'settings.shortcutLinks' },
-    { key: 'P',    descKey: 'settings.shortcutPencil' },
-  ];
-  const [selectedCodeBlockIdx, setSelectedCodeBlockIdx] = useState<number | null>(null);
-  const [selectedCodeBlockSide, setSelectedCodeBlockSide] = useState<'front' | 'back' | 'memo' | null>(null);
-  const [runTrigger, setRunTrigger] = useState(0);
-  const [editTrigger, setEditTrigger] = useState(0);
+
   // cardId -> blockIndex -> 編集済みコード
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<Record<string, Record<number, string>>>({});
   const codeEditingRef = useRef(false);
@@ -139,106 +109,40 @@ export default function StudySessionScreen() {
     suppressedRef.current = true;
     setTimeout(() => { suppressedRef.current = false; }, 300);
   }, []);
-  const isNavigatingRef = useRef(false);
+
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
   const frontScrollYRef = useRef(0);
   const backScrollYRef = useRef(0);
+  const completeRef = useRef<TextInput>(null);
+  const keyboardRef = useRef<TextInput>(null);
+  const completeReadyRef = useRef(false);
+
+  const cbs = useCodeBlockSelection();
+
+  const swipe = useSwipeGesture({
+    screenWidth,
+    currentIndex,
+    goNext,
+    goBack,
+    flipCardRef,
+    onReset: () => {
+      setIsFlipped(false);
+      cbs.reset();
+    },
+  });
 
   const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
   const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
-
-  const memoTapGesture = useMemo(
-    () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleToggleMemo)()),
-    [handleToggleMemo]
-  );
 
   const cardLinks = useMemo(
     () => extractLinks([...(currentCard?.frontContent ?? []), ...(currentCard?.backContent ?? []), ...(currentCard?.memoContent ?? [])]),
     [currentCard]
   );
 
-  const translateX = useSharedValue(0);
-  const slideX = useSharedValue(0);
-  const currentIndexSV = useSharedValue(currentIndex);
-  const linksSheetY = useSharedValue(500);
-  const linksOverlayOpacity = useSharedValue(0);
-  // 1=右からスライドイン, -1=左からスライドイン, 0=アニメーションなし
-  const slideInDirRef = useRef(0);
-
-  // JS-thread callbacks for swipe gestures (called via runOnJS — must be named functions)
-  function onSwipedLeft() {
-    flipCardRef.current?.resetInstant();
-    setIsFlipped(false);
-    slideInDirRef.current = 1;
-    goNext();
-  }
-
-  function onSwipedRight() {
-    flipCardRef.current?.resetInstant();
-    setIsFlipped(false);
-    slideInDirRef.current = -1;
-    goBack();
-  }
-
-  function cancelSwipe() {
-    translateX.value = withSpring(0);
-  }
-
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .failOffsetY([-10, 10])
-    .onUpdate((e) => {
-      translateX.value = e.translationX * 0.3;
-    })
-    .onEnd((e) => {
-      const swipeLeft  = e.translationX < -80 || e.velocityX < -500;
-      const swipeRight = e.translationX > 80  || e.velocityX > 500;
-      if (swipeLeft) {
-        translateX.value = withTiming(-screenWidth, { duration: 150 }, (finished) => {
-          if (finished) runOnJS(onSwipedLeft)();
-          else runOnJS(cancelSwipe)();
-        });
-      } else if (swipeRight) {
-        if (currentIndexSV.value === 0) {
-          translateX.value = withSpring(0);
-        } else {
-          translateX.value = withTiming(screenWidth, { duration: 150 }, (finished) => {
-            if (finished) runOnJS(onSwipedRight)();
-            else runOnJS(cancelSwipe)();
-          });
-        }
-      } else {
-        translateX.value = withSpring(0);
-      }
-    });
-
-  const cardAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value + slideX.value }],
-  }));
-  const linksSheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: linksSheetY.value }],
-  }));
-  const linksOverlayStyle = useAnimatedStyle(() => ({
-    opacity: linksOverlayOpacity.value,
-  }));
-  const keyboardRef = useRef<TextInput>(null);
-  const completeRef = useRef<TextInput>(null);
-  const completeReadyRef = useRef(false);
-
   useEffect(() => {
     loadSession({ deckId, tagId, filter });
   }, [deckId, tagId, filter]);
-
-  useEffect(() => {
-    if (showLinksModal) {
-      linksOverlayOpacity.value = withTiming(1, { duration: 200 });
-      linksSheetY.value = withTiming(0, { duration: 250 });
-    } else {
-      linksOverlayOpacity.value = withTiming(0, { duration: 200 });
-      linksSheetY.value = withTiming(500, { duration: 250 });
-    }
-  }, [showLinksModal]);
 
   useEffect(() => {
     if (completed) {
@@ -254,36 +158,13 @@ export default function StudySessionScreen() {
     }
   }, [completed]);
 
-  // 新しいカードに移ったらフリップ・メモをリセット、SharedValue を同期
-  // useEffect 内でスライドインを開始することで、React が新カードをコミット済みの状態でアニメーションが始まる
+  // 新しいカードに移ったらフリップ・メモをリセット、スライドイン開始
   useEffect(() => {
-    const dir = slideInDirRef.current;
-    slideInDirRef.current = 0;
-    const sw = screenWidth;
-    if (dir !== 0) {
-      // 新カードコンテンツがコミット済み。translateX リセットとスライドインをアトミックに実行
-      runOnUI(() => {
-        'worklet';
-        translateX.value = 0;
-        slideX.value = dir > 0 ? sw : -sw;
-        slideX.value = withTiming(0, { duration: 180 });
-      })();
-      setTimeout(() => { isNavigatingRef.current = false; }, 200);
-    } else {
-      // セッション初期ロード時など: 位置をリセット
-      runOnUI(() => {
-        'worklet';
-        translateX.value = 0;
-        slideX.value = 0;
-      })();
-    }
+    swipe.applySlideIn(screenWidth);
+    swipe.currentIndexSV.value = currentIndex;
     setIsFlipped(false);
     setShowMemo(false);
-    setSelectedCodeBlockIdx(null);
-    setSelectedCodeBlockSide(null);
-    setRunTrigger(0);
-    setEditTrigger(0);
-    currentIndexSV.value = currentIndex;
+    cbs.reset();
     frontScrollRef.current?.scrollTo({ y: 0, animated: false });
     backScrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentIndex]);
@@ -291,36 +172,8 @@ export default function StudySessionScreen() {
   // フリップ時にメモを隠し、コードブロック選択をリセット
   useEffect(() => {
     if (!isFlipped) setShowMemo(false);
-    setSelectedCodeBlockIdx(null);
-    setSelectedCodeBlockSide(null);
-    setRunTrigger(0);
-    setEditTrigger(0);
+    cbs.reset();
   }, [isFlipped]);
-
-
-  function navigateWithSlide(direction: 'next' | 'prev', action?: () => void) {
-    if (isNavigatingRef.current) return;
-    if (direction === 'prev' && currentIndex === 0) return;
-    isNavigatingRef.current = true;
-
-    const slideOut = direction === 'next' ? -screenWidth : screenWidth;
-
-    // スライドアウト後、slideInDirRef をセットして goNext/goBack を呼ぶ
-    // スライドインは useEffect([currentIndex]) 内で新カードコミット後に開始する
-    slideX.value = withTiming(slideOut, { duration: 180 });
-    setTimeout(() => {
-      flipCardRef.current?.resetInstant();
-      setIsFlipped(false);
-      setRunTrigger(0);
-      setEditTrigger(0);
-      setSelectedCodeBlockIdx(null);
-      setSelectedCodeBlockSide(null);
-      slideInDirRef.current = direction === 'next' ? 1 : -1;
-      if (action) action();
-      else if (direction === 'next') goNext();
-      else goBack();
-    }, 180);
-  }
 
   function handleKeyPress(key: string) {
     if (!keyboardShortcutsEnabled) return;
@@ -328,100 +181,21 @@ export default function StudySessionScreen() {
     if (key === ' ') {
       setIsFlipped((v) => !v);
     } else if (key === 't' || key === 'T' || key === 'y' || key === 'Y') {
-      const forward = key === 't' || key === 'T';
-      if (!isFlipped) {
-        // 表面: 表面のコードブロックのみサイクル
-        const frontCodeCount = currentCard?.frontContent.filter(b => b.type === 'code').length ?? 0;
-        if (frontCodeCount > 0) {
-          setEditTrigger(0);
-          setRunTrigger(0);
-          if (forward) {
-            if (selectedCodeBlockIdx === null) {
-              setSelectedCodeBlockSide('front');
-              setSelectedCodeBlockIdx(0);
-            } else if (selectedCodeBlockIdx === frontCodeCount - 1) {
-              setSelectedCodeBlockSide(null);
-              setSelectedCodeBlockIdx(null);
-            } else {
-              setSelectedCodeBlockSide('front');
-              setSelectedCodeBlockIdx(selectedCodeBlockIdx + 1);
-            }
-          } else {
-            if (selectedCodeBlockIdx === null) {
-              setSelectedCodeBlockSide('front');
-              setSelectedCodeBlockIdx(frontCodeCount - 1);
-            } else if (selectedCodeBlockIdx === 0) {
-              setSelectedCodeBlockSide(null);
-              setSelectedCodeBlockIdx(null);
-            } else {
-              setSelectedCodeBlockSide('front');
-              setSelectedCodeBlockIdx(selectedCodeBlockIdx - 1);
-            }
-          }
-        }
-      } else {
-        // 裏面: 裏面＋メモのコードブロックを通しでサイクル
-        const backCodeCount = currentCard?.backContent.filter(b => b.type === 'code').length ?? 0;
-        const memoCodeCount = currentCard?.memoContent.filter(b => b.type === 'code').length ?? 0;
-        const totalCodeCount = backCodeCount + memoCodeCount;
-        if (totalCodeCount > 0) {
-          setEditTrigger(0);
-          setRunTrigger(0);
-          // 現在の combined index（back: 0〜backCodeCount-1、memo: backCodeCount〜）
-          let currentCombined: number | null = null;
-          if (selectedCodeBlockIdx !== null) {
-            if (selectedCodeBlockSide === 'back') currentCombined = selectedCodeBlockIdx;
-            else if (selectedCodeBlockSide === 'memo') currentCombined = backCodeCount + selectedCodeBlockIdx;
-          }
-          const applyIndex = (combined: number) => {
-            if (combined < backCodeCount) {
-              setSelectedCodeBlockSide('back');
-              setSelectedCodeBlockIdx(combined);
-            } else {
-              setSelectedCodeBlockSide('memo');
-              setShowMemo(true);
-              setSelectedCodeBlockIdx(combined - backCodeCount);
-            }
-          };
-          if (forward) {
-            if (currentCombined === null) {
-              applyIndex(0);
-            } else if (currentCombined === totalCodeCount - 1) {
-              setSelectedCodeBlockSide(null);
-              setSelectedCodeBlockIdx(null);
-            } else {
-              applyIndex(currentCombined + 1);
-            }
-          } else {
-            if (currentCombined === null) {
-              applyIndex(totalCodeCount - 1);
-            } else if (currentCombined === 0) {
-              setSelectedCodeBlockSide(null);
-              setSelectedCodeBlockIdx(null);
-            } else {
-              applyIndex(currentCombined - 1);
-            }
-          }
-        }
-      }
+      cbs.cycleCodeBlock(key === 't' || key === 'T', currentCard, isFlipped, setShowMemo);
     } else if (key.toLowerCase() === 'r') {
-      if (selectedCodeBlockIdx !== null) {
-        setRunTrigger((v) => v + 1);
-      }
+      if (cbs.selectedCodeBlockIdx !== null) cbs.setRunTrigger((v) => v + 1);
     } else if (key.toLowerCase() === 'j') {
-      navigateWithSlide('next');
+      swipe.navigateWithSlide('next');
     } else if (key.toLowerCase() === 'k') {
-      navigateWithSlide('prev');
+      swipe.navigateWithSlide('prev');
     } else if (key.toLowerCase() === 'm' && isFlipped) {
       setShowMemo((v) => !v);
     } else if (key.toLowerCase() === 'f') {
       setIsFullscreen((v) => !v);
-      setEditTrigger(0);
-      setRunTrigger(0);
+      cbs.setEditTrigger(0);
+      cbs.setRunTrigger(0);
     } else if (key.toLowerCase() === 'e') {
-      if (selectedCodeBlockIdx !== null) {
-        setEditTrigger((v) => v + 1);
-      }
+      if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
     } else if (key.toLowerCase() === 'u') {
       const ref = isFlipped ? backScrollRef : frontScrollRef;
       const y = isFlipped ? backScrollYRef.current : frontScrollYRef.current;
@@ -433,9 +207,7 @@ export default function StudySessionScreen() {
     } else if (key.toLowerCase() === 'b') {
       router.back();
     } else if (key.toLowerCase() === 'l') {
-      if (cardLinks.length > 0) {
-        setShowLinksModal((v) => !v);
-      }
+      if (cardLinks.length > 0) setShowLinksModal((v) => !v);
     } else if (key.toLowerCase() === 'p') {
       if (currentCard) {
         const tab = isFlipped ? 'back' : 'front';
@@ -459,7 +231,7 @@ export default function StudySessionScreen() {
 
   function handleGradeWithSlide(grade: Grade) {
     if (grading) return;
-    navigateWithSlide('next', () => handleGrade(grade));
+    swipe.navigateWithSlide('next', () => handleGrade(grade));
   }
 
   function handleCodeBlockChange(cardId: string, blockIndex: number, text: string, side: 'front' | 'back' | 'memo' = 'front') {
@@ -526,6 +298,59 @@ export default function StudySessionScreen() {
   const progressRatio = result.totalCards > 0 ? (currentIndex + 1) / result.totalCards : 0;
   const hasMemo = currentCard.memoContent.some((b) => b.type !== 'image' && 'content' in b && b.content.trim() !== '' || b.type === 'image' && !!b.uri);
 
+  // メモトグル（Pressable で処理するため memoTapGesture は使用しない）
+  const memoToggle = (
+    <Pressable style={styles.memoToggle} onPress={handleToggleMemo}>
+      <Ionicons
+        name={showMemo ? 'eye-off-outline' : 'eye-outline'}
+        size={16}
+        color={theme.colors.textTertiary}
+      />
+      <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
+        {showMemo ? t('study.hideMemo') : t('study.showMemo')}
+      </Text>
+    </Pressable>
+  );
+
+  const memoBlock = hasMemo && (
+    <View style={styles.memoSection}>
+      {memoToggle}
+      {showMemo && (
+        <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
+          <BlocksView
+            blocks={currentCard.memoContent}
+            editableCode
+            editedContents={editedCodeBlocks[currentCard.id + '_memo']}
+            onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'memo')}
+            onEditFocus={() => { codeEditingRef.current = true; }}
+            onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+            onSelectCodeBlock={(idx) => { cbs.setSelectedCodeBlockIdx(idx); cbs.setSelectedCodeBlockSide('memo'); cbs.setEditTrigger(0); }}
+            runTrigger={showMemo && cbs.selectedCodeBlockSide === 'memo' ? cbs.runTrigger : undefined}
+            editTrigger={showMemo && cbs.selectedCodeBlockSide === 'memo' ? cbs.editTrigger : undefined}
+            selectedCodeBlockIdx={showMemo && cbs.selectedCodeBlockSide === 'memo' ? cbs.selectedCodeBlockIdx : null}
+            scrollRef={backScrollRef}
+          />
+        </View>
+      )}
+    </View>
+  );
+
+  const gradeRow = (
+    <View style={styles.gradeRow}>
+      {GRADES.map(({ grade, labelKey, color }) => (
+        <TouchableOpacity
+          key={grade}
+          style={[styles.gradeBtn, { borderColor: color, backgroundColor: theme.colors.surface }, grading && styles.gradeBtnDisabled]}
+          onPress={() => handleGradeWithSlide(grade)}
+          disabled={grading}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.gradeBtnText, { color, fontSize: theme.fontSize.sm }]}>{t(labelKey)}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
   if (isFullscreen) {
     return (
       <>
@@ -552,8 +377,8 @@ export default function StudySessionScreen() {
               onPress={() => {
                 codeEditingRef.current = false;
                 setIsFullscreen(false);
-                setEditTrigger(0);
-                setRunTrigger(0);
+                cbs.setEditTrigger(0);
+                cbs.setRunTrigger(0);
                 setTimeout(() => { keyboardRef.current?.focus(); }, 100);
               }}
             >
@@ -577,144 +402,62 @@ export default function StudySessionScreen() {
             </Pressable>
           </View>
 
-          {/* コンテンツエリア：タップで裏返す */}
-          <GestureDetector gesture={panGesture}>
-            <Animated.View style={[{ flex: 1 }, cardAnimStyle]}>
+          {/* コンテンツエリア */}
+          <GestureDetector gesture={swipe.panGesture}>
+            <Animated.View style={[{ flex: 1 }, swipe.cardAnimStyle]}>
               <FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
-              <FlipCard
-                ref={flipCardRef}
-                isFlipped={isFlipped}
-                onFlip={handleFlip}
-                cardStyle={{ borderRadius: 0, shadowOpacity: 0, elevation: 0 }}
-                innerStyle={{ padding: 0, justifyContent: 'flex-start' }}
-                front={
-                  <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false} onScroll={(e) => { frontScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
-                    <BlocksView
-                      key={currentCard.id}
-                      blocks={currentCard.frontContent}
-                      editableCode
-                      editedContents={editedCodeBlocks[currentCard.id]}
-                      onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
-                      onEditFocus={() => { codeEditingRef.current = true; }}
-                      onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                      onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide(isFlipped ? 'back' : 'front'); setEditTrigger(0); }}
-                      runTrigger={!isFlipped ? runTrigger : undefined}
-                      editTrigger={!isFlipped ? editTrigger : undefined}
-                      selectedCodeBlockIdx={!isFlipped ? selectedCodeBlockIdx : null}
-                      scrollRef={frontScrollRef}
-                    />
-                  </ScrollView>
-                }
-                back={
-                  <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false} onScroll={(e) => { backScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
-                    <BlocksView
-                      key={currentCard.id}
-                      blocks={currentCard.backContent}
-                      editableCode
-                      editedContents={editedCodeBlocks[currentCard.id + '_back']}
-                      onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'back')}
-                      onEditFocus={() => { codeEditingRef.current = true; }}
-                      onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                      onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide(isFlipped ? 'back' : 'front'); setEditTrigger(0); }}
-                      runTrigger={isFlipped && selectedCodeBlockSide === 'back' ? runTrigger : undefined}
-                      editTrigger={isFlipped && selectedCodeBlockSide === 'back' ? editTrigger : undefined}
-                      selectedCodeBlockIdx={isFlipped && selectedCodeBlockSide === 'back' ? selectedCodeBlockIdx : null}
-                      scrollRef={backScrollRef}
-                    />
-                    {hasMemo && (
-                      <View style={styles.memoSection}>
-                        <GestureDetector gesture={memoTapGesture}>
-                          <View style={styles.memoToggle}>
-                            <Ionicons
-                              name={showMemo ? 'eye-off-outline' : 'eye-outline'}
-                              size={16}
-                              color={theme.colors.textTertiary}
-                            />
-                            <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.lg }]}>
-                              {showMemo ? t('study.hideMemo') : t('study.showMemo')}
-                            </Text>
-                          </View>
-                        </GestureDetector>
-                        {showMemo && (
-                          <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
-                            <BlocksView
-                              blocks={currentCard.memoContent}
-                              editableCode
-                              editedContents={editedCodeBlocks[currentCard.id + '_memo']}
-                              onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'memo')}
-                              onEditFocus={() => { codeEditingRef.current = true; }}
-                              onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                              onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide('memo'); setEditTrigger(0); }}
-                              runTrigger={showMemo && selectedCodeBlockSide === 'memo' ? runTrigger : undefined}
-                              editTrigger={showMemo && selectedCodeBlockSide === 'memo' ? editTrigger : undefined}
-                              selectedCodeBlockIdx={showMemo && selectedCodeBlockSide === 'memo' ? selectedCodeBlockIdx : null}
-                              scrollRef={backScrollRef}
-                            />
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </ScrollView>
-                }
-              />
+                <FlipCard
+                  ref={flipCardRef}
+                  isFlipped={isFlipped}
+                  onFlip={handleFlip}
+                  cardStyle={{ borderRadius: 0, shadowOpacity: 0, elevation: 0 }}
+                  innerStyle={{ padding: 0, justifyContent: 'flex-start' }}
+                  front={
+                    <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false} onScroll={(e) => { frontScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
+                      <BlocksView
+                        key={currentCard.id}
+                        blocks={currentCard.frontContent}
+                        editableCode
+                        editedContents={editedCodeBlocks[currentCard.id]}
+                        onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
+                        onEditFocus={() => { codeEditingRef.current = true; }}
+                        onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                        onSelectCodeBlock={(idx) => { cbs.setSelectedCodeBlockIdx(idx); cbs.setSelectedCodeBlockSide(isFlipped ? 'back' : 'front'); cbs.setEditTrigger(0); }}
+                        runTrigger={!isFlipped ? cbs.runTrigger : undefined}
+                        editTrigger={!isFlipped ? cbs.editTrigger : undefined}
+                        selectedCodeBlockIdx={!isFlipped ? cbs.selectedCodeBlockIdx : null}
+                        scrollRef={frontScrollRef}
+                      />
+                    </ScrollView>
+                  }
+                  back={
+                    <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.fullscreenContent} showsVerticalScrollIndicator={false} onScroll={(e) => { backScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
+                      <BlocksView
+                        key={currentCard.id}
+                        blocks={currentCard.backContent}
+                        editableCode
+                        editedContents={editedCodeBlocks[currentCard.id + '_back']}
+                        onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'back')}
+                        onEditFocus={() => { codeEditingRef.current = true; }}
+                        onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                        onSelectCodeBlock={(idx) => { cbs.setSelectedCodeBlockIdx(idx); cbs.setSelectedCodeBlockSide(isFlipped ? 'back' : 'front'); cbs.setEditTrigger(0); }}
+                        runTrigger={isFlipped && cbs.selectedCodeBlockSide === 'back' ? cbs.runTrigger : undefined}
+                        editTrigger={isFlipped && cbs.selectedCodeBlockSide === 'back' ? cbs.editTrigger : undefined}
+                        selectedCodeBlockIdx={isFlipped && cbs.selectedCodeBlockSide === 'back' ? cbs.selectedCodeBlockIdx : null}
+                        scrollRef={backScrollRef}
+                      />
+                      {memoBlock}
+                    </ScrollView>
+                  }
+                />
               </FlipSuppressContext.Provider>
             </Animated.View>
           </GestureDetector>
 
-          {isFlipped && (
-            <View style={styles.bottom}>
-              <View style={styles.gradeRow}>
-                {GRADES.map(({ grade, labelKey, color }) => (
-                  <TouchableOpacity
-                    key={grade}
-                    style={[styles.gradeBtn, { borderColor: color, backgroundColor: theme.colors.surface }, grading && styles.gradeBtnDisabled]}
-                    onPress={() => handleGradeWithSlide(grade)}
-                    disabled={grading}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.gradeBtnText, { color, fontSize: theme.fontSize.sm }]}>{t(labelKey)}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
+          {isFlipped && <View style={styles.bottom}>{gradeRow}</View>}
         </View>
 
-        {/* リンク一覧オーバーレイ（全画面モード） */}
-        <View
-          pointerEvents={showLinksModal ? 'box-none' : 'none'}
-          style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
-        >
-          <Animated.View style={[StyleSheet.absoluteFillObject, linksOverlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowLinksModal(false)} />
-          </Animated.View>
-          <Animated.View style={[linksSheetStyle, styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
-              <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
-              </Pressable>
-            </View>
-            <FlatList
-              data={cardLinks}
-              keyExtractor={(item) => item.url}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
-                  onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>{item.text}</Text>
-                    {item.text !== item.url && (
-                      <Text style={[styles.linkUrl, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1}>{item.url}</Text>
-                    )}
-                  </View>
-                  <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
-                </Pressable>
-              )}
-            />
-          </Animated.View>
-        </View>
+        <LinksSheet visible={showLinksModal} onClose={() => setShowLinksModal(false)} links={cardLinks} />
       </>
     );
   }
@@ -789,84 +532,51 @@ export default function StudySessionScreen() {
         </View>
 
         {/* カード */}
-        <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.cardArea, cardAnimStyle]}>
+        <GestureDetector gesture={swipe.panGesture}>
+          <Animated.View style={[styles.cardArea, swipe.cardAnimStyle]}>
             <FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
-            <FlipCard
-              ref={flipCardRef}
-              isFlipped={isFlipped}
-              onFlip={handleFlip}
-              front={
-                <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false} onScroll={(e) => { frontScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
-                  <BlocksView
-                    key={currentCard.id}
-                    blocks={currentCard.frontContent}
-                    editableCode
-                    editedContents={editedCodeBlocks[currentCard.id]}
-                    onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
-                    onEditFocus={() => { codeEditingRef.current = true; }}
-                    onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                    onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setEditTrigger(0); }}
-                    runTrigger={!isFlipped ? runTrigger : undefined}
-                    editTrigger={!isFlipped ? editTrigger : undefined}
-                    selectedCodeBlockIdx={!isFlipped ? selectedCodeBlockIdx : null}
-                    scrollRef={frontScrollRef}
-                  />
-                </ScrollView>
-              }
-              back={
-                <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false} onScroll={(e) => { backScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
-                  <BlocksView
-                    key={currentCard.id}
-                    blocks={currentCard.backContent}
-                    editableCode
-                    editedContents={editedCodeBlocks[currentCard.id + '_back']}
-                    onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'back')}
-                    onEditFocus={() => { codeEditingRef.current = true; }}
-                    onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                    onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide('back'); setEditTrigger(0); }}
-                    runTrigger={isFlipped && selectedCodeBlockSide === 'back' ? runTrigger : undefined}
-                    editTrigger={isFlipped && selectedCodeBlockSide === 'back' ? editTrigger : undefined}
-                    selectedCodeBlockIdx={isFlipped && selectedCodeBlockSide === 'back' ? selectedCodeBlockIdx : null}
-                    scrollRef={backScrollRef}
-                  />
-                  {/* メモ */}
-                  {hasMemo && (
-                    <View style={styles.memoSection}>
-                      <GestureDetector gesture={memoTapGesture}>
-                        <View style={styles.memoToggle}>
-                          <Ionicons
-                            name={showMemo ? 'eye-off-outline' : 'eye-outline'}
-                            size={16}
-                            color={theme.colors.textTertiary}
-                          />
-                          <Text style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}>
-                            {showMemo ? t('study.hideMemo') : t('study.showMemo')}
-                          </Text>
-                        </View>
-                      </GestureDetector>
-                      {showMemo && (
-                        <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
-                          <BlocksView
-                            blocks={currentCard.memoContent}
-                            editableCode
-                            editedContents={editedCodeBlocks[currentCard.id + '_memo']}
-                            onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'memo')}
-                            onEditFocus={() => { codeEditingRef.current = true; }}
-                            onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
-                            onSelectCodeBlock={(idx) => { setSelectedCodeBlockIdx(idx); setSelectedCodeBlockSide('memo'); setEditTrigger(0); }}
-                            runTrigger={showMemo && selectedCodeBlockSide === 'memo' ? runTrigger : undefined}
-                            editTrigger={showMemo && selectedCodeBlockSide === 'memo' ? editTrigger : undefined}
-                            selectedCodeBlockIdx={showMemo && selectedCodeBlockSide === 'memo' ? selectedCodeBlockIdx : null}
-                            scrollRef={backScrollRef}
-                          />
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </ScrollView>
-              }
-            />
+              <FlipCard
+                ref={flipCardRef}
+                isFlipped={isFlipped}
+                onFlip={handleFlip}
+                front={
+                  <ScrollView ref={frontScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false} onScroll={(e) => { frontScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
+                    <BlocksView
+                      key={currentCard.id}
+                      blocks={currentCard.frontContent}
+                      editableCode
+                      editedContents={editedCodeBlocks[currentCard.id]}
+                      onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text)}
+                      onEditFocus={() => { codeEditingRef.current = true; }}
+                      onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                      onSelectCodeBlock={(idx) => { cbs.setSelectedCodeBlockIdx(idx); cbs.setEditTrigger(0); }}
+                      runTrigger={!isFlipped ? cbs.runTrigger : undefined}
+                      editTrigger={!isFlipped ? cbs.editTrigger : undefined}
+                      selectedCodeBlockIdx={!isFlipped ? cbs.selectedCodeBlockIdx : null}
+                      scrollRef={frontScrollRef}
+                    />
+                  </ScrollView>
+                }
+                back={
+                  <ScrollView ref={backScrollRef} style={{ flex: 1 }} contentContainerStyle={styles.faceContent} showsVerticalScrollIndicator={false} onScroll={(e) => { backScrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}>
+                    <BlocksView
+                      key={currentCard.id}
+                      blocks={currentCard.backContent}
+                      editableCode
+                      editedContents={editedCodeBlocks[currentCard.id + '_back']}
+                      onCodeBlockChange={(i, text) => handleCodeBlockChange(currentCard.id, i, text, 'back')}
+                      onEditFocus={() => { codeEditingRef.current = true; }}
+                      onEditBlur={() => { codeEditingRef.current = false; keyboardRef.current?.focus(); }}
+                      onSelectCodeBlock={(idx) => { cbs.setSelectedCodeBlockIdx(idx); cbs.setSelectedCodeBlockSide('back'); cbs.setEditTrigger(0); }}
+                      runTrigger={isFlipped && cbs.selectedCodeBlockSide === 'back' ? cbs.runTrigger : undefined}
+                      editTrigger={isFlipped && cbs.selectedCodeBlockSide === 'back' ? cbs.editTrigger : undefined}
+                      selectedCodeBlockIdx={isFlipped && cbs.selectedCodeBlockSide === 'back' ? cbs.selectedCodeBlockIdx : null}
+                      scrollRef={backScrollRef}
+                    />
+                    {memoBlock}
+                  </ScrollView>
+                }
+              />
             </FlipSuppressContext.Provider>
           </Animated.View>
         </GestureDetector>
@@ -877,8 +587,8 @@ export default function StudySessionScreen() {
           onPress={() => {
             codeEditingRef.current = false;
             setIsFullscreen(true);
-            setEditTrigger(0);
-            setRunTrigger(0);
+            cbs.setEditTrigger(0);
+            cbs.setRunTrigger(0);
             setTimeout(() => { keyboardRef.current?.focus(); }, 100);
           }}
         >
@@ -895,89 +605,17 @@ export default function StudySessionScreen() {
               <Ionicons name="sync-outline" size={18} color={theme.colors.textTertiary} />
               <Text style={[styles.flipHintText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>{t('study.tapToFlip')}</Text>
             </Pressable>
-          ) : (
-            <View style={styles.gradeRow}>
-              {GRADES.map(({ grade, labelKey, color }) => (
-                <TouchableOpacity
-                  key={grade}
-                  style={[styles.gradeBtn, { borderColor: color, backgroundColor: theme.colors.surface }, grading && styles.gradeBtnDisabled]}
-                  onPress={() => handleGradeWithSlide(grade)}
-                  disabled={grading}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.gradeBtnText, { color, fontSize: theme.fontSize.sm }]}>{t(labelKey)}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+          ) : gradeRow}
         </View>
       </View>
 
-      {/* リンク一覧オーバーレイ */}
-      <View
-        pointerEvents={showLinksModal ? 'box-none' : 'none'}
-        style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
-      >
-        <Animated.View style={[StyleSheet.absoluteFillObject, linksOverlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowLinksModal(false)} />
-        </Animated.View>
-        <Animated.View style={[linksSheetStyle, styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('study.linksTitle')}</Text>
-            <Pressable onPress={() => setShowLinksModal(false)} style={styles.modalCloseBtn}>
-              <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
-            </Pressable>
-          </View>
-          <FlatList
-            data={cardLinks}
-            keyExtractor={(item) => item.url}
-            renderItem={({ item }) => (
-              <Pressable
-                style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
-                onPress={() => { setShowLinksModal(false); Linking.openURL(item.url); }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.linkText, { color: theme.colors.text }]} numberOfLines={1}>{item.text}</Text>
-                  {item.text !== item.url && (
-                    <Text style={[styles.linkUrl, { color: theme.colors.textTertiary }]} numberOfLines={1}>{item.url}</Text>
-                  )}
-                </View>
-                <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
-              </Pressable>
-            )}
-          />
-        </Animated.View>
-      </View>
+      <LinksSheet visible={showLinksModal} onClose={() => setShowLinksModal(false)} links={cardLinks} />
 
-      <Modal
+      <ShortcutsModal
         visible={showShortcutsModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowShortcutsModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowShortcutsModal(false)} />
-          <View style={[styles.shortcutsSheet, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.shortcutsTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
-              {t('settings.keyboardShortcuts')}
-            </Text>
-            <ScrollView>
-              {STUDY_SHORTCUTS.map((item) => (
-                <View key={item.key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
-                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
-                      {item.key}
-                    </Text>
-                  </View>
-                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
-                    {t(item.descKey)}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={STUDY_SHORTCUTS}
+      />
     </>
   );
 }
@@ -1093,70 +731,5 @@ const styles = StyleSheet.create({
   fullscreenEditBtn: {
     padding: 8,
     borderRadius: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 32,
-    maxHeight: '60%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  modalTitle: {
-    fontWeight: '700',
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  linkText: {
-    fontWeight: '500',
-  },
-  linkUrl: {
-    marginTop: 2,
-  },
-  shortcutsSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 16,
-    paddingBottom: 36,
-    maxHeight: '70%',
-  },
-  shortcutsTitle: {
-    fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  shortcutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  keyBadge: {
-    minWidth: 48,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignItems: 'center',
   },
 });

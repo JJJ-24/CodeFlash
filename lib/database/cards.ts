@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { deleteImagesInBlocks } from '@/lib/image';
 import type { Block, Card } from '@/types';
 import { generateId, localDateStr, todayLocalRange } from './utils';
+import { addTagToCard, getTagsByCardId } from './tags';
 
 type RawCard = {
   id: string;
@@ -249,6 +250,25 @@ export async function moveCardsToDeck(
       [cardIds.length, now, toDeckId]
     );
   });
+}
+
+export async function duplicateCard(db: SQLiteDatabase, cardId: string): Promise<Card> {
+  const original = await getCardById(db, cardId);
+  if (!original) throw new Error(`Card not found: ${cardId}`);
+
+  const newCard = await createCard(db, {
+    deckId: original.deckId,
+    frontContent: original.frontContent,
+    backContent: original.backContent,
+    memoContent: original.memoContent,
+  });
+
+  const tags = await getTagsByCardId(db, cardId);
+  for (const tag of tags) {
+    await addTagToCard(db, newCard.id, tag.id);
+  }
+
+  return newCard;
 }
 
 export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string): Promise<void> {

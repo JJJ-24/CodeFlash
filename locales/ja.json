@@ -122,7 +122,8 @@
     "deleteSelectedConfirm": "{{count}}件のカードを削除しますか？\n紐づく学習履歴も削除されます。",
     "newCardDeckTitle": "作成先デッキを選択",
     "searchPlaceholder": "カードを検索...",
-    "searchNoResults": "一致するカードはありません"
+    "searchNoResults": "一致するカードはありません",
+    "duplicate": "複製"
   },
   "tabs": {
     "home": "ホーム",

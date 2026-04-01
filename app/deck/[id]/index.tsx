@@ -23,6 +23,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme, FILTER_COLORS } from '@/lib/theme';
 import {
   deleteCard,
+  duplicateCard,
   getCardsByDeckId,
   getTodayCreatedCardIdsByDeckId,
   getTodayCreatedCountByDeck,
@@ -206,6 +207,18 @@ export default function DeckDetailScreen() {
         },
       ]
     );
+  }
+
+  async function handleDuplicate() {
+    const ids = Array.from(selectedCardIds);
+    for (const cardId of ids) {
+      await duplicateCard(db, cardId);
+    }
+    if (deck) {
+      updateDeck({ ...deck, cardCount: deck.cardCount + ids.length });
+    }
+    exitSelectionMode();
+    await loadCards();
   }
 
   function handleMoveToDeck(targetDeck: Deck) {
@@ -540,6 +553,14 @@ export default function DeckDetailScreen() {
             {t('card.selectedCount', { count: selectedCardIds.size })}
           </Text>
           <View style={styles.selectionActions}>
+            <Pressable
+              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
+              onPress={handleDuplicate}
+              disabled={selectedCardIds.size === 0}
+              accessibilityLabel={t('card.duplicate')}
+            >
+              <Ionicons name="copy-outline" size={22} color="#FFF" />
+            </Pressable>
             <Pressable
               style={[styles.iconBtn, { backgroundColor: '#C62828' }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
               onPress={handleDeleteSelected}

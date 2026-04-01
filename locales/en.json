@@ -122,7 +122,8 @@
     "deleteSelectedConfirm": "Delete {{count}} card(s)?\nAssociated study history will also be deleted.",
     "newCardDeckTitle": "Select Deck",
     "searchPlaceholder": "Search cards...",
-    "searchNoResults": "No cards found"
+    "searchNoResults": "No cards found",
+    "duplicate": "Duplicate"
   },
   "tabs": {
     "home": "Home",

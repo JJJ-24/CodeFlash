@@ -370,28 +370,32 @@ export default function SettingsScreen() {
             <Pressable style={styles.dataRow} onPress={handleExport}>
               <Ionicons name="arrow-up-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.exportTitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.exportTitle')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.exportSubtitle')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleImport}>
               <Ionicons name="arrow-down-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.importTitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.importTitle')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.importSubtitle')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleTsvExport}>
               <Ionicons name="document-text-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.exportTsv')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.exportTsv')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.exportTsvSubtitle')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleTsvImport}>
               <Ionicons name="document-attach-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.importTsv')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.importTsv')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.importTsvSubtitle')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
@@ -447,8 +451,9 @@ dataRow: {
     gap: 12,
     paddingVertical: 6,
   },
-  dataRowText: { flex: 1 },
-  dataRowTitle: { fontWeight: '500' },
+  dataRowText: { flex: 1, gap: 2 },
+  dataRowTitle: { fontWeight: '600' },
+  dataRowSubtitle: {},
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',

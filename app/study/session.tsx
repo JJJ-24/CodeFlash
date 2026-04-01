@@ -282,6 +282,62 @@ export default function StudySessionScreen() {
           <Text style={[styles.completeCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
             {t('study.reviewedCount', { count: result.reviewed })}
           </Text>
+
+          {result.reviewed > 0 && (() => {
+            const { again, hard, good, easy } = result.gradeCount;
+            const total = result.reviewed;
+            const gradeItems: { key: string; count: number; color: string }[] = [
+              { key: t('grade.again'), count: again, color: '#E53935' },
+              { key: t('grade.hard'),  count: hard,  color: '#F57C00' },
+              { key: t('grade.good'),  count: good,  color: '#43A047' },
+              { key: t('grade.easy'),  count: easy,  color: '#1976D2' },
+            ];
+            const correctRate = Math.round(((hard + good + easy) / total) * 100);
+            const nextReviewStr = result.earliestNextReview
+              ? result.earliestNextReview.slice(5, 10).replace('-', '/')
+              : null;
+
+            return (
+              <View style={styles.summaryCard}>
+                {/* グレード分布バー */}
+                <View style={styles.gradeBar}>
+                  {gradeItems.map(({ key, count, color }) =>
+                    count > 0 ? (
+                      <View
+                        key={key}
+                        style={[styles.gradeBarSegment, { flex: count / total, backgroundColor: color }]}
+                      />
+                    ) : null
+                  )}
+                </View>
+
+                {/* グレード別枚数 */}
+                <View style={styles.summaryGradeRow}>
+                  {gradeItems.map(({ key, count, color }) => (
+                    <View key={key} style={styles.gradeItem}>
+                      <Text style={[styles.gradeItemCount, { color, fontSize: theme.fontSize.lg }]}>{count}</Text>
+                      <Text style={[styles.gradeItemLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{key}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* 正答率 + 次回予定 */}
+                <View style={[styles.statRow, { borderTopColor: theme.colors.border }]}>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{correctRate}%</Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.correctRate')}</Text>
+                  </View>
+                  {nextReviewStr && (
+                    <View style={styles.statItem}>
+                      <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{nextReviewStr}</Text>
+                      <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.nextReview')}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })()}
+
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: theme.colors.primary }]}
             onPress={() => router.back()}
@@ -696,6 +752,44 @@ const styles = StyleSheet.create({
   },
   completeTitle: { fontWeight: '700' },
   completeCount: {},
+  summaryCard: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  gradeBar: {
+    flexDirection: 'row',
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  gradeBarSegment: {
+    height: 10,
+  },
+  summaryGradeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  gradeItem: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  gradeItemCount: { fontWeight: '700' },
+  gradeItemLabel: {},
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 14,
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  statValue: { fontWeight: '700' },
+  statLabel: {},
   backBtn: {
     marginTop: 8,
     borderRadius: 12,

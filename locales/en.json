@@ -47,7 +47,9 @@
     "filterDescAll": "All cards",
     "filterDescLearned": "Studied today",
     "filterDescReview": "Due cards (includes new cards)",
-    "filterDescNew": "New cards today"
+    "filterDescNew": "New cards today",
+    "correctRate": "Correct",
+    "nextReview": "Next Review"
   },
   "tag": {
     "title": "Tags",

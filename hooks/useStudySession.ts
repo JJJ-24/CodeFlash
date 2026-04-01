@@ -19,6 +19,8 @@ import type { Card } from '@/types';
 export interface SessionResult {
   totalCards: number;
   reviewed: number;
+  gradeCount: { again: number; hard: number; good: number; easy: number };
+  earliestNextReview: string | null;
 }
 
 export function useStudySession() {
@@ -27,7 +29,7 @@ export function useStudySession() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [result, setResult] = useState<SessionResult>({ totalCards: 0, reviewed: 0 });
+  const [result, setResult] = useState<SessionResult>({ totalCards: 0, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
 
   // レンダーごとに同期 — useFocusEffect から呼ばれる refreshCurrentCard が常に最新値を参照できる
   const queueRef = useRef<Card[]>([]);
@@ -61,7 +63,7 @@ export function useStudySession() {
         ).filter((c): c is Card => c !== null);
 
         setQueue(cards);
-        setResult({ totalCards: cards.length, reviewed: 0 });
+        setResult({ totalCards: cards.length, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
         if (cards.length === 0) setCompleted(true);
       } finally {
         setLoading(false);
@@ -96,7 +98,16 @@ export function useStudySession() {
 
       await saveReview(db, { cardId: card.id, ...reviewResult, lastGrade: grade });
 
-      setResult((r) => ({ ...r, reviewed: r.reviewed + 1 }));
+      const gradeKey = (['again', 'hard', 'good', 'easy'] as const)[grade];
+      setResult((r) => ({
+        ...r,
+        reviewed: r.reviewed + 1,
+        gradeCount: { ...r.gradeCount, [gradeKey]: r.gradeCount[gradeKey] + 1 },
+        earliestNextReview:
+          r.earliestNextReview === null || reviewResult.nextReviewDate < r.earliestNextReview
+            ? reviewResult.nextReviewDate
+            : r.earliestNextReview,
+      }));
       goNext();
     },
     [db, queue, currentIndex, goNext]

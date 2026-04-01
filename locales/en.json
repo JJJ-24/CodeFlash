@@ -3,7 +3,10 @@
     "title": "Decks",
     "empty": "No decks yet",
     "emptySub": "Tap the + button to create your first deck",
-    "cards": "{{count}} cards"
+    "cards": "{{count}} cards",
+    "sortManual": "Manual",
+    "sortName": "Name",
+    "sortCardCount": "Count"
   },
   "deck": {
     "new": "New Deck",

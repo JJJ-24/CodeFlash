@@ -8,6 +8,9 @@ const DECK_FILTER_STORAGE_KEY = '@codeflash_last_deck_detail_filter';
 const NOTIFICATION_ENABLED_KEY = '@codeflash_notification_enabled';
 const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
 const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
+const DECK_SORT_KEY = '@codeflash_deck_sort';
+
+export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
@@ -38,6 +41,8 @@ interface SettingsState {
   notificationMinute: number;
   setNotificationEnabled: (v: boolean) => void;
   setNotificationTime: (hour: number, minute: number) => void;
+  deckSortOrder: DeckSortOrder;
+  setDeckSortOrder: (v: DeckSortOrder) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -73,6 +78,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     AsyncStorage.setItem(NOTIFICATION_HOUR_KEY, String(hour));
     AsyncStorage.setItem(NOTIFICATION_MINUTE_KEY, String(minute));
   },
+  deckSortOrder: 'manual',
+  setDeckSortOrder: (v) => {
+    set({ deckSortOrder: v });
+    AsyncStorage.setItem(DECK_SORT_KEY, v);
+  },
 }));
 
 AsyncStorage.getItem(STORAGE_KEY).then((value) => {
@@ -102,6 +112,12 @@ AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY).then((value) => {
 AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY).then((value) => {
   if (value !== null) {
     useSettingsStore.setState({ notificationEnabled: value === 'true' });
+  }
+});
+
+AsyncStorage.getItem(DECK_SORT_KEY).then((value) => {
+  if (value !== null) {
+    useSettingsStore.setState({ deckSortOrder: value as DeckSortOrder });
   }
 });
 

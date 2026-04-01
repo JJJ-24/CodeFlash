@@ -136,7 +136,7 @@ Stack (_layout.tsx)
 - **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）とカード一覧（`app/deck/[id]/index.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。矢印キーは iOS の `onKeyPress` では検知できないため未対応。`Tab` キーは iPadOS がシステムフォーカス移動（UIFocusSystem）に使用するため `onKeyPress` で検知不可。
   - **学習画面キー**: J/K = 次/前カード、Space = 表裏反転、1–4 = グレード、T/Y = コードブロック次/前フォーカス、M = メモ開閉、F = 全画面、P = カード編集、L = リンク一覧
   - **カード一覧キー（通常モード）**: Space = 学習開始、1–4 = フィルター切替、T/Y = カードフォーカス次/前、P = フォーカスカード編集、N = 新規カード、S = 選択モード開始、U/D = スクロール、B = 戻る
-  - **カード一覧キー（選択モード）**: T/Y = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、D = 削除、S/C = 選択モード終了（複製はバーボタンのみ、キーショートカットなし）
+  - **カード一覧キー（選択モード）**: T/Y = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、D = 削除、C = 複製、S = 選択モード終了
 - **T/Yキーのコードブロックサイクル（学習画面）**: T = 次へ / Y = 前へ。表面表示中は表面のコードブロックのみサイクル。裏面表示中は裏面＋メモのコードブロックを**通しで**サイクルする（裏面ブロック0→1→…→メモブロック0→1→…→裏面ブロック0）。サイクルの両端で `null`（フォーカスなし）を経由する**ヌルサイクル**方式。メモブロックに到達するとメモを自動展開する。combined index は `selectedCodeBlockSide`（`'back'` か `'memo'`）と `selectedCodeBlockIdx` の組み合わせで管理する。
 - **T/Yキーのカードフォーカス（カード一覧）**: `app/deck/[id]/index.tsx` でも同じヌルサイクル方式。`focusedCardIndex` が `null` → 0 → 1 → … → last → `null` と循環（Y は逆順）。フォーカス中のカードは `borderColor` で強調（通常モード: `theme.colors.primary`〈青〉、選択モードカーソル: `#F57C00`〈オレンジ〉、選択モード選択済み: `theme.colors.primary`〈青〉）。
 - **ホーム画面のフィルターブロック**: `app/(tabs)/index.tsx` の `selectedFilter` は将来のブロック追加（タグ別フィルタ等）を想定した拡張ポイント。現状は `'all'` のみ。型は `useState<'all'>` のユニオン型を拡張して対応する。

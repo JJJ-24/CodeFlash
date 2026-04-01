@@ -216,6 +216,7 @@
     "shortcutEditCard": "フォーカス中のカードを編集",
     "shortcutScrollDownDelete": "下にスクロール（フォーカス中は削除）",
     "shortcutExitSelect": "選択モードを解除",
+    "shortcutDuplicateSelected": "選択したカードを複製",
     "shortcutStartStudy": "学習開始",
     "shortcutFilterSwitch": "フィルター切替（すべて/済み/復習/新規）",
     "shortcutNewCard": "新規カード作成",

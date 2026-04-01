@@ -95,7 +95,8 @@ export default function DeckDetailScreen() {
     { key: 'A',     descKey: 'settings.shortcutSelectAll' },
     { key: 'M',     descKey: 'settings.shortcutMoveSelected' },
     { key: 'D',     descKey: 'settings.shortcutDeleteSelected' },
-    { key: 'S / C', descKey: 'settings.shortcutExitSelect' },
+    { key: 'C',     descKey: 'settings.shortcutDuplicateSelected' },
+    { key: 'S',     descKey: 'settings.shortcutExitSelect' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
@@ -375,7 +376,8 @@ export default function DeckDetailScreen() {
             else if (k === 'a') { toggleSelectAll(); }
             else if (k === 'm') { if (selectedCardIds.size > 0) setShowDeckPicker(true); }
             else if (k === 'd') { if (selectedCardIds.size > 0) handleDeleteSelected(); }
-            else if (k === 's' || k === 'c') { exitSelectionMode(); }
+            else if (k === 'c') { if (selectedCardIds.size > 0) handleDuplicate(); }
+            else if (k === 's') { exitSelectionMode(); }
             return;
           }
           if (key === ' ') {

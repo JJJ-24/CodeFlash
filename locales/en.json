@@ -216,6 +216,7 @@
     "shortcutEditCard": "Edit focused card",
     "shortcutScrollDownDelete": "Scroll down (delete focused card if focused)",
     "shortcutExitSelect": "Exit selection mode",
+    "shortcutDuplicateSelected": "Duplicate selected cards",
     "shortcutStartStudy": "Start studying",
     "shortcutFilterSwitch": "Switch filter (All / Done / Due / New)",
     "shortcutNewCard": "New card",

@@ -9,6 +9,7 @@ const NOTIFICATION_ENABLED_KEY = '@codeflash_notification_enabled';
 const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
 const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
 const DECK_SORT_KEY = '@codeflash_deck_sort';
+const SHUFFLE_KEY = '@codeflash_shuffle';
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 
@@ -43,6 +44,8 @@ interface SettingsState {
   setNotificationTime: (hour: number, minute: number) => void;
   deckSortOrder: DeckSortOrder;
   setDeckSortOrder: (v: DeckSortOrder) => void;
+  shuffleEnabled: boolean;
+  setShuffleEnabled: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -83,6 +86,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ deckSortOrder: v });
     AsyncStorage.setItem(DECK_SORT_KEY, v);
   },
+  shuffleEnabled: false,
+  setShuffleEnabled: (v) => {
+    set({ shuffleEnabled: v });
+    AsyncStorage.setItem(SHUFFLE_KEY, String(v));
+  },
 }));
 
 AsyncStorage.getItem(STORAGE_KEY).then((value) => {
@@ -118,6 +126,12 @@ AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY).then((value) => {
 AsyncStorage.getItem(DECK_SORT_KEY).then((value) => {
   if (value !== null) {
     useSettingsStore.setState({ deckSortOrder: value as DeckSortOrder });
+  }
+});
+
+AsyncStorage.getItem(SHUFFLE_KEY).then((value) => {
+  if (value !== null) {
+    useSettingsStore.setState({ shuffleEnabled: value === 'true' });
   }
 });
 

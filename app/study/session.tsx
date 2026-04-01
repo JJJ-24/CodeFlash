@@ -63,7 +63,7 @@ const STUDY_SHORTCUTS = [
 ];
 
 export default function StudySessionScreen() {
-  const { deckId, tagId, filter } = useLocalSearchParams<{ deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned' }>();
+  const { deckId, tagId, filter, shuffle } = useLocalSearchParams<{ deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned'; shuffle?: string }>();
   const router = useRouter();
   const navigation = useNavigation();
   const { t } = useTranslation();
@@ -145,8 +145,8 @@ export default function StudySessionScreen() {
   );
 
   useEffect(() => {
-    loadSession({ deckId, tagId, filter });
-  }, [deckId, tagId, filter]);
+    loadSession({ deckId, tagId, filter, shuffle: shuffle === '1' });
+  }, [deckId, tagId, filter, shuffle]);
 
   useEffect(() => {
     if (completed) {

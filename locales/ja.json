@@ -52,7 +52,8 @@
     "filterDescReview": "復習が必要なカード（新規含む）",
     "filterDescNew": "今日作成したカード",
     "correctRate": "正答率",
-    "nextReview": "次回予定"
+    "nextReview": "次回予定",
+    "shuffle": "シャッフル"
   },
   "tag": {
     "title": "タグ管理",

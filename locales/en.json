@@ -52,7 +52,8 @@
     "filterDescReview": "Due cards (includes new cards)",
     "filterDescNew": "New cards today",
     "correctRate": "Correct",
-    "nextReview": "Next Review"
+    "nextReview": "Next Review",
+    "shuffle": "Shuffle"
   },
   "tag": {
     "title": "Tags",

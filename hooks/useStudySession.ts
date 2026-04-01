@@ -38,7 +38,7 @@ export function useStudySession() {
   currentIndexRef.current = currentIndex;
 
   const loadSession = useCallback(
-    async (params: { deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned' }) => {
+    async (params: { deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned'; shuffle?: boolean }) => {
       setLoading(true);
       setCompleted(false);
       setCurrentIndex(0);
@@ -58,9 +58,16 @@ export function useStudySession() {
           else                             cardIds = await getDueCardIdsByTagId(db, params.tagId);
         }
 
-        const cards = (
+        let cards = (
           await Promise.all(cardIds.map((id) => getCardById(db, id)))
         ).filter((c): c is Card => c !== null);
+
+        if (params.shuffle) {
+          for (let i = cards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cards[i], cards[j]] = [cards[j], cards[i]];
+          }
+        }
 
         setQueue(cards);
         setResult({ totalCards: cards.length, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });

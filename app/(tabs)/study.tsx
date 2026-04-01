@@ -46,7 +46,7 @@ export default function StudyScreen() {
   const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
-  const { initialFilterPreference } = useSettingsStore();
+  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled } = useSettingsStore();
 
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
@@ -185,6 +185,21 @@ export default function StudyScreen() {
           <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
             {filterDescMap[activeFilter]}
           </Text>
+          <Pressable
+            onPress={() => setShuffleEnabled(!shuffleEnabled)}
+            style={[
+              styles.shuffleBtn,
+              { borderColor: shuffleEnabled ? theme.colors.primary : theme.colors.border },
+              shuffleEnabled && { backgroundColor: theme.colors.primary },
+            ]}
+          >
+            <Text style={[
+              styles.shuffleBtnText,
+              { color: shuffleEnabled ? theme.colors.primaryText : theme.colors.textSecondary, fontSize: theme.fontSize.xs },
+            ]}>
+              {t('study.shuffle')}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -240,7 +255,7 @@ export default function StudyScreen() {
                   onPress={() => {
                     if (!tappable) return;
                     fromSessionRef.current = true;
-                    router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter] } });
+                    router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
                 >
                   <View style={styles.deckInfo}>
@@ -297,7 +312,7 @@ export default function StudyScreen() {
                   onPress={() => {
                     if (!tappable) return;
                     fromSessionRef.current = true;
-                    router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter] } });
+                    router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
                 >
                   <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
@@ -350,8 +365,15 @@ const styles = StyleSheet.create({
   summaryValue: { fontWeight: '700' },
   summaryLabel: { marginTop: 2, textAlign: 'center' },
   sectionTitle: { fontWeight: '700' },
-  listTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16 },
-  filterDesc: { flexShrink: 1 },
+  listTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shuffleBtn: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  shuffleBtnText: { fontWeight: '600' },
+  filterDesc: { flex: 1 },
 
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },

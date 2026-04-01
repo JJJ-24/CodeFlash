@@ -7,7 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
-import { cancelAllReminders, scheduleDailyReminder } from '@/lib/notifications';
+import { cancelAllReminders, scheduleDailyReminder, updateBadgeCount } from '@/lib/notifications';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useThemeStore } from '@/store/theme';
@@ -30,6 +30,7 @@ function RootStack() {
         } else {
           cancelAllReminders().catch(() => {});
         }
+        updateBadgeCount(db).catch(() => {});
       }
     });
     return () => sub.remove();

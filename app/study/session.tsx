@@ -1,5 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -26,6 +27,7 @@ import { useCodeBlockSelection } from '@/hooks/useCodeBlockSelection';
 import { useStudySession } from '@/hooks/useStudySession';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { FlipSuppressContext } from '@/lib/FlipSuppressContext';
+import { updateBadgeCount } from '@/lib/notifications';
 import { extractLinks } from '@/lib/study/extractLinks';
 import { GRADE_COLORS, useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
@@ -66,6 +68,7 @@ export default function StudySessionScreen() {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const theme = useTheme();
+  const db = useSQLiteContext();
   const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext, refreshCurrentCard } =
     useStudySession();
 
@@ -144,6 +147,12 @@ export default function StudySessionScreen() {
   useEffect(() => {
     loadSession({ deckId, tagId, filter });
   }, [deckId, tagId, filter]);
+
+  useEffect(() => {
+    if (completed) {
+      updateBadgeCount(db).catch(() => {});
+    }
+  }, [completed, db]);
 
   useEffect(() => {
     if (completed) {

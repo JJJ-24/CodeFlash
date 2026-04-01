@@ -1,5 +1,8 @@
 import * as Localization from 'expo-localization';
 import * as Notifications from 'expo-notifications';
+import type { SQLiteDatabase } from 'expo-sqlite';
+
+import { getTodayDueCount } from '@/lib/database/reviews';
 
 const NOTIFICATION_IDENTIFIER = 'daily-reminder';
 
@@ -37,4 +40,10 @@ export async function scheduleDailyReminder(hour: number, minute: number): Promi
 /** 通知をキャンセル */
 export async function cancelAllReminders(): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_IDENTIFIER).catch(() => {});
+}
+
+/** 今日の due カード数をアプリアイコンバッジに反映 */
+export async function updateBadgeCount(db: SQLiteDatabase): Promise<void> {
+  const count = await getTodayDueCount(db);
+  await Notifications.setBadgeCountAsync(count);
 }

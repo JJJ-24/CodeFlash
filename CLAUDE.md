@@ -28,6 +28,7 @@ npm run lint
 ```
 app/                     # Expo Router ルート（ファイル = 画面）
 ├── _layout.tsx          # ルートレイアウト: SQLiteProvider + Stack 登録
+├── search.tsx           # カード全文検索画面（全デッキ横断、frontContent LIKE 検索）
 └── (tabs)/              # タブグループ（URLに影響しない透過グループ）
     ├── _layout.tsx      # タブバー定義（ホーム / 学習 / 統計 / 設定）
     ├── index.tsx        # ホーム画面（デッキ一覧）
@@ -47,13 +48,16 @@ lib/
 │   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成
 │   ├── constants.ts     # LANGUAGES・LANG_LABELS
 │   └── types.ts         # ExecResult・ExecStatus・LogEntry
-├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: ja）
+├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: en）
 ├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors・AppFontSize 型定義
 ├── image.ts             # resolveImageUri()：画像パス解決
 ├── syntax-highlight.ts  # シンタックスハイライト（Token/TokenType）。学習画面の SyntaxHighlightedCode が使用
 ├── FlipSuppressContext.ts  # コードブロックのボタンタップ時にカードフリップを一時抑制する Context
 ├── export.ts            # 全テーブル（review_logs 含む）を JSON エクスポート
 ├── import.ts            # merge（INSERT OR IGNORE）/ replace（全削除後挿入）の2モードでインポート
+├── notifications.ts     # requestPermission()・scheduleDailyReminder()：毎日繰り返し通知スケジュール
+├── study/
+│   └── extractLinks.ts  # カードブロックからリンクを抽出（学習画面 L キー = リンク一覧用）
 └── sm2.ts               # SM-2 間隔反復アルゴリズム実装
 
 store/                   # Zustand ストア（インメモリキャッシュ）
@@ -74,13 +78,15 @@ components/
 └── study/               # FlipCard（reanimated）, BlocksView, CodeRunnerView, SyntaxHighlightedCode, ZoomableImage
 
 hooks/
-├── useStudySession.ts   # 学習セッション管理（キュー管理・SM-2連携）
-└── useCodeExecution.ts  # コード実行状態管理（run/clear/reset/handleMessage）
+├── useStudySession.ts        # 学習セッション管理（キュー管理・SM-2連携）
+├── useCodeExecution.ts       # コード実行状態管理（run/clear/reset/handleMessage）
+├── useCodeBlockSelection.ts  # コードブロックフォーカス選択状態管理
+└── useSwipeGesture.ts        # 学習セッションのスワイプジェスチャー管理
 
 types/index.ts           # 全ドメイン型（唯一の定義元）
 locales/ja.json          # 日本語翻訳
 locales/en.json          # 英語翻訳
-docs/000〜020-*.md       # 機能チケット（実装計画・Todoチェックリスト）
+docs/000〜023-*.md       # 機能チケット（実装計画・Todoチェックリスト）
 ```
 
 ### データフロー
@@ -105,7 +111,8 @@ Stack (_layout.tsx)
 ├── tags/index                          — タグ管理
 ├── tags/new, tags/[tagId]/edit         — モーダル（タグ作成・編集）
 ├── tags/[tagId]/cards                  — タグ別カード一覧
-└── study/session                       — 学習セッション
+├── study/session                       — 学習セッション
+└── search                              — カード全文検索（ホーム画面ヘッダーの検索アイコンから遷移）
 ```
 
 ### 型定義
@@ -145,6 +152,8 @@ Stack (_layout.tsx)
 - **ヘッダータイトルの切り詰め**: ヘッダー右側にアイコンを置く場合、タイトル文字列に `maxWidth: screenWidth * 0.5` と `flexShrink: 1` を付与する。`useWindowDimensions` でスクリーン幅を取得する。React Navigation のヘッダータイトルコンテナは絶対配置のため `flexShrink` 単独では効かない。
 - **選択バーのアクションボタン**: 削除・移動などのバーボタンは言語/フォントサイズ非依存にするためアイコンのみ（テキストなし）の円形ボタンにする。`iconBtn` スタイル: `{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }`。無効時は `opacity: 0.4`。
 - **学習セッションのヘッダータイトル**: デッキ学習時はデッキ名、タグ学習時はタグ名を表示する。`useDeckStore` / `useTagStore` から `deckId` / `tagId` で検索して取得し、`Stack.Screen` の `headerTitle` に渡す。
+- **通知リマインダー**: `lib/notifications.ts` の `scheduleDailyReminder(hour, minute)` が identifier `'daily-reminder'` 固定で毎日繰り返し通知をスケジュール（再呼び出し前に既存通知をキャンセル）。設定画面でオン/オフと時刻を管理。`useSettingsStore` に `notificationEnabled`・`notificationHour`・`notificationMinute` を AsyncStorage 永続化で保存。
+- **カード全文検索**: `app/search.tsx` はホーム画面ヘッダーの検索アイコンから遷移。`searchCards(db, query)` が `frontContent LIKE ?` で検索（JSON文字列のまま LIKE 可能）し `ORDER BY updatedAt DESC LIMIT 100`。クエリ変更ごとにリアルタイム検索。結果タップで `/deck/[id]/card/[cardId]/edit` へ遷移。
 
 ### ジェスチャー実装パターン
 
@@ -158,17 +167,18 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 ### 主要な設定
 
-- `app.json`: `newArchEnabled: true`（新アーキテクチャ）、`typedRoutes: true`、`reactCompiler: true`（実験的）
+- `app.json`: `newArchEnabled: true`（新アーキテクチャ）、`typedRoutes: true`、`reactCompiler: true`（実験的）。Android は `edgeToEdgeEnabled: true`、`predictiveBackGestureEnabled: false`。URL スキーム: `codeflashcard`
 - `tsconfig.json`: strictモード、`@/*` がリポジトリルートに対応
 - VSCode: 保存時に ESLint 自動修正とインポート整理が実行される
+- `patch-package`: `postinstall` フックで自動適用。`patches/` 配下に差分ファイルを置く
 
 **技術スタック:** React Native 0.81 / React 19 / Expo 54 / expo-router 6 / expo-sqlite / Zustand 5 / i18next。アニメーションに react-native-reanimated、ジェスチャー操作に react-native-gesture-handler が利用可能。
 
 ### 実装チケット
 
-`docs/` 配下に機能チケット（000〜020）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
+`docs/` 配下に機能チケット（000〜023）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
-完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・T/Yキーヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化などを実施。
+完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・T/Yキーヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。
 
 未着手: 014（iCloud同期）・015（Web版）・016（買い切り課金）・017（App Store申請）・018（SQL/C++実行）・019（マーケットプレイス）・020（AI生成）
 

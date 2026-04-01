@@ -36,6 +36,7 @@ import {
   getTodayReviewedCardIdsByDeckId,
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
+import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
@@ -594,43 +595,14 @@ export default function DeckDetailScreen() {
         </>
       )}
 
-      <Modal
+      <DeckPickerModal
         visible={showDeckPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDeckPicker(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowDeckPicker(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface, maxHeight: '60%' }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
-              {t('card.selectDeckTitle')}
-            </Text>
-            {decks.filter((d) => d.id !== id).length === 0 ? (
-              <Text style={{ color: theme.colors.textSecondary, padding: 20, fontSize: theme.fontSize.md }}>
-                {t('card.noDeckToMove')}
-              </Text>
-            ) : (
-              <FlatList
-                data={decks.filter((d) => d.id !== id)}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={[styles.deckPickerItem, { borderBottomColor: theme.colors.border }]}
-                    onPress={() => handleMoveToDeck(item)}
-                  >
-                    <Text style={{ color: theme.colors.text, fontWeight: '500', fontSize: theme.fontSize.md, flex: 1, marginRight: 8 }} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }}>
-                      {t('home.cards', { count: item.cardCount })}
-                    </Text>
-                  </Pressable>
-                )}
-              />
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title={t('card.selectDeckTitle')}
+        decks={decks.filter((d) => d.id !== id)}
+        onSelect={handleMoveToDeck}
+        onClose={() => setShowDeckPicker(false)}
+        showCardCount
+      />
       <Modal
         visible={showShortcutsModal}
         transparent
@@ -772,14 +744,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 20,
     paddingBottom: 12,
-  },
-  deckPickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   shortcutSection: {
     fontWeight: '700',

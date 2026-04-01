@@ -3,8 +3,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useRef, useState } from 'react';
+
+import { DeckPickerModal } from '@/components/DeckPickerModal';
 
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
@@ -399,38 +401,13 @@ export default function SettingsScreen() {
 
     </ScrollView>
 
-    {/* TSV デッキ選択モーダル */}
-    <Modal
+    <DeckPickerModal
       visible={tsvDeckPickerVisible}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setTsvDeckPickerVisible(false)}
-    >
-      <Pressable style={styles.modalOverlay} onPress={() => setTsvDeckPickerVisible(false)}>
-        <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
-          <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
-            {tsvAction === 'export' ? t('dataManagement.selectDeckForExport') : t('dataManagement.selectDeckForImport')}
-          </Text>
-          <FlatList
-            data={decks}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <Pressable style={[styles.deckPickerItem, { borderBottomColor: theme.colors.border }]} onPress={() => handleTsvDeckSelected(item)}>
-                <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{item.name}</Text>
-              </Pressable>
-            )}
-            ListEmptyComponent={
-              <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, textAlign: 'center', padding: 16 }]}>
-                {t('card.noDeckToMove')}
-              </Text>
-            }
-          />
-          <Pressable style={[styles.modalCancel, { borderTopColor: theme.colors.border }]} onPress={() => setTsvDeckPickerVisible(false)}>
-            <Text style={[{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }]}>{t('common.cancel')}</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      title={tsvAction === 'export' ? t('dataManagement.selectDeckForExport') : t('dataManagement.selectDeckForImport')}
+      decks={decks}
+      onSelect={handleTsvDeckSelected}
+      onClose={() => setTsvDeckPickerVisible(false)}
+    />
     {loading && <View style={styles.loadingOverlay} onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} />}
     </View>
   );
@@ -483,31 +460,4 @@ dataRow: {
     minHeight: 44,
   },
   notificationLabel: { flex: 1 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 16,
-    maxHeight: '60%',
-  },
-  modalTitle: {
-    fontWeight: '700',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  deckPickerItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  deckPickerName: { fontWeight: '500' },
-  modalCancel: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
 });

@@ -94,8 +94,8 @@ export async function createCard(
     ]
   );
   await db.runAsync(
-    'UPDATE decks SET cardCount = cardCount + 1, updatedAt = ? WHERE id = ?',
-    [now, data.deckId]
+    'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
+    [data.deckId, now, data.deckId]
   );
   return { id, sortOrder, createdAt: now, updatedAt: now, ...data };
 }
@@ -242,12 +242,12 @@ export async function moveCardsToDeck(
       );
     }
     await db.runAsync(
-      'UPDATE decks SET cardCount = MAX(cardCount - ?, 0), updatedAt = ? WHERE id = ?',
-      [cardIds.length, now, fromDeckId]
+      'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
+      [fromDeckId, now, fromDeckId]
     );
     await db.runAsync(
-      'UPDATE decks SET cardCount = cardCount + ?, updatedAt = ? WHERE id = ?',
-      [cardIds.length, now, toDeckId]
+      'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
+      [toDeckId, now, toDeckId]
     );
   });
 }
@@ -285,7 +285,7 @@ export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string)
   await db.runAsync('DELETE FROM cards WHERE id = ?', [id]);
   const now = new Date().toISOString();
   await db.runAsync(
-    'UPDATE decks SET cardCount = MAX(cardCount - 1, 0), updatedAt = ? WHERE id = ?',
-    [now, deckId]
+    'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
+    [deckId, now, deckId]
   );
 }

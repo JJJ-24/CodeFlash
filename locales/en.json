@@ -259,6 +259,12 @@
     "exportLargeSizeTitle": "Large File Warning",
     "exportLargeSizeMessage": "Including images will result in approximately {{size}} MB. Continue?",
     "exportPerfWarnMessage": "Including images will result in approximately {{size}} MB.\nThis may affect export and import performance. Continue?",
-    "exportContinue": "Continue"
+    "exportContinue": "Continue",
+    "exportTsv": "TSV Export",
+    "importTsv": "TSV Import",
+    "selectDeckForExport": "Select Deck to Export",
+    "selectDeckForImport": "Select Destination Deck",
+    "tsvImportSuccess": "Imported: {{created}} new, {{updated}} updated",
+    "tsvImportError": "Failed to read TSV file"
   }
 }

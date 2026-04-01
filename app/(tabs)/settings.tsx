@@ -3,14 +3,15 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
 
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
 import { estimateImageExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
 import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
+import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
 import { useTheme } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
@@ -18,6 +19,7 @@ import { useTagStore } from '@/store/tags';
 import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
 import type { InitialFilterPreference } from '@/store/settings';
+import type { Deck } from '@/types';
 
 
 interface SegmentedCardProps<T extends string> {
@@ -66,9 +68,13 @@ export default function SettingsScreen() {
     notificationEnabled, notificationHour, notificationMinute,
     setNotificationEnabled, setNotificationTime,
   } = useSettingsStore();
-  const { setDecks } = useDeckStore();
+  const { decks, setDecks } = useDeckStore();
   const { setTags } = useTagStore();
   const [loading, setLoading] = useState(false);
+  const [tsvDeckPickerVisible, setTsvDeckPickerVisible] = useState(false);
+  const [tsvAction, setTsvAction] = useState<'export' | 'import' | null>(null);
+  const pendingTsvUriRef = useRef<string | null>(null);
+  const tsvProcessingRef = useRef(false);
 
   async function handleNotificationToggle(value: boolean) {
     if (value) {
@@ -152,6 +158,57 @@ export default function SettingsScreen() {
         { text: t('dataManagement.exportWithImages'), onPress: handleExportWithImages },
       ]
     );
+  }
+
+  async function handleTsvExport() {
+    setTsvAction('export');
+    setTsvDeckPickerVisible(true);
+  }
+
+  async function handleTsvImport() {
+    const uri = await pickTsvFile();
+    if (!uri) return;
+    pendingTsvUriRef.current = uri;
+    setTsvAction('import');
+    setTsvDeckPickerVisible(true);
+  }
+
+  async function handleTsvDeckSelected(deck: Deck) {
+    if (tsvProcessingRef.current) return;
+    tsvProcessingRef.current = true;
+    setTsvDeckPickerVisible(false);
+    if (tsvAction === 'export') {
+      try {
+        setLoading(true);
+        await exportDeckToTsv(db, deck.id, deck.name);
+      } catch {
+        Alert.alert(t('dataManagement.exportError'));
+      } finally {
+        setLoading(false);
+        tsvProcessingRef.current = false;
+      }
+    } else if (tsvAction === 'import') {
+      const uri = pendingTsvUriRef.current;
+      if (!uri) {
+        tsvProcessingRef.current = false;
+        return;
+      }
+      try {
+        setLoading(true);
+        const { created, updated } = await importTsv(db, uri, deck.id);
+        const updatedDecks = await getAllDecks(db);
+        setDecks(updatedDecks);
+        Alert.alert(t('dataManagement.tsvImportSuccess', { created, updated }));
+      } catch {
+        Alert.alert(t('dataManagement.tsvImportError'));
+      } finally {
+        setLoading(false);
+        pendingTsvUriRef.current = null;
+        tsvProcessingRef.current = false;
+      }
+    } else {
+      tsvProcessingRef.current = false;
+    }
   }
 
   async function handleImport() {
@@ -298,11 +355,58 @@ export default function SettingsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
             </Pressable>
+            <Pressable style={styles.dataRow} onPress={handleTsvExport}>
+              <Ionicons name="document-text-outline" size={22} color={theme.colors.primary} />
+              <View style={styles.dataRowText}>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.exportTsv')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+            </Pressable>
+            <Pressable style={styles.dataRow} onPress={handleTsvImport}>
+              <Ionicons name="document-attach-outline" size={22} color={theme.colors.primary} />
+              <View style={styles.dataRowText}>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{t('dataManagement.importTsv')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+            </Pressable>
           </>
         )}
       </View>
 
     </ScrollView>
+
+    {/* TSV デッキ選択モーダル */}
+    <Modal
+      visible={tsvDeckPickerVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setTsvDeckPickerVisible(false)}
+    >
+      <Pressable style={styles.modalOverlay} onPress={() => setTsvDeckPickerVisible(false)}>
+        <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+          <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+            {tsvAction === 'export' ? t('dataManagement.selectDeckForExport') : t('dataManagement.selectDeckForImport')}
+          </Text>
+          <FlatList
+            data={decks}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <Pressable style={[styles.deckPickerItem, { borderBottomColor: theme.colors.border }]} onPress={() => handleTsvDeckSelected(item)}>
+                <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{item.name}</Text>
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, textAlign: 'center', padding: 16 }]}>
+                {t('card.noDeckToMove')}
+              </Text>
+            }
+          />
+          <Pressable style={[styles.modalCancel, { borderTopColor: theme.colors.border }]} onPress={() => setTsvDeckPickerVisible(false)}>
+            <Text style={[{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }]}>{t('common.cancel')}</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
     {loading && <View style={styles.loadingOverlay} onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} />}
     </View>
   );
@@ -355,4 +459,31 @@ dataRow: {
     minHeight: 44,
   },
   notificationLabel: { flex: 1 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 16,
+    maxHeight: '60%',
+  },
+  modalTitle: {
+    fontWeight: '700',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  deckPickerItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  deckPickerName: { fontWeight: '500' },
+  modalCancel: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
 });

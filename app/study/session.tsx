@@ -255,7 +255,7 @@ export default function StudySessionScreen() {
   if (completed) {
     return (
       <>
-        <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '', headerBackVisible: false, headerLeft: () => null }} />
+        <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '', headerBackVisible: false, headerLeft: () => null, headerRight: () => null }} />
         <TextInput
           ref={completeRef}
           style={styles.hiddenKeyboardInput}

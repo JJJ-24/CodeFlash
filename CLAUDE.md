@@ -55,7 +55,7 @@ lib/
 ├── FlipSuppressContext.ts  # コードブロックのボタンタップ時にカードフリップを一時抑制する Context
 ├── export.ts            # 全テーブル（review_logs 含む）を JSON エクスポート
 ├── import.ts            # merge（INSERT OR IGNORE）/ replace（全削除後挿入）の2モードでインポート
-├── notifications.ts     # requestPermission()・scheduleDailyReminder()：毎日繰り返し通知スケジュール
+├── notifications.ts     # requestPermission()・scheduleDailyReminder()・updateBadgeCount(db)：毎日繰り返し通知スケジュール＋アイコンバッジ更新
 ├── study/
 │   └── extractLinks.ts  # カードブロックからリンクを抽出（学習画面 L キー = リンク一覧用）
 └── sm2.ts               # SM-2 間隔反復アルゴリズム実装
@@ -66,7 +66,7 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 ├── tags.ts              # useTagStore
 ├── reviews.ts           # useReviewStore（学習セッション状態）
 ├── theme.ts             # useThemeStore（preference: 'light'|'dark'|'system'、AsyncStorage永続化）
-└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastSelectedCodeLanguage、AsyncStorage永続化）
+└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastSelectedCodeLanguage・deckSortOrder・通知設定、AsyncStorage永続化）
 
 components/
 ├── code/
@@ -136,7 +136,7 @@ Stack (_layout.tsx)
 - **Bluetooth キーボード対応**: 学習セッション（`app/study/session.tsx`）とカード一覧（`app/deck/[id]/index.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。矢印キーは iOS の `onKeyPress` では検知できないため未対応。`Tab` キーは iPadOS がシステムフォーカス移動（UIFocusSystem）に使用するため `onKeyPress` で検知不可。
   - **学習画面キー**: J/K = 次/前カード、Space = 表裏反転、1–4 = グレード、T/Y = コードブロック次/前フォーカス、M = メモ開閉、F = 全画面、P = カード編集、L = リンク一覧
   - **カード一覧キー（通常モード）**: Space = 学習開始、1–4 = フィルター切替、T/Y = カードフォーカス次/前、P = フォーカスカード編集、N = 新規カード、S = 選択モード開始、U/D = スクロール、B = 戻る
-  - **カード一覧キー（選択モード）**: T/Y = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、D = 削除、S/C = 選択モード終了
+  - **カード一覧キー（選択モード）**: T/Y = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、D = 削除、S/C = 選択モード終了（複製はバーボタンのみ、キーショートカットなし）
 - **T/Yキーのコードブロックサイクル（学習画面）**: T = 次へ / Y = 前へ。表面表示中は表面のコードブロックのみサイクル。裏面表示中は裏面＋メモのコードブロックを**通しで**サイクルする（裏面ブロック0→1→…→メモブロック0→1→…→裏面ブロック0）。サイクルの両端で `null`（フォーカスなし）を経由する**ヌルサイクル**方式。メモブロックに到達するとメモを自動展開する。combined index は `selectedCodeBlockSide`（`'back'` か `'memo'`）と `selectedCodeBlockIdx` の組み合わせで管理する。
 - **T/Yキーのカードフォーカス（カード一覧）**: `app/deck/[id]/index.tsx` でも同じヌルサイクル方式。`focusedCardIndex` が `null` → 0 → 1 → … → last → `null` と循環（Y は逆順）。フォーカス中のカードは `borderColor` で強調（通常モード: `theme.colors.primary`〈青〉、選択モードカーソル: `#F57C00`〈オレンジ〉、選択モード選択済み: `theme.colors.primary`〈青〉）。
 - **ホーム画面のフィルターブロック**: `app/(tabs)/index.tsx` の `selectedFilter` は将来のブロック追加（タグ別フィルタ等）を想定した拡張ポイント。現状は `'all'` のみ。型は `useState<'all'>` のユニオン型を拡張して対応する。
@@ -153,6 +153,9 @@ Stack (_layout.tsx)
 - **選択バーのアクションボタン**: 削除・移動などのバーボタンは言語/フォントサイズ非依存にするためアイコンのみ（テキストなし）の円形ボタンにする。`iconBtn` スタイル: `{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }`。無効時は `opacity: 0.4`。
 - **学習セッションのヘッダータイトル**: デッキ学習時はデッキ名、タグ学習時はタグ名を表示する。`useDeckStore` / `useTagStore` から `deckId` / `tagId` で検索して取得し、`Stack.Screen` の `headerTitle` に渡す。
 - **通知リマインダー**: `lib/notifications.ts` の `scheduleDailyReminder(hour, minute)` が identifier `'daily-reminder'` 固定で毎日繰り返し通知をスケジュール（再呼び出し前に既存通知をキャンセル）。設定画面でオン/オフと時刻を管理。`useSettingsStore` に `notificationEnabled`・`notificationHour`・`notificationMinute` を AsyncStorage 永続化で保存。
+- **アイコンバッジ**: `lib/notifications.ts` の `updateBadgeCount(db)` が `getTodayDueCount()` で全デッキ横断の due 枚数を取得し `setBadgeCountAsync()` でバッジに反映。`app/_layout.tsx` のフォアグラウンド復帰時と学習セッション完了時に呼ばれる。
+- **デッキソート**: `store/settings.ts` の `deckSortOrder`（`'manual' | 'name' | 'cardCount'`）で制御。`'manual'` 時のみ長押しドラッグが有効。他のソートは Zustand の `decks` 配列を `.sort()` するだけで DB 順序を変えない。
+- **カード複製**: `lib/database/cards.ts` の `duplicateCard(db, cardId)` が元カードの内容・タグを複製して新カードを作成。カード一覧の選択モードバーの複製ボタン（`copy-outline`）から呼び出す。
 - **カード全文検索**: `app/search.tsx` はホーム画面ヘッダーの検索アイコンから遷移。`searchCards(db, query)` が `frontContent LIKE ?` で検索（JSON文字列のまま LIKE 可能）し `ORDER BY updatedAt DESC LIMIT 100`。クエリ変更ごとにリアルタイム検索。結果タップで `/deck/[id]/card/[cardId]/edit` へ遷移。
 
 ### ジェスチャー実装パターン
@@ -178,7 +181,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 `docs/` 配下に機能チケット（000〜023）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
-完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・T/Yキーヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。
+完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・T/Yキーヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）を追加実装。
 
 未着手: 014（iCloud同期）・015（Web版）・016（買い切り課金）・017（App Store申請）・018（SQL/C++実行）・019（マーケットプレイス）・020（AI生成）
 

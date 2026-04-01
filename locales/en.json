@@ -49,7 +49,7 @@
     "linksTitle": "Links",
     "filterDescAll": "All cards",
     "filterDescLearned": "Studied today",
-    "filterDescReview": "Due cards (includes new cards)",
+    "filterDescReview": "Cards to study",
     "filterDescNew": "New cards today",
     "correctRate": "Correct",
     "nextReview": "Next Review",

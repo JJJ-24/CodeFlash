@@ -49,7 +49,7 @@
     "linksTitle": "リンク一覧",
     "filterDescAll": "すべてのカード",
     "filterDescLearned": "今日学習したカード",
-    "filterDescReview": "復習が必要なカード（新規含む）",
+    "filterDescReview": "学習が必要なカード",
     "filterDescNew": "今日作成したカード",
     "correctRate": "正答率",
     "nextReview": "次回予定",

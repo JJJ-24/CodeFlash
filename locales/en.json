@@ -123,6 +123,10 @@
     "newCardDeckTitle": "Select Deck",
     "searchPlaceholder": "Search cards...",
     "searchNoResults": "No cards found",
+    "searchFieldAll": "All",
+    "searchFieldFront": "Front",
+    "searchFieldBack": "Back",
+    "searchFieldMemo": "Memo",
     "duplicate": "Duplicate"
   },
   "tabs": {

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { searchCards } from '@/lib/database/cards';
+import type { SearchField } from '@/lib/database/cards';
 import { useTheme } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import type { Card, TextBlock } from '@/types';
@@ -38,6 +39,14 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Card[]>([]);
   const [searched, setSearched] = useState(false);
+  const [searchField, setSearchField] = useState<SearchField>('all');
+
+  const FIELD_OPTIONS: { value: SearchField; labelKey: string }[] = [
+    { value: 'all',  labelKey: 'card.searchFieldAll' },
+    { value: 'front', labelKey: 'card.searchFieldFront' },
+    { value: 'back',  labelKey: 'card.searchFieldBack' },
+    { value: 'memo',  labelKey: 'card.searchFieldMemo' },
+  ];
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -50,11 +59,11 @@ export default function SearchScreen() {
       return;
     }
     const trimmed = query.trim();
-    searchCards(db, trimmed).then((cards) => {
+    searchCards(db, trimmed, searchField).then((cards) => {
       setResults(cards);
       setSearched(true);
     });
-  }, [query]);
+  }, [query, searchField]);
 
   const deckMap = Object.fromEntries(decks.map((d) => [d.id, d.name]));
 
@@ -76,6 +85,24 @@ export default function SearchScreen() {
           autoCorrect={false}
           autoCapitalize="none"
         />
+      </View>
+
+      {/* 検索対象フィールド */}
+      <View style={[styles.fieldSelector, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+        {FIELD_OPTIONS.map(({ value, labelKey }) => {
+          const active = searchField === value;
+          return (
+            <Pressable
+              key={value}
+              style={[styles.fieldOption, active && { backgroundColor: theme.colors.primary }]}
+              onPress={() => setSearchField(value)}
+            >
+              <Text style={[styles.fieldOptionText, { fontSize: theme.fontSize.sm, color: active ? '#fff' : theme.colors.textSecondary }, active && { fontWeight: '700' }]}>
+                {t(labelKey)}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* 結果 */}
@@ -141,6 +168,20 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   input: { flex: 1 },
+  fieldSelector: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  fieldOption: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+  },
+  fieldOptionText: {},
   list: { paddingBottom: 32 },
   separator: { height: StyleSheet.hairlineWidth },
   resultItem: {

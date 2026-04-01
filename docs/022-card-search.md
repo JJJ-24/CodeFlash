@@ -51,7 +51,24 @@
   テキストブロックの `content` フィールドの部分一致が可能。
   ただし JSON キー名（`"type":"text","content":"..."` など）にも一致してしまうため、
   クエリが `"type"` や `"content"` 等のJSON予約語と被ると誤ヒットする可能性がある（実用上は問題なし）。
-- 検索対象を frontContent のみに限定しているのは、バックコンテンツや
-  メモも含めると結果が多くなりすぎることと、「表面のキーワードで引く」ユースケースが主だから。
-- 将来的に backContent・memoContent も対象に追加する場合は
-  `WHERE frontContent LIKE ? OR backContent LIKE ? OR memoContent LIKE ?` に変更する。
+
+---
+
+## 検索対象フィールド選択（追加実装）
+
+「すべて / 表面 / 裏面 / メモ」をセグメントボタンで切り替えられるよう拡張。
+裏面に答えが含まれるため表面のみを検索したいケースがある一方、
+裏面・メモから引きたいケースもあるため、ユーザーが選択できる方式とした。
+
+### Todo
+
+- [x] `searchCards(db, query, field)` に `field: SearchField` 引数を追加
+  - [x] `SearchField = 'all' | 'front' | 'back' | 'memo'` 型をエクスポート
+  - [x] `field` に応じて SQL の WHERE 句を切り替え（`all` のみ3列 OR 結合）
+  - [x] デフォルト値は `'all'`
+- [x] `app/search.tsx` に検索フィールド選択UIを追加
+  - [x] 検索バー直下に横並びセグメントボタン（すべて / 表面 / 裏面 / メモ）
+  - [x] 選択中はプライマリカラー背景・白文字で強調
+  - [x] `searchField` state を `useEffect` の依存配列に追加（切替時に即再検索）
+- [x] `locales/ja.json` / `locales/en.json` にキー追加
+  - [x] `card.searchFieldAll` / `card.searchFieldFront` / `card.searchFieldBack` / `card.searchFieldMemo`

@@ -123,6 +123,10 @@
     "newCardDeckTitle": "作成先デッキを選択",
     "searchPlaceholder": "カードを検索...",
     "searchNoResults": "一致するカードはありません",
+    "searchFieldAll": "すべて",
+    "searchFieldFront": "表面",
+    "searchFieldBack": "裏面",
+    "searchFieldMemo": "メモ",
     "duplicate": "複製"
   },
   "tabs": {

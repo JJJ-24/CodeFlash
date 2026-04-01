@@ -48,11 +48,30 @@ export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promis
   return rows.map(toCard);
 }
 
-export async function searchCards(db: SQLiteDatabase, query: string): Promise<Card[]> {
-  const rows = await db.getAllAsync<RawCard>(
-    'SELECT * FROM cards WHERE frontContent LIKE ? ORDER BY updatedAt DESC LIMIT 100',
-    [`%${query}%`]
-  );
+export type SearchField = 'all' | 'front' | 'back' | 'memo';
+
+export async function searchCards(db: SQLiteDatabase, query: string, field: SearchField = 'all'): Promise<Card[]> {
+  const p = `%${query}%`;
+  let sql: string;
+  let params: string[];
+  switch (field) {
+    case 'front':
+      sql = 'SELECT * FROM cards WHERE frontContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
+      params = [p];
+      break;
+    case 'back':
+      sql = 'SELECT * FROM cards WHERE backContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
+      params = [p];
+      break;
+    case 'memo':
+      sql = 'SELECT * FROM cards WHERE memoContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
+      params = [p];
+      break;
+    default:
+      sql = 'SELECT * FROM cards WHERE frontContent LIKE ? OR backContent LIKE ? OR memoContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
+      params = [p, p, p];
+  }
+  const rows = await db.getAllAsync<RawCard>(sql, params);
   return rows.map(toCard);
 }
 

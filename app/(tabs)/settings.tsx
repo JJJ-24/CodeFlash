@@ -161,16 +161,40 @@ export default function SettingsScreen() {
   }
 
   async function handleTsvExport() {
-    setTsvAction('export');
-    setTsvDeckPickerVisible(true);
+    Alert.alert(
+      t('dataManagement.tsvExportNoteTitle'),
+      t('dataManagement.tsvExportNoteMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('dataManagement.exportContinue'),
+          onPress: () => {
+            setTsvAction('export');
+            setTsvDeckPickerVisible(true);
+          },
+        },
+      ]
+    );
   }
 
   async function handleTsvImport() {
     const uri = await pickTsvFile();
     if (!uri) return;
     pendingTsvUriRef.current = uri;
-    setTsvAction('import');
-    setTsvDeckPickerVisible(true);
+    Alert.alert(
+      t('dataManagement.tsvImportNoteTitle'),
+      t('dataManagement.tsvImportNoteMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('dataManagement.exportContinue'),
+          onPress: () => {
+            setTsvAction('import');
+            setTsvDeckPickerVisible(true);
+          },
+        },
+      ]
+    );
   }
 
   async function handleTsvDeckSelected(deck: Deck) {

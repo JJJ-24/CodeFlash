@@ -159,7 +159,8 @@
     "past7DaysReviewed": "過去7日間の学習済み",
     "past7DaysActivity": "過去7日間の学習日数",
     "past7DaysCreated": "過去7日間の新規作成",
-    "activityHeatmap": "学習履歴"
+    "activityHeatmap": "学習履歴",
+    "learnedOf": "学習済み {{learned}} / {{total}} 枚"
   },
   "code": {
     "run": "実行",

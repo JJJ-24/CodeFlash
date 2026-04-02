@@ -6,6 +6,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useFocusEffect } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
+import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
@@ -98,30 +99,8 @@ const INITIAL_STATS: StatsData = {
 };
 
 // ──────────────────────────────────────────────
-// SVG Pie Chart
+// SVG Donut Chart
 // ──────────────────────────────────────────────
-const PIE_SIZE = 160;
-const PIE_R = PIE_SIZE / 2;
-const PIE_INNER_R = PIE_R * 0.42; // ドーナツの穴の半径
-const PIE_CX = PIE_SIZE / 2;
-const PIE_CY = PIE_SIZE / 2;
-
-function polarToCart(angleDeg: number): { x: number; y: number } {
-  const rad = ((angleDeg - 90) * Math.PI) / 180;
-  return { x: PIE_CX + PIE_R * Math.cos(rad), y: PIE_CY + PIE_R * Math.sin(rad) };
-}
-
-function arcPath(startDeg: number, endDeg: number): string {
-  // Full circle special case
-  if (Math.abs(endDeg - startDeg) >= 359.9) {
-    return `M ${PIE_CX} ${PIE_CY - PIE_R} A ${PIE_R} ${PIE_R} 0 1 1 ${PIE_CX - 0.01} ${PIE_CY - PIE_R} Z`;
-  }
-  const s = polarToCart(startDeg);
-  const e = polarToCart(endDeg);
-  const large = endDeg - startDeg > 180 ? 1 : 0;
-  return `M ${PIE_CX} ${PIE_CY} L ${s.x} ${s.y} A ${PIE_R} ${PIE_R} 0 ${large} 1 ${e.x} ${e.y} Z`;
-}
-
 type PieSlice = { value: number; color: string; label: string };
 
 function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: AppTheme }) {
@@ -129,33 +108,37 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
   const total = dist.again + dist.hard + dist.normal + dist.easy + dist.unlearned;
   if (total === 0) return null;
 
+  const learned = dist.again + dist.hard + dist.normal + dist.easy;
+
   const slices: PieSlice[] = [
     { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
     { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
     { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
     { value: dist.easy,      color: GRADE_COLORS.easy,  label: t('grade.easy') },
-    { value: dist.unlearned, color: '#9E9E9E', label: t('stats.unlearned') },
-  ].filter((s) => s.value > 0);
+    { value: dist.unlearned, color: '#9E9E9E',           label: t('stats.unlearned') },
+  ];
 
   let cumDeg = 0;
 
   return (
     <View style={pieStyles.container}>
-      <Svg width={PIE_SIZE} height={PIE_SIZE}>
-        {/* Background circle */}
-        <Circle cx={PIE_CX} cy={PIE_CY} r={PIE_R} fill={theme.colors.progressBg} />
-        {slices.map((slice) => {
+      {/* ヘッダー: 学習済み / トータル */}
+      <Text style={[pieStyles.learnedHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+        {t('stats.learnedOf', { learned, total })}
+      </Text>
+      {/* ドーナツチャート */}
+      <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
+        <Circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R} fill={theme.colors.progressBg} />
+        {slices.filter((s) => s.value > 0).map((slice) => {
           const sweepDeg = (slice.value / total) * 360;
-          const path = arcPath(cumDeg, cumDeg + sweepDeg);
+          const path = donutArcPath(cumDeg, cumDeg + sweepDeg);
           cumDeg += sweepDeg;
           return <Path key={slice.label} d={path} fill={slice.color} />;
         })}
-        {/* ドーナツの穴 */}
-        <Circle cx={PIE_CX} cy={PIE_CY} r={PIE_INNER_R} fill={theme.colors.surface} />
-        {/* 中央: トータルカード数 */}
+        <Circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_INNER_R} fill={theme.colors.surface} />
         <SvgText
-          x={PIE_CX}
-          y={PIE_CY + 8}
+          x={DONUT_CX}
+          y={DONUT_CY + 8}
           textAnchor="middle"
           fontSize={24}
           fontWeight="700"
@@ -164,18 +147,20 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           {total}
         </SvgText>
       </Svg>
-      {/* Legend */}
-      <View style={pieStyles.legend}>
+      {/* グレード別横並びグリッド */}
+      <View style={pieStyles.gradeGrid}>
         {slices.map((slice) => {
           const pct = Math.round((slice.value / total) * 100);
           return (
-            <View key={slice.label} style={pieStyles.legendRow}>
-              <View style={[pieStyles.legendDot, { backgroundColor: slice.color }]} />
-              <Text style={[pieStyles.legendLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+            <View key={slice.label} style={pieStyles.gradeGridItem}>
+              <Text style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: theme.fontSize.lg }]}>
+                {slice.value}
+              </Text>
+              <Text style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
                 {slice.label}
               </Text>
-              <Text style={[pieStyles.legendValue, { color: theme.colors.text, fontSize: theme.fontSize.sm }]}>
-                {slice.value} {t('stats.cards')} ({pct}%)
+              <Text style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+                {pct}%
               </Text>
             </View>
           );
@@ -186,12 +171,13 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
 }
 
 const pieStyles = StyleSheet.create({
-  container: { alignItems: 'center', gap: 16, paddingVertical: 8 },
-  legend: { alignItems: 'center', gap: 6 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 220 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { flex: 1 },
-  legendValue: { fontWeight: '600', textAlign: 'right' },
+  container: { alignItems: 'center', gap: 12, paddingVertical: 8 },
+  learnedHeader: {},
+  gradeGrid: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', paddingTop: 4 },
+  gradeGridItem: { alignItems: 'center', gap: 2, minWidth: 44 },
+  gradeGridCount: { fontWeight: '700' },
+  gradeGridLabel: {},
+  gradeGridPct: {},
 });
 
 function BarChart({

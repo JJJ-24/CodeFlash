@@ -159,7 +159,8 @@
     "past7DaysReviewed": "Last 7 Days Studied",
     "past7DaysActivity": "Last 7 Days Activity",
     "past7DaysCreated": "Last 7 Days New Cards",
-    "activityHeatmap": "Activity"
+    "activityHeatmap": "Activity",
+    "learnedOf": "Done {{learned}} / {{total}} cards"
   },
   "code": {
     "run": "Run",

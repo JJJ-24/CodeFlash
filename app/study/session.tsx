@@ -30,6 +30,7 @@ import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { FlipSuppressContext } from '@/lib/FlipSuppressContext';
 import { updateBadgeCount } from '@/lib/notifications';
 import { extractLinks } from '@/lib/study/extractLinks';
+import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { GRADE_COLORS, useTheme } from '@/lib/theme';
 import type { Grade } from '@/lib/sm2';
 import { useSettingsStore } from '@/store/settings';
@@ -45,30 +46,6 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 3, labelKey: 'grade.easy',  color: GRADE_COLORS.easy  },
 ];
 
-// 学習完了画面のドーナツチャート
-const SESSION_DONUT_SIZE = 160;
-const SESSION_DONUT_CX = SESSION_DONUT_SIZE / 2;
-const SESSION_DONUT_CY = SESSION_DONUT_SIZE / 2;
-const SESSION_DONUT_R = SESSION_DONUT_SIZE / 2;
-const SESSION_DONUT_INNER_R = Math.round(SESSION_DONUT_R * 0.42);
-
-function sessionDonutPolarToCart(angleDeg: number): { x: number; y: number } {
-  const rad = ((angleDeg - 90) * Math.PI) / 180;
-  return {
-    x: SESSION_DONUT_CX + SESSION_DONUT_R * Math.cos(rad),
-    y: SESSION_DONUT_CY + SESSION_DONUT_R * Math.sin(rad),
-  };
-}
-
-function sessionDonutArcPath(startDeg: number, endDeg: number): string {
-  if (Math.abs(endDeg - startDeg) >= 359.9) {
-    return `M ${SESSION_DONUT_CX} ${SESSION_DONUT_CY - SESSION_DONUT_R} A ${SESSION_DONUT_R} ${SESSION_DONUT_R} 0 1 1 ${SESSION_DONUT_CX - 0.01} ${SESSION_DONUT_CY - SESSION_DONUT_R} Z`;
-  }
-  const s = sessionDonutPolarToCart(startDeg);
-  const e = sessionDonutPolarToCart(endDeg);
-  const large = endDeg - startDeg > 180 ? 1 : 0;
-  return `M ${SESSION_DONUT_CX} ${SESSION_DONUT_CY} L ${s.x} ${s.y} A ${SESSION_DONUT_R} ${SESSION_DONUT_R} 0 ${large} 1 ${e.x} ${e.y} Z`;
-}
 
 const STUDY_SHORTCUTS = [
   { key: 'Space', descKey: 'settings.shortcutFlip' },
@@ -309,7 +286,7 @@ export default function StudySessionScreen() {
           .filter(({ count }) => count > 0)
           .map(({ color, count }) => {
             const sweepDeg = (count / reviewed) * 360;
-            const path = sessionDonutArcPath(cumDeg, cumDeg + sweepDeg);
+            const path = donutArcPath(cumDeg, cumDeg + sweepDeg);
             cumDeg += sweepDeg;
             return { color, path };
           })
@@ -349,15 +326,15 @@ export default function StudySessionScreen() {
             <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
               {/* ドーナツチャート */}
               <View style={styles.donutContainer}>
-                <Svg width={SESSION_DONUT_SIZE} height={SESSION_DONUT_SIZE}>
-                  <Circle cx={SESSION_DONUT_CX} cy={SESSION_DONUT_CY} r={SESSION_DONUT_R} fill={theme.colors.progressBg} />
+                <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
+                  <Circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R} fill={theme.colors.progressBg} />
                   {donutSlices.map(({ color, path }, i) => (
                     <Path key={i} d={path} fill={color} />
                   ))}
-                  <Circle cx={SESSION_DONUT_CX} cy={SESSION_DONUT_CY} r={SESSION_DONUT_INNER_R} fill={theme.colors.surface} />
+                  <Circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_INNER_R} fill={theme.colors.surface} />
                   <SvgText
-                    x={SESSION_DONUT_CX}
-                    y={SESSION_DONUT_CY + 8}
+                    x={DONUT_CX}
+                    y={DONUT_CY + 8}
                     textAnchor="middle"
                     fontSize={24}
                     fontWeight="700"

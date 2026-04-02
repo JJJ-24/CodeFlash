@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
+import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 
 import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
@@ -43,6 +44,31 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 2, labelKey: 'grade.good',  color: GRADE_COLORS.good  },
   { grade: 3, labelKey: 'grade.easy',  color: GRADE_COLORS.easy  },
 ];
+
+// 学習完了画面のドーナツチャート
+const SESSION_DONUT_SIZE = 160;
+const SESSION_DONUT_CX = SESSION_DONUT_SIZE / 2;
+const SESSION_DONUT_CY = SESSION_DONUT_SIZE / 2;
+const SESSION_DONUT_R = SESSION_DONUT_SIZE / 2;
+const SESSION_DONUT_INNER_R = Math.round(SESSION_DONUT_R * 0.42);
+
+function sessionDonutPolarToCart(angleDeg: number): { x: number; y: number } {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return {
+    x: SESSION_DONUT_CX + SESSION_DONUT_R * Math.cos(rad),
+    y: SESSION_DONUT_CY + SESSION_DONUT_R * Math.sin(rad),
+  };
+}
+
+function sessionDonutArcPath(startDeg: number, endDeg: number): string {
+  if (Math.abs(endDeg - startDeg) >= 359.9) {
+    return `M ${SESSION_DONUT_CX} ${SESSION_DONUT_CY - SESSION_DONUT_R} A ${SESSION_DONUT_R} ${SESSION_DONUT_R} 0 1 1 ${SESSION_DONUT_CX - 0.01} ${SESSION_DONUT_CY - SESSION_DONUT_R} Z`;
+  }
+  const s = sessionDonutPolarToCart(startDeg);
+  const e = sessionDonutPolarToCart(endDeg);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${SESSION_DONUT_CX} ${SESSION_DONUT_CY} L ${s.x} ${s.y} A ${SESSION_DONUT_R} ${SESSION_DONUT_R} 0 ${large} 1 ${e.x} ${e.y} Z`;
+}
 
 const STUDY_SHORTCUTS = [
   { key: 'Space', descKey: 'settings.shortcutFlip' },
@@ -262,6 +288,33 @@ export default function StudySessionScreen() {
 
   // セッション完了画面
   if (completed) {
+    const { again, hard, good, easy } = result.gradeCount;
+    const reviewed = result.reviewed;
+    const totalCards = result.totalCards;
+    const gradeItems: { key: string; count: number; color: string }[] = [
+      { key: t('grade.again'), count: again, color: GRADE_COLORS.again },
+      { key: t('grade.hard'),  count: hard,  color: GRADE_COLORS.hard  },
+      { key: t('grade.good'),  count: good,  color: GRADE_COLORS.good  },
+      { key: t('grade.easy'),  count: easy,  color: GRADE_COLORS.easy  },
+    ];
+    const reviewRate = totalCards > 0 ? Math.round((reviewed / totalCards) * 100) : 0;
+    const correctRate = reviewed > 0 ? Math.round(((hard + good + easy) / reviewed) * 100) : 0;
+    const nextReviewStr = result.earliestNextReview
+      ? result.earliestNextReview.slice(5, 10).replace('-', '/')
+      : null;
+
+    let cumDeg = 0;
+    const donutSlices = reviewed > 0
+      ? gradeItems
+          .filter(({ count }) => count > 0)
+          .map(({ color, count }) => {
+            const sweepDeg = (count / reviewed) * 360;
+            const path = sessionDonutArcPath(cumDeg, cumDeg + sweepDeg);
+            cumDeg += sweepDeg;
+            return { color, path };
+          })
+      : [];
+
     return (
       <>
         <Stack.Screen options={{ title: t('study.title'), headerBackTitle: '', headerBackVisible: false, headerLeft: () => null, headerRight: () => null }} />
@@ -289,63 +342,61 @@ export default function StudySessionScreen() {
           <Ionicons name="checkmark-circle" size={80} color="#43A047" />
           <Text style={[styles.completeTitle, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{t('study.complete')}</Text>
           <Text style={[styles.completeCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-            {t('study.reviewedCount', { count: result.reviewed })}
+            {t('study.reviewedOf', { reviewed, total: totalCards })}
           </Text>
 
-          {result.reviewed > 0 && (() => {
-            const { again, hard, good, easy } = result.gradeCount;
-            const total = result.reviewed;
-            const gradeItems: { key: string; count: number; color: string }[] = [
-              { key: t('grade.again'), count: again, color: '#E53935' },
-              { key: t('grade.hard'),  count: hard,  color: '#F57C00' },
-              { key: t('grade.good'),  count: good,  color: '#43A047' },
-              { key: t('grade.easy'),  count: easy,  color: '#1976D2' },
-            ];
-            const correctRate = Math.round(((hard + good + easy) / total) * 100);
-            const nextReviewStr = result.earliestNextReview
-              ? result.earliestNextReview.slice(5, 10).replace('-', '/')
-              : null;
-
-            return (
-              <View style={styles.summaryCard}>
-                {/* グレード分布バー */}
-                <View style={styles.gradeBar}>
-                  {gradeItems.map(({ key, count, color }) =>
-                    count > 0 ? (
-                      <View
-                        key={key}
-                        style={[styles.gradeBarSegment, { flex: count / total, backgroundColor: color }]}
-                      />
-                    ) : null
-                  )}
-                </View>
-
-                {/* グレード別枚数 */}
-                <View style={styles.summaryGradeRow}>
-                  {gradeItems.map(({ key, count, color }) => (
-                    <View key={key} style={styles.gradeItem}>
-                      <Text style={[styles.gradeItemCount, { color, fontSize: theme.fontSize.lg }]}>{count}</Text>
-                      <Text style={[styles.gradeItemLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{key}</Text>
-                    </View>
+          {reviewed > 0 && (
+            <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+              {/* ドーナツチャート */}
+              <View style={styles.donutContainer}>
+                <Svg width={SESSION_DONUT_SIZE} height={SESSION_DONUT_SIZE}>
+                  <Circle cx={SESSION_DONUT_CX} cy={SESSION_DONUT_CY} r={SESSION_DONUT_R} fill={theme.colors.progressBg} />
+                  {donutSlices.map(({ color, path }, i) => (
+                    <Path key={i} d={path} fill={color} />
                   ))}
-                </View>
-
-                {/* 正答率 + 次回予定 */}
-                <View style={[styles.statRow, { borderTopColor: theme.colors.border }]}>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{correctRate}%</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.correctRate')}</Text>
-                  </View>
-                  {nextReviewStr && (
-                    <View style={styles.statItem}>
-                      <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{nextReviewStr}</Text>
-                      <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.nextReview')}</Text>
-                    </View>
-                  )}
-                </View>
+                  <Circle cx={SESSION_DONUT_CX} cy={SESSION_DONUT_CY} r={SESSION_DONUT_INNER_R} fill={theme.colors.surface} />
+                  <SvgText
+                    x={SESSION_DONUT_CX}
+                    y={SESSION_DONUT_CY + 8}
+                    textAnchor="middle"
+                    fontSize={24}
+                    fontWeight="700"
+                    fill={theme.colors.primary}
+                  >
+                    {reviewed}
+                  </SvgText>
+                </Svg>
               </View>
-            );
-          })()}
+
+              {/* グレード別枚数 */}
+              <View style={[styles.summaryGradeRow, { borderTopColor: theme.colors.border }]}>
+                {gradeItems.map(({ key, count, color }) => (
+                  <View key={key} style={styles.gradeItem}>
+                    <Text style={[styles.gradeItemCount, { color, fontSize: theme.fontSize.lg }]}>{count}</Text>
+                    <Text style={[styles.gradeItemLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{key}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* 評価率・正答率・次回予定 */}
+              <View style={[styles.statRow, { borderTopColor: theme.colors.border }]}>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{reviewRate}%</Text>
+                  <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.reviewRate')}</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{correctRate}%</Text>
+                  <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.correctRate')}</Text>
+                </View>
+                {nextReviewStr && (
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{nextReviewStr}</Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.nextReview')}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: theme.colors.primary }]}
@@ -764,22 +815,23 @@ const styles = StyleSheet.create({
   summaryCard: {
     width: '100%',
     borderRadius: 16,
-    overflow: 'hidden',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  gradeBar: {
-    flexDirection: 'row',
-    height: 10,
-    borderRadius: 5,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  gradeBarSegment: {
-    height: 10,
+  donutContainer: {
+    alignItems: 'center',
+    paddingBottom: 4,
   },
   summaryGradeRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   gradeItem: {
     alignItems: 'center',

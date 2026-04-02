@@ -1,15 +1,19 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useRef, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -39,14 +43,24 @@ function sumValues(map: Record<string, number>): number {
   return Object.values(map).reduce((s, v) => s + v, 0);
 }
 
+const STUDY_SHORTCUTS = [
+  { key: '1–4',   descKey: 'settings.shortcutFilterSwitch' },
+  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
+  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'Space', descKey: 'settings.shortcutStartStudy' },
+  { key: 'S',     descKey: 'settings.shortcutToggleShuffle' },
+  { key: 'Q',     descKey: 'settings.shortcutToggleTab' },
+];
+
 export default function StudyScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
+  const navigation = useNavigation();
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
-  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled } = useSettingsStore();
+  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled } = useSettingsStore();
 
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
@@ -59,7 +73,33 @@ export default function StudyScreen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('decks');
   const [activeFilter, setActiveFilter] = useState<Filter>('review');
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
   const fromSessionRef = useRef(false);
+  const keyboardRef = useRef<TextInput>(null);
+  const isScreenFocusedRef = useRef(false);
+  const listRef = useRef<FlatList<any>>(null);
+
+  useLayoutEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (navigation as any).setOptions({
+      headerRight: keyboardShortcutsEnabled ? () => (
+        <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
+          <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+        </Pressable>
+      ) : undefined,
+      headerRightContainerStyle: keyboardShortcutsEnabled ? { paddingRight: 8 } : undefined,
+    });
+  }, [keyboardShortcutsEnabled, theme]);
+
+  useEffect(() => {
+    setFocusedItemIndex(null);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (focusedItemIndex === null) return;
+    listRef.current?.scrollToIndex({ index: focusedItemIndex, animated: true, viewPosition: 0.5 });
+  }, [focusedItemIndex]);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,6 +109,8 @@ export default function StudyScreen() {
       }
       const isFromSession = fromSessionRef.current;
       fromSessionRef.current = false;
+      isScreenFocusedRef.current = true;
+      setTimeout(() => keyboardRef.current?.focus(), 100);
       (async () => {
         if (!isFromSession) setLoading(true);
         const [
@@ -97,6 +139,7 @@ export default function StudyScreen() {
         setTotalPerTag(totalTag);
         setLoading(false);
       })();
+      return () => { isScreenFocusedRef.current = false; };
     }, [db, initialFilterPreference])
   );
 
@@ -122,6 +165,47 @@ export default function StudyScreen() {
       new: todayCreatedPerTag[tag.id] ?? 0,
     };
     return makeDisplayInfo(counts[activeFilter]);
+  }
+
+  function handleKeyPress({ nativeEvent: { key } }: { nativeEvent: { key: string } }) {
+    if (key === '1') { setActiveFilter('all'); setFocusedItemIndex(null); }
+    else if (key === '2') { setActiveFilter('learned'); setFocusedItemIndex(null); }
+    else if (key === '3') { setActiveFilter('review'); setFocusedItemIndex(null); }
+    else if (key === '4') { setActiveFilter('new'); setFocusedItemIndex(null); }
+    else if (key === 's' || key === 'S') { setShuffleEnabled(!shuffleEnabled); }
+    else if (key === 'q' || key === 'Q') {
+      setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
+    }
+    else if (key === 't' || key === 'T') {
+      const items = activeTab === 'decks' ? decks : tags;
+      setFocusedItemIndex(prev => {
+        if (prev === null) return items.length > 0 ? 0 : null;
+        return prev >= items.length - 1 ? null : prev + 1;
+      });
+    }
+    else if (key === 'y' || key === 'Y') {
+      const items = activeTab === 'decks' ? decks : tags;
+      setFocusedItemIndex(prev => {
+        if (prev === null) return items.length > 0 ? items.length - 1 : null;
+        return prev <= 0 ? null : prev - 1;
+      });
+    }
+    else if (key === ' ') {
+      if (focusedItemIndex === null) return;
+      const items = activeTab === 'decks' ? decks : tags;
+      const item = items[focusedItemIndex];
+      if (!item) return;
+      const info = activeTab === 'decks'
+        ? getDeckDisplayInfo(item as Deck)
+        : getTagDisplayInfo(item as Tag);
+      if (!info.tappable) return;
+      fromSessionRef.current = true;
+      if (activeTab === 'decks') {
+        router.push({ pathname: '/study/session', params: { deckId: (item as Deck).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
+      } else {
+        router.push({ pathname: '/study/session', params: { tagId: (item as Tag).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
+      }
+    }
   }
 
   const totalAll = activeTab === 'decks'
@@ -237,20 +321,24 @@ export default function StudyScreen() {
           </View>
         ) : (
           <FlatList
+            ref={listRef}
             data={decks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
+            onScrollToIndexFailed={() => {}}
             ItemSeparatorComponent={() => (
               <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
             )}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getDeckDisplayInfo(item);
+              const isFocused = focusedItemIndex === index;
               return (
                 <Pressable
                   style={[
                     styles.deckRow,
                     { backgroundColor: theme.colors.surface },
                     !tappable && styles.deckRowDimmed,
+                    isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                   ]}
                   onPress={() => {
                     if (!tappable) return;
@@ -294,20 +382,24 @@ export default function StudyScreen() {
           </View>
         ) : (
           <FlatList
+            ref={listRef}
             data={tags}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
+            onScrollToIndexFailed={() => {}}
             ItemSeparatorComponent={() => (
               <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
             )}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getTagDisplayInfo(item);
+              const isFocused = focusedItemIndex === index;
               return (
                 <Pressable
                   style={[
                     styles.deckRow,
                     { backgroundColor: theme.colors.surface },
                     !tappable && styles.deckRowDimmed,
+                    isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                   ]}
                   onPress={() => {
                     if (!tappable) return;
@@ -340,6 +432,47 @@ export default function StudyScreen() {
           />
         )
       )}
+
+      {/* 隠しキーボード入力 */}
+      <TextInput
+        ref={keyboardRef}
+        style={styles.hiddenKeyboardInput}
+        showSoftInputOnFocus={false}
+        keyboardType="ascii-capable"
+        onKeyPress={handleKeyPress}
+        onBlur={() => {
+          setTimeout(() => {
+            if (isScreenFocusedRef.current) keyboardRef.current?.focus();
+          }, 50);
+        }}
+      />
+
+      {/* ショートカット一覧モーダル */}
+      <Modal
+        visible={showShortcutsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowShortcutsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowShortcutsModal(false)} />
+          <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+              {t('settings.keyboardShortcuts')}
+            </Text>
+            <ScrollView>
+              {STUDY_SHORTCUTS.map(({ key, descKey }) => (
+                <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
+                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>{key}</Text>
+                  </View>
+                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>{t(descKey)}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -348,6 +481,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyText: {},
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
 
   filterSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 24 },
   summaryRow: { flexDirection: 'row', gap: 8 },
@@ -400,4 +534,10 @@ const styles = StyleSheet.create({
   },
   dueChipText: { fontWeight: '700', color: '#FFF' },
   tagColorDot: { width: 16, height: 16, borderRadius: 8 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 24, gap: 16, maxHeight: '60%' },
+  modalTitle: { fontWeight: '700' },
+  shortcutRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  keyBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, minWidth: 56, alignItems: 'center' },
 });

@@ -31,6 +31,9 @@ export function useStudySession() {
   const [completed, setCompleted] = useState(false);
   const [result, setResult] = useState<SessionResult>({ totalCards: 0, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
 
+  // カードごとの評価履歴: 戻って再評価しない場合も最初の評価を保持する
+  const gradedCardsRef = useRef<Map<string, { grade: Grade; nextReviewDate: string }>>(new Map());
+
   // レンダーごとに同期 — useFocusEffect から呼ばれる refreshCurrentCard が常に最新値を参照できる
   const queueRef = useRef<Card[]>([]);
   const currentIndexRef = useRef(0);
@@ -69,6 +72,7 @@ export function useStudySession() {
           }
         }
 
+        gradedCardsRef.current = new Map();
         setQueue(cards);
         setResult({ totalCards: cards.length, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
         if (cards.length === 0) setCompleted(true);
@@ -82,7 +86,6 @@ export function useStudySession() {
   const goBack = useCallback(() => {
     if (currentIndex <= 0) return;
     setCurrentIndex((i) => i - 1);
-    setResult((r) => ({ ...r, reviewed: Math.max(0, r.reviewed - 1) }));
   }, [currentIndex]);
 
   const goNext = useCallback(() => {
@@ -105,15 +108,24 @@ export function useStudySession() {
 
       await saveReview(db, { cardId: card.id, ...reviewResult, lastGrade: grade });
 
-      const gradeKey = (['again', 'hard', 'good', 'easy'] as const)[grade];
+      // カードごとの評価を記録（同一カードを再評価した場合は上書き）
+      gradedCardsRef.current.set(card.id, { grade, nextReviewDate: reviewResult.nextReviewDate });
+
+      // Map から集計し直す（戻って再評価しないカードの評価も保持される）
+      const gradeCount = { again: 0, hard: 0, good: 0, easy: 0 };
+      let earliestNextReview: string | null = null;
+      for (const { grade: g, nextReviewDate } of gradedCardsRef.current.values()) {
+        const key = (['again', 'hard', 'good', 'easy'] as const)[g];
+        gradeCount[key]++;
+        if (earliestNextReview === null || nextReviewDate < earliestNextReview) {
+          earliestNextReview = nextReviewDate;
+        }
+      }
       setResult((r) => ({
         ...r,
-        reviewed: r.reviewed + 1,
-        gradeCount: { ...r.gradeCount, [gradeKey]: r.gradeCount[gradeKey] + 1 },
-        earliestNextReview:
-          r.earliestNextReview === null || reviewResult.nextReviewDate < r.earliestNextReview
-            ? reviewResult.nextReviewDate
-            : r.earliestNextReview,
+        reviewed: gradedCardsRef.current.size,
+        gradeCount,
+        earliestNextReview,
       }));
       goNext();
     },

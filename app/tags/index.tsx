@@ -40,9 +40,6 @@ export default function TagsScreen() {
     ]);
   }
 
-  const TAG_LIMIT = 12;
-  const isAtLimit = tags.length >= TAG_LIMIT;
-
   useFocusEffect(
     useCallback(() => {
       getAllTags(db).then(setTags);
@@ -73,11 +70,6 @@ export default function TagsScreen() {
             reorderTags(data);
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
-          ListFooterComponent={isAtLimit ? (
-            <Text style={[styles.limitMsg, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
-              {t('tag.limitReached', { count: TAG_LIMIT })}
-            </Text>
-          ) : null}
           renderItem={({ item, drag }: RenderItemParams<TagWithCount>) => (
             <ScaleDecorator>
               <Pressable
@@ -109,8 +101,8 @@ export default function TagsScreen() {
 
       {/* FAB */}
       <Pressable
-        style={[styles.fab, { backgroundColor: theme.colors.primary }, isAtLimit && styles.fabDisabled]}
-        onPress={isAtLimit ? undefined : () => router.push('/tags/new')}
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        onPress={() => router.push('/tags/new')}
       >
         <Ionicons name="add" size={28} color="#FFF" />
       </Pressable>
@@ -178,6 +170,4 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
-  fabDisabled: { opacity: 0.4 },
-  limitMsg: { textAlign: 'center', paddingVertical: 12 },
 });

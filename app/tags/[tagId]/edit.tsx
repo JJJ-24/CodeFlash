@@ -41,6 +41,7 @@ export default function EditTagScreen() {
   const [name, setName] = useState(existingTag?.name ?? '');
   const [color, setColor] = useState(existingTag?.color ?? PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (existingTag) {
@@ -55,6 +56,10 @@ export default function EditTagScreen() {
     if (!existingTag) return;
     const trimmed = name.trim();
     if (!trimmed) return;
+    if (tags.some((tag) => tag.name === trimmed && tag.id !== tagId)) {
+      setError(t('tag.duplicateName'));
+      return;
+    }
     setSaving(true);
     try {
       await updateTag(db, tagId, { name: trimmed, color });
@@ -116,9 +121,12 @@ export default function EditTagScreen() {
               placeholder={t('tag.namePlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
-              onChangeText={setName}
+              onChangeText={(v) => { setName(v); setError(''); }}
               autoFocus
             />
+            {!!error && (
+              <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }}>{error}</Text>
+            )}
           </View>
 
           <View style={styles.field}>

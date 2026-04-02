@@ -71,7 +71,8 @@
     "save": "保存",
     "empty": "タグがまだありません",
     "emptySub": "+ ボタンからタグを作成しましょう",
-    "cards": "{{count}} 枚"
+    "cards": "{{count}} 枚",
+    "duplicateName": "同じ名前のタグがすでに存在します"
   },
   "grade": {
     "again": "もう一度",

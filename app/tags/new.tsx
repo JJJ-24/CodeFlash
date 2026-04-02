@@ -31,18 +31,23 @@ export default function NewTagScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { addTag } = useTagStore();
+  const { tags, addTag } = useTagStore();
   const { bottom: bottomInset } = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const canSave = !!name.trim() && !saving;
 
   async function handleSave() {
     const trimmed = name.trim();
     if (!trimmed) return;
+    if (tags.some((tag) => tag.name === trimmed)) {
+      setError(t('tag.duplicateName'));
+      return;
+    }
     setSaving(true);
     try {
       const tag = await createTag(db, { name: trimmed, color });
@@ -88,9 +93,12 @@ export default function NewTagScreen() {
               placeholder={t('tag.namePlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
-              onChangeText={setName}
+              onChangeText={(v) => { setName(v); setError(''); }}
               autoFocus
             />
+            {!!error && (
+              <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }}>{error}</Text>
+            )}
           </View>
 
           <View style={styles.field}>

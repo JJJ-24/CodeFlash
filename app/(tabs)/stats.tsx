@@ -173,8 +173,8 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
 const pieStyles = StyleSheet.create({
   container: { alignItems: 'center', gap: 12, paddingVertical: 8 },
   learnedHeader: {},
-  gradeGrid: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', paddingTop: 4 },
-  gradeGridItem: { alignItems: 'center', gap: 2, minWidth: 44 },
+  gradeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16, paddingTop: 4, width: '100%' },
+  gradeGridItem: { alignItems: 'center', gap: 2, minWidth: 52 },
   gradeGridCount: { fontWeight: '700' },
   gradeGridLabel: {},
   gradeGridPct: {},

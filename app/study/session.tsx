@@ -570,7 +570,7 @@ export default function StudySessionScreen() {
                 {sessionTitle}
               </Text>
               {keyboardShortcutsEnabled && (
-                <MaterialIcons name="keyboard" size={18} color={theme.colors.textSecondary} />
+                <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
               )}
             </Pressable>
           ),

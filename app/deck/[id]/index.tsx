@@ -422,7 +422,7 @@ export default function DeckDetailScreen() {
               <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
                 {deck.name}
               </Text>
-              <MaterialIcons name="keyboard" size={18} color={theme.colors.textSecondary} />
+              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             </Pressable>
           ),
           headerBackTitle: '',

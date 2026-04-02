@@ -318,12 +318,12 @@ export default function StudySessionScreen() {
         <View style={[styles.completeScreen, { backgroundColor: theme.colors.background }]}>
           <Ionicons name="checkmark-circle" size={80} color="#43A047" />
           <Text style={[styles.completeTitle, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{t('study.complete')}</Text>
-          <Text style={[styles.completeCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-            {t('study.reviewedOf', { reviewed, total: totalCards })}
-          </Text>
-
           {reviewed > 0 && (
             <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
+              {/* 評価済み ◯/◯ 枚 */}
+              <Text style={[styles.completeCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, textAlign: 'center' }]}>
+                {t('study.reviewedOf', { reviewed, total: totalCards })}
+              </Text>
               {/* ドーナツチャート */}
               <View style={styles.donutContainer}>
                 <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
@@ -346,7 +346,7 @@ export default function StudySessionScreen() {
               </View>
 
               {/* グレード別枚数 */}
-              <View style={[styles.summaryGradeRow, { borderTopColor: theme.colors.border }]}>
+              <View style={styles.summaryGradeRow}>
                 {gradeItems.map(({ key, count, color }) => (
                   <View key={key} style={styles.gradeItem}>
                     <Text style={[styles.gradeItemCount, { color, fontSize: theme.fontSize.lg }]}>{count}</Text>
@@ -356,7 +356,7 @@ export default function StudySessionScreen() {
               </View>
 
               {/* 評価率・正答率・次回予定 */}
-              <View style={[styles.statRow, { borderTopColor: theme.colors.border }]}>
+              <View style={styles.statRow}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{reviewRate}%</Text>
                   <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.reviewRate')}</Text>
@@ -801,25 +801,29 @@ const styles = StyleSheet.create({
   },
   donutContainer: {
     alignItems: 'center',
+    paddingTop: 20,
     paddingBottom: 4,
   },
   summaryGradeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: StyleSheet.hairlineWidth,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
     paddingTop: 16,
     paddingBottom: 16,
   },
   gradeItem: {
     alignItems: 'center',
     gap: 2,
+    minWidth: 52,
   },
   gradeItemCount: { fontWeight: '700' },
   gradeItemLabel: {},
   statRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: StyleSheet.hairlineWidth,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 32,
     paddingTop: 14,
   },
   statItem: {

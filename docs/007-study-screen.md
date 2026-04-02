@@ -38,6 +38,12 @@
 - [x] `app/study/session.tsx` — 学習セッション画面
 - [x] デッキ詳細の「学習開始」ボタン接続
 
+### シャッフル
+- [x] 学習タブの「学習一覧」行右端にシャッフルトグルボタン（ソートボタンと同形状）
+- [x] ON/OFF は `useSettingsStore.shuffleEnabled` で AsyncStorage 永続化
+- [x] `useStudySession.loadSession` の `shuffle` パラメータで Fisher-Yates シャッフルを実行
+- [x] セッション開始時に `params: { shuffle: '1' | '0' }` を渡して `session.tsx` で受け取る
+
 ### i18n
 - [x] 学習画面テキストの翻訳キー追加（study.* / grade.*）
 

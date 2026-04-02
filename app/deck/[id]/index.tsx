@@ -455,9 +455,14 @@ export default function DeckDetailScreen() {
       {displayedCards.length === 0 ? (
         <View style={styles.emptyCards}>
           <Ionicons name="card-outline" size={64} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyCardsText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
+          <Text style={[styles.emptyCardsText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, fontWeight: '600' }]}>
             {selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
           </Text>
+          {selectedFilter === 'all' && (
+            <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.md }}>
+              {t('deck.noCardsSub')}
+            </Text>
+          )}
         </View>
       ) : (
         <DraggableFlatList

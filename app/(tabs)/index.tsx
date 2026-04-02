@@ -172,7 +172,7 @@ export default function HomeScreen() {
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
             {t('home.empty')}
           </Text>
-          <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+          <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
             {t('home.emptySub')}
           </Text>
         </View>

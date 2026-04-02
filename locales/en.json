@@ -25,6 +25,7 @@
     "save": "Save",
     "study": "Start Studying",
     "noCards": "No cards yet",
+    "noCardsSub": "Tap the + button to create your first card",
     "noCardsInFilter": "No matching cards"
   },
   "study": {

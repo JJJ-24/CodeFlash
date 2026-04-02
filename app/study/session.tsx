@@ -379,7 +379,7 @@ export default function StudySessionScreen() {
   );
 
   const memoBlock = hasMemo && (
-    <View style={styles.memoSection}>
+    <View style={styles.memoSection} onTouchStart={suppress}>
       {memoToggle}
       {showMemo && (
         <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>

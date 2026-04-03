@@ -87,6 +87,22 @@ export async function removeTagFromCard(
   await db.runAsync('DELETE FROM card_tags WHERE cardId = ? AND tagId = ?', [cardId, tagId]);
 }
 
+/** デッキ内全カードのタグ行を一括取得（エクスポート用） */
+export async function getTagRowsByDeckId(
+  db: SQLiteDatabase,
+  deckId: string
+): Promise<{ cardId: string; name: string }[]> {
+  return db.getAllAsync<{ cardId: string; name: string }>(
+    `SELECT ct.cardId, t.name
+     FROM card_tags ct
+     JOIN tags t ON ct.tagId = t.id
+     JOIN cards c ON ct.cardId = c.id
+     WHERE c.deckId = ?
+     ORDER BY ct.cardId, t.name ASC`,
+    [deckId]
+  );
+}
+
 /** タグに紐付くカードIDを取得（デッキ横断） */
 export async function getCardIdsByTagId(db: SQLiteDatabase, tagId: string): Promise<string[]> {
   const rows = await db.getAllAsync<{ cardId: string }>(

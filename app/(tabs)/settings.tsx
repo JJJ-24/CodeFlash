@@ -222,8 +222,9 @@ export default function SettingsScreen() {
       try {
         setLoading(true);
         const { created, updated } = await importTsv(db, uri, deck.id);
-        const updatedDecks = await getAllDecks(db);
+        const [updatedDecks, updatedTags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
         setDecks(updatedDecks);
+        setTags(updatedTags);
         Alert.alert(t('dataManagement.tsvImportSuccess', { created, updated }));
       } catch {
         Alert.alert(t('dataManagement.tsvImportError'));

@@ -268,11 +268,14 @@ export default function StudySessionScreen() {
     const { again, hard, good, easy } = result.gradeCount;
     const reviewed = result.reviewed;
     const totalCards = result.totalCards;
+    const skipped = totalCards - reviewed;
+    const skipColor = theme.dark ? '#6B7280' : '#9CA3AF';
     const gradeItems: { key: string; count: number; color: string }[] = [
-      { key: t('grade.again'), count: again, color: GRADE_COLORS.again },
-      { key: t('grade.hard'),  count: hard,  color: GRADE_COLORS.hard  },
-      { key: t('grade.good'),  count: good,  color: GRADE_COLORS.good  },
-      { key: t('grade.easy'),  count: easy,  color: GRADE_COLORS.easy  },
+      { key: t('grade.again'), count: again,   color: GRADE_COLORS.again },
+      { key: t('grade.hard'),  count: hard,    color: GRADE_COLORS.hard  },
+      { key: t('grade.good'),  count: good,    color: GRADE_COLORS.good  },
+      { key: t('grade.easy'),  count: easy,    color: GRADE_COLORS.easy  },
+      ...(skipped > 0 ? [{ key: t('study.skipped'), count: skipped, color: skipColor }] : []),
     ];
     const reviewRate = totalCards > 0 ? Math.round((reviewed / totalCards) * 100) : 0;
     const correctRate = reviewed > 0 ? Math.round(((hard + good + easy) / reviewed) * 100) : 0;
@@ -286,11 +289,11 @@ export default function StudySessionScreen() {
       : null;
 
     let cumDeg = 0;
-    const donutSlices = reviewed > 0
+    const donutSlices = totalCards > 0
       ? gradeItems
           .filter(({ count }) => count > 0)
           .map(({ color, count }) => {
-            const sweepDeg = (count / reviewed) * 360;
+            const sweepDeg = (count / totalCards) * 360;
             const path = donutArcPath(cumDeg, cumDeg + sweepDeg);
             cumDeg += sweepDeg;
             return { color, path };
@@ -351,7 +354,7 @@ export default function StudySessionScreen() {
               </View>
 
               {/* グレード別枚数 */}
-              <View style={styles.summaryGradeRow}>
+              <View style={[styles.summaryGradeRow, { gap: Math.max(2, Math.min(16, Math.floor((screenWidth - 104 - gradeItems.length * 44) / Math.max(1, gradeItems.length - 1)))) }]}>
                 {gradeItems.map(({ key, count, color }) => (
                   <View key={key} style={styles.gradeItem}>
                     <Text style={[styles.gradeItemCount, { color, fontSize: theme.fontSize.lg }]}>{count}</Text>
@@ -811,16 +814,14 @@ const styles = StyleSheet.create({
   },
   summaryGradeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 16,
     paddingTop: 16,
     paddingBottom: 16,
   },
   gradeItem: {
     alignItems: 'center',
     gap: 2,
-    minWidth: 52,
+    minWidth: 44,
   },
   gradeItemCount: { fontWeight: '700' },
   gradeItemLabel: {},

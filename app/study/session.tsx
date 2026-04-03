@@ -69,7 +69,7 @@ export default function StudySessionScreen() {
   const { deckId, tagId, filter, shuffle } = useLocalSearchParams<{ deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned'; shuffle?: string }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const db = useSQLiteContext();
   const { loading, completed, currentCard, currentIndex, result, loadSession, submitGrade, goBack, goNext, refreshCurrentCard } =
@@ -277,7 +277,12 @@ export default function StudySessionScreen() {
     const reviewRate = totalCards > 0 ? Math.round((reviewed / totalCards) * 100) : 0;
     const correctRate = reviewed > 0 ? Math.round(((hard + good + easy) / reviewed) * 100) : 0;
     const nextReviewStr = result.earliestNextReview
-      ? result.earliestNextReview.slice(5, 10).replace('-', '/')
+      ? (() => {
+          const [, m, d] = result.earliestNextReview.slice(0, 10).split('-').map(Number);
+          if (i18n.language === 'ja') return `${m}月${d}日`;
+          const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          return `${MONTHS[m - 1]} ${d}`;
+        })()
       : null;
 
     let cumDeg = 0;

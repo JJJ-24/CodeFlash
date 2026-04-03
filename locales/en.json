@@ -52,7 +52,7 @@
     "filterDescLearned": "Studied today",
     "filterDescReview": "Cards to study",
     "filterDescNew": "New cards today",
-    "reviewedOf": "Reviewed {{reviewed}} / {{total}} cards",
+    "reviewedOf": "Studied {{reviewed}} / {{total}} cards",
     "reviewRate": "Review Rate",
     "correctRate": "Correct",
     "nextReview": "Next Review",

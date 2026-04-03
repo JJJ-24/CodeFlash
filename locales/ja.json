@@ -52,7 +52,7 @@
     "filterDescLearned": "今日学習したカード",
     "filterDescReview": "学習が必要なカード",
     "filterDescNew": "今日作成したカード",
-    "reviewedOf": "評価済み {{reviewed}} / {{total}} 枚",
+    "reviewedOf": "学習済み {{reviewed}} / {{total}} 枚",
     "reviewRate": "評価率",
     "correctRate": "正答率",
     "nextReview": "次回予定",

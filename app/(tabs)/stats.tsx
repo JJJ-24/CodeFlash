@@ -49,7 +49,8 @@ function getStreakMedal(streak: number): MedalInfo {
   return null;
 }
 
-function masteryPercent(avgEase: number): number {
+function masteryPercent(avgEase: number | null): number {
+  if (avgEase == null) return 0;
   return Math.round(((avgEase - EASE_MIN) / (EASE_MAX - EASE_MIN)) * 100);
 }
 
@@ -61,7 +62,7 @@ function masteryColor(pct: number): string {
 }
 
 type ScheduleItem = { date: string; count: number };
-type MasteryItem = { deckId: string; avgEase: number; learnedCount: number; newCount: number };
+type MasteryItem = { deckId: string; avgEase: number | null; learnedCount: number; newCount: number };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
 type GradeDistribution = { again: number; hard: number; normal: number; easy: number; unlearned: number };
 

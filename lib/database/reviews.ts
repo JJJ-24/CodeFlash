@@ -363,8 +363,8 @@ export async function getDeckGradeDistribution(
 /** デッキ別習熟度（easeFactor 平均 + 学習済み枚数 + 新規枚数）、ホーム画面のデッキ順に返す */
 export async function getDeckMasteryList(
   db: SQLiteDatabase
-): Promise<{ deckId: string; avgEase: number; learnedCount: number; newCount: number }[]> {
-  return db.getAllAsync<{ deckId: string; avgEase: number; learnedCount: number; newCount: number }>(
+): Promise<{ deckId: string; avgEase: number | null; learnedCount: number; newCount: number }[]> {
+  return db.getAllAsync<{ deckId: string; avgEase: number | null; learnedCount: number; newCount: number }>(
     `SELECT c.deckId,
             AVG(r.easeFactor) as avgEase,
             COUNT(r.cardId) as learnedCount,

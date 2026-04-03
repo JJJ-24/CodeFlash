@@ -61,7 +61,7 @@ function masteryColor(pct: number): string {
 }
 
 type ScheduleItem = { date: string; count: number };
-type MasteryItem = { deckId: string; avgEase: number; learnedCount: number };
+type MasteryItem = { deckId: string; avgEase: number; learnedCount: number; newCount: number };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
 type GradeDistribution = { again: number; hard: number; normal: number; easy: number; unlearned: number };
 
@@ -237,7 +237,7 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
         <View style={[styles.masteryBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
       <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>
-        {t('stats.learned')}: {mastery.learnedCount} {t('stats.cards')}
+        {t('stats.learned')}: {mastery.learnedCount}{'        '}{t('stats.unlearned')}: {mastery.newCount}
       </Text>
     </Pressable>
   );

@@ -66,8 +66,10 @@ export default function DeckDetailScreen() {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(
     () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
   );
+  const lastFocusTimeRef = useRef(0);
   const keyboardRef = useRef<TextInput>(null);
   const isScreenFocusedRef = useRef(false);
+  const keyboardFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<FlatList<Card>>(null);
   const scrollOffsetRef = useRef(0);
   const SCROLL_STEP = 200;
@@ -136,9 +138,18 @@ export default function DeckDetailScreen() {
         return;
       }
       isScreenFocusedRef.current = true;
+      lastFocusTimeRef.current = Date.now();
       loadCards();
-      setTimeout(() => keyboardRef.current?.focus(), 100);
-      return () => { isScreenFocusedRef.current = false; };
+      keyboardFocusTimerRef.current = setTimeout(() => {
+        if (isScreenFocusedRef.current) keyboardRef.current?.focus();
+      }, 100);
+      return () => {
+        isScreenFocusedRef.current = false;
+        if (keyboardFocusTimerRef.current !== null) {
+          clearTimeout(keyboardFocusTimerRef.current);
+          keyboardFocusTimerRef.current = null;
+        }
+      };
     }, [loadCards])
   );
 
@@ -426,6 +437,15 @@ export default function DeckDetailScreen() {
             </Pressable>
           ),
           headerBackTitle: '',
+          headerLeft: () => (
+            <Pressable
+              onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+              style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              hitSlop={8}
+            >
+              <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+            </Pressable>
+          ),
           headerRight: () => (
             <Pressable
               onPress={() => {
@@ -588,7 +608,7 @@ export default function DeckDetailScreen() {
       ) : (
         <>
           {/* FAB: 戻る */}
-          <Pressable style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>
+          <Pressable style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]} onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}>
             <Ionicons name="chevron-back" size={28} color="#FFF" />
           </Pressable>
 

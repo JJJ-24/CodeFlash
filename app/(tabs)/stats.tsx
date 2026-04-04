@@ -25,6 +25,7 @@ import {
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
+import { EmptyState } from '@/components/EmptyState';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import type { Deck } from '@/types';
 
@@ -357,13 +358,7 @@ export default function StatsScreen() {
   if (!hasData && total === 0) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
-        <Ionicons name="bar-chart-outline" size={64} color={theme.colors.iconSubtle} />
-        <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-          {t('stats.empty')}
-        </Text>
-        <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
-          {t('stats.emptySub')}
-        </Text>
+        <EmptyState icon="bar-chart-outline" title={t('stats.empty')} subtitle={t('stats.emptySub')} />
       </View>
     );
   }
@@ -583,8 +578,6 @@ const styles = StyleSheet.create({
   summarySection: { paddingHorizontal: 16, paddingTop: 16 },
   content: { paddingHorizontal: 16, paddingBottom: 32, gap: 4 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { fontWeight: '600' },
-  emptySubText: { textAlign: 'center', paddingHorizontal: 40 },
 
   // Summary row
   summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },

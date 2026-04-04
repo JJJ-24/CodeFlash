@@ -22,6 +22,7 @@ import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
 
 import { BlocksView } from '@/components/study/BlocksView';
 import { FlipCard, type FlipCardRef } from '@/components/study/FlipCard';
+import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { LinksSheet } from '@/components/study/LinksSheet';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useCodeBlockSelection } from '@/hooks/useCodeBlockSelection';
@@ -76,7 +77,7 @@ export default function StudySessionScreen() {
     useStudySession();
 
   // モーダル遷移中は onBlur による自動再フォーカスを抑制するためのフラグ
-  const isScreenFocusedRef = useRef(true);
+  const { keyboardRef, isScreenFocusedRef, onScreenBlur } = useKeyboardFocus();
   useFocusEffect(
     useCallback(() => {
       isScreenFocusedRef.current = true;
@@ -85,7 +86,7 @@ export default function StudySessionScreen() {
       setTimeout(() => {
         if (!codeEditingRef.current) keyboardRef.current?.focus();
       }, 100);
-      return () => { isScreenFocusedRef.current = false; };
+      return () => { onScreenBlur(); };
     }, [refreshCurrentCard])
   );
 
@@ -122,7 +123,6 @@ export default function StudySessionScreen() {
   const frontScrollYRef = useRef(0);
   const backScrollYRef = useRef(0);
   const completeRef = useRef<TextInput>(null);
-  const keyboardRef = useRef<TextInput>(null);
   const completeReadyRef = useRef(false);
 
   const cbs = useCodeBlockSelection();

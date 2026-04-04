@@ -8,13 +8,20 @@ interface ShortcutItem {
   descKey: string;
 }
 
+interface ShortcutSection {
+  title: string;
+  items: ShortcutItem[];
+}
+
 interface Props {
   visible: boolean;
   onClose: () => void;
-  shortcuts: ShortcutItem[];
+  shortcuts?: ShortcutItem[];
+  sections?: ShortcutSection[];
+  maxHeight?: string | number;
 }
 
-export function ShortcutsModal({ visible, onClose, shortcuts }: Props) {
+export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeight = '70%' }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -22,23 +29,45 @@ export function ShortcutsModal({ visible, onClose, shortcuts }: Props) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.colors.surface, maxHeight }]}>
           <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
             {t('settings.keyboardShortcuts')}
           </Text>
           <ScrollView>
-            {shortcuts.map((item) => (
-              <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
-                <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                  <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
-                    {item.key}
+            {sections ? (
+              sections.map((section) => (
+                <View key={section.title}>
+                  <Text style={[styles.sectionHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+                    {section.title}
+                  </Text>
+                  {section.items.map((item) => (
+                    <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
+                      <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                        <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
+                          {item.key}
+                        </Text>
+                      </View>
+                      <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
+                        {t(item.descKey)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ))
+            ) : (
+              (shortcuts ?? []).map((item) => (
+                <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
+                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
+                      {item.key}
+                    </Text>
+                  </View>
+                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
+                    {t(item.descKey)}
                   </Text>
                 </View>
-                <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
-                  {t(item.descKey)}
-                </Text>
-              </View>
-            ))}
+              ))
+            )}
           </ScrollView>
         </View>
       </View>
@@ -57,12 +86,17 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingTop: 16,
     paddingBottom: 36,
-    maxHeight: '70%',
   },
   title: {
     fontWeight: '700',
     paddingHorizontal: 20,
     paddingBottom: 12,
+  },
+  sectionHeader: {
+    fontWeight: '700',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   row: {
     flexDirection: 'row',

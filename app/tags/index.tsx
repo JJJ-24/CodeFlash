@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
+import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { deleteTag, getAllTags, updateTagSortOrders } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
@@ -52,13 +53,7 @@ export default function TagsScreen() {
 
       {tags.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
-          <Ionicons name="pricetags-outline" size={64} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-            {t('tag.empty')}
-          </Text>
-          <Text style={[styles.emptySub, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
-            {t('tag.emptySub')}
-          </Text>
+          <EmptyState icon="pricetags-outline" title={t('tag.empty')} subtitle={t('tag.emptySub')} />
         </View>
       ) : (
         <DraggableFlatList
@@ -137,9 +132,7 @@ const styles = StyleSheet.create({
   },
   countBadgeText: { fontWeight: '700', color: '#FFF' },
   iconBtn: { padding: 4 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyText: { fontWeight: '600' },
-  emptySub: {},
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   fabBack: {
     position: 'absolute',
     left: 20,

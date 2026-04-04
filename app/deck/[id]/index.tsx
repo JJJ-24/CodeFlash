@@ -7,9 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -37,6 +35,9 @@ import {
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
+import { EmptyState } from '@/components/EmptyState';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
@@ -67,9 +68,7 @@ export default function DeckDetailScreen() {
     () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
   );
   const lastFocusTimeRef = useRef(0);
-  const keyboardRef = useRef<TextInput>(null);
-  const isScreenFocusedRef = useRef(false);
-  const keyboardFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const listRef = useRef<FlatList<Card>>(null);
   const scrollOffsetRef = useRef(0);
   const SCROLL_STEP = 200;
@@ -137,19 +136,10 @@ export default function DeckDetailScreen() {
         router.back();
         return;
       }
-      isScreenFocusedRef.current = true;
       lastFocusTimeRef.current = Date.now();
       loadCards();
-      keyboardFocusTimerRef.current = setTimeout(() => {
-        if (isScreenFocusedRef.current) keyboardRef.current?.focus();
-      }, 100);
-      return () => {
-        isScreenFocusedRef.current = false;
-        if (keyboardFocusTimerRef.current !== null) {
-          clearTimeout(keyboardFocusTimerRef.current);
-          keyboardFocusTimerRef.current = null;
-        }
-      };
+      onScreenFocus();
+      return () => { onScreenBlur(); };
     }, [loadCards])
   );
 
@@ -421,7 +411,7 @@ export default function DeckDetailScreen() {
             setFocusedCardIndex(null);
           }
         }}
-        onBlur={() => { setTimeout(() => { if (isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
+        onBlur={onInputBlur}
       />
       <Stack.Screen
         options={{
@@ -473,17 +463,11 @@ export default function DeckDetailScreen() {
 
       <View style={{ flex: 1 }}>
       {displayedCards.length === 0 ? (
-        <View style={styles.emptyCards}>
-          <Ionicons name="card-outline" size={64} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyCardsText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, fontWeight: '600' }]}>
-            {selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
-          </Text>
-          {selectedFilter === 'all' && (
-            <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.md }}>
-              {t('deck.noCardsSub')}
-            </Text>
-          )}
-        </View>
+        <EmptyState
+          icon="card-outline"
+          title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
+          subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
+        />
       ) : (
         <DraggableFlatList
           ref={listRef as any}
@@ -630,45 +614,15 @@ export default function DeckDetailScreen() {
         onClose={() => setShowDeckPicker(false)}
         showCardCount
       />
-      <Modal
+      <ShortcutsModal
         visible={showShortcutsModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowShortcutsModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowShortcutsModal(false)} />
-          <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface, maxHeight: '75%' }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
-              {t('settings.keyboardShortcuts')}
-            </Text>
-            <ScrollView>
-              <Text style={[styles.shortcutSection, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
-                {t('settings.shortcutNormalMode')}
-              </Text>
-              {DECK_SHORTCUTS_NORMAL.map(({ key, descKey }) => (
-                <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
-                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>{key}</Text>
-                  </View>
-                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>{t(descKey)}</Text>
-                </View>
-              ))}
-              <Text style={[styles.shortcutSection, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 8 }]}>
-                {t('settings.shortcutSelectMode')}
-              </Text>
-              {DECK_SHORTCUTS_SELECT.map(({ key, descKey }) => (
-                <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
-                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>{key}</Text>
-                  </View>
-                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>{t(descKey)}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowShortcutsModal(false)}
+        maxHeight="75%"
+        sections={[
+          { title: t('settings.shortcutNormalMode'), items: DECK_SHORTCUTS_NORMAL },
+          { title: t('settings.shortcutSelectMode'), items: DECK_SHORTCUTS_SELECT },
+        ]}
+      />
     </GestureHandlerRootView>
   );
 }
@@ -704,8 +658,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontWeight: '700' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16 },
   filterDesc: { flexShrink: 1 },
-  emptyCards: { alignItems: 'center', gap: 8, paddingVertical: 32 },
-  emptyCardsText: {},
   cardItem: {
     borderRadius: 10,
     paddingHorizontal: 16,
@@ -755,42 +707,5 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 16,
-    paddingBottom: 36,
-  },
-  modalTitle: {
-    fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  shortcutSection: {
-    fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 4,
-  },
-  shortcutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  keyBadge: {
-    minWidth: 48,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignItems: 'center',
   },
 });

@@ -15,6 +15,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
@@ -168,13 +169,7 @@ export default function HomeScreen() {
       <View style={{ flex: 1 }}>
       {decks.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="layers-outline" size={64} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-            {t('home.empty')}
-          </Text>
-          <Text style={[styles.emptySubText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
-            {t('home.emptySub')}
-          </Text>
+          <EmptyState icon="layers-outline" title={t('home.empty')} subtitle={t('home.emptySub')} />
         </View>
       ) : (
         <DraggableFlatList
@@ -249,8 +244,6 @@ const styles = StyleSheet.create({
   sortBtnText: { fontWeight: '600' },
   listContent: { padding: 16, gap: 12, paddingBottom: 96 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { fontWeight: '600' },
-  emptySubText: { textAlign: 'center', paddingHorizontal: 40 },
   card: {
     borderRadius: 12,
     padding: 16,

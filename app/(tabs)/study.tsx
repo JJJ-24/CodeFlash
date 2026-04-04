@@ -8,15 +8,16 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
+import { EmptyState } from '@/components/EmptyState';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useTheme, FILTER_COLORS } from '@/lib/theme';
 import {
   getDueCountPerDeck,
@@ -76,8 +77,7 @@ export default function StudyScreen() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
   const fromSessionRef = useRef(false);
-  const keyboardRef = useRef<TextInput>(null);
-  const isScreenFocusedRef = useRef(false);
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const listRef = useRef<FlatList<any>>(null);
 
   useLayoutEffect(() => {
@@ -109,8 +109,7 @@ export default function StudyScreen() {
       }
       const isFromSession = fromSessionRef.current;
       fromSessionRef.current = false;
-      isScreenFocusedRef.current = true;
-      setTimeout(() => keyboardRef.current?.focus(), 100);
+      onScreenFocus();
       (async () => {
         if (!isFromSession) setLoading(true);
         const [
@@ -139,7 +138,7 @@ export default function StudyScreen() {
         setTotalPerTag(totalTag);
         setLoading(false);
       })();
-      return () => { isScreenFocusedRef.current = false; };
+      return () => { onScreenBlur(); };
     }, [db, initialFilterPreference])
   );
 
@@ -314,10 +313,7 @@ export default function StudyScreen() {
       {activeTab === 'decks' && (
         decks.length === 0 ? (
           <View style={styles.center}>
-            <Ionicons name="book-outline" size={64} color={theme.colors.iconSubtle} />
-            <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
-              {t('study.noDecks')}
-            </Text>
+            <EmptyState icon="book-outline" title={t('study.noDecks')} />
           </View>
         ) : (
           <FlatList
@@ -372,10 +368,7 @@ export default function StudyScreen() {
       {activeTab === 'tags' && (
         tags.length === 0 ? (
           <View style={styles.center}>
-            <Ionicons name="pricetag-outline" size={64} color={theme.colors.iconSubtle} />
-            <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
-              {t('study.noTags')}
-            </Text>
+            <EmptyState icon="pricetag-outline" title={t('study.noTags')} />
           </View>
         ) : (
           <FlatList
@@ -434,47 +427,21 @@ export default function StudyScreen() {
         showSoftInputOnFocus={false}
         keyboardType="ascii-capable"
         onKeyPress={handleKeyPress}
-        onBlur={() => {
-          setTimeout(() => {
-            if (isScreenFocusedRef.current) keyboardRef.current?.focus();
-          }, 50);
-        }}
+        onBlur={onInputBlur}
       />
 
-      {/* ショートカット一覧モーダル */}
-      <Modal
+      <ShortcutsModal
         visible={showShortcutsModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowShortcutsModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowShortcutsModal(false)} />
-          <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
-              {t('settings.keyboardShortcuts')}
-            </Text>
-            <ScrollView>
-              {STUDY_SHORTCUTS.map(({ key, descKey }) => (
-                <View key={key} style={[styles.shortcutRow, { borderBottomColor: theme.colors.border }]}>
-                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>{key}</Text>
-                  </View>
-                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>{t(descKey)}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={STUDY_SHORTCUTS}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  emptyText: {},
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
 
   filterSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 24 },
@@ -534,9 +501,4 @@ const styles = StyleSheet.create({
   dueChipText: { fontWeight: '700', color: '#FFF' },
   tagColorDot: { width: 16, height: 16, borderRadius: 8 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 24, gap: 16, maxHeight: '60%' },
-  modalTitle: { fontWeight: '700' },
-  shortcutRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
-  keyBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, minWidth: 56, alignItems: 'center' },
 });

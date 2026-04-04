@@ -90,7 +90,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 4 }}
+        contentContainerStyle={{ paddingBottom: 4, paddingRight: 12 }}
       >
         <View>
           <View style={styles.monthRow}>

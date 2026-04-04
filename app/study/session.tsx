@@ -192,6 +192,8 @@ export default function StudySessionScreen() {
     if (!keyboardShortcutsEnabled) return;
 
     if (key === ' ') {
+      cbs.setRunTrigger(0);
+      cbs.setEditTrigger(0);
       setIsFlipped((v) => !v);
     } else if (key === 't' || key === 'T' || key === 'y' || key === 'Y') {
       cbs.cycleCodeBlock(key === 't' || key === 'T', currentCard, isFlipped, setShowMemo);

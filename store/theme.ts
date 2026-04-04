@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 import { create } from 'zustand';
 
 export type ColorSchemePreference = 'light' | 'dark' | 'system';
@@ -21,6 +22,10 @@ interface ThemeState {
   setFontSizePreference: (fontSizePreference: FontSizePreference) => void;
 }
 
+function applyNativeColorScheme(preference: ColorSchemePreference) {
+  Appearance.setColorScheme(preference === 'system' ? null : preference);
+}
+
 export const useThemeStore = create<ThemeState>((set) => ({
   preference: 'system',
   fontSizePreference: 'medium',
@@ -28,6 +33,7 @@ export const useThemeStore = create<ThemeState>((set) => ({
   setPreference: (preference) => {
     set({ preference });
     AsyncStorage.setItem(THEME_KEY, preference);
+    applyNativeColorScheme(preference);
   },
   setFontSizePreference: (fontSizePreference) => {
     set({ fontSizePreference });
@@ -42,5 +48,6 @@ Promise.all([
 ]).then(([theme, fontSize]) => {
   const preference = (theme === 'light' || theme === 'dark' || theme === 'system') ? theme : 'system';
   const fontSizePreference = (fontSize === 'small' || fontSize === 'medium' || fontSize === 'large') ? fontSize : 'medium';
+  applyNativeColorScheme(preference);
   useThemeStore.setState({ preference, fontSizePreference, hydrated: true });
 });

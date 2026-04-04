@@ -326,9 +326,6 @@ export default function StudyScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}
-            ItemSeparatorComponent={() => (
-              <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-            )}
             renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getDeckDisplayInfo(item);
               const isFocused = focusedItemIndex === index;
@@ -360,7 +357,7 @@ export default function StudyScreen() {
                     </View>
                   )}
                   <Ionicons
-                    name="chevron-forward"
+                    name="play"
                     size={18}
                     color={tappable ? theme.colors.iconSubtle : theme.colors.border}
                   />
@@ -387,9 +384,6 @@ export default function StudyScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}
-            ItemSeparatorComponent={() => (
-              <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-            )}
             renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getTagDisplayInfo(item);
               const isFocused = focusedItemIndex === index;
@@ -422,7 +416,7 @@ export default function StudyScreen() {
                     </View>
                   )}
                   <Ionicons
-                    name="chevron-forward"
+                    name="play"
                     size={18}
                     color={tappable ? theme.colors.iconSubtle : theme.colors.border}
                   />
@@ -512,14 +506,19 @@ const styles = StyleSheet.create({
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabText: { fontWeight: '600' },
-  list: { paddingHorizontal: 16 },
-  separator: { height: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   deckRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   deckRowDimmed: { opacity: 0.5 },
   deckInfo: { flex: 1, gap: 3 },

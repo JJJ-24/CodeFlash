@@ -3,8 +3,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -79,11 +77,8 @@ export default function NewTagScreen() {
           ),
         }}
       />
-      <KeyboardAvoidingView
-        style={[styles.flex, { backgroundColor: theme.colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
               {t('tag.name')}
@@ -135,7 +130,7 @@ export default function NewTagScreen() {
             <Text style={styles.actionBtnTextLight}>{t('tag.create')}</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </>
   );
 }

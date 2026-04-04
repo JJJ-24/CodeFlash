@@ -3,8 +3,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -76,13 +74,11 @@ export default function NewDeckScreen() {
           ),
         }}
       />
-      <KeyboardAvoidingView
-        style={[styles.flex, { backgroundColor: theme.colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
@@ -122,7 +118,7 @@ export default function NewDeckScreen() {
             <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('deck.create')}</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </>
   );
 }

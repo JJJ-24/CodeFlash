@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -107,11 +105,8 @@ export default function EditTagScreen() {
           ),
         }}
       />
-      <KeyboardAvoidingView
-        style={[styles.flex, { backgroundColor: theme.colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
               {t('tag.name')}
@@ -169,7 +164,7 @@ export default function EditTagScreen() {
             <Text style={styles.actionBtnTextLight}>{t('tag.save')}</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </>
   );
 }

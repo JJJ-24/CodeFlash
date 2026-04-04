@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -61,7 +61,7 @@ export default function StudyScreen() {
   const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
-  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled } = useSettingsStore();
+  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder } = useSettingsStore();
 
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
@@ -176,14 +176,14 @@ export default function StudyScreen() {
       setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
     }
     else if (key === 't' || key === 'T') {
-      const items = activeTab === 'decks' ? decks : tags;
+      const items = activeTab === 'decks' ? sortedDecks : tags;
       setFocusedItemIndex(prev => {
         if (prev === null) return items.length > 0 ? 0 : null;
         return prev >= items.length - 1 ? null : prev + 1;
       });
     }
     else if (key === 'y' || key === 'Y') {
-      const items = activeTab === 'decks' ? decks : tags;
+      const items = activeTab === 'decks' ? sortedDecks : tags;
       setFocusedItemIndex(prev => {
         if (prev === null) return items.length > 0 ? items.length - 1 : null;
         return prev <= 0 ? null : prev - 1;
@@ -191,7 +191,7 @@ export default function StudyScreen() {
     }
     else if (key === ' ') {
       if (focusedItemIndex === null) return;
-      const items = activeTab === 'decks' ? decks : tags;
+      const items = activeTab === 'decks' ? sortedDecks : tags;
       const item = items[focusedItemIndex];
       if (!item) return;
       const info = activeTab === 'decks'
@@ -206,6 +206,12 @@ export default function StudyScreen() {
       }
     }
   }
+
+  const sortedDecks = useMemo(() => {
+    if (deckSortOrder === 'name') return [...decks].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    if (deckSortOrder === 'cardCount') return [...decks].sort((a, b) => b.cardCount - a.cardCount);
+    return decks;
+  }, [decks, deckSortOrder]);
 
   const totalAll = activeTab === 'decks'
     ? decks.reduce((s, d) => s + d.cardCount, 0)
@@ -311,14 +317,14 @@ export default function StudyScreen() {
 
       {/* デッキタブ */}
       {activeTab === 'decks' && (
-        decks.length === 0 ? (
+        sortedDecks.length === 0 ? (
           <View style={styles.center}>
             <EmptyState icon="book-outline" title={t('study.noDecks')} />
           </View>
         ) : (
           <FlatList
             ref={listRef}
-            data={decks}
+            data={sortedDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}

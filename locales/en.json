@@ -71,7 +71,7 @@
     "create": "Create",
     "save": "Save",
     "empty": "No tags yet",
-    "emptySub": "Tap + to create your first tag",
+    "emptySub": "Tap the + button to create your first tag",
     "cards": "{{count}} cards",
     "duplicateName": "A tag with that name already exists"
   },

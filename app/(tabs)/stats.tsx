@@ -470,7 +470,7 @@ export default function StatsScreen() {
         </View>
       </View>
 
-      {/* 全体進捗 */}
+      {/* 全体学習率 */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
           {t('stats.totalProgress')}

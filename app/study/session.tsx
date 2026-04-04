@@ -342,15 +342,8 @@ export default function StudySessionScreen() {
                     <Path key={i} d={path} fill={color} />
                   ))}
                   <Circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_INNER_R} fill={theme.colors.surface} />
-                  <SvgText
-                    x={DONUT_CX}
-                    y={DONUT_CY + 8}
-                    textAnchor="middle"
-                    fontSize={24}
-                    fontWeight="700"
-                    fill={theme.colors.primary}
-                  >
-                    {reviewed}
+                  <SvgText x={DONUT_CX} y={DONUT_CY + 10} textAnchor="middle" fontSize={24} fontWeight="700" fill={theme.colors.text}>
+                    {reviewRate}
                   </SvgText>
                 </Svg>
               </View>
@@ -365,12 +358,8 @@ export default function StudySessionScreen() {
                 ))}
               </View>
 
-              {/* 評価率・正答率・次回予定 */}
+              {/* 正答率・次回予定 */}
               <View style={styles.statRow}>
-                <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{reviewRate}%</Text>
-                  <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.reviewRate')}</Text>
-                </View>
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{correctRate}%</Text>
                   <Text style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('study.correctRate')}</Text>
@@ -831,7 +820,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 32,
+    gap: 56,
     paddingTop: 14,
   },
   statItem: {

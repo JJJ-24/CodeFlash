@@ -111,6 +111,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
   if (total === 0) return null;
 
   const learned = dist.again + dist.hard + dist.normal + dist.easy;
+  const pct = total > 0 ? Math.round((learned / total) * 100) : 0;
 
   const slices: PieSlice[] = [
     { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
@@ -138,15 +139,8 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           return <Path key={slice.label} d={path} fill={slice.color} />;
         })}
         <Circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_INNER_R} fill={theme.colors.surface} />
-        <SvgText
-          x={DONUT_CX}
-          y={DONUT_CY + 8}
-          textAnchor="middle"
-          fontSize={24}
-          fontWeight="700"
-          fill={theme.colors.primary}
-        >
-          {total}
+        <SvgText x={DONUT_CX} y={DONUT_CY + 10} textAnchor="middle" fontSize={24} fontWeight="700" fill={theme.colors.text}>
+          {pct}
         </SvgText>
       </Svg>
       {/* グレード別横並びグリッド */}

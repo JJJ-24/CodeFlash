@@ -1,4 +1,5 @@
 import '@/lib/i18n';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect } from 'react';
@@ -14,6 +15,18 @@ import { useThemeStore } from '@/store/theme';
 
 function RootStack() {
   const theme = useTheme();
+  const baseNavTheme = theme.dark ? DarkTheme : DefaultTheme;
+  const navigationTheme = {
+    ...baseNavTheme,
+    colors: {
+      ...baseNavTheme.colors,
+      primary:    theme.colors.primary,
+      background: theme.colors.background,
+      card:       theme.colors.surface,
+      text:       theme.colors.text,
+      border:     theme.colors.border,
+    },
+  };
   const db = useSQLiteContext();
   const { notificationEnabled, notificationHour, notificationMinute } = useSettingsStore();
 
@@ -37,6 +50,7 @@ function RootStack() {
   }, [notificationEnabled, notificationHour, notificationMinute]);
 
   return (
+    <ThemeProvider value={navigationTheme}>
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: theme.colors.surface },
@@ -58,6 +72,7 @@ function RootStack() {
       <Stack.Screen name="study/session" options={{ headerShown: true, title: '' }} />
       <Stack.Screen name="search" />
     </Stack>
+    </ThemeProvider>
   );
 }
 

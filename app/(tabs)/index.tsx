@@ -1,13 +1,15 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -16,20 +18,36 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { EmptyState } from '@/components/EmptyState';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTheme } from '@/lib/theme';
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
+import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
+
+const HOME_SHORTCUTS = [
+  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
+  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'Space', descKey: 'settings.shortcutOpenDeck' },
+  { key: 'P',     descKey: 'settings.shortcutEditDeck' },
+  { key: 'D',     descKey: 'settings.shortcutDeleteDeck' },
+  { key: 'N',     descKey: 'settings.shortcutNewDeck' },
+  { key: 'Q',     descKey: 'settings.shortcutToggleSort' },
+  { key: 'F',     descKey: 'settings.shortcutSearch' },
+  { key: 'G',     descKey: 'settings.shortcutTags' },
+];
 import type { Deck } from '@/types';
 
 function DeckCard({
   deck,
   drag,
   onDelete,
+  isFocused,
 }: {
   deck: Deck;
   drag: (() => void) | null;
   onDelete: (id: string) => void;
+  isFocused?: boolean;
 }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -44,7 +62,11 @@ function DeckCard({
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: theme.colors.surface }]}
+      style={[
+        styles.card,
+        { backgroundColor: theme.colors.surface },
+        isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+      ]}
       onPress={() => router.push({ pathname: '/deck/[id]', params: { id: deck.id } })}
       onLongPress={drag ?? undefined}
       activeOpacity={0.7}
@@ -87,18 +109,47 @@ const SORT_OPTIONS: { key: DeckSortOrder; labelKey: string }[] = [
 export default function HomeScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
+  const navigation = useNavigation();
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, setDecks, removeDeck, reorderDecks } = useDeckStore();
-  const { deckSortOrder, setDeckSortOrder } = useSettingsStore();
+  const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled } = useSettingsStore();
   const { width } = useWindowDimensions();
   // 学習画面の4ブロック幅に合わせる（padding:16×2=32, gap:8×3=24）
   const blockWidth = (width - 32 - 24) / 4;
   const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
+  const [focusedDeckIndex, setFocusedDeckIndex] = useState<number | null>(null);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
+  const listRef = useRef<any>(null);
+
+  useLayoutEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (navigation as any).setOptions({
+      headerRight: keyboardShortcutsEnabled ? () => (
+        <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
+          <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+        </Pressable>
+      ) : undefined,
+      headerRightContainerStyle: keyboardShortcutsEnabled ? { paddingRight: 8 } : undefined,
+    });
+  }, [keyboardShortcutsEnabled, theme]);
 
   useEffect(() => {
     getAllDecks(db).then(setDecks);
   }, [db]);
+
+  // デッキ数が変わったときフォーカスをリセット
+  useEffect(() => {
+    setFocusedDeckIndex(null);
+  }, [decks.length]);
+
+  useFocusEffect(
+    useCallback(() => {
+      onScreenFocus();
+      return () => { onScreenBlur(); };
+    }, [onScreenFocus, onScreenBlur])
+  );
 
   async function handleDelete(id: string) {
     await deleteDeck(db, id);
@@ -114,6 +165,29 @@ export default function HomeScreen() {
     }
     return decks; // manual
   }, [decks, deckSortOrder]);
+
+  function cycleSortOrder() {
+    const idx = SORT_OPTIONS.findIndex((o) => o.key === deckSortOrder);
+    const next = SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length];
+    setDeckSortOrder(next.key);
+  }
+
+  function moveDeckFocus(dir: 'next' | 'prev') {
+    setFocusedDeckIndex((prev) => {
+      let next: number | null;
+      if (dir === 'next') {
+        next = prev === null ? 0 : prev === sortedDecks.length - 1 ? null : prev + 1;
+      } else {
+        next = prev === null ? sortedDecks.length - 1 : prev === 0 ? null : prev - 1;
+      }
+      if (next !== null) {
+        setTimeout(() => {
+          listRef.current?.scrollToIndex({ index: next as number, viewPosition: 0.5, animated: true });
+        }, 50);
+      }
+      return next;
+    });
+  }
 
   const StatsHeader = (
     <View style={styles.statsHeader}>
@@ -163,6 +237,49 @@ export default function HomeScreen() {
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <TextInput
+        ref={keyboardRef}
+        style={styles.hiddenKeyboardInput}
+        caretHidden
+        keyboardType="ascii-capable"
+        showSoftInputOnFocus={false}
+        autoCorrect={false}
+        autoCapitalize="none"
+        spellCheck={false}
+        onKeyPress={({ nativeEvent: { key } }) => {
+          const k = key.toLowerCase();
+          if (k === 'q') {
+            cycleSortOrder();
+          } else if (k === 't') {
+            moveDeckFocus('next');
+          } else if (k === 'y') {
+            moveDeckFocus('prev');
+          } else if (key === ' ') {
+            if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
+              router.push({ pathname: '/deck/[id]', params: { id: sortedDecks[focusedDeckIndex].id } });
+            }
+          } else if (k === 'p') {
+            if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
+              router.push({ pathname: '/deck/[id]/edit', params: { id: sortedDecks[focusedDeckIndex].id } });
+            }
+          } else if (k === 'd') {
+            if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
+              const deck = sortedDecks[focusedDeckIndex];
+              Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('common.delete'), style: 'destructive', onPress: () => handleDelete(deck.id) },
+              ]);
+            }
+          } else if (k === 'n') {
+            router.push({ pathname: '/deck/new' });
+          } else if (k === 'f') {
+            router.push('/search');
+          } else if (k === 'g') {
+            router.push('/tags');
+          }
+        }}
+        onBlur={onInputBlur}
+      />
       <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
         {StatsHeader}
       </View>
@@ -173,6 +290,7 @@ export default function HomeScreen() {
         </View>
       ) : (
         <DraggableFlatList
+          ref={listRef}
           data={sortedDecks}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -181,12 +299,13 @@ export default function HomeScreen() {
             reorderDecks(data);
             updateDeckSortOrders(db, data.map((d) => d.id));
           }}
-          renderItem={({ item, drag, isActive }: RenderItemParams<Deck>) => (
+          renderItem={({ item, drag, isActive, getIndex }: RenderItemParams<Deck>) => (
             <ScaleDecorator>
               <DeckCard
                 deck={item}
                 drag={deckSortOrder === 'manual' ? drag : null}
                 onDelete={handleDelete}
+                isFocused={focusedDeckIndex !== null && getIndex() === focusedDeckIndex}
               />
             </ScaleDecorator>
           )}
@@ -207,12 +326,18 @@ export default function HomeScreen() {
       >
         <Ionicons name="add" size={30} color="#FFF" />
       </TouchableOpacity>
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={HOME_SHORTCUTS}
+      />
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   fixedHeader: { paddingHorizontal: 16, paddingTop: 16 },
   statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
   statsRow: {},

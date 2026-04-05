@@ -245,6 +245,8 @@
     "shortcutToggleSort": "並び替え切替",
     "shortcutSearch": "検索",
     "shortcutTags": "タグ管理",
+    "shortcutSelectBlock": "グラフブロック切替（連続/済み/復習/新規）",
+    "shortcutOpenDonut": "フォーカス中のドーナツグラフを表示",
     "initialFilter": "初期表示フィルター",
     "initialFilterAll": "すべて",
     "initialFilterLearned": "済み",

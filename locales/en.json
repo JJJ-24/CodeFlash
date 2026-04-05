@@ -245,6 +245,8 @@
     "shortcutToggleSort": "Cycle sort order",
     "shortcutSearch": "Search",
     "shortcutTags": "Tag manager",
+    "shortcutSelectBlock": "Select chart block (Streak / Done / Due / New)",
+    "shortcutOpenDonut": "Open donut chart for focused item",
     "initialFilter": "Default Filter",
     "initialFilterAll": "All",
     "initialFilterLearned": "Done",

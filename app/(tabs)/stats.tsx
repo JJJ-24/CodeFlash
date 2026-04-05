@@ -1,8 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
@@ -25,9 +27,18 @@ import {
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { EmptyState } from '@/components/EmptyState';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import type { Deck } from '@/types';
+
+const STATS_SHORTCUTS = [
+  { key: '1–4',   descKey: 'settings.shortcutSelectBlock' },
+  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
+  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'Space', descKey: 'settings.shortcutOpenDonut' },
+];
 
 const HEATMAP_WEEKS = 52; // 約1年分
 const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -239,6 +250,75 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
   );
 }
 
+function DonutSheet({
+  visible,
+  title,
+  dist,
+  onClose,
+  theme,
+}: {
+  visible: boolean;
+  title: string;
+  dist: GradeDistribution | null;
+  onClose: () => void;
+  theme: AppTheme;
+}) {
+  const { t } = useTranslation();
+  const sheetY = useSharedValue(500);
+  const overlayOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible) {
+      overlayOpacity.value = withTiming(1, { duration: 200 });
+      sheetY.value = withTiming(0, { duration: 250 });
+    } else {
+      overlayOpacity.value = withTiming(0, { duration: 200 });
+      sheetY.value = withTiming(500, { duration: 250 });
+    }
+  }, [visible]);
+
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
+
+  return (
+    <View
+      pointerEvents={visible ? 'box-none' : 'none'}
+      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+    >
+      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      </Animated.View>
+      <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
+        <View style={sheetStyles.header}>
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+            {title}
+          </Text>
+          <Pressable onPress={onClose} style={sheetStyles.closeBtn}>
+            <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+          </Pressable>
+        </View>
+        <View style={sheetStyles.body}>
+          {dist ? (
+            <GradeDistPieChart dist={dist} theme={theme} />
+          ) : (
+            <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
+              {t('common.loading')}
+            </Text>
+          )}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+const sheetStyles = StyleSheet.create({
+  sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 32, maxHeight: '70%' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
+  title: { fontWeight: '700' },
+  closeBtn: { padding: 4 },
+  body: { paddingHorizontal: 16, paddingBottom: 16 },
+});
+
 /** Date をローカル YYYY-MM-DD 文字列に変換 */
 function toLocalDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -258,24 +338,51 @@ function fillPast7Days(rows: ScheduleItem[]): ScheduleItem[] {
   });
 }
 
+// T/Y フォーカス対象: null = なし, 'total' = 全体学習率, number = デッキ別習熟度インデックス
+type FocusedItem = null | 'total' | number;
+
 export default function StatsScreen() {
   const db = useSQLiteContext();
+  const navigation = useNavigation();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled } = useSettingsStore();
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const sectionOffsets = useRef<{ total: number; decks: number[] }>({ total: 0, decks: [] });
 
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
-  const [selectedMastery, setSelectedMastery] = useState<MasteryItem | null>(null);
-  const [gradeDistribution, setGradeDistribution] = useState<GradeDistribution | null>(null);
-  const [showTotalModal, setShowTotalModal] = useState(false);
-  const [totalDistribution, setTotalDistribution] = useState<GradeDistribution | null>(null);
   const [stats, setStats] = useState<StatsData>(INITIAL_STATS);
+  const [focusedItem, setFocusedItem] = useState<FocusedItem>(null);
+  const [activeSheet, setActiveSheet] = useState<null | 'total' | number>(null);
+  const [sheetDist, setSheetDist] = useState<GradeDistribution | null>(null);
+  const [sheetTitle, setSheetTitle] = useState('');
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  useLayoutEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (navigation as any).setOptions({
+      headerRight: keyboardShortcutsEnabled ? () => (
+        <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
+          <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+        </Pressable>
+      ) : undefined,
+      headerRightContainerStyle: keyboardShortcutsEnabled ? { paddingRight: 8 } : undefined,
+    });
+  }, [keyboardShortcutsEnabled, theme]);
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
           deckMastery, decks, heatmapData } = stats;
 
+  // openSheet 内で参照するため useMemo で安定化
+  const deckMap = useMemo(
+    () => Object.fromEntries(decks.map((d) => [d.id, d])),
+    [decks]
+  );
+
   useFocusEffect(
     useCallback(() => {
+      onScreenFocus();
       const blockMap: Record<InitialFilterPreference, BlockKey | null> = {
         all: 'streak', learned: 'learned', review: 'due', new: 'new', none: null,
       };
@@ -328,22 +435,52 @@ export default function StatsScreen() {
         });
       }
       load();
-    }, [db, initialFilterPreference])
+      return () => { onScreenBlur(); };
+    }, [db, initialFilterPreference, onScreenFocus, onScreenBlur])
   );
 
-  const openMasteryModal = useCallback(async (m: MasteryItem) => {
-    setSelectedMastery(m);
-    setGradeDistribution(null);
-    const dist = await getDeckGradeDistribution(db, m.deckId);
-    setGradeDistribution(dist);
-  }, [db]);
+  function moveFocus(dir: 'next' | 'prev') {
+    const totalItems = 1 + deckMastery.length; // 'total' + decks
+    setFocusedItem((prev) => {
+      let next: FocusedItem;
+      if (dir === 'next') {
+        if (prev === null) next = 'total';
+        else if (prev === 'total') next = deckMastery.length > 0 ? 0 : null;
+        else if (typeof prev === 'number') next = prev < deckMastery.length - 1 ? prev + 1 : null;
+        else next = null;
+      } else {
+        if (prev === null) next = deckMastery.length > 0 ? deckMastery.length - 1 : 'total';
+        else if (typeof prev === 'number') next = prev > 0 ? prev - 1 : 'total';
+        else next = null; // 'total' → null
+      }
+      // スクロール
+      if (next === 'total') {
+        scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total, animated: true });
+      } else if (typeof next === 'number') {
+        const y = sectionOffsets.current.decks[next] ?? 0;
+        scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total + y, animated: true });
+      }
+      return next;
+    });
+  }
 
-  const openTotalModal = useCallback(async () => {
-    setShowTotalModal(true);
-    setTotalDistribution(null);
-    const dist = await getAllGradeDistribution(db);
-    setTotalDistribution(dist);
-  }, [db]);
+  const openSheet = useCallback(async (target: 'total' | number) => {
+    setActiveSheet(target);
+    setSheetDist(null);
+    if (target === 'total') {
+      setSheetTitle(t('stats.totalProgress'));
+      const dist = await getAllGradeDistribution(db);
+      setSheetDist(dist);
+    } else {
+      const m = deckMastery[target];
+      if (!m) return;
+      setSheetTitle(deckMap[m.deckId]?.name ?? '');
+      const dist = await getDeckGradeDistribution(db, m.deckId);
+      setSheetDist(dist);
+    }
+  }, [db, deckMastery, deckMap, t]);
+
+  const closeSheet = useCallback(() => setActiveSheet(null), []);
 
   const hasData = learned > 0 || todayReviewed > 0;
   const total = learned + unlearned;
@@ -356,9 +493,6 @@ export default function StatsScreen() {
       </View>
     );
   }
-
-  // デッキIDでデッキを引く map
-  const deckMap = Object.fromEntries(decks.map((d) => [d.id, d]));
 
   const blockColors: Record<BlockKey, string> = {
     streak: theme.colors.primary,
@@ -378,6 +512,32 @@ export default function StatsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <TextInput
+        ref={keyboardRef}
+        style={styles.hiddenKeyboardInput}
+        caretHidden
+        keyboardType="ascii-capable"
+        showSoftInputOnFocus={false}
+        autoCorrect={false}
+        autoCapitalize="none"
+        spellCheck={false}
+        onKeyPress={({ nativeEvent: { key } }) => {
+          if (activeSheet !== null) { if (key === ' ') closeSheet(); return; }
+          const k = key.toLowerCase();
+          if (key === '1') { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (key === '2') { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (key === '3') { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (key === '4') { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (k === 't') { moveFocus('next'); }
+          else if (k === 'y') { moveFocus('prev'); }
+          else if (key === ' ') {
+            if (focusedItem === null) return;
+            if (activeSheet === focusedItem) { closeSheet(); }
+            else { openSheet(focusedItem); }
+          }
+        }}
+        onBlur={onInputBlur}
+      />
       <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
         <View style={styles.summaryRow}>
         <Pressable
@@ -431,7 +591,7 @@ export default function StatsScreen() {
         </Pressable>
         </View>
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
 
       {/* 7日間バーチャート */}
       <View style={styles.section}>
@@ -460,13 +620,21 @@ export default function StatsScreen() {
       </View>
 
       {/* 全体学習率 */}
-      <View style={styles.section}>
+      <View
+        style={styles.section}
+        onLayout={(e) => { sectionOffsets.current.total = e.nativeEvent.layout.y; }}
+      >
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
           {t('stats.totalProgress')}
         </Text>
         <Pressable
-          style={({ pressed }) => [styles.card, { backgroundColor: theme.colors.surface }, pressed && { opacity: 0.7 }]}
-          onPress={openTotalModal}
+          style={({ pressed }) => [
+            styles.card,
+            { backgroundColor: theme.colors.surface },
+            focusedItem === 'total' && { borderWidth: 2, borderColor: theme.colors.primary },
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => activeSheet === 'total' ? closeSheet() : openSheet('total')}
         >
           <View style={styles.progressHeader}>
             <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
@@ -490,12 +658,21 @@ export default function StatsScreen() {
             {t('stats.deckMastery')}
           </Text>
           <View style={styles.deckMasteryList}>
-            {deckMastery.map((m) => {
+            {deckMastery.map((m, idx) => {
               const deck = deckMap[m.deckId];
               if (!deck) return null;
+              const isFocused = focusedItem === idx;
               return (
-                <View key={m.deckId} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => openMasteryModal(m)} />
+                <View
+                  key={m.deckId}
+                  style={[
+                    styles.card,
+                    { backgroundColor: theme.colors.surface },
+                    isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+                  ]}
+                  onLayout={(e) => { sectionOffsets.current.decks[idx] = e.nativeEvent.layout.y; }}
+                >
+                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => activeSheet === idx ? closeSheet() : openSheet(idx)} />
                 </View>
               );
             })}
@@ -503,72 +680,26 @@ export default function StatsScreen() {
         </View>
       )}
 
-      {/* 全体進捗モーダル */}
-      <Modal
-        visible={showTotalModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowTotalModal(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowTotalModal(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
-                {t('stats.totalProgress')}
-              </Text>
-              <Pressable onPress={() => setShowTotalModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
-              </Pressable>
-            </View>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-              {totalDistribution ? (
-                <GradeDistPieChart dist={totalDistribution} theme={theme} />
-              ) : (
-                <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
-                  {t('common.loading')}
-                </Text>
-              )}
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* デッキ詳細モーダル */}
-      <Modal
-        visible={selectedMastery !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedMastery(null)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setSelectedMastery(null)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
-                {deckMap[selectedMastery?.deckId ?? '']?.name ?? ''}
-              </Text>
-              <Pressable onPress={() => setSelectedMastery(null)} style={styles.modalCloseBtn}>
-                <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
-              </Pressable>
-            </View>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-              {gradeDistribution ? (
-                <GradeDistPieChart dist={gradeDistribution} theme={theme} />
-              ) : (
-                <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
-                  {t('common.loading')}
-                </Text>
-              )}
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
       </ScrollView>
+      <DonutSheet
+        visible={activeSheet !== null}
+        title={sheetTitle}
+        dist={sheetDist}
+        onClose={closeSheet}
+        theme={theme}
+      />
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={STATS_SHORTCUTS}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   summarySection: { paddingHorizontal: 16, paddingTop: 16 },
   content: { paddingHorizontal: 16, paddingBottom: 32, gap: 4 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
@@ -629,10 +760,4 @@ const styles = StyleSheet.create({
   masteryBarFill: { height: '100%', borderRadius: 4 },
   masterySubLabel: {},
 
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 32, maxHeight: '70%' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
-  modalTitle: { fontWeight: '700' },
-  modalCloseBtn: { padding: 4 },
 });

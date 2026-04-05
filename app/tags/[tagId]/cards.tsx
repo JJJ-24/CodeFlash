@@ -189,9 +189,6 @@ export default function TagCardsScreen() {
               {t('card.list')}
             </Text>
           }
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-          )}
           renderItem={({ item, index }) => {
             const preview = getPreviewText(item.frontContent);
             const isFocused = focusedCardIndex === index;
@@ -289,16 +286,23 @@ const styles = StyleSheet.create({
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerDot: { width: 12, height: 12, borderRadius: 6 },
-  list: { padding: 16, paddingBottom: 96 },
-  separator: { height: 1 },
+  list: { paddingTop: 16, paddingBottom: 96 },
   cardItem: {
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginHorizontal: 20,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  sectionTitle: { fontWeight: '700', marginBottom: 12 },
+  sectionTitle: { fontWeight: '700', marginBottom: 12, marginHorizontal: 20 },
   cardPreview: { flex: 1, lineHeight: 22 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyText: {},

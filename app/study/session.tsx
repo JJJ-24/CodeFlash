@@ -122,6 +122,9 @@ export default function StudySessionScreen() {
   const backScrollRef = useRef<ScrollView>(null);
   const frontScrollYRef = useRef(0);
   const backScrollYRef = useRef(0);
+  const memoSectionYRef = useRef(0);
+  const memoContentOffsetRef = useRef(0);
+  const memoScrollBaseYRef = useRef(0);
   const completeRef = useRef<TextInput>(null);
   const completeReadyRef = useRef(false);
 
@@ -187,6 +190,15 @@ export default function StudySessionScreen() {
     if (!isFlipped) setShowMemo(false);
     cbs.reset();
   }, [isFlipped]);
+
+  // メモを展開したらメモ欄までスクロール
+  useEffect(() => {
+    if (showMemo) {
+      setTimeout(() => {
+        backScrollRef.current?.scrollTo({ y: memoSectionYRef.current, animated: true });
+      }, 100);
+    }
+  }, [showMemo]);
 
   function handleKeyPress(key: string) {
     if (!keyboardShortcutsEnabled) return;
@@ -406,10 +418,23 @@ export default function StudySessionScreen() {
   );
 
   const memoBlock = hasMemo && (
-    <View style={styles.memoSection} onTouchStart={suppress}>
+    <View
+      style={styles.memoSection}
+      onTouchStart={suppress}
+      onLayout={(e) => {
+        memoSectionYRef.current = e.nativeEvent.layout.y;
+        memoScrollBaseYRef.current = memoSectionYRef.current + memoContentOffsetRef.current;
+      }}
+    >
       {memoToggle}
       {showMemo && (
-        <View style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}>
+        <View
+          style={[styles.memoContent, { backgroundColor: theme.colors.memoBackground, borderLeftColor: theme.colors.inputBorder }]}
+          onLayout={(e) => {
+            memoContentOffsetRef.current = e.nativeEvent.layout.y;
+            memoScrollBaseYRef.current = memoSectionYRef.current + memoContentOffsetRef.current;
+          }}
+        >
           <BlocksView
             blocks={currentCard.memoContent}
             editableCode
@@ -422,6 +447,7 @@ export default function StudySessionScreen() {
             editTrigger={showMemo && cbs.selectedCodeBlockSide === 'memo' ? cbs.editTrigger : undefined}
             selectedCodeBlockIdx={showMemo && cbs.selectedCodeBlockSide === 'memo' ? cbs.selectedCodeBlockIdx : null}
             scrollRef={backScrollRef}
+            scrollBaseYRef={memoScrollBaseYRef}
           />
         </View>
       )}

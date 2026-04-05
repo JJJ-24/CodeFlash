@@ -42,9 +42,10 @@ interface Props {
   onSelectCodeBlock?: (codeBlockIdx: number) => void;
   onCodeRunStart?: () => void;
   scrollRef?: RefObject<ScrollView | null>;
+  scrollBaseYRef?: RefObject<number>;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -76,9 +77,21 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       }
     }
     if (blockArrayIdx === undefined) return;
-    if (scrollRef?.current) {
-      const y = containerYRef.current + (blockYPositions.current[blockArrayIdx] ?? 0) - 8;
-      scrollRef.current.scrollTo({ y: Math.max(0, y), animated: true });
+    const idx = blockArrayIdx;
+    const doScroll = () => {
+      if (scrollRef?.current) {
+        const base = scrollBaseYRef?.current ?? 0;
+        const y = base + containerYRef.current + (blockYPositions.current[idx] ?? 0) - 8;
+        scrollRef.current.scrollTo({ y: Math.max(0, y), animated: true });
+      }
+    };
+    if (scrollBaseYRef) {
+      // メモ欄のコードブロック: showMemo 展開と同時に呼ばれる場合があるため
+      // onLayout が完了するまで少し待ってからスクロール
+      const timer = setTimeout(doScroll, 100);
+      return () => clearTimeout(timer);
+    } else {
+      doScroll();
     }
   }, [selectedCodeBlockIdx]);
 
@@ -187,7 +200,8 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                   if (!scrollRef?.current) return;
                   // 出力レイアウト更新後（300ms）にブロック下端が見える位置へスクロール
                   setTimeout(() => {
-                    const y = containerYRef.current + (blockYPositions.current[i] ?? 0);
+                    const base = scrollBaseYRef?.current ?? 0;
+                    const y = base + containerYRef.current + (blockYPositions.current[i] ?? 0);
                     const h = blockHeights.current[i] ?? 0;
                     scrollRef.current?.scrollTo({ y: Math.max(0, y + h - 300), animated: true });
                   }, 300);

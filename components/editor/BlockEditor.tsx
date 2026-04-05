@@ -56,7 +56,7 @@ function newCodeBlock(): EditBlock {
     type: "code",
     language: lang,
     content: "",
-    executable: false,
+    executable: true,
     _key: makeKey(),
   };
 }

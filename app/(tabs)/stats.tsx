@@ -439,7 +439,6 @@ export default function StatsScreen() {
   );
 
   function moveFocus(dir: 'next' | 'prev') {
-    const totalItems = 1 + deckMastery.length; // 'total' + decks
     setFocusedItem((prev) => {
       let next: FocusedItem;
       if (dir === 'next') {

@@ -282,7 +282,7 @@ export default function HomeScreen() {
             reorderDecks(data);
             updateDeckSortOrders(db, data.map((d) => d.id));
           }}
-          renderItem={({ item, drag, isActive, getIndex }: RenderItemParams<Deck>) => (
+          renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
             <ScaleDecorator>
               <DeckCard
                 deck={item}

@@ -114,6 +114,9 @@ function tokenizeHtml(code: string): Token[] {
 function tokenizeCss(code: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
+  let blockDepth = 0;   // {} のネスト深さ（0 = セレクター文脈）
+  let afterColon = false; // declaration の : 以降（値の文脈）かどうか
+
   while (i < code.length) {
     // Block comment
     if (code.startsWith('/*', i)) {
@@ -121,6 +124,38 @@ function tokenizeCss(code: string): Token[] {
       const closeEnd = end === -1 ? code.length : end + 2;
       tokens.push({ text: code.slice(i, closeEnd), type: 'comment' });
       i = closeEnd;
+    // {
+    } else if (code[i] === '{') {
+      blockDepth++;
+      afterColon = false;
+      tokens.push({ text: '{', type: 'punctuation' });
+      i++;
+    // }
+    } else if (code[i] === '}') {
+      if (blockDepth > 0) blockDepth--;
+      afterColon = false;
+      tokens.push({ text: '}', type: 'punctuation' });
+      i++;
+    // ;
+    } else if (code[i] === ';') {
+      afterColon = false;
+      tokens.push({ text: ';', type: 'punctuation' });
+      i++;
+    // : セレクター文脈では疑似クラス・疑似要素、宣言文脈ではプロパティ/値の区切り
+    } else if (code[i] === ':') {
+      if (blockDepth === 0) {
+        // 疑似クラス / 疑似要素 (:hover, ::before など)
+        let j = i;
+        if (code[j + 1] === ':') j++; // ::
+        j++;
+        while (j < code.length && /[\w-]/.test(code[j])) j++;
+        tokens.push({ text: code.slice(i, j), type: 'keyword' });
+        i = j;
+      } else {
+        afterColon = true;
+        tokens.push({ text: ':', type: 'punctuation' });
+        i++;
+      }
     // String
     } else if (code[i] === '"' || code[i] === "'") {
       const quote = code[i];
@@ -131,12 +166,30 @@ function tokenizeCss(code: string): Token[] {
       }
       tokens.push({ text: code.slice(i, j + 1), type: 'string' });
       i = j + 1;
-    // Selector / property (word before '{' or ':')
-    } else if (/[a-zA-Z_-]/.test(code[i])) {
-      let j = i;
+    // At-rule
+    } else if (code[i] === '@') {
+      let j = i + 1;
       while (j < code.length && /[\w-]/.test(code[j])) j++;
-      const word = code.slice(i, j);
-      tokens.push({ text: word, type: 'plain' });
+      tokens.push({ text: code.slice(i, j), type: 'keyword' });
+      i = j;
+    // .クラスセレクター（セレクター文脈のみ）
+    } else if (code[i] === '.' && blockDepth === 0) {
+      let j = i + 1;
+      while (j < code.length && /[\w-]/.test(code[j])) j++;
+      tokens.push({ text: code.slice(i, j), type: 'type' });
+      i = j;
+    // # — セレクター文脈は ID セレクター、宣言文脈は hex カラー
+    } else if (code[i] === '#') {
+      let j = i + 1;
+      if (blockDepth === 0) {
+        // #id セレクター
+        while (j < code.length && /[\w-]/.test(code[j])) j++;
+        tokens.push({ text: code.slice(i, j), type: 'type' });
+      } else {
+        // hex カラー値
+        while (j < code.length && /[\da-fA-F]/.test(code[j])) j++;
+        tokens.push({ text: code.slice(i, j), type: 'string' });
+      }
       i = j;
     // Number with units
     } else if (/[0-9]/.test(code[i]) || (code[i] === '-' && /[0-9]/.test(code[i + 1] ?? ''))) {
@@ -144,17 +197,20 @@ function tokenizeCss(code: string): Token[] {
       while (j < code.length && /[\d.%a-zA-Z]/.test(code[j])) j++;
       tokens.push({ text: code.slice(i, j), type: 'number' });
       i = j;
-    // Color hex
-    } else if (code[i] === '#') {
-      let j = i + 1;
-      while (j < code.length && /[\da-fA-F]/.test(code[j])) j++;
-      tokens.push({ text: code.slice(i, j), type: 'string' });
-      i = j;
-    // At-rule
-    } else if (code[i] === '@') {
-      let j = i + 1;
+    // Word（識別子・セレクター・プロパティ名・値）
+    } else if (/[a-zA-Z_]/.test(code[i]) || (code[i] === '-' && /[a-zA-Z_-]/.test(code[i + 1] ?? ''))) {
+      let j = i;
       while (j < code.length && /[\w-]/.test(code[j])) j++;
-      tokens.push({ text: code.slice(i, j), type: 'keyword' });
+      const word = code.slice(i, j);
+      let type: TokenType;
+      if (blockDepth === 0) {
+        type = 'keyword';   // 要素セレクター (div, p, span …)
+      } else if (!afterColon) {
+        type = 'type';      // プロパティ名 (color, background-color …)
+      } else {
+        type = 'plain';     // プロパティ値の単語 (solid, none, inherit …)
+      }
+      tokens.push({ text: word, type });
       i = j;
     } else {
       tokens.push({ text: code[i], type: 'plain' });

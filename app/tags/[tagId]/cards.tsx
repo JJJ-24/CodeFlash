@@ -26,8 +26,7 @@ import { useDeckStore } from '@/store/decks';
 import type { Card, Tag, TextBlock } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
-  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
-  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Space', descKey: 'settings.shortcutEditCard' },
   { key: 'P',     descKey: 'settings.shortcutEditCard' },
   { key: 'D',     descKey: 'settings.shortcutDeleteCard' },

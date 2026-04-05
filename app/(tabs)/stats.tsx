@@ -35,8 +35,7 @@ import type { Deck } from '@/types';
 
 const STATS_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutSelectBlock' },
-  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
-  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Space', descKey: 'settings.shortcutOpenDonut' },
 ];
 

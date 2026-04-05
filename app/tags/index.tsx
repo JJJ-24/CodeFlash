@@ -27,8 +27,7 @@ import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
 
 const TAG_SHORTCUTS = [
-  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
-  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Space', descKey: 'settings.shortcutOpenTag' },
   { key: 'P',     descKey: 'settings.shortcutEditTag' },
   { key: 'D',     descKey: 'settings.shortcutDeleteTag' },

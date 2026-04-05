@@ -27,8 +27,7 @@ import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 
 const HOME_SHORTCUTS = [
-  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
-  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Space', descKey: 'settings.shortcutOpenDeck' },
   { key: 'P',     descKey: 'settings.shortcutEditDeck' },
   { key: 'D',     descKey: 'settings.shortcutDeleteDeck' },

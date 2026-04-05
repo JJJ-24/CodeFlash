@@ -80,18 +80,15 @@ export default function DeckDetailScreen() {
   const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space', descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
-    { key: 'T',    descKey: 'settings.shortcutFocusCard' },
-    { key: 'Y',    descKey: 'settings.shortcutFocusCardPrev' },
+    { key: 'T / Y',  descKey: 'settings.shortcutFocusCardNextPrev' },
     { key: 'P',    descKey: 'settings.shortcutEditCard' },
     { key: 'N',    descKey: 'settings.shortcutNewCard' },
     { key: 'S',    descKey: 'settings.shortcutToggleSelect' },
-    { key: 'U',    descKey: 'settings.shortcutScrollUp' },
-    { key: 'D',    descKey: 'settings.shortcutScrollDownDelete' },
+    { key: 'U / D',  descKey: 'settings.shortcutScrollUpDownDelete' },
     { key: 'B',    descKey: 'settings.shortcutBack' },
   ];
   const DECK_SHORTCUTS_SELECT = [
-    { key: 'T',     descKey: 'settings.shortcutFocusCard' },
-    { key: 'Y',     descKey: 'settings.shortcutFocusCardPrev' },
+    { key: 'T / Y',   descKey: 'settings.shortcutFocusCardNextPrev' },
     { key: 'Space', descKey: 'settings.shortcutToggleCheck' },
     { key: 'A',     descKey: 'settings.shortcutSelectAll' },
     { key: 'M',     descKey: 'settings.shortcutMoveSelected' },

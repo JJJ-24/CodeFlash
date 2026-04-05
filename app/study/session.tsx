@@ -48,7 +48,7 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
 ];
 
 
-const STUDY_SHORTCUTS = [
+const SESSION_SHORTCUTS = [
   { key: 'Space', descKey: 'settings.shortcutFlip' },
   { key: '1–4',  descKey: 'settings.shortcutGrade' },
   { key: 'J',    descKey: 'settings.shortcutNext' },
@@ -588,7 +588,7 @@ export default function StudySessionScreen() {
         options={{
           headerTitle: () => (
             <Pressable
-              onPress={() => setShowShortcutsModal(true)}
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: screenWidth * 0.5 }}
             >
               <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
@@ -733,7 +733,7 @@ export default function StudySessionScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={STUDY_SHORTCUTS}
+        shortcuts={SESSION_SHORTCUTS}
       />
     </>
   );

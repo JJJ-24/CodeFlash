@@ -44,7 +44,7 @@ function sumValues(map: Record<string, number>): number {
   return Object.values(map).reduce((s, v) => s + v, 0);
 }
 
-const STUDY_SHORTCUTS = [
+const STUDY_TAB_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutFilterSwitch' },
   { key: 'T',     descKey: 'settings.shortcutFocusNext' },
   { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
@@ -439,7 +439,7 @@ export default function StudyScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={STUDY_SHORTCUTS}
+        shortcuts={STUDY_TAB_SHORTCUTS}
       />
     </View>
   );

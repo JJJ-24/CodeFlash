@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,6 +18,7 @@ import {
 import { useTheme } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
 import { getAllTags } from '@/lib/database/tags';
 import { useSettingsStore } from '@/store/settings';
@@ -53,13 +54,12 @@ export default function TagCardsScreen() {
   const { decks } = useDeckStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-  const listRef = useRef<FlatList<Card>>(null);
 
   const [cards, setCards] = useState<Card[]>([]);
   const [tag, setTag] = useState<Tag | null>(null);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
-  const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const { focusedIndex: focusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
 
   function confirmDeleteCard(card: Card) {
     Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
@@ -96,23 +96,6 @@ export default function TagCardsScreen() {
       return () => { onScreenBlur(); };
     }, [db, tagId, onScreenFocus, onScreenBlur])
   );
-
-  function moveFocus(dir: 'next' | 'prev') {
-    setFocusedCardIndex((prev) => {
-      let next: number | null;
-      if (dir === 'next') {
-        next = prev === null ? 0 : prev === cards.length - 1 ? null : prev + 1;
-      } else {
-        next = prev === null ? cards.length - 1 : prev === 0 ? null : prev - 1;
-      }
-      if (next !== null) {
-        setTimeout(() => {
-          listRef.current?.scrollToIndex({ index: next as number, viewPosition: 0.5, animated: true });
-        }, 50);
-      }
-      return next;
-    });
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

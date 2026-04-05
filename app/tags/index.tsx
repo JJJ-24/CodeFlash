@@ -14,11 +14,12 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme } from '@/lib/theme';
 import { deleteTag, getAllTags, updateTagSortOrders } from '@/lib/database/tags';
 import { useSettingsStore } from '@/store/settings';
@@ -43,8 +44,7 @@ export default function TagsScreen() {
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-  const listRef = useRef<FlatList<TagWithCount>>(null);
-  const [focusedTagIndex, setFocusedTagIndex] = useState<number | null>(null);
+  const { focusedIndex: focusedTagIndex, listRef, moveFocus } = useListNavigation(tags);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   function confirmDelete(tag: TagWithCount) {
@@ -68,23 +68,6 @@ export default function TagsScreen() {
       return () => { onScreenBlur(); };
     }, [db, onScreenFocus, onScreenBlur])
   );
-
-  function moveFocus(dir: 'next' | 'prev') {
-    setFocusedTagIndex((prev) => {
-      let next: number | null;
-      if (dir === 'next') {
-        next = prev === null ? 0 : prev === tags.length - 1 ? null : prev + 1;
-      } else {
-        next = prev === null ? tags.length - 1 : prev === 0 ? null : prev - 1;
-      }
-      if (next !== null) {
-        setTimeout(() => {
-          listRef.current?.scrollToIndex({ index: next as number, viewPosition: 0.5, animated: true });
-        }, 50);
-      }
-      return next;
-    });
-  }
 
   return (
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>

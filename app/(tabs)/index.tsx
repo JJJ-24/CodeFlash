@@ -2,7 +2,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -22,6 +22,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTheme } from '@/lib/theme';
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useListNavigation } from '@/hooks/useListNavigation';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 
@@ -118,10 +119,8 @@ export default function HomeScreen() {
   // 学習画面の4ブロック幅に合わせる（padding:16×2=32, gap:8×3=24）
   const blockWidth = (width - 32 - 24) / 4;
   const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
-  const [focusedDeckIndex, setFocusedDeckIndex] = useState<number | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-  const listRef = useRef<any>(null);
 
   useLayoutEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -172,22 +171,7 @@ export default function HomeScreen() {
     setDeckSortOrder(next.key);
   }
 
-  function moveDeckFocus(dir: 'next' | 'prev') {
-    setFocusedDeckIndex((prev) => {
-      let next: number | null;
-      if (dir === 'next') {
-        next = prev === null ? 0 : prev === sortedDecks.length - 1 ? null : prev + 1;
-      } else {
-        next = prev === null ? sortedDecks.length - 1 : prev === 0 ? null : prev - 1;
-      }
-      if (next !== null) {
-        setTimeout(() => {
-          listRef.current?.scrollToIndex({ index: next as number, viewPosition: 0.5, animated: true });
-        }, 50);
-      }
-      return next;
-    });
-  }
+  const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, listRef, moveFocus: moveDeckFocus } = useListNavigation(sortedDecks);
 
   const StatsHeader = (
     <View style={styles.statsHeader}>

@@ -20,6 +20,7 @@ import {
   View,
 } from "react-native";
 
+import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
@@ -56,7 +57,7 @@ function newCodeBlock(): EditBlock {
     type: "code",
     language: lang,
     content: "",
-    executable: true,
+    executable: EXECUTABLE_LANGUAGES.includes(lang),
     _key: makeKey(),
   };
 }

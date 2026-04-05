@@ -38,9 +38,10 @@ interface Props {
   flashTrigger?: number;
   isLast?: boolean;
   onFocusInput?: () => void;
+  autoFocus?: boolean;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, autoFocus }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -49,6 +50,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const isEmpty = block.content.trim() === '';
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
+  const codeInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (autoFocus) {
+      setTimeout(() => codeInputRef.current?.focus(), 50);
+    }
+  }, []);
 
   const theme = useTheme();
 
@@ -132,6 +140,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <TextInput
+                  ref={codeInputRef}
                   style={[styles.codeInput, { fontSize: theme.fontSize.md }]}
                   value={block.content}
                   onChangeText={(v) =>

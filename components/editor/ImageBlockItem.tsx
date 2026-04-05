@@ -27,9 +27,10 @@ interface Props {
   flashTrigger?: number;
   isLast?: boolean;
   onFocusInput?: () => void;
+  autoFocus?: boolean;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, autoFocus }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -45,6 +46,12 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
     }
     prevCollapsedRef.current = collapsed;
   }, [collapsed]);
+
+  useEffect(() => {
+    if (autoFocus) {
+      setTimeout(() => altInputRef.current?.focus(), 50);
+    }
+  }, []);
 
   useEffect(() => {
     if (flashTrigger > 0) {

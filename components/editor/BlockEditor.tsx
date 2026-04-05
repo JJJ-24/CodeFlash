@@ -116,6 +116,7 @@ export function BlockEditor({
   const [isSortMode, setIsSortMode] = useState(false);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
   const [moveCount, setMoveCount] = useState(0);
+  const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -147,6 +148,7 @@ export function BlockEditor({
           ? newCodeBlock()
           : newImageBlock();
     setterByTab[activeTab]((prev) => [...prev, block]);
+    setNewBlockKey(block._key);
     setAddMenuVisible(false);
   }
 
@@ -469,7 +471,7 @@ export function BlockEditor({
                   isPreview={isPreview}
                   onChange={(content) => updateBlock(activeTab, block._key, { content })}
                   onDelete={() => deleteBlock(activeTab, block._key)}
-                  autoFocus={index === 0}
+                  autoFocus={index === 0 || block._key === newBlockKey}
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
@@ -496,6 +498,7 @@ export function BlockEditor({
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
                   isLast={isLast}
+                  autoFocus={block._key === newBlockKey}
                   onRunStart={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
@@ -522,6 +525,7 @@ export function BlockEditor({
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
                   isLast={isLast}
+                  autoFocus={block._key === newBlockKey}
                   onFocusInput={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];

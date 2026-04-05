@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,14 +11,28 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
 import { getAllTags } from '@/lib/database/tags';
+import { useSettingsStore } from '@/store/settings';
 import { useDeckStore } from '@/store/decks';
 import type { Card, Tag, TextBlock } from '@/types';
+
+const TAG_CARDS_SHORTCUTS = [
+  { key: 'T',     descKey: 'settings.shortcutFocusNext' },
+  { key: 'Y',     descKey: 'settings.shortcutFocusPrev' },
+  { key: 'Space', descKey: 'settings.shortcutEditCard' },
+  { key: 'P',     descKey: 'settings.shortcutEditCard' },
+  { key: 'D',     descKey: 'settings.shortcutDeleteCard' },
+  { key: 'N',     descKey: 'settings.shortcutNewCard' },
+  { key: 'B',     descKey: 'settings.shortcutBack' },
+];
 
 function getPreviewText(blocks: Card['frontContent']): string {
   for (const block of blocks) {
@@ -37,10 +51,15 @@ export default function TagCardsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks } = useDeckStore();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
+  const listRef = useRef<FlatList<Card>>(null);
 
   const [cards, setCards] = useState<Card[]>([]);
   const [tag, setTag] = useState<Tag | null>(null);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
+  const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   function confirmDeleteCard(card: Card) {
     Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
@@ -56,6 +75,13 @@ export default function TagCardsScreen() {
     ]);
   }
 
+  function navigateToEdit(card: Card) {
+    router.push({
+      pathname: '/deck/[id]/card/[cardId]/edit',
+      params: { id: card.deckId, cardId: card.id },
+    });
+  }
+
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -66,8 +92,27 @@ export default function TagCardsScreen() {
         setCards(loadedCards);
         setTag(allTags.find((t) => t.id === tagId) ?? null);
       })();
-    }, [db, tagId])
+      onScreenFocus();
+      return () => { onScreenBlur(); };
+    }, [db, tagId, onScreenFocus, onScreenBlur])
   );
+
+  function moveFocus(dir: 'next' | 'prev') {
+    setFocusedCardIndex((prev) => {
+      let next: number | null;
+      if (dir === 'next') {
+        next = prev === null ? 0 : prev === cards.length - 1 ? null : prev + 1;
+      } else {
+        next = prev === null ? cards.length - 1 : prev === 0 ? null : prev - 1;
+      }
+      if (next !== null) {
+        setTimeout(() => {
+          listRef.current?.scrollToIndex({ index: next as number, viewPosition: 0.5, animated: true });
+        }, 50);
+      }
+      return next;
+    });
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -75,7 +120,10 @@ export default function TagCardsScreen() {
         options={{
           headerTitle: () =>
             tag ? (
-              <View style={styles.headerTitle}>
+              <Pressable
+                onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+                style={styles.headerTitle}
+              >
                 <View style={[styles.headerDot, { backgroundColor: tag.color }]} />
                 <Text
                   style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600' }}
@@ -83,11 +131,44 @@ export default function TagCardsScreen() {
                 >
                   {tag.name}
                 </Text>
-              </View>
+                {keyboardShortcutsEnabled && (
+                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+                )}
+              </Pressable>
             ) : (
               <View />
             ),
         }}
+      />
+
+      <TextInput
+        ref={keyboardRef}
+        style={styles.hiddenKeyboardInput}
+        caretHidden
+        keyboardType="ascii-capable"
+        showSoftInputOnFocus={false}
+        autoCorrect={false}
+        autoCapitalize="none"
+        spellCheck={false}
+        onKeyPress={({ nativeEvent: { key } }) => {
+          const k = key.toLowerCase();
+          if (k === 't') { moveFocus('next'); }
+          else if (k === 'y') { moveFocus('prev'); }
+          else if (key === ' ' || k === 'p') {
+            if (focusedCardIndex !== null && cards[focusedCardIndex]) {
+              navigateToEdit(cards[focusedCardIndex]);
+            }
+          } else if (k === 'd') {
+            if (focusedCardIndex !== null && cards[focusedCardIndex]) {
+              confirmDeleteCard(cards[focusedCardIndex]);
+            }
+          } else if (k === 'n') {
+            setShowDeckPicker(true);
+          } else if (k === 'b') {
+            router.back();
+          }
+        }}
+        onBlur={onInputBlur}
       />
 
       {cards.length === 0 ? (
@@ -99,6 +180,7 @@ export default function TagCardsScreen() {
         </View>
       ) : (
         <FlatList
+          ref={listRef}
           data={cards}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
@@ -110,17 +192,17 @@ export default function TagCardsScreen() {
           ItemSeparatorComponent={() => (
             <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
           )}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const preview = getPreviewText(item.frontContent);
+            const isFocused = focusedCardIndex === index;
             return (
               <Pressable
-                style={[styles.cardItem, { backgroundColor: theme.colors.surface }]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/deck/[id]/card/[cardId]/edit',
-                    params: { id: item.deckId, cardId: item.id },
-                  })
-                }
+                style={[
+                  styles.cardItem,
+                  { backgroundColor: theme.colors.surface },
+                  isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+                ]}
+                onPress={() => navigateToEdit(item)}
               >
                 <Text
                   style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
@@ -192,12 +274,19 @@ export default function TagCardsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={TAG_CARDS_SHORTCUTS}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerDot: { width: 12, height: 12, borderRadius: 6 },
   list: { padding: 16, paddingBottom: 96 },

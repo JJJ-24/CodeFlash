@@ -71,7 +71,24 @@ export default function TagCardsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: tag?.name ?? '' }} />
+      <Stack.Screen
+        options={{
+          headerTitle: () =>
+            tag ? (
+              <View style={styles.headerTitle}>
+                <View style={[styles.headerDot, { backgroundColor: tag.color }]} />
+                <Text
+                  style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600' }}
+                  numberOfLines={1}
+                >
+                  {tag.name}
+                </Text>
+              </View>
+            ) : (
+              <View />
+            ),
+        }}
+      />
 
       {cards.length === 0 ? (
         <View style={styles.empty}>
@@ -181,6 +198,8 @@ export default function TagCardsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerDot: { width: 12, height: 12, borderRadius: 6 },
   list: { padding: 16, paddingBottom: 96 },
   separator: { height: 1 },
   cardItem: {

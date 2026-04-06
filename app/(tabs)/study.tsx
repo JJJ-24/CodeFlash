@@ -47,7 +47,7 @@ function sumValues(map: Record<string, number>): number {
 const STUDY_TAB_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutFilterSwitch' },
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space', descKey: 'settings.shortcutStartStudy' },
+  { key: 'Space', descKey: 'settings.shortcutStartStudyFocused' },
   { key: 'S',     descKey: 'settings.shortcutToggleShuffle' },
   { key: 'Q',     descKey: 'settings.shortcutToggleTab' },
 ];

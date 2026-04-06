@@ -28,8 +28,7 @@ import type { Card, Tag, TextBlock } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space', descKey: 'settings.shortcutEditCard' },
-  { key: 'P',     descKey: 'settings.shortcutEditCard' },
+  { key: 'Space / P', descKey: 'settings.shortcutEditCard' },
   { key: 'D',     descKey: 'settings.shortcutDeleteCard' },
   { key: 'N',     descKey: 'settings.shortcutNewCard' },
   { key: 'B',     descKey: 'settings.shortcutBack' },

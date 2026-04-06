@@ -226,6 +226,7 @@
     "shortcutExitSelect": "Exit selection mode",
     "shortcutDuplicateSelected": "Duplicate selected cards",
     "shortcutStartStudy": "Start studying",
+    "shortcutStartStudyFocused": "Start studying focused item",
     "shortcutFilterSwitch": "Switch filter (All / Done / Due / New)",
     "shortcutNewCard": "New card",
     "shortcutToggleSelect": "Toggle selection mode",

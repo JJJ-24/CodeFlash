@@ -226,6 +226,7 @@
     "shortcutExitSelect": "選択モードを解除",
     "shortcutDuplicateSelected": "選択したカードを複製",
     "shortcutStartStudy": "学習開始",
+    "shortcutStartStudyFocused": "フォーカス中の項目で学習開始",
     "shortcutFilterSwitch": "フィルター切替（すべて/済み/復習/新規）",
     "shortcutNewCard": "新規カード作成",
     "shortcutToggleSelect": "選択モード切替",

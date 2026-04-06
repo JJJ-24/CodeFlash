@@ -16,21 +16,21 @@ App Store（iOS）および Google Play（Android）へのストア申請準備�
 ## Todo
 
 ### アセット準備
-- [ ] アプリアイコン（1024x1024 PNG）
+- [x] アプリアイコン（1024x1024 PNG）
 - [ ] スプラッシュスクリーン
-- [ ] App Store スクリーンショット（iPhone 6.7", 6.5", 5.5"）
-- [ ] iPad スクリーンショット（Pro 12.9"）
+- [x] App Store スクリーンショット（iPhone 6.7", 6.5", 5.5"）
+- [x] iPad スクリーンショット（Pro 12.9"）
 - [ ] Google Play スクリーンショット（スマートフォン / タブレット）
 - [ ] プロモーション用グラフィック（Google Play: 1024x500）
 
 ### App Store 申請
-- [ ] `app.json` の bundle identifier 確認（`codeflashcard`）
-- [ ] EAS Build の iOS プロダクションビルド設定
-- [ ] App Store Connect アプリ登録
-- [ ] アプリ説明文（日本語・英語）
-- [ ] キーワード設定
-- [ ] プライバシーポリシー URL
-- [ ] 利用規約 URL
+- [x] `app.json` の bundle identifier 確認（`codeflashcard`）
+- [x] EAS Build の iOS プロダクションビルド設定
+- [x] App Store Connect アプリ登録
+- [x] アプリ説明文（日本語・英語）
+- [x] キーワード設定
+- [x] プライバシーポリシー URL
+- [x] 利用規約 URL
 - [ ] TestFlight での内部テスト
 - [ ] App Store 審査提出
 
@@ -43,9 +43,9 @@ App Store（iOS）および Google Play（Android）へのストア申請準備�
 - [ ] 審査提出
 
 ### 共通
-- [ ] プライバシーポリシーページ作成（Web）
+- [x] プライバシーポリシーページ作成（Web）
 - [ ] 利用規約ページ作成（Web）
-- [ ] サポートページ / FAQ 作成
+- [x] サポートページ / FAQ 作成
 - [ ] EAS Update の設定（OTA アップデート用）
 
 ---

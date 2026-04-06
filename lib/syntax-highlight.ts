@@ -84,28 +84,69 @@ function tokenizeHtml(code: string): Token[] {
       const closeEnd = end === -1 ? code.length : end + 3;
       tokens.push({ text: code.slice(i, closeEnd), type: 'comment' });
       i = closeEnd;
+    // DOCTYPE / 宣言
+    } else if (code.startsWith('<!', i)) {
+      const end = code.indexOf('>', i);
+      const closeEnd = end === -1 ? code.length : end + 1;
+      tokens.push({ text: code.slice(i, closeEnd), type: 'keyword' });
+      i = closeEnd;
     // Tag
     } else if (code[i] === '<') {
-      const end = code.indexOf('>', i);
-      const tagEnd = end === -1 ? code.length : end + 1;
-      const tagText = code.slice(i, tagEnd);
-      // Split tag into parts: < tagname attrs >
-      // Just color the whole tag as keyword for simplicity
-      tokens.push({ text: tagText, type: 'keyword' });
-      i = tagEnd;
-    // String (attribute value)
-    } else if (code[i] === '"' || code[i] === "'") {
-      const quote = code[i];
-      let j = i + 1;
-      while (j < code.length && code[j] !== quote) {
-        if (code[j] === '\\') j++;
-        j++;
-      }
-      tokens.push({ text: code.slice(i, j + 1), type: 'string' });
-      i = j + 1;
-    } else {
-      tokens.push({ text: code[i], type: 'plain' });
+      tokens.push({ text: '<', type: 'punctuation' });
       i++;
+      // 閉じタグのスラッシュ
+      if (i < code.length && code[i] === '/') {
+        tokens.push({ text: '/', type: 'punctuation' });
+        i++;
+      }
+      // タグ名
+      let j = i;
+      while (j < code.length && /[a-zA-Z0-9\-]/.test(code[j])) j++;
+      if (j > i) {
+        tokens.push({ text: code.slice(i, j), type: 'keyword' });
+        i = j;
+      }
+      // 属性部分（> が来るまで）
+      while (i < code.length && code[i] !== '>') {
+        if (code[i] === '/' && code[i + 1] === '>') {
+          // 自己閉じスラッシュ
+          tokens.push({ text: '/', type: 'punctuation' });
+          i++;
+        } else if (code[i] === '=') {
+          tokens.push({ text: '=', type: 'punctuation' });
+          i++;
+        } else if (code[i] === '"' || code[i] === "'") {
+          // 属性値（文字列）
+          const quote = code[i];
+          let k = i + 1;
+          while (k < code.length && code[k] !== quote) {
+            if (code[k] === '\\') k++;
+            k++;
+          }
+          tokens.push({ text: code.slice(i, k + 1), type: 'string' });
+          i = k + 1;
+        } else if (/[a-zA-Z_\-:]/.test(code[i])) {
+          // 属性名
+          let k = i;
+          while (k < code.length && /[a-zA-Z0-9_\-:.]/.test(code[k])) k++;
+          tokens.push({ text: code.slice(i, k), type: 'type' });
+          i = k;
+        } else {
+          tokens.push({ text: code[i], type: 'plain' });
+          i++;
+        }
+      }
+      // 閉じ >
+      if (i < code.length && code[i] === '>') {
+        tokens.push({ text: '>', type: 'punctuation' });
+        i++;
+      }
+    // テキストコンテンツ
+    } else {
+      let j = i;
+      while (j < code.length && code[j] !== '<') j++;
+      tokens.push({ text: code.slice(i, j), type: 'plain' });
+      i = j;
     }
   }
   return mergeAdjacentSameType(tokens);
@@ -287,8 +328,10 @@ export function tokenize(code: string, language: string): Token[] {
 
   const keywords = KEYWORDS[lang] ?? new Set<string>();
   const isTs = lang === 'typescript';
-  const isPython = lang === 'python' || lang === 'bash';
+  const isPython = lang === 'python';
+  const isBash = lang === 'bash';
   const isSql = lang === 'sql';
+  const isCpp = lang === 'cpp';
 
   const tokens: Token[] = [];
   let i = 0;
@@ -296,8 +339,8 @@ export function tokenize(code: string, language: string): Token[] {
   while (i < code.length) {
     // Line comment: // (JS/TS/Java/Swift/C++) or # (Python/Bash) or -- (SQL)
     if (
-      (code.startsWith('//', i) && !isPython && !isSql) ||
-      (code[i] === '#' && isPython) ||
+      (code.startsWith('//', i) && !isPython && !isBash && !isSql) ||
+      ((isPython || isBash) && code[i] === '#') ||
       (code.startsWith('--', i) && isSql)
     ) {
       const end = code.indexOf('\n', i);
@@ -308,12 +351,38 @@ export function tokenize(code: string, language: string): Token[] {
     }
 
     // Block comment /* ... */
-    if (code.startsWith('/*', i) && !isPython) {
+    if (code.startsWith('/*', i) && !isPython && !isBash) {
       const end = code.indexOf('*/', i + 2);
       const closeEnd = end === -1 ? code.length : end + 2;
       tokens.push({ text: code.slice(i, closeEnd), type: 'comment' });
       i = closeEnd;
       continue;
+    }
+
+    // Python string prefix (f, b, r, rb, br, fr, rf, u など) + 文字列
+    if (isPython && /[fFbBrRuU]/.test(code[i])) {
+      let prefixEnd = i;
+      while (prefixEnd < i + 3 && prefixEnd < code.length && /[fFbBrRuU]/.test(code[prefixEnd])) prefixEnd++;
+      if (prefixEnd < code.length && (code[prefixEnd] === '"' || code[prefixEnd] === "'")) {
+        const quote = code[prefixEnd];
+        if (code.startsWith(quote.repeat(3), prefixEnd)) {
+          const tripleQuote = quote.repeat(3);
+          let j = prefixEnd + 3;
+          while (j < code.length && !code.startsWith(tripleQuote, j)) j++;
+          tokens.push({ text: code.slice(i, j + 3), type: 'string' });
+          i = j + 3;
+        } else {
+          let j = prefixEnd + 1;
+          while (j < code.length && code[j] !== quote && code[j] !== '\n') {
+            if (code[j] === '\\') j++;
+            j++;
+          }
+          tokens.push({ text: code.slice(i, j + 1), type: 'string' });
+          i = j + 1;
+        }
+        continue;
+      }
+      // プレフィックスなし → word トークナイザーへフォールスルー
     }
 
     // Python triple-quoted string
@@ -326,8 +395,8 @@ export function tokenize(code: string, language: string): Token[] {
       continue;
     }
 
-    // Template literal (backtick)
-    if (code[i] === '`' && !isPython) {
+    // Template literal (backtick) for JS/TS
+    if (code[i] === '`' && !isPython && !isBash) {
       let j = i + 1;
       while (j < code.length && code[j] !== '`') {
         if (code[j] === '\\') j++;
@@ -354,11 +423,9 @@ export function tokenize(code: string, language: string): Token[] {
     // Number (integer, float, hex, binary)
     if (/[0-9]/.test(code[i]) || (code[i] === '.' && /[0-9]/.test(code[i + 1] ?? ''))) {
       let j = i;
-      // Hex
       if (code[i] === '0' && (code[i + 1] === 'x' || code[i + 1] === 'X')) {
         j += 2;
         while (j < code.length && /[\da-fA-F_]/.test(code[j])) j++;
-      // Binary
       } else if (code[i] === '0' && (code[i + 1] === 'b' || code[i + 1] === 'B')) {
         j += 2;
         while (j < code.length && /[01_]/.test(code[j])) j++;
@@ -370,11 +437,44 @@ export function tokenize(code: string, language: string): Token[] {
           while (j < code.length && /[\d_]/.test(code[j])) j++;
         }
       }
-      // Suffix (e.g. f, L, u in C++)
-      if (lang === 'cpp' || lang === 'java') {
+      if (isCpp || lang === 'java') {
         while (j < code.length && /[uUlLfF]/.test(code[j])) j++;
       }
       tokens.push({ text: code.slice(i, j), type: 'number' });
+      i = j;
+      continue;
+    }
+
+    // @ decorator / annotation (JS/TS/Python/Java/Swift)
+    if (code[i] === '@' && !isSql && !isBash && !isCpp) {
+      let j = i + 1;
+      while (j < code.length && /[\w.]/.test(code[j])) j++;
+      tokens.push({ text: code.slice(i, j), type: 'keyword' });
+      i = j;
+      continue;
+    }
+
+    // Bash $variable / ${variable}
+    if (isBash && code[i] === '$') {
+      if (code[i + 1] === '{') {
+        const end = code.indexOf('}', i + 2);
+        const closeEnd = end === -1 ? code.length : end + 1;
+        tokens.push({ text: code.slice(i, closeEnd), type: 'type' });
+        i = closeEnd;
+      } else {
+        let j = i + 1;
+        while (j < code.length && /\w/.test(code[j])) j++;
+        tokens.push({ text: code.slice(i, j), type: 'type' });
+        i = j;
+      }
+      continue;
+    }
+
+    // Preprocessor directive (C++): #include, #define, #ifdef など
+    if (isCpp && code[i] === '#') {
+      let j = i + 1;
+      while (j < code.length && /\w/.test(code[j])) j++;
+      tokens.push({ text: code.slice(i, j), type: 'keyword' });
       i = j;
       continue;
     }
@@ -385,27 +485,23 @@ export function tokenize(code: string, language: string): Token[] {
       while (j < code.length && /[\w$]/.test(code[j])) j++;
       const word = code.slice(i, j);
 
+      // 直後に '(' があれば関数呼び出し
+      let k = j;
+      while (k < code.length && code[k] === ' ') k++;
+      const isCall = code[k] === '(' && !keywords.has(word);
+
       let type: TokenType = 'plain';
       if (keywords.has(word)) {
         type = 'keyword';
       } else if (isTs && TS_TYPES.has(word)) {
         type = 'type';
-      } else if (/^[A-Z][a-zA-Z0-9_]*$/.test(word)) {
-        // PascalCase → treat as type
-        type = isTs ? 'type' : 'plain';
+      } else if (isCall) {
+        type = 'type';
+      } else if (/^[A-Z][a-zA-Z0-9_]*$/.test(word) && (isTs || lang === 'java' || lang === 'swift' || isCpp)) {
+        type = 'type';
       }
 
       tokens.push({ text: word, type });
-      i = j;
-      continue;
-    }
-
-    // Preprocessor directive (C++)
-    if (code[i] === '#' && lang === 'cpp') {
-      let j = i;
-      while (j < code.length && /[\w]/.test(code[j + 1] ?? '')) j++;
-      j++;
-      tokens.push({ text: code.slice(i, j), type: 'keyword' });
       i = j;
       continue;
     }

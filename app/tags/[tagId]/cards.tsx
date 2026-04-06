@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
@@ -52,6 +53,7 @@ export default function TagCardsScreen() {
   const theme = useTheme();
   const { decks } = useDeckStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { width: screenWidth } = useWindowDimensions();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
   const [cards, setCards] = useState<Card[]>([]);
@@ -104,11 +106,11 @@ export default function TagCardsScreen() {
             tag ? (
               <Pressable
                 onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-                style={styles.headerTitle}
+                style={[styles.headerTitle, { maxWidth: screenWidth * 0.6 }]}
               >
                 <View style={[styles.headerDot, { backgroundColor: tag.color }]} />
                 <Text
-                  style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600' }}
+                  style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flexShrink: 1 }}
                   numberOfLines={1}
                 >
                   {tag.name}

@@ -80,14 +80,14 @@ export default function DeckDetailScreen() {
   const [descExpanded, setDescExpanded] = useState(false);
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
-    { key: 'Space', descKey: 'settings.shortcutStartStudy' },
-    { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
-    { key: 'T / Y',  descKey: 'settings.shortcutFocusCardNextPrev' },
-    { key: 'P',    descKey: 'settings.shortcutEditCard' },
-    { key: 'N',    descKey: 'settings.shortcutNewCard' },
-    { key: 'S',    descKey: 'settings.shortcutToggleSelect' },
-    { key: 'U / D',  descKey: 'settings.shortcutScrollUpDownDelete' },
-    { key: 'B',    descKey: 'settings.shortcutBack' },
+    { key: 'Return',    descKey: 'settings.shortcutStartStudy' },
+    { key: '1–4',       descKey: 'settings.shortcutFilterSwitch' },
+    { key: 'T / Y',     descKey: 'settings.shortcutFocusCardNextPrev' },
+    { key: 'Space / P', descKey: 'settings.shortcutEditCard' },
+    { key: 'N',         descKey: 'settings.shortcutNewCard' },
+    { key: 'S',         descKey: 'settings.shortcutToggleSelect' },
+    { key: 'U / D',     descKey: 'settings.shortcutScrollUpDownDelete' },
+    { key: 'B',         descKey: 'settings.shortcutBack' },
   ];
   const DECK_SHORTCUTS_SELECT = [
     { key: 'T / Y',   descKey: 'settings.shortcutFocusCardNextPrev' },
@@ -352,7 +352,9 @@ export default function DeckDetailScreen() {
             return;
           }
           if (key === ' ') {
-            router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
+            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+              navigateToCardEdit(displayedCards[focusedCardIndex].id);
+            }
           } else if (FILTER_KEY_MAP[key]) {
             const f = FILTER_KEY_MAP[key];
             setSelectedFilter(f);
@@ -379,6 +381,11 @@ export default function DeckDetailScreen() {
             setSelectionMode((v) => !v);
             setSelectedCardIds(new Set());
             setFocusedCardIndex(null);
+          }
+        }}
+        onSubmitEditing={() => {
+          if (!selectionMode) {
+            router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           }
         }}
         onBlur={onInputBlur}

@@ -90,6 +90,7 @@ export default function NewDeckScreen() {
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
               onChangeText={setName}
+              maxLength={25}
               autoFocus
               returnKeyType="next"
             />

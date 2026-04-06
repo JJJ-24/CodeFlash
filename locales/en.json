@@ -15,7 +15,7 @@
     "delete": "Delete Deck",
     "deleteConfirm": "Delete this deck?\nAll associated cards and review history (stats) will also be deleted.",
     "name": "Deck Name",
-    "namePlaceholder": "e.g. JavaScript Basics",
+    "namePlaceholder": "e.g. JavaScript Basics (max 25 chars)",
     "description": "Description",
     "descriptionPlaceholder": "Add a description (optional)",
     "language": "Language",

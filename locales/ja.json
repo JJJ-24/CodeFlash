@@ -15,7 +15,7 @@
     "delete": "デッキを削除",
     "deleteConfirm": "このデッキを削除しますか？\n紐付いたカードと学習履歴（統計）もすべて削除されます。",
     "name": "デッキ名",
-    "namePlaceholder": "例: JavaScript 基礎",
+    "namePlaceholder": "例: JavaScript 基礎（25文字まで）",
     "description": "説明",
     "descriptionPlaceholder": "説明を入力（省略可）",
     "language": "言語",

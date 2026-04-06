@@ -289,7 +289,7 @@ function DonutSheet({
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={sheetStyles.header}>
-          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail">
             {title}
           </Text>
           <Pressable onPress={onClose} style={sheetStyles.closeBtn}>
@@ -312,8 +312,8 @@ function DonutSheet({
 
 const sheetStyles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 32, maxHeight: '70%' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
-  title: { fontWeight: '700' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  title: { fontWeight: '700', flex: 1, marginRight: 12 },
   closeBtn: { padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
 });

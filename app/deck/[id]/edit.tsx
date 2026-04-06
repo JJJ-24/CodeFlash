@@ -108,6 +108,7 @@ export default function EditDeckScreen() {
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
               onChangeText={setName}
+              maxLength={25}
               autoFocus
               returnKeyType="next"
             />

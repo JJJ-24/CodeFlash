@@ -62,7 +62,7 @@ function getStreakMedal(streak: number): MedalInfo {
 
 function masteryPercent(avgEase: number | null): number {
   if (avgEase == null) return 0;
-  return Math.round(((avgEase - EASE_MIN) / (EASE_MAX - EASE_MIN)) * 100);
+  return Math.min(100, Math.round(((avgEase - EASE_MIN) / (EASE_MAX - EASE_MIN)) * 100));
 }
 
 function masteryColor(pct: number): string {

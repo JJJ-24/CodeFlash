@@ -60,7 +60,7 @@ export default function DeckDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, updateCard } = useCardStore();
-  const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter } = useSettingsStore();
+  const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
   const [todayCreatedCount, setTodayCreatedCount] = useState(0);

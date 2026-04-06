@@ -177,6 +177,8 @@
   },
   "common": {
     "cancel": "キャンセル",
+    "showMore": "もっと見る",
+    "showLess": "閉じる",
     "delete": "削除",
     "edit": "編集",
     "ok": "OK",

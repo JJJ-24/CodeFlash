@@ -177,6 +177,8 @@
   },
   "common": {
     "cancel": "Cancel",
+    "showMore": "Show more",
+    "showLess": "Show less",
     "delete": "Delete",
     "edit": "Edit",
     "ok": "OK",

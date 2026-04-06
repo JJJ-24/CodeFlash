@@ -77,6 +77,8 @@ export default function DeckDetailScreen() {
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space', descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',  descKey: 'settings.shortcutFilterSwitch' },
@@ -134,6 +136,7 @@ export default function DeckDetailScreen() {
         return;
       }
       lastFocusTimeRef.current = Date.now();
+      setDescExpanded(false);
       loadCards();
       onScreenFocus();
       return () => { onScreenBlur(); };
@@ -290,60 +293,30 @@ export default function DeckDetailScreen() {
     new: t('study.filterDescNew'),
   };
 
-  const ListHeader = (
-    <>
-      {deck.description ? (
-        <Text style={[styles.description, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
-          {deck.description}
-        </Text>
-      ) : null}
-
-      <View style={styles.statsRow}>
-        {filterItems.map(({ key, count, color, label }) => {
-          const isSelected = selectedFilter === key;
-          return (
-            <Pressable
-              key={key}
-              style={[
-                styles.statItem,
-                { backgroundColor: theme.colors.surface },
-                isSelected && { borderWidth: 2, borderColor: color },
-                selectionMode && { opacity: 0.5 },
-              ]}
-              onPress={() => {
-                if (selectionMode) return;
-                setSelectedFilter(key);
-                if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
-              }}
-            >
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statValue, { color, fontSize: theme.fontSize.xxl }]}>{count}</Text>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <TouchableOpacity
-        style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, selectionMode && { opacity: 0.5 }]}
-        activeOpacity={0.8}
-        disabled={selectionMode}
-        onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
+  const ListHeader = deck.description ? (
+    <View style={[styles.descBlock, { backgroundColor: theme.colors.background }]}>
+      {/* 行数計測用の非表示 Text */}
+      <Text
+        style={[styles.description, { color: 'transparent', fontSize: theme.fontSize.md, position: 'absolute', opacity: 0 }]}
+        onTextLayout={(e) => setDescTruncatable(e.nativeEvent.lines.length > 2)}
       >
-        <Ionicons name="play" size={20} color="#FFF" />
-        <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]}>{t('deck.study')}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.sectionTitleRow}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-          {t('deck.detail')}
-        </Text>
-        <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
-          {filterDescMap[selectedFilter]}
-        </Text>
-      </View>
-
-    </>
-  );
+        {deck.description}
+      </Text>
+      <Text
+        style={[styles.description, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}
+        numberOfLines={descExpanded ? undefined : 2}
+      >
+        {deck.description}
+      </Text>
+      {descTruncatable && (
+        <Pressable onPress={() => setDescExpanded((v) => !v)} style={styles.descToggleBtn}>
+          <Text style={[styles.descToggleText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]}>
+            {descExpanded ? t('common.showLess') : t('common.showMore')}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  ) : null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -454,22 +427,66 @@ export default function DeckDetailScreen() {
         }}
       />
 
-      <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
-        {ListHeader}
+      {/* 固定ヘッダー: 統計・学習ボタン・セクションタイトル */}
+      <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.statsRow}>
+          {filterItems.map(({ key, count, color, label }) => {
+            const isSelected = selectedFilter === key;
+            return (
+              <Pressable
+                key={key}
+                style={[
+                  styles.statItem,
+                  { backgroundColor: theme.colors.surface },
+                  isSelected && { borderWidth: 2, borderColor: color },
+                  selectionMode && { opacity: 0.5 },
+                ]}
+                onPress={() => {
+                  if (selectionMode) return;
+                  setSelectedFilter(key);
+                  if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
+                }}
+              >
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statValue, { color, fontSize: theme.fontSize.xxl }]}>{count}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, selectionMode && { opacity: 0.5 }]}
+          activeOpacity={0.8}
+          disabled={selectionMode}
+          onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
+        >
+          <Ionicons name="play" size={20} color="#FFF" />
+          <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]}>{t('deck.study')}</Text>
+        </TouchableOpacity>
+
+        <View style={styles.sectionTitleRow}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+            {t('deck.detail')}
+          </Text>
+          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+            {filterDescMap[selectedFilter]}
+          </Text>
+        </View>
       </View>
 
       <View style={{ flex: 1 }}>
-      {displayedCards.length === 0 ? (
-        <EmptyState
-          icon="card-outline"
-          title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
-          subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
-        />
-      ) : (
         <DraggableFlatList
           ref={listRef as any}
           data={displayedCards}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={
+            <EmptyState
+              icon="card-outline"
+              title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
+              subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
+            />
+          }
           contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
           onScrollOffsetChange={(offset) => { scrollOffsetRef.current = offset; }}
           onScrollToIndexFailed={() => {}}
@@ -548,7 +565,6 @@ export default function DeckDetailScreen() {
           );
         }}
         />
-      )}
       </View>
 
       {selectionMode ? (
@@ -627,8 +643,11 @@ export default function DeckDetailScreen() {
 const styles = StyleSheet.create({
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   container: { paddingBottom: 96 },
-  header: { padding: 20, gap: 16 },
+  fixedHeader: { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
+  descBlock: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
   description: { lineHeight: 22 },
+  descToggleBtn: { paddingTop: 4, paddingBottom: 8 },
+  descToggleText: { fontWeight: '600' },
   statsRow: { flexDirection: 'row', gap: 8 },
   statItem: {
     flex: 1,

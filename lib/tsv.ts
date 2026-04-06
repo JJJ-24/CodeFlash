@@ -79,7 +79,9 @@ export async function exportDeckToTsv(db: SQLiteDatabase, deckId: string, deckNa
     lines.push(`${card.id}\t${front}\t${back}\t${memo}\t${tags}`);
   }
   const tsv = lines.join('\n');
-  const filename = `${deckName.replace(/[/\\:*?"<>|]/g, '_')}.tsv`;
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  const filename = `${deckName.replace(/[/\\:*?"<>|]/g, '_')}_${timestamp}.tsv`;
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, tsv, { encoding: 'utf8' });
   await Sharing.shareAsync(uri, { mimeType: 'text/tab-separated-values', dialogTitle: filename });

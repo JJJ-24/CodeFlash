@@ -112,14 +112,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         style={{ backgroundColor: isRunning ? '#1E5024' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-          <Text style={[styles.langText, { fontSize: theme.fontSize.md }]}>{LANG_LABELS[block.language] ?? block.language}</Text>
-          <Text style={[styles.langChevron, { fontSize: theme.fontSize.xs }]}>▾</Text>
+          <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
+          <Text style={styles.langChevron}>▾</Text>
         </Pressable>
 
         <View style={styles.headerRight}>
           {!collapsed && EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
-              <Text style={[styles.execLabel, { fontSize: theme.fontSize.sm }]}>{t('code.run')}</Text>
+              {!block.executable && <Text style={styles.execLabel}>{t('code.run')}</Text>}
               <Switch
                 value={block.executable}
                 onValueChange={(v) => onChange({ executable: v })}
@@ -138,7 +138,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             >
               {isRunning
                 ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={[styles.runBtnText, { fontSize: theme.fontSize.md }]}>{'▶ ' + t('code.run')}</Text>
+                : <Text style={styles.runBtnText}>{'▶ ' + t('code.run')}</Text>
               }
             </TouchableOpacity>
           )}
@@ -279,10 +279,10 @@ const styles = StyleSheet.create({
   containerFocused: { borderColor: '#64B5F6' },
   containerRunning: { borderColor: '#43A047', borderWidth: 2 },
   langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  langText: { color: '#9CDCFE', fontWeight: '600' },
-  langChevron: { color: '#9CDCFE' },
+  langText: { color: '#9CDCFE', fontWeight: '600', fontSize: 14 },
+  langChevron: { color: '#9CDCFE', fontSize: 12 },
   headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-  execLabel: { color: '#9E9E9E' },
+  execLabel: { color: '#9E9E9E', fontSize: 13 },
   execSwitch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] },
   runBtn: {
     backgroundColor: '#1976D2',
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   runBtnDisabled: { backgroundColor: '#555' },
-  runBtnText: { color: '#FFF', fontWeight: '600' },
+  runBtnText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
   spinner: { marginHorizontal: 4 },
   codeArea: {
     position: 'relative',

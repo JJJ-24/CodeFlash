@@ -53,7 +53,7 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
       ) : (
         !collapsed && (
           <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
-            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle, fontSize: theme.fontSize.lg }]}>✕</Text>
+            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
           </Pressable>
         )
       )}
@@ -73,5 +73,5 @@ const styles = StyleSheet.create({
   moveButtons: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   moveBtn: { padding: 4 },
   deleteBtn: { padding: 6 },
-  deleteBtnText: {},
+  deleteBtnText: { fontSize: 18 },
 });

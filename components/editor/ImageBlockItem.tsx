@@ -92,7 +92,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
           borderBottomColor: theme.colors.border,
         }}
       >
-        <Ionicons name="image-outline" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+        <Ionicons name="image-outline" size={18} color={theme.colors.textTertiary} />
       </BlockItemHeader>
 
       {collapsed ? (

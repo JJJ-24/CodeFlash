@@ -131,7 +131,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           borderBottomColor: theme.colors.border,
         }}
       >
-        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.lg }]}>T</Text>
+        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]}>T</Text>
       </BlockItemHeader>
 
       {collapsed ? (
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  typeLabel: { fontWeight: '700' },
+  typeLabel: { fontWeight: '700', fontSize: 18 },
   input: {
     paddingHorizontal: 14,
     paddingVertical: 12,

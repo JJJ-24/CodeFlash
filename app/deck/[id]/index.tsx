@@ -387,13 +387,15 @@ export default function DeckDetailScreen() {
         options={{
           headerTitle: () => (
             <Pressable
-              onPress={() => setShowShortcutsModal(true)}
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: screenWidth * 0.5 }}
             >
               <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
                 {deck.name}
               </Text>
-              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+              )}
             </Pressable>
           ),
           headerBackTitle: '',

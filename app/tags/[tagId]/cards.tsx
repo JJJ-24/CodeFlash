@@ -21,9 +21,9 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
-import { getAllTags } from '@/lib/database/tags';
 import { useSettingsStore } from '@/store/settings';
 import { useDeckStore } from '@/store/decks';
+import { useTagStore } from '@/store/tags';
 import type { Card, Tag, TextBlock } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
@@ -52,12 +52,13 @@ export default function TagCardsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks } = useDeckStore();
+  const { tags } = useTagStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
   const [cards, setCards] = useState<Card[]>([]);
-  const [tag, setTag] = useState<Tag | null>(null);
+  const tag = tags.find((t) => t.id === tagId) ?? null;
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { focusedIndex: focusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
@@ -85,14 +86,7 @@ export default function TagCardsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      (async () => {
-        const [loadedCards, allTags] = await Promise.all([
-          getCardsByTagId(db, tagId),
-          getAllTags(db),
-        ]);
-        setCards(loadedCards);
-        setTag(allTags.find((t) => t.id === tagId) ?? null);
-      })();
+      getCardsByTagId(db, tagId).then(setCards);
       onScreenFocus();
       return () => { onScreenBlur(); };
     }, [db, tagId, onScreenFocus, onScreenBlur])
@@ -102,26 +96,22 @@ export default function TagCardsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen
         options={{
-          headerTitle: () =>
-            tag ? (
-              <Pressable
-                onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-                style={[styles.headerTitle, { maxWidth: screenWidth * 0.6 }]}
+          headerTitle: () => (
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+              style={[styles.headerTitle, { maxWidth: screenWidth * 0.5 }]}
+            >
+              <Text
+                style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1 }}
+                numberOfLines={1}
               >
-                <View style={[styles.headerDot, { backgroundColor: tag.color }]} />
-                <Text
-                  style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flexShrink: 1 }}
-                  numberOfLines={1}
-                >
-                  {tag.name}
-                </Text>
-                {keyboardShortcutsEnabled && (
-                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-                )}
-              </Pressable>
-            ) : (
-              <View />
-            ),
+                {tag?.name ?? ''}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          ),
         }}
       />
 
@@ -269,7 +259,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerDot: { width: 12, height: 12, borderRadius: 6 },
   list: { paddingTop: 16, paddingBottom: 96 },
   cardItem: {
     borderRadius: 10,

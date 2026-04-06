@@ -524,7 +524,7 @@ export default function DeckDetailScreen() {
                   styles.cardItem,
                   { backgroundColor: theme.colors.surface },
                   selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
-                  selectionMode && isFocused && !isSelected && { borderWidth: 2, borderColor: '#F57C00' },
+                  selectionMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
                   !selectionMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                 ]}
                 onPress={() => {

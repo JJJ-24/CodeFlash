@@ -67,6 +67,7 @@ export default function SettingsScreen() {
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
   const {
     initialFilterPreference, setInitialFilterPreference,
+    keyboardShortcutsEnabled, setKeyboardShortcutsEnabled,
     notificationEnabled, notificationHour, notificationMinute,
     setNotificationEnabled, setNotificationTime,
   } = useSettingsStore();
@@ -317,6 +318,17 @@ export default function SettingsScreen() {
         onChange={setFontSizePreference}
       />
 
+      <SegmentedCard
+        label={t('settings.initialFilter')}
+        options={[
+          { value: 'all' as InitialFilterPreference,    label: t('settings.initialFilterAll') },
+          { value: 'review' as InitialFilterPreference, label: t('settings.initialFilterReview') },
+          { value: 'none' as InitialFilterPreference,   label: t('settings.initialFilterNone') },
+        ]}
+        value={initialFilterPreference}
+        onChange={setInitialFilterPreference}
+      />
+
       {/* 通知 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
@@ -348,16 +360,22 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      <SegmentedCard
-        label={t('settings.initialFilter')}
-        options={[
-          { value: 'all' as InitialFilterPreference,    label: t('settings.initialFilterAll') },
-          { value: 'review' as InitialFilterPreference, label: t('settings.initialFilterReview') },
-          { value: 'none' as InitialFilterPreference,   label: t('settings.initialFilterNone') },
-        ]}
-        value={initialFilterPreference}
-        onChange={setInitialFilterPreference}
-      />
+      {/* キーボードショートカット */}
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+          {t('settings.keyboard')}
+        </Text>
+        <View style={styles.notificationRow}>
+          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+            {t('settings.keyboardEnabled')}
+          </Text>
+          <Switch
+            value={keyboardShortcutsEnabled}
+            onValueChange={setKeyboardShortcutsEnabled}
+            trackColor={{ true: theme.colors.primary }}
+          />
+        </View>
+      </View>
 
       {/* データ管理 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

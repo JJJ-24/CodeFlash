@@ -321,6 +321,7 @@ export default function StudySessionScreen() {
           caretHidden
           keyboardType="ascii-capable"
           showSoftInputOnFocus={false}
+          disableKeyboardShortcuts={true}
           onKeyPress={({ nativeEvent: { key } }) => {
             if (key === 'Enter') {
               completeReadyRef.current = false;
@@ -479,6 +480,7 @@ export default function StudySessionScreen() {
           caretHidden
           keyboardType="ascii-capable"
           showSoftInputOnFocus={false}
+          disableKeyboardShortcuts={true}
           autoCorrect={false}
           autoCapitalize="none"
           spellCheck={false}
@@ -629,6 +631,7 @@ export default function StudySessionScreen() {
         autoCorrect={false}
         autoCapitalize="none"
         spellCheck={false}
+        disableKeyboardShortcuts={true}
         onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
         onBlur={() => { setTimeout(() => { if (!codeEditingRef.current && isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
       />

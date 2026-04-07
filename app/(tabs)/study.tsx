@@ -430,6 +430,7 @@ export default function StudyScreen() {
         ref={keyboardRef}
         style={styles.hiddenKeyboardInput}
         showSoftInputOnFocus={false}
+        disableKeyboardShortcuts={true}
         keyboardType="ascii-capable"
         onKeyPress={handleKeyPress}
         onBlur={onInputBlur}

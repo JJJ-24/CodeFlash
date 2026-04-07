@@ -94,6 +94,7 @@ export default function TagsScreen() {
         caretHidden
         keyboardType="ascii-capable"
         showSoftInputOnFocus={false}
+        disableKeyboardShortcuts={true}
         autoCorrect={false}
         autoCapitalize="none"
         spellCheck={false}

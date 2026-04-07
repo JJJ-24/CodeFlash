@@ -120,6 +120,7 @@ export default function TagCardsScreen() {
         caretHidden
         keyboardType="ascii-capable"
         showSoftInputOnFocus={false}
+        disableKeyboardShortcuts={true}
         autoCorrect={false}
         autoCapitalize="none"
         spellCheck={false}

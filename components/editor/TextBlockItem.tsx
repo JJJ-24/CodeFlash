@@ -164,6 +164,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           onFocus={() => { setFocused(true); onFocusInput?.(); }}
           onBlur={() => setFocused(false)}
           textAlignVertical="top"
+          autoCorrect={false}
+          spellCheck={false}
         />
       )}
       <Animated.View

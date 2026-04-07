@@ -93,6 +93,8 @@ export default function NewDeckScreen() {
               maxLength={25}
               autoFocus
               returnKeyType="next"
+              autoCorrect={false}
+              spellCheck={false}
             />
           </View>
           <View style={styles.field}>
@@ -107,6 +109,8 @@ export default function NewDeckScreen() {
               onChangeText={setDescription}
               multiline
               numberOfLines={3}
+              autoCorrect={false}
+              spellCheck={false}
             />
           </View>
         </ScrollView>

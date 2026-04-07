@@ -154,6 +154,8 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
             placeholderTextColor={theme.colors.textTertiary}
             onFocus={() => { setFocused(true); onFocusInput?.(); }}
             onBlur={() => setFocused(false)}
+            autoCorrect={false}
+            spellCheck={false}
           />
         </>
       )}

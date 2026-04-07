@@ -90,6 +90,8 @@ export default function NewTagScreen() {
               value={name}
               onChangeText={(v) => { setName(v); setError(''); }}
               autoFocus
+              autoCorrect={false}
+              spellCheck={false}
             />
             {!!error && (
               <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }}>{error}</Text>

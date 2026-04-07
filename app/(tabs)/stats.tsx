@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { InputAccessoryView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
@@ -534,8 +534,14 @@ export default function StatsScreen() {
             else { openSheet(focusedItem); }
           }
         }}
+        inputAccessoryViewID="kb-accessory"
         onBlur={onInputBlur}
       />
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="kb-accessory">
+          <View style={{ height: 0 }} />
+        </InputAccessoryView>
+      )}
       <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
         <View style={styles.summaryRow}>
         <Pressable

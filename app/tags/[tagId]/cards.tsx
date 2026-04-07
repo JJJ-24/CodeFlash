@@ -7,7 +7,9 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
+  InputAccessoryView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -141,8 +143,14 @@ export default function TagCardsScreen() {
             router.back();
           }
         }}
+        inputAccessoryViewID="kb-accessory"
         onBlur={onInputBlur}
       />
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="kb-accessory">
+          <View style={{ height: 0 }} />
+        </InputAccessoryView>
+      )}
 
       {cards.length === 0 ? (
         <View style={styles.empty}>

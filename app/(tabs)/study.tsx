@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
+  InputAccessoryView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -431,9 +433,15 @@ export default function StudyScreen() {
         style={styles.hiddenKeyboardInput}
         showSoftInputOnFocus={false}
         keyboardType="ascii-capable"
+        inputAccessoryViewID="kb-accessory"
         onKeyPress={handleKeyPress}
         onBlur={onInputBlur}
       />
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="kb-accessory">
+          <View style={{ height: 0 }} />
+        </InputAccessoryView>
+      )}
 
       <ShortcutsModal
         visible={showShortcutsModal}

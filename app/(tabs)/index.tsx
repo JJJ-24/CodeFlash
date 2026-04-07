@@ -6,6 +6,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'reac
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  InputAccessoryView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -261,8 +263,14 @@ export default function HomeScreen() {
             router.push('/tags');
           }
         }}
+        inputAccessoryViewID="kb-accessory"
         onBlur={onInputBlur}
       />
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="kb-accessory">
+          <View style={{ height: 0 }} />
+        </InputAccessoryView>
+      )}
       <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
         {StatsHeader}
       </View>

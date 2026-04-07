@@ -7,6 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  InputAccessoryView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -327,6 +329,7 @@ export default function StudySessionScreen() {
               router.back();
             }
           }}
+          inputAccessoryViewID="kb-accessory"
           onBlur={() => {
             if (completeReadyRef.current) {
               completeReadyRef.current = false;
@@ -334,6 +337,11 @@ export default function StudySessionScreen() {
             }
           }}
         />
+        {Platform.OS === 'ios' && (
+          <InputAccessoryView nativeID="kb-accessory">
+            <View style={{ height: 0 }} />
+          </InputAccessoryView>
+        )}
         <View style={[styles.completeScreen, { backgroundColor: theme.colors.background }]}>
           <Ionicons name="checkmark-circle" size={80} color="#43A047" />
           <Text style={[styles.completeTitle, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}>{t('study.complete')}</Text>
@@ -482,9 +490,15 @@ export default function StudySessionScreen() {
           autoCorrect={false}
           autoCapitalize="none"
           spellCheck={false}
+          inputAccessoryViewID="kb-accessory"
           onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
           onBlur={() => { setTimeout(() => { if (!codeEditingRef.current && isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
         />
+        {Platform.OS === 'ios' && (
+          <InputAccessoryView nativeID="kb-accessory">
+            <View style={{ height: 0 }} />
+          </InputAccessoryView>
+        )}
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
           {/* ヘッダー行（実体あり、スクロール外） */}
           <View style={styles.fullscreenHeader}>
@@ -629,9 +643,15 @@ export default function StudySessionScreen() {
         autoCorrect={false}
         autoCapitalize="none"
         spellCheck={false}
+        inputAccessoryViewID="kb-accessory"
         onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
         onBlur={() => { setTimeout(() => { if (!codeEditingRef.current && isScreenFocusedRef.current) keyboardRef.current?.focus(); }, 50); }}
       />
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="kb-accessory">
+          <View style={{ height: 0 }} />
+        </InputAccessoryView>
+      )}
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* プログレスバー */}
         <View style={[styles.progressBar, { backgroundColor: theme.colors.progressBg }]}>

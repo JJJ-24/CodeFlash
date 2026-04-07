@@ -7,8 +7,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
-  InputAccessoryView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -390,14 +388,8 @@ export default function DeckDetailScreen() {
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           }
         }}
-        inputAccessoryViewID="kb-accessory"
         onBlur={onInputBlur}
       />
-      {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID="kb-accessory">
-          <View style={{ height: 0 }} />
-        </InputAccessoryView>
-      )}
       <Stack.Screen
         options={{
           headerTitle: () => (

@@ -5,8 +5,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
-  InputAccessoryView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -121,14 +119,8 @@ export default function TagsScreen() {
             router.back();
           }
         }}
-        inputAccessoryViewID="kb-accessory"
         onBlur={onInputBlur}
       />
-      {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID="kb-accessory">
-          <View style={{ height: 0 }} />
-        </InputAccessoryView>
-      )}
 
       {tags.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -202,6 +203,13 @@ export default function StudySessionScreen() {
   const handleCodeEditFocus = useCallback(() => {
     codeEditingRef.current = true;
   }, []);
+  // メモ欄専用: 編集開始時にキーボード表示後、裏面 ScrollView を末尾へスクロール
+  const handleMemoCodeEditFocus = useCallback(() => {
+    codeEditingRef.current = true;
+    setTimeout(() => {
+      backScrollRef.current?.scrollToEnd({ animated: true });
+    }, 350);
+  }, []);
   const handleCodeEditBlur = useCallback(() => {
     codeEditingRef.current = false;
     if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
@@ -337,7 +345,7 @@ export default function StudySessionScreen() {
     } else if (key.toLowerCase() === "b") {
       router.back();
     } else if (key.toLowerCase() === "l") {
-      if (cardLinks.length > 0) setShowLinksModal((v) => !v);
+      if (cardLinks.length > 0) { Keyboard.dismiss(); setShowLinksModal((v) => !v); }
     } else if (key.toLowerCase() === "p") {
       if (currentCard) {
         const tab = isFlipped ? "back" : "front";
@@ -753,7 +761,7 @@ export default function StudySessionScreen() {
             onCodeBlockChange={(i, text) =>
               handleCodeBlockChange(currentCard.id, i, text, "memo")
             }
-            onEditFocus={handleCodeEditFocus}
+            onEditFocus={handleMemoCodeEditFocus}
             onEditBlur={handleCodeEditBlur}
             onSelectCodeBlock={makeSelectHandler('memo', 'back')}
             runTrigger={
@@ -864,7 +872,7 @@ export default function StudySessionScreen() {
             {cardLinks.length > 0 && (
               <Pressable
                 style={styles.fullscreenEditBtn}
-                onPress={() => setShowLinksModal(true)}
+                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
                 accessibilityLabel={t("study.links")}
               >
                 <Ionicons
@@ -910,6 +918,7 @@ export default function StudySessionScreen() {
                       style={{ flex: 1 }}
                       contentContainerStyle={styles.fullscreenContent}
                       showsVerticalScrollIndicator={false}
+                      automaticallyAdjustKeyboardInsets
                       onScroll={(e) => {
                         frontScrollYRef.current = e.nativeEvent.contentOffset.y;
                       }}
@@ -941,6 +950,7 @@ export default function StudySessionScreen() {
                       style={{ flex: 1 }}
                       contentContainerStyle={styles.fullscreenContent}
                       showsVerticalScrollIndicator={false}
+                      automaticallyAdjustKeyboardInsets
                       onScroll={(e) => {
                         backScrollYRef.current = e.nativeEvent.contentOffset.y;
                       }}
@@ -1045,7 +1055,7 @@ export default function StudySessionScreen() {
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     {cardLinks.length > 0 && (
                       <Pressable
-                        onPress={() => setShowLinksModal(true)}
+                        onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
                         style={{ paddingHorizontal: 8 }}
                         accessibilityLabel={t("study.links")}
                       >
@@ -1125,7 +1135,7 @@ export default function StudySessionScreen() {
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             {cardLinks.length > 0 && (
               <Pressable
-                onPress={() => setShowLinksModal(true)}
+                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
                 style={{ paddingHorizontal: 8 }}
                 accessibilityLabel={t("study.links")}
               >
@@ -1206,6 +1216,7 @@ export default function StudySessionScreen() {
                     style={{ flex: 1 }}
                     contentContainerStyle={styles.faceContent}
                     showsVerticalScrollIndicator={false}
+                    automaticallyAdjustKeyboardInsets
                     onScroll={(e) => {
                       frontScrollYRef.current = e.nativeEvent.contentOffset.y;
                     }}
@@ -1237,6 +1248,7 @@ export default function StudySessionScreen() {
                     style={{ flex: 1 }}
                     contentContainerStyle={styles.faceContent}
                     showsVerticalScrollIndicator={false}
+                    automaticallyAdjustKeyboardInsets
                     onScroll={(e) => {
                       backScrollYRef.current = e.nativeEvent.contentOffset.y;
                     }}

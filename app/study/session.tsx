@@ -151,6 +151,11 @@ export default function StudySessionScreen() {
     Record<string, Record<number, string>>
   >({});
   const codeEditingRef = useRef(false);
+  // 別 BlocksView のコードブロックへ編集が移るとき、onEditBlur の keyboardRef.focus() を抑制する
+  const switchingCodeBlockRef = useRef(false);
+  // 裏面↔メモ間でコード実行・選択が切り替わったとき、相手側の編集を終了させるトリガー
+  const [backExitAllEditTrigger, setBackExitAllEditTrigger] = useState(0);
+  const [memoExitAllEditTrigger, setMemoExitAllEditTrigger] = useState(0);
   const flipCardRef = useRef<FlipCardRef>(null);
   // コードブロックのボタンタップがFlipCardに伝播して意図せず裏返るのを防ぐ（300ms抑制）
   const suppressedRef = useRef(false);
@@ -721,9 +726,12 @@ export default function StudySessionScreen() {
             }}
             onEditBlur={() => {
               codeEditingRef.current = false;
-              keyboardRef.current?.focus();
+              if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
             }}
             onSelectCodeBlock={(idx) => {
+              switchingCodeBlockRef.current = true;
+              setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
+              setBackExitAllEditTrigger(v => v + 1);
               cbs.setSelectedCodeBlockIdx(idx);
               cbs.setSelectedCodeBlockSide("memo");
               cbs.setEditTrigger(0);
@@ -743,6 +751,7 @@ export default function StudySessionScreen() {
                 ? cbs.selectedCodeBlockIdx
                 : null
             }
+            exitAllEditTrigger={memoExitAllEditTrigger}
             scrollRef={backScrollRef}
             scrollBaseYRef={memoScrollBaseYRef}
           />
@@ -899,9 +908,11 @@ export default function StudySessionScreen() {
                         }}
                         onEditBlur={() => {
                           codeEditingRef.current = false;
-                          keyboardRef.current?.focus();
+                          if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
                         }}
                         onSelectCodeBlock={(idx) => {
+                          switchingCodeBlockRef.current = true;
+                          setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
                           cbs.setSelectedCodeBlockIdx(idx);
                           cbs.setSelectedCodeBlockSide(
                             isFlipped ? "back" : "front",
@@ -943,9 +954,12 @@ export default function StudySessionScreen() {
                         }}
                         onEditBlur={() => {
                           codeEditingRef.current = false;
-                          keyboardRef.current?.focus();
+                          if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
                         }}
                         onSelectCodeBlock={(idx) => {
+                          switchingCodeBlockRef.current = true;
+                          setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
+                          if (isFlipped) setMemoExitAllEditTrigger(v => v + 1);
                           cbs.setSelectedCodeBlockIdx(idx);
                           cbs.setSelectedCodeBlockSide(
                             isFlipped ? "back" : "front",
@@ -967,6 +981,7 @@ export default function StudySessionScreen() {
                             ? cbs.selectedCodeBlockIdx
                             : null
                         }
+                        exitAllEditTrigger={backExitAllEditTrigger}
                         scrollRef={backScrollRef}
                       />
                       {memoBlock}
@@ -1216,9 +1231,11 @@ export default function StudySessionScreen() {
                       }}
                       onEditBlur={() => {
                         codeEditingRef.current = false;
-                        keyboardRef.current?.focus();
+                        if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
                       }}
                       onSelectCodeBlock={(idx) => {
+                        switchingCodeBlockRef.current = true;
+                        setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
                         cbs.setSelectedCodeBlockIdx(idx);
                         cbs.setEditTrigger(0);
                       }}
@@ -1257,9 +1274,12 @@ export default function StudySessionScreen() {
                       }}
                       onEditBlur={() => {
                         codeEditingRef.current = false;
-                        keyboardRef.current?.focus();
+                        if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
                       }}
                       onSelectCodeBlock={(idx) => {
+                        switchingCodeBlockRef.current = true;
+                        setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
+                        setMemoExitAllEditTrigger(v => v + 1);
                         cbs.setSelectedCodeBlockIdx(idx);
                         cbs.setSelectedCodeBlockSide("back");
                         cbs.setEditTrigger(0);
@@ -1279,6 +1299,7 @@ export default function StudySessionScreen() {
                           ? cbs.selectedCodeBlockIdx
                           : null
                       }
+                      exitAllEditTrigger={backExitAllEditTrigger}
                       scrollRef={backScrollRef}
                     />
                     {memoBlock}

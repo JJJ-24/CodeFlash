@@ -38,6 +38,7 @@ interface Props {
   onEditBlur?: () => void;
   runTrigger?: number;
   editTrigger?: number;
+  exitAllEditTrigger?: number;
   selectedCodeBlockIdx?: number | null;
   onSelectCodeBlock?: (codeBlockIdx: number) => void;
   onCodeRunStart?: () => void;
@@ -45,7 +46,7 @@ interface Props {
   scrollBaseYRef?: RefObject<number>;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -64,6 +65,16 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     editingBlockIdxRef.current = blockIdx;
     onSelectCodeBlock?.(codeBlockIndexMap[blockIdx]);
   }
+
+  // 別 BlocksView でコードが実行・選択されたとき、この BlocksView の編集中ブロックを終了させる
+  useEffect(() => {
+    if (!exitAllEditTrigger) return;
+    const prev = editingBlockIdxRef.current;
+    if (prev !== null) {
+      setExitEditTriggers(t => ({ ...t, [prev]: (t[prev] ?? 0) + 1 }));
+      editingBlockIdxRef.current = null;
+    }
+  }, [exitAllEditTrigger]);
 
   // Tab キーでブロックが切り替わったら、そのブロックが画面内に入るようスクロール
   useEffect(() => {

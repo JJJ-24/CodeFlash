@@ -93,54 +93,30 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 }));
 
-AsyncStorage.getItem(STORAGE_KEY).then((value) => {
-  if (value !== null) {
-    useSettingsStore.setState({ keyboardShortcutsEnabled: value === 'true' });
-  }
-});
-
-AsyncStorage.getItem(FILTER_STORAGE_KEY).then((value) => {
-  if (value !== null) {
-    useSettingsStore.setState({ initialFilterPreference: value as InitialFilterPreference });
-  }
-});
-
-AsyncStorage.getItem(LANG_STORAGE_KEY).then((value) => {
-  if (value !== null) {
-    useSettingsStore.setState({ lastSelectedCodeLanguage: value });
-  }
-});
-
-AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY).then((value) => {
-  if (value !== null) {
-    useSettingsStore.setState({ lastDeckDetailFilter: value as DeckDetailFilter });
-  }
-});
-
-AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY).then((value) => {
-  if (value !== null) {
-    useSettingsStore.setState({ notificationEnabled: value === 'true' });
-  }
-});
-
-AsyncStorage.getItem(DECK_SORT_KEY).then((value) => {
-  if (value !== null) {
-    useSettingsStore.setState({ deckSortOrder: value as DeckSortOrder });
-  }
-});
-
-AsyncStorage.getItem(SHUFFLE_KEY).then((value) => {
-  if (value !== null) {
-    useSettingsStore.setState({ shuffleEnabled: value === 'true' });
-  }
-});
-
 Promise.all([
+  AsyncStorage.getItem(STORAGE_KEY),
+  AsyncStorage.getItem(FILTER_STORAGE_KEY),
+  AsyncStorage.getItem(LANG_STORAGE_KEY),
+  AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY),
+  AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY),
+  AsyncStorage.getItem(DECK_SORT_KEY),
+  AsyncStorage.getItem(SHUFFLE_KEY),
   AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
   AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
-]).then(([hour, minute]) => {
-  const update: Partial<{ notificationHour: number; notificationMinute: number }> = {};
-  if (hour !== null) update.notificationHour = Number(hour);
-  if (minute !== null) update.notificationMinute = Number(minute);
+]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, shuffle, notifHour, notifMinute]) => {
+  const update: Partial<Pick<SettingsState,
+    'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
+    'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
+    'deckSortOrder' | 'shuffleEnabled'
+  >> = {};
+  if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
+  if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
+  if (lang !== null) update.lastSelectedCodeLanguage = lang;
+  if (deckFilter !== null) update.lastDeckDetailFilter = deckFilter as DeckDetailFilter;
+  if (notifEnabled !== null) update.notificationEnabled = notifEnabled === 'true';
+  if (deckSort !== null) update.deckSortOrder = deckSort as DeckSortOrder;
+  if (shuffle !== null) update.shuffleEnabled = shuffle === 'true';
+  if (notifHour !== null) update.notificationHour = Number(notifHour);
+  if (notifMinute !== null) update.notificationMinute = Number(notifMinute);
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 });

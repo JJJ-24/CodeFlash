@@ -19,9 +19,11 @@ import { useTranslation } from 'react-i18next';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
+import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
+import { useInsertPair } from '@/hooks/useInsertPair';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock } from '@/types';
@@ -51,9 +53,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
   const codeInputRef = useRef<TextInput>(null);
-  const selectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
-  const insertTimeRef = useRef(0);
-  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
+  const { insertPair, selection, handleSelectionChange } = useInsertPair(
+    block.content,
+    (text) => onChange({ content: text }),
+    codeInputRef,
+  );
 
   useEffect(() => {
     if (autoFocus) {
@@ -76,23 +80,6 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       Animated.timing(flashAnim, { toValue: 0, duration: 600, useNativeDriver: true }).start();
     }
   }, [flashTrigger]);
-
-  const insertPair = useCallback((open: string, close: string) => {
-    const { start, end } = selectionRef.current;
-    const current = block.content;
-    const selected = current.slice(start, end);
-    const newContent = current.slice(0, start) + open + selected + close + current.slice(end);
-    const newCursor = start + open.length + selected.length;
-    // onSelectionChange が巻き戻さないよう、先に ref を正しい位置に更新
-    selectionRef.current = { start: newCursor, end: newCursor };
-    insertTimeRef.current = Date.now();
-    onChange({ content: newContent });
-    setSelection({ start: newCursor, end: newCursor });
-    requestAnimationFrame(() => {
-      codeInputRef.current?.focus();
-      setSelection(undefined);
-    });
-  }, [block.content, onChange]);
 
   async function handleCodeCopy() {
     await Clipboard.setStringAsync(block.content);
@@ -171,11 +158,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                         .replace(/[\u2018\u2019]/g, "'"),
                     })
                   }
-                  onSelectionChange={({ nativeEvent }) => {
-                    // 挿入直後 200ms はカーソルリセットを無視する
-                    if (Date.now() - insertTimeRef.current < 200) return;
-                    selectionRef.current = nativeEvent.selection;
-                  }}
+                  onSelectionChange={handleSelectionChange}
                   multiline
                   placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
@@ -193,19 +176,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </Pressable>
           </View>
 
-          {focused && !isPreview && (
-            <View style={[styles.palette, { borderTopColor: theme.dark ? '#3A3A3A' : '#444' }]}>
-              {PAIRS.map(({ open, close, label }) => (
-                <Pressable
-                  key={label}
-                  style={[styles.paletteBtn, { backgroundColor: theme.dark ? '#2D2D2D' : '#1E1E1E', borderColor: theme.dark ? '#555' : '#444' }]}
-                  onPress={() => insertPair(open, close)}
-                >
-                  <Text style={[styles.paletteBtnText, { fontSize: theme.fontSize.sm }]}>{label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+          <SymbolPalette
+            visible={focused && !isPreview}
+            onInsertPair={insertPair}
+            theme={theme}
+          />
 
           <ExecutionOutput
             result={result}
@@ -259,16 +234,6 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     </View>
   );
 }
-
-const PAIRS = [
-  { open: '(', close: ')', label: '( )' },
-  { open: '{', close: '}', label: '{ }' },
-  { open: '[', close: ']', label: '[ ]' },
-  { open: '"', close: '"', label: '" "' },
-  { open: "'", close: "'", label: "' '" },
-  { open: '`', close: '`', label: '` `' },
-  { open: '<', close: '>', label: '< >' },
-];
 
 const styles = StyleSheet.create({
   container: {
@@ -337,24 +302,6 @@ const styles = StyleSheet.create({
   },
   langOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
   langOptionText: {},
-  palette: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderTopWidth: 1,
-  },
-  paletteBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  paletteBtnText: {
-    color: '#9CDCFE',
-    fontFamily: 'monospace',
-  },
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,

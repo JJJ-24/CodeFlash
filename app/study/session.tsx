@@ -198,6 +198,38 @@ export default function StudySessionScreen() {
   const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
   const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
 
+  // BlocksView 共通ハンドラ
+  const handleCodeEditFocus = useCallback(() => {
+    codeEditingRef.current = true;
+  }, []);
+  const handleCodeEditBlur = useCallback(() => {
+    codeEditingRef.current = false;
+    if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
+  }, []);
+  /**
+   * onSelectCodeBlock ファクトリ
+   * - side: 選択されたブロックの面（null = 変更しない）
+   * - triggerOther: 相手面の編集を終了させるタイミング
+   */
+  const makeSelectHandler = useCallback(
+    (
+      side: 'front' | 'back' | 'memo' | 'frontOrBack' | null,
+      triggerOther?: 'back' | 'memo' | 'memoIfFlipped',
+    ) => (idx: number) => {
+      switchingCodeBlockRef.current = true;
+      setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
+      if (triggerOther === 'back') setBackExitAllEditTrigger(v => v + 1);
+      if (triggerOther === 'memo') setMemoExitAllEditTrigger(v => v + 1);
+      if (triggerOther === 'memoIfFlipped' && isFlipped) setMemoExitAllEditTrigger(v => v + 1);
+      cbs.setSelectedCodeBlockIdx(idx);
+      if (side === 'memo') cbs.setSelectedCodeBlockSide('memo');
+      else if (side === 'back') cbs.setSelectedCodeBlockSide('back');
+      else if (side === 'frontOrBack') cbs.setSelectedCodeBlockSide(isFlipped ? 'back' : 'front');
+      cbs.setEditTrigger(0);
+    },
+    [cbs, isFlipped],
+  );
+
   const cardLinks = useMemo(
     () =>
       extractLinks([
@@ -721,21 +753,9 @@ export default function StudySessionScreen() {
             onCodeBlockChange={(i, text) =>
               handleCodeBlockChange(currentCard.id, i, text, "memo")
             }
-            onEditFocus={() => {
-              codeEditingRef.current = true;
-            }}
-            onEditBlur={() => {
-              codeEditingRef.current = false;
-              if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
-            }}
-            onSelectCodeBlock={(idx) => {
-              switchingCodeBlockRef.current = true;
-              setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
-              setBackExitAllEditTrigger(v => v + 1);
-              cbs.setSelectedCodeBlockIdx(idx);
-              cbs.setSelectedCodeBlockSide("memo");
-              cbs.setEditTrigger(0);
-            }}
+            onEditFocus={handleCodeEditFocus}
+            onEditBlur={handleCodeEditBlur}
+            onSelectCodeBlock={makeSelectHandler('memo', 'back')}
             runTrigger={
               showMemo && cbs.selectedCodeBlockSide === "memo"
                 ? cbs.runTrigger
@@ -903,22 +923,9 @@ export default function StudySessionScreen() {
                         onCodeBlockChange={(i, text) =>
                           handleCodeBlockChange(currentCard.id, i, text)
                         }
-                        onEditFocus={() => {
-                          codeEditingRef.current = true;
-                        }}
-                        onEditBlur={() => {
-                          codeEditingRef.current = false;
-                          if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
-                        }}
-                        onSelectCodeBlock={(idx) => {
-                          switchingCodeBlockRef.current = true;
-                          setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
-                          cbs.setSelectedCodeBlockIdx(idx);
-                          cbs.setSelectedCodeBlockSide(
-                            isFlipped ? "back" : "front",
-                          );
-                          cbs.setEditTrigger(0);
-                        }}
+                        onEditFocus={handleCodeEditFocus}
+                        onEditBlur={handleCodeEditBlur}
+                        onSelectCodeBlock={makeSelectHandler('frontOrBack')}
                         runTrigger={!isFlipped ? cbs.runTrigger : undefined}
                         editTrigger={!isFlipped ? cbs.editTrigger : undefined}
                         selectedCodeBlockIdx={
@@ -949,23 +956,9 @@ export default function StudySessionScreen() {
                         onCodeBlockChange={(i, text) =>
                           handleCodeBlockChange(currentCard.id, i, text, "back")
                         }
-                        onEditFocus={() => {
-                          codeEditingRef.current = true;
-                        }}
-                        onEditBlur={() => {
-                          codeEditingRef.current = false;
-                          if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
-                        }}
-                        onSelectCodeBlock={(idx) => {
-                          switchingCodeBlockRef.current = true;
-                          setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
-                          if (isFlipped) setMemoExitAllEditTrigger(v => v + 1);
-                          cbs.setSelectedCodeBlockIdx(idx);
-                          cbs.setSelectedCodeBlockSide(
-                            isFlipped ? "back" : "front",
-                          );
-                          cbs.setEditTrigger(0);
-                        }}
+                        onEditFocus={handleCodeEditFocus}
+                        onEditBlur={handleCodeEditBlur}
+                        onSelectCodeBlock={makeSelectHandler('frontOrBack', 'memoIfFlipped')}
                         runTrigger={
                           isFlipped && cbs.selectedCodeBlockSide === "back"
                             ? cbs.runTrigger
@@ -1226,19 +1219,9 @@ export default function StudySessionScreen() {
                       onCodeBlockChange={(i, text) =>
                         handleCodeBlockChange(currentCard.id, i, text)
                       }
-                      onEditFocus={() => {
-                        codeEditingRef.current = true;
-                      }}
-                      onEditBlur={() => {
-                        codeEditingRef.current = false;
-                        if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
-                      }}
-                      onSelectCodeBlock={(idx) => {
-                        switchingCodeBlockRef.current = true;
-                        setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
-                        cbs.setSelectedCodeBlockIdx(idx);
-                        cbs.setEditTrigger(0);
-                      }}
+                      onEditFocus={handleCodeEditFocus}
+                      onEditBlur={handleCodeEditBlur}
+                      onSelectCodeBlock={makeSelectHandler(null)}
                       runTrigger={!isFlipped ? cbs.runTrigger : undefined}
                       editTrigger={!isFlipped ? cbs.editTrigger : undefined}
                       selectedCodeBlockIdx={
@@ -1269,21 +1252,9 @@ export default function StudySessionScreen() {
                       onCodeBlockChange={(i, text) =>
                         handleCodeBlockChange(currentCard.id, i, text, "back")
                       }
-                      onEditFocus={() => {
-                        codeEditingRef.current = true;
-                      }}
-                      onEditBlur={() => {
-                        codeEditingRef.current = false;
-                        if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
-                      }}
-                      onSelectCodeBlock={(idx) => {
-                        switchingCodeBlockRef.current = true;
-                        setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
-                        setMemoExitAllEditTrigger(v => v + 1);
-                        cbs.setSelectedCodeBlockIdx(idx);
-                        cbs.setSelectedCodeBlockSide("back");
-                        cbs.setEditTrigger(0);
-                      }}
+                      onEditFocus={handleCodeEditFocus}
+                      onEditBlur={handleCodeEditBlur}
+                      onSelectCodeBlock={makeSelectHandler('back', 'memo')}
                       runTrigger={
                         isFlipped && cbs.selectedCodeBlockSide === "back"
                           ? cbs.runTrigger

@@ -3,7 +3,6 @@ import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,8 +17,10 @@ import { runOnJS } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 
 import { ExecutionOutput } from "@/components/code/ExecutionOutput";
+import { SymbolPalette } from "@/components/code/SymbolPalette";
 import { SyntaxHighlightedCode } from "@/components/study/SyntaxHighlightedCode";
 import { useCodeExecution } from "@/hooks/useCodeExecution";
+import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS } from "@/lib/code-execution/constants";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useTheme } from "@/lib/theme";
@@ -75,12 +76,14 @@ export function CodeRunnerView({
   } = useCodeExecution(onRunStart);
   const [isEditing, setIsEditing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined);
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
   const intentionalExitRef = useRef(false);
-  const selectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
-  const insertTimeRef = useRef(0);
+  const { insertPair, selection, handleSelectionChange } = useInsertPair(
+    editedContent ?? block.content,
+    onContentChange ?? (() => {}),
+    codeInputRef,
+  );
 
   useEffect(() => {
     reset();
@@ -164,22 +167,6 @@ export function CodeRunnerView({
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 1000);
   }, [editedContent, block.content]);
-
-  const insertPair = useCallback((open: string, close: string) => {
-    const { start, end } = selectionRef.current;
-    const current = editedContent ?? block.content;
-    const selected = current.slice(start, end);
-    const newContent = current.slice(0, start) + open + selected + close + current.slice(end);
-    const newCursor = start + open.length + selected.length;
-    selectionRef.current = { start: newCursor, end: newCursor };
-    insertTimeRef.current = Date.now();
-    onContentChange?.(newContent);
-    setSelection({ start: newCursor, end: newCursor });
-    requestAnimationFrame(() => {
-      codeInputRef.current?.focus();
-      setSelection(undefined);
-    });
-  }, [editedContent, block.content, onContentChange]);
 
   const editGesture = useMemo(
     () =>
@@ -279,10 +266,7 @@ export function CodeRunnerView({
             value={editedContent ?? block.content}
             selection={selection}
             onChangeText={onContentChange}
-            onSelectionChange={({ nativeEvent }) => {
-              if (Date.now() - insertTimeRef.current < 200) return;
-              selectionRef.current = nativeEvent.selection;
-            }}
+            onSelectionChange={handleSelectionChange}
             multiline
             autoCorrect={false}
             autoCapitalize="none"
@@ -329,22 +313,12 @@ export function CodeRunnerView({
         </GestureDetector>
       </View>
 
-      {isEditing && (
-        <View
-          style={[styles.palette, { borderTopColor: theme.dark ? '#3A3A3A' : '#444' }]}
-          onTouchStart={suppress}
-        >
-          {PAIRS.map(({ open, close, label }) => (
-            <Pressable
-              key={label}
-              style={[styles.paletteBtn, { backgroundColor: theme.dark ? '#2D2D2D' : '#1E1E1E', borderColor: theme.dark ? '#555' : '#444' }]}
-              onPress={() => insertPair(open, close)}
-            >
-              <Text style={[styles.paletteBtnText, { fontSize: theme.fontSize.sm }]}>{label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <SymbolPalette
+        visible={isEditing}
+        onInsertPair={insertPair}
+        suppress={suppress}
+        theme={theme}
+      />
 
       {!isEditing && (
         <ExecutionOutput
@@ -358,16 +332,6 @@ export function CodeRunnerView({
     </View>
   );
 }
-
-const PAIRS = [
-  { open: '(', close: ')', label: '( )' },
-  { open: '{', close: '}', label: '{ }' },
-  { open: '[', close: ']', label: '[ ]' },
-  { open: '"', close: '"', label: '" "' },
-  { open: "'", close: "'", label: "' '" },
-  { open: '`', close: '`', label: '` `' },
-  { open: '<', close: '>', label: '< >' },
-];
 
 const styles = StyleSheet.create({
   container: {
@@ -453,23 +417,5 @@ const styles = StyleSheet.create({
   codeInput: {
     width: "100%",
     textAlignVertical: "top",
-  },
-  palette: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderTopWidth: 1,
-  },
-  paletteBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  paletteBtnText: {
-    color: '#9CDCFE',
-    fontFamily: 'monospace',
   },
 });

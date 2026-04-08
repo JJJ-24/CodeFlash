@@ -154,10 +154,15 @@ export default function StudySessionScreen() {
   const flipCardRef = useRef<FlipCardRef>(null);
   // コードブロックのボタンタップがFlipCardに伝播して意図せず裏返るのを防ぐ（300ms抑制）
   const suppressedRef = useRef(false);
+  const suppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppress = useCallback(() => {
+    if (suppressTimerRef.current !== null) {
+      clearTimeout(suppressTimerRef.current);
+    }
     suppressedRef.current = true;
-    setTimeout(() => {
+    suppressTimerRef.current = setTimeout(() => {
       suppressedRef.current = false;
+      suppressTimerRef.current = null;
     }, 300);
   }, []);
 

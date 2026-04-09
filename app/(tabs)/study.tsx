@@ -167,10 +167,10 @@ export default function StudyScreen() {
 
   function handleKeyPress({ nativeEvent: { key } }: { nativeEvent: { key: string } }) {
     if (!keyboardShortcutsEnabled) return;
-    if (key === '1') { setActiveFilter('all'); setFocusedItemIndex(null); }
-    else if (key === '2') { setActiveFilter('learned'); setFocusedItemIndex(null); }
-    else if (key === '3') { setActiveFilter('review'); setFocusedItemIndex(null); }
-    else if (key === '4') { setActiveFilter('new'); setFocusedItemIndex(null); }
+    if (key === '1') { setActiveFilter('all'); }
+    else if (key === '2') { setActiveFilter('learned'); }
+    else if (key === '3') { setActiveFilter('review'); }
+    else if (key === '4') { setActiveFilter('new'); }
     else if (key === 's' || key === 'S') { setShuffleEnabled(!shuffleEnabled); }
     else if (key === 'q' || key === 'Q') {
       setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
@@ -260,7 +260,7 @@ export default function StudyScreen() {
                   { backgroundColor: theme.colors.surface },
                   selected && { borderWidth: 2, borderColor: block.color },
                 ]}
-                onPress={() => { setFocusedItemIndex(null); setActiveFilter(block.key); }}
+                onPress={() => { setActiveFilter(block.key); }}
               >
                 <Text style={[styles.summaryValue, { color: block.color, fontSize: theme.fontSize.xxl }]}>{block.value}</Text>
                 <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>

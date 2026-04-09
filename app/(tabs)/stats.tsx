@@ -524,10 +524,10 @@ export default function StatsScreen() {
           if (!keyboardShortcutsEnabled) return;
           if (activeSheet !== null) { return; }
           const k = key.toLowerCase();
-          if (key === '1') { setFocusedItem(null); setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
-          else if (key === '2') { setFocusedItem(null); setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
-          else if (key === '3') { setFocusedItem(null); setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
-          else if (key === '4') { setFocusedItem(null); setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          if (key === '1') { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (key === '2') { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (key === '3') { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (key === '4') { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
           else if (k === 't') { moveFocus('next'); }
           else if (k === 'y') { moveFocus('prev'); }
         }}
@@ -546,7 +546,7 @@ export default function StatsScreen() {
             { backgroundColor: theme.colors.primary },
             selectedBlock === 'streak' && { borderWidth: 2, borderColor: blockColors.streak },
           ]}
-          onPress={() => { setFocusedItem(null); setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+          onPress={() => { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#FFF', fontSize: theme.fontSize.xxl }]}>
             {streak}
@@ -562,7 +562,7 @@ export default function StatsScreen() {
             { backgroundColor: theme.colors.surface },
             selectedBlock === 'learned' && { borderWidth: 2, borderColor: blockColors.learned },
           ]}
-          onPress={() => { setFocusedItem(null); setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+          onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: theme.fontSize.xxl }]}>{todayReviewed}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.learned')}</Text>
@@ -573,7 +573,7 @@ export default function StatsScreen() {
             { backgroundColor: theme.colors.surface },
             selectedBlock === 'due' && { borderWidth: 2, borderColor: blockColors.due },
           ]}
-          onPress={() => { setFocusedItem(null); setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+          onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: theme.fontSize.xxl }]}>{todayDue}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.statDue')}</Text>
@@ -584,7 +584,7 @@ export default function StatsScreen() {
             { backgroundColor: theme.colors.surface },
             selectedBlock === 'new' && { borderWidth: 2, borderColor: blockColors.new },
           ]}
-          onPress={() => { setFocusedItem(null); setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+          onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xxl }]}>{todayCreated}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.newToday')}</Text>

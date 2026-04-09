@@ -246,6 +246,7 @@ export default function StudyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Pressable style={{ flex: 1 }} onPress={() => setFocusedItemIndex(null)}>
       {/* フィルターブロック */}
       <View style={styles.filterSection}>
         <View style={styles.summaryRow}>
@@ -259,7 +260,7 @@ export default function StudyScreen() {
                   { backgroundColor: theme.colors.surface },
                   selected && { borderWidth: 2, borderColor: block.color },
                 ]}
-                onPress={() => setActiveFilter(block.key)}
+                onPress={() => { setFocusedItemIndex(null); setActiveFilter(block.key); }}
               >
                 <Text style={[styles.summaryValue, { color: block.color, fontSize: theme.fontSize.xxl }]}>{block.value}</Text>
                 <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>
@@ -330,6 +331,7 @@ export default function StudyScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedItemIndex(null)} />}
             renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getDeckDisplayInfo(item);
               const isFocused = focusedItemIndex === index;
@@ -343,6 +345,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
+                    setFocusedItemIndex(index);
                     fromSessionRef.current = true;
                     router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
@@ -385,6 +388,7 @@ export default function StudyScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedItemIndex(null)} />}
             renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getTagDisplayInfo(item);
               const isFocused = focusedItemIndex === index;
@@ -398,6 +402,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
+                    setFocusedItemIndex(index);
                     fromSessionRef.current = true;
                     router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
@@ -427,6 +432,8 @@ export default function StudyScreen() {
           />
         )
       )}
+
+      </Pressable>
 
       {/* 隠しキーボード入力 */}
       <TextInput

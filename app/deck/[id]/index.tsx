@@ -487,13 +487,14 @@ export default function DeckDetailScreen() {
         </View>
       </View>
 
-      <View style={{ flex: 1 }}>
+      <Pressable style={{ flex: 1 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
         <DraggableFlatList
           ref={listRef as any}
           data={displayedCards}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={ListHeader}
+          ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }} />}
           ListEmptyComponent={
             <EmptyState
               icon="card-outline"
@@ -536,6 +537,8 @@ export default function DeckDetailScreen() {
                   if (selectionMode) {
                     toggleSelect();
                   } else {
+                    const idx = getIndex();
+                    if (idx !== undefined) setFocusedCardIndex(idx);
                     navigateToCardEdit(item.id);
                   }
                 }}
@@ -579,7 +582,7 @@ export default function DeckDetailScreen() {
           );
         }}
         />
-      </View>
+      </Pressable>
 
       {selectionMode ? (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>

@@ -43,7 +43,7 @@ export default function TagsScreen() {
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-  const { focusedIndex: focusedTagIndex, listRef, moveFocus } = useListNavigation(tags);
+  const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(tags);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   function confirmDelete(tag: TagWithCount) {
@@ -126,6 +126,7 @@ export default function TagsScreen() {
         onBlur={onInputBlur}
       />
 
+      <Pressable style={{ flex: 1 }} onPress={() => setFocusedTagIndex(null)}>
       {tags.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
           <EmptyState icon="pricetags-outline" title={t('tag.empty')} subtitle={t('tag.emptySub')} />
@@ -141,6 +142,7 @@ export default function TagsScreen() {
             reorderTags(data);
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
+          ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedTagIndex(null)} />}
           renderItem={({ item, drag, getIndex }: RenderItemParams<TagWithCount>) => {
             const isFocused = focusedTagIndex !== null && getIndex() === focusedTagIndex;
             return (
@@ -151,7 +153,11 @@ export default function TagsScreen() {
                     { backgroundColor: theme.colors.surface },
                     isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                   ]}
-                  onPress={() => router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } })}
+                  onPress={() => {
+                    const idx = getIndex();
+                    if (idx !== undefined) setFocusedTagIndex(idx);
+                    router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
+                  }}
                   onLongPress={drag}
                 >
                   <View style={[styles.colorDot, { backgroundColor: item.color }]} />
@@ -183,6 +189,7 @@ export default function TagsScreen() {
         onPress={() => router.push('/tags/new')}
       >
         <Ionicons name="add" size={28} color="#FFF" />
+      </Pressable>
       </Pressable>
 
       <ShortcutsModal

@@ -42,14 +42,15 @@ function DeckCard({
   deck,
   drag,
   onDelete,
+  onPress,
   isFocused,
 }: {
   deck: Deck;
   drag: (() => void) | null;
   onDelete: (id: string) => void;
+  onPress: () => void;
   isFocused?: boolean;
 }) {
-  const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -67,7 +68,7 @@ function DeckCard({
         { backgroundColor: theme.colors.surface },
         isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
       ]}
-      onPress={() => router.push({ pathname: '/deck/[id]', params: { id: deck.id } })}
+      onPress={onPress}
       onLongPress={drag ?? undefined}
       activeOpacity={0.7}
     >
@@ -136,11 +137,6 @@ export default function HomeScreen() {
   useEffect(() => {
     getAllDecks(db).then(setDecks);
   }, [db]);
-
-  // デッキ数が変わったときフォーカスをリセット
-  useEffect(() => {
-    setFocusedDeckIndex(null);
-  }, [decks.length]);
 
   useFocusEffect(
     useCallback(() => {
@@ -267,52 +263,60 @@ export default function HomeScreen() {
         }}
         onBlur={onInputBlur}
       />
-      <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
-        {StatsHeader}
-      </View>
-      <View style={{ flex: 1 }}>
-      {decks.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <EmptyState icon="layers-outline" title={t('home.empty')} subtitle={t('home.emptySub')} />
+      <Pressable style={{ flex: 1 }} onPress={() => setFocusedDeckIndex(null)}>
+        <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
+          {StatsHeader}
         </View>
-      ) : (
-        <DraggableFlatList
-          ref={listRef}
-          data={sortedDecks}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          onDragEnd={({ data }) => {
-            if (deckSortOrder !== 'manual') return;
-            reorderDecks(data);
-            updateDeckSortOrders(db, data.map((d) => d.id));
-          }}
-          renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
-            <ScaleDecorator>
-              <DeckCard
-                deck={item}
-                drag={deckSortOrder === 'manual' ? drag : null}
-                onDelete={handleDelete}
-                isFocused={focusedDeckIndex !== null && getIndex() === focusedDeckIndex}
-              />
-            </ScaleDecorator>
-          )}
-        />
-      )}
-      </View>
-      <TouchableOpacity
-        style={[styles.fabLeft, { backgroundColor: theme.colors.surface }]}
-        onPress={() => router.push('/tags')}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="pricetags-outline" size={24} color={theme.colors.primary} />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={() => router.push({ pathname: '/deck/new' })}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={30} color="#FFF" />
-      </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+        {decks.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <EmptyState icon="layers-outline" title={t('home.empty')} subtitle={t('home.emptySub')} />
+          </View>
+        ) : (
+          <DraggableFlatList
+            ref={listRef}
+            data={sortedDecks}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            onDragEnd={({ data }) => {
+              if (deckSortOrder !== 'manual') return;
+              reorderDecks(data);
+              updateDeckSortOrders(db, data.map((d) => d.id));
+            }}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedDeckIndex(null)} />}
+            renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
+              <ScaleDecorator>
+                <DeckCard
+                  deck={item}
+                  drag={deckSortOrder === 'manual' ? drag : null}
+                  onDelete={handleDelete}
+                  onPress={() => {
+                    const idx = getIndex();
+                    if (idx !== undefined) setFocusedDeckIndex(idx);
+                    router.push({ pathname: '/deck/[id]', params: { id: item.id } });
+                  }}
+                  isFocused={focusedDeckIndex !== null && getIndex() === focusedDeckIndex}
+                />
+              </ScaleDecorator>
+            )}
+          />
+        )}
+        </View>
+        <TouchableOpacity
+          style={[styles.fabLeft, { backgroundColor: theme.colors.surface }]}
+          onPress={() => router.push('/tags')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="pricetags-outline" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          onPress={() => router.push({ pathname: '/deck/new' })}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={30} color="#FFF" />
+        </TouchableOpacity>
+      </Pressable>
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}

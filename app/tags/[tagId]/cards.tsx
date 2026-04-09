@@ -60,7 +60,7 @@ export default function TagCardsScreen() {
   const tag = tags.find((t) => t.id === tagId) ?? null;
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  const { focusedIndex: focusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
+  const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
 
   function confirmDeleteCard(card: Card) {
     Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
@@ -152,6 +152,7 @@ export default function TagCardsScreen() {
         onBlur={onInputBlur}
       />
 
+      <Pressable style={{ flex: 1 }} onPress={() => setFocusedCardIndex(null)}>
       {cards.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="card-outline" size={64} color={theme.colors.iconSubtle} />
@@ -170,6 +171,7 @@ export default function TagCardsScreen() {
               {t('card.list')}
             </Text>
           }
+          ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedCardIndex(null)} />}
           renderItem={({ item, index }) => {
             const preview = getPreviewText(item.frontContent);
             const isFocused = focusedCardIndex === index;
@@ -180,7 +182,10 @@ export default function TagCardsScreen() {
                   { backgroundColor: theme.colors.surface },
                   isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                 ]}
-                onPress={() => navigateToEdit(item)}
+                onPress={() => {
+                  setFocusedCardIndex(index);
+                  navigateToEdit(item);
+                }}
               >
                 <Text
                   style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
@@ -209,6 +214,7 @@ export default function TagCardsScreen() {
         onPress={() => setShowDeckPicker(true)}
       >
         <Ionicons name="add" size={28} color="#FFF" />
+      </Pressable>
       </Pressable>
 
       {/* デッキ選択モーダル */}

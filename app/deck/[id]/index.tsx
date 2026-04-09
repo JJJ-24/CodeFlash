@@ -415,8 +415,8 @@ export default function DeckDetailScreen() {
           headerLeft: () => (
             <Pressable
               onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
-              style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-              hitSlop={8}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
             >
               <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
             </Pressable>

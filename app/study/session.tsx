@@ -919,6 +919,7 @@ export default function StudySessionScreen() {
                       contentContainerStyle={styles.fullscreenContent}
                       showsVerticalScrollIndicator={false}
                       automaticallyAdjustKeyboardInsets
+                      keyboardShouldPersistTaps="handled"
                       onScroll={(e) => {
                         frontScrollYRef.current = e.nativeEvent.contentOffset.y;
                       }}
@@ -951,6 +952,7 @@ export default function StudySessionScreen() {
                       contentContainerStyle={styles.fullscreenContent}
                       showsVerticalScrollIndicator={false}
                       automaticallyAdjustKeyboardInsets
+                      keyboardShouldPersistTaps="handled"
                       onScroll={(e) => {
                         backScrollYRef.current = e.nativeEvent.contentOffset.y;
                       }}
@@ -1217,6 +1219,7 @@ export default function StudySessionScreen() {
                     contentContainerStyle={styles.faceContent}
                     showsVerticalScrollIndicator={false}
                     automaticallyAdjustKeyboardInsets
+                    keyboardShouldPersistTaps="handled"
                     onScroll={(e) => {
                       frontScrollYRef.current = e.nativeEvent.contentOffset.y;
                     }}
@@ -1249,6 +1252,7 @@ export default function StudySessionScreen() {
                     contentContainerStyle={styles.faceContent}
                     showsVerticalScrollIndicator={false}
                     automaticallyAdjustKeyboardInsets
+                    keyboardShouldPersistTaps="handled"
                     onScroll={(e) => {
                       backScrollYRef.current = e.nativeEvent.contentOffset.y;
                     }}

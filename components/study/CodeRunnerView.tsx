@@ -79,6 +79,8 @@ export function CodeRunnerView({
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
   const intentionalExitRef = useRef(false);
+  // パレットタップ中フラグ（onTouchStart でセット、onFocus でリセット）
+  const paletteActiveRef = useRef(false);
   const { insertPair, selection, handleSelectionChange } = useInsertPair(
     editedContent ?? block.content,
     onContentChange ?? (() => {}),
@@ -161,6 +163,12 @@ export function CodeRunnerView({
     onSelectRequest,
     onRunRequest,
   ]);
+
+  // パレット onTouchStart: タッチ開始時点でフラグをセットし onBlur の誤終了を防ぐ
+  const handlePaletteTouchStart = useCallback(() => {
+    paletteActiveRef.current = true;
+    suppress?.();
+  }, [suppress]);
 
   const handleCodeCopy = useCallback(async () => {
     await Clipboard.setStringAsync(editedContent ?? block.content);
@@ -271,10 +279,11 @@ export function CodeRunnerView({
             autoCorrect={false}
             autoCapitalize="none"
             spellCheck={false}
-            keyboardType="ascii-capable"
+            keyboardType={keyboardShortcutsEnabled ? "ascii-capable" : "default"}
             showSoftInputOnFocus={!keyboardShortcutsEnabled}
             onFocus={() => {
               intentionalExitRef.current = false;
+              paletteActiveRef.current = false;
             }}
             onKeyPress={({ nativeEvent }) => {
               const { key } = nativeEvent;
@@ -285,9 +294,10 @@ export function CodeRunnerView({
             }}
             onBlur={() => {
               // 外タップ等でフォーカスが外れた場合は編集終了のみ（実行しない）
-              // 完了ボタン・▶実行ボタン・Tab キー経由の場合は intentionalExitRef で防ぐ
+              // 完了ボタン・▶実行ボタン・Tab キー経由は intentionalExitRef で防ぐ
+              // パレットタップ経由は paletteActiveRef で防ぐ（onFocus より先に onTouchStart でセット済み）
               setTimeout(() => {
-                if (!intentionalExitRef.current) {
+                if (!intentionalExitRef.current && !paletteActiveRef.current) {
                   handleEditEnd();
                 }
                 intentionalExitRef.current = false;
@@ -316,7 +326,7 @@ export function CodeRunnerView({
       <SymbolPalette
         visible={isEditing}
         onInsertPair={insertPair}
-        suppress={suppress}
+        suppress={handlePaletteTouchStart}
         theme={theme}
       />
 

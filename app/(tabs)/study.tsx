@@ -47,7 +47,7 @@ function sumValues(map: Record<string, number>): number {
 const STUDY_TAB_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutFilterSwitch' },
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space', descKey: 'settings.shortcutStartStudyFocused' },
+  { key: 'Return', descKey: 'settings.shortcutStartStudyFocused' },
   { key: 'S',     descKey: 'settings.shortcutToggleShuffle' },
   { key: 'Q',     descKey: 'settings.shortcutToggleTab' },
 ];
@@ -189,21 +189,23 @@ export default function StudyScreen() {
         return prev <= 0 ? null : prev - 1;
       });
     }
-    else if (key === ' ') {
-      if (focusedItemIndex === null) return;
-      const items = activeTab === 'decks' ? sortedDecks : tags;
-      const item = items[focusedItemIndex];
-      if (!item) return;
-      const info = activeTab === 'decks'
-        ? getDeckDisplayInfo(item as Deck)
-        : getTagDisplayInfo(item as Tag);
-      if (!info.tappable) return;
-      fromSessionRef.current = true;
-      if (activeTab === 'decks') {
-        router.push({ pathname: '/study/session', params: { deckId: (item as Deck).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
-      } else {
-        router.push({ pathname: '/study/session', params: { tagId: (item as Tag).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
-      }
+  }
+
+  function startStudyFocused() {
+    if (!keyboardShortcutsEnabled) return;
+    if (focusedItemIndex === null) return;
+    const items = activeTab === 'decks' ? sortedDecks : tags;
+    const item = items[focusedItemIndex];
+    if (!item) return;
+    const info = activeTab === 'decks'
+      ? getDeckDisplayInfo(item as Deck)
+      : getTagDisplayInfo(item as Tag);
+    if (!info.tappable) return;
+    fromSessionRef.current = true;
+    if (activeTab === 'decks') {
+      router.push({ pathname: '/study/session', params: { deckId: (item as Deck).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
+    } else {
+      router.push({ pathname: '/study/session', params: { tagId: (item as Tag).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
     }
   }
 
@@ -434,6 +436,7 @@ export default function StudyScreen() {
         disableKeyboardShortcuts={true}
         keyboardType="ascii-capable"
         onKeyPress={handleKeyPress}
+        onSubmitEditing={startStudyFocused}
         onBlur={onInputBlur}
       />
 

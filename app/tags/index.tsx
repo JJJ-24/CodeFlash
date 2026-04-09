@@ -28,7 +28,7 @@ import type { TagWithCount } from '@/store/tags';
 
 const TAG_SHORTCUTS = [
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space', descKey: 'settings.shortcutOpenTag' },
+  { key: 'Return', descKey: 'settings.shortcutOpenTag' },
   { key: 'P',     descKey: 'settings.shortcutEditTag' },
   { key: 'D',     descKey: 'settings.shortcutDeleteTag' },
   { key: 'N',     descKey: 'settings.shortcutNewTag' },
@@ -103,11 +103,7 @@ export default function TagsScreen() {
           const k = key.toLowerCase();
           if (k === 't') { moveFocus('next'); }
           else if (k === 'y') { moveFocus('prev'); }
-          else if (key === ' ') {
-            if (focusedTagIndex !== null && tags[focusedTagIndex]) {
-              router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: tags[focusedTagIndex].id } });
-            }
-          } else if (k === 'p') {
+          else if (k === 'p') {
             if (focusedTagIndex !== null && tags[focusedTagIndex]) {
               router.push(`/tags/${tags[focusedTagIndex].id}/edit`);
             }
@@ -119,6 +115,12 @@ export default function TagsScreen() {
             router.push('/tags/new');
           } else if (k === 'b') {
             router.back();
+          }
+        }}
+        onSubmitEditing={() => {
+          if (!keyboardShortcutsEnabled) return;
+          if (focusedTagIndex !== null && tags[focusedTagIndex]) {
+            router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: tags[focusedTagIndex].id } });
           }
         }}
         onBlur={onInputBlur}

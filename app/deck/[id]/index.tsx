@@ -81,10 +81,10 @@ export default function DeckDetailScreen() {
   const [descExpanded, setDescExpanded] = useState(false);
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
-    { key: 'Return',    descKey: 'settings.shortcutStartStudy' },
+    { key: 'Space',     descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',       descKey: 'settings.shortcutFilterSwitch' },
     { key: 'T / Y',     descKey: 'settings.shortcutFocusCardNextPrev' },
-    { key: 'Space / P', descKey: 'settings.shortcutEditCard' },
+    { key: 'Return / P', descKey: 'settings.shortcutEditCard' },
     { key: 'N',         descKey: 'settings.shortcutNewCard' },
     { key: 'S',         descKey: 'settings.shortcutToggleSelect' },
     { key: 'U / D',     descKey: 'settings.shortcutScrollUpDownDelete' },
@@ -357,9 +357,7 @@ export default function DeckDetailScreen() {
             return;
           }
           if (key === ' ') {
-            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              navigateToCardEdit(displayedCards[focusedCardIndex].id);
-            }
+            router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           } else if (FILTER_KEY_MAP[key]) {
             const f = FILTER_KEY_MAP[key];
             setSelectedFilter(f);
@@ -390,8 +388,8 @@ export default function DeckDetailScreen() {
         }}
         onSubmitEditing={() => {
           if (!keyboardShortcutsEnabled) return;
-          if (!selectionMode) {
-            router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
+          if (!selectionMode && focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+            navigateToCardEdit(displayedCards[focusedCardIndex].id);
           }
         }}
         onBlur={onInputBlur}

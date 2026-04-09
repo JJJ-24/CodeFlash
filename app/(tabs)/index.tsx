@@ -28,7 +28,7 @@ import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 
 const HOME_SHORTCUTS = [
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space', descKey: 'settings.shortcutOpenDeck' },
+  { key: 'Return', descKey: 'settings.shortcutOpenDeck' },
   { key: 'P',     descKey: 'settings.shortcutEditDeck' },
   { key: 'D',     descKey: 'settings.shortcutDeleteDeck' },
   { key: 'N',     descKey: 'settings.shortcutNewDeck' },
@@ -239,10 +239,6 @@ export default function HomeScreen() {
             moveDeckFocus('next');
           } else if (k === 'y') {
             moveDeckFocus('prev');
-          } else if (key === ' ') {
-            if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-              router.push({ pathname: '/deck/[id]', params: { id: sortedDecks[focusedDeckIndex].id } });
-            }
           } else if (k === 'p') {
             if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
               router.push({ pathname: '/deck/[id]/edit', params: { id: sortedDecks[focusedDeckIndex].id } });
@@ -261,6 +257,12 @@ export default function HomeScreen() {
             router.push('/search');
           } else if (k === 'g') {
             router.push('/tags');
+          }
+        }}
+        onSubmitEditing={() => {
+          if (!keyboardShortcutsEnabled) return;
+          if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
+            router.push({ pathname: '/deck/[id]', params: { id: sortedDecks[focusedDeckIndex].id } });
           }
         }}
         onBlur={onInputBlur}

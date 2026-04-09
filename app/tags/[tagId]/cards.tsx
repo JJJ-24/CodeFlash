@@ -28,7 +28,7 @@ import type { Card, Tag, TextBlock } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space / P', descKey: 'settings.shortcutEditCard' },
+  { key: 'Return / P', descKey: 'settings.shortcutEditCard' },
   { key: 'D',     descKey: 'settings.shortcutDeleteCard' },
   { key: 'N',     descKey: 'settings.shortcutNewCard' },
   { key: 'B',     descKey: 'settings.shortcutBack' },
@@ -129,7 +129,7 @@ export default function TagCardsScreen() {
           const k = key.toLowerCase();
           if (k === 't') { moveFocus('next'); }
           else if (k === 'y') { moveFocus('prev'); }
-          else if (key === ' ' || k === 'p') {
+          else if (k === 'p') {
             if (focusedCardIndex !== null && cards[focusedCardIndex]) {
               navigateToEdit(cards[focusedCardIndex]);
             }
@@ -141,6 +141,12 @@ export default function TagCardsScreen() {
             setShowDeckPicker(true);
           } else if (k === 'b') {
             router.back();
+          }
+        }}
+        onSubmitEditing={() => {
+          if (!keyboardShortcutsEnabled) return;
+          if (focusedCardIndex !== null && cards[focusedCardIndex]) {
+            navigateToEdit(cards[focusedCardIndex]);
           }
         }}
         onBlur={onInputBlur}

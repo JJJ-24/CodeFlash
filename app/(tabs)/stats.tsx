@@ -36,7 +36,7 @@ import type { Deck } from '@/types';
 const STATS_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutSelectBlock' },
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space', descKey: 'settings.shortcutOpenDonut' },
+  { key: 'Return', descKey: 'settings.shortcutOpenDonut' },
 ];
 
 const HEATMAP_WEEKS = 52; // 約1年分
@@ -522,7 +522,7 @@ export default function StatsScreen() {
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
-          if (activeSheet !== null) { if (key === ' ') closeSheet(); return; }
+          if (activeSheet !== null) { return; }
           const k = key.toLowerCase();
           if (key === '1') { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
           else if (key === '2') { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
@@ -530,11 +530,11 @@ export default function StatsScreen() {
           else if (key === '4') { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
           else if (k === 't') { moveFocus('next'); }
           else if (k === 'y') { moveFocus('prev'); }
-          else if (key === ' ') {
-            if (focusedItem === null) return;
-            if (activeSheet === focusedItem) { closeSheet(); }
-            else { openSheet(focusedItem); }
-          }
+        }}
+        onSubmitEditing={() => {
+          if (!keyboardShortcutsEnabled) return;
+          if (activeSheet !== null) { closeSheet(); return; }
+          if (focusedItem !== null) { openSheet(focusedItem); }
         }}
         onBlur={onInputBlur}
       />

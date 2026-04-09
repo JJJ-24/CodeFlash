@@ -7,7 +7,7 @@ import {
   useRouter,
 } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar, setStatusBarHidden as expoSetStatusBarHidden } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -116,6 +116,9 @@ export default function StudySessionScreen() {
       return () => {
         onScreenBlur();
         setStatusBarHidden(false);
+        // コンポーネントのアンマウントとバッチ処理されて StatusBar 再レンダリングが
+        // 走らない場合があるため、命令型 API で確実に復元する
+        expoSetStatusBarHidden(false, 'fade');
       };
     }, [refreshCurrentCard]),
   );
@@ -212,7 +215,14 @@ export default function StudySessionScreen() {
   }, []);
   const handleCodeEditBlur = useCallback(() => {
     codeEditingRef.current = false;
-    if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
+    if (!switchingCodeBlockRef.current) {
+      // コード TextInput のアンマウントと focus 切り替えの競合でキーボードが
+      // 残留することがあるため、明示的に dismiss してから hidden TextInput に戻す
+      Keyboard.dismiss();
+      setTimeout(() => {
+        if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
+      }, 150);
+    }
   }, []);
   /**
    * onSelectCodeBlock ファクトリ

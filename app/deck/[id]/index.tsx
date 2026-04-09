@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
+  Keyboard,
   Pressable,
   StyleSheet,
   Text,
@@ -138,6 +139,8 @@ export default function DeckDetailScreen() {
       lastFocusTimeRef.current = Date.now();
       setDescExpanded(false);
       loadCards();
+      // 前の画面でソフトキーボードが残留していた場合に確実に閉じる
+      Keyboard.dismiss();
       onScreenFocus();
       return () => { onScreenBlur(); };
     }, [loadCards])
@@ -489,6 +492,7 @@ export default function DeckDetailScreen() {
           ref={listRef as any}
           data={displayedCards}
           keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={
             <EmptyState

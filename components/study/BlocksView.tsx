@@ -64,6 +64,21 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     }
     editingBlockIdxRef.current = blockIdx;
     onSelectCodeBlock?.(codeBlockIndexMap[blockIdx]);
+
+    // 編集開始時: FlipCard の 3D トランスフォームにより iOS の自動スクロールが
+    // 機能しないため、TextInput レンダリング後（300ms）にカーソル位置（ブロック末尾）
+    // が見えるよう手動スクロールする。
+    if (scrollRef?.current) {
+      setTimeout(() => {
+        const base = scrollBaseYRef?.current ?? 0;
+        const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
+        const blockH = blockHeights.current[blockIdx] ?? 0;
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, blockY + blockH - 300),
+          animated: true,
+        });
+      }, 300);
+    }
   }
 
   // 別 BlocksView でコードが実行・選択されたとき、この BlocksView の編集中ブロックを終了させる

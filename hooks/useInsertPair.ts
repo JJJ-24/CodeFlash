@@ -35,5 +35,10 @@ export function useInsertPair(
     [],
   );
 
-  return { insertPair, selection, handleSelectionChange };
+  /** 編集開始時にカーソル位置を手動で初期化する（programmatic focus では onSelectionChange が発火しないため） */
+  const initCursorPosition = useCallback((pos: number) => {
+    selectionRef.current = { start: pos, end: pos };
+  }, []);
+
+  return { insertPair, selection, handleSelectionChange, initCursorPosition };
 }

@@ -81,7 +81,7 @@ export function CodeRunnerView({
   const intentionalExitRef = useRef(false);
   // パレットタップ中フラグ（onTouchStart でセット、onFocus でリセット）
   const paletteActiveRef = useRef(false);
-  const { insertPair, selection, handleSelectionChange } = useInsertPair(
+  const { insertPair, selection, handleSelectionChange, initCursorPosition } = useInsertPair(
     editedContent ?? block.content,
     onContentChange ?? (() => {}),
     codeInputRef,
@@ -98,7 +98,14 @@ export function CodeRunnerView({
 
   useEffect(() => {
     if (isEditing) {
-      setTimeout(() => codeInputRef.current?.focus(), 50);
+      // focus() によるプログラム的フォーカスでは onSelectionChange が発火しない（iOS の挙動）ため、
+      // カーソル位置をテキスト末尾で初期化する。これにより、ユーザーが手動でタップする前でも
+      // パレットからの挿入が正しい位置（末尾）に行われる。
+      const textLength = (editedContent ?? block.content).length;
+      setTimeout(() => {
+        codeInputRef.current?.focus();
+        initCursorPosition(textLength);
+      }, 50);
     }
   }, [isEditing]);
 
@@ -165,8 +172,11 @@ export function CodeRunnerView({
   ]);
 
   // パレット onTouchStart: タッチ開始時点でフラグをセットし onBlur の誤終了を防ぐ
+  // 200ms 後に自動リセット（onBlur タイマー 50ms より長く保持することで、
+  // rAF 内の focus() → onFocus によるリセットより後まで true を維持できる）
   const handlePaletteTouchStart = useCallback(() => {
     paletteActiveRef.current = true;
+    setTimeout(() => { paletteActiveRef.current = false; }, 200);
     suppress?.();
   }, [suppress]);
 
@@ -283,7 +293,11 @@ export function CodeRunnerView({
             showSoftInputOnFocus={!keyboardShortcutsEnabled}
             onFocus={() => {
               intentionalExitRef.current = false;
-              paletteActiveRef.current = false;
+              // paletteActiveRef はここでリセットしない。
+              // insertPair 内の focus() がこの onFocus を発火させるため、
+              // ここでリセットすると onBlur タイマー（50ms）が発火する前に
+              // paletteActiveRef が false になり handleEditEnd() が誤呼出しされる。
+              // 代わりに handlePaletteTouchStart 内の 200ms タイマーでリセットする。
             }}
             onKeyPress={({ nativeEvent }) => {
               const { key } = nativeEvent;
@@ -295,7 +309,9 @@ export function CodeRunnerView({
             onBlur={() => {
               // 外タップ等でフォーカスが外れた場合は編集終了のみ（実行しない）
               // 完了ボタン・▶実行ボタン・Tab キー経由は intentionalExitRef で防ぐ
-              // パレットタップ経由は paletteActiveRef で防ぐ（onFocus より先に onTouchStart でセット済み）
+              // パレットタップ経由は paletteActiveRef で防ぐ
+              // （handlePaletteTouchStart の 200ms タイマーが onBlur の 50ms タイマーより
+              //   長く paletteActiveRef=true を保持するため、onFocus によるリセットに依存しない）
               setTimeout(() => {
                 if (!intentionalExitRef.current && !paletteActiveRef.current) {
                   handleEditEnd();

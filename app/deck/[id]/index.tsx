@@ -334,6 +334,7 @@ export default function DeckDetailScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
+          if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
           if (selectionMode) {
             if (k === 't') { moveFocus('next'); }
@@ -388,6 +389,7 @@ export default function DeckDetailScreen() {
           }
         }}
         onSubmitEditing={() => {
+          if (!keyboardShortcutsEnabled) return;
           if (!selectionMode) {
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           }

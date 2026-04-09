@@ -521,6 +521,7 @@ export default function StatsScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
+          if (!keyboardShortcutsEnabled) return;
           if (activeSheet !== null) { if (key === ' ') closeSheet(); return; }
           const k = key.toLowerCase();
           if (key === '1') { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }

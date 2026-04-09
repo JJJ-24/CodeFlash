@@ -231,6 +231,7 @@ export default function HomeScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
+          if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
           if (k === 'q') {
             cycleSortOrder();

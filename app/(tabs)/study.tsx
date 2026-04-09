@@ -166,6 +166,7 @@ export default function StudyScreen() {
   }
 
   function handleKeyPress({ nativeEvent: { key } }: { nativeEvent: { key: string } }) {
+    if (!keyboardShortcutsEnabled) return;
     if (key === '1') { setActiveFilter('all'); setFocusedItemIndex(null); }
     else if (key === '2') { setActiveFilter('learned'); setFocusedItemIndex(null); }
     else if (key === '3') { setActiveFilter('review'); setFocusedItemIndex(null); }

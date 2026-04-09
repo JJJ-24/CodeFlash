@@ -99,6 +99,7 @@ export default function TagsScreen() {
         autoCapitalize="none"
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
+          if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
           if (k === 't') { moveFocus('next'); }
           else if (k === 'y') { moveFocus('prev'); }

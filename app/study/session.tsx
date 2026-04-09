@@ -930,6 +930,7 @@ export default function StudySessionScreen() {
                       showsVerticalScrollIndicator={false}
                       automaticallyAdjustKeyboardInsets
                       keyboardShouldPersistTaps="handled"
+                      bounces={false}
                       onScroll={(e) => {
                         frontScrollYRef.current = e.nativeEvent.contentOffset.y;
                       }}
@@ -963,6 +964,7 @@ export default function StudySessionScreen() {
                       showsVerticalScrollIndicator={false}
                       automaticallyAdjustKeyboardInsets
                       keyboardShouldPersistTaps="handled"
+                      bounces={false}
                       onScroll={(e) => {
                         backScrollYRef.current = e.nativeEvent.contentOffset.y;
                       }}
@@ -1230,6 +1232,7 @@ export default function StudySessionScreen() {
                     showsVerticalScrollIndicator={false}
                     automaticallyAdjustKeyboardInsets
                     keyboardShouldPersistTaps="handled"
+                    bounces={false}
                     onScroll={(e) => {
                       frontScrollYRef.current = e.nativeEvent.contentOffset.y;
                     }}
@@ -1263,6 +1266,7 @@ export default function StudySessionScreen() {
                     showsVerticalScrollIndicator={false}
                     automaticallyAdjustKeyboardInsets
                     keyboardShouldPersistTaps="handled"
+                    bounces={false}
                     onScroll={(e) => {
                       backScrollYRef.current = e.nativeEvent.contentOffset.y;
                     }}

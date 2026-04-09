@@ -259,7 +259,7 @@
     "shortcutDeleteTag": "フォーカス中のタグを削除",
     "shortcutNewTag": "新規タグ作成",
     "shortcutDeleteCard": "フォーカス中のカードを削除",
-    "shortcutSelectBlock": "グラフブロック切替（連続/済み/復習/新規）",
+    "shortcutSelectBlock": "グラフを切替（連続/済み/復習/新規）",
     "shortcutOpenDonut": "フォーカス中のドーナツグラフを表示",
     "initialFilter": "初期表示フィルター",
     "initialFilterAll": "すべて",

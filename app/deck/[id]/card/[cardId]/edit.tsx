@@ -73,7 +73,10 @@ export default function EditCardScreen() {
   }
 
   function confirmDelete() {
-    Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
+    const rawPreview = card?.frontContent.find((b) => b.type === 'text')?.content?.trim() ?? '';
+    const preview = rawPreview || t('card.noText');
+    const name = preview.length > 20 ? preview.slice(0, 20) + '…' : preview;
+    Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),

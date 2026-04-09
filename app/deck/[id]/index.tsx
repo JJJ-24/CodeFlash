@@ -157,7 +157,9 @@ export default function DeckDetailScreen() {
   }, [deck]);
 
   function confirmDeleteCard(card: Card) {
-    Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
+    const preview = getPreviewText(card.frontContent);
+    const name = (preview || t('card.noText')).slice(0, 20) + ((preview || t('card.noText')).length > 20 ? '…' : '');
+    Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),

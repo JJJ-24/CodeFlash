@@ -63,7 +63,10 @@ export default function TagCardsScreen() {
   const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
 
   function confirmDeleteCard(card: Card) {
-    Alert.alert(t('card.delete'), t('card.deleteConfirm'), [
+    const rawPreview = getPreviewText(card.frontContent);
+    const preview = rawPreview || t('card.noText');
+    const name = preview.length > 20 ? preview.slice(0, 20) + '…' : preview;
+    Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),

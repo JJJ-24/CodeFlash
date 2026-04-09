@@ -70,7 +70,8 @@ export default function EditTagScreen() {
 
   function confirmDelete() {
     if (!existingTag) return;
-    Alert.alert(t('tag.delete'), t('tag.deleteConfirm'), [
+    const tagName = existingTag.name.length > 20 ? existingTag.name.slice(0, 20) + '…' : existingTag.name;
+    Alert.alert(t('tag.delete'), t('tag.deleteConfirm', { name: tagName }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),

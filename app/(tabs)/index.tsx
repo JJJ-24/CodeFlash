@@ -38,6 +38,10 @@ const HOME_SHORTCUTS = [
 ];
 import type { Deck } from '@/types';
 
+function truncate(str: string, max = 20): string {
+  return str.length > max ? str.slice(0, max) + '…' : str;
+}
+
 function DeckCard({
   deck,
   drag,
@@ -55,7 +59,8 @@ function DeckCard({
   const theme = useTheme();
 
   function confirmDelete() {
-    Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
+    const name = truncate(deck.name);
+    Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(deck.id) },
     ]);
@@ -242,7 +247,8 @@ export default function HomeScreen() {
           } else if (k === 'd') {
             if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
               const deck = sortedDecks[focusedDeckIndex];
-              Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
+              const name = truncate(deck.name);
+              Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
                 { text: t('common.cancel'), style: 'cancel' },
                 { text: t('common.delete'), style: 'destructive', onPress: () => handleDelete(deck.id) },
               ]);

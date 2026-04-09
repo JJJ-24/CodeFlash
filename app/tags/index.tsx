@@ -47,7 +47,8 @@ export default function TagsScreen() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   function confirmDelete(tag: TagWithCount) {
-    Alert.alert(t('tag.delete'), t('tag.deleteConfirm'), [
+    const name = tag.name.length > 20 ? tag.name.slice(0, 20) + '…' : tag.name;
+    Alert.alert(t('tag.delete'), t('tag.deleteConfirm', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),

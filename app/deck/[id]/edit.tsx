@@ -49,7 +49,8 @@ export default function EditDeckScreen() {
   }
 
   function confirmDelete() {
-    Alert.alert(t('deck.delete'), t('deck.deleteConfirm'), [
+    const name = deck ? (deck.name.length > 20 ? deck.name.slice(0, 20) + '…' : deck.name) : '';
+    Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),

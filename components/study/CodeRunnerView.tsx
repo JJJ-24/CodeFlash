@@ -24,7 +24,6 @@ import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS } from "@/lib/code-execution/constants";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useTheme } from "@/lib/theme";
-import { useSettingsStore } from "@/store/settings";
 import type { CodeBlock } from "@/types";
 
 interface Props {
@@ -63,7 +62,6 @@ export function CodeRunnerView({
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
-  const { keyboardShortcutsEnabled } = useSettingsStore();
   const {
     result,
     htmlSource,
@@ -289,8 +287,8 @@ export function CodeRunnerView({
             autoCorrect={false}
             autoCapitalize="none"
             spellCheck={false}
-            keyboardType={keyboardShortcutsEnabled ? "ascii-capable" : "default"}
-            showSoftInputOnFocus={!keyboardShortcutsEnabled}
+            keyboardType="default"
+            showSoftInputOnFocus={true}
             onFocus={() => {
               intentionalExitRef.current = false;
               // paletteActiveRef はここでリセットしない。

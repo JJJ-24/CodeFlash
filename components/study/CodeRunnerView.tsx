@@ -273,7 +273,7 @@ export function CodeRunnerView({
         </Text>
 
         <View style={styles.headerRight}>
-          {editable && (
+          {editable && block.executable && (
             <GestureDetector gesture={editGesture}>
               <TouchableOpacity
                 style={[styles.editBtn, isEditing && styles.editBtnActive]}

@@ -46,12 +46,14 @@ function DeckCard({
   deck,
   drag,
   onDelete,
+  onEdit,
   onPress,
   isFocused,
 }: {
   deck: Deck;
   drag: (() => void) | null;
   onDelete: (id: string) => void;
+  onEdit: (id: string) => void;
   onPress: () => void;
   isFocused?: boolean;
 }) {
@@ -92,7 +94,7 @@ function DeckCard({
           <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{deck.cardCount}</Text>
         </View>
         <Pressable
-          onPress={() => router.push({ pathname: '/deck/[id]/edit', params: { id: deck.id } })}
+          onPress={() => onEdit(deck.id)}
           hitSlop={8}
           style={styles.iconBtn}
         >
@@ -296,6 +298,7 @@ export default function HomeScreen() {
                   deck={item}
                   drag={deckSortOrder === 'manual' ? drag : null}
                   onDelete={handleDelete}
+                  onEdit={(id) => router.push({ pathname: '/deck/[id]/edit', params: { id } })}
                   onPress={() => {
                     const idx = getIndex();
                     if (idx !== undefined) setFocusedDeckIndex(idx);

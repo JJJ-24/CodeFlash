@@ -160,6 +160,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   }
                   onSelectionChange={handleSelectionChange}
                   multiline
+                  scrollEnabled={false}
                   placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
                   onFocus={() => { setFocused(true); onFocusInput?.(); }}
@@ -278,7 +279,6 @@ const styles = StyleSheet.create({
     color: '#D4D4D4',
     fontFamily: 'monospace',
     minHeight: 100,
-    maxHeight: 320,
     minWidth: '100%',
     lineHeight: 22,
   },

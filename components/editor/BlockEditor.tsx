@@ -10,8 +10,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -84,6 +82,8 @@ interface Props {
   onSave: (data: BlockEditorData) => Promise<void>;
   onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
+  /** 新規カード作成時は true → 最初のテキストブロックを自動フォーカス。編集時は false/省略 → タップするまでフォーカスなし */
+  isNewCard?: boolean;
   ref?: Ref<BlockEditorRef>;
 }
 
@@ -94,6 +94,7 @@ export function BlockEditor({
   onSave,
   onFrontEmptyChange,
   saving: _saving,
+  isNewCard,
   ref,
 }: Props) {
   const { t } = useTranslation();
@@ -370,10 +371,7 @@ export function BlockEditor({
   );
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={{ flex: 1 }}>
       {/* タブバー */}
       <View
         style={[
@@ -450,6 +448,7 @@ export function BlockEditor({
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         {currentBlocks.map((block, index) => {
           const isLast = currentBlocks.length === 1;
@@ -472,7 +471,7 @@ export function BlockEditor({
                   isPreview={isPreview}
                   onChange={(content) => updateBlock(activeTab, block._key, { content })}
                   onDelete={() => deleteBlock(activeTab, block._key)}
-                  autoFocus={index === 0 || block._key === newBlockKey}
+                  autoFocus={(isNewCard && index === 0) || block._key === newBlockKey}
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
@@ -541,7 +540,7 @@ export function BlockEditor({
         })}
         {footerContent}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

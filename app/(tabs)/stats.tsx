@@ -36,7 +36,7 @@ import type { Deck } from '@/types';
 const STATS_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutSelectBlock' },
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Return', descKey: 'settings.shortcutOpenDonut' },
+  { key: 'Return / Space', descKey: 'settings.shortcutOpenDonut' },
 ];
 
 const HEATMAP_WEEKS = 52; // 約1年分
@@ -522,6 +522,10 @@ export default function StatsScreen() {
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
+          if (key === ' ') {
+            if (activeSheet !== null) { closeSheet(); } else if (focusedItem !== null) { openSheet(focusedItem); }
+            return;
+          }
           if (activeSheet !== null) { return; }
           const k = key.toLowerCase();
           if (key === '1') { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }

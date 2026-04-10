@@ -35,6 +35,7 @@ const HOME_SHORTCUTS = [
   { key: 'Q',     descKey: 'settings.shortcutToggleSort' },
   { key: 'F',     descKey: 'settings.shortcutSearch' },
   { key: 'G',     descKey: 'settings.shortcutTags' },
+  { key: 'J / K', descKey: 'settings.shortcutTabNextPrev' },
 ];
 import type { Deck } from '@/types';
 
@@ -261,6 +262,10 @@ export default function HomeScreen() {
             router.push('/search');
           } else if (k === 'g') {
             router.push('/tags');
+          } else if (k === 'j') {
+            router.navigate('/(tabs)/study');
+          } else if (k === 'k') {
+            router.navigate('/(tabs)/settings');
           }
         }}
         onSubmitEditing={() => {

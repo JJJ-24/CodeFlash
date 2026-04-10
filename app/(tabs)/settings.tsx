@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+
+import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 
@@ -64,6 +67,7 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const db = useSQLiteContext();
+  const router = useRouter();
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
   const {
     initialFilterPreference, setInitialFilterPreference,
@@ -71,6 +75,14 @@ export default function SettingsScreen() {
     notificationEnabled, notificationHour, notificationMinute,
     setNotificationEnabled, setNotificationTime,
   } = useSettingsStore();
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
+
+  useFocusEffect(
+    useCallback(() => {
+      onScreenFocus();
+      return () => { onScreenBlur(); };
+    }, [onScreenFocus, onScreenBlur])
+  );
   const { decks, setDecks } = useDeckStore();
   const { setTags } = useTagStore();
   const [loading, setLoading] = useState(false);
@@ -424,6 +436,25 @@ export default function SettingsScreen() {
 
     </ScrollView>
 
+    <TextInput
+      ref={keyboardRef}
+      style={styles.hiddenKeyboardInput}
+      caretHidden
+      keyboardType="ascii-capable"
+      showSoftInputOnFocus={false}
+      disableKeyboardShortcuts={true}
+      autoCorrect={false}
+      autoCapitalize="none"
+      spellCheck={false}
+      onKeyPress={({ nativeEvent: { key } }) => {
+        if (!keyboardShortcutsEnabled) return;
+        const k = key.toLowerCase();
+        if (k === 'j') { router.navigate('/(tabs)/'); }
+        else if (k === 'k') { router.navigate('/(tabs)/stats'); }
+      }}
+      onBlur={onInputBlur}
+    />
+
     <DeckPickerModal
       visible={tsvDeckPickerVisible}
       title={tsvAction === 'export' ? t('dataManagement.selectDeckForExport') : t('dataManagement.selectDeckForImport')}
@@ -477,6 +508,7 @@ dataRow: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
   },
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   notificationRow: {
     flexDirection: 'row',
     alignItems: 'center',

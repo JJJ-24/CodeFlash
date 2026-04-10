@@ -50,6 +50,7 @@ const STUDY_TAB_SHORTCUTS = [
   { key: 'Return', descKey: 'settings.shortcutStartStudyFocused' },
   { key: 'S',     descKey: 'settings.shortcutToggleShuffle' },
   { key: 'Q',     descKey: 'settings.shortcutToggleTab' },
+  { key: 'J / K', descKey: 'settings.shortcutTabNextPrev' },
 ];
 
 export default function StudyScreen() {
@@ -206,6 +207,8 @@ export default function StudyScreen() {
         return next;
       });
     }
+    else if (key === 'j' || key === 'J') { router.navigate('/(tabs)/stats'); }
+    else if (key === 'k' || key === 'K') { router.navigate('/(tabs)/'); }
   }
 
   function startStudyFocused() {

@@ -242,6 +242,7 @@
     "shortcutToggleSort": "並び替え切替",
     "shortcutSearch": "検索",
     "shortcutTags": "タグ管理",
+    "shortcutTabNextPrev": "タブ切替（次/前）",
     "shortcutOpenTag": "フォーカス中のタグのカード一覧を開く",
     "shortcutEditTag": "フォーカス中のタグを編集",
     "shortcutDeleteTag": "フォーカス中のタグを削除",

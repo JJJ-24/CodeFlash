@@ -242,6 +242,7 @@
     "shortcutToggleSort": "Cycle sort order",
     "shortcutSearch": "Search",
     "shortcutTags": "Tag manager",
+    "shortcutTabNextPrev": "Switch tab (next/prev)",
     "shortcutOpenTag": "Open card list for focused tag",
     "shortcutEditTag": "Edit focused tag",
     "shortcutDeleteTag": "Delete focused tag",

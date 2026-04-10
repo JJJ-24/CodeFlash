@@ -5,7 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
@@ -37,6 +37,7 @@ const STATS_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutSelectBlock' },
   { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Return / Space', descKey: 'settings.shortcutOpenDonut' },
+  { key: 'J / K', descKey: 'settings.shortcutTabNextPrev' },
 ];
 
 const HEATMAP_WEEKS = 52; // 約1年分
@@ -342,6 +343,7 @@ type FocusedItem = null | 'total' | number;
 
 export default function StatsScreen() {
   const db = useSQLiteContext();
+  const router = useRouter();
   const navigation = useNavigation();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
@@ -526,8 +528,10 @@ export default function StatsScreen() {
             if (activeSheet !== null) { closeSheet(); } else if (focusedItem !== null) { openSheet(focusedItem); }
             return;
           }
-          if (activeSheet !== null) { return; }
           const k = key.toLowerCase();
+          if (k === 'j') { router.navigate('/(tabs)/settings'); return; }
+          if (k === 'k') { router.navigate('/(tabs)/study'); return; }
+          if (activeSheet !== null) { return; }
           if (key === '1') { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
           else if (key === '2') { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
           else if (key === '3') { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }

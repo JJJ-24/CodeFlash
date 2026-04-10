@@ -43,7 +43,7 @@ export default function TagsScreen() {
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-  const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(tags);
+  const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(tags, (tag) => tag.id);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   function confirmDelete(tag: TagWithCount) {

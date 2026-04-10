@@ -75,6 +75,8 @@ export default function StudyScreen() {
   const [activeFilter, setActiveFilter] = useState<Filter>('review');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
+  const focusedDeckIdRef = useRef<string | null>(null);
+  const focusedTagIdRef = useRef<string | null>(null);
   const fromSessionRef = useRef(false);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const listRef = useRef<FlatList<any>>(null);
@@ -93,6 +95,8 @@ export default function StudyScreen() {
 
   useEffect(() => {
     setFocusedItemIndex(null);
+    focusedDeckIdRef.current = null;
+    focusedTagIdRef.current = null;
   }, [activeTab]);
 
   useEffect(() => {
@@ -178,15 +182,21 @@ export default function StudyScreen() {
     else if (key === 't' || key === 'T') {
       const items = activeTab === 'decks' ? sortedDecks : tags;
       setFocusedItemIndex(prev => {
-        if (prev === null) return items.length > 0 ? 0 : null;
-        return prev >= items.length - 1 ? null : prev + 1;
+        const next = prev === null ? (items.length > 0 ? 0 : null) : prev >= items.length - 1 ? null : prev + 1;
+        const item = next != null ? items[next] : null;
+        if (activeTab === 'decks') focusedDeckIdRef.current = item ? (item as Deck).id : null;
+        else focusedTagIdRef.current = item ? (item as Tag).id : null;
+        return next;
       });
     }
     else if (key === 'y' || key === 'Y') {
       const items = activeTab === 'decks' ? sortedDecks : tags;
       setFocusedItemIndex(prev => {
-        if (prev === null) return items.length > 0 ? items.length - 1 : null;
-        return prev <= 0 ? null : prev - 1;
+        const next = prev === null ? (items.length > 0 ? items.length - 1 : null) : prev <= 0 ? null : prev - 1;
+        const item = next != null ? items[next] : null;
+        if (activeTab === 'decks') focusedDeckIdRef.current = item ? (item as Deck).id : null;
+        else focusedTagIdRef.current = item ? (item as Tag).id : null;
+        return next;
       });
     }
   }
@@ -214,6 +224,15 @@ export default function StudyScreen() {
     if (deckSortOrder === 'cardCount') return [...decks].sort((a, b) => b.cardCount - a.cardCount);
     return decks;
   }, [decks, deckSortOrder]);
+
+  // ソート変更後もフォーカスを同じデッキに維持（ホームでソート変更後に学習タブへ戻った場合）
+  useEffect(() => {
+    const id = focusedDeckIdRef.current;
+    if (id == null) return;
+    const newIdx = sortedDecks.findIndex(d => d.id === id);
+    setFocusedItemIndex(newIdx === -1 ? null : newIdx);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedDecks]);
 
   const totalAll = activeTab === 'decks'
     ? decks.reduce((s, d) => s + d.cardCount, 0)
@@ -246,7 +265,7 @@ export default function StudyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Pressable style={{ flex: 1 }} onPress={() => setFocusedItemIndex(null)}>
+      <Pressable style={{ flex: 1 }} onPress={() => { setFocusedItemIndex(null); focusedDeckIdRef.current = null; focusedTagIdRef.current = null; }}>
       {/* フィルターブロック */}
       <View style={styles.filterSection}>
         <View style={styles.summaryRow}>
@@ -346,6 +365,7 @@ export default function StudyScreen() {
                   onPress={() => {
                     if (!tappable) return;
                     setFocusedItemIndex(index);
+                    focusedDeckIdRef.current = item.id;
                     fromSessionRef.current = true;
                     router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
@@ -403,6 +423,7 @@ export default function StudyScreen() {
                   onPress={() => {
                     if (!tappable) return;
                     setFocusedItemIndex(index);
+                    focusedTagIdRef.current = item.id;
                     fromSessionRef.current = true;
                     router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}

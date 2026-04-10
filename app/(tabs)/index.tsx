@@ -173,7 +173,7 @@ export default function HomeScreen() {
     setDeckSortOrder(next.key);
   }
 
-  const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, listRef, moveFocus: moveDeckFocus } = useListNavigation(sortedDecks);
+  const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, listRef, moveFocus: moveDeckFocus } = useListNavigation(sortedDecks, (deck) => deck.id);
 
   const StatsHeader = (
     <View style={styles.statsHeader}>

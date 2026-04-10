@@ -77,7 +77,8 @@ export default function DeckDetailScreen() {
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  const [focusedCardIndex, setFocusedCardIndex] = useState<number | null>(null);
+  const focusedCardIdRef = useRef<string | null>(null);
+  const [focusedCardId, setFocusedCardIdState] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
@@ -267,12 +268,26 @@ export default function DeckDetailScreen() {
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
 
+  const focusedCardIndex = focusedCardId != null
+    ? (() => { const i = displayedCards.findIndex(c => c.id === focusedCardId); return i === -1 ? null : i; })()
+    : null;
+  function setFocusedCardIndex(idx: number | null) {
+    const id = idx != null && displayedCards[idx] ? displayedCards[idx].id : null;
+    focusedCardIdRef.current = id;
+    setFocusedCardIdState(id);
+  }
+
   function moveFocus(direction: 'next' | 'prev') {
     if (displayedCards.length === 0) return;
+    const currentId = focusedCardIdRef.current;
+    const currentIdx = currentId != null ? displayedCards.findIndex(c => c.id === currentId) : null;
+    const ci = currentIdx === -1 ? null : currentIdx;
     const next = direction === 'next'
-      ? (focusedCardIndex === null ? 0 : focusedCardIndex === displayedCards.length - 1 ? null : focusedCardIndex + 1)
-      : (focusedCardIndex === null ? displayedCards.length - 1 : focusedCardIndex === 0 ? null : focusedCardIndex - 1);
-    setFocusedCardIndex(next);
+      ? (ci === null ? 0 : ci === displayedCards.length - 1 ? null : ci + 1)
+      : (ci === null ? displayedCards.length - 1 : ci === 0 ? null : ci - 1);
+    const newId = next != null && displayedCards[next] ? displayedCards[next].id : null;
+    focusedCardIdRef.current = newId;
+    setFocusedCardIdState(newId);
     if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
   }
 

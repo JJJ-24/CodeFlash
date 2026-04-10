@@ -27,7 +27,7 @@ import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 
 const HOME_SHORTCUTS = [
-  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
+  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Return', descKey: 'settings.shortcutOpenDeck' },
   { key: 'P',     descKey: 'settings.shortcutEditDeck' },
   { key: 'D',     descKey: 'settings.shortcutDeleteDeck' },
@@ -35,7 +35,7 @@ const HOME_SHORTCUTS = [
   { key: 'Q',     descKey: 'settings.shortcutToggleSort' },
   { key: 'F',     descKey: 'settings.shortcutSearch' },
   { key: 'G',     descKey: 'settings.shortcutTags' },
-  { key: 'J / K', descKey: 'settings.shortcutTabNextPrev' },
+  { key: ', / .', descKey: 'settings.shortcutTabNextPrev' },
 ];
 import type { Deck } from '@/types';
 
@@ -239,9 +239,9 @@ export default function HomeScreen() {
           const k = key.toLowerCase();
           if (k === 'q') {
             cycleSortOrder();
-          } else if (k === 't') {
+          } else if (k === 'j') {
             moveDeckFocus('next');
-          } else if (k === 'y') {
+          } else if (k === 'k') {
             moveDeckFocus('prev');
           } else if (k === 'p') {
             if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
@@ -262,9 +262,9 @@ export default function HomeScreen() {
             router.push('/search');
           } else if (k === 'g') {
             router.push('/tags');
-          } else if (k === 'j') {
+          } else if (key === '.') {
             router.navigate('/(tabs)/study');
-          } else if (k === 'k') {
+          } else if (key === ',') {
             router.navigate('/(tabs)/settings');
           }
         }}

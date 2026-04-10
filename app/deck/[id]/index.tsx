@@ -84,7 +84,7 @@ export default function DeckDetailScreen() {
   const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space',     descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',       descKey: 'settings.shortcutFilterSwitch' },
-    { key: 'T / Y',     descKey: 'settings.shortcutFocusCardNextPrev' },
+    { key: 'J / K',     descKey: 'settings.shortcutFocusCardNextPrev' },
     { key: 'Return / P', descKey: 'settings.shortcutEditCard' },
     { key: 'N',         descKey: 'settings.shortcutNewCard' },
     { key: 'S',         descKey: 'settings.shortcutToggleSelect' },
@@ -92,7 +92,7 @@ export default function DeckDetailScreen() {
     { key: 'B',         descKey: 'settings.shortcutBack' },
   ];
   const DECK_SHORTCUTS_SELECT = [
-    { key: 'T / Y',   descKey: 'settings.shortcutFocusCardNextPrev' },
+    { key: 'J / K',   descKey: 'settings.shortcutFocusCardNextPrev' },
     { key: 'Space', descKey: 'settings.shortcutToggleCheck' },
     { key: 'A',     descKey: 'settings.shortcutSelectAll' },
     { key: 'M',     descKey: 'settings.shortcutMoveSelected' },
@@ -354,8 +354,8 @@ export default function DeckDetailScreen() {
           if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
           if (selectionMode) {
-            if (k === 't') { moveFocus('next'); }
-            else if (k === 'y') { moveFocus('prev'); }
+            if (k === 'j') { moveFocus('next'); }
+            else if (k === 'k') { moveFocus('prev'); }
             else if (key === ' ') {
               if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
                 const cardId = displayedCards[focusedCardIndex].id;
@@ -380,8 +380,8 @@ export default function DeckDetailScreen() {
             setSelectedFilter(f);
             setFocusedCardIndex(null);
             if (initialFilterPreference === 'none') setLastDeckDetailFilter(f);
-          } else if (k === 't') { moveFocus('next'); }
-          else if (k === 'y') { moveFocus('prev'); }
+          } else if (k === 'j') { moveFocus('next'); }
+          else if (k === 'k') { moveFocus('prev'); }
           else if (k === 'p') {
             if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
               navigateToCardEdit(displayedCards[focusedCardIndex].id);

@@ -449,8 +449,8 @@ export default function SettingsScreen() {
       onKeyPress={({ nativeEvent: { key } }) => {
         if (!keyboardShortcutsEnabled) return;
         const k = key.toLowerCase();
-        if (k === 'j') { router.navigate('/(tabs)/'); }
-        else if (k === 'k') { router.navigate('/(tabs)/stats'); }
+        if (key === '.') { router.navigate('/(tabs)/'); }
+        else if (key === ',') { router.navigate('/(tabs)/stats'); }
       }}
       onBlur={onInputBlur}
     />

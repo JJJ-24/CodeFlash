@@ -27,7 +27,7 @@ import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
 
 const TAG_SHORTCUTS = [
-  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
+  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Return', descKey: 'settings.shortcutOpenTag' },
   { key: 'P',     descKey: 'settings.shortcutEditTag' },
   { key: 'D',     descKey: 'settings.shortcutDeleteTag' },
@@ -102,8 +102,8 @@ export default function TagsScreen() {
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
-          if (k === 't') { moveFocus('next'); }
-          else if (k === 'y') { moveFocus('prev'); }
+          if (k === 'j') { moveFocus('next'); }
+          else if (k === 'k') { moveFocus('prev'); }
           else if (k === 'p') {
             if (focusedTagIndex !== null && tags[focusedTagIndex]) {
               router.push(`/tags/${tags[focusedTagIndex].id}/edit`);

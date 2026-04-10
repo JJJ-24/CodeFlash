@@ -65,10 +65,10 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
 const SESSION_SHORTCUTS = [
   { key: "Space", descKey: "settings.shortcutFlip" },
   { key: "1–4", descKey: "settings.shortcutGrade" },
-  { key: "J / K", descKey: "settings.shortcutNextPrev" },
+  { key: ", / .", descKey: "settings.shortcutNextPrev" },
   { key: "M", descKey: "settings.shortcutMemo" },
   { key: "F", descKey: "settings.shortcutFullscreen" },
-  { key: "T / Y", descKey: "settings.shortcutFocusBlockNextPrev" },
+  { key: "J / K", descKey: "settings.shortcutFocusBlockNextPrev" },
   { key: "R", descKey: "settings.shortcutRun" },
   { key: "E", descKey: "settings.shortcutEdit" },
   { key: "U / D", descKey: "settings.shortcutScrollUpDown" },
@@ -341,18 +341,18 @@ export default function StudySessionScreen() {
       cbs.setRunTrigger(0);
       cbs.setEditTrigger(0);
       setIsFlipped((v) => !v);
-    } else if (key === "t" || key === "T" || key === "y" || key === "Y") {
+    } else if (key === "j" || key === "J" || key === "k" || key === "K") {
       cbs.cycleCodeBlock(
-        key === "t" || key === "T",
+        key === "j" || key === "J",
         currentCard,
         isFlipped,
         setShowMemo,
       );
     } else if (key.toLowerCase() === "r") {
       if (cbs.selectedCodeBlockIdx !== null) cbs.setRunTrigger((v) => v + 1);
-    } else if (key.toLowerCase() === "j") {
+    } else if (key === ".") {
       swipe.navigateWithSlide("next");
-    } else if (key.toLowerCase() === "k") {
+    } else if (key === ",") {
       swipe.navigateWithSlide("prev");
     } else if (key.toLowerCase() === "m" && isFlipped) {
       setShowMemo((v) => !v);

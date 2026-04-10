@@ -46,11 +46,11 @@ function sumValues(map: Record<string, number>): number {
 
 const STUDY_TAB_SHORTCUTS = [
   { key: '1–4',   descKey: 'settings.shortcutFilterSwitch' },
-  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
+  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Return', descKey: 'settings.shortcutStartStudyFocused' },
   { key: 'S',     descKey: 'settings.shortcutToggleShuffle' },
   { key: 'Q',     descKey: 'settings.shortcutToggleTab' },
-  { key: 'J / K', descKey: 'settings.shortcutTabNextPrev' },
+  { key: ', / .', descKey: 'settings.shortcutTabNextPrev' },
 ];
 
 export default function StudyScreen() {
@@ -187,7 +187,7 @@ export default function StudyScreen() {
     else if (key === 'q' || key === 'Q') {
       setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
     }
-    else if (key === 't' || key === 'T') {
+    else if (key === 'j' || key === 'J') {
       const items = activeTab === 'decks' ? sortedDecks : tags;
       setFocusedItemIndex(prev => {
         const next = prev === null ? (items.length > 0 ? 0 : null) : prev >= items.length - 1 ? null : prev + 1;
@@ -197,7 +197,7 @@ export default function StudyScreen() {
         return next;
       });
     }
-    else if (key === 'y' || key === 'Y') {
+    else if (key === 'k' || key === 'K') {
       const items = activeTab === 'decks' ? sortedDecks : tags;
       setFocusedItemIndex(prev => {
         const next = prev === null ? (items.length > 0 ? items.length - 1 : null) : prev <= 0 ? null : prev - 1;
@@ -207,8 +207,8 @@ export default function StudyScreen() {
         return next;
       });
     }
-    else if (key === 'j' || key === 'J') { router.navigate('/(tabs)/stats'); }
-    else if (key === 'k' || key === 'K') { router.navigate('/(tabs)/'); }
+    else if (key === '.') { router.navigate('/(tabs)/stats'); }
+    else if (key === ',') { router.navigate('/(tabs)/'); }
   }
 
   function startStudyFocused() {

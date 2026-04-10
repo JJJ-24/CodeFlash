@@ -27,7 +27,7 @@ import { useTagStore } from '@/store/tags';
 import type { Card, Tag, TextBlock } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
-  { key: 'T / Y',   descKey: 'settings.shortcutFocusNextPrev' },
+  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
   { key: 'Return / P', descKey: 'settings.shortcutEditCard' },
   { key: 'D',     descKey: 'settings.shortcutDeleteCard' },
   { key: 'N',     descKey: 'settings.shortcutNewCard' },
@@ -130,8 +130,8 @@ export default function TagCardsScreen() {
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
-          if (k === 't') { moveFocus('next'); }
-          else if (k === 'y') { moveFocus('prev'); }
+          if (k === 'j') { moveFocus('next'); }
+          else if (k === 'k') { moveFocus('prev'); }
           else if (k === 'p') {
             if (focusedCardIndex !== null && cards[focusedCardIndex]) {
               navigateToEdit(cards[focusedCardIndex]);

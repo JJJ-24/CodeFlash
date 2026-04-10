@@ -94,9 +94,16 @@ export default function StudyScreen() {
   }, [keyboardShortcutsEnabled, theme]);
 
   useEffect(() => {
-    setFocusedItemIndex(null);
-    focusedDeckIdRef.current = null;
-    focusedTagIdRef.current = null;
+    if (activeTab === 'decks') {
+      const id = focusedDeckIdRef.current;
+      const idx = id ? sortedDecks.findIndex(d => d.id === id) : -1;
+      setFocusedItemIndex(idx === -1 ? null : idx);
+    } else {
+      const id = focusedTagIdRef.current;
+      const idx = id ? tags.findIndex(t => t.id === id) : -1;
+      setFocusedItemIndex(idx === -1 ? null : idx);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   useEffect(() => {

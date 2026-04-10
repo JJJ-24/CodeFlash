@@ -123,6 +123,7 @@ export default function StudySessionScreen() {
     }, [refreshCurrentCard]),
   );
 
+  const [keyboardInputKey, setKeyboardInputKey] = useState(0);
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
   // iPad: ステータスバーを隠す際にヘッダー高さが変わらないよう、初回 top inset を固定値として保持
@@ -216,13 +217,23 @@ export default function StudySessionScreen() {
   const handleCodeEditBlur = useCallback(() => {
     codeEditingRef.current = false;
     if (!switchingCodeBlockRef.current) {
-      // コード TextInput のアンマウントと focus 切り替えの競合でキーボードが
-      // 残留することがあるため、明示的に dismiss してから hidden TextInput に戻す
+      // keyboardRef TextInput を強制リマウントして autoFocus でフォーカスを確実に取得する。
+      // focus() の直接呼び出しは WebView 初期化との競合で失敗する場合があるため、
+      // autoFocus（フルスクリーン切替と同じ仕組み）を使う。
+      // Keyboard.dismiss() でソフトキーボードを明示的に閉じてからリマウントする。
       Keyboard.dismiss();
-      setTimeout(() => {
-        if (!switchingCodeBlockRef.current) keyboardRef.current?.focus();
-      }, 150);
+      setKeyboardInputKey((k) => k + 1);
     }
+  }, []);
+  // 実行ボタン経由での編集終了時に呼ぶ。switchingCodeBlockRef に関わらず
+  // keyboard TextInput を強制リマウントしてショートカットキーを確実に復元する。
+  // （編集 → 実行の場合、handleEditRequest が makeSelectHandler 経由で
+  //   switchingCodeBlockRef=true をセットするため、handleCodeEditBlur のガードが
+  //   300ms 以内に実行すると setKeyboardInputKey をスキップしてしまう。）
+  const handleForceKeyboardFocus = useCallback(() => {
+    codeEditingRef.current = false;
+    Keyboard.dismiss();
+    setKeyboardInputKey((k) => k + 1);
   }, []);
   /**
    * onSelectCodeBlock ファクトリ
@@ -236,6 +247,16 @@ export default function StudySessionScreen() {
     ) => (idx: number) => {
       switchingCodeBlockRef.current = true;
       setTimeout(() => { switchingCodeBlockRef.current = false; }, 300);
+      // 他面のコードブロックが編集中の場合、exitAllEditTrigger → handleCodeEditBlur が
+      // switchingCodeBlockRef ガードで setKeyboardInputKey をスキップするため、
+      // ここで強制的にキーボードフォーカスを復元する
+      const willExitOtherFace =
+        triggerOther === 'back' ||
+        triggerOther === 'memo' ||
+        (triggerOther === 'memoIfFlipped' && isFlipped);
+      if (willExitOtherFace && codeEditingRef.current) {
+        handleForceKeyboardFocus();
+      }
       if (triggerOther === 'back') setBackExitAllEditTrigger(v => v + 1);
       if (triggerOther === 'memo') setMemoExitAllEditTrigger(v => v + 1);
       if (triggerOther === 'memoIfFlipped' && isFlipped) setMemoExitAllEditTrigger(v => v + 1);
@@ -245,7 +266,7 @@ export default function StudySessionScreen() {
       else if (side === 'frontOrBack') cbs.setSelectedCodeBlockSide(isFlipped ? 'back' : 'front');
       cbs.setEditTrigger(0);
     },
-    [cbs, isFlipped],
+    [cbs, isFlipped, handleForceKeyboardFocus],
   );
 
   const cardLinks = useMemo(
@@ -773,6 +794,7 @@ export default function StudySessionScreen() {
             }
             onEditFocus={handleMemoCodeEditFocus}
             onEditBlur={handleCodeEditBlur}
+            onForceKeyboardFocus={handleForceKeyboardFocus}
             onSelectCodeBlock={makeSelectHandler('memo', 'back')}
             runTrigger={
               showMemo && cbs.selectedCodeBlockSide === "memo"
@@ -837,6 +859,7 @@ export default function StudySessionScreen() {
           }}
         />
         <TextInput
+          key={keyboardInputKey}
           ref={keyboardRef}
           style={styles.hiddenKeyboardInput}
           autoFocus
@@ -946,6 +969,7 @@ export default function StudySessionScreen() {
                         }
                         onEditFocus={handleCodeEditFocus}
                         onEditBlur={handleCodeEditBlur}
+                        onForceKeyboardFocus={handleForceKeyboardFocus}
                         onSelectCodeBlock={makeSelectHandler('frontOrBack')}
                         runTrigger={!isFlipped ? cbs.runTrigger : undefined}
                         editTrigger={!isFlipped ? cbs.editTrigger : undefined}
@@ -982,6 +1006,7 @@ export default function StudySessionScreen() {
                         }
                         onEditFocus={handleCodeEditFocus}
                         onEditBlur={handleCodeEditBlur}
+                        onForceKeyboardFocus={handleForceKeyboardFocus}
                         onSelectCodeBlock={makeSelectHandler('frontOrBack', 'memoIfFlipped')}
                         runTrigger={
                           isFlipped && cbs.selectedCodeBlockSide === "back"
@@ -1100,6 +1125,7 @@ export default function StudySessionScreen() {
         }
       />
       <TextInput
+        key={keyboardInputKey}
         ref={keyboardRef}
         style={styles.hiddenKeyboardInput}
         autoFocus
@@ -1248,6 +1274,7 @@ export default function StudySessionScreen() {
                       }
                       onEditFocus={handleCodeEditFocus}
                       onEditBlur={handleCodeEditBlur}
+                      onForceKeyboardFocus={handleForceKeyboardFocus}
                       onSelectCodeBlock={makeSelectHandler(null)}
                       runTrigger={!isFlipped ? cbs.runTrigger : undefined}
                       editTrigger={!isFlipped ? cbs.editTrigger : undefined}
@@ -1284,6 +1311,7 @@ export default function StudySessionScreen() {
                       }
                       onEditFocus={handleCodeEditFocus}
                       onEditBlur={handleCodeEditBlur}
+                      onForceKeyboardFocus={handleForceKeyboardFocus}
                       onSelectCodeBlock={makeSelectHandler('back', 'memo')}
                       runTrigger={
                         isFlipped && cbs.selectedCodeBlockSide === "back"

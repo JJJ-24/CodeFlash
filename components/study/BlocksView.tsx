@@ -36,6 +36,8 @@ interface Props {
   onCodeBlockChange?: (index: number, text: string) => void;
   onEditFocus?: () => void;
   onEditBlur?: () => void;
+  /** 実行ボタン経由での編集終了時にキーボードフォーカスを強制復元するコールバック */
+  onForceKeyboardFocus?: () => void;
   runTrigger?: number;
   editTrigger?: number;
   exitAllEditTrigger?: number;
@@ -46,7 +48,7 @@ interface Props {
   scrollBaseYRef?: RefObject<number>;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -55,6 +57,8 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   const blockHeights = useRef<Record<number, number>>({});
   // 現在編集中のブロック index（blocks 配列上の i）を管理
   const editingBlockIdxRef = useRef<number | null>(null);
+  // CodeRunnerView に "別ブロックが編集中か" を伝えるための state（ref だけでは再描画されない）
+  const [editingBlockIdx, setEditingBlockIdx] = useState<number | null>(null);
   const [exitEditTriggers, setExitEditTriggers] = useState<Record<number, number>>({});
 
   function handleEditRequest(blockIdx: number) {
@@ -63,6 +67,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       setExitEditTriggers(t => ({ ...t, [prev]: (t[prev] ?? 0) + 1 }));
     }
     editingBlockIdxRef.current = blockIdx;
+    setEditingBlockIdx(blockIdx);
     onSelectCodeBlock?.(codeBlockIndexMap[blockIdx]);
 
     // 編集開始時: FlipCard の 3D トランスフォームにより iOS の自動スクロールが
@@ -88,6 +93,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     if (prev !== null) {
       setExitEditTriggers(t => ({ ...t, [prev]: (t[prev] ?? 0) + 1 }));
       editingBlockIdxRef.current = null;
+      setEditingBlockIdx(null);
     }
   }, [exitAllEditTrigger]);
 
@@ -121,11 +127,14 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     }
   }, [selectedCodeBlockIdx]);
 
-  // 実行ボタンが押されたとき、別のブロックが編集中なら終了させる
+  // 実行ボタンが押されたとき、別のブロックが編集中なら終了させ、keyboard focus を強制復元する
   function handleRunRequest(blockIdx: number) {
     const prev = editingBlockIdxRef.current;
     if (prev !== null && prev !== blockIdx) {
       setExitEditTriggers(t => ({ ...t, [prev]: (t[prev] ?? 0) + 1 }));
+      // 別ブロックの handleCodeEditBlur は switchingCodeBlockRef ガードで
+      // setKeyboardInputKey をスキップする場合があるため、ここで強制復元する
+      onForceKeyboardFocus?.();
     }
   }
 
@@ -133,6 +142,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     if (editingBlockIdxRef.current === blockIdx) {
       // このブロックが最後の編集ブロック → session に編集終了を通知
       editingBlockIdxRef.current = null;
+      setEditingBlockIdx(null);
       onEditBlur?.();
     }
     // 別ブロックが既に編集を引き継いでいる場合は session に通知しない
@@ -217,10 +227,12 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 onEditRequest={() => handleEditRequest(i)}
                 onSelectRequest={() => onSelectCodeBlock?.(codeBlockIndexMap[i])}
                 onRunRequest={() => handleRunRequest(i)}
+                onForceKeyboardFocus={onForceKeyboardFocus}
                 exitEditTrigger={exitEditTriggers[i]}
                 runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}
                 editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}
                 isSelected={codeBlockIndexMap[i] === selectedCodeBlockIdx}
+                anotherBlockEditing={editingBlockIdx !== null && editingBlockIdx !== i}
                 onRunStart={() => {
                   onCodeRunStart?.();
                   if (!scrollRef?.current) return;

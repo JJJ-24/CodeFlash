@@ -41,6 +41,10 @@ interface Props {
   editTrigger?: number;
   isSelected?: boolean;
   onRunStart?: () => void;
+  /** 同じ BlocksView 内の別ブロックが編集中かどうか */
+  anotherBlockEditing?: boolean;
+  /** 実行ボタン経由での編集終了時にキーボードフォーカスを強制復元するコールバック */
+  onForceKeyboardFocus?: () => void;
 }
 
 export function CodeRunnerView({
@@ -58,6 +62,8 @@ export function CodeRunnerView({
   editTrigger,
   isSelected,
   onRunStart,
+  anotherBlockEditing,
+  onForceKeyboardFocus,
 }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -79,6 +85,12 @@ export function CodeRunnerView({
   const intentionalExitRef = useRef(false);
   // パレットタップ中フラグ（onTouchStart でセット、onFocus でリセット）
   const paletteActiveRef = useRef(false);
+  // isEditing の ref 版（RNGH worklet の stale closure 問題を回避するため、
+  // setIsEditing と同時に同期更新する）
+  const isEditingRef = useRef(false);
+  // 別ブロックが編集中かどうかの ref 版（prop 変化時に useEffect で更新）
+  const anotherBlockEditingRef = useRef(false);
+  useEffect(() => { anotherBlockEditingRef.current = anotherBlockEditing ?? false; }, [anotherBlockEditing]);
   const { insertPair, selection, handleSelectionChange, initCursorPosition } = useInsertPair(
     editedContent ?? block.content,
     onContentChange ?? (() => {}),
@@ -87,6 +99,7 @@ export function CodeRunnerView({
 
   useEffect(() => {
     reset();
+    isEditingRef.current = false;
     setIsEditing(false);
   }, [block.content]);
 
@@ -112,7 +125,8 @@ export function CodeRunnerView({
   }, [runTrigger]);
 
   useEffect(() => {
-    if (editTrigger && editable && !isEditing) {
+    if (editTrigger && editable && !isEditingRef.current) {
+      isEditingRef.current = true;
       onEditRequest?.();
       setIsEditing(true);
       clear();
@@ -122,6 +136,7 @@ export function CodeRunnerView({
 
   // 編集終了のみ（実行なし）- 完了ボタン・exitEditTrigger 用
   const handleEditEnd = useCallback(() => {
+    isEditingRef.current = false;
     intentionalExitRef.current = true;
     setIsEditing(false);
     onEditBlur?.();
@@ -137,6 +152,7 @@ export function CodeRunnerView({
     if (isEditing) {
       handleEditEnd();
     } else {
+      isEditingRef.current = true;
       onEditRequest?.();
       setIsEditing(true);
       clear();
@@ -144,30 +160,52 @@ export function CodeRunnerView({
     }
   }, [isEditing, handleEditEnd, clear, onEditFocus, onEditRequest]);
 
-  // 編集終了 + 実行 - ▶実行ボタン・r キー・Escape キー用
+  // 実行 - ▶実行ボタン・r キー用
+  // isEditingRef / anotherBlockEditingRef を使って stale closure を回避する。
+  // 編集中の場合は編集終了 → 300ms 後に実行（keyboardRef の focus 復元を待つ）。
   const handleRun = useCallback(() => {
-    onRunRequest?.();
-    onSelectRequest?.();
-    if (isEditing) {
-      // 編集中の場合のみ onBlur 二重実行防止フラグをセット
+    if (isRunning) return;
+    suppress?.(); // カードフリップを抑制
+    const wasThisEditing = isEditingRef.current;
+    if (wasThisEditing) {
+      isEditingRef.current = false;
       intentionalExitRef.current = true;
       setIsEditing(false);
       onEditBlur?.();
+      // switchingCodeBlockRef ガードを迂回してキーボードフォーカスを確実に復元する
+      onForceKeyboardFocus?.();
     }
+    const anotherWasEditing = anotherBlockEditingRef.current;
+    onRunRequest?.(); // 別ブロックが編集中なら終了させる
+    onSelectRequest?.();
     const content =
       editable && editedContent !== undefined ? editedContent : block.content;
-    run(content, block.language);
+    if (wasThisEditing || anotherWasEditing) {
+      // keyboard TextInput の focus 復元を待ってから WebView をマウントする
+      setTimeout(() => run(content, block.language), 300);
+    } else {
+      run(content, block.language);
+    }
   }, [
-    isEditing,
+    isRunning,
+    suppress,
     editable,
     editedContent,
     block.content,
     block.language,
     run,
     onEditBlur,
+    onForceKeyboardFocus,
     onSelectRequest,
     onRunRequest,
   ]);
+
+  // RNGH worklet の stale capture を防ぐための安定した ref パターン
+  // handleRun は deps が変わるたびに再生成されるが、callHandleRun は常に同じ参照を保つ。
+  // worklet は callHandleRun を capture するだけでよく、最新の handleRun は ref 経由で参照される。
+  const handleRunRef = useRef(handleRun);
+  handleRunRef.current = handleRun; // 毎レンダーで最新版に更新
+  const callHandleRun = useCallback(() => { handleRunRef.current(); }, []);
 
   // パレット onTouchStart: タッチ開始時点でフラグをセットし onBlur の誤終了を防ぐ
   // 200ms 後に自動リセット（onBlur タイマー 50ms より長く保持することで、
@@ -196,10 +234,9 @@ export function CodeRunnerView({
     () =>
       Gesture.Tap()
         .maxDistance(10)
-        .onEnd(() => {
-          if (!isRunning) runOnJS(handleRun)();
-        }),
-    [isRunning, handleRun],
+        .enabled(!isRunning)
+        .onEnd(() => runOnJS(callHandleRun)()),
+    [isRunning, callHandleRun],
   );
 
   const copyGesture = useMemo(

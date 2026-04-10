@@ -10,6 +10,7 @@ const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
 const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
 const DECK_SORT_KEY = '@codeflash_deck_sort';
 const SHUFFLE_KEY = '@codeflash_shuffle';
+const SEARCH_FIELD_KEY = '@codeflash_last_search_field';
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 
@@ -46,6 +47,8 @@ interface SettingsState {
   setDeckSortOrder: (v: DeckSortOrder) => void;
   shuffleEnabled: boolean;
   setShuffleEnabled: (v: boolean) => void;
+  lastSearchField: string;
+  setLastSearchField: (v: string) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -91,6 +94,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ shuffleEnabled: v });
     AsyncStorage.setItem(SHUFFLE_KEY, String(v));
   },
+  lastSearchField: 'all',
+  setLastSearchField: (v) => {
+    set({ lastSearchField: v });
+    AsyncStorage.setItem(SEARCH_FIELD_KEY, v);
+  },
 }));
 
 Promise.all([
@@ -103,11 +111,12 @@ Promise.all([
   AsyncStorage.getItem(SHUFFLE_KEY),
   AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
   AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
-]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, shuffle, notifHour, notifMinute]) => {
+  AsyncStorage.getItem(SEARCH_FIELD_KEY),
+]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, shuffle, notifHour, notifMinute, searchField]) => {
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
-    'deckSortOrder' | 'shuffleEnabled'
+    'deckSortOrder' | 'shuffleEnabled' | 'lastSearchField'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -118,5 +127,6 @@ Promise.all([
   if (shuffle !== null) update.shuffleEnabled = shuffle === 'true';
   if (notifHour !== null) update.notificationHour = Number(notifHour);
   if (notifMinute !== null) update.notificationMinute = Number(notifMinute);
+  if (searchField !== null) update.lastSearchField = searchField;
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 });

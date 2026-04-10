@@ -16,6 +16,7 @@ import { searchCards } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
 import { useTheme } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
+import { useSettingsStore } from '@/store/settings';
 import type { Card, TextBlock } from '@/types';
 
 function getPreviewText(blocks: Card['frontContent']): string {
@@ -34,12 +35,13 @@ export default function SearchScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks } = useDeckStore();
+  const { lastSearchField, setLastSearchField } = useSettingsStore();
   const inputRef = useRef<TextInput>(null);
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Card[]>([]);
   const [searched, setSearched] = useState(false);
-  const [searchField, setSearchField] = useState<SearchField>('all');
+  const [searchField, setSearchField] = useState<SearchField>(lastSearchField as SearchField);
 
   const FIELD_OPTIONS: { value: SearchField; labelKey: string }[] = [
     { value: 'all',  labelKey: 'card.searchFieldAll' },
@@ -95,7 +97,7 @@ export default function SearchScreen() {
             <Pressable
               key={value}
               style={[styles.fieldOption, active && { backgroundColor: theme.colors.primary }]}
-              onPress={() => setSearchField(value)}
+              onPress={() => { setSearchField(value); setLastSearchField(value); }}
             >
               <Text style={[styles.fieldOptionText, { fontSize: theme.fontSize.sm, color: active ? '#fff' : theme.colors.textSecondary }, active && { fontWeight: '700' }]}>
                 {t(labelKey)}

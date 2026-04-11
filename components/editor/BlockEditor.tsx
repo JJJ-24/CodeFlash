@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -199,6 +200,20 @@ export function BlockEditor({
       }, 50);
     }
   }, [addMenuVisible]);
+
+  // キーボード高さをトラッキングして contentContainerStyle の paddingBottom に反映する。
+  // automaticallyAdjustKeyboardInsets を使わずに手動で制御することで、
+  // iOS が contentInset を変更する際に発生するカーソル位置への自動スクロールを防ぐ。
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', (e: { endCoordinates: { height: number } }) => {
+      setKbHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener('keyboardWillHide', () => {
+      setKbHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   async function handleSave() {
     if (isFrontEmpty) return;
@@ -447,9 +462,8 @@ export function BlockEditor({
       <ScrollView
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, kbHeight > 0 && { paddingBottom: kbHeight + 16 }]}
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
         onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={100}
       >

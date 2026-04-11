@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +26,7 @@ interface Props {
 
 export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onCollapsedDoubleTap, onFocusInput }: Props) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const doubleTapCountRef = useRef(0);
@@ -152,21 +153,26 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           )}
         </View>
       ) : (
-        <TextInput
-          ref={inputRef}
-          style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
-          value={block.content}
-          onChangeText={onChange}
-          multiline
-          scrollEnabled={false}
-          placeholder={t('card.textBlockPlaceholder')}
-          placeholderTextColor={theme.colors.textTertiary}
-          onFocus={() => { setFocused(true); onFocusInput?.(); }}
-          onBlur={() => setFocused(false)}
-          textAlignVertical="top"
-          autoCorrect={false}
-          spellCheck={false}
-        />
+        // 水平 ScrollView でラップすることで、iOS の「scroll to first responder」を
+        // 水平方向で吸収し、外側の縦 ScrollView への自動スクロールを防ぐ。
+        // （CodeBlockItem と同じ機構）
+        <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} bounces={false}>
+          <TextInput
+            ref={inputRef}
+            style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md, width: width - 32 }]}
+            value={block.content}
+            onChangeText={onChange}
+            multiline
+            scrollEnabled={false}
+            placeholder={t('card.textBlockPlaceholder')}
+            placeholderTextColor={theme.colors.textTertiary}
+            onFocus={() => { setFocused(true); onFocusInput?.(); }}
+            onBlur={() => setFocused(false)}
+            textAlignVertical="top"
+            autoCorrect={false}
+            spellCheck={false}
+          />
+        </ScrollView>
       )}
       <Animated.View
         style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}

@@ -378,7 +378,6 @@ export default function DeckDetailScreen() {
           } else if (FILTER_KEY_MAP[key]) {
             const f = FILTER_KEY_MAP[key];
             setSelectedFilter(f);
-            setFocusedCardIndex(null);
             if (initialFilterPreference === 'none') setLastDeckDetailFilter(f);
           } else if (k === 'j') { moveFocus('next'); }
           else if (k === 'k') { moveFocus('prev'); }

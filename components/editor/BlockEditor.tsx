@@ -101,6 +101,7 @@ export function BlockEditor({
   const theme = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
+  const scrollOffsetRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [isPreview, setIsPreview] = useState(false);
@@ -449,6 +450,8 @@ export function BlockEditor({
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
+        onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={100}
       >
         {currentBlocks.map((block, index) => {
           const isLast = currentBlocks.length === 1;
@@ -482,6 +485,9 @@ export function BlockEditor({
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
+                      const currentY = scrollOffsetRef.current;
+                      // すでにブロック内を表示中なら自動スクロールしない
+                      if (currentY > pos.y - 80 && currentY < pos.y + pos.h) return;
                       scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
                     }, 300);
                   }}
@@ -510,6 +516,9 @@ export function BlockEditor({
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
+                      const currentY = scrollOffsetRef.current;
+                      // すでにブロック内を表示中なら自動スクロールしない
+                      if (currentY > pos.y - 80 && currentY < pos.y + pos.h) return;
                       scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
                     }, 300);
                   }}
@@ -530,6 +539,9 @@ export function BlockEditor({
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
+                      const currentY = scrollOffsetRef.current;
+                      // すでにブロック内を表示中なら自動スクロールしない
+                      if (currentY > pos.y - 80 && currentY < pos.y + pos.h) return;
                       scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
                     }, 300);
                   }}

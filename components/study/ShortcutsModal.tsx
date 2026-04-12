@@ -35,11 +35,13 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
           </Text>
           <ScrollView>
             {sections ? (
-              sections.map((section) => (
+              sections.map((section, sectionIndex) => (
                 <View key={section.title}>
-                  <Text style={[styles.sectionHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
-                    {section.title}
-                  </Text>
+                  <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border }, sectionIndex > 0 && styles.sectionHeaderSeparator]}>
+                    <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }}>
+                      {section.title}
+                    </Text>
+                  </View>
                   {section.items.map((item) => (
                     <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
                       <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
@@ -93,10 +95,12 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   sectionHeader: {
-    fontWeight: '700',
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  sectionHeaderSeparator: {
+    marginTop: 8,
   },
   row: {
     flexDirection: 'row',

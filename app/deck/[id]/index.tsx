@@ -669,9 +669,9 @@ export default function DeckDetailScreen() {
 
 const styles = StyleSheet.create({
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
-  container: { paddingBottom: 96 },
+  container: { paddingBottom: 96, paddingTop: 20 },
   fixedHeader: { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
-  descBlock: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
+  descBlock: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 12 },
   description: { lineHeight: 22 },
   descToggleBtn: { paddingTop: 4, paddingBottom: 8 },
   descToggleText: { fontWeight: '600' },

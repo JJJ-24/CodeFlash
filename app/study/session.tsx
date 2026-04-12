@@ -763,6 +763,7 @@ export default function StudySessionScreen() {
     <View
       style={styles.memoSection}
       onTouchStart={suppress}
+      onTouchEnd={suppress}
       onLayout={(e) => {
         memoSectionYRef.current = e.nativeEvent.layout.y;
         memoScrollBaseYRef.current =
@@ -951,7 +952,6 @@ export default function StudySessionScreen() {
                       style={{ flex: 1 }}
                       contentContainerStyle={styles.fullscreenContent}
                       showsVerticalScrollIndicator={false}
-                      automaticallyAdjustKeyboardInsets
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
                       onScroll={(e) => {
@@ -986,7 +986,6 @@ export default function StudySessionScreen() {
                       style={{ flex: 1 }}
                       contentContainerStyle={styles.fullscreenContent}
                       showsVerticalScrollIndicator={false}
-                      automaticallyAdjustKeyboardInsets
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
                       onScroll={(e) => {
@@ -1256,7 +1255,6 @@ export default function StudySessionScreen() {
                     style={{ flex: 1 }}
                     contentContainerStyle={styles.faceContent}
                     showsVerticalScrollIndicator={false}
-                    automaticallyAdjustKeyboardInsets
                     keyboardShouldPersistTaps="handled"
                     bounces={false}
                     onScroll={(e) => {
@@ -1291,7 +1289,6 @@ export default function StudySessionScreen() {
                     style={{ flex: 1 }}
                     contentContainerStyle={styles.faceContent}
                     showsVerticalScrollIndicator={false}
-                    automaticallyAdjustKeyboardInsets
                     keyboardShouldPersistTaps="handled"
                     bounces={false}
                     onScroll={(e) => {

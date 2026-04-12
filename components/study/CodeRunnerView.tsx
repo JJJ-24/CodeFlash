@@ -3,6 +3,7 @@ import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -150,6 +151,7 @@ export function CodeRunnerView({
   // 編集開始/終了トグル - 編集ボタン用
   const handleEditToggle = useCallback(() => {
     if (isEditing) {
+      suppress?.(); // Done タップ時にフリップを抑制
       handleEditEnd();
     } else {
       isEditingRef.current = true;
@@ -158,7 +160,7 @@ export function CodeRunnerView({
       clear();
       onEditFocus?.();
     }
-  }, [isEditing, handleEditEnd, clear, onEditFocus, onEditRequest]);
+  }, [isEditing, handleEditEnd, clear, onEditFocus, onEditRequest, suppress]);
 
   // 実行 - ▶実行ボタン・r キー用
   // isEditingRef / anotherBlockEditingRef を使って stale closure を回避する。
@@ -268,9 +270,15 @@ export function CodeRunnerView({
           isSelected && !isEditing && !isRunning && { backgroundColor: '#1A3050' },
         ]}
       >
-        <Text style={styles.langLabel}>
-          {LANG_LABELS[block.language] ?? block.language}
-        </Text>
+        <Pressable
+          style={styles.langLabelArea}
+          onTouchStart={() => { if (isEditingRef.current) suppress?.(); }}
+          onPress={() => { if (isEditingRef.current) handleEditEnd(); }}
+        >
+          <Text style={styles.langLabel}>
+            {LANG_LABELS[block.language] ?? block.language}
+          </Text>
+        </Pressable>
 
         <View style={styles.headerRight}>
           {editable && block.executable && (
@@ -411,6 +419,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  langLabelArea: {
+    flex: 1,
+    justifyContent: "center",
   },
   langLabel: {
     fontSize: 14,

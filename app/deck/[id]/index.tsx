@@ -583,7 +583,7 @@ export default function DeckDetailScreen() {
                       <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
                     </Pressable>
                     <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
-                      <Ionicons name="trash-outline" size={18} color={theme.colors.iconSubtle} />
+                      <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
                     </Pressable>
                   </>
                 )}

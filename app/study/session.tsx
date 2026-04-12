@@ -745,7 +745,7 @@ export default function StudySessionScreen() {
 
   // メモトグル（Pressable で処理するため memoTapGesture は使用しない）
   const memoToggle = (
-    <Pressable style={styles.memoToggle} onPress={handleToggleMemo}>
+    <Pressable style={styles.memoToggle} onPress={handleToggleMemo} onTouchStart={suppress}>
       <Ionicons
         name={showMemo ? "eye-off-outline" : "eye-outline"}
         size={16}
@@ -762,8 +762,6 @@ export default function StudySessionScreen() {
   const memoBlock = hasMemo && (
     <View
       style={styles.memoSection}
-      onTouchStart={suppress}
-      onTouchEnd={suppress}
       onLayout={(e) => {
         memoSectionYRef.current = e.nativeEvent.layout.y;
         memoScrollBaseYRef.current =

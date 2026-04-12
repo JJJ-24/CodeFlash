@@ -232,7 +232,6 @@
     "shortcutFocusBlockNextPrev": "Move focus (next/prev code block)",
     "shortcutNextPrev": "Go to previous / skip to next (no grade)",
     "shortcutScrollUpDown": "Scroll (up/down)",
-    "shortcutScrollUpDownDelete": "Scroll (up/down)\nD deletes focused card",
     "shortcutToggleShuffle": "Toggle shuffle",
     "shortcutToggleTab": "Switch between Decks / Tags",
     "shortcutOpenDeck": "Open focused deck",

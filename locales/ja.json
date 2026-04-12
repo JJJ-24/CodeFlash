@@ -232,7 +232,6 @@
     "shortcutFocusBlockNextPrev": "フォーカスを移動（次/前のコードブロック）",
     "shortcutNextPrev": "前へ戻る / 次へスキップ（評価なし）",
     "shortcutScrollUpDown": "スクロール（上/下）",
-    "shortcutScrollUpDownDelete": "スクロール（上/下）\nDはフォーカス中のみ削除",
     "shortcutToggleShuffle": "シャッフルの切替",
     "shortcutToggleTab": "デッキ / タグ の切替",
     "shortcutOpenDeck": "フォーカス中のデッキを開く",

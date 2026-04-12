@@ -71,8 +71,7 @@ export default function DeckDetailScreen() {
   const lastFocusTimeRef = useRef(0);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const listRef = useRef<FlatList<Card>>(null);
-  const scrollOffsetRef = useRef(0);
-  const SCROLL_STEP = 200;
+
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [showDeckPicker, setShowDeckPicker] = useState(false);
@@ -86,9 +85,9 @@ export default function DeckDetailScreen() {
     { key: '1–4',       descKey: 'settings.shortcutFilterSwitch' },
     { key: 'J / K',     descKey: 'settings.shortcutFocusCardNextPrev' },
     { key: 'Return / P', descKey: 'settings.shortcutEditCard' },
+    { key: 'D',         descKey: 'settings.shortcutDeleteCard' },
     { key: 'N',         descKey: 'settings.shortcutNewCard' },
     { key: 'S',         descKey: 'settings.shortcutToggleSelect' },
-    { key: 'U / D',     descKey: 'settings.shortcutScrollUpDownDelete' },
     { key: 'B',         descKey: 'settings.shortcutBack' },
   ];
   const DECK_SHORTCUTS_SELECT = [
@@ -386,13 +385,9 @@ export default function DeckDetailScreen() {
               navigateToCardEdit(displayedCards[focusedCardIndex].id);
             }
           } else if (k === 'b') { router.back(); }
-          else if (k === 'u') {
-            listRef.current?.scrollToOffset({ offset: Math.max(0, scrollOffsetRef.current - SCROLL_STEP), animated: true });
-          } else if (k === 'd') {
+          else if (k === 'd') {
             if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
               confirmDeleteCard(displayedCards[focusedCardIndex]);
-            } else {
-              listRef.current?.scrollToOffset({ offset: scrollOffsetRef.current + SCROLL_STEP, animated: true });
             }
           } else if (k === 'n') {
             router.push({ pathname: '/deck/[id]/card/new', params: { id } });
@@ -519,7 +514,6 @@ export default function DeckDetailScreen() {
             />
           }
           contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
-          onScrollOffsetChange={(offset) => { scrollOffsetRef.current = offset; }}
           onScrollToIndexFailed={() => {}}
           onDragEnd={({ data }) => {
             if (selectionMode) return;

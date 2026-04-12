@@ -244,6 +244,16 @@ export default function StudyScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortedDecks]);
 
+  // タグ並び替え後もフォーカスを同じタグに維持（タグ管理で並び替え後に学習タブへ戻った場合）
+  useEffect(() => {
+    if (activeTab !== 'tags') return;
+    const id = focusedTagIdRef.current;
+    if (id == null) return;
+    const newIdx = tags.findIndex(t => t.id === id);
+    setFocusedItemIndex(newIdx === -1 ? null : newIdx);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags]);
+
   const totalAll = activeTab === 'decks'
     ? decks.reduce((s, d) => s + d.cardCount, 0)
     : sumValues(totalPerTag);

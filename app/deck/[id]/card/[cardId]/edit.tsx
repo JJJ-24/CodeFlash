@@ -1,19 +1,42 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteCard, getCardById, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
+import { useSettingsStore } from '@/store/settings';
 import type { Card } from '@/types';
+
+const CARD_EDITOR_SHORTCUTS_NORMAL = [
+  { key: 'J / K',      descKey: 'settings.shortcutFocusCardNextPrev' },
+  { key: 'Return / E', descKey: 'settings.shortcutEditBlock' },
+  { key: 'D',          descKey: 'settings.shortcutDeleteBlock' },
+  { key: 'Q',          descKey: 'settings.shortcutTabSwitchCard' },
+  { key: 'P',          descKey: 'settings.shortcutTogglePreview' },
+  { key: 'O',          descKey: 'settings.shortcutEnterSortMode' },
+  { key: 'A',          descKey: 'settings.shortcutAddBlock' },
+  { key: 'R',          descKey: 'settings.shortcutRun' },
+  { key: 'T',          descKey: 'settings.shortcutScrollToTags' },
+  { key: 'S',          descKey: 'settings.shortcutSave' },
+  { key: 'C',          descKey: 'settings.shortcutCancelCard' },
+];
+
+const CARD_EDITOR_SHORTCUTS_SORT = [
+  { key: 'J / K', descKey: 'settings.shortcutFocusCardNextPrev' },
+  { key: 'U / D', descKey: 'settings.shortcutMoveBlock' },
+  { key: 'O',     descKey: 'settings.shortcutExitSortMode' },
+];
 
 export default function EditCardScreen() {
   const { id, cardId, tab } = useLocalSearchParams<{ id: string; cardId: string; tab?: string }>();
@@ -21,15 +44,18 @@ export default function EditCardScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { bottom: bottomInset } = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { updateCard: updateStore, removeCard } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
   const theme = useTheme();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
 
   const editorRef = useRef<BlockEditorRef>(null);
   const [card, setCard] = useState<Card | null>(null);
   const [initialTagIds, setInitialTagIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [frontEmpty, setFrontEmpty] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -104,7 +130,19 @@ export default function EditCardScreen() {
     <>
       <Stack.Screen
         options={{
-          title: t('card.edit'),
+          headerTitle: () => (
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
+            >
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
+                {t('card.edit')}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          ),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
               <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.textSecondary }}>
@@ -135,6 +173,8 @@ export default function EditCardScreen() {
           onSave={handleSave}
           onFrontEmptyChange={setFrontEmpty}
           saving={saving}
+          onCancel={() => router.back()}
+          onDeleteCard={confirmDelete}
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
@@ -145,6 +185,15 @@ export default function EditCardScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        maxHeight="80%"
+        sections={[
+          { title: t('settings.shortcutNormalMode'), items: CARD_EDITOR_SHORTCUTS_NORMAL },
+          { title: t('settings.shortcutSortMode'), items: CARD_EDITOR_SHORTCUTS_SORT },
+        ]}
+      />
     </>
   );
 }

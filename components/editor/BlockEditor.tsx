@@ -10,11 +10,13 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Alert,
   Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -85,6 +87,10 @@ interface Props {
   saving: boolean;
   /** 新規カード作成時は true → 最初のテキストブロックを自動フォーカス。編集時は false/省略 → タップするまでフォーカスなし */
   isNewCard?: boolean;
+  /** C キーでキャンセル */
+  onCancel?: () => void;
+  /** フォーカスなし時の D キーでカード削除 */
+  onDeleteCard?: () => void;
   ref?: Ref<BlockEditorRef>;
 }
 
@@ -96,13 +102,26 @@ export function BlockEditor({
   onFrontEmptyChange,
   saving: _saving,
   isNewCard,
+  onCancel,
+  onDeleteCard,
   ref,
 }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
   const scrollRef = useRef<ScrollView>(null);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
   const scrollOffsetRef = useRef(0);
+  const keyboardRef = useRef<TextInput>(null);
+  const focusedBlockIndexRef = useRef<number | null>(null);
+  const isTransitioningRef = useRef(false);
+  const isTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeTabRef = useRef<Tab>('front');
+  const isSortModeRef = useRef(false);
+  const isPreviewRef = useRef(false);
+  const currentBlocksRef = useRef<EditBlock[]>([]);
+  const addMenuVisibleRef = useRef(false);
+  const addMenuFocusIndexRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [isPreview, setIsPreview] = useState(false);
@@ -117,10 +136,14 @@ export function BlockEditor({
   );
   const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
   const [addMenuVisible, setAddMenuVisible] = useState(false);
+  const [addMenuFocusIndex, setAddMenuFocusIndex] = useState(0);
   const [isSortMode, setIsSortMode] = useState(false);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
   const [moveCount, setMoveCount] = useState(0);
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
+  const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(null);
+  const [editTriggerMap, setEditTriggerMap] = useState<Record<string, number>>({});
+  const [runTriggerMap, setRunTriggerMap] = useState<Record<string, number>>({});
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -156,6 +179,17 @@ export function BlockEditor({
     setAddMenuVisible(false);
   }
 
+  // メニューフォーカスインデックスに対応するブロックを追加（またはキャンセル）
+  const ADD_MENU_ITEMS = ['text', 'code', 'image', 'cancel'] as const;
+  function selectAddMenuItem(idx: number) {
+    const item = ADD_MENU_ITEMS[idx];
+    if (item === 'cancel') {
+      setAddMenuVisible(false);
+    } else {
+      addBlock(item);
+    }
+  }
+
   function moveBlock(tab: Tab, key: string, direction: 'up' | 'down') {
     const blocks = blocksByTab[tab];
     const idx = blocks.findIndex((b) => b._key === key);
@@ -179,6 +213,17 @@ export function BlockEditor({
       }
     }, 150);
   }
+
+  const currentBlocks = blocksByTab[activeTab];
+
+  // Sync mutable state into refs so key handlers always see fresh values
+  activeTabRef.current = activeTab;
+  isSortModeRef.current = isSortMode;
+  isPreviewRef.current = isPreview;
+  currentBlocksRef.current = currentBlocks;
+  focusedBlockIndexRef.current = focusedBlockIndex;
+  addMenuVisibleRef.current = addMenuVisible;
+  addMenuFocusIndexRef.current = addMenuFocusIndex;
 
   const isFrontEmpty = frontBlocks.every((b) => {
     if (b.type === "image") return !b.uri;
@@ -215,6 +260,187 @@ export function BlockEditor({
     return () => { show.remove(); hide.remove(); };
   }, []);
 
+  // タブ切替でブロックフォーカスをリセット
+  useEffect(() => {
+    setFocusedBlockIndex(null);
+  }, [activeTab]);
+
+  // ブロック数変化時にフォーカスインデックスを補正
+  useEffect(() => {
+    if (focusedBlockIndex !== null && focusedBlockIndex >= currentBlocks.length) {
+      setFocusedBlockIndex(currentBlocks.length > 0 ? currentBlocks.length - 1 : null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBlocks.length]);
+
+  // フォーカス中ブロックへスクロール
+  useEffect(() => {
+    if (focusedBlockIndex === null) return;
+    const block = currentBlocks[focusedBlockIndex];
+    if (!block) return;
+    setTimeout(() => {
+      const pos = blockPositions.current[block._key];
+      if (!pos || !scrollRef.current) return;
+      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
+    }, 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedBlockIndex]);
+
+  // 編集画面マウント時に hidden TextInput をフォーカス
+  useEffect(() => {
+    if (!isNewCard && keyboardShortcutsEnabled) {
+      setTimeout(() => keyboardRef.current?.focus(), 150);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleBlockEditBlur() {
+    if (isTransitioningRef.current) return;
+    if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
+    isTransitionTimerRef.current = setTimeout(() => {
+      keyboardRef.current?.focus();
+    }, 200);
+  }
+
+  function startEditFocusedBlock() {
+    const idx = focusedBlockIndexRef.current;
+    const blocks = currentBlocksRef.current;
+    if (idx === null || !blocks[idx]) return;
+    const key = blocks[idx]._key;
+    isTransitioningRef.current = true;
+    setEditTriggerMap(prev => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
+    setTimeout(() => { isTransitioningRef.current = false; }, 300);
+  }
+
+  function handleKeyPress(key: string) {
+    if (!keyboardShortcutsEnabled) return;
+    const k = key.toLowerCase();
+    const blocks = currentBlocksRef.current;
+    const idx = focusedBlockIndexRef.current;
+    const tab = activeTabRef.current;
+    const inSort = isSortModeRef.current;
+    const menuLen = 4; // text / code / image / cancel
+
+    // ブロック追加メニュー表示中はメニューナビゲーションを優先
+    if (addMenuVisibleRef.current) {
+      if (k === 'j') {
+        setAddMenuFocusIndex(prev => (prev + 1) % menuLen);
+      } else if (k === 'k') {
+        setAddMenuFocusIndex(prev => (prev - 1 + menuLen) % menuLen);
+      } else if (k === 'a') {
+        setAddMenuVisible(false);
+      }
+      // Return は onSubmitEditing で処理
+      return;
+    }
+
+    if (inSort) {
+      if (k === 'j') {
+        setSelectedBlockKey(null);
+        setFocusedBlockIndex(prev => {
+          if (prev === null) return blocks.length > 0 ? 0 : null;
+          return prev < blocks.length - 1 ? prev + 1 : null;
+        });
+      } else if (k === 'k') {
+        setSelectedBlockKey(null);
+        setFocusedBlockIndex(prev => {
+          if (prev === null) return blocks.length > 0 ? blocks.length - 1 : null;
+          return prev > 0 ? prev - 1 : null;
+        });
+      } else if (k === 'u') {
+        if (idx !== null && blocks[idx] && idx > 0) {
+          moveBlock(tab, blocks[idx]._key, 'up');
+          setFocusedBlockIndex(idx - 1);
+        }
+      } else if (k === 'd') {
+        if (idx !== null && blocks[idx] && idx < blocks.length - 1) {
+          moveBlock(tab, blocks[idx]._key, 'down');
+          setFocusedBlockIndex(idx + 1);
+        }
+      } else if (k === 'o') {
+        setIsSortMode(false);
+      }
+      return;
+    }
+
+    if (k === 'j') {
+      setFocusedBlockIndex(prev => {
+        if (prev === null) return blocks.length > 0 ? 0 : null;
+        return prev < blocks.length - 1 ? prev + 1 : null;
+      });
+    } else if (k === 'k') {
+      setFocusedBlockIndex(prev => {
+        if (prev === null) return blocks.length > 0 ? blocks.length - 1 : null;
+        return prev > 0 ? prev - 1 : null;
+      });
+    } else if (k === 'q') {
+      const tabOrder: Tab[] = ['front', 'back', 'memo'];
+      setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) + 1) % 3]);
+    } else if (k === 'p') {
+      setIsPreview(v => !v);
+      setIsSortMode(false);
+    } else if (k === 'o') {
+      if (!isPreviewRef.current) setIsSortMode(true);
+    } else if (k === 'a') {
+      if (!isPreviewRef.current) {
+        setAddMenuVisible(v => {
+          if (!v) {
+            // メニューを開く: ブロックフォーカス解除・メニュー先頭を選択
+            setFocusedBlockIndex(null);
+            setAddMenuFocusIndex(0);
+          }
+          return !v;
+        });
+      }
+    } else if (k === 'r') {
+      if (idx !== null && blocks[idx]?.type === 'code') {
+        const blockKey = blocks[idx]._key;
+        if ((blocks[idx] as CodeBlock & { _key: string }).executable) {
+          setRunTriggerMap(prev => ({ ...prev, [blockKey]: (prev[blockKey] ?? 0) + 1 }));
+        }
+      }
+    } else if (k === 'd') {
+      if (idx !== null && blocks[idx]) {
+        const block = blocks[idx];
+        const isLast = blocks.length === 1;
+        const isEmpty =
+          block.type === 'image'
+            ? !(block as ImageBlock).uri
+            : (block as TextBlock | CodeBlock).content.trim() === '';
+        if (isLast) {
+          Alert.alert(t('card.deleteBlock'), t('card.deleteBlockRequired'), [
+            { text: t('common.ok') },
+          ]);
+        } else if (isEmpty) {
+          deleteBlock(tab, block._key);
+          setFocusedBlockIndex(null);
+        } else {
+          Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('common.delete'),
+              style: 'destructive',
+              onPress: () => {
+                deleteBlock(tab, block._key);
+                setFocusedBlockIndex(null);
+              },
+            },
+          ]);
+        }
+      } else {
+        onDeleteCard?.();
+      }
+    } else if (k === 'c') {
+      onCancel?.();
+    } else if (k === 's') {
+      handleSave();
+    } else if (k === 'e') {
+      startEditFocusedBlock();
+    } else if (k === 't') {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }
+  }
+
   async function handleSave() {
     if (isFrontEmpty) return;
     await onSave({
@@ -232,8 +458,6 @@ export function BlockEditor({
     { key: "back", label: t("card.back") },
     { key: "memo", label: t("card.memo") },
   ];
-
-  const currentBlocks = blocksByTab[activeTab];
 
   const footerContent = (
     <>
@@ -254,6 +478,7 @@ export function BlockEditor({
                 style={[
                   styles.addMenuItem,
                   { borderBottomColor: theme.colors.border },
+                  addMenuFocusIndex === 0 && { backgroundColor: theme.colors.primaryLight },
                 ]}
                 onPress={() => addBlock("text")}
               >
@@ -271,6 +496,7 @@ export function BlockEditor({
                 style={[
                   styles.addMenuItem,
                   { borderBottomColor: theme.colors.border },
+                  addMenuFocusIndex === 1 && { backgroundColor: theme.colors.primaryLight },
                 ]}
                 onPress={() => addBlock("code")}
               >
@@ -288,6 +514,7 @@ export function BlockEditor({
                 style={[
                   styles.addMenuItem,
                   { borderBottomColor: theme.colors.border },
+                  addMenuFocusIndex === 2 && { backgroundColor: theme.colors.primaryLight },
                 ]}
                 onPress={() => addBlock("image")}
               >
@@ -305,7 +532,10 @@ export function BlockEditor({
               </TouchableOpacity>
               <Pressable
                 onPress={() => setAddMenuVisible(false)}
-                style={styles.addMenuCancel}
+                style={[
+                  styles.addMenuCancel,
+                  addMenuFocusIndex === 3 && { backgroundColor: theme.colors.primaryLight },
+                ]}
               >
                 <Text
                   style={[
@@ -388,6 +618,32 @@ export function BlockEditor({
 
   return (
     <View style={{ flex: 1 }}>
+      <TextInput
+        ref={keyboardRef}
+        style={styles.hiddenKeyboardInput}
+        caretHidden
+        keyboardType="ascii-capable"
+        showSoftInputOnFocus={false}
+        disableKeyboardShortcuts={true}
+        autoCorrect={false}
+        autoCapitalize="none"
+        spellCheck={false}
+        onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
+        onSubmitEditing={() => {
+          if (!keyboardShortcutsEnabled) return;
+          if (addMenuVisibleRef.current) {
+            const menuIdx = addMenuFocusIndexRef.current;
+            selectAddMenuItem(menuIdx);
+            // キャンセル選択時はブロックが新規フォーカスを取得しないため、
+            // hidden TextInput を明示的に再フォーカスする
+            if (menuIdx === 3) {
+              setTimeout(() => keyboardRef.current?.focus(), 100);
+            }
+            return;
+          }
+          startEditFocusedBlock();
+        }}
+      />
       {/* タブバー */}
       <View
         style={[
@@ -495,6 +751,9 @@ export function BlockEditor({
                   flashTrigger={flashTrigger}
                   isLast={isLast}
                   onCollapsedDoubleTap={() => setIsSortMode(false)}
+                  isFocused={focusedBlockIndex === index}
+                  editTrigger={editTriggerMap[block._key] ?? 0}
+                  onEditBlur={handleBlockEditBlur}
                   onFocusInput={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
@@ -519,6 +778,10 @@ export function BlockEditor({
                   flashTrigger={flashTrigger}
                   isLast={isLast}
                   autoFocus={block._key === newBlockKey}
+                  isFocused={focusedBlockIndex === index}
+                  editTrigger={editTriggerMap[block._key] ?? 0}
+                  onEditBlur={handleBlockEditBlur}
+                  runTrigger={runTriggerMap[block._key] ?? 0}
                   onRunStart={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
@@ -549,6 +812,8 @@ export function BlockEditor({
                   flashTrigger={flashTrigger}
                   isLast={isLast}
                   autoFocus={block._key === newBlockKey}
+                  isFocused={focusedBlockIndex === index}
+                  onEditBlur={handleBlockEditBlur}
                   onFocusInput={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
@@ -571,6 +836,7 @@ export function BlockEditor({
 }
 
 const styles = StyleSheet.create({
+  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,

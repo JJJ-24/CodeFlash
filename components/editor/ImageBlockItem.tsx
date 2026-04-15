@@ -27,10 +27,12 @@ interface Props {
   flashTrigger?: number;
   isLast?: boolean;
   onFocusInput?: () => void;
+  onEditBlur?: () => void;
   autoFocus?: boolean;
+  isFocused?: boolean;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, autoFocus }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, onEditBlur, autoFocus, isFocused }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -78,7 +80,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const isEmpty = !block.uri;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : (!collapsed && focused ? theme.colors.primary : theme.colors.inputBorder) }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : ((focused || isFocused) ? theme.colors.primary : theme.colors.inputBorder) }]}>
       <BlockItemHeader
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
@@ -153,7 +155,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
             placeholder={t('card.imageAltPlaceholder')}
             placeholderTextColor={theme.colors.textTertiary}
             onFocus={() => { setFocused(true); onFocusInput?.(); }}
-            onBlur={() => setFocused(false)}
+            onBlur={() => { setFocused(false); onEditBlur?.(); }}
             autoCorrect={false}
             spellCheck={false}
           />

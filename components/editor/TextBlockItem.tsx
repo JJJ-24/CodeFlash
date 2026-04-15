@@ -22,9 +22,15 @@ interface Props {
   isLast?: boolean;
   onCollapsedDoubleTap?: () => void;
   onFocusInput?: () => void;
+  /** キーボードナビゲーションでこのブロックが選択されているか */
+  isFocused?: boolean;
+  /** BlockEditor から編集開始を指示するトリガー（値が変化するたびにフォーカス） */
+  editTrigger?: number;
+  /** TextInput のフォーカスが外れたとき BlockEditor に通知するコールバック */
+  onEditBlur?: () => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onCollapsedDoubleTap, onFocusInput }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -49,6 +55,12 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, []);
+
+  useEffect(() => {
+    if ((editTrigger ?? 0) > 0) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [editTrigger]);
 
   useEffect(() => {
     if (prevCollapsedRef.current === true && collapsed === false) {
@@ -117,7 +129,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   return (
     <View style={[
       styles.container,
-      { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : (!collapsed && focused ? theme.colors.primary : theme.colors.inputBorder) },
+      { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : ((focused || isFocused) ? theme.colors.primary : theme.colors.inputBorder) },
     ]}>
       <BlockItemHeader
         onMoveUp={onMoveUp}
@@ -167,7 +179,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
             placeholder={t('card.textBlockPlaceholder')}
             placeholderTextColor={theme.colors.textTertiary}
             onFocus={() => { setFocused(true); onFocusInput?.(); }}
-            onBlur={() => setFocused(false)}
+            onBlur={() => { setFocused(false); onEditBlur?.(); }}
             textAlignVertical="top"
             autoCorrect={false}
             spellCheck={false}

@@ -41,9 +41,13 @@ interface Props {
   isLast?: boolean;
   onFocusInput?: () => void;
   autoFocus?: boolean;
+  isFocused?: boolean;
+  editTrigger?: number;
+  onEditBlur?: () => void;
+  runTrigger?: number;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, autoFocus }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, runTrigger }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -64,6 +68,19 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       setTimeout(() => codeInputRef.current?.focus(), 50);
     }
   }, []);
+
+  useEffect(() => {
+    if ((editTrigger ?? 0) > 0) {
+      setTimeout(() => codeInputRef.current?.focus(), 50);
+    }
+  }, [editTrigger]);
+
+  useEffect(() => {
+    if ((runTrigger ?? 0) > 0 && block.executable) {
+      run(block.content, block.language);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runTrigger]);
 
   const theme = useTheme();
 
@@ -88,7 +105,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: flashTrigger > 0 ? theme.colors.primary : (theme.dark ? '#3A3A3A' : '#333') }, !collapsed && focused && styles.containerFocused, isRunning && styles.containerRunning]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: isRunning ? '#43A047' : flashTrigger > 0 || focused || isFocused ? theme.colors.primary : (theme.dark ? '#3A3A3A' : '#333') }]}>
       <BlockItemHeader
         onDelete={onDelete}
         collapsed={collapsed}
@@ -164,7 +181,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
                   onFocus={() => { setFocused(true); onFocusInput?.(); }}
-                  onBlur={() => setFocused(false)}
+                  onBlur={() => { setFocused(false); onEditBlur?.(); }}
                   textAlignVertical="top"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -242,9 +259,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  containerFocused: { borderColor: '#64B5F6' },
-  containerRunning: { borderColor: '#43A047', borderWidth: 2 },
-  langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   langText: { color: '#9CDCFE', fontWeight: '600', fontSize: 14 },
   langChevron: { color: '#9CDCFE', fontSize: 12 },
   headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },

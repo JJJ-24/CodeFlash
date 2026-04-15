@@ -294,6 +294,17 @@ export function BlockEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ブロックの TextInput がタップでフォーカスされたとき呼ぶ。
+  // handleBlockEditBlur が仕掛けた「hidden TextInput へ戻す」タイマーをキャンセルし、
+  // J/K キーボードフォーカス（focusedBlockIndex）もクリアする。
+  function handleBlockTapFocus() {
+    if (isTransitionTimerRef.current) {
+      clearTimeout(isTransitionTimerRef.current);
+      isTransitionTimerRef.current = null;
+    }
+    setFocusedBlockIndex(null);
+  }
+
   function handleBlockEditBlur() {
     if (isTransitioningRef.current) return;
     if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
@@ -755,6 +766,7 @@ export function BlockEditor({
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onFocusInput={() => {
+                    handleBlockTapFocus();
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
@@ -790,6 +802,7 @@ export function BlockEditor({
                     }, 300);
                   }}
                   onFocusInput={() => {
+                    handleBlockTapFocus();
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
@@ -815,6 +828,7 @@ export function BlockEditor({
                   isFocused={focusedBlockIndex === index}
                   onEditBlur={handleBlockEditBlur}
                   onFocusInput={() => {
+                    handleBlockTapFocus();
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;

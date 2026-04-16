@@ -842,6 +842,8 @@ export default function StudySessionScreen() {
           activeOpacity={0.7}
         >
           <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
             style={[
               styles.gradeBtnText,
               { color, fontSize: theme.fontSize.sm },

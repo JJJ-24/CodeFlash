@@ -323,7 +323,7 @@ export function CodeRunnerView({
         {editable && isEditing ? (
           <TextInput
             ref={codeInputRef}
-            style={[styles.codeText, styles.codeInput]}
+            style={[styles.codeText, styles.codeInput, { fontSize: theme.fontSize.md, lineHeight: theme.fontSize.md * 1.57 }]}
             value={editedContent ?? block.content}
             selection={selection}
             onChangeText={onContentChange}

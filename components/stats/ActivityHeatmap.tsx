@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 
 import { localDateStr } from '@/lib/database/utils';
 import { FILTER_COLORS, useTheme } from '@/lib/theme';
@@ -68,11 +69,13 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 0);
   }, [weeks]);
 
+  const monthRowHeight = Math.ceil(theme.fontSize.xs * 1.6);
+
   return (
     <View style={styles.heatmapWrapper}>
       {/* 曜日ラベル（スクロール固定） */}
       <View>
-        <View style={styles.monthRowSpacer} />
+        <View style={{ height: monthRowHeight }} />
         <View style={[styles.dayLabelCol, { width: DAY_LABEL_WIDTH }]}>
           {dayLabels.map((label, i) => (
             <Text
@@ -93,7 +96,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
         contentContainerStyle={{ paddingBottom: 4, paddingRight: 12 }}
       >
         <View>
-          <View style={styles.monthRow}>
+          <View style={[styles.monthRow, { height: monthRowHeight }]}>
             {monthLabels.map(({ colIndex, label }) => (
               <Text
                 key={colIndex}
@@ -137,12 +140,11 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
 
 const styles = StyleSheet.create({
   heatmapWrapper: { flexDirection: 'row' },
-  monthRowSpacer: { height: 16 },
-  monthRow: { flexDirection: 'row', height: 16, position: 'relative' },
+  monthRow: { flexDirection: 'row', position: 'relative' },
   monthLabel: { position: 'absolute', fontWeight: '500' },
   grid: { flexDirection: 'row' },
   dayLabelCol: { justifyContent: 'flex-start' },
-  dayLabel: { textAlign: 'center', lineHeight: CELL_STEP },
+  dayLabel: { textAlign: 'center', lineHeight: CELL_STEP - 3 },
   col: { flexDirection: 'column' },
   cell: { borderRadius: 2 },
 });

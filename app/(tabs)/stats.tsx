@@ -160,13 +160,13 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           const pct = Math.round((slice.value / total) * 100);
           return (
             <View key={slice.label} style={pieStyles.gradeGridItem}>
-              <Text style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: theme.fontSize.lg }]}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: theme.fontSize.lg }]}>
                 {slice.value}
               </Text>
-              <Text style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
                 {slice.label}
               </Text>
-              <Text style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
                 {pct}%
               </Text>
             </View>
@@ -180,8 +180,8 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
 const pieStyles = StyleSheet.create({
   container: { alignItems: 'center', gap: 16, paddingVertical: 8 },
   learnedHeader: { marginBottom: 4 },
-  gradeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16, paddingTop: 4, paddingBottom: 4, width: '100%' },
-  gradeGridItem: { alignItems: 'center', gap: 2, minWidth: 52 },
+  gradeGrid: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 4, paddingBottom: 4 },
+  gradeGridItem: { flex: 1, alignItems: 'center', gap: 2 },
   gradeGridCount: { fontWeight: '700' },
   gradeGridLabel: {},
   gradeGridPct: {},
@@ -204,8 +204,12 @@ function BarChart({
   const maxCount = Math.max(...schedule.map((s) => s.count), 1);
   const color = barColor ?? theme.colors.primary;
 
+  const barCountH = Math.ceil(theme.fontSize.xs * 1.5);
+  const barLabelH = Math.ceil(theme.fontSize.sm * 1.5);
+  const chartH = BAR_MAX_HEIGHT + barCountH + barLabelH + 8;
+
   return (
-    <View style={styles.barChart}>
+    <View style={[styles.barChart, { height: chartH }]}>
       {schedule.map((item, i) => {
         const barH = Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, item.count > 0 ? 4 : 0);
         const dayIndex = new Date(item.date + 'T00:00:00').getDay();
@@ -213,11 +217,11 @@ function BarChart({
 
         return (
           <View key={item.date} style={styles.barCol}>
-            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>
+            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]}>
               {item.count > 0 ? item.count : ''}
             </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />
-            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }, isToday && { color, fontWeight: '700' }]}>
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color, fontWeight: '700' }]}>
               {labels[dayIndex]}
             </Text>
           </View>
@@ -744,10 +748,10 @@ const styles = StyleSheet.create({
   },
 
   // Bar chart
-  barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: BAR_MAX_HEIGHT + 44 },
+  barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
-  barCount: { height: 14 },
+  barCount: {},
   barLabel: {},
 
   // Progress

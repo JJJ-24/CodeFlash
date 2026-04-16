@@ -301,10 +301,8 @@ export default function StudyScreen() {
                 ]}
                 onPress={() => { setActiveFilter(block.key); }}
               >
-                <Text style={[styles.summaryValue, { color: block.color, fontSize: theme.fontSize.xxl }]}>{block.value}</Text>
-                <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>
-                  {block.label}
-                </Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: block.color, fontSize: theme.fontSize.xxl }]}>{block.value}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{block.label}</Text>
               </Pressable>
             );
           })}

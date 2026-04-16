@@ -506,7 +506,7 @@ export function BlockEditor({
                 ]}
                 onPress={() => addBlock("text")}
               >
-                <Text style={styles.addMenuIcon}>T</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={styles.addMenuIcon}>T</Text>
                 <Text
                   style={[
                     styles.addMenuLabel,
@@ -524,7 +524,7 @@ export function BlockEditor({
                 ]}
                 onPress={() => addBlock("code")}
               >
-                <Text style={styles.addMenuIcon}>{"</>"}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={styles.addMenuIcon}>{"</>"}</Text>
                 <Text
                   style={[
                     styles.addMenuLabel,

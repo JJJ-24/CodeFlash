@@ -109,7 +109,7 @@ export default function EditDeckScreen() {
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
               onChangeText={setName}
-              maxLength={25}
+              maxLength={50}
               autoFocus
               returnKeyType="next"
               autoCorrect={false}
@@ -131,6 +131,17 @@ export default function EditDeckScreen() {
               autoCorrect={false}
               spellCheck={false}
             />
+          </View>
+
+          <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+              {name || t('deck.namePlaceholder')}
+            </Text>
+            {!!description && (
+              <Text style={[styles.previewDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+                {description}
+              </Text>
+            )}
           </View>
         </ScrollView>
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
@@ -158,6 +169,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   multiline: { height: 90, textAlignVertical: 'top' },
+  preview: {
+    borderRadius: 10,
+    padding: 14,
+    gap: 4,
+  },
+  previewName: { fontWeight: '600' },
+  previewDesc: {},
   langRow: { flexDirection: 'row', gap: 10 },
   langBtn: {
     flex: 1,

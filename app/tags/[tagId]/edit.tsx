@@ -121,6 +121,7 @@ export default function EditTagScreen() {
               autoFocus
               autoCorrect={false}
               spellCheck={false}
+              maxLength={50}
             />
             {!!error && (
               <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }}>{error}</Text>
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   previewDot: { width: 14, height: 14, borderRadius: 7 },
-  previewName: { fontSize: 15 },
+  previewName: { fontSize: 15, flex: 1 },
   bottomBar: {
     flexDirection: 'row',
     gap: 12,

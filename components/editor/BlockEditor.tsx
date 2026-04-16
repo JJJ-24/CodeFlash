@@ -122,6 +122,7 @@ export function BlockEditor({
   const currentBlocksRef = useRef<EditBlock[]>([]);
   const addMenuVisibleRef = useRef(false);
   const addMenuFocusIndexRef = useRef(0);
+  const editingBlockKeyRef = useRef<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [isPreview, setIsPreview] = useState(false);
@@ -253,6 +254,14 @@ export function BlockEditor({
   useEffect(() => {
     const show = Keyboard.addListener('keyboardWillShow', (e: { endCoordinates: { height: number } }) => {
       setKbHeight(e.endCoordinates.height);
+      // キーボードが現れるとき、編集中のブロックがキーボードで隠れないようスクロールする
+      setTimeout(() => {
+        const key = editingBlockKeyRef.current;
+        if (!key || !scrollRef.current) return;
+        const pos = blockPositions.current[key];
+        if (!pos) return;
+        scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
+      }, 50);
     });
     const hide = Keyboard.addListener('keyboardWillHide', () => {
       setKbHeight(0);
@@ -294,10 +303,13 @@ export function BlockEditor({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ブロックの TextInput がタップでフォーカスされたとき呼ぶ。
+  // ブロックの TextInput がフォーカスされたとき呼ぶ（タップ・Return/E キー共通）。
   // handleBlockEditBlur が仕掛けた「hidden TextInput へ戻す」タイマーをキャンセルし、
   // J/K キーボードフォーカス（focusedBlockIndex）もクリアする。
-  function handleBlockTapFocus() {
+  // editingBlockKeyRef に現在編集中のブロックキーを記録し、
+  // keyboardWillShow 時のスクロールに使用する。
+  function handleBlockTapFocus(blockKey: string) {
+    editingBlockKeyRef.current = blockKey;
     if (isTransitionTimerRef.current) {
       clearTimeout(isTransitionTimerRef.current);
       isTransitionTimerRef.current = null;
@@ -306,6 +318,7 @@ export function BlockEditor({
   }
 
   function handleBlockEditBlur() {
+    editingBlockKeyRef.current = null;
     if (isTransitioningRef.current) return;
     if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
     isTransitionTimerRef.current = setTimeout(() => {
@@ -766,7 +779,7 @@ export function BlockEditor({
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onFocusInput={() => {
-                    handleBlockTapFocus();
+                    handleBlockTapFocus(block._key);
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
@@ -802,7 +815,7 @@ export function BlockEditor({
                     }, 300);
                   }}
                   onFocusInput={() => {
-                    handleBlockTapFocus();
+                    handleBlockTapFocus(block._key);
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
@@ -828,7 +841,7 @@ export function BlockEditor({
                   isFocused={focusedBlockIndex === index}
                   onEditBlur={handleBlockEditBlur}
                   onFocusInput={() => {
-                    handleBlockTapFocus();
+                    handleBlockTapFocus(block._key);
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;

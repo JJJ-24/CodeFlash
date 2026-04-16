@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 function LinkPressable({ href, suppress, children }: { href: string; suppress: () => void; children: React.ReactNode }) {
   const [highlighted, setHighlighted] = useState(false);
@@ -55,6 +55,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   const containerYRef = useRef(0);
   const blockYPositions = useRef<Record<number, number>>({});
   const blockHeights = useRef<Record<number, number>>({});
+  const kbHeightRef = useRef(0);
   // 現在編集中のブロック index（blocks 配列上の i）を管理
   const editingBlockIdxRef = useRef<number | null>(null);
   // CodeRunnerView に "別ブロックが編集中か" を伝えるための state（ref だけでは再描画されない）
@@ -71,18 +72,22 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     onSelectCodeBlock?.(codeBlockIndexMap[blockIdx]);
 
     // 編集開始時: FlipCard の 3D トランスフォームにより iOS の自動スクロールが
-    // 機能しないため、TextInput レンダリング後（300ms）にカーソル位置（ブロック末尾）
+    // 機能しないため、TextInput レンダリング後（400ms）にカーソル位置（ブロック末尾）
     // が見えるよう手動スクロールする。
+    // キーボードがすでに表示中の場合（別ブロックから切り替え）は kbHeightRef が有効。
+    // キーボードが新規表示される場合は keyboardWillShow リスナーが改めてスクロールする。
     if (scrollRef?.current) {
       setTimeout(() => {
         const base = scrollBaseYRef?.current ?? 0;
         const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
         const blockH = blockHeights.current[blockIdx] ?? 0;
+        const kh = kbHeightRef.current;
+        // kh > 0 の場合: キーボード高さ + シンボルパレット分（約60px）を加算
         scrollRef.current?.scrollTo({
-          y: Math.max(0, blockY + blockH - 300),
+          y: Math.max(0, blockY + blockH - 300 + kh + (kh > 0 ? 60 : 0)),
           animated: true,
         });
-      }, 300);
+      }, 400);
     }
   }
 
@@ -96,6 +101,29 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       setEditingBlockIdx(null);
     }
   }, [exitAllEditTrigger]);
+
+  // キーボード表示完了時に編集中ブロックが隠れないよう再スクロールする
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', (e) => {
+      const kh = e.endCoordinates.height;
+      kbHeightRef.current = kh;
+      const blockIdx = editingBlockIdxRef.current;
+      if (blockIdx === null || !scrollRef?.current) return;
+      const base = scrollBaseYRef?.current ?? 0;
+      const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
+      const blockH = blockHeights.current[blockIdx] ?? 0;
+      // シンボルパレット（約60px）+ キーボード高さ分だけ余分にスクロール
+      scrollRef.current.scrollTo({
+        y: Math.max(0, blockY + blockH - 300 + kh + 60),
+        animated: true,
+      });
+    });
+    const hide = Keyboard.addListener('keyboardWillHide', () => {
+      kbHeightRef.current = 0;
+    });
+    return () => { show.remove(); hide.remove(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Tab キーでブロックが切り替わったら、そのブロックが画面内に入るようスクロール
   useEffect(() => {
@@ -236,13 +264,14 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 onRunStart={() => {
                   onCodeRunStart?.();
                   if (!scrollRef?.current) return;
-                  // 出力レイアウト更新後（300ms）にブロック下端が見える位置へスクロール
+                  // 出力レイアウト更新後（400ms）にブロック下端が見える位置へスクロール
                   setTimeout(() => {
                     const base = scrollBaseYRef?.current ?? 0;
                     const y = base + containerYRef.current + (blockYPositions.current[i] ?? 0);
                     const h = blockHeights.current[i] ?? 0;
-                    scrollRef.current?.scrollTo({ y: Math.max(0, y + h - 300), animated: true });
-                  }, 300);
+                    const kh = kbHeightRef.current;
+                    scrollRef.current?.scrollTo({ y: Math.max(0, y + h - 300 + kh + (kh > 0 ? 60 : 0)), animated: true });
+                  }, 400);
                 }}
               />
             </View>

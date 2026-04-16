@@ -150,6 +150,14 @@ export default function StudySessionScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [kbHeight, setKbHeight] = useState(0);
+
+  // キーボード表示時に paddingBottom を追加してスクロール余白を確保する
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', (e) => setKbHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKbHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // cardId -> blockIndex -> 編集済みコード
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<
@@ -948,7 +956,7 @@ export default function StudySessionScreen() {
                     <ScrollView
                       ref={frontScrollRef}
                       style={{ flex: 1 }}
-                      contentContainerStyle={styles.fullscreenContent}
+                      contentContainerStyle={[styles.fullscreenContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
@@ -982,7 +990,7 @@ export default function StudySessionScreen() {
                     <ScrollView
                       ref={backScrollRef}
                       style={{ flex: 1 }}
-                      contentContainerStyle={styles.fullscreenContent}
+                      contentContainerStyle={[styles.fullscreenContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
@@ -1251,7 +1259,7 @@ export default function StudySessionScreen() {
                   <ScrollView
                     ref={frontScrollRef}
                     style={{ flex: 1 }}
-                    contentContainerStyle={styles.faceContent}
+                    contentContainerStyle={[styles.faceContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     bounces={false}
@@ -1285,7 +1293,7 @@ export default function StudySessionScreen() {
                   <ScrollView
                     ref={backScrollRef}
                     style={{ flex: 1 }}
-                    contentContainerStyle={styles.faceContent}
+                    contentContainerStyle={[styles.faceContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     bounces={false}

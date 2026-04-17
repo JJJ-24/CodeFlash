@@ -183,11 +183,11 @@ export default function HomeScreen() {
           style={[
             styles.statItem,
             { backgroundColor: theme.colors.surface, width: blockWidth },
-            selectedFilter === 'all' && { borderWidth: 2, borderColor: theme.colors.primary },
+            selectedFilter === 'all' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: String(decks.length).length >= 4 ? theme.fontSize.md : String(decks.length).length >= 3 ? theme.fontSize.lg : String(decks.length).length >= 2 ? theme.fontSize.xl : theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{decks.length}</Text>
+          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: String(decks.length).length >= 4 ? theme.fontSize.md : String(decks.length).length >= 3 ? theme.fontSize.lg : String(decks.length).length >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{decks.length}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.all')}</Text>
         </Pressable>
       </View>
@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    margin: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,

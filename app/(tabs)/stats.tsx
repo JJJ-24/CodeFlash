@@ -558,7 +558,7 @@ export default function StatsScreen() {
       {(() => {
         const statNums = [streak, todayReviewed, todayDue, todayCreated];
         const maxDigits = Math.max(...statNums.map(n => String(n).length));
-        const statValueFontSize = maxDigits >= 4 ? theme.fontSize.md : maxDigits >= 3 ? theme.fontSize.lg : maxDigits >= 2 ? theme.fontSize.xl : theme.fontSize.xxl;
+        const statValueFontSize = maxDigits >= 4 ? theme.fontSize.md : maxDigits >= 3 ? theme.fontSize.lg : maxDigits >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl;
         return (
       <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
         <View style={styles.summaryRow}>
@@ -566,7 +566,7 @@ export default function StatsScreen() {
           style={[
             styles.summaryCard,
             { backgroundColor: theme.colors.primary },
-            selectedBlock === 'streak' && { borderWidth: 2, borderColor: blockColors.streak },
+            selectedBlock === 'streak' && { margin: 0, borderWidth: 2, borderColor: blockColors.streak },
           ]}
           onPress={() => { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
@@ -582,7 +582,7 @@ export default function StatsScreen() {
           style={[
             styles.summaryCard,
             { backgroundColor: theme.colors.surface },
-            selectedBlock === 'learned' && { borderWidth: 2, borderColor: blockColors.learned },
+            selectedBlock === 'learned' && { margin: 0, borderWidth: 2, borderColor: blockColors.learned },
           ]}
           onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
@@ -593,7 +593,7 @@ export default function StatsScreen() {
           style={[
             styles.summaryCard,
             { backgroundColor: theme.colors.surface },
-            selectedBlock === 'due' && { borderWidth: 2, borderColor: blockColors.due },
+            selectedBlock === 'due' && { margin: 0, borderWidth: 2, borderColor: blockColors.due },
           ]}
           onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
@@ -604,7 +604,7 @@ export default function StatsScreen() {
           style={[
             styles.summaryCard,
             { backgroundColor: theme.colors.surface },
-            selectedBlock === 'new' && { borderWidth: 2, borderColor: blockColors.new },
+            selectedBlock === 'new' && { margin: 0, borderWidth: 2, borderColor: blockColors.new },
           ]}
           onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
@@ -729,12 +729,13 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
 
   // Summary row
-  summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  summaryRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2, marginBottom: 8 },
   summaryCard: {
     flex: 1,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    margin: 2,
     overflow: 'visible',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

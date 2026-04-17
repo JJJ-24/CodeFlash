@@ -276,7 +276,7 @@ export default function StudyScreen() {
   ];
 
   const filterBlockMaxDigits = Math.max(...filterBlocks.map(b => String(b.value).length));
-  const filterValueFontSize = filterBlockMaxDigits >= 4 ? theme.fontSize.md : filterBlockMaxDigits >= 3 ? theme.fontSize.lg : filterBlockMaxDigits >= 2 ? theme.fontSize.xl : theme.fontSize.xxl;
+  const filterValueFontSize = filterBlockMaxDigits >= 4 ? theme.fontSize.md : filterBlockMaxDigits >= 3 ? theme.fontSize.lg : filterBlockMaxDigits >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl;
 
   if (loading) {
     return (
@@ -300,7 +300,7 @@ export default function StudyScreen() {
                 style={[
                   styles.summaryCard,
                   { backgroundColor: theme.colors.surface },
-                  selected && { borderWidth: 2, borderColor: block.color },
+                  selected && { margin: 0, borderWidth: 2, borderColor: block.color },
                 ]}
                 onPress={() => { setActiveFilter(block.key); }}
               >
@@ -507,12 +507,13 @@ const styles = StyleSheet.create({
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
 
   filterSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 24 },
-  summaryRow: { flexDirection: 'row', gap: 8 },
+  summaryRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },
   summaryCard: {
     flex: 1,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    margin: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,

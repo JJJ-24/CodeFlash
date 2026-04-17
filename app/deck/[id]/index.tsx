@@ -306,7 +306,7 @@ export default function DeckDetailScreen() {
   ];
 
   const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
-  const filterValueFontSize = filterItemMaxDigits >= 4 ? theme.fontSize.md : filterItemMaxDigits >= 3 ? theme.fontSize.lg : filterItemMaxDigits >= 2 ? theme.fontSize.xl : theme.fontSize.xxl;
+  const filterValueFontSize = filterItemMaxDigits >= 4 ? theme.fontSize.md : filterItemMaxDigits >= 3 ? theme.fontSize.lg : filterItemMaxDigits >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl;
 
   const filterDescMap: Record<FilterKey, string> = {
     all: t('study.filterDescAll'),
@@ -465,7 +465,7 @@ export default function DeckDetailScreen() {
                 style={[
                   styles.statItem,
                   { backgroundColor: theme.colors.surface },
-                  isSelected && { borderWidth: 2, borderColor: color },
+                  isSelected && { margin: 0, borderWidth: 2, borderColor: color },
                   selectionMode && { opacity: 0.5 },
                 ]}
                 onPress={() => {
@@ -679,12 +679,13 @@ const styles = StyleSheet.create({
   description: { lineHeight: 22 },
   descToggleBtn: { paddingTop: 4, paddingBottom: 8 },
   descToggleText: { fontWeight: '600' },
-  statsRow: { flexDirection: 'row', gap: 8 },
+  statsRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },
   statItem: {
     flex: 1,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    margin: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,

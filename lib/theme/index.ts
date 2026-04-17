@@ -41,10 +41,10 @@ export interface AppFontSize {
   md: number;   // 16 — 本文・デッキ名等
   lg: number;   // 18 — セクションタイトル・モーダルタイトル
   xl: number;   // 20 — 大見出し
-  xxl: number;  // 26 — 統計数値
+  xxl: number;  // 22 — 統計数値
 }
 
-const BASE_FONT_SIZE: AppFontSize = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20, xxl: 26 };
+const BASE_FONT_SIZE: AppFontSize = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20, xxl: 22 };
 
 export interface AppTheme {
   dark: boolean;

@@ -250,7 +250,7 @@ export default function TagCardsScreen() {
                       router.push({ pathname: '/deck/[id]/card/new', params: { id: item.id, tagId } });
                     }}
                   >
-                    <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {item.name}
                     </Text>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -260,6 +260,11 @@ export default function TagCardsScreen() {
                 )}
               />
             )}
+            <Pressable style={[styles.modalCancel, { borderTopColor: theme.colors.border }]} onPress={() => setShowDeckPicker(false)}>
+              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('common.cancel')}
+              </Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
@@ -336,7 +341,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 16,
-    paddingBottom: 36,
+    maxHeight: '60%',
   },
   modalTitle: {
     fontWeight: '700',
@@ -353,4 +358,5 @@ const styles = StyleSheet.create({
   },
   deckPickerName: { fontWeight: '600', flex: 1, marginRight: 8 },
   noDeckText: { paddingHorizontal: 20, paddingVertical: 16 },
+  modalCancel: { paddingVertical: 16, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth },
 });

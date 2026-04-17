@@ -78,12 +78,14 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
         <View style={{ height: monthRowHeight }} />
         <View style={[styles.dayLabelCol, { width: DAY_LABEL_WIDTH }]}>
           {dayLabels.map((label, i) => (
-            <Text
-              key={i}
-              style={[styles.dayLabel, { color: theme.colors.textTertiary, fontSize: 9, height: CELL_STEP }]}
-            >
-              {i % 2 === 0 ? label : ''}
-            </Text>
+            <View key={i} style={{ height: CELL_STEP, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+              <Text
+                style={[styles.dayLabel, { color: theme.colors.textTertiary, fontSize: 13 }]}
+                maxFontSizeMultiplier={1}
+              >
+                {i % 2 === 0 ? label : ''}
+              </Text>
+            </View>
           ))}
         </View>
       </View>
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
   monthLabel: { position: 'absolute', fontWeight: '500' },
   grid: { flexDirection: 'row' },
   dayLabelCol: { justifyContent: 'flex-start' },
-  dayLabel: { textAlign: 'center', lineHeight: CELL_STEP - 3 },
+  dayLabel: { textAlign: 'center' },
   col: { flexDirection: 'column' },
   cell: { borderRadius: 2 },
 });

@@ -619,7 +619,7 @@ export default function StatsScreen() {
 
       {/* 7日間バーチャート */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {chartConfig.title}
         </Text>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -635,7 +635,7 @@ export default function StatsScreen() {
 
       {/* 学習履歴（草グラフ） */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {t('stats.activityHeatmap')}
         </Text>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -648,7 +648,7 @@ export default function StatsScreen() {
         style={styles.section}
         onLayout={(e) => { sectionOffsets.current.total = e.nativeEvent.layout.y; }}
       >
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {t('stats.totalProgress')}
         </Text>
         <Pressable
@@ -678,7 +678,7 @@ export default function StatsScreen() {
       {/* デッキ別習熟度 */}
       {deckMastery.length > 0 && (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.deckMastery')}
           </Text>
           <View style={styles.deckMasteryList}>

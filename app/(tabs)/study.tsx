@@ -18,7 +18,7 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
-import { useTheme, FILTER_COLORS } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import {
   getDueCountPerDeck,
   getDueCountPerTag,
@@ -304,18 +304,18 @@ export default function StudyScreen() {
                 ]}
                 onPress={() => { setActiveFilter(block.key); }}
               >
-                <Text numberOfLines={1} style={[styles.summaryValue, { color: block.color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={1.3}>{block.value}</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{block.label}</Text>
+                <Text numberOfLines={1} style={[styles.summaryValue, { color: block.color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{block.value}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{block.label}</Text>
               </Pressable>
             );
           })}
         </View>
         <View style={styles.listTitleRow}>
           <View style={styles.listTitleBlock}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('study.listTitle')}
             </Text>
-            <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={1.3}>
+            <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {filterDescMap[activeFilter]}
             </Text>
           </View>
@@ -330,7 +330,7 @@ export default function StudyScreen() {
             <Text style={[
               styles.shuffleBtnText,
               { color: shuffleEnabled ? theme.colors.primaryText : theme.colors.textSecondary, fontSize: theme.fontSize.xs },
-            ]} maxFontSizeMultiplier={1.3}>
+            ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('study.shuffle')}
             </Text>
           </Pressable>
@@ -353,7 +353,7 @@ export default function StudyScreen() {
                 styles.tabText,
                 { color: activeTab === tab ? theme.colors.primary : theme.colors.textTertiary, fontSize: theme.fontSize.md },
               ]}
-              maxFontSizeMultiplier={1.3}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
               {t(tab === 'decks' ? 'study.selectDeck' : 'study.selectTag')}
             </Text>

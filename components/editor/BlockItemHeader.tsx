@@ -3,7 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { StyleProp, ViewStyle } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 interface Props {
   children: React.ReactNode;
@@ -53,7 +53,7 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
       ) : (
         !collapsed && (
           <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
-            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]} maxFontSizeMultiplier={1.3}>✕</Text>
+            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>✕</Text>
           </Pressable>
         )
       )}

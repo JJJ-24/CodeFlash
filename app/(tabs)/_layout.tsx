@@ -3,7 +3,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Text } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -32,7 +32,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('tabs.home'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.home')}</Text>,
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.home')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="home-outline" color={color} size={size} />
           ),
@@ -49,7 +49,7 @@ export default function TabsLayout() {
         name="study"
         options={{
           title: t('tabs.study'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.study')}</Text>,
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.study')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="book-outline" color={color} size={size} />
           ),
@@ -59,7 +59,7 @@ export default function TabsLayout() {
         name="stats"
         options={{
           title: t('tabs.stats'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.stats')}</Text>,
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.stats')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="bar-chart-outline" color={color} size={size} />
           ),
@@ -69,7 +69,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: t('tabs.settings'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.settings')}</Text>,
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.settings')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="settings-outline" color={color} size={size} />
           ),

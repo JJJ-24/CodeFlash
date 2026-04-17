@@ -9,7 +9,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
-import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS } from '@/lib/theme';
+import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -142,7 +142,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
   return (
     <View style={pieStyles.container}>
       {/* ヘッダー: 学習済み / トータル */}
-      <Text style={[pieStyles.learnedHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
+      <Text style={[pieStyles.learnedHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
         {t('stats.learnedOf', { learned, total })}
       </Text>
       {/* ドーナツチャート */}
@@ -165,13 +165,13 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           const pct = Math.round((slice.value / total) * 100);
           return (
             <View key={slice.label} style={pieStyles.gradeGridItem}>
-              <Text numberOfLines={1} style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} maxFontSizeMultiplier={2.0}>
+              <Text numberOfLines={1} style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {slice.value}
               </Text>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={1.3}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
                 {slice.label}
               </Text>
-              <Text numberOfLines={1} style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={2.0}>
+              <Text numberOfLines={1} style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {pct}%
               </Text>
             </View>
@@ -222,11 +222,11 @@ function BarChart({
 
         return (
           <View key={item.date} style={styles.barCol}>
-            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={1.3}>
+            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {item.count > 0 ? item.count : ''}
             </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />
-            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color, fontWeight: '700' }]} maxFontSizeMultiplier={1.3}>
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color, fontWeight: '700' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {labels[dayIndex]}
             </Text>
           </View>
@@ -299,7 +299,7 @@ function DonutSheet({
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={sheetStyles.header}>
-          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {title}
           </Text>
           <Pressable onPress={onClose} style={sheetStyles.closeBtn}>
@@ -570,10 +570,10 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: '#FFF', fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: '#FFF', fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {streak}
           </Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.streak')}
           </Text>
           {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={theme.fontSize.xl} color={m.color} style={styles.streakMedalBadge} /> : null; })()}
@@ -586,8 +586,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>{todayReviewed}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.learned')}</Text>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{todayReviewed}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.learned')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -597,8 +597,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>{todayDue}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.statDue')}</Text>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{todayDue}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.statDue')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -608,8 +608,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>{todayCreated}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.newToday')}</Text>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{todayCreated}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.newToday')}</Text>
         </Pressable>
         </View>
       </View>

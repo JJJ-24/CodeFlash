@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { BlockItemHeader } from './BlockItemHeader';
 
 const markdownItLinkify = MarkdownIt({ linkify: true });
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { TextBlock } from '@/types';
 
 interface Props {
@@ -144,7 +144,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           borderBottomColor: theme.colors.border,
         }}
       >
-        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]} maxFontSizeMultiplier={1.3}>T</Text>
+        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>T</Text>
       </BlockItemHeader>
 
       {collapsed ? (

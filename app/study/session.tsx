@@ -48,7 +48,7 @@ import { FlipSuppressContext } from "@/lib/FlipSuppressContext";
 import { updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
 import { extractLinks } from "@/lib/study/extractLinks";
-import { GRADE_COLORS, useTheme } from "@/lib/theme";
+import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER } from "@/lib/theme";
 import { useDeckStore } from "@/store/decks";
 import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
@@ -513,7 +513,7 @@ export default function StudySessionScreen() {
                     <Text
                       style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
                       numberOfLines={1}
-                      maxFontSizeMultiplier={1.3}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                     >
                       {t("study.title")}
                     </Text>
@@ -579,7 +579,7 @@ export default function StudySessionScreen() {
               styles.completeTitle,
               { color: theme.colors.text, fontSize: theme.fontSize.xl },
             ]}
-            maxFontSizeMultiplier={1.3}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
           >
             {t("study.complete")}
           </Text>
@@ -600,7 +600,7 @@ export default function StudySessionScreen() {
                     textAlign: "center",
                   },
                 ]}
-                maxFontSizeMultiplier={1.3}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
                 {t("study.reviewedOf", { reviewed, total: totalCards })}
               </Text>
@@ -660,7 +660,7 @@ export default function StudySessionScreen() {
                         styles.gradeItemCount,
                         { color, fontSize: theme.fontSize.lg },
                       ]}
-                      maxFontSizeMultiplier={2.0}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                     >
                       {count}
                     </Text>
@@ -674,7 +674,7 @@ export default function StudySessionScreen() {
                       ]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
-                      maxFontSizeMultiplier={1.3}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
                     >
                       {key}
                     </Text>
@@ -692,7 +692,7 @@ export default function StudySessionScreen() {
                     ]}
                     numberOfLines={1}
                     adjustsFontSizeToFit
-                    maxFontSizeMultiplier={1.3}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {correctRate}%
                   </Text>
@@ -704,7 +704,7 @@ export default function StudySessionScreen() {
                         fontSize: theme.fontSize.xs,
                       },
                     ]}
-                    maxFontSizeMultiplier={1.3}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {t("study.correctRate")}
                   </Text>
@@ -721,7 +721,7 @@ export default function StudySessionScreen() {
                       ]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
-                      maxFontSizeMultiplier={1.3}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                     >
                       {nextReviewStr}
                     </Text>
@@ -733,7 +733,7 @@ export default function StudySessionScreen() {
                           fontSize: theme.fontSize.xs,
                         },
                       ]}
-                      maxFontSizeMultiplier={1.3}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                     >
                       {t("study.nextReview")}
                     </Text>
@@ -1107,7 +1107,7 @@ export default function StudySessionScreen() {
                         flexShrink: 1,
                       }}
                       numberOfLines={1}
-                      maxFontSizeMultiplier={1.3}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                     >
                       {sessionTitle}
                     </Text>

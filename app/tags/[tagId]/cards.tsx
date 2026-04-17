@@ -16,7 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -106,7 +106,7 @@ export default function TagCardsScreen() {
               <Text
                 style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1 }}
                 numberOfLines={1}
-                maxFontSizeMultiplier={1.3}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
                 {tag?.name ?? ''}
               </Text>

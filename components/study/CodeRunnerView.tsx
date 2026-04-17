@@ -24,7 +24,7 @@ import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS } from "@/lib/code-execution/constants";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
-import { useTheme } from "@/lib/theme";
+import { useTheme, MAX_FONT_MULTIPLIER } from "@/lib/theme";
 import type { CodeBlock } from "@/types";
 
 interface Props {
@@ -275,7 +275,7 @@ export function CodeRunnerView({
           onTouchStart={() => { if (isEditingRef.current) suppress?.(); }}
           onPress={() => { if (isEditingRef.current) handleEditEnd(); }}
         >
-          <Text style={styles.langLabel} maxFontSizeMultiplier={1.3}>
+          <Text style={styles.langLabel} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {LANG_LABELS[block.language] ?? block.language}
           </Text>
         </Pressable>
@@ -292,7 +292,7 @@ export function CodeRunnerView({
                 activeOpacity={0.7}
               >
                 {isEditing ? (
-                  <Text style={[styles.editBtnText, styles.editBtnTextActive]} maxFontSizeMultiplier={1.3}>{t('code.done')}</Text>
+                  <Text style={[styles.editBtnText, styles.editBtnTextActive]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.done')}</Text>
                 ) : (
                   <Ionicons name="pencil" size={Math.round(theme.fontSize.sm)} color="#9CDCFE" />
                 )}
@@ -318,7 +318,7 @@ export function CodeRunnerView({
                     style={styles.spinner}
                   />
                 ) : (
-                  <Text style={styles.runBtnText} maxFontSizeMultiplier={1.3}>{'▶ ' + t('code.run')}</Text>
+                  <Text style={styles.runBtnText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
                 )}
               </TouchableOpacity>
             </GestureDetector>

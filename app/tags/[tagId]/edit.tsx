@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 
@@ -89,17 +89,17 @@ export default function EditTagScreen() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tag.edit')}</Text>,
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.edit')}</Text>,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={1.3}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('common.cancel')}
               </Text>
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={handleSave} disabled={!canSave} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: canSave ? theme.colors.primary : theme.colors.textTertiary }} maxFontSizeMultiplier={1.3}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: canSave ? theme.colors.primary : theme.colors.textTertiary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('tag.save')}
               </Text>
             </Pressable>

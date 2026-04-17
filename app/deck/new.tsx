@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { createDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
 
@@ -53,10 +53,10 @@ export default function NewDeckScreen() {
     <>
       <Stack.Screen
         options={{
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('deck.new')}</Text>,
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.new')}</Text>,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={[styles.headerBtn, { color: theme.colors.textSecondary, fontSize: Math.min(theme.fontSize.md, 19.2) }]} maxFontSizeMultiplier={1.3}>
+              <Text style={[styles.headerBtn, { color: theme.colors.textSecondary, fontSize: Math.min(theme.fontSize.md, 19.2) }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('common.cancel')}
               </Text>
             </Pressable>
@@ -67,7 +67,7 @@ export default function NewDeckScreen() {
               disabled={!canSave}
               style={{ paddingHorizontal: 4 }}
             >
-              <Text style={[styles.headerBtn, { color: theme.colors.primary, fontSize: Math.min(theme.fontSize.md, 19.2) }, !canSave && styles.disabled]} maxFontSizeMultiplier={1.3}>
+              <Text style={[styles.headerBtn, { color: theme.colors.primary, fontSize: Math.min(theme.fontSize.md, 19.2) }, !canSave && styles.disabled]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('deck.create')}
               </Text>
             </Pressable>

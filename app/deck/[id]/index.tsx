@@ -19,7 +19,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useTheme, FILTER_COLORS } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import {
   deleteCard,
   duplicateCard,
@@ -415,7 +415,7 @@ export default function DeckDetailScreen() {
               onPress={keyboardShortcutsEnabled && !selectionMode ? () => setShowShortcutsModal(true) : undefined}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.46 }}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {deck.name}
               </Text>
               {keyboardShortcutsEnabled && !selectionMode && (
@@ -446,7 +446,7 @@ export default function DeckDetailScreen() {
               }}
               style={{ paddingHorizontal: 4 }}
             >
-              <Text style={{ color: theme.colors.primary, fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600' }} maxFontSizeMultiplier={1.3}>
+              <Text style={{ color: theme.colors.primary, fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {selectionMode ? t('card.cancelSelect') : t('card.select')}
               </Text>
             </Pressable>
@@ -474,8 +474,8 @@ export default function DeckDetailScreen() {
                   if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
                 }}
               >
-                <Text numberOfLines={1} style={[styles.statValue, { color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={1.3}>{count}</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{label}</Text>
+                <Text numberOfLines={1} style={[styles.statValue, { color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{label}</Text>
               </Pressable>
             );
           })}
@@ -488,14 +488,14 @@ export default function DeckDetailScreen() {
           onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
         >
           <Ionicons name="play" size={20} color="#FFF" />
-          <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>{t('deck.study')}</Text>
+          <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.study')}</Text>
         </TouchableOpacity>
 
         <View style={styles.sectionTitleRow}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('deck.detail')}
           </Text>
-          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={1.3}>
+          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {filterDescMap[selectedFilter]}
           </Text>
         </View>
@@ -601,11 +601,11 @@ export default function DeckDetailScreen() {
       {selectionMode ? (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
           <Pressable onPress={toggleSelectAll}>
-            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={1.3}>
+            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {selectedCardIds.size === displayedCards.length ? t('card.cancelSelect') : t('card.selectAll')}
             </Text>
           </Pressable>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={1.3}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('card.selectedCount', { count: selectedCardIds.size })}
           </Text>
           <View style={styles.selectionActions}>

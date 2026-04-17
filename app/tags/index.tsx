@@ -20,7 +20,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { deleteTag, getAllTags, updateTagSortOrders } from '@/lib/database/tags';
 import { useSettingsStore } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
@@ -78,7 +78,7 @@ export default function TagsScreen() {
               onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={1.3}>
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('tag.title')}
               </Text>
               {keyboardShortcutsEnabled && (

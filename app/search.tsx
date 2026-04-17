@@ -14,7 +14,7 @@ import {
 
 import { searchCards } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 import type { Card, TextBlock } from '@/types';
@@ -71,7 +71,7 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('common.search')}</Text> }} />
+      <Stack.Screen options={{ headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.search')}</Text> }} />
       {/* 検索バー */}
       <View style={[styles.searchBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <Ionicons name="search-outline" size={18} color={theme.colors.textTertiary} />

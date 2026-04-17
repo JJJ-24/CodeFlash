@@ -19,7 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -187,12 +187,12 @@ export default function HomeScreen() {
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: String(decks.length).length >= 4 ? theme.fontSize.md : String(decks.length).length >= 3 ? theme.fontSize.lg : String(decks.length).length >= 2 ? theme.fontSize.xl : theme.fontSize.xxl }]} maxFontSizeMultiplier={1.3}>{decks.length}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.all')}</Text>
+          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: String(decks.length).length >= 4 ? theme.fontSize.md : String(decks.length).length >= 3 ? theme.fontSize.lg : String(decks.length).length >= 2 ? theme.fontSize.xl : theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{decks.length}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.all')}</Text>
         </Pressable>
       </View>
       <View style={styles.sectionRow}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {t('home.title')}
         </Text>
         <View style={styles.sortButtons}>
@@ -211,7 +211,7 @@ export default function HomeScreen() {
                 <Text style={[
                   styles.sortBtnText,
                   { color: active ? theme.colors.primaryText : theme.colors.textSecondary, fontSize: theme.fontSize.xs },
-                ]} maxFontSizeMultiplier={1.3}>
+                ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t(labelKey)}
                 </Text>
               </Pressable>

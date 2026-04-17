@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { createCard } from '@/lib/database/cards';
 import { addTagToCard } from '@/lib/database/tags';
 import { useCardStore } from '@/store/cards';
@@ -82,7 +82,7 @@ export default function NewCardScreen() {
               onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('card.new')}
               </Text>
               {keyboardShortcutsEnabled && (
@@ -92,14 +92,14 @@ export default function NewCardScreen() {
           ),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={1.3}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('common.cancel')}
               </Text>
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }} maxFontSizeMultiplier={1.3}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('card.create')}
               </Text>
             </Pressable>

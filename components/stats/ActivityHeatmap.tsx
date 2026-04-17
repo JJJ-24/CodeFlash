@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { localDateStr } from '@/lib/database/utils';
-import { FILTER_COLORS, useTheme } from '@/lib/theme';
+import { FILTER_COLORS, useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 const CELL_SIZE = 11;
 const CELL_GAP = 2;
@@ -104,7 +104,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
                   styles.monthLabel,
                   { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, left: colIndex * CELL_STEP },
                 ]}
-                maxFontSizeMultiplier={1.3}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
                 {label}
               </Text>

@@ -22,7 +22,7 @@ import {
 } from "react-native";
 
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
-import { useTheme } from "@/lib/theme";
+import { useTheme, MAX_FONT_MULTIPLIER } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
@@ -693,7 +693,7 @@ export function BlockEditor({
                 },
                 activeTab === tab.key && styles.tabTextActive,
               ]}
-              maxFontSizeMultiplier={1.3}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
               {tab.label}
             </Text>
@@ -734,7 +734,7 @@ export function BlockEditor({
               },
               isPreview && styles.previewToggleTextActive,
             ]}
-            maxFontSizeMultiplier={1.3}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
           >
             {isPreview ? t("common.edit") : t("editor.preview")}
           </Text>

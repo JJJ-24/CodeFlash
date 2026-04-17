@@ -24,7 +24,7 @@ import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode'
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock } from '@/types';
 
@@ -116,14 +116,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         style={{ backgroundColor: isRunning ? '#1E5024' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-          <Text style={styles.langText} maxFontSizeMultiplier={1.3}>{LANG_LABELS[block.language] ?? block.language}</Text>
-          <Text style={styles.langChevron} maxFontSizeMultiplier={1.3}>▾</Text>
+          <Text style={styles.langText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>
+          <Text style={styles.langChevron} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>▾</Text>
         </Pressable>
 
         <View style={styles.headerRight}>
           {!collapsed && EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
-              {!block.executable && <Text style={styles.execLabel} maxFontSizeMultiplier={1.3}>{t('code.run')}</Text>}
+              {!block.executable && <Text style={styles.execLabel} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.run')}</Text>}
               <Switch
                 value={block.executable}
                 onValueChange={(v) => onChange({ executable: v })}
@@ -142,7 +142,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             >
               {isRunning
                 ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={styles.runBtnText} maxFontSizeMultiplier={1.3}>{'▶ ' + t('code.run')}</Text>
+                : <Text style={styles.runBtnText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
               }
             </TouchableOpacity>
           )}

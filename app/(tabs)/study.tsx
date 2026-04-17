@@ -275,6 +275,9 @@ export default function StudyScreen() {
     { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 
+  const filterBlockMaxDigits = Math.max(...filterBlocks.map(b => String(b.value).length));
+  const filterValueFontSize = filterBlockMaxDigits >= 4 ? theme.fontSize.md : filterBlockMaxDigits >= 3 ? theme.fontSize.lg : filterBlockMaxDigits >= 2 ? theme.fontSize.xl : theme.fontSize.xxl;
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
@@ -301,19 +304,21 @@ export default function StudyScreen() {
                 ]}
                 onPress={() => { setActiveFilter(block.key); }}
               >
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: block.color, fontSize: theme.fontSize.xxl }]}>{block.value}</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{block.label}</Text>
+                <Text numberOfLines={1} style={[styles.summaryValue, { color: block.color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={1.3}>{block.value}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{block.label}</Text>
               </Pressable>
             );
           })}
         </View>
         <View style={styles.listTitleRow}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
-            {t('study.listTitle')}
-          </Text>
-          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
-            {filterDescMap[activeFilter]}
-          </Text>
+          <View style={styles.listTitleBlock}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
+              {t('study.listTitle')}
+            </Text>
+            <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={1.3}>
+              {filterDescMap[activeFilter]}
+            </Text>
+          </View>
           <Pressable
             onPress={() => setShuffleEnabled(!shuffleEnabled)}
             style={[
@@ -325,7 +330,7 @@ export default function StudyScreen() {
             <Text style={[
               styles.shuffleBtnText,
               { color: shuffleEnabled ? theme.colors.primaryText : theme.colors.textSecondary, fontSize: theme.fontSize.xs },
-            ]}>
+            ]} maxFontSizeMultiplier={1.3}>
               {t('study.shuffle')}
             </Text>
           </Pressable>
@@ -348,6 +353,7 @@ export default function StudyScreen() {
                 styles.tabText,
                 { color: activeTab === tab ? theme.colors.primary : theme.colors.textTertiary, fontSize: theme.fontSize.md },
               ]}
+              maxFontSizeMultiplier={1.3}
             >
               {t(tab === 'decks' ? 'study.selectDeck' : 'study.selectTag')}
             </Text>
@@ -517,6 +523,7 @@ const styles = StyleSheet.create({
   summaryLabel: { marginTop: 2, textAlign: 'center' },
   sectionTitle: { fontWeight: '700' },
   listTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  listTitleBlock: { flex: 1, gap: 2 },
   shuffleBtn: {
     borderRadius: 6,
     borderWidth: 1,
@@ -524,7 +531,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   shuffleBtnText: { fontWeight: '600' },
-  filterDesc: { flex: 1 },
+  filterDesc: {},
 
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },

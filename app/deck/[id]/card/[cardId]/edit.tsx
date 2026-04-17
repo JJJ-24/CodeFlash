@@ -135,7 +135,7 @@ export default function EditCardScreen() {
               onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={1.3}>
                 {t('card.edit')}
               </Text>
               {keyboardShortcutsEnabled && (
@@ -145,14 +145,14 @@ export default function EditCardScreen() {
           ),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.textSecondary }}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={1.3}>
                 {t('common.cancel')}
               </Text>
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }} maxFontSizeMultiplier={1.3}>
                 {t('card.save')}
               </Text>
             </Pressable>

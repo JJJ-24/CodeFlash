@@ -46,6 +46,7 @@
 - [project_study_run_shortcut_bug.md](project_study_run_shortcut_bug.md) — 編集→実行後ショートカット無効バグ（解決済み: handleForceKeyboardFocus で switchingCodeBlockRef ガードを迂回）
 
 ## フィードバック・作業スタイル
+- [feedback_edit_screen_consistency.md](feedback_edit_screen_consistency.md) — デッキ/カード/タグの編集・新規作成画面は文字サイズ・実装パターンを統一する
 - [feedback_language.md](feedback_language.md) — 変更内容サマリーと動作確認方法は日本語で記述する
 - [feedback_nesatable_scroll_measure.md](feedback_nesatable_scroll_measure.md) — NestableDraggableFlatList 内での位置計測は measureLayout を使う。FlipCard の 3D transform により iOS の自動スクロールが機能しないため、コードブロック編集開始時は BlocksView.handleEditRequest で 300ms 後に手動 scrollTo する
 - [feedback_cleanup_after_retry.md](feedback_cleanup_after_retry.md) — 複数回試行後に正解に辿り着いたら、失敗試行の残骸コードをその場で削除する

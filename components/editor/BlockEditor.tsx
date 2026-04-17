@@ -693,6 +693,7 @@ export function BlockEditor({
                 },
                 activeTab === tab.key && styles.tabTextActive,
               ]}
+              maxFontSizeMultiplier={1.3}
             >
               {tab.label}
             </Text>
@@ -733,6 +734,7 @@ export function BlockEditor({
               },
               isPreview && styles.previewToggleTextActive,
             ]}
+            maxFontSizeMultiplier={1.3}
           >
             {isPreview ? t("common.edit") : t("editor.preview")}
           </Text>

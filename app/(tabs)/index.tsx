@@ -187,12 +187,12 @@ export default function HomeScreen() {
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statValue, { color: theme.colors.primary, fontSize: theme.fontSize.xxl }]}>{decks.length}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{t('stats.all')}</Text>
+          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: String(decks.length).length >= 4 ? theme.fontSize.md : String(decks.length).length >= 3 ? theme.fontSize.lg : String(decks.length).length >= 2 ? theme.fontSize.xl : theme.fontSize.xxl }]} maxFontSizeMultiplier={1.3}>{decks.length}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.all')}</Text>
         </Pressable>
       </View>
       <View style={styles.sectionRow}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
           {t('home.title')}
         </Text>
         <View style={styles.sortButtons}>
@@ -211,7 +211,7 @@ export default function HomeScreen() {
                 <Text style={[
                   styles.sortBtnText,
                   { color: active ? theme.colors.primaryText : theme.colors.textSecondary, fontSize: theme.fontSize.xs },
-                ]}>
+                ]} maxFontSizeMultiplier={1.3}>
                   {t(labelKey)}
                 </Text>
               </Pressable>

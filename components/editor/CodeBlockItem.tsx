@@ -116,14 +116,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         style={{ backgroundColor: isRunning ? '#1E5024' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-          <Text style={styles.langText}>{LANG_LABELS[block.language] ?? block.language}</Text>
-          <Text style={styles.langChevron}>▾</Text>
+          <Text style={styles.langText} maxFontSizeMultiplier={1.3}>{LANG_LABELS[block.language] ?? block.language}</Text>
+          <Text style={styles.langChevron} maxFontSizeMultiplier={1.3}>▾</Text>
         </Pressable>
 
         <View style={styles.headerRight}>
           {!collapsed && EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
-              {!block.executable && <Text style={styles.execLabel}>{t('code.run')}</Text>}
+              {!block.executable && <Text style={styles.execLabel} maxFontSizeMultiplier={1.3}>{t('code.run')}</Text>}
               <Switch
                 value={block.executable}
                 onValueChange={(v) => onChange({ executable: v })}
@@ -142,7 +142,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             >
               {isRunning
                 ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={styles.runBtnText}>{'▶ ' + t('code.run')}</Text>
+                : <Text style={styles.runBtnText} maxFontSizeMultiplier={1.3}>{'▶ ' + t('code.run')}</Text>
               }
             </TouchableOpacity>
           )}

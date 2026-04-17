@@ -275,7 +275,7 @@ export function CodeRunnerView({
           onTouchStart={() => { if (isEditingRef.current) suppress?.(); }}
           onPress={() => { if (isEditingRef.current) handleEditEnd(); }}
         >
-          <Text style={styles.langLabel}>
+          <Text style={styles.langLabel} maxFontSizeMultiplier={1.3}>
             {LANG_LABELS[block.language] ?? block.language}
           </Text>
         </Pressable>
@@ -284,13 +284,17 @@ export function CodeRunnerView({
           {editable && block.executable && (
             <GestureDetector gesture={editGesture}>
               <TouchableOpacity
-                style={[styles.editBtn, isEditing && styles.editBtnActive]}
+                style={[
+                  styles.editBtn,
+                  { paddingVertical: Math.round(theme.fontSize.xs * 0.58), paddingHorizontal: theme.fontSize.sm },
+                  isEditing && styles.editBtnActive,
+                ]}
                 activeOpacity={0.7}
               >
                 {isEditing ? (
-                  <Text style={[styles.editBtnText, styles.editBtnTextActive]}>{t('code.done')}</Text>
+                  <Text style={[styles.editBtnText, styles.editBtnTextActive]} maxFontSizeMultiplier={1.3}>{t('code.done')}</Text>
                 ) : (
-                  <Ionicons name="pencil" size={15} color="#9CDCFE" />
+                  <Ionicons name="pencil" size={Math.round(theme.fontSize.sm)} color="#9CDCFE" />
                 )}
               </TouchableOpacity>
             </GestureDetector>
@@ -299,7 +303,11 @@ export function CodeRunnerView({
           {block.executable && (
             <GestureDetector gesture={runGesture}>
               <TouchableOpacity
-                style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
+                style={[
+                  styles.runBtn,
+                  { paddingVertical: Math.round(theme.fontSize.xs * 0.58), paddingHorizontal: theme.fontSize.sm },
+                  isRunning && styles.runBtnDisabled,
+                ]}
                 activeOpacity={0.7}
                 disabled={isRunning}
               >
@@ -310,7 +318,7 @@ export function CodeRunnerView({
                     style={styles.spinner}
                   />
                 ) : (
-                  <Text style={styles.runBtnText}>{'▶ ' + t('code.run')}</Text>
+                  <Text style={styles.runBtnText} maxFontSizeMultiplier={1.3}>{'▶ ' + t('code.run')}</Text>
                 )}
               </TouchableOpacity>
             </GestureDetector>

@@ -106,6 +106,7 @@ export default function TagCardsScreen() {
               <Text
                 style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1 }}
                 numberOfLines={1}
+                maxFontSizeMultiplier={1.3}
               >
                 {tag?.name ?? ''}
               </Text>

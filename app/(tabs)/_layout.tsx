@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from 'react-native';
+import { Pressable, Text } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
 
@@ -22,7 +22,6 @@ export default function TabsLayout() {
         headerShown: true,
         headerStyle: { backgroundColor: theme.colors.surface },
         headerTintColor: theme.colors.text,
-        headerTitleStyle: { fontSize: theme.fontSize.lg },
         headerShadowVisible: false,
         tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border },
         tabBarActiveTintColor: theme.colors.primary,
@@ -33,6 +32,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('tabs.home'),
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.home')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="home-outline" color={color} size={size} />
           ),
@@ -49,6 +49,7 @@ export default function TabsLayout() {
         name="study"
         options={{
           title: t('tabs.study'),
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.study')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="book-outline" color={color} size={size} />
           ),
@@ -58,6 +59,7 @@ export default function TabsLayout() {
         name="stats"
         options={{
           title: t('tabs.stats'),
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.stats')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="bar-chart-outline" color={color} size={size} />
           ),
@@ -67,6 +69,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: t('tabs.settings'),
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tabs.settings')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="settings-outline" color={color} size={size} />
           ),

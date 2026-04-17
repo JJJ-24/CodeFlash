@@ -132,12 +132,17 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
     { value: dist.unlearned, color: '#9E9E9E',           label: t('stats.unlearned') },
   ];
 
+  const maxCountDigits = Math.max(...slices.map(s => String(s.value).length));
+  const gradeCountFontSize = maxCountDigits >= 3 ? theme.fontSize.md : theme.fontSize.lg;
+  const maxLabelLen = Math.max(...slices.map(s => s.label.length));
+  const gradeLabelFontSize = maxLabelLen >= 3 ? theme.fontSize.xs : theme.fontSize.sm;
+
   let cumDeg = 0;
 
   return (
     <View style={pieStyles.container}>
       {/* ヘッダー: 学習済み / トータル */}
-      <Text style={[pieStyles.learnedHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+      <Text style={[pieStyles.learnedHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
         {t('stats.learnedOf', { learned, total })}
       </Text>
       {/* ドーナツチャート */}
@@ -160,13 +165,13 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           const pct = Math.round((slice.value / total) * 100);
           return (
             <View key={slice.label} style={pieStyles.gradeGridItem}>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: theme.fontSize.lg }]}>
+              <Text numberOfLines={1} style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} maxFontSizeMultiplier={2.0}>
                 {slice.value}
               </Text>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={1.3}>
                 {slice.label}
               </Text>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+              <Text numberOfLines={1} style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={2.0}>
                 {pct}%
               </Text>
             </View>
@@ -180,7 +185,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
 const pieStyles = StyleSheet.create({
   container: { alignItems: 'center', gap: 16, paddingVertical: 8 },
   learnedHeader: { marginBottom: 4 },
-  gradeGrid: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 4, paddingBottom: 4 },
+  gradeGrid: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 4, paddingBottom: 4, maxWidth: 360, alignSelf: 'center', width: '100%' },
   gradeGridItem: { flex: 1, alignItems: 'center', gap: 2 },
   gradeGridCount: { fontWeight: '700' },
   gradeGridLabel: {},
@@ -204,8 +209,8 @@ function BarChart({
   const maxCount = Math.max(...schedule.map((s) => s.count), 1);
   const color = barColor ?? theme.colors.primary;
 
-  const barCountH = Math.ceil(theme.fontSize.xs * 1.5);
-  const barLabelH = Math.ceil(theme.fontSize.sm * 1.5);
+  const barCountH = Math.ceil(theme.fontSize.xs * 1.95);
+  const barLabelH = Math.ceil(theme.fontSize.sm * 1.95);
   const chartH = BAR_MAX_HEIGHT + barCountH + barLabelH + 8;
 
   return (
@@ -217,11 +222,11 @@ function BarChart({
 
         return (
           <View key={item.date} style={styles.barCol}>
-            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]}>
+            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={1.3}>
               {item.count > 0 ? item.count : ''}
             </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />
-            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color, fontWeight: '700' }]}>
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color, fontWeight: '700' }]} maxFontSizeMultiplier={1.3}>
               {labels[dayIndex]}
             </Text>
           </View>
@@ -294,7 +299,7 @@ function DonutSheet({
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={sheetStyles.header}>
-          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>
             {title}
           </Text>
           <Pressable onPress={onClose} style={sheetStyles.closeBtn}>
@@ -550,6 +555,11 @@ export default function StatsScreen() {
         }}
         onBlur={onInputBlur}
       />
+      {(() => {
+        const statNums = [streak, todayReviewed, todayDue, todayCreated];
+        const maxDigits = Math.max(...statNums.map(n => String(n).length));
+        const statValueFontSize = maxDigits >= 4 ? theme.fontSize.md : maxDigits >= 3 ? theme.fontSize.lg : maxDigits >= 2 ? theme.fontSize.xl : theme.fontSize.xxl;
+        return (
       <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
         <View style={styles.summaryRow}>
         <Pressable
@@ -560,10 +570,10 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: '#FFF', fontSize: theme.fontSize.xxl }]}>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: '#FFF', fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>
             {streak}
           </Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>
             {t('stats.streak')}
           </Text>
           {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={theme.fontSize.xl} color={m.color} style={styles.streakMedalBadge} /> : null; })()}
@@ -576,8 +586,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: theme.fontSize.xxl }]}>{todayReviewed}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.learned')}</Text>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>{todayReviewed}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.learned')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -587,8 +597,8 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: theme.fontSize.xxl }]}>{todayDue}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.statDue')}</Text>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>{todayDue}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.statDue')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -598,11 +608,13 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xxl }]}>{todayCreated}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]}>{t('stats.newToday')}</Text>
+          <Text numberOfLines={1} style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: statValueFontSize }]} maxFontSizeMultiplier={1.3}>{todayCreated}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{t('stats.newToday')}</Text>
         </Pressable>
         </View>
       </View>
+        );
+      })()}
       <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
 
       {/* 7日間バーチャート */}

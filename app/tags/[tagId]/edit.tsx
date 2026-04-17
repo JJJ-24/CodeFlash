@@ -89,17 +89,17 @@ export default function EditTagScreen() {
     <>
       <Stack.Screen
         options={{
-          title: t('tag.edit'),
+          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('tag.edit')}</Text>,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.textSecondary }}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={1.3}>
                 {t('common.cancel')}
               </Text>
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={handleSave} disabled={!canSave} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: canSave ? theme.colors.primary : theme.colors.textTertiary }}>
+              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: canSave ? theme.colors.primary : theme.colors.textTertiary }} maxFontSizeMultiplier={1.3}>
                 {t('tag.save')}
               </Text>
             </Pressable>
@@ -109,11 +109,11 @@ export default function EditTagScreen() {
       <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
               {t('tag.name')}
             </Text>
             <TextInput
-              style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text }]}
+              style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.md }]}
               placeholder={t('tag.namePlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
@@ -129,7 +129,7 @@ export default function EditTagScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
               {t('tag.color')}
             </Text>
             <View style={styles.colorGrid}>
@@ -147,7 +147,7 @@ export default function EditTagScreen() {
 
           <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
             <View style={[styles.previewDot, { backgroundColor: color }]} />
-            <Text style={[styles.previewName, { color: theme.colors.text }]}>
+            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
               {name || t('tag.namePlaceholder')}
             </Text>
           </View>
@@ -158,14 +158,14 @@ export default function EditTagScreen() {
             style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]}
             onPress={confirmDelete}
           >
-            <Text style={styles.actionBtnTextLight}>{t('common.delete')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('common.delete')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]}
             onPress={handleSave}
             disabled={!canSave}
           >
-            <Text style={styles.actionBtnTextLight}>{t('tag.save')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('tag.save')}</Text>
           </TouchableOpacity>
         </View>
       </View>

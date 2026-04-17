@@ -305,6 +305,9 @@ export default function DeckDetailScreen() {
     { key: 'new', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },
   ];
 
+  const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
+  const filterValueFontSize = filterItemMaxDigits >= 4 ? theme.fontSize.md : filterItemMaxDigits >= 3 ? theme.fontSize.lg : filterItemMaxDigits >= 2 ? theme.fontSize.xl : theme.fontSize.xxl;
+
   const filterDescMap: Record<FilterKey, string> = {
     all: t('study.filterDescAll'),
     learned: t('study.filterDescLearned'),
@@ -412,7 +415,7 @@ export default function DeckDetailScreen() {
               onPress={keyboardShortcutsEnabled && !selectionMode ? () => setShowShortcutsModal(true) : undefined}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.46 }}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1}>
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={1.3}>
                 {deck.name}
               </Text>
               {keyboardShortcutsEnabled && !selectionMode && (
@@ -443,7 +446,7 @@ export default function DeckDetailScreen() {
               }}
               style={{ paddingHorizontal: 4 }}
             >
-              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '600' }}>
+              <Text style={{ color: theme.colors.primary, fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600' }} maxFontSizeMultiplier={1.3}>
                 {selectionMode ? t('card.cancelSelect') : t('card.select')}
               </Text>
             </Pressable>
@@ -471,8 +474,8 @@ export default function DeckDetailScreen() {
                   if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
                 }}
               >
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statValue, { color, fontSize: theme.fontSize.xxl }]}>{count}</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}>{label}</Text>
+                <Text numberOfLines={1} style={[styles.statValue, { color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={1.3}>{count}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={1.3}>{label}</Text>
               </Pressable>
             );
           })}
@@ -485,17 +488,18 @@ export default function DeckDetailScreen() {
           onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
         >
           <Ionicons name="play" size={20} color="#FFF" />
-          <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]}>{t('deck.study')}</Text>
+          <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>{t('deck.study')}</Text>
         </TouchableOpacity>
 
         <View style={styles.sectionTitleRow}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={1.3}>
             {t('deck.detail')}
           </Text>
-          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={1.3}>
             {filterDescMap[selectedFilter]}
           </Text>
         </View>
+
       </View>
 
       <Pressable style={{ flex: 1 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
@@ -597,11 +601,11 @@ export default function DeckDetailScreen() {
       {selectionMode ? (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
           <Pressable onPress={toggleSelectAll}>
-            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }}>
+            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={1.3}>
               {selectedCardIds.size === displayedCards.length ? t('card.cancelSelect') : t('card.selectAll')}
             </Text>
           </Pressable>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={1.3}>
             {t('card.selectedCount', { count: selectedCardIds.size })}
           </Text>
           <View style={styles.selectionActions}>
@@ -699,8 +703,8 @@ const styles = StyleSheet.create({
   },
   studyBtnText: { fontWeight: '700', color: '#FFF' },
   sectionTitle: { fontWeight: '700' },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16 },
-  filterDesc: { flexShrink: 1 },
+  sectionTitleRow: { flexDirection: 'column', gap: 2 },
+  filterDesc: {},
   cardItem: {
     borderRadius: 10,
     paddingHorizontal: 16,

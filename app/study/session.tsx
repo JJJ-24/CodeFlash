@@ -457,6 +457,8 @@ export default function StudySessionScreen() {
         ? [{ key: t("study.skipped"), count: skipped, color: skipColor }]
         : []),
     ];
+    const gradeMaxLabelLen = Math.max(...gradeItems.map(g => g.key.length));
+    const gradeLabelFontSize = gradeMaxLabelLen >= 3 ? theme.fontSize.xs : theme.fontSize.sm;
     const reviewRate =
       totalCards > 0 ? Math.round((reviewed / totalCards) * 100) : 0;
     const correctRate =
@@ -507,7 +509,15 @@ export default function StudySessionScreen() {
             (Platform as any).isPad
               ? { headerShown: false, animation: "fade" }
               : {
-                  title: t("study.title"),
+                  headerTitle: () => (
+                    <Text
+                      style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
+                      numberOfLines={1}
+                      maxFontSizeMultiplier={1.3}
+                    >
+                      {t("study.title")}
+                    </Text>
+                  ),
                   headerBackTitle: "",
                   headerBackVisible: false,
                   headerLeft: () => null,
@@ -569,6 +579,7 @@ export default function StudySessionScreen() {
               styles.completeTitle,
               { color: theme.colors.text, fontSize: theme.fontSize.xl },
             ]}
+            maxFontSizeMultiplier={1.3}
           >
             {t("study.complete")}
           </Text>
@@ -589,6 +600,7 @@ export default function StudySessionScreen() {
                     textAlign: "center",
                   },
                 ]}
+                maxFontSizeMultiplier={1.3}
               >
                 {t("study.reviewedOf", { reviewed, total: totalCards })}
               </Text>
@@ -648,6 +660,7 @@ export default function StudySessionScreen() {
                         styles.gradeItemCount,
                         { color, fontSize: theme.fontSize.lg },
                       ]}
+                      maxFontSizeMultiplier={2.0}
                     >
                       {count}
                     </Text>
@@ -656,9 +669,12 @@ export default function StudySessionScreen() {
                         styles.gradeItemLabel,
                         {
                           color: theme.colors.textSecondary,
-                          fontSize: theme.fontSize.xs,
+                          fontSize: gradeLabelFontSize,
                         },
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      maxFontSizeMultiplier={1.3}
                     >
                       {key}
                     </Text>
@@ -674,6 +690,9 @@ export default function StudySessionScreen() {
                       styles.statValue,
                       { color: theme.colors.text, fontSize: theme.fontSize.xl },
                     ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    maxFontSizeMultiplier={1.3}
                   >
                     {correctRate}%
                   </Text>
@@ -685,6 +704,7 @@ export default function StudySessionScreen() {
                         fontSize: theme.fontSize.xs,
                       },
                     ]}
+                    maxFontSizeMultiplier={1.3}
                   >
                     {t("study.correctRate")}
                   </Text>
@@ -699,6 +719,9 @@ export default function StudySessionScreen() {
                           fontSize: theme.fontSize.xl,
                         },
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      maxFontSizeMultiplier={1.3}
                     >
                       {nextReviewStr}
                     </Text>
@@ -710,6 +733,7 @@ export default function StudySessionScreen() {
                           fontSize: theme.fontSize.xs,
                         },
                       ]}
+                      maxFontSizeMultiplier={1.3}
                     >
                       {t("study.nextReview")}
                     </Text>
@@ -1083,6 +1107,7 @@ export default function StudySessionScreen() {
                         flexShrink: 1,
                       }}
                       numberOfLines={1}
+                      maxFontSizeMultiplier={1.3}
                     >
                       {sessionTitle}
                     </Text>
@@ -1504,6 +1529,8 @@ const styles = StyleSheet.create({
   completeCount: {},
   summaryCard: {
     width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
     borderRadius: 16,
     padding: 20,
     shadowColor: "#000",
@@ -1524,22 +1551,22 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   gradeItem: {
+    flex: 1,
     alignItems: "center",
     gap: 2,
-    minWidth: 44,
   },
   gradeItemCount: { fontWeight: "700" },
   gradeItemLabel: {},
   statRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "center",
-    gap: 56,
+    gap: 48,
     paddingTop: 14,
   },
   statItem: {
     alignItems: "center",
     gap: 4,
+    minWidth: 80,
   },
   statValue: { fontWeight: "700" },
   statLabel: {},

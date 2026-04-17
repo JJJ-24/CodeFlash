@@ -53,7 +53,7 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
       ) : (
         !collapsed && (
           <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
-            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]}>✕</Text>
+            <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle }]} maxFontSizeMultiplier={1.3}>✕</Text>
           </Pressable>
         )
       )}

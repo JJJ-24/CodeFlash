@@ -71,7 +71,7 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: t('common.search') }} />
+      <Stack.Screen options={{ headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={1.3}>{t('common.search')}</Text> }} />
       {/* 検索バー */}
       <View style={[styles.searchBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <Ionicons name="search-outline" size={18} color={theme.colors.textTertiary} />

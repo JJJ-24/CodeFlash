@@ -69,7 +69,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 0);
   }, [weeks]);
 
-  const monthRowHeight = Math.ceil(theme.fontSize.xs * 1.6);
+  const monthRowHeight = Math.ceil(theme.fontSize.xs * 2.08);
 
   return (
     <View style={styles.heatmapWrapper}>
@@ -104,6 +104,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
                   styles.monthLabel,
                   { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, left: colIndex * CELL_STEP },
                 ]}
+                maxFontSizeMultiplier={1.3}
               >
                 {label}
               </Text>

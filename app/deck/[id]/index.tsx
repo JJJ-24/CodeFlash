@@ -575,7 +575,7 @@ export default function DeckDetailScreen() {
                     color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
                   />
                 )}
-                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={2}>
+                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {preview || t('card.noText')}
                 </Text>
                 {!selectionMode && (
@@ -584,10 +584,10 @@ export default function DeckDetailScreen() {
                       onPress={() => navigateToCardEdit(item.id)}
                       hitSlop={8}
                     >
-                      <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                      <Ionicons name="pencil-outline" size={theme.fontSize.lg} color={theme.colors.primary} />
                     </Pressable>
                     <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
-                      <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                      <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
                     </Pressable>
                   </>
                 )}

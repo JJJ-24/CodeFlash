@@ -395,16 +395,16 @@ export default function StudyScreen() {
                   }}
                 >
                   <View style={styles.deckInfo}>
-                    <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                    <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                     {!subTextActive && (
-                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                         {subText}
                       </Text>
                     )}
                   </View>
                   {count > 0 && (
                     <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]}>{count}</Text>
+                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
                     </View>
                   )}
                   <Ionicons
@@ -454,16 +454,16 @@ export default function StudyScreen() {
                 >
                   <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
                   <View style={styles.deckInfo}>
-                    <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                    <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                     {!subTextActive && (
-                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+                      <Text style={[styles.dueLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                         {subText}
                       </Text>
                     )}
                   </View>
                   {count > 0 && (
                     <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]}>{count}</Text>
+                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
                     </View>
                   )}
                   <Ionicons

@@ -1,7 +1,7 @@
 import { FlatList, Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { Deck } from '@/types';
 
 interface Props {
@@ -22,7 +22,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={[styles.sheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
-          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {title}
           </Text>
           <FlatList
@@ -33,24 +33,24 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
                 style={[styles.item, { borderBottomColor: theme.colors.border }]}
                 onPress={() => onSelect(item)}
               >
-                <Text style={[styles.itemName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>
+                <Text style={[styles.itemName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {item.name}
                 </Text>
                 {showCardCount && (
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {t('home.cards', { count: item.cardCount })}
                   </Text>
                 )}
               </Pressable>
             )}
             ListEmptyComponent={
-              <Text style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+              <Text style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {emptyMessage ?? t('card.noDeckToMove')}
               </Text>
             }
           />
           <Pressable style={[styles.cancel, { borderTopColor: theme.colors.border }]} onPress={onClose}>
-            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }}>
+            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('common.cancel')}
             </Text>
           </Pressable>

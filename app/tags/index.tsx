@@ -162,15 +162,15 @@ export default function TagsScreen() {
                   onLongPress={drag}
                 >
                   <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-                  <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>{item.name}</Text>
+                  <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                   <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                    <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{item.cardCount}</Text>
+                    <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
                   </View>
                   <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                    <Ionicons name="pencil-outline" size={theme.fontSize.lg} color={theme.colors.primary} />
                   </Pressable>
                   <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                    <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
                   </Pressable>
                 </Pressable>
               </ScaleDecorator>

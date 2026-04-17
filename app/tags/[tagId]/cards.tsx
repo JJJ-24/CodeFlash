@@ -106,7 +106,7 @@ export default function TagCardsScreen() {
               <Text
                 style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1 }}
                 numberOfLines={1}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {tag?.name ?? ''}
               </Text>
@@ -160,7 +160,7 @@ export default function TagCardsScreen() {
       {cards.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="card-outline" size={64} color={theme.colors.iconSubtle} />
-          <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
+          <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('deck.noCards')}
           </Text>
         </View>
@@ -171,7 +171,7 @@ export default function TagCardsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('card.list')}
             </Text>
           }
@@ -194,6 +194,7 @@ export default function TagCardsScreen() {
                 <Text
                   style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
                   numberOfLines={2}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
                   {preview || t('card.noText')}
                 </Text>
@@ -230,11 +231,11 @@ export default function TagCardsScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowDeckPicker(false)}>
           <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('card.newCardDeckTitle')}
             </Text>
             {decks.length === 0 ? (
-              <Text style={[styles.noDeckText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+              <Text style={[styles.noDeckText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('study.noDecks')}
               </Text>
             ) : (
@@ -249,10 +250,10 @@ export default function TagCardsScreen() {
                       router.push({ pathname: '/deck/[id]/card/new', params: { id: item.id, tagId } });
                     }}
                   >
-                    <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+                    <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {item.name}
                     </Text>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {t('home.cards', { count: item.cardCount })}
                     </Text>
                   </Pressable>
@@ -350,6 +351,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  deckPickerName: { fontWeight: '600' },
+  deckPickerName: { fontWeight: '600', flex: 1, marginRight: 8 },
   noDeckText: { paddingHorizontal: 20, paddingVertical: 16 },
 });

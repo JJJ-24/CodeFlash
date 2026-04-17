@@ -41,7 +41,9 @@
       "Bash(git log:*)",
       "Bash(git checkout:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(xargs sed *)",
+      "Bash(git add *)"
     ],
     "deny": [
       "Bash(sudo:*)",

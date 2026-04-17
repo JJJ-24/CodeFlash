@@ -17,7 +17,7 @@ import { estimateImageExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
 import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
 import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
@@ -38,7 +38,7 @@ function SegmentedCard<T extends string>({ label, options, value, onChange }: Se
   const theme = useTheme();
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-      <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{label}</Text>
+      <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{label}</Text>
       <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
         {options.map(({ value: optValue, label: optLabel }) => {
           const active = value === optValue;
@@ -52,7 +52,7 @@ function SegmentedCard<T extends string>({ label, options, value, onChange }: Se
                 styles.segmentText,
                 { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.md },
                 active && styles.segmentTextActive,
-              ]}>
+              ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {optLabel}
               </Text>
             </Pressable>
@@ -343,11 +343,11 @@ export default function SettingsScreen() {
 
       {/* 通知 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {t('notification.title')}
         </Text>
         <View style={styles.notificationRow}>
-          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('notification.dailyReminder')}
           </Text>
           <Switch
@@ -358,7 +358,7 @@ export default function SettingsScreen() {
         </View>
         {notificationEnabled && (
           <View style={styles.notificationRow}>
-            <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('notification.reminderTime')}
             </Text>
             <DateTimePicker
@@ -374,11 +374,11 @@ export default function SettingsScreen() {
 
       {/* キーボードショートカット */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {t('settings.keyboard')}
         </Text>
         <View style={styles.notificationRow}>
-          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.keyboardEnabled')}
           </Text>
           <Switch
@@ -391,7 +391,7 @@ export default function SettingsScreen() {
 
       {/* データ管理 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {t('dataManagement.title')}
         </Text>
         {loading ? (
@@ -399,36 +399,32 @@ export default function SettingsScreen() {
         ) : (
           <>
             <Pressable style={styles.dataRow} onPress={handleExport}>
-              <Ionicons name="arrow-up-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.exportTitle')}</Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.exportSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.exportTitle')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.exportSubtitle')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleImport}>
-              <Ionicons name="arrow-down-circle-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.importTitle')}</Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.importSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.importTitle')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.importSubtitle')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleTsvExport}>
-              <Ionicons name="document-text-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.exportTsv')}</Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.exportTsvSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.exportTsv')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.exportTsvSubtitle')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
             </Pressable>
             <Pressable style={styles.dataRow} onPress={handleTsvImport}>
-              <Ionicons name="document-attach-outline" size={22} color={theme.colors.primary} />
               <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('dataManagement.importTsv')}</Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>{t('dataManagement.importTsvSubtitle')}</Text>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.importTsv')}</Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('dataManagement.importTsvSubtitle')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.iconSubtle} />
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
             </Pressable>
           </>
         )}

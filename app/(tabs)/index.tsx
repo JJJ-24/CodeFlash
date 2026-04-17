@@ -81,28 +81,28 @@ function DeckCard({
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
-        <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1}>
+        <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {deck.name}
         </Text>
         {deck.description ? (
-          <Text style={[styles.deckDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} numberOfLines={2}>
+          <Text style={[styles.deckDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {deck.description}
           </Text>
         ) : null}
       </View>
       <View style={styles.cardActions}>
         <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E', marginRight: 8 }]}>
-          <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{deck.cardCount}</Text>
+          <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{deck.cardCount}</Text>
         </View>
         <Pressable
           onPress={() => onEdit(deck.id)}
           hitSlop={8}
           style={styles.iconBtn}
         >
-          <Ionicons name="pencil-outline" size={18} color={theme.colors.icon} />
+          <Ionicons name="pencil-outline" size={theme.fontSize.lg} color={theme.colors.icon} />
         </Pressable>
         <Pressable onPress={confirmDelete} hitSlop={8} style={styles.iconBtn}>
-          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+          <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
         </Pressable>
       </View>
     </TouchableOpacity>

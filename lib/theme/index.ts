@@ -7,13 +7,13 @@ const isPad = (Platform as any).isPad;
 /**
  * デバイス種別ごとの maxFontSizeMultiplier 定数。
  * - ui:      ヘッダー・ボタン・一般テキスト（幅が限られる箇所）
- * - content: 統計数字・カウント等（1〜2桁、スペースに余裕あり）
+ * - content: リスト項目名・統計数字等（縦スクロールで高さが伸びるため大きめ許容）
  * - label:   凡例ラベル等（幅制約があるため iPhone では ui と同値）
  */
 export const MAX_FONT_MULTIPLIER = {
   ui:      isPad ? 2.0 : 1.3,
-  content: isPad ? 3.0 : 2.0,
-  label:   isPad ? 2.0 : 1.3,
+  content: isPad ? 3.0 : 1.8,
+  label:   isPad ? 2.5 : 1.5,
 } as const;
 
 export interface AppColors {

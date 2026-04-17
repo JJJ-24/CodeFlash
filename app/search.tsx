@@ -78,6 +78,7 @@ export default function SearchScreen() {
         <TextInput
           ref={inputRef}
           style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
           placeholder={t('card.searchPlaceholder')}
           placeholderTextColor={theme.colors.textTertiary}
           value={query}
@@ -99,7 +100,7 @@ export default function SearchScreen() {
               style={[styles.fieldOption, active && { backgroundColor: theme.colors.primary }]}
               onPress={() => { setSearchField(value); setLastSearchField(value); }}
             >
-              <Text style={[styles.fieldOptionText, { fontSize: theme.fontSize.sm, color: active ? '#fff' : theme.colors.textSecondary }, active && { fontWeight: '700' }]}>
+              <Text style={[styles.fieldOptionText, { fontSize: theme.fontSize.sm, color: active ? '#fff' : theme.colors.textSecondary }, active && { fontWeight: '700' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t(labelKey)}
               </Text>
             </Pressable>

@@ -244,15 +244,15 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.masteryRow, pressed && { opacity: 0.7 }]}>
       <View style={styles.masteryHeader}>
-        <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>
+        <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {deck.name}
         </Text>
-        <Text style={[styles.masteryPct, { color, fontSize: theme.fontSize.md }]}>{pct}%</Text>
+        <Text style={[styles.masteryPct, { color, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{pct}%</Text>
       </View>
       <View style={[styles.masteryBarBg, { backgroundColor: theme.colors.progressBg }]}>
         <View style={[styles.masteryBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
-      <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}>
+      <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
         {t('stats.learned')}: {mastery.learnedCount}{'        '}{t('stats.unlearned')}: {mastery.newCount}
       </Text>
     </Pressable>
@@ -619,7 +619,7 @@ export default function StatsScreen() {
 
       {/* 7日間バーチャート */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {chartConfig.title}
         </Text>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -635,7 +635,7 @@ export default function StatsScreen() {
 
       {/* 学習履歴（草グラフ） */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {t('stats.activityHeatmap')}
         </Text>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -648,7 +648,7 @@ export default function StatsScreen() {
         style={styles.section}
         onLayout={(e) => { sectionOffsets.current.total = e.nativeEvent.layout.y; }}
       >
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {t('stats.totalProgress')}
         </Text>
         <Pressable
@@ -661,13 +661,13 @@ export default function StatsScreen() {
           onPress={() => { setFocusedItem('total'); activeSheet === 'total' ? closeSheet() : openSheet('total'); }}
         >
           <View style={styles.progressHeader}>
-            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
               {t('stats.learned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{learned}</Text>
             </Text>
-            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
               {t('stats.unlearned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{unlearned}</Text>
             </Text>
-            <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]}>{learnedPct}%</Text>
+            <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{learnedPct}%</Text>
           </View>
           <View style={[styles.progressBarBg, { backgroundColor: theme.colors.progressBg }]}>
             <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
@@ -678,7 +678,7 @@ export default function StatsScreen() {
       {/* デッキ別習熟度 */}
       {deckMastery.length > 0 && (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.deckMastery')}
           </Text>
           <View style={styles.deckMasteryList}>

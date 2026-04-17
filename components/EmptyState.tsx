@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 interface Props {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -14,11 +14,11 @@ export function EmptyState({ icon, title, subtitle }: Props) {
   return (
     <View style={styles.container}>
       <Ionicons name={icon} size={64} color={theme.colors.iconSubtle} />
-      <Text style={[styles.title, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}>
+      <Text style={[styles.title, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
         {title}
       </Text>
       {subtitle && (
-        <Text style={[styles.subtitle, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
+        <Text style={[styles.subtitle, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {subtitle}
         </Text>
       )}

@@ -214,7 +214,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   }), [suppress]);
 
   if (blocks.length === 0) {
-    return <Text style={[styles.empty, { color: theme.colors.iconSubtle }]}>{t('card.noContent')}</Text>;
+    return <Text style={[styles.empty, { color: theme.colors.iconSubtle, fontSize: theme.fontSize.sm }]}>{t('card.noContent')}</Text>;
   }
 
   const codeBlockIndexMap: Record<number, number> = {};
@@ -285,7 +285,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
               <ZoomableImage uri={imgUri} alt={imgBlock.alt} />
             ) : (
               <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
-                <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary }]}>🖼</Text>
+                <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]}>🖼</Text>
               </View>
             )}
             {!!imgBlock.alt && (
@@ -300,7 +300,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  empty: { fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
+  empty: { fontStyle: 'italic', textAlign: 'center' },
   textBlock: {},
   imageBlock: { gap: 6 },
   altText: { textAlign: 'center', fontStyle: 'italic' },
@@ -309,5 +309,5 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
   },
-  imagePlaceholderText: { fontSize: 24 },
+  imagePlaceholderText: {},
 });

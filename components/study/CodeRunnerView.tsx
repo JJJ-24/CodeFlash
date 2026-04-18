@@ -275,7 +275,7 @@ export function CodeRunnerView({
           onTouchStart={() => { if (isEditingRef.current) suppress?.(); }}
           onPress={() => { if (isEditingRef.current) handleEditEnd(); }}
         >
-          <Text style={styles.langLabel} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          <Text style={[styles.langLabel, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {LANG_LABELS[block.language] ?? block.language}
           </Text>
         </Pressable>
@@ -434,7 +434,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   langLabel: {
-    fontSize: 14,
     color: "#9CDCFE",
     fontWeight: "600",
   },
@@ -490,7 +489,6 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontFamily: "monospace",
-    fontSize: 14,
     color: "#D4D4D4",
     paddingHorizontal: 12,
     paddingBottom: 12,

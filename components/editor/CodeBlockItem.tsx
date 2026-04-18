@@ -119,7 +119,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
           <Text style={[styles.langText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>
-          <Text style={styles.langChevron} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>▾</Text>
+          <Text style={[styles.langChevron, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>▾</Text>
         </Pressable>
 
         <View style={styles.headerRight}>
@@ -264,8 +264,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  langText: { color: '#9CDCFE', fontWeight: '600', fontSize: 14 },
-  langChevron: { color: '#9CDCFE', fontSize: 12 },
+  langText: { color: '#9CDCFE', fontWeight: '600' },
+  langChevron: { color: '#9CDCFE' },
   headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   execLabel: { color: '#9E9E9E' },
   execSwitch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] },

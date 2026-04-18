@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  typeLabel: { fontWeight: '700', fontSize: 18 },
+  typeLabel: { fontWeight: '700' },
   input: {
     paddingHorizontal: 14,
     paddingVertical: 12,

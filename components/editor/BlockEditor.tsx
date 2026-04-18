@@ -933,7 +933,6 @@ const styles = StyleSheet.create({
   addMenuIcon: {
     fontWeight: "700",
     color: "#1976D2",
-    fontSize: 18,
     width: 36,
     textAlign: "center",
   },

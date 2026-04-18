@@ -203,5 +203,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
 });

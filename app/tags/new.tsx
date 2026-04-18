@@ -143,13 +143,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   body: { padding: 20, gap: 20 },
   field: { gap: 8 },
-  label: { fontSize: 14, fontWeight: '600' },
+  label: { fontWeight: '600' },
   input: {
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
   },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   colorCell: {
@@ -174,7 +173,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   previewDot: { width: 14, height: 14, borderRadius: 7 },
-  previewName: { fontSize: 15, flex: 1 },
+  previewName: { flex: 1 },
   bottomBar: {
     flexDirection: 'row',
     gap: 12,
@@ -189,5 +188,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
 });

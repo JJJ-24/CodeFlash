@@ -144,7 +144,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           borderBottomColor: theme.colors.border,
         }}
       >
-        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>T</Text>
+        <Text style={[styles.typeLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>T</Text>
       </BlockItemHeader>
 
       {collapsed ? (

@@ -506,7 +506,7 @@ export function BlockEditor({
                 ]}
                 onPress={() => addBlock("text")}
               >
-                <Text numberOfLines={1} adjustsFontSizeToFit style={styles.addMenuIcon}>T</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>T</Text>
                 <Text
                   style={[
                     styles.addMenuLabel,
@@ -525,7 +525,7 @@ export function BlockEditor({
                 ]}
                 onPress={() => addBlock("code")}
               >
-                <Text numberOfLines={1} adjustsFontSizeToFit style={styles.addMenuIcon}>{"</>"}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{"</>"}</Text>
                 <Text
                   style={[
                     styles.addMenuLabel,
@@ -545,7 +545,7 @@ export function BlockEditor({
                 onPress={() => addBlock("image")}
               >
                 <View style={styles.addMenuIconWrap}>
-                  <Ionicons name="image-outline" size={22} color="#1976D2" />
+                  <Ionicons name="image-outline" size={theme.fontSize.xxl} color="#1976D2" />
                 </View>
                 <Text
                   style={[

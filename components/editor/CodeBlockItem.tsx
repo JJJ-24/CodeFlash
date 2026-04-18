@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 
 import { useTranslation } from 'react-i18next';
@@ -52,6 +53,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const { width } = useWindowDimensions();
   const { result, htmlSource, baseUrl, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
   const prevCollapsedRef = useRef(collapsed);
@@ -116,7 +118,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         style={{ backgroundColor: isRunning ? '#1E5024' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-          <Text style={styles.langText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>
+          <Text style={[styles.langText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>
           <Text style={styles.langChevron} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>▾</Text>
         </Pressable>
 
@@ -214,7 +216,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       {/* 言語選択モーダル */}
       <Modal visible={langModalVisible} transparent animationType="fade">
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
-          <View style={[styles.langModal, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.langModal, { backgroundColor: theme.colors.surface, width: Math.max(220, width * 0.5) }]}>
             <Text style={[styles.langModalTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('editor.selectLanguage')}</Text>
             <ScrollView>
               {LANGUAGES.map((lang) => (
@@ -237,6 +239,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       { color: theme.colors.textSecondary, fontSize: theme.fontSize.md },
                       block.language === lang && { color: theme.colors.primary, fontWeight: '600' },
                     ]}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {LANG_LABELS[lang]}
                   </Text>

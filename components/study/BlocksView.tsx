@@ -301,7 +301,6 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
 const styles = StyleSheet.create({
   container: { gap: 12 },
   empty: { fontStyle: 'italic', textAlign: 'center' },
-  textBlock: {},
   imageBlock: { gap: 6 },
   altText: { textAlign: 'center', fontStyle: 'italic' },
   imagePlaceholder: {
@@ -309,5 +308,4 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
   },
-  imagePlaceholderText: {},
 });

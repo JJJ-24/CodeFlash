@@ -185,7 +185,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     alignItems: 'center',
   },
-  fieldOptionText: {},
   list: { paddingBottom: 32 },
   separator: { height: StyleSheet.hairlineWidth },
   resultItem: {
@@ -197,7 +196,5 @@ const styles = StyleSheet.create({
   },
   resultText: { flex: 1, gap: 2 },
   preview: { fontWeight: '500', lineHeight: 22 },
-  deckName: {},
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: {},
 });

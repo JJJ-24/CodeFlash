@@ -159,7 +159,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   previewName: { fontWeight: '600' },
-  previewDesc: {},
   langRow: { flexDirection: 'row', gap: 10 },
   langBtn: {
     flex: 1,
@@ -168,7 +167,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
   },
-  langBtnText: {},
   headerBtn: { fontWeight: '600' },
   disabled: { opacity: 0.35 },
   bottomBar: {

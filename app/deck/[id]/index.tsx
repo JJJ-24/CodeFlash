@@ -702,7 +702,6 @@ const styles = StyleSheet.create({
   studyBtnText: { fontWeight: '700', color: '#FFF' },
   sectionTitle: { fontWeight: '700' },
   sectionTitleRow: { flexDirection: 'column', gap: 2 },
-  filterDesc: {},
   cardItem: {
     borderRadius: 10,
     paddingHorizontal: 16,

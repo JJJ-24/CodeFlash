@@ -29,5 +29,4 @@ export function EmptyState({ icon, title, subtitle }: Props) {
 const styles = StyleSheet.create({
   container: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   title: { fontWeight: '600' },
-  subtitle: {},
 });

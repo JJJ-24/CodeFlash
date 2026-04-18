@@ -528,7 +528,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   shuffleBtnText: { fontWeight: '600' },
-  filterDesc: {},
 
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
@@ -546,7 +545,6 @@ const styles = StyleSheet.create({
   deckRowDimmed: { opacity: 0.5 },
   deckInfo: { flex: 1, gap: 3 },
   deckName: { fontWeight: '600' },
-  dueLabel: {},
   dueChip: {
     borderRadius: 12,
     paddingHorizontal: 10,

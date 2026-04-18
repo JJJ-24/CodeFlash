@@ -188,8 +188,6 @@ const pieStyles = StyleSheet.create({
   gradeGrid: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 4, paddingBottom: 4, maxWidth: 360, alignSelf: 'center', width: '100%' },
   gradeGridItem: { flex: 1, alignItems: 'center', gap: 2 },
   gradeGridCount: { fontWeight: '700' },
-  gradeGridLabel: {},
-  gradeGridPct: {},
 });
 
 function BarChart({
@@ -756,8 +754,6 @@ const styles = StyleSheet.create({
   barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
-  barCount: {},
-  barLabel: {},
 
   // Progress
   progressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
@@ -775,6 +771,5 @@ const styles = StyleSheet.create({
   masteryPct: { fontWeight: '700' },
   masteryBarBg: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 4 },
   masteryBarFill: { height: '100%', borderRadius: 4 },
-  masterySubLabel: {},
 
 });

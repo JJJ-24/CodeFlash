@@ -176,7 +176,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  typeLabel: {},
   imageArea: {
     paddingHorizontal: 12,
     paddingTop: 10,
@@ -204,8 +203,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  pickBtnIcon: {},
-  pickBtnText: {},
   altInput: {
     margin: 12,
     marginTop: 8,

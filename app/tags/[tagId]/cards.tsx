@@ -297,7 +297,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontWeight: '700', marginBottom: 12, marginHorizontal: 20 },
   cardPreview: { flex: 1, lineHeight: 22 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  emptyText: {},
   fabBack: {
     position: 'absolute',
     left: 20,

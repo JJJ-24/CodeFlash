@@ -320,7 +320,6 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     textAlign: 'center',
   },
   langOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
-  langOptionText: {},
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,

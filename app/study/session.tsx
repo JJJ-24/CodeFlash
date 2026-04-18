@@ -1456,7 +1456,6 @@ const styles = StyleSheet.create({
     height: 4,
     flexDirection: "row",
   },
-  progressFill: {},
   progressRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1495,7 +1494,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 4,
   },
-  memoToggleText: {},
   memoContent: {
     borderRadius: 8,
     padding: 12,
@@ -1514,7 +1512,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
   },
-  flipHintText: {},
   gradeRow: { flexDirection: "row", gap: 8 },
   gradeBtn: {
     flex: 1,
@@ -1533,7 +1530,6 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   completeTitle: { fontWeight: "700" },
-  completeCount: {},
   summaryCard: {
     width: "100%",
     maxWidth: 480,
@@ -1563,7 +1559,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   gradeItemCount: { fontWeight: "700" },
-  gradeItemLabel: {},
   statRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -1576,7 +1571,6 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   statValue: { fontWeight: "700" },
-  statLabel: {},
   backBtn: {
     marginTop: 8,
     borderRadius: 12,

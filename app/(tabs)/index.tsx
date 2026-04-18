@@ -345,7 +345,6 @@ const styles = StyleSheet.create({
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   fixedHeader: { paddingHorizontal: 16, paddingTop: 16 },
   statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
-  statsRow: {},
   statItem: {
     borderRadius: 12,
     padding: 16,

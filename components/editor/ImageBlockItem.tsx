@@ -146,7 +146,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
             </Pressable>
           )}
 
-          {/* alt テキスト */}
+          {/* 画像の説明 */}
           <TextInput
             ref={altInputRef}
             style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder, fontSize: theme.fontSize.sm }]}
@@ -158,7 +158,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
             onBlur={() => { setFocused(false); onEditBlur?.(); }}
             autoCorrect={false}
             spellCheck={false}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
           />
         </>
       )}

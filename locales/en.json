@@ -101,7 +101,7 @@
     "imageBlock": "Image",
     "imageSelect": "Select Image",
     "imageChange": "Change",
-    "imageAltPlaceholder": "Alt text (optional)",
+    "imageAltPlaceholder": "Image description (optional)",
     "imageSizeErrorTitle": "Image too large",
     "imageSizeError": "Please select an image under 5MB",
     "reorderDisabledTitle": "Cannot Reorder",

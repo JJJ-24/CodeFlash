@@ -101,7 +101,7 @@
     "imageBlock": "画像",
     "imageSelect": "画像を選択",
     "imageChange": "変更",
-    "imageAltPlaceholder": "alt テキスト（省略可）",
+    "imageAltPlaceholder": "画像の説明（省略可）",
     "imageSizeErrorTitle": "画像が大きすぎます",
     "imageSizeError": "5MB 以下の画像を選択してください",
     "reorderDisabledTitle": "並び替えできません",

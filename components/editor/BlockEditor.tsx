@@ -717,7 +717,7 @@ export function BlockEditor({
         >
           <Ionicons
             name="reorder-three-outline"
-            size={18}
+            size={theme.fontSize.lg}
             color={
               isSortMode ? theme.colors.primary : theme.colors.textSecondary
             }

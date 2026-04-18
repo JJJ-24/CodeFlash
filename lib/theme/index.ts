@@ -109,6 +109,23 @@ export const GRADE_COLORS = {
   easy:  '#1976D2',
 } as const;
 
+export const SHADOW = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  subtle: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+} as const;
+
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);

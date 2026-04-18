@@ -18,7 +18,7 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import {
   getDueCountPerDeck,
   getDueCountPerTag,
@@ -514,11 +514,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     margin: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    ...SHADOW.card,
   },
   summaryValue: { fontWeight: '700' },
   summaryLabel: { marginTop: 2, textAlign: 'center' },
@@ -545,11 +541,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 12,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    ...SHADOW.card,
   },
   deckRowDimmed: { opacity: 0.5 },
   deckInfo: { flex: 1, gap: 3 },

@@ -19,7 +19,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import {
   deleteCard,
   duplicateCard,
@@ -687,11 +687,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     margin: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    ...SHADOW.card,
   },
   statValue: { fontWeight: '700' },
   statLabel: { marginTop: 2, textAlign: 'center' },
@@ -716,11 +712,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...SHADOW.subtle,
   },
   cardPreview: { flex: 1, lineHeight: 22 },
   fab: {

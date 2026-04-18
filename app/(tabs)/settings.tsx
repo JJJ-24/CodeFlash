@@ -17,7 +17,7 @@ import { estimateImageExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
 import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
 import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
@@ -470,11 +470,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...SHADOW.subtle,
   },
   sectionLabel: { fontWeight: '600' },
   segmented: {

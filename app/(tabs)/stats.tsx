@@ -9,7 +9,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
-import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -737,11 +737,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     margin: 2,
     overflow: 'visible',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    ...SHADOW.card,
   },
   summaryValue: { fontWeight: '700' },
   summaryLabel: { marginTop: 2, textAlign: 'center' },
@@ -753,11 +749,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    ...SHADOW.card,
   },
 
   // Bar chart

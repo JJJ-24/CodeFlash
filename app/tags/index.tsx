@@ -20,7 +20,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { deleteTag, getAllTags, updateTagSortOrders } from '@/lib/database/tags';
 import { useSettingsStore } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
@@ -213,11 +213,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...SHADOW.subtle,
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
   tagName: { flex: 1, fontWeight: '500' },

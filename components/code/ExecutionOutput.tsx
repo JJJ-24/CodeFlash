@@ -90,6 +90,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
                   log.type === 'error' && styles.logError,
                   log.type === 'warn'  && styles.logWarn,
                 ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {log.text}
               </Text>

@@ -18,7 +18,7 @@ import { useSettingsStore } from '@/store/settings';
 
 const CARD_EDITOR_SHORTCUTS_NORMAL = [
   { key: 'J / K',      descKey: 'settings.shortcutFocusCardNextPrev' },
-  { key: 'Return / E', descKey: 'settings.shortcutEditBlock' },
+  { key: 'E',          descKey: 'settings.shortcutEditBlock' },
   { key: 'D',          descKey: 'settings.shortcutDeleteBlock' },
   { key: 'Q',          descKey: 'settings.shortcutTabSwitchCard' },
   { key: 'P',          descKey: 'settings.shortcutTogglePreview' },

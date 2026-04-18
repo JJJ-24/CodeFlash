@@ -19,7 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -187,7 +187,7 @@ export default function HomeScreen() {
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: String(decks.length).length >= 4 ? theme.fontSize.md : String(decks.length).length >= 3 ? theme.fontSize.lg : String(decks.length).length >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{decks.length}</Text>
+          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, String(decks.length).length) }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{decks.length}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.all')}</Text>
         </Pressable>
       </View>

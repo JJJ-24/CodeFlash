@@ -18,7 +18,7 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import {
   getDueCountPerDeck,
   getDueCountPerTag,
@@ -276,7 +276,7 @@ export default function StudyScreen() {
   ];
 
   const filterBlockMaxDigits = Math.max(...filterBlocks.map(b => String(b.value).length));
-  const filterValueFontSize = filterBlockMaxDigits >= 4 ? theme.fontSize.md : filterBlockMaxDigits >= 3 ? theme.fontSize.lg : filterBlockMaxDigits >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl;
+  const filterValueFontSize = fontSizeForDigits(theme, filterBlockMaxDigits);
 
   if (loading) {
     return (

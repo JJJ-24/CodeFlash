@@ -9,7 +9,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
-import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { InitialFilterPreference } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -556,7 +556,7 @@ export default function StatsScreen() {
       {(() => {
         const statNums = [streak, todayReviewed, todayDue, todayCreated];
         const maxDigits = Math.max(...statNums.map(n => String(n).length));
-        const statValueFontSize = maxDigits >= 4 ? theme.fontSize.md : maxDigits >= 3 ? theme.fontSize.lg : maxDigits >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl;
+        const statValueFontSize = fontSizeForDigits(theme, maxDigits);
         return (
       <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
         <View style={styles.summaryRow}>

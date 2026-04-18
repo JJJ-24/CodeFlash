@@ -126,6 +126,13 @@ export const SHADOW = {
   },
 } as const;
 
+/** 数値の桁数に応じて統計ブロックの数字フォントサイズを返す（4桁以上で縮小）。 */
+export function fontSizeForDigits(theme: AppTheme, digits: number): number {
+  if (digits >= 4) return theme.fontSize.md;
+  if (digits >= 3) return theme.fontSize.lg;
+  return theme.fontSize.xxl;
+}
+
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);

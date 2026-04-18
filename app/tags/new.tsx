@@ -60,19 +60,16 @@ export default function NewTagScreen() {
     <>
       <Stack.Screen
         options={{
+
           headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.new')}</Text>,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('common.cancel')}
-              </Text>
+              <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={handleSave} disabled={!canSave} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: canSave ? theme.colors.primary : theme.colors.textTertiary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('tag.create')}
-              </Text>
+              <Ionicons name="checkmark-sharp" size={26} color={canSave ? theme.colors.primary : theme.colors.textTertiary} />
             </Pressable>
           ),
         }}
@@ -111,7 +108,7 @@ export default function NewTagScreen() {
                   style={[styles.colorCell, { backgroundColor: c }, color === c && styles.colorCellSelected]}
                   onPress={() => setColor(c)}
                 >
-                  {color === c && <Ionicons name="checkmark" size={18} color="#FFF" />}
+                  {color === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
                 </TouchableOpacity>
               ))}
             </View>

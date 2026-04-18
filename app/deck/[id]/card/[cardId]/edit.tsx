@@ -1,4 +1,4 @@
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
@@ -130,6 +130,7 @@ export default function EditCardScreen() {
     <>
       <Stack.Screen
         options={{
+
           headerTitle: () => (
             <Pressable
               onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
@@ -145,16 +146,12 @@ export default function EditCardScreen() {
           ),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: theme.colors.textSecondary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('common.cancel')}
-              </Text>
+              <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600', color: saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('card.save')}
-              </Text>
+              <Ionicons name="checkmark-sharp" size={26} color={saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary} />
             </Pressable>
           ),
         }}

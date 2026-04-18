@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { createDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
@@ -53,23 +55,16 @@ export default function NewDeckScreen() {
     <>
       <Stack.Screen
         options={{
+
           headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.new')}</Text>,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
-              <Text style={[styles.headerBtn, { color: theme.colors.textSecondary, fontSize: Math.min(theme.fontSize.md, 19.2) }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('common.cancel')}
-              </Text>
+              <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable
-              onPress={handleCreate}
-              disabled={!canSave}
-              style={{ paddingHorizontal: 4 }}
-            >
-              <Text style={[styles.headerBtn, { color: theme.colors.primary, fontSize: Math.min(theme.fontSize.md, 19.2) }, !canSave && styles.disabled]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('deck.create')}
-              </Text>
+            <Pressable onPress={handleCreate} disabled={!canSave} style={{ paddingHorizontal: 4 }}>
+              <Ionicons name="checkmark-sharp" size={26} color={canSave ? theme.colors.primary : theme.colors.textTertiary} />
             </Pressable>
           ),
         }}

@@ -447,9 +447,11 @@ export default function DeckDetailScreen() {
               }}
               style={{ paddingHorizontal: 4 }}
             >
-              <Text style={{ color: theme.colors.primary, fontSize: Math.min(theme.fontSize.md, 19.2), fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {selectionMode ? t('card.cancelSelect') : t('card.select')}
-              </Text>
+              <Ionicons
+                name={selectionMode ? 'close' : 'albums-outline'}
+                size={26}
+                color={theme.colors.primary}
+              />
             </Pressable>
           ),
         }}
@@ -494,7 +496,7 @@ export default function DeckDetailScreen() {
 
         <View style={styles.sectionTitleRow}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('deck.detail')}
+            {selectionMode ? t('card.selectHint') : t('deck.detail')}
           </Text>
           <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {filterDescMap[selectedFilter]}

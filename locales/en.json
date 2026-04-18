@@ -116,6 +116,7 @@
     "imageNoSelection": "(no image selected)",
     "select": "Select",
     "cancelSelect": "Cancel",
+    "selectHint": "Tap cards to select",
     "selectedCount": "{{count}} selected",
     "moveToDeck": "Move",
     "moveConfirmTitle": "Move to Deck",

@@ -116,6 +116,7 @@
     "imageNoSelection": "（画像未選択）",
     "select": "選択",
     "cancelSelect": "キャンセル",
+    "selectHint": "カードをタップして選択",
     "selectedCount": "{{count}}件選択",
     "moveToDeck": "移動",
     "moveConfirmTitle": "デッキに移動",

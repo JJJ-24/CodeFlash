@@ -84,7 +84,7 @@ export default function DeckDetailScreen() {
     { key: 'Space',     descKey: 'settings.shortcutStartStudy' },
     { key: '1–4',       descKey: 'settings.shortcutFilterSwitch' },
     { key: 'J / K',     descKey: 'settings.shortcutFocusCardNextPrev' },
-    { key: 'Return / P', descKey: 'settings.shortcutEditCard' },
+    { key: 'P', descKey: 'settings.shortcutEditCard' },
     { key: 'D',         descKey: 'settings.shortcutDeleteCard' },
     { key: 'N',         descKey: 'settings.shortcutNewCard' },
     { key: 'S',         descKey: 'settings.shortcutToggleSelect' },

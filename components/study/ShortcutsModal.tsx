@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 interface ShortcutItem {
   key: string;
@@ -30,7 +30,7 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.colors.surface, maxHeight }]}>
-          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('settings.keyboardShortcuts')}
           </Text>
           <ScrollView>
@@ -38,18 +38,18 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
               sections.map((section, sectionIndex) => (
                 <View key={section.title}>
                   <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border }, sectionIndex > 0 && styles.sectionHeaderSeparator]}>
-                    <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }}>
+                    <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {section.title}
                     </Text>
                   </View>
                   {section.items.map((item) => (
                     <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
                       <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                        <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
+                        <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
                           {item.key}
                         </Text>
                       </View>
-                      <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
+                      <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                         {t(item.descKey)}
                       </Text>
                     </View>
@@ -60,11 +60,11 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
               (shortcuts ?? []).map((item) => (
                 <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
                   <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
-                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }}>
+                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
                       {item.key}
                     </Text>
                   </View>
-                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}>
+                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {t(item.descKey)}
                   </Text>
                 </View>
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   keyBadge: {
-    minWidth: 44,
+    width: 100,
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,

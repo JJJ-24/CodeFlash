@@ -384,7 +384,7 @@ export function CodeRunnerView({
           <View style={styles.codeCopyBtn}>
             <Ionicons
               name={codeCopied ? "checkmark-outline" : "copy-outline"}
-              size={14}
+              size={theme.fontSize.sm}
               color="#4B5563"
             />
           </View>

@@ -193,7 +193,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
               </ScrollView>
             )}
             <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
-              <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+              <Ionicons name={codeCopied ? 'checkmark-outline' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
             </Pressable>
           </View>
 

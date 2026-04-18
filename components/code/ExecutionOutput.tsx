@@ -97,7 +97,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
             ))}
             <GestureDetector gesture={copyGesture}>
               <View style={styles.copyBtn}>
-                <Ionicons name={copied ? 'checkmark-outline' : 'copy-outline'} size={14} color="#4B5563" />
+                <Ionicons name={copied ? 'checkmark-outline' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
               </View>
             </GestureDetector>
           </View>

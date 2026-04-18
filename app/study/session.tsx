@@ -932,7 +932,7 @@ export default function StudySessionScreen() {
             >
               <Ionicons
                 name="contract-outline"
-                size={24}
+                size={Math.round(theme.fontSize.xl)}
                 color={theme.colors.iconSubtle}
               />
             </Pressable>
@@ -945,7 +945,7 @@ export default function StudySessionScreen() {
               >
                 <Ionicons
                   name="link-outline"
-                  size={24}
+                  size={Math.round(theme.fontSize.xl)}
                   color={theme.colors.iconSubtle}
                 />
               </Pressable>
@@ -1389,7 +1389,7 @@ export default function StudySessionScreen() {
         >
           <Ionicons
             name="expand-outline"
-            size={22}
+            size={Math.round(theme.fontSize.xl)}
             color={theme.colors.iconSubtle}
           />
         </Pressable>

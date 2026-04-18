@@ -289,7 +289,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
               </View>
             )}
             {!!imgBlock.alt && (
-              <Text style={[styles.altText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{imgBlock.alt}</Text>
+              <Text style={[styles.altText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{imgBlock.alt}</Text>
             )}
           </View>
         );

@@ -601,10 +601,12 @@ export default function DeckDetailScreen() {
 
       {selectionMode ? (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
-          <Pressable onPress={toggleSelectAll}>
-            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {selectedCardIds.size === displayedCards.length ? t('card.cancelSelect') : t('card.selectAll')}
-            </Text>
+          <Pressable onPress={toggleSelectAll} style={[styles.iconBtn, { backgroundColor: theme.colors.primary }]} accessibilityLabel={t('card.selectAll')}>
+            <Ionicons
+              name={selectedCardIds.size === displayedCards.length ? 'checkmark-circle' : 'checkmark-circle-outline'}
+              size={22}
+              color="#FFF"
+            />
           </Pressable>
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('card.selectedCount', { count: selectedCardIds.size })}

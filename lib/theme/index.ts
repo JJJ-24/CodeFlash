@@ -11,8 +11,8 @@ const isPad = (Platform as any).isPad;
  * - label:   凡例ラベル等（幅制約があるため iPhone では ui と同値）
  */
 export const MAX_FONT_MULTIPLIER = {
-  ui:      isPad ? 2.0 : 1.3,
-  content: isPad ? 3.0 : 1.8,
+  ui:      isPad ? 1.8 : 1.3,
+  content: isPad ? 2.8 : 1.8,
   label:   isPad ? 2.5 : 1.5,
 } as const;
 

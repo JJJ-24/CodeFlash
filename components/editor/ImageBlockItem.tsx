@@ -121,7 +121,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 {picking ? (
                   <ActivityIndicator size="small" color={theme.colors.primary} />
                 ) : (
-                  <Text style={[styles.changeBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  <Text style={[styles.changeBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
                     {t('card.imageChange')}
                   </Text>
                 )}
@@ -138,7 +138,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
               ) : (
                 <>
                   <Text style={[styles.pickBtnIcon, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>📷</Text>
-                  <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
                     {t('card.imageSelect')}
                   </Text>
                 </>
@@ -158,7 +158,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
             onBlur={() => { setFocused(false); onEditBlur?.(); }}
             autoCorrect={false}
             spellCheck={false}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
           />
         </>
       )}

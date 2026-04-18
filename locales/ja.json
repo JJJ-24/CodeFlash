@@ -116,7 +116,7 @@
     "imageNoSelection": "（画像未選択）",
     "select": "選択",
     "cancelSelect": "キャンセル",
-    "selectedCount": "{{count}}件選択中",
+    "selectedCount": "{{count}}件選択",
     "moveToDeck": "移動",
     "moveConfirmTitle": "デッキに移動",
     "moveConfirmMessage": "{{count}}件のカードを「{{deckName}}」に移動しますか？",

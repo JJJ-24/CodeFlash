@@ -39,7 +39,7 @@ export default function TabsLayout() {
           headerTitleAlign: 'center',
           headerLeft: () => (
             <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
-              <Ionicons name="search-outline" size={22} color={theme.colors.primary} />
+              <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
             </Pressable>
           ),
           headerLeftContainerStyle: { paddingLeft: 8 },

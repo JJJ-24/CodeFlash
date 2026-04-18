@@ -1134,7 +1134,7 @@ export default function StudySessionScreen() {
                       >
                         <Ionicons
                           name="link-outline"
-                          size={22}
+                          size={Math.round(theme.fontSize.xxl)}
                           color={theme.colors.primary}
                         />
                       </Pressable>

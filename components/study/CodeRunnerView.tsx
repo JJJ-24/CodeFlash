@@ -292,7 +292,7 @@ export function CodeRunnerView({
                 activeOpacity={0.7}
               >
                 {isEditing ? (
-                  <Text style={[styles.editBtnText, styles.editBtnTextActive]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.done')}</Text>
+                  <Text style={[styles.editBtnText, styles.editBtnTextActive, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.done')}</Text>
                 ) : (
                   <Ionicons name="pencil" size={Math.round(theme.fontSize.sm)} color="#9CDCFE" />
                 )}
@@ -318,7 +318,7 @@ export function CodeRunnerView({
                     style={styles.spinner}
                   />
                 ) : (
-                  <Text style={styles.runBtnText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
+                  <Text style={[styles.runBtnText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
                 )}
               </TouchableOpacity>
             </GestureDetector>
@@ -332,6 +332,7 @@ export function CodeRunnerView({
           <TextInput
             ref={codeInputRef}
             style={[styles.codeText, styles.codeInput, { fontSize: theme.fontSize.md, lineHeight: theme.fontSize.md * 1.57 }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             value={editedContent ?? block.content}
             selection={selection}
             onChangeText={onContentChange}
@@ -443,6 +444,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderWidth: 1,
     borderColor: "#555",
+    alignSelf: "stretch",
+    justifyContent: "center",
   },
   editBtnActive: {
     backgroundColor: "#2A4A2A",
@@ -450,7 +453,6 @@ const styles = StyleSheet.create({
   },
   editBtnText: {
     color: "#9CDCFE",
-    fontSize: 14,
     fontWeight: "600",
   },
   editBtnTextActive: {
@@ -470,7 +472,6 @@ const styles = StyleSheet.create({
   },
   runBtnText: {
     color: "#FFF",
-    fontSize: 14,
     fontWeight: "600",
   },
   spinner: {

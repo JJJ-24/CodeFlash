@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { resolveImageUri } from '@/lib/image';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
@@ -289,7 +289,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
               </View>
             )}
             {!!imgBlock.alt && (
-              <Text style={[styles.altText, { color: theme.colors.textTertiary }]}>{imgBlock.alt}</Text>
+              <Text style={[styles.altText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{imgBlock.alt}</Text>
             )}
           </View>
         );
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   empty: { fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
   textBlock: {},
   imageBlock: { gap: 6 },
-  altText: { fontSize: 12, textAlign: 'center', fontStyle: 'italic' },
+  altText: { textAlign: 'center', fontStyle: 'italic' },
   imagePlaceholder: {
     borderRadius: 8,
     padding: 24,

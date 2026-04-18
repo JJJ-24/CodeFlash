@@ -562,6 +562,7 @@ export default function StudySessionScreen() {
                 fontSize: theme.fontSize.lg,
                 color: theme.colors.text,
               }}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
               {t("study.title")}
             </Text>
@@ -785,6 +786,7 @@ export default function StudySessionScreen() {
       />
       <Text
         style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
       >
         {showMemo ? t("study.hideMemo") : t("study.showMemo")}
       </Text>
@@ -958,7 +960,7 @@ export default function StudySessionScreen() {
             >
               <Ionicons
                 name="create-outline"
-                size={24}
+                size={Math.round(theme.fontSize.xl)}
                 color={theme.colors.iconSubtle}
               />
             </Pressable>
@@ -1147,7 +1149,7 @@ export default function StudySessionScreen() {
                     >
                       <Ionicons
                         name="create-outline"
-                        size={22}
+                        size={Math.round(theme.fontSize.xl)}
                         color={theme.colors.primary}
                       />
                     </Pressable>
@@ -1197,6 +1199,7 @@ export default function StudySessionScreen() {
             <Text
               style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }}
               numberOfLines={1}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
               {sessionTitle}
             </Text>
@@ -1222,7 +1225,7 @@ export default function StudySessionScreen() {
               }
               style={{ paddingHorizontal: 8 }}
             >
-              <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+              <Ionicons name="create-outline" size={Math.round(theme.fontSize.xl)} color={theme.colors.primary} />
             </Pressable>
           </View>
         </View>
@@ -1255,8 +1258,9 @@ export default function StudySessionScreen() {
             <Text
               style={[
                 styles.reviewedBadgeText,
-                { fontSize: theme.fontSize.xs },
+                { fontSize: theme.fontSize.sm },
               ]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             >
               {result.reviewed}
             </Text>
@@ -1264,8 +1268,9 @@ export default function StudySessionScreen() {
           <Text
             style={[
               styles.progressText,
-              { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs },
+              { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm },
             ]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
           >
             {t("study.progress", {
               current: currentIndex + 1,
@@ -1412,6 +1417,7 @@ export default function StudySessionScreen() {
                     fontSize: theme.fontSize.md,
                   },
                 ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {t("study.tapToFlip")}
               </Text>
@@ -1460,9 +1466,10 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   reviewedBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    borderRadius: 999,
+    minWidth: 28,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
     alignItems: "center",
     justifyContent: "center",
   },

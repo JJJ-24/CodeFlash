@@ -121,7 +121,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 {picking ? (
                   <ActivityIndicator size="small" color={theme.colors.primary} />
                 ) : (
-                  <Text style={[styles.changeBtnText, { color: theme.colors.primary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  <Text style={[styles.changeBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {t('card.imageChange')}
                   </Text>
                 )}
@@ -138,7 +138,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
               ) : (
                 <>
                   <Text style={[styles.pickBtnIcon, { color: theme.colors.textTertiary }]}>📷</Text>
-                  <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {t('card.imageSelect')}
                   </Text>
                 </>
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
   },
-  changeBtnText: { fontSize: 13, fontWeight: '600' },
+  changeBtnText: { fontWeight: '600' },
   pickBtn: {
     marginHorizontal: 12,
     marginTop: 10,
@@ -205,11 +205,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pickBtnIcon: { fontSize: 28 },
-  pickBtnText: { fontSize: 14 },
+  pickBtnText: {},
   altInput: {
     margin: 12,
     marginTop: 8,
-    fontSize: 13,
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 10,
@@ -218,7 +217,6 @@ const styles = StyleSheet.create({
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 13,
     lineHeight: 20,
   },
 });

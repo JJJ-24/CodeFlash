@@ -125,7 +125,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         <View style={styles.headerRight}>
           {!collapsed && EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
-              {!block.executable && <Text style={styles.execLabel} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.run')}</Text>}
+              {!block.executable && <Text style={[styles.execLabel, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.run')}</Text>}
               <Switch
                 value={block.executable}
                 onValueChange={(v) => onChange({ executable: v })}
@@ -144,7 +144,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             >
               {isRunning
                 ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={styles.runBtnText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
+                : <Text style={[styles.runBtnText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
               }
             </TouchableOpacity>
           )}
@@ -267,7 +267,7 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   langText: { color: '#9CDCFE', fontWeight: '600', fontSize: 14 },
   langChevron: { color: '#9CDCFE', fontSize: 12 },
   headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-  execLabel: { color: '#9E9E9E', fontSize: 13 },
+  execLabel: { color: '#9E9E9E' },
   execSwitch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] },
   runBtn: {
     backgroundColor: '#1976D2',
@@ -279,7 +279,7 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     gap: 4,
   },
   runBtnDisabled: { backgroundColor: '#555' },
-  runBtnText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
+  runBtnText: { color: '#FFF', fontWeight: '600' },
   spinner: { marginHorizontal: 4 },
   codeArea: {
     position: 'relative',

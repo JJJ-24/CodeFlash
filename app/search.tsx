@@ -111,7 +111,7 @@ export default function SearchScreen() {
       {/* 結果 */}
       {searched && results.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>
+          <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('card.searchNoResults')}
           </Text>
         </View>
@@ -141,10 +141,11 @@ export default function SearchScreen() {
                   <Text
                     style={[styles.preview, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
                     numberOfLines={2}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                   >
                     {preview || t('card.noText')}
                   </Text>
-                  <Text style={[styles.deckName, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>
+                  <Text style={[styles.deckName, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {deckName}
                   </Text>
                 </View>

@@ -327,12 +327,13 @@ export default function DeckDetailScreen() {
       <Text
         style={[styles.description, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}
         numberOfLines={descExpanded ? undefined : 2}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
       >
         {deck.description}
       </Text>
       {descTruncatable && (
         <Pressable onPress={() => setDescExpanded((v) => !v)} style={styles.descToggleBtn}>
-          <Text style={[styles.descToggleText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]}>
+          <Text style={[styles.descToggleText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {descExpanded ? t('common.showLess') : t('common.showMore')}
           </Text>
         </Pressable>

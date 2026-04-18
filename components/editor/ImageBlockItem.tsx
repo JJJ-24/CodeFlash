@@ -137,7 +137,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 <ActivityIndicator color={theme.colors.primary} />
               ) : (
                 <>
-                  <Text style={[styles.pickBtnIcon, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]}>📷</Text>
+                  <Text style={[styles.pickBtnIcon, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>📷</Text>
                   <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {t('card.imageSelect')}
                   </Text>

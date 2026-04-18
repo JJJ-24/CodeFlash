@@ -121,7 +121,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         onPress={() => Linking.openURL(node.attributes.href)}
         style={({ pressed }) => pressed ? { backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 3 } : undefined}
       >
-        <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }}>{children}</Text>
+        <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{children}</Text>
       </Pressable>
     ),
   }), []);

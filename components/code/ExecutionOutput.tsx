@@ -8,7 +8,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
 import type { ExecResult } from '@/lib/code-execution/types';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 function buildCopyText(result: ExecResult): string {
   const lines: string[] = [];
@@ -61,25 +61,25 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
           ]}
         >
           <View style={styles.outputHeader}>
-            <Text style={[styles.outputTitle, { fontSize: theme.fontSize.xs }]}>
+            <Text style={[styles.outputTitle, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {result.status === 'timeout' ? t('code.timeout') :
                result.status === 'error'   ? t('code.error') : t('code.output')}
             </Text>
             <GestureDetector gesture={clearGesture}>
               <View style={styles.clearBtnWrapper}>
-                <Text style={styles.clearBtn}>✕</Text>
+                <Text style={styles.clearBtn} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>✕</Text>
               </View>
             </GestureDetector>
           </View>
           <View style={styles.outputContent}>
             {result.status === 'error' && result.errorMessage && (
-              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]}>{result.errorMessage}</Text>
+              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{result.errorMessage}</Text>
             )}
             {result.status === 'timeout' && (
-              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]}>{t('code.timeoutMessage')}</Text>
+              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.timeoutMessage')}</Text>
             )}
             {result.logs.length === 0 && result.status === 'success' && (
-              <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]}>{t('code.empty')}</Text>
+              <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.empty')}</Text>
             )}
             {result.logs.map((log, i) => (
               <Text

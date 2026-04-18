@@ -13,7 +13,7 @@ function LinkPressable({ href, suppress, children }: { href: string; suppress: (
       delayLongPress={DELAY}
       style={highlighted ? { backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 3 } : undefined}
     >
-      <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }}>{children}</Text>
+      <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{children}</Text>
     </Pressable>
   );
 }
@@ -285,7 +285,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
               <ZoomableImage uri={imgUri} alt={imgBlock.alt} />
             ) : (
               <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
-                <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]}>🖼</Text>
+                <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>🖼</Text>
               </View>
             )}
             {!!imgBlock.alt && (

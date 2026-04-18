@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { LinkItem } from '@/lib/study/extractLinks';
 
 interface Props {
@@ -42,7 +42,7 @@ export function LinksSheet({ visible, onClose, links }: Props) {
       </Animated.View>
       <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('study.linksTitle')}
           </Text>
           <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -58,11 +58,11 @@ export function LinksSheet({ visible, onClose, links }: Props) {
               onPress={() => { onClose(); Linking.openURL(item.url); }}
             >
               <View style={{ flex: 1 }}>
-                <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1}>
+                <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {item.text}
                 </Text>
                 {item.text !== item.url && (
-                  <Text style={[styles.linkUrl, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1}>
+                  <Text style={[styles.linkUrl, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {item.url}
                   </Text>
                 )}

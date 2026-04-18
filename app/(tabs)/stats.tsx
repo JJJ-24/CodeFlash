@@ -310,7 +310,7 @@ function DonutSheet({
           {dist ? (
             <GradeDistPieChart dist={dist} theme={theme} />
           ) : (
-            <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }}>
+            <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('common.loading')}
             </Text>
           )}

@@ -512,6 +512,7 @@ export function BlockEditor({
                     styles.addMenuLabel,
                     { color: theme.colors.text, fontSize: theme.fontSize.md },
                   ]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
                   {t("editor.textBlock")}
                 </Text>
@@ -530,6 +531,7 @@ export function BlockEditor({
                     styles.addMenuLabel,
                     { color: theme.colors.text, fontSize: theme.fontSize.md },
                   ]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
                   {t("editor.codeBlock")}
                 </Text>
@@ -550,6 +552,7 @@ export function BlockEditor({
                     styles.addMenuLabel,
                     { color: theme.colors.text, fontSize: theme.fontSize.md },
                   ]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
                   {t("card.imageBlock")}
                 </Text>
@@ -569,6 +572,7 @@ export function BlockEditor({
                       fontSize: theme.fontSize.md,
                     },
                   ]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
                   {t("common.cancel")}
                 </Text>
@@ -590,6 +594,7 @@ export function BlockEditor({
                     fontSize: theme.fontSize.md,
                   },
                 ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {t("editor.addBlock")}
               </Text>
@@ -608,6 +613,7 @@ export function BlockEditor({
               fontSize: theme.fontSize.md,
             },
           ]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
         >
           {t("tag.title")}
         </Text>
@@ -617,10 +623,10 @@ export function BlockEditor({
       {/* デッキ名 */}
       {deckName != null && (
         <View style={[styles.deckRow, { borderColor: theme.colors.border }]}>
-          <Text style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+          <Text style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t("deck.name")}
           </Text>
-          <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg, paddingLeft: 8 }]}>
+          <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg, paddingLeft: 8 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {deckName}
           </Text>
         </View>
@@ -633,6 +639,7 @@ export function BlockEditor({
             styles.validationError,
             { color: theme.colors.danger, fontSize: theme.fontSize.sm },
           ]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
         >
           {t("card.frontRequired")}
         </Text>

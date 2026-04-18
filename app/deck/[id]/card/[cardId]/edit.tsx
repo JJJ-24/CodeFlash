@@ -178,10 +178,10 @@ export default function EditCardScreen() {
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('common.delete')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.delete')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('card.save')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('card.save')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -214,5 +214,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

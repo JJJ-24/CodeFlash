@@ -100,7 +100,7 @@ export default function EditDeckScreen() {
           automaticallyAdjustKeyboardInsets
         >
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.name')}
             </Text>
             <TextInput
@@ -114,10 +114,11 @@ export default function EditDeckScreen() {
               returnKeyType="next"
               autoCorrect={false}
               spellCheck={false}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
           </View>
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.description')}
             </Text>
             <TextInput
@@ -130,15 +131,16 @@ export default function EditDeckScreen() {
               numberOfLines={3}
               autoCorrect={false}
               spellCheck={false}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
           </View>
 
           <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {name || t('deck.namePlaceholder')}
             </Text>
             {!!description && (
-              <Text style={[styles.previewDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+              <Text style={[styles.previewDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {description}
               </Text>
             )}
@@ -146,10 +148,10 @@ export default function EditDeckScreen() {
         </ScrollView>
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('common.delete')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.delete')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]} onPress={handleSave} disabled={!canSave}>
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('deck.save')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('deck.save')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
@@ -201,5 +203,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

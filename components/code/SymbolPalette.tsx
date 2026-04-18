@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { AppTheme } from '@/lib/theme';
 
 export const SYMBOL_PAIRS = [
@@ -40,7 +41,7 @@ export function SymbolPalette({ visible, onInsertPair, suppress, theme }: Props)
           ]}
           onPress={() => onInsertPair(open, close)}
         >
-          <Text style={[styles.paletteBtnText, { fontSize: theme.fontSize.sm }]}>{label}</Text>
+          <Text style={[styles.paletteBtnText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{label}</Text>
         </Pressable>
       ))}
     </View>

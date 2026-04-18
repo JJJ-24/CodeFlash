@@ -110,7 +110,7 @@ export default function NewCardScreen() {
         <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={decks.find((d) => d.id === deckId)?.name} onCancel={() => router.back()} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('card.create')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('card.create')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -143,5 +143,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

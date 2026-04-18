@@ -152,6 +152,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           <Text
             style={[styles.collapsedPreview, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}
             numberOfLines={2}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
           >
             {block.content || t('card.emptyTextBlock')}
           </Text>
@@ -161,7 +162,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           {block.content.trim() ? (
             <Markdown markdownit={markdownItLinkify} style={markdownStyles} rules={linkRule}>{block.content}</Markdown>
           ) : (
-            <Text style={[styles.placeholder, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}>{t('card.emptyTextBlock')}</Text>
+            <Text style={[styles.placeholder, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('card.emptyTextBlock')}</Text>
           )}
         </View>
       ) : (
@@ -183,6 +184,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
             textAlignVertical="top"
             autoCorrect={false}
             spellCheck={false}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
           />
         </ScrollView>
       )}

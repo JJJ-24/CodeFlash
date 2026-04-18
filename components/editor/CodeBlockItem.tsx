@@ -151,7 +151,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
       {/* コード入力エリア */}
       {collapsed ? (
-        <Text style={[styles.collapsedPreview, { fontSize: theme.fontSize.sm }]} numberOfLines={2}>
+        <Text style={[styles.collapsedPreview, { fontSize: theme.fontSize.sm }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {block.content || t('card.emptyCodeBlock')}
         </Text>
       ) : (
@@ -186,6 +186,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   autoCapitalize="none"
                   autoCorrect={false}
                   spellCheck={false}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 />
               </ScrollView>
             )}
@@ -214,7 +215,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       <Modal visible={langModalVisible} transparent animationType="fade">
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
           <View style={[styles.langModal, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.langModalTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>{t('editor.selectLanguage')}</Text>
+            <Text style={[styles.langModalTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('editor.selectLanguage')}</Text>
             <ScrollView>
               {LANGUAGES.map((lang) => (
                 <TouchableOpacity

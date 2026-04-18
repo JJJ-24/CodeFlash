@@ -81,7 +81,7 @@ export default function NewDeckScreen() {
           automaticallyAdjustKeyboardInsets
         >
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.name')}
             </Text>
             <TextInput
@@ -95,10 +95,11 @@ export default function NewDeckScreen() {
               returnKeyType="next"
               autoCorrect={false}
               spellCheck={false}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
           </View>
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.description')}
             </Text>
             <TextInput
@@ -111,15 +112,16 @@ export default function NewDeckScreen() {
               numberOfLines={3}
               autoCorrect={false}
               spellCheck={false}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
           </View>
 
           <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {name || t('deck.namePlaceholder')}
             </Text>
             {!!description && (
-              <Text style={[styles.previewDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+              <Text style={[styles.previewDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {description}
               </Text>
             )}
@@ -131,7 +133,7 @@ export default function NewDeckScreen() {
             onPress={handleCreate}
             disabled={!canSave}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('deck.create')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('deck.create')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -171,7 +173,8 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.35 },
   bottomBar: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    gap: 12,
+    paddingHorizontal: 20,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
@@ -182,5 +185,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
+  actionBtnTextLight: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

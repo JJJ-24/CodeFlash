@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { getAllTags } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 
@@ -38,7 +38,7 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
 
   if (tags.length === 0) {
     return (
-      <Text style={[styles.empty, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}>{t('study.noTags')}</Text>
+      <Text style={[styles.empty, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('study.noTags')}</Text>
     );
   }
 
@@ -66,7 +66,7 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
             onPress={() => toggle(tag.id)}
           >
             {!selected && <View style={[styles.dot, { backgroundColor: tag.color }]} />}
-            <Text style={[styles.chipText, { color: selected ? '#FFF' : theme.colors.text, fontSize: theme.fontSize.sm }]}>
+            <Text style={[styles.chipText, { color: selected ? '#FFF' : theme.colors.text, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {truncateTag(tag.name)}
             </Text>
           </Pressable>

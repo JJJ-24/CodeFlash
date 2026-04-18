@@ -109,7 +109,7 @@ export default function EditTagScreen() {
       <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.name')}
             </Text>
             <TextInput
@@ -122,14 +122,15 @@ export default function EditTagScreen() {
               autoCorrect={false}
               spellCheck={false}
               maxLength={50}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
             {!!error && (
-              <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }}>{error}</Text>
+              <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{error}</Text>
             )}
           </View>
 
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.color')}
             </Text>
             <View style={styles.colorGrid}>
@@ -147,7 +148,7 @@ export default function EditTagScreen() {
 
           <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
             <View style={[styles.previewDot, { backgroundColor: color }]} />
-            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]}>
+            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {name || t('tag.namePlaceholder')}
             </Text>
           </View>
@@ -158,14 +159,14 @@ export default function EditTagScreen() {
             style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]}
             onPress={confirmDelete}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('common.delete')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.delete')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]}
             onPress={handleSave}
             disabled={!canSave}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]}>{t('tag.save')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('tag.save')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { pickAndSaveImage, resolveImageUri } from '@/lib/image';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { ImageBlock } from '@/types';
 
 interface Props {
@@ -98,7 +98,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
       </BlockItemHeader>
 
       {collapsed ? (
-        <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]}>
+        <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {hasImage ? `📷 ${t('card.imageBlock')}` : t('card.imageNoSelection')}
         </Text>
       ) : (
@@ -121,7 +121,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 {picking ? (
                   <ActivityIndicator size="small" color={theme.colors.primary} />
                 ) : (
-                  <Text style={[styles.changeBtnText, { color: theme.colors.primary }]}>
+                  <Text style={[styles.changeBtnText, { color: theme.colors.primary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('card.imageChange')}
                   </Text>
                 )}
@@ -138,7 +138,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
               ) : (
                 <>
                   <Text style={[styles.pickBtnIcon, { color: theme.colors.textTertiary }]}>📷</Text>
-                  <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary }]}>
+                  <Text style={[styles.pickBtnText, { color: theme.colors.textTertiary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('card.imageSelect')}
                   </Text>
                 </>
@@ -149,7 +149,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
           {/* alt テキスト */}
           <TextInput
             ref={altInputRef}
-            style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder }]}
+            style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder, fontSize: theme.fontSize.sm }]}
             value={block.alt}
             onChangeText={(alt) => onChange({ alt })}
             placeholder={t('card.imageAltPlaceholder')}
@@ -158,6 +158,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
             onBlur={() => { setFocused(false); onEditBlur?.(); }}
             autoCorrect={false}
             spellCheck={false}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
           />
         </>
       )}

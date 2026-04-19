@@ -31,14 +31,15 @@ import { ZoomableImage } from './ZoomableImage';
 
 const markdownItLinkify = MarkdownIt({ linkify: true });
 
-function TextBlockCopyBtn({ content }: { content: string }) {
+function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: () => void }) {
   const [copied, setCopied] = useState(false);
   const theme = useTheme();
   const handleCopy = useCallback(async () => {
+    suppress();
     await Clipboard.setStringAsync(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1000);
-  }, [content]);
+  }, [content, suppress]);
   return (
     <Pressable style={styles.textCopyBtn} onPress={handleCopy} hitSlop={8}>
       <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
@@ -251,7 +252,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
           return (
             <View key={i} style={styles.textBlock}>
               <Markdown markdownit={markdownItLinkify} style={markdownStyles} onLinkPress={() => false} rules={linkRule}>{textContent}</Markdown>
-              {textContent.trim() ? <TextBlockCopyBtn content={textContent} /> : null}
+              {textContent.trim() ? <TextBlockCopyBtn content={textContent} suppress={suppress} /> : null}
             </View>
           );
         }

@@ -19,9 +19,9 @@ import { createTag } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 
 const PRESET_COLORS = [
-  '#E53935', '#F4511E', '#F6BF26', '#33B679',
-  '#0B8043', '#039BE5', '#3F51B5', '#7986CB',
-  '#8E24AA', '#616161', '#795548', '#D81B60',
+  '#E53935', '#fd9023', '#F6BF26', '#33B679',
+  '#0B8043', '#039BE5', '#0e4cdd', '#7986CB',
+  '#8E24AA', '#828080', '#795548', '#F48FB1',
 ];
 
 export default function NewTagScreen() {

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -14,7 +15,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -22,7 +23,7 @@ import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { deleteTag, getAllTags, updateTagSortOrders } from '@/lib/database/tags';
-import { useSettingsStore } from '@/store/settings';
+import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
 
@@ -41,9 +42,22 @@ export default function TagsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
-  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { keyboardShortcutsEnabled, tagSortOrder, setTagSortOrder } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-  const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(tags, (tag) => tag.id);
+
+  const sortedTags = useMemo(() => {
+    if (tagSortOrder === 'name') return [...tags].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    if (tagSortOrder === 'cardCount') return [...tags].sort((a, b) => b.cardCount - a.cardCount);
+    return tags;
+  }, [tags, tagSortOrder]);
+
+  const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
+
+  const SORT_OPTIONS: { key: DeckSortOrder; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { key: 'manual',    icon: 'reorder-three-outline' },
+    { key: 'name',      icon: 'text-outline' },
+    { key: 'cardCount', icon: 'layers-outline' },
+  ];
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   function confirmDelete(tag: TagWithCount) {
@@ -105,12 +119,12 @@ export default function TagsScreen() {
           if (k === 'j') { moveFocus('next'); }
           else if (k === 'k') { moveFocus('prev'); }
           else if (k === 'p') {
-            if (focusedTagIndex !== null && tags[focusedTagIndex]) {
-              router.push(`/tags/${tags[focusedTagIndex].id}/edit`);
+            if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+              router.push(`/tags/${sortedTags[focusedTagIndex].id}/edit`);
             }
           } else if (k === 'd') {
-            if (focusedTagIndex !== null && tags[focusedTagIndex]) {
-              confirmDelete(tags[focusedTagIndex]);
+            if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+              confirmDelete(sortedTags[focusedTagIndex]);
             }
           } else if (k === 'n') {
             router.push('/tags/new');
@@ -120,14 +134,43 @@ export default function TagsScreen() {
         }}
         onSubmitEditing={() => {
           if (!keyboardShortcutsEnabled) return;
-          if (focusedTagIndex !== null && tags[focusedTagIndex]) {
-            router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: tags[focusedTagIndex].id } });
+          if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+            router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: sortedTags[focusedTagIndex].id } });
           }
         }}
         onBlur={onInputBlur}
       />
 
       <Pressable style={{ flex: 1 }} onPress={() => setFocusedTagIndex(null)}>
+      <View style={[styles.sectionRow, { paddingHorizontal: 16, paddingTop: 16, backgroundColor: theme.colors.background }]}>
+        <View style={styles.sectionTitleCol}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('home.tagListTitle')}
+          </Text>
+          <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t(`home.sortDesc${tagSortOrder.charAt(0).toUpperCase()}${tagSortOrder.slice(1)}`)}
+          </Text>
+        </View>
+        <View style={styles.sortButtons}>
+          {SORT_OPTIONS.map(({ key, icon }) => {
+            const active = tagSortOrder === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => setTagSortOrder(key)}
+                style={[
+                  styles.sortBtn,
+                  { borderColor: active ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                  active && { backgroundColor: theme.colors.primary },
+                ]}
+              >
+                <Ionicons name={icon} size={theme.fontSize.xl} color={active ? theme.colors.primaryText : theme.colors.textSecondary} />
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
       {tags.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
           <EmptyState icon="pricetags-outline" title={t('tag.empty')} subtitle={t('tag.emptySub')} />
@@ -136,7 +179,7 @@ export default function TagsScreen() {
         <DraggableFlatList
           ref={listRef as any}
           style={{ backgroundColor: theme.colors.background }}
-          data={tags}
+          data={sortedTags}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           onDragEnd={({ data }) => {
@@ -159,7 +202,7 @@ export default function TagsScreen() {
                     if (idx !== undefined) setFocusedTagIndex(idx);
                     router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
                   }}
-                  onLongPress={drag}
+                  onLongPress={tagSortOrder === 'manual' ? drag : undefined}
                 >
                   <View style={[styles.colorDot, { backgroundColor: item.color }]} />
                   <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
@@ -206,6 +249,11 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   list: { padding: 16, gap: 12, paddingBottom: 96 },
+  sectionRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  sectionTitleCol: { flexDirection: 'column', gap: 2, flex: 1 },
+  sectionTitle: { fontWeight: '700' },
+  sortButtons: { flexDirection: 'row', gap: 6 },
+  sortBtn: { borderRadius: 6, borderWidth: 1, paddingVertical: 4 },
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',

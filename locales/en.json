@@ -9,7 +9,8 @@
     "sortCardCount": "Count",
     "sortDescManual": "Long-press to reorder",
     "sortDescName": "Sorted by deck name",
-    "sortDescCardCount": "Most cards first"
+    "sortDescCardCount": "Most cards first",
+    "tagListTitle": "Tags"
   },
   "deck": {
     "new": "New Deck",

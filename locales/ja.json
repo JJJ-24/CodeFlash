@@ -8,8 +8,9 @@
     "sortName": "  名前  ",
     "sortCardCount": "  枚数  ",
     "sortDescManual": "長押しで並び替え",
-    "sortDescName": "デッキ名順",
-    "sortDescCardCount": "カード枚数の多い順"
+    "sortDescName": "名前順",
+    "sortDescCardCount": "カード枚数の多い順",
+    "tagListTitle": "タグ一覧"
   },
   "deck": {
     "new": "新規デッキ",

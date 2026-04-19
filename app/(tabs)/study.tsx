@@ -63,7 +63,7 @@ export default function StudyScreen() {
   const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
-  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder } = useSettingsStore();
+  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder } = useSettingsStore();
 
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
@@ -103,7 +103,7 @@ export default function StudyScreen() {
       setFocusedItemIndex(idx === -1 ? null : idx);
     } else {
       const id = focusedTagIdRef.current;
-      const idx = id ? tags.findIndex(t => t.id === id) : -1;
+      const idx = id ? sortedTags.findIndex(t => t.id === id) : -1;
       setFocusedItemIndex(idx === -1 ? null : idx);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,7 +190,7 @@ export default function StudyScreen() {
       setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
     }
     else if (key === 'j' || key === 'J') {
-      const items = activeTab === 'decks' ? sortedDecks : tags;
+      const items = activeTab === 'decks' ? sortedDecks : sortedTags;
       setFocusedItemIndex(prev => {
         const next = prev === null ? (items.length > 0 ? 0 : null) : prev >= items.length - 1 ? null : prev + 1;
         const item = next != null ? items[next] : null;
@@ -200,7 +200,7 @@ export default function StudyScreen() {
       });
     }
     else if (key === 'k' || key === 'K') {
-      const items = activeTab === 'decks' ? sortedDecks : tags;
+      const items = activeTab === 'decks' ? sortedDecks : sortedTags;
       setFocusedItemIndex(prev => {
         const next = prev === null ? (items.length > 0 ? items.length - 1 : null) : prev <= 0 ? null : prev - 1;
         const item = next != null ? items[next] : null;
@@ -216,7 +216,7 @@ export default function StudyScreen() {
   function startStudyFocused() {
     if (!keyboardShortcutsEnabled) return;
     if (focusedItemIndex === null) return;
-    const items = activeTab === 'decks' ? sortedDecks : tags;
+    const items = activeTab === 'decks' ? sortedDecks : sortedTags;
     const item = items[focusedItemIndex];
     if (!item) return;
     const info = activeTab === 'decks'
@@ -238,6 +238,12 @@ export default function StudyScreen() {
     return decks;
   }, [decks, deckSortOrder]);
 
+  const sortedTags = useMemo(() => {
+    if (tagSortOrder === 'name') return [...tags].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    if (tagSortOrder === 'cardCount') return [...tags].sort((a, b) => b.cardCount - a.cardCount);
+    return tags;
+  }, [tags, tagSortOrder]);
+
   // ソート変更後もフォーカスを同じデッキに維持（ホームでソート変更後に学習タブへ戻った場合）
   useEffect(() => {
     const id = focusedDeckIdRef.current;
@@ -252,10 +258,10 @@ export default function StudyScreen() {
     if (activeTab !== 'tags') return;
     const id = focusedTagIdRef.current;
     if (id == null) return;
-    const newIdx = tags.findIndex(t => t.id === id);
+    const newIdx = sortedTags.findIndex(t => t.id === id);
     setFocusedItemIndex(newIdx === -1 ? null : newIdx);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tags]);
+  }, [sortedTags]);
 
   const totalAll = activeTab === 'decks'
     ? decks.reduce((s, d) => s + d.cardCount, 0)
@@ -424,14 +430,14 @@ export default function StudyScreen() {
 
       {/* タグタブ */}
       {activeTab === 'tags' && (
-        tags.length === 0 ? (
+        sortedTags.length === 0 ? (
           <View style={styles.center}>
             <EmptyState icon="pricetag-outline" title={t('study.noTags')} />
           </View>
         ) : (
           <FlatList
             ref={listRef}
-            data={tags}
+            data={sortedTags}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}

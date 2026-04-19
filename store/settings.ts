@@ -9,6 +9,7 @@ const NOTIFICATION_ENABLED_KEY = '@codeflash_notification_enabled';
 const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
 const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
 const DECK_SORT_KEY = '@codeflash_deck_sort';
+const TAG_SORT_KEY = '@codeflash_tag_sort';
 const SHUFFLE_KEY = '@codeflash_shuffle';
 const SEARCH_FIELD_KEY = '@codeflash_last_search_field';
 
@@ -45,6 +46,8 @@ interface SettingsState {
   setNotificationTime: (hour: number, minute: number) => void;
   deckSortOrder: DeckSortOrder;
   setDeckSortOrder: (v: DeckSortOrder) => void;
+  tagSortOrder: DeckSortOrder;
+  setTagSortOrder: (v: DeckSortOrder) => void;
   shuffleEnabled: boolean;
   setShuffleEnabled: (v: boolean) => void;
   lastSearchField: string;
@@ -89,6 +92,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ deckSortOrder: v });
     AsyncStorage.setItem(DECK_SORT_KEY, v);
   },
+  tagSortOrder: 'manual',
+  setTagSortOrder: (v) => {
+    set({ tagSortOrder: v });
+    AsyncStorage.setItem(TAG_SORT_KEY, v);
+  },
   shuffleEnabled: false,
   setShuffleEnabled: (v) => {
     set({ shuffleEnabled: v });
@@ -108,15 +116,16 @@ Promise.all([
   AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY),
   AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY),
   AsyncStorage.getItem(DECK_SORT_KEY),
+  AsyncStorage.getItem(TAG_SORT_KEY),
   AsyncStorage.getItem(SHUFFLE_KEY),
   AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
   AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
   AsyncStorage.getItem(SEARCH_FIELD_KEY),
-]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, shuffle, notifHour, notifMinute, searchField]) => {
+]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, shuffle, notifHour, notifMinute, searchField]) => {
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
-    'deckSortOrder' | 'shuffleEnabled' | 'lastSearchField'
+    'deckSortOrder' | 'tagSortOrder' | 'shuffleEnabled' | 'lastSearchField'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -124,6 +133,7 @@ Promise.all([
   if (deckFilter !== null) update.lastDeckDetailFilter = deckFilter as DeckDetailFilter;
   if (notifEnabled !== null) update.notificationEnabled = notifEnabled === 'true';
   if (deckSort !== null) update.deckSortOrder = deckSort as DeckSortOrder;
+  if (tagSort !== null) update.tagSortOrder = tagSort as DeckSortOrder;
   if (shuffle !== null) update.shuffleEnabled = shuffle === 'true';
   if (notifHour !== null) update.notificationHour = Number(notifHour);
   if (notifMinute !== null) update.notificationMinute = Number(notifMinute);

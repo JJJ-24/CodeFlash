@@ -99,7 +99,7 @@ function DeckCard({
           hitSlop={8}
           style={styles.iconBtn}
         >
-          <Ionicons name="pencil-outline" size={theme.fontSize.lg} color={theme.colors.icon} />
+          <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
         </Pressable>
         <Pressable onPress={confirmDelete} hitSlop={8} style={styles.iconBtn}>
           <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />

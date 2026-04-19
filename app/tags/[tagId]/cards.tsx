@@ -198,9 +198,9 @@ export default function TagCardsScreen() {
                 >
                   {preview || t('card.noText')}
                 </Text>
-                <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
                 <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                  <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
                 </Pressable>
               </Pressable>
             );

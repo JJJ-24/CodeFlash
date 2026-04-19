@@ -149,7 +149,7 @@ export default function SearchScreen() {
                     {deckName}
                   </Text>
                 </View>
-                <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                <Ionicons name="pencil-sharp" size={18} color={theme.colors.primary} />
               </Pressable>
             );
           }}

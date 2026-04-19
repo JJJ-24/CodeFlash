@@ -383,7 +383,7 @@ export function CodeRunnerView({
         <GestureDetector gesture={copyGesture}>
           <View style={styles.codeCopyBtn}>
             <Ionicons
-              name={codeCopied ? "checkmark-outline" : "copy-outline"}
+              name={codeCopied ? "checkmark-sharp" : "copy-outline"}
               size={theme.fontSize.sm}
               color="#4B5563"
             />

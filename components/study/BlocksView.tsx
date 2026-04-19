@@ -35,13 +35,12 @@ function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: ()
   const [copied, setCopied] = useState(false);
   const theme = useTheme();
   const handleCopy = useCallback(async () => {
-    suppress();
     await Clipboard.setStringAsync(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1000);
-  }, [content, suppress]);
+  }, [content]);
   return (
-    <Pressable style={styles.textCopyBtn} onPress={handleCopy} hitSlop={8}>
+    <Pressable style={styles.textCopyBtn} onPress={handleCopy} onTouchStart={suppress} hitSlop={8}>
       <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
     </Pressable>
   );

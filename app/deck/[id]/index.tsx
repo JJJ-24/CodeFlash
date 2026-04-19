@@ -378,6 +378,7 @@ export default function DeckDetailScreen() {
             return;
           }
           if (key === ' ') {
+            if (displayedCards.length === 0) return;
             setStatusBarHidden(true, 'fade');
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           } else if (FILTER_KEY_MAP[key]) {
@@ -487,9 +488,9 @@ export default function DeckDetailScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, selectionMode && { opacity: 0.5 }]}
+          style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, (selectionMode || displayedCards.length === 0) && { opacity: 0.5 }]}
           activeOpacity={0.8}
-          disabled={selectionMode}
+          disabled={selectionMode || displayedCards.length === 0}
           onPress={() => { setStatusBarHidden(true, 'fade'); router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } }); }}
         >
           <Ionicons name="play" size={20} color="#FFF" />

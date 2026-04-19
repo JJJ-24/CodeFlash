@@ -281,7 +281,7 @@ export function CodeRunnerView({
         </Pressable>
 
         <View style={styles.headerRight}>
-          {editable && block.executable && (
+          {editable && (
             <GestureDetector gesture={editGesture}>
               <TouchableOpacity
                 style={[

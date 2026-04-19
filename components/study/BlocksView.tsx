@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, type RefObject } from 'react';
 import { Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
 
 function LinkPressable({ href, suppress, children }: { href: string; suppress: () => void; children: React.ReactNode }) {
   const [highlighted, setHighlighted] = useState(false);
@@ -28,6 +30,21 @@ import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
 
 const markdownItLinkify = MarkdownIt({ linkify: true });
+
+function TextBlockCopyBtn({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+  const theme = useTheme();
+  const handleCopy = useCallback(async () => {
+    await Clipboard.setStringAsync(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1000);
+  }, [content]);
+  return (
+    <Pressable style={styles.textCopyBtn} onPress={handleCopy} hitSlop={8}>
+      <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+    </Pressable>
+  );
+}
 
 interface Props {
   blocks: Block[];
@@ -230,9 +247,11 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     >
       {blocks.map((block, i) => {
         if (block.type === 'text') {
+          const textContent = (block as TextBlock).content;
           return (
             <View key={i} style={styles.textBlock}>
-              <Markdown markdownit={markdownItLinkify} style={markdownStyles} onLinkPress={() => false} rules={linkRule}>{(block as TextBlock).content}</Markdown>
+              <Markdown markdownit={markdownItLinkify} style={markdownStyles} onLinkPress={() => false} rules={linkRule}>{textContent}</Markdown>
+              {textContent.trim() ? <TextBlockCopyBtn content={textContent} /> : null}
             </View>
           );
         }
@@ -301,6 +320,15 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
 const styles = StyleSheet.create({
   container: { gap: 12 },
   empty: { fontStyle: 'italic', textAlign: 'center' },
+  textBlock: { position: 'relative' },
+  textCopyBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    borderRadius: 4,
+  },
   imageBlock: { gap: 6 },
   altText: { textAlign: 'center', fontStyle: 'italic' },
   imagePlaceholder: {

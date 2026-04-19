@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
+import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
 
 import { BlockItemHeader } from './BlockItemHeader';
 
@@ -34,6 +36,13 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await Clipboard.setStringAsync(block.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1000);
+  }
   const inputRef = useRef<TextInput>(null);
   const doubleTapCountRef = useRef(0);
   const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -164,29 +173,41 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           ) : (
             <Text style={[styles.placeholder, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('card.emptyTextBlock')}</Text>
           )}
+          {block.content.trim() ? (
+            <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
+              <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+            </Pressable>
+          ) : null}
         </View>
       ) : (
         // 水平 ScrollView でラップすることで、iOS の「scroll to first responder」を
         // 水平方向で吸収し、外側の縦 ScrollView への自動スクロールを防ぐ。
         // （CodeBlockItem と同じ機構）
-        <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} bounces={false}>
-          <TextInput
-            ref={inputRef}
-            style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md, width: width - 32 }]}
-            value={block.content}
-            onChangeText={onChange}
-            multiline
-            scrollEnabled={false}
-            placeholder={t('card.textBlockPlaceholder')}
-            placeholderTextColor={theme.colors.textTertiary}
-            onFocus={() => { setFocused(true); onFocusInput?.(); }}
-            onBlur={() => { setFocused(false); onEditBlur?.(); }}
-            textAlignVertical="top"
-            autoCorrect={false}
-            spellCheck={false}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-          />
-        </ScrollView>
+        <View style={styles.inputArea}>
+          <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} bounces={false}>
+            <TextInput
+              ref={inputRef}
+              style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md, width: width - 32 }]}
+              value={block.content}
+              onChangeText={onChange}
+              multiline
+              scrollEnabled={false}
+              placeholder={t('card.textBlockPlaceholder')}
+              placeholderTextColor={theme.colors.textTertiary}
+              onFocus={() => { setFocused(true); onFocusInput?.(); }}
+              onBlur={() => { setFocused(false); onEditBlur?.(); }}
+              textAlignVertical="top"
+              autoCorrect={false}
+              spellCheck={false}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            />
+          </ScrollView>
+          {block.content.trim() ? (
+            <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
+              <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+            </Pressable>
+          ) : null}
+        </View>
       )}
       <Animated.View
         style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}
@@ -209,7 +230,16 @@ const styles = StyleSheet.create({
     minHeight: 80,
     lineHeight: 22,
   },
-  preview: { paddingHorizontal: 14, paddingVertical: 12 },
+  preview: { paddingHorizontal: 14, paddingVertical: 12, position: 'relative' },
+  inputArea: { position: 'relative' },
+  copyBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    borderRadius: 4,
+  },
   placeholder: { fontStyle: 'italic' },
   collapsedPreview: {
     paddingHorizontal: 14,

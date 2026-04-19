@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -325,16 +326,15 @@ export default function StudyScreen() {
             onPress={() => setShuffleEnabled(!shuffleEnabled)}
             style={[
               styles.shuffleBtn,
-              { borderColor: shuffleEnabled ? theme.colors.primary : theme.colors.border },
+              { borderColor: shuffleEnabled ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
               shuffleEnabled && { backgroundColor: theme.colors.primary },
             ]}
           >
-            <Text style={[
-              styles.shuffleBtnText,
-              { color: shuffleEnabled ? theme.colors.primaryText : theme.colors.textSecondary, fontSize: theme.fontSize.xs },
-            ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('study.shuffle')}
-            </Text>
+            <Ionicons
+              name="shuffle-outline"
+              size={theme.fontSize.xl}
+              color={shuffleEnabled ? theme.colors.primaryText : theme.colors.textSecondary}
+            />
           </Pressable>
         </View>
       </View>
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontWeight: '700' },
   summaryLabel: { marginTop: 2, textAlign: 'center' },
   sectionTitle: { fontWeight: '700' },
-  listTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  listTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   listTitleBlock: { flex: 1, gap: 2 },
   shuffleBtn: {
     borderRadius: 6,
@@ -531,7 +531,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  shuffleBtnText: { fontWeight: '600' },
 
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },

@@ -584,17 +584,14 @@ export default function DeckDetailScreen() {
                   {preview || t('card.noText')}
                 </Text>
                 {!selectionMode && (
-                  <>
-                    <Pressable
-                      onPress={() => navigateToCardEdit(item.id)}
-                      hitSlop={8}
-                    >
+                  <View style={styles.cardActions}>
+                    <Pressable onPress={() => navigateToCardEdit(item.id)} hitSlop={8} style={{ padding: 4 }}>
                       <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
                     </Pressable>
-                    <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
+                    <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8} style={{ padding: 4 }}>
                       <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
                     </Pressable>
-                  </>
+                  </View>
                 )}
               </Pressable>
             </ScaleDecorator>
@@ -720,6 +717,7 @@ const styles = StyleSheet.create({
     ...SHADOW.subtle,
   },
   cardPreview: { flex: 1, lineHeight: 22 },
+  cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   fab: {
     position: 'absolute',
     bottom: 32,

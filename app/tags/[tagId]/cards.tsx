@@ -106,7 +106,7 @@ export default function TagCardsScreen() {
               <Text
                 style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1 }}
                 numberOfLines={1}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
                 {tag?.name ?? ''}
               </Text>
@@ -198,10 +198,14 @@ export default function TagCardsScreen() {
                 >
                   {preview || t('card.noText')}
                 </Text>
-                <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
-                <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
-                </Pressable>
+                <View style={styles.cardActions}>
+                  <Pressable onPress={() => navigateToEdit(item)} hitSlop={8} style={styles.iconBtn}>
+                    <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
+                  </Pressable>
+                  <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8} style={styles.iconBtn}>
+                    <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
+                  </Pressable>
+                </View>
               </Pressable>
             );
           }}
@@ -296,6 +300,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontWeight: '700', marginBottom: 12, marginHorizontal: 20 },
   cardPreview: { flex: 1, lineHeight: 22 },
+  cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  iconBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   fabBack: {
     position: 'absolute',

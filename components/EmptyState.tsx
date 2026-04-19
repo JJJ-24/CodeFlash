@@ -14,11 +14,11 @@ export function EmptyState({ icon, title, subtitle }: Props) {
   return (
     <View style={styles.container}>
       <Ionicons name={icon} size={64} color={theme.colors.iconSubtle} />
-      <Text style={[styles.title, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+      <Text style={[styles.title, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
         {title}
       </Text>
       {subtitle && (
-        <Text style={[styles.subtitle, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+        <Text style={[styles.subtitle, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {subtitle}
         </Text>
       )}

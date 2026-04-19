@@ -1,5 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { setStatusBarHidden } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -377,6 +378,7 @@ export default function DeckDetailScreen() {
             return;
           }
           if (key === ' ') {
+            setStatusBarHidden(true, 'fade');
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           } else if (FILTER_KEY_MAP[key]) {
             const f = FILTER_KEY_MAP[key];
@@ -488,7 +490,7 @@ export default function DeckDetailScreen() {
           style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, selectionMode && { opacity: 0.5 }]}
           activeOpacity={0.8}
           disabled={selectionMode}
-          onPress={() => router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } })}
+          onPress={() => { setStatusBarHidden(true, 'fade'); router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } }); }}
         >
           <Ionicons name="play" size={20} color="#FFF" />
           <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.study')}</Text>

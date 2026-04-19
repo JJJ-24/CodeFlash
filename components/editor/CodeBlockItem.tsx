@@ -138,13 +138,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
           {!collapsed && block.executable && (
             <TouchableOpacity
-              style={[styles.runBtn, isRunning && styles.runBtnDisabled]}
+              style={[styles.runBtn, { paddingHorizontal: Math.round(theme.fontSize.sm * 1.5) }, isRunning && styles.runBtnDisabled]}
               onPress={() => run(block.content, block.language)}
               disabled={isRunning}
             >
               {isRunning
                 ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Text style={[styles.runBtnText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
+                : <Ionicons name="caret-forward" size={Math.round(theme.fontSize.lg)} color="#FFF" />
               }
             </TouchableOpacity>
           )}

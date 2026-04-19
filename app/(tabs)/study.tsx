@@ -2,6 +2,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { setStatusBarHidden } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -222,6 +223,7 @@ export default function StudyScreen() {
       : getTagDisplayInfo(item as Tag);
     if (!info.tappable) return;
     fromSessionRef.current = true;
+    setStatusBarHidden(true, 'fade');
     if (activeTab === 'decks') {
       router.push({ pathname: '/study/session', params: { deckId: (item as Deck).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
     } else {
@@ -391,6 +393,7 @@ export default function StudyScreen() {
                     setFocusedItemIndex(index);
                     focusedDeckIdRef.current = item.id;
                     fromSessionRef.current = true;
+                    setStatusBarHidden(true, 'fade');
                     router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
                 >
@@ -449,6 +452,7 @@ export default function StudyScreen() {
                     setFocusedItemIndex(index);
                     focusedTagIdRef.current = item.id;
                     fromSessionRef.current = true;
+                    setStatusBarHidden(true, 'fade');
                     router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
                 >

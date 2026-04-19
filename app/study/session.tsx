@@ -13,7 +13,6 @@ import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -128,7 +127,6 @@ export default function StudySessionScreen() {
   const { width: screenWidth } = useWindowDimensions();
   // iPad: ステータスバーを隠す際にヘッダー高さが変わらないよう、初回 top inset を固定値として保持
   const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
   const sessionTitle = deckId
@@ -137,12 +135,7 @@ export default function StudySessionScreen() {
       ? (tags.find((tg) => tg.id === tagId)?.name ?? t("study.title"))
       : t("study.title");
 
-  const [statusBarHidden, setStatusBarHidden] = useState(false);
-
-  // マウント時（フェード開始直後）にステータスバーを非表示
-  useEffect(() => {
-    setStatusBarHidden(true);
-  }, []);
+  const [statusBarHidden, setStatusBarHidden] = useState(true);
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
@@ -505,25 +498,21 @@ export default function StudySessionScreen() {
       <>
         <StatusBar hidden={statusBarHidden} />
         <Stack.Screen
-          options={
-            (Platform as any).isPad
-              ? { headerShown: false, animation: "fade" }
-              : {
-                  headerTitle: () => (
-                    <Text
-                      style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
-                      numberOfLines={1}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-                    >
-                      {t("study.title")}
-                    </Text>
-                  ),
-                  headerBackTitle: "",
-                  headerBackVisible: false,
-                  headerLeft: () => null,
-                  headerRight: () => null,
-                }
-          }
+          options={{
+            headerTitle: () => (
+              <Text
+                style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {t("study.title")}
+              </Text>
+            ),
+            headerBackTitle: "",
+            headerBackVisible: false,
+            headerLeft: () => null,
+            headerRight: () => null,
+          }}
         />
         <TextInput
           ref={completeRef}
@@ -546,28 +535,6 @@ export default function StudySessionScreen() {
             }
           }}
         />
-        {(Platform as any).isPad && (
-          <View
-            style={{
-              height: initialTopInsetRef.current + 44,
-              backgroundColor: theme.colors.surface,
-              justifyContent: "flex-end",
-              alignItems: "center",
-              paddingBottom: 10,
-            }}
-          >
-            <Text
-              style={{
-                fontWeight: "600",
-                fontSize: theme.fontSize.lg,
-                color: theme.colors.text,
-              }}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-            >
-              {t("study.title")}
-            </Text>
-          </View>
-        )}
         <View
           style={[
             styles.completeScreen,
@@ -932,7 +899,7 @@ export default function StudySessionScreen() {
             >
               <Ionicons
                 name="contract-outline"
-                size={Math.round(theme.fontSize.xl)}
+                size={Math.round(theme.fontSize.xxl)}
                 color={theme.colors.iconSubtle}
               />
             </Pressable>
@@ -944,8 +911,8 @@ export default function StudySessionScreen() {
                 accessibilityLabel={t("study.links")}
               >
                 <Ionicons
-                  name="link-outline"
-                  size={Math.round(theme.fontSize.xl)}
+                  name="link-sharp"
+                  size={Math.round(theme.fontSize.xxl)}
                   color={theme.colors.iconSubtle}
                 />
               </Pressable>
@@ -959,8 +926,8 @@ export default function StudySessionScreen() {
               }
             >
               <Ionicons
-                name="create-outline"
-                size={Math.round(theme.fontSize.xl)}
+                name="pencil-sharp"
+                size={Math.round(theme.fontSize.xxl)}
                 color={theme.colors.iconSubtle}
               />
             </Pressable>
@@ -1083,10 +1050,7 @@ export default function StudySessionScreen() {
     <>
       <StatusBar hidden={statusBarHidden} />
       <Stack.Screen
-        options={
-          (Platform as any).isPad
-            ? { headerShown: false, animation: "fade" }
-            : {
+        options={{
                 headerTitle: () => (
                   <Pressable
                     onPress={
@@ -1122,7 +1086,6 @@ export default function StudySessionScreen() {
                     )}
                   </Pressable>
                 ),
-                headerBackTitle: "",
                 headerShown: true,
                 headerRight: () => (
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -1133,7 +1096,7 @@ export default function StudySessionScreen() {
                         accessibilityLabel={t("study.links")}
                       >
                         <Ionicons
-                          name="link-outline"
+                          name="link-sharp"
                           size={Math.round(theme.fontSize.xxl)}
                           color={theme.colors.primary}
                         />
@@ -1148,15 +1111,14 @@ export default function StudySessionScreen() {
                       style={{ paddingHorizontal: 8 }}
                     >
                       <Ionicons
-                        name="create-outline"
-                        size={Math.round(theme.fontSize.xl)}
+                        name="pencil-sharp"
+                        size={Math.round(theme.fontSize.xxl)}
                         color={theme.colors.primary}
                       />
                     </Pressable>
                   </View>
                 ),
-              }
-        }
+        }}
       />
       <TextInput
         key={keyboardInputKey}
@@ -1178,58 +1140,6 @@ export default function StudySessionScreen() {
           }, 50);
         }}
       />
-      {(Platform as any).isPad && (
-        <View
-          style={{
-            height: initialTopInsetRef.current + 44,
-            backgroundColor: theme.colors.surface,
-            flexDirection: "row",
-            alignItems: "flex-end",
-            paddingHorizontal: 8,
-            paddingBottom: 10,
-          }}
-        >
-          <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 8 }}>
-            <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
-          </Pressable>
-          <Pressable
-            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-            style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
-          >
-            <Text
-              style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }}
-              numberOfLines={1}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-            >
-              {sessionTitle}
-            </Text>
-            {keyboardShortcutsEnabled && (
-              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-            )}
-          </Pressable>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {cardLinks.length > 0 && (
-              <Pressable
-                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
-                style={{ paddingHorizontal: 8 }}
-                accessibilityLabel={t("study.links")}
-              >
-                <Ionicons name="link-outline" size={22} color={theme.colors.primary} />
-              </Pressable>
-            )}
-            <Pressable
-              onPress={() =>
-                router.push(
-                  `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`,
-                )
-              }
-              style={{ paddingHorizontal: 8 }}
-            >
-              <Ionicons name="create-outline" size={Math.round(theme.fontSize.xl)} color={theme.colors.primary} />
-            </Pressable>
-          </View>
-        </View>
-      )}
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
@@ -1260,7 +1170,7 @@ export default function StudySessionScreen() {
                 styles.reviewedBadgeText,
                 { fontSize: theme.fontSize.sm },
               ]}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
               {result.reviewed}
             </Text>
@@ -1270,7 +1180,7 @@ export default function StudySessionScreen() {
               styles.progressText,
               { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm },
             ]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
           >
             {t("study.progress", {
               current: currentIndex + 1,
@@ -1389,7 +1299,7 @@ export default function StudySessionScreen() {
         >
           <Ionicons
             name="expand-outline"
-            size={Math.round(theme.fontSize.xl)}
+            size={Math.round(theme.fontSize.xxl)}
             color={theme.colors.iconSubtle}
           />
         </Pressable>
@@ -1460,17 +1370,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 8,
+    gap: 16,
     paddingHorizontal: 20,
     paddingTop: 6,
   },
   reviewedBadge: {
-    borderRadius: 999,
+    borderRadius: 12,
     minWidth: 28,
-    paddingHorizontal: 6,
+    paddingHorizontal: 10,
     paddingVertical: 3,
     alignItems: "center",
-    justifyContent: "center",
   },
   reviewedBadgeText: {
     fontWeight: "700",

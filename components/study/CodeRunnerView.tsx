@@ -292,9 +292,9 @@ export function CodeRunnerView({
                 activeOpacity={0.7}
               >
                 {isEditing ? (
-                  <Text style={[styles.editBtnText, styles.editBtnTextActive, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.done')}</Text>
+                  <Ionicons name="checkmark-sharp" size={Math.round(theme.fontSize.lg)} color="#9CDCFE" />
                 ) : (
-                  <Ionicons name="pencil" size={Math.round(theme.fontSize.sm)} color="#9CDCFE" />
+                  <Ionicons name="pencil-sharp" size={Math.round(theme.fontSize.lg)} color="#9CDCFE" />
                 )}
               </TouchableOpacity>
             </GestureDetector>
@@ -305,7 +305,7 @@ export function CodeRunnerView({
               <TouchableOpacity
                 style={[
                   styles.runBtn,
-                  { paddingVertical: Math.round(theme.fontSize.xs * 0.58), paddingHorizontal: theme.fontSize.sm },
+                  { paddingVertical: Math.round(theme.fontSize.xs * 0.58), paddingHorizontal: Math.round(theme.fontSize.sm * 1.5) },
                   isRunning && styles.runBtnDisabled,
                 ]}
                 activeOpacity={0.7}
@@ -318,7 +318,7 @@ export function CodeRunnerView({
                     style={styles.spinner}
                   />
                 ) : (
-                  <Text style={[styles.runBtnText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{'▶ ' + t('code.run')}</Text>
+                  <Ionicons name="caret-forward" size={Math.round(theme.fontSize.lg)} color="#FFF" />
                 )}
               </TouchableOpacity>
             </GestureDetector>

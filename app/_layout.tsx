@@ -3,7 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect } from 'react';
-import { ActivityIndicator, AppState, Platform, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, AppState, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
@@ -73,10 +73,7 @@ function RootStack() {
       <Stack.Screen name="tags/[tagId]/cards" />
       <Stack.Screen
         name="study/session"
-        options={(Platform as any).isPad
-          ? { headerShown: false, animation: 'fade', title: '' }
-          : { headerShown: true, animation: 'fade', title: '' }
-        }
+        options={{ headerShown: true, animation: 'fade', title: '' }}
       />
       <Stack.Screen name="search" />
     </Stack>

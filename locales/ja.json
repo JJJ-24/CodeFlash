@@ -6,7 +6,10 @@
     "cards": "{{count}} 枚",
     "sortManual": "  手動  ",
     "sortName": "  名前  ",
-    "sortCardCount": "  枚数  "
+    "sortCardCount": "  枚数  ",
+    "sortDescManual": "長押しで並び替え",
+    "sortDescName": "デッキ名順",
+    "sortDescCardCount": "カード枚数の多い順"
   },
   "deck": {
     "new": "新規デッキ",

@@ -6,7 +6,10 @@
     "cards": "{{count}} cards",
     "sortManual": "Manual",
     "sortName": "Name",
-    "sortCardCount": "Count"
+    "sortCardCount": "Count",
+    "sortDescManual": "Long-press to reorder",
+    "sortDescName": "Sorted by deck name",
+    "sortDescCardCount": "Most cards first"
   },
   "deck": {
     "new": "New Deck",

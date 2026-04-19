@@ -6,6 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'reac
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -109,10 +110,10 @@ function DeckCard({
   );
 }
 
-const SORT_OPTIONS: { key: DeckSortOrder; labelKey: string }[] = [
-  { key: 'manual',    labelKey: 'home.sortManual' },
-  { key: 'name',      labelKey: 'home.sortName' },
-  { key: 'cardCount', labelKey: 'home.sortCardCount' },
+const SORT_OPTIONS: { key: DeckSortOrder; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { key: 'manual',    icon: 'reorder-three-outline' },
+  { key: 'name',      icon: 'text-outline' },
+  { key: 'cardCount', icon: 'layers-outline' },
 ];
 
 export default function HomeScreen() {
@@ -192,11 +193,16 @@ export default function HomeScreen() {
         </Pressable>
       </View>
       <View style={styles.sectionRow}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {t('home.title')}
-        </Text>
+        <View style={styles.sectionTitleCol}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('home.title')}
+          </Text>
+          <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t(`home.sortDesc${deckSortOrder.charAt(0).toUpperCase()}${deckSortOrder.slice(1)}`)}
+          </Text>
+        </View>
         <View style={styles.sortButtons}>
-          {SORT_OPTIONS.map(({ key, labelKey }) => {
+          {SORT_OPTIONS.map(({ key, icon }) => {
             const active = deckSortOrder === key;
             return (
               <Pressable
@@ -204,16 +210,15 @@ export default function HomeScreen() {
                 onPress={() => setDeckSortOrder(key)}
                 style={[
                   styles.sortBtn,
-                  { borderColor: active ? theme.colors.primary : theme.colors.border },
+                  { borderColor: active ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                   active && { backgroundColor: theme.colors.primary },
                 ]}
               >
-                <Text style={[
-                  styles.sortBtnText,
-                  { color: active ? theme.colors.primaryText : theme.colors.textSecondary, fontSize: theme.fontSize.xs },
-                ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t(labelKey)}
-                </Text>
+                <Ionicons
+                  name={icon}
+                  size={theme.fontSize.xl}
+                  color={active ? theme.colors.primaryText : theme.colors.textSecondary}
+                />
               </Pressable>
             );
           })}
@@ -356,10 +361,11 @@ const styles = StyleSheet.create({
   statLabel: { marginTop: 2, textAlign: 'center' },
   sectionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
   sectionTitle: { fontWeight: '700' },
+  sectionTitleCol: { flexDirection: 'column', gap: 2, flex: 1 },
   sortButtons: { flexDirection: 'row', gap: 6 },
   sortBtn: {
     borderRadius: 6,
@@ -367,7 +373,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  sortBtnText: { fontWeight: '600' },
   listContent: { padding: 16, gap: 12, paddingBottom: 96 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   card: {

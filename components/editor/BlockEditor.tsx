@@ -315,6 +315,13 @@ export function BlockEditor({
     isTransitioningRef.current = true;
     setEditTriggerMap(prev => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
     setTimeout(() => { isTransitioningRef.current = false; }, 300);
+    // キーボード出現後にブロック末尾（カーソル位置）へスクロール
+    setTimeout(() => {
+      const pos = blockPositions.current[key];
+      if (pos && scrollRef.current) {
+        scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - 150), animated: true });
+      }
+    }, 300);
   }
 
   function handleKeyPress(key: string) {

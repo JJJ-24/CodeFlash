@@ -124,11 +124,20 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
   const learned = dist.again + dist.hard + dist.normal + dist.easy;
   const pct = total > 0 ? Math.round((learned / total) * 100) : 0;
 
+  // 凡例用（再度→難しい→普通→簡単→新規 の従来順）
   const slices: PieSlice[] = [
     { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
     { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
     { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
     { value: dist.easy,      color: GRADE_COLORS.easy,  label: t('grade.easy') },
+    { value: dist.unlearned, color: '#9E9E9E',           label: t('stats.unlearned') },
+  ];
+  // チャート描画用（12時から時計回りに 簡単→普通→難しい→再度→新規）
+  const chartSlices: PieSlice[] = [
+    { value: dist.easy,      color: GRADE_COLORS.easy,  label: t('grade.easy') },
+    { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
+    { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
+    { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
     { value: dist.unlearned, color: '#9E9E9E',           label: t('stats.unlearned') },
   ];
 
@@ -148,7 +157,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
       {/* ドーナツチャート */}
       <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
         <Circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R} fill={theme.colors.progressBg} />
-        {slices.filter((s) => s.value > 0).map((slice) => {
+        {chartSlices.filter((s) => s.value > 0).map((slice) => {
           const sweepDeg = (slice.value / total) * 360;
           const path = donutArcPath(cumDeg, cumDeg + sweepDeg);
           cumDeg += sweepDeg;

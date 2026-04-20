@@ -118,6 +118,7 @@ type PieSlice = { value: number; color: string; label: string };
 
 function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: AppTheme }) {
   const { t } = useTranslation();
+  const { width: screenWidth } = useWindowDimensions();
   const total = dist.again + dist.hard + dist.normal + dist.easy + dist.unlearned;
   if (total === 0) return null;
 
@@ -130,7 +131,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
     { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
     { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
     { value: dist.easy,      color: GRADE_COLORS.easy,  label: t('grade.easy') },
-    { value: dist.unlearned, color: '#9E9E9E',           label: t('stats.unlearned') },
+    ...(dist.unlearned > 0 ? [{ value: dist.unlearned, color: '#9E9E9E', label: t('stats.unlearned') }] : []),
   ];
   // チャート描画用（12時から時計回りに 簡単→普通→難しい→再度→新規）
   const chartSlices: PieSlice[] = [
@@ -169,7 +170,10 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
         </SvgText>
       </Svg>
       {/* グレード別横並びグリッド */}
-      <View style={pieStyles.gradeGrid}>
+      <View style={[pieStyles.gradeGrid, {
+        maxWidth: Math.min(screenWidth * 0.92, 520),
+        gap: Math.max(8, Math.round(theme.fontSize.xs * 0.9)),
+      }]}>
         {slices.map((slice) => {
           const pct = Math.round((slice.value / total) * 100);
           return (
@@ -180,7 +184,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
               <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
                 {slice.label}
               </Text>
-              <Text numberOfLines={1} style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {pct}%
               </Text>
             </View>
@@ -194,7 +198,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
 const pieStyles = StyleSheet.create({
   container: { alignItems: 'center', gap: 16, paddingVertical: 8 },
   learnedHeader: { marginBottom: 4 },
-  gradeGrid: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 4, paddingBottom: 4, maxWidth: 360, alignSelf: 'center', width: '100%' },
+  gradeGrid: { flexDirection: 'row', justifyContent: 'center', paddingTop: 4, paddingBottom: 4, alignSelf: 'center', width: '100%' },
   gradeGridItem: { flex: 1, alignItems: 'center', gap: 2 },
   gradeGridCount: { fontWeight: '700' },
 });

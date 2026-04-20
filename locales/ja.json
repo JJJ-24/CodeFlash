@@ -57,10 +57,13 @@
     "filterDescReview": "学習が必要なカード",
     "filterDescNew": "今日作成したカード",
     "reviewedOf": "学習済み {{reviewed}} / {{total}} 枚",
-    "skipped": "未評価",
+    "skipped": "評価なし",
     "reviewRate": "学習率",
     "correctRate": "正答率",
     "nextReview": "次回予定",
+    "nextReviewToday": "今日",
+    "nextReviewTomorrow": "明日",
+    "nextReviewDays": "{{count}}日後",
     "shuffle": "シャッフル"
   },
   "tag": {

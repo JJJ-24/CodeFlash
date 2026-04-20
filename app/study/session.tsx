@@ -85,7 +85,7 @@ export default function StudySessionScreen() {
   }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const theme = useTheme();
   const db = useSQLiteContext();
   const {
@@ -441,6 +441,7 @@ export default function StudySessionScreen() {
     const totalCards = result.totalCards;
     const skipped = totalCards - reviewed;
     const skipColor = theme.dark ? "#6B7280" : "#9CA3AF";
+    // 凡例用（再度→難しい→普通→簡単→評価なし の従来順）
     const gradeItems: { key: string; count: number; color: string }[] = [
       { key: t("grade.again"), count: again, color: GRADE_COLORS.again },
       { key: t("grade.hard"), count: hard, color: GRADE_COLORS.hard },
@@ -450,6 +451,14 @@ export default function StudySessionScreen() {
         ? [{ key: t("study.skipped"), count: skipped, color: skipColor }]
         : []),
     ];
+    // チャート描画用（12時から時計回りに 簡単→普通→難しい→再度→評価なし）
+    const gradeChartItems: { count: number; color: string }[] = [
+      { count: easy,    color: GRADE_COLORS.easy },
+      { count: good,    color: GRADE_COLORS.good },
+      { count: hard,    color: GRADE_COLORS.hard },
+      { count: again,   color: GRADE_COLORS.again },
+      ...(skipped > 0 ? [{ count: skipped, color: skipColor }] : []),
+    ];
     const gradeMaxLabelLen = Math.max(...gradeItems.map(g => g.key.length));
     const gradeLabelFontSize = gradeMaxLabelLen >= 3 ? theme.fontSize.xs : theme.fontSize.sm;
     const reviewRate =
@@ -458,33 +467,21 @@ export default function StudySessionScreen() {
       reviewed > 0 ? Math.round(((hard + good + easy) / reviewed) * 100) : 0;
     const nextReviewStr = result.earliestNextReview
       ? (() => {
-          const [, m, d] = result.earliestNextReview
-            .slice(0, 10)
-            .split("-")
-            .map(Number);
-          if (i18n.language === "ja") return `${m}月${d}日`;
-          const MONTHS = [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-          ];
-          return `${MONTHS[m - 1]} ${d}`;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const target = new Date(result.earliestNextReview.slice(0, 10));
+          target.setHours(0, 0, 0, 0);
+          const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+          if (diffDays <= 0) return t("study.nextReviewToday");
+          if (diffDays === 1) return t("study.nextReviewTomorrow");
+          return t("study.nextReviewDays", { count: diffDays });
         })()
       : null;
 
     let cumDeg = 0;
     const donutSlices =
       totalCards > 0
-        ? gradeItems
+        ? gradeChartItems
             .filter(({ count }) => count > 0)
             .map(({ color, count }) => {
               const sweepDeg = (count / totalCards) * 360;

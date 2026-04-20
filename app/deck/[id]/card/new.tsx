@@ -20,9 +20,8 @@ const CARD_EDITOR_SHORTCUTS_NORMAL = [
   { key: 'J / K',      descKey: 'shortcut.focusCardNextPrev' },
   { key: 'E',          descKey: 'shortcut.editBlock' },
   { key: 'D',          descKey: 'shortcut.deleteBlock' },
-  { key: 'Q',          descKey: 'shortcut.tabSwitchCard' },
-  { key: 'P',          descKey: 'shortcut.togglePreview' },
-  { key: 'O',          descKey: 'shortcut.enterSortMode' },
+  { key: 'Q',          descKey: 'shortcut.cycleEditorMode' },
+  { key: ', / .',      descKey: 'shortcut.tabSwitchCard' },
   { key: 'A',          descKey: 'shortcut.addBlock' },
   { key: 'R',          descKey: 'shortcut.run' },
   { key: 'T',          descKey: 'shortcut.scrollToTags' },
@@ -33,7 +32,7 @@ const CARD_EDITOR_SHORTCUTS_NORMAL = [
 const CARD_EDITOR_SHORTCUTS_SORT = [
   { key: 'J / K', descKey: 'shortcut.focusCardNextPrev' },
   { key: 'U / D', descKey: 'shortcut.moveBlock' },
-  { key: 'O',     descKey: 'shortcut.exitSortMode' },
+  { key: 'Q',     descKey: 'shortcut.cycleEditorMode' },
 ];
 
 export default function NewCardScreen() {

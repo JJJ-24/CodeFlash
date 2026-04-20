@@ -34,6 +34,7 @@ import { TagSelector } from "./TagSelector";
 import { TextBlockItem } from "./TextBlockItem";
 
 type Tab = "front" | "back" | "memo";
+type EditorMode = "edit" | "sort" | "preview";
 
 // エディタ内部でブロックを一意に識別するためのローカルキー付き型
 type EditBlock = Block & { _key: string };
@@ -123,6 +124,7 @@ export function BlockEditor({
   const isTransitioningRef = useRef(false);
   const isTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeTabRef = useRef<Tab>('front');
+  const editorModeRef = useRef<EditorMode>("edit");
   const isSortModeRef = useRef(false);
   const isPreviewRef = useRef(false);
   const currentBlocksRef = useRef<EditBlock[]>([]);
@@ -132,7 +134,9 @@ export function BlockEditor({
   const addAreaYRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
-  const [isPreview, setIsPreview] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>("edit");
+  const isPreview = editorMode === "preview";
+  const isSortMode = editorMode === "sort";
   const [frontBlocks, setFrontBlocks] = useState<EditBlock[]>(() =>
     toEditBlocks(initialData?.frontBlocks ?? [newTextBlock()]),
   );
@@ -145,7 +149,6 @@ export function BlockEditor({
   const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
   const [addMenuVisible, setAddMenuVisible] = useState(false);
   const [addMenuFocusIndex, setAddMenuFocusIndex] = useState(0);
-  const [isSortMode, setIsSortMode] = useState(false);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
   const [moveCount, setMoveCount] = useState(0);
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
@@ -226,6 +229,7 @@ export function BlockEditor({
 
   // Sync mutable state into refs so key handlers always see fresh values
   activeTabRef.current = activeTab;
+  editorModeRef.current = editorMode;
   isSortModeRef.current = isSortMode;
   isPreviewRef.current = isPreview;
   currentBlocksRef.current = currentBlocks;
@@ -243,8 +247,8 @@ export function BlockEditor({
   }, [isFrontEmpty]);
 
   useEffect(() => {
-    if (!isSortMode) setSelectedBlockKey(null);
-  }, [isSortMode]);
+    if (editorMode !== "sort") setSelectedBlockKey(null);
+  }, [editorMode]);
 
   useEffect(() => {
     if (addMenuVisible) {
@@ -355,6 +359,11 @@ export function BlockEditor({
       return;
     }
 
+    const cycleMode = () => {
+      const modes: EditorMode[] = ["edit", "sort", "preview"];
+      setEditorMode(prev => modes[(modes.indexOf(prev) + 1) % 3]);
+    };
+
     if (inSort) {
       if (k === 'j') {
         setSelectedBlockKey(null);
@@ -378,8 +387,8 @@ export function BlockEditor({
           moveBlock(tab, blocks[idx]._key, 'down');
           setFocusedBlockIndex(idx + 1);
         }
-      } else if (k === 'o') {
-        setIsSortMode(false);
+      } else if (k === 'q') {
+        cycleMode();
       }
       return;
     }
@@ -395,13 +404,13 @@ export function BlockEditor({
         return prev > 0 ? prev - 1 : null;
       });
     } else if (k === 'q') {
+      cycleMode();
+    } else if (key === ',') {
+      const tabOrder: Tab[] = ['front', 'back', 'memo'];
+      setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) - 1 + 3) % 3]);
+    } else if (key === '.') {
       const tabOrder: Tab[] = ['front', 'back', 'memo'];
       setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) + 1) % 3]);
-    } else if (k === 'p') {
-      setIsPreview(v => !v);
-      setIsSortMode(false);
-    } else if (k === 'o') {
-      if (!isPreviewRef.current) setIsSortMode(true);
     } else if (k === 'a') {
       if (!isPreviewRef.current) {
         setAddMenuVisible(v => {
@@ -703,46 +712,33 @@ export function BlockEditor({
             </Text>
           </Pressable>
         ))}
-        {/* 並替モードトグル */}
-        <Pressable
-          style={[
-            styles.sortToggle,
-            { backgroundColor: theme.colors.background },
-            isSortMode && { backgroundColor: theme.colors.primaryLight },
-          ]}
-          onPress={() => setIsSortMode((v) => !v)}
-        >
-          <Ionicons
-            name="reorder-three-outline"
-            size={theme.fontSize.lg}
-            color={
-              isSortMode ? theme.colors.primary : theme.colors.textSecondary
-            }
-          />
-        </Pressable>
-        {/* プレビュー切替 */}
-        <Pressable
-          style={[
-            styles.previewToggle,
-            { backgroundColor: theme.colors.background },
-            isPreview && { backgroundColor: theme.colors.primaryLight },
-          ]}
-          onPress={() => { setIsPreview((v) => !v); setIsSortMode(false); }}
-        >
-          <Text
-            style={[
-              styles.previewToggleText,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.fontSize.xs,
-              },
-              isPreview && styles.previewToggleTextActive,
-            ]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-          >
-            {isPreview ? t("common.edit") : t("editor.preview")}
-          </Text>
-        </Pressable>
+        {/* モード3択ボタン */}
+        <View style={styles.modeButtons}>
+          {([
+            { mode: "edit" as EditorMode,    icon: "pencil-outline"       as const },
+            { mode: "sort" as EditorMode,    icon: "reorder-three-outline" as const },
+            { mode: "preview" as EditorMode, icon: "eye-outline"           as const },
+          ] as const).map(({ mode, icon }) => {
+            const active = editorMode === mode;
+            return (
+              <Pressable
+                key={mode}
+                style={[
+                  styles.modeBtn,
+                  { backgroundColor: theme.colors.background, paddingHorizontal: (Platform as any).isPad ? 32 : 9 },
+                  active && { backgroundColor: theme.colors.primaryLight },
+                ]}
+                onPress={() => setEditorMode(mode)}
+              >
+                <Ionicons
+                  name={icon}
+                  size={theme.fontSize.lg}
+                  color={active ? theme.colors.primary : theme.colors.textSecondary}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <ScrollView
@@ -783,7 +779,7 @@ export function BlockEditor({
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
                   isLast={isLast}
-                  onCollapsedDoubleTap={() => setIsSortMode(false)}
+                  onCollapsedDoubleTap={() => setEditorMode("edit")}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
@@ -860,23 +856,16 @@ const styles = StyleSheet.create({
   tabActive: { borderBottomColor: "#1976D2" },
   tabText: { fontWeight: "500" },
   tabTextActive: { color: "#1976D2", fontWeight: "700" },
-  sortToggle: {
+  modeButtons: {
     marginLeft: "auto",
+    flexDirection: "row",
+    alignSelf: "center",
+    gap: 4,
+  },
+  modeBtn: {
     paddingVertical: 7,
-    paddingHorizontal: 10,
     borderRadius: 6,
-    alignSelf: "center",
   },
-  previewToggle: {
-    marginLeft: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    alignSelf: "center",
-    minWidth: 80,
-    alignItems: "center",
-  },
-  previewToggleTextActive: { color: "#1976D2", fontWeight: "600" },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
   addArea: { marginTop: 4 },

@@ -129,6 +129,7 @@ export function BlockEditor({
   const addMenuVisibleRef = useRef(false);
   const addMenuFocusIndexRef = useRef(0);
   const editingBlockKeyRef = useRef<string | null>(null);
+  const addAreaYRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [isPreview, setIsPreview] = useState(false);
@@ -248,7 +249,9 @@ export function BlockEditor({
   useEffect(() => {
     if (addMenuVisible) {
       setTimeout(() => {
-        scrollRef.current?.scrollToEnd({ animated: true });
+        // scrollToEnd ではメニュー下のタグ欄まで行き過ぎるため、
+        // addArea の先頭が画面上端付近に来るようスクロールする
+        scrollRef.current?.scrollTo({ y: Math.max(0, addAreaYRef.current - 16), animated: true });
       }, 50);
     }
   }, [addMenuVisible]);
@@ -481,7 +484,7 @@ export function BlockEditor({
     <>
       {/* ブロック追加ボタン */}
       {!isPreview && (
-        <View style={styles.addArea}>
+        <View style={styles.addArea} onLayout={(e) => { addAreaYRef.current = e.nativeEvent.layout.y; }}>
           {addMenuVisible ? (
             <View
               style={[

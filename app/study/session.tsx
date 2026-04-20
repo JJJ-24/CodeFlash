@@ -912,7 +912,7 @@ export default function StudySessionScreen() {
               >
                 <Ionicons
                   name="link-sharp"
-                  size={Math.round(theme.fontSize.xxl)}
+                  size={Math.round(theme.fontSize.xl)}
                   color={theme.colors.iconSubtle}
                 />
               </Pressable>
@@ -927,7 +927,7 @@ export default function StudySessionScreen() {
             >
               <Ionicons
                 name="pencil-sharp"
-                size={Math.round(theme.fontSize.xxl)}
+                size={Math.round(theme.fontSize.xl)}
                 color={theme.colors.iconSubtle}
               />
             </Pressable>
@@ -1097,7 +1097,7 @@ export default function StudySessionScreen() {
                       >
                         <Ionicons
                           name="link-sharp"
-                          size={Math.round(theme.fontSize.xxl)}
+                          size={Math.round(theme.fontSize.xl)}
                           color={theme.colors.primary}
                         />
                       </Pressable>
@@ -1112,7 +1112,7 @@ export default function StudySessionScreen() {
                     >
                       <Ionicons
                         name="pencil-sharp"
-                        size={Math.round(theme.fontSize.xxl)}
+                        size={Math.round(theme.fontSize.xl)}
                         color={theme.colors.primary}
                       />
                     </Pressable>

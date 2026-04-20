@@ -12,8 +12,8 @@ const isPad = (Platform as any).isPad;
  */
 export const MAX_FONT_MULTIPLIER = {
   ui:      isPad ? 1.8 : 1.3,
-  content: isPad ? 2.8 : 1.8,
-  label:   isPad ? 2.5 : 1.5,
+  label:   isPad ? 2.3 : 1.4,
+  content: isPad ? 2.5 : 1.5,
 } as const;
 
 export interface AppColors {

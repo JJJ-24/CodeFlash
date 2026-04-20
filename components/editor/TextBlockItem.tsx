@@ -30,9 +30,11 @@ interface Props {
   editTrigger?: number;
   /** TextInput のフォーカスが外れたとき BlockEditor に通知するコールバック */
   onEditBlur?: () => void;
+  /** スクロール中かどうかを返す（スクロールによる誤フォーカス防止） */
+  getIsScrolling?: () => boolean;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur, getIsScrolling }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -180,11 +182,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           ) : null}
         </View>
       ) : (
-        // 水平 ScrollView でラップすることで、iOS の「scroll to first responder」を
-        // 水平方向で吸収し、外側の縦 ScrollView への自動スクロールを防ぐ。
-        // （CodeBlockItem と同じ機構）
         <View style={styles.inputArea}>
-          <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} bounces={false}>
+          <ScrollView horizontal scrollEnabled showsHorizontalScrollIndicator={false} style={{ width: width - 32 }}>
             <TextInput
               ref={inputRef}
               style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md, width: width - 32 }]}
@@ -194,7 +193,14 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
               scrollEnabled={false}
               placeholder={t('card.textBlockPlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
-              onFocus={() => { setFocused(true); onFocusInput?.(); }}
+              onFocus={() => {
+                if (getIsScrolling?.()) {
+                  setTimeout(() => inputRef.current?.blur(), 0);
+                  return;
+                }
+                setFocused(true);
+                onFocusInput?.();
+              }}
               onBlur={() => { setFocused(false); onEditBlur?.(); }}
               textAlignVertical="top"
               autoCorrect={false}

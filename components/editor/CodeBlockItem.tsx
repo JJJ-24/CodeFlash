@@ -46,9 +46,11 @@ interface Props {
   editTrigger?: number;
   onEditBlur?: () => void;
   runTrigger?: number;
+  /** スクロール中かどうかを返す（スクロールによる誤フォーカス防止） */
+  getIsScrolling?: () => boolean;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, runTrigger }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, runTrigger, getIsScrolling }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -182,7 +184,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   scrollEnabled={false}
                   placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
-                  onFocus={() => { setFocused(true); onFocusInput?.(); }}
+                  onFocus={() => {
+                    if (getIsScrolling?.()) {
+                      setTimeout(() => codeInputRef.current?.blur(), 0);
+                      return;
+                    }
+                    setFocused(true);
+                    onFocusInput?.();
+                  }}
                   onBlur={() => { setFocused(false); onEditBlur?.(); }}
                   textAlignVertical="top"
                   autoCapitalize="none"

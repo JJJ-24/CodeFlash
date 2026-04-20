@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -11,7 +12,8 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   Alert,
-  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -110,8 +112,9 @@ export function BlockEditor({
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const scrollRef = useRef<ScrollView>(null);
+  const isScrollingRef = useRef(false);
+  const getIsScrolling = useCallback(() => isScrollingRef.current, []);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
-  const scrollOffsetRef = useRef(0);
   const keyboardRef = useRef<TextInput>(null);
   const focusedBlockIndexRef = useRef<number | null>(null);
   const isTransitioningRef = useRef(false);
@@ -246,28 +249,6 @@ export function BlockEditor({
       }, 50);
     }
   }, [addMenuVisible]);
-
-  // キーボード高さをトラッキングして contentContainerStyle の paddingBottom に反映する。
-  // automaticallyAdjustKeyboardInsets を使わずに手動で制御することで、
-  // iOS が contentInset を変更する際に発生するカーソル位置への自動スクロールを防ぐ。
-  const [kbHeight, setKbHeight] = useState(0);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardWillShow', (e: { endCoordinates: { height: number } }) => {
-      setKbHeight(e.endCoordinates.height);
-      // キーボードが現れるとき、編集中のブロックがキーボードで隠れないようスクロールする
-      setTimeout(() => {
-        const key = editingBlockKeyRef.current;
-        if (!key || !scrollRef.current) return;
-        const pos = blockPositions.current[key];
-        if (!pos) return;
-        scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
-      }, 50);
-    });
-    const hide = Keyboard.addListener('keyboardWillHide', () => {
-      setKbHeight(0);
-    });
-    return () => { show.remove(); hide.remove(); };
-  }, []);
 
   // タブ切替でブロックフォーカスをリセット
   useEffect(() => {
@@ -648,7 +629,7 @@ export function BlockEditor({
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TextInput
         ref={keyboardRef}
         style={styles.hiddenKeyboardInput}
@@ -751,10 +732,12 @@ export function BlockEditor({
       <ScrollView
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={[styles.content, kbHeight > 0 && { paddingBottom: kbHeight + 16 }]}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={100}
+        onScrollBeginDrag={() => { isScrollingRef.current = true; }}
+        onScrollEndDrag={() => { setTimeout(() => { isScrollingRef.current = false; }, 150); }}
+        onMomentumScrollEnd={() => { isScrollingRef.current = false; }}
       >
         {currentBlocks.map((block, index) => {
           const isLast = currentBlocks.length === 1;
@@ -787,17 +770,8 @@ export function BlockEditor({
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
-                  onFocusInput={() => {
-                    handleBlockTapFocus(block._key);
-                    setTimeout(() => {
-                      const pos = blockPositions.current[block._key];
-                      if (!pos || !scrollRef.current) return;
-                      const currentY = scrollOffsetRef.current;
-                      // すでにブロック内を表示中なら自動スクロールしない
-                      if (currentY > pos.y - 80 && currentY < pos.y + pos.h) return;
-                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
-                    }, 300);
-                  }}
+                  onFocusInput={() => handleBlockTapFocus(block._key)}
+                  getIsScrolling={getIsScrolling}
                 />
               )}
               {block.type === "code" && (
@@ -816,6 +790,7 @@ export function BlockEditor({
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   runTrigger={runTriggerMap[block._key] ?? 0}
+                  getIsScrolling={getIsScrolling}
                   onRunStart={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
@@ -823,17 +798,7 @@ export function BlockEditor({
                       scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - 300), animated: true });
                     }, 300);
                   }}
-                  onFocusInput={() => {
-                    handleBlockTapFocus(block._key);
-                    setTimeout(() => {
-                      const pos = blockPositions.current[block._key];
-                      if (!pos || !scrollRef.current) return;
-                      const currentY = scrollOffsetRef.current;
-                      // すでにブロック内を表示中なら自動スクロールしない
-                      if (currentY > pos.y - 80 && currentY < pos.y + pos.h) return;
-                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
-                    }, 300);
-                  }}
+                  onFocusInput={() => handleBlockTapFocus(block._key)}
                 />
               )}
               {block.type === "image" && (
@@ -849,17 +814,7 @@ export function BlockEditor({
                   autoFocus={block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
                   onEditBlur={handleBlockEditBlur}
-                  onFocusInput={() => {
-                    handleBlockTapFocus(block._key);
-                    setTimeout(() => {
-                      const pos = blockPositions.current[block._key];
-                      if (!pos || !scrollRef.current) return;
-                      const currentY = scrollOffsetRef.current;
-                      // すでにブロック内を表示中なら自動スクロールしない
-                      if (currentY > pos.y - 80 && currentY < pos.y + pos.h) return;
-                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
-                    }, 300);
-                  }}
+                  onFocusInput={() => handleBlockTapFocus(block._key)}
                 />
               )}
             </View>
@@ -867,7 +822,7 @@ export function BlockEditor({
         })}
         {footerContent}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

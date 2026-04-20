@@ -21,6 +21,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
@@ -111,7 +112,9 @@ export function BlockEditor({
   const { t } = useTranslation();
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
+  const scrollViewHeightRef = useRef(windowHeight);
   const isScrollingRef = useRef(false);
   const getIsScrolling = useCallback(() => isScrollingRef.current, []);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
@@ -315,13 +318,16 @@ export function BlockEditor({
     isTransitioningRef.current = true;
     setEditTriggerMap(prev => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
     setTimeout(() => { isTransitioningRef.current = false; }, 300);
-    // キーボード出現後にブロック末尾（カーソル位置）へスクロール
-    setTimeout(() => {
+    // ブロック末尾（カーソル位置）が画面最下部に来るようスクロール
+    // 2段階: t=100ms で scrollRectToVisible を即時上書き、t=350ms でキーボード出現後に最終補正
+    const scrollToBlockEnd = (animated: boolean) => {
       const pos = blockPositions.current[key];
-      if (pos && scrollRef.current) {
-        scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - 150), animated: true });
-      }
-    }, 300);
+      if (!pos || !scrollRef.current) return;
+      const viewH = scrollViewHeightRef.current;
+      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - viewH + 24), animated });
+    };
+    setTimeout(() => scrollToBlockEnd(false), 100);
+    setTimeout(() => scrollToBlockEnd(true), 350);
   }
 
   function handleKeyPress(key: string) {
@@ -740,6 +746,7 @@ export function BlockEditor({
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
+        onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={100}
         onScrollBeginDrag={() => { isScrollingRef.current = true; }}

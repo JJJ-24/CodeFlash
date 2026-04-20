@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type RefObject } from 'react';
-import { Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -79,6 +79,28 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   const [editingBlockIdx, setEditingBlockIdx] = useState<number | null>(null);
   const [exitEditTriggers, setExitEditTriggers] = useState<Record<number, number>>({});
 
+  // ブロック末尾（シンボルパレット含む）がキーボード上端より 16px 上に来るようスクロール。
+  // measure() の pageY（ScrollView のスクリーン上 Y 座標）を使い、
+  // "スクリーン高さ - キーボード高さ - ScrollView 上端" でキーボード上の実表示高さを正確に算出する。
+  // svH - kh だけでは ScrollView の画面上位置を考慮しないため過小推計になる場合がある。
+  function scrollToBlockEnd(blockIdx: number, kh: number) {
+    if (!scrollRef?.current) return;
+    const base = scrollBaseYRef?.current ?? 0;
+    const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
+    const blockH = blockHeights.current[blockIdx] ?? 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (scrollRef.current as any).measure?.((
+      _x: number, _y: number, _w: number, svH: number, _pageX: number, pageY: number
+    ) => {
+      const screenH = Dimensions.get('window').height;
+      const visibleH = Math.max(80, Math.min(svH, screenH - kh - pageY));
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, blockY + blockH - visibleH + 16),
+        animated: true,
+      });
+    });
+  }
+
   function handleEditRequest(blockIdx: number) {
     const prev = editingBlockIdxRef.current;
     if (prev !== null && prev !== blockIdx) {
@@ -88,23 +110,10 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     setEditingBlockIdx(blockIdx);
     onSelectCodeBlock?.(codeBlockIndexMap[blockIdx]);
 
-    // 編集開始時: FlipCard の 3D トランスフォームにより iOS の自動スクロールが
-    // 機能しないため、TextInput レンダリング後（400ms）にカーソル位置（ブロック末尾）
-    // が見えるよう手動スクロールする。
-    // キーボードがすでに表示中の場合（別ブロックから切り替え）は kbHeightRef が有効。
-    // キーボードが新規表示される場合は keyboardWillShow リスナーが改めてスクロールする。
+    // FlipCard の 3D トランスフォームにより iOS の自動スクロールが機能しないため
+    // レンダリング完了後（400ms）に手動スクロール。
     if (scrollRef?.current) {
-      setTimeout(() => {
-        const base = scrollBaseYRef?.current ?? 0;
-        const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
-        const blockH = blockHeights.current[blockIdx] ?? 0;
-        const kh = kbHeightRef.current;
-        // kh > 0 の場合: キーボード高さ + シンボルパレット分（約60px）を加算
-        scrollRef.current?.scrollTo({
-          y: Math.max(0, blockY + blockH - 300 + kh + (kh > 0 ? 60 : 0)),
-          animated: true,
-        });
-      }, 400);
+      setTimeout(() => scrollToBlockEnd(blockIdx, kbHeightRef.current), 400);
     }
   }
 
@@ -126,14 +135,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       kbHeightRef.current = kh;
       const blockIdx = editingBlockIdxRef.current;
       if (blockIdx === null || !scrollRef?.current) return;
-      const base = scrollBaseYRef?.current ?? 0;
-      const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
-      const blockH = blockHeights.current[blockIdx] ?? 0;
-      // シンボルパレット（約60px）+ キーボード高さ分だけ余分にスクロール
-      scrollRef.current.scrollTo({
-        y: Math.max(0, blockY + blockH - 300 + kh + 60),
-        animated: true,
-      });
+      scrollToBlockEnd(blockIdx, kh);
     });
     const hide = Keyboard.addListener('keyboardWillHide', () => {
       kbHeightRef.current = 0;

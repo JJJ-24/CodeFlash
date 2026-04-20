@@ -80,10 +80,10 @@
     "duplicateName": "同じ名前のタグがすでに存在します"
   },
   "grade": {
-    "again": "再度",
-    "hard": "難しい",
-    "good": "普通",
-    "easy": "簡単"
+    "again": "もう一度",
+    "hard": "うろ覚え",
+    "good": "わかった",
+    "easy": "バッチリ"
   },
   "card": {
     "new": "新規カード",
@@ -157,7 +157,8 @@
     "totalProgress": "全体学習率",
     "learned": "済み",
     "statDue": "復習",
-    "unlearned": "新規",
+    "new": "新規",
+    "unlearned": "新規未習",
     "newToday": "新規",
     "deckMastery": "デッキ別習熟度",
     "mastery": "習熟度",

@@ -260,7 +260,7 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
         <View style={[styles.masteryBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
       <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-        {t('stats.learned')}: {mastery.learnedCount}{'        '}{t('stats.unlearned')}: {mastery.newCount}
+        {t('stats.learned')}: {mastery.learnedCount}{'        '}{t('stats.new')}: {mastery.newCount}
       </Text>
     </Pressable>
   );
@@ -673,7 +673,7 @@ export default function StatsScreen() {
               {t('stats.learned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{learned}</Text>
             </Text>
             <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {t('stats.unlearned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{unlearned}</Text>
+              {t('stats.new')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{unlearned}</Text>
             </Text>
             <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{learnedPct}%</Text>
           </View>

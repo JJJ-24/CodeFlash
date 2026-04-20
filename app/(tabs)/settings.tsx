@@ -503,7 +503,7 @@ dataRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 44,
+    paddingVertical: 6,
   },
   notificationLabel: { flex: 1 },
 });

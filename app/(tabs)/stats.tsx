@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
@@ -271,7 +271,8 @@ function DonutSheet({
   theme: AppTheme;
 }) {
   const { t } = useTranslation();
-  const sheetY = useSharedValue(500);
+  const { height: screenHeight } = useWindowDimensions();
+  const sheetY = useSharedValue(screenHeight);
   const overlayOpacity = useSharedValue(0);
 
   useEffect(() => {
@@ -280,9 +281,9 @@ function DonutSheet({
       sheetY.value = withTiming(0, { duration: 250 });
     } else {
       overlayOpacity.value = withTiming(0, { duration: 200 });
-      sheetY.value = withTiming(500, { duration: 250 });
+      sheetY.value = withTiming(screenHeight, { duration: 250 });
     }
-  }, [visible]);
+  }, [visible, screenHeight]);
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));

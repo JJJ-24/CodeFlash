@@ -277,7 +277,7 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   langChevron: { color: '#9CDCFE' },
   headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   execLabel: { color: '#9E9E9E' },
-  execSwitch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] },
+  execSwitch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }], alignSelf: 'center' },
   runBtn: {
     backgroundColor: '#1976D2',
     borderRadius: 6,

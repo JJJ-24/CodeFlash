@@ -50,26 +50,56 @@ export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promis
 
 export type SearchField = 'all' | 'front' | 'back' | 'memo';
 
+function hiraganaToKatakana(str: string): string {
+  return str.replace(/[\u3041-\u3096]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+}
+
+function katakanaToHiragana(str: string): string {
+  return str.replace(/[\u30A1-\u30F6]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+}
+
+function kanaVariantPatterns(query: string): string[] {
+  const variants = new Set([query, hiraganaToKatakana(query), katakanaToHiragana(query)]);
+  return Array.from(variants).map((v) => `%${v}%`);
+}
+
+function kanaLikeClause(col: string, patterns: string[]): { clause: string; params: string[] } {
+  return {
+    clause: `(${patterns.map(() => `${col} LIKE ?`).join(' OR ')})`,
+    params: patterns,
+  };
+}
+
 export async function searchCards(db: SQLiteDatabase, query: string, field: SearchField = 'all'): Promise<Card[]> {
-  const p = `%${query}%`;
+  const patterns = kanaVariantPatterns(query);
   let sql: string;
   let params: string[];
   switch (field) {
-    case 'front':
-      sql = 'SELECT * FROM cards WHERE frontContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
-      params = [p];
+    case 'front': {
+      const c = kanaLikeClause('frontContent', patterns);
+      sql = `SELECT * FROM cards WHERE ${c.clause} ORDER BY updatedAt DESC LIMIT 100`;
+      params = c.params;
       break;
-    case 'back':
-      sql = 'SELECT * FROM cards WHERE backContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
-      params = [p];
+    }
+    case 'back': {
+      const c = kanaLikeClause('backContent', patterns);
+      sql = `SELECT * FROM cards WHERE ${c.clause} ORDER BY updatedAt DESC LIMIT 100`;
+      params = c.params;
       break;
-    case 'memo':
-      sql = 'SELECT * FROM cards WHERE memoContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
-      params = [p];
+    }
+    case 'memo': {
+      const c = kanaLikeClause('memoContent', patterns);
+      sql = `SELECT * FROM cards WHERE ${c.clause} ORDER BY updatedAt DESC LIMIT 100`;
+      params = c.params;
       break;
-    default:
-      sql = 'SELECT * FROM cards WHERE frontContent LIKE ? OR backContent LIKE ? OR memoContent LIKE ? ORDER BY updatedAt DESC LIMIT 100';
-      params = [p, p, p];
+    }
+    default: {
+      const f = kanaLikeClause('frontContent', patterns);
+      const b = kanaLikeClause('backContent', patterns);
+      const m = kanaLikeClause('memoContent', patterns);
+      sql = `SELECT * FROM cards WHERE ${f.clause} OR ${b.clause} OR ${m.clause} ORDER BY updatedAt DESC LIMIT 100`;
+      params = [...f.params, ...b.params, ...m.params];
+    }
   }
   const rows = await db.getAllAsync<RawCard>(sql, params);
   return rows.map(toCard);

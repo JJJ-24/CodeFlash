@@ -82,23 +82,23 @@ export default function DeckDetailScreen() {
   const [descExpanded, setDescExpanded] = useState(false);
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
-    { key: 'Space',     descKey: 'settings.shortcutStartStudy' },
-    { key: '1–4',       descKey: 'settings.shortcutFilterSwitch' },
-    { key: 'J / K',     descKey: 'settings.shortcutFocusCardNextPrev' },
-    { key: 'P', descKey: 'settings.shortcutEditCard' },
-    { key: 'D',         descKey: 'settings.shortcutDeleteCard' },
-    { key: 'N',         descKey: 'settings.shortcutNewCard' },
-    { key: 'S',         descKey: 'settings.shortcutToggleSelect' },
-    { key: 'B',         descKey: 'settings.shortcutBack' },
+    { key: 'Space',     descKey: 'shortcut.startStudy' },
+    { key: '1–4',       descKey: 'shortcut.filterSwitch' },
+    { key: 'J / K',     descKey: 'shortcut.focusCardNextPrev' },
+    { key: 'P', descKey: 'shortcut.editCard' },
+    { key: 'D',         descKey: 'shortcut.deleteCard' },
+    { key: 'N',         descKey: 'shortcut.newCard' },
+    { key: 'S',         descKey: 'shortcut.toggleSelect' },
+    { key: 'B',         descKey: 'shortcut.back' },
   ];
   const DECK_SHORTCUTS_SELECT = [
-    { key: 'J / K',   descKey: 'settings.shortcutFocusCardNextPrev' },
-    { key: 'Space', descKey: 'settings.shortcutToggleCheck' },
-    { key: 'A',     descKey: 'settings.shortcutSelectAll' },
-    { key: 'M',     descKey: 'settings.shortcutMoveSelected' },
-    { key: 'D',     descKey: 'settings.shortcutDeleteSelected' },
-    { key: 'C',     descKey: 'settings.shortcutDuplicateSelected' },
-    { key: 'S',     descKey: 'settings.shortcutExitSelect' },
+    { key: 'J / K',   descKey: 'shortcut.focusCardNextPrev' },
+    { key: 'Space', descKey: 'shortcut.toggleCheck' },
+    { key: 'A',     descKey: 'shortcut.selectAll' },
+    { key: 'M',     descKey: 'shortcut.moveSelected' },
+    { key: 'D',     descKey: 'shortcut.deleteSelected' },
+    { key: 'C',     descKey: 'shortcut.duplicateSelected' },
+    { key: 'S',     descKey: 'shortcut.exitSelect' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
@@ -668,8 +668,8 @@ export default function DeckDetailScreen() {
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="75%"
         sections={[
-          { title: t('settings.shortcutNormalMode'), items: DECK_SHORTCUTS_NORMAL },
-          { title: t('settings.shortcutSelectMode'), items: DECK_SHORTCUTS_SELECT },
+          { title: t('shortcut.normalMode'), items: DECK_SHORTCUTS_NORMAL },
+          { title: t('shortcut.selectMode'), items: DECK_SHORTCUTS_SELECT },
         ]}
       />
     </GestureHandlerRootView>

@@ -28,12 +28,13 @@ import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
 
 const TAG_SHORTCUTS = [
-  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Return', descKey: 'settings.shortcutOpenTag' },
-  { key: 'P',     descKey: 'settings.shortcutEditTag' },
-  { key: 'D',     descKey: 'settings.shortcutDeleteTag' },
-  { key: 'N',     descKey: 'settings.shortcutNewTag' },
-  { key: 'B',     descKey: 'settings.shortcutBack' },
+  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+  { key: 'Return', descKey: 'shortcut.openTag' },
+  { key: 'P',     descKey: 'shortcut.editTag' },
+  { key: 'D',     descKey: 'shortcut.deleteTag' },
+  { key: 'N',     descKey: 'shortcut.newTag' },
+  { key: 'Q',     descKey: 'shortcut.toggleSort' },
+  { key: 'B',     descKey: 'shortcut.back' },
 ];
 
 export default function TagsScreen() {
@@ -128,6 +129,9 @@ export default function TagsScreen() {
             }
           } else if (k === 'n') {
             router.push('/tags/new');
+          } else if (k === 'q') {
+            const idx = SORT_OPTIONS.findIndex(o => o.key === tagSortOrder);
+            setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
           } else if (k === 'b') {
             router.back();
           }

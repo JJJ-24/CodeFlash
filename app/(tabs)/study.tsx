@@ -47,12 +47,12 @@ function sumValues(map: Record<string, number>): number {
 }
 
 const STUDY_TAB_SHORTCUTS = [
-  { key: '1–4',   descKey: 'settings.shortcutFilterSwitch' },
-  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Return', descKey: 'settings.shortcutStartStudyFocused' },
-  { key: 'S',     descKey: 'settings.shortcutToggleShuffle' },
-  { key: 'Q',     descKey: 'settings.shortcutToggleTab' },
-  { key: ', / .', descKey: 'settings.shortcutTabNextPrev' },
+  { key: '1–4',   descKey: 'shortcut.filterSwitch' },
+  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+  { key: 'Return', descKey: 'shortcut.startStudyFocused' },
+  { key: 'S',     descKey: 'shortcut.toggleShuffle' },
+  { key: 'Q',     descKey: 'shortcut.toggleTab' },
+  { key: ', / .', descKey: 'shortcut.tabNextPrev' },
 ];
 
 export default function StudyScreen() {

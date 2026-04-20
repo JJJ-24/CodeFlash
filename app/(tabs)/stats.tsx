@@ -34,10 +34,10 @@ import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/c
 import type { Deck } from '@/types';
 
 const STATS_SHORTCUTS = [
-  { key: '1–4',   descKey: 'settings.shortcutSelectBlock' },
-  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'Space', descKey: 'settings.shortcutOpenDonut' },
-  { key: ', / .', descKey: 'settings.shortcutTabNextPrev' },
+  { key: '1–4',   descKey: 'shortcut.selectBlock' },
+  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+  { key: 'Space', descKey: 'shortcut.openDonut' },
+  { key: ', / .', descKey: 'shortcut.tabNextPrev' },
 ];
 
 const HEATMAP_WEEKS = 52; // 約1年分

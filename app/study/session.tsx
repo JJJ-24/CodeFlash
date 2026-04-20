@@ -62,18 +62,18 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
 ];
 
 const SESSION_SHORTCUTS = [
-  { key: "Space", descKey: "settings.shortcutFlip" },
-  { key: "1–4", descKey: "settings.shortcutGrade" },
-  { key: ", / .", descKey: "settings.shortcutNextPrev" },
-  { key: "M", descKey: "settings.shortcutMemo" },
-  { key: "F", descKey: "settings.shortcutFullscreen" },
-  { key: "J / K", descKey: "settings.shortcutFocusBlockNextPrev" },
-  { key: "R", descKey: "settings.shortcutRun" },
-  { key: "E", descKey: "settings.shortcutEdit" },
-  { key: "U / D", descKey: "settings.shortcutScrollUpDown" },
-  { key: "B", descKey: "settings.shortcutBack" },
-  { key: "L", descKey: "settings.shortcutLinks" },
-  { key: "P", descKey: "settings.shortcutPencil" },
+  { key: "Space", descKey: "shortcut.flip" },
+  { key: "1–4", descKey: "shortcut.grade" },
+  { key: ", / .", descKey: "shortcut.nextPrev" },
+  { key: "M", descKey: "shortcut.memo" },
+  { key: "F", descKey: "shortcut.fullscreen" },
+  { key: "J / K", descKey: "shortcut.focusBlockNextPrev" },
+  { key: "R", descKey: "shortcut.run" },
+  { key: "E", descKey: "shortcut.edit" },
+  { key: "U / D", descKey: "shortcut.scrollUpDown" },
+  { key: "B", descKey: "shortcut.back" },
+  { key: "L", descKey: "shortcut.links" },
+  { key: "P", descKey: "shortcut.pencil" },
 ];
 
 export default function StudySessionScreen() {

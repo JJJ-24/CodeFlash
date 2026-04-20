@@ -27,11 +27,11 @@ import { useTagStore } from '@/store/tags';
 import type { Card, Tag, TextBlock } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
-  { key: 'J / K',   descKey: 'settings.shortcutFocusNextPrev' },
-  { key: 'P',       descKey: 'settings.shortcutEditCard' },
-  { key: 'D',     descKey: 'settings.shortcutDeleteCard' },
-  { key: 'N',     descKey: 'settings.shortcutNewCard' },
-  { key: 'B',     descKey: 'settings.shortcutBack' },
+  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+  { key: 'P',       descKey: 'shortcut.editCard' },
+  { key: 'D',     descKey: 'shortcut.deleteCard' },
+  { key: 'N',     descKey: 'shortcut.newCard' },
+  { key: 'B',     descKey: 'shortcut.back' },
 ];
 
 function getPreviewText(blocks: Card['frontContent']): string {

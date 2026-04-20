@@ -19,23 +19,23 @@ import { useSettingsStore } from '@/store/settings';
 import type { Card } from '@/types';
 
 const CARD_EDITOR_SHORTCUTS_NORMAL = [
-  { key: 'J / K',      descKey: 'settings.shortcutFocusCardNextPrev' },
-  { key: 'E',          descKey: 'settings.shortcutEditBlock' },
-  { key: 'D',          descKey: 'settings.shortcutDeleteBlock' },
-  { key: 'Q',          descKey: 'settings.shortcutTabSwitchCard' },
-  { key: 'P',          descKey: 'settings.shortcutTogglePreview' },
-  { key: 'O',          descKey: 'settings.shortcutEnterSortMode' },
-  { key: 'A',          descKey: 'settings.shortcutAddBlock' },
-  { key: 'R',          descKey: 'settings.shortcutRun' },
-  { key: 'T',          descKey: 'settings.shortcutScrollToTags' },
-  { key: 'S',          descKey: 'settings.shortcutSave' },
-  { key: 'C',          descKey: 'settings.shortcutCancelCard' },
+  { key: 'J / K',      descKey: 'shortcut.focusCardNextPrev' },
+  { key: 'E',          descKey: 'shortcut.editBlock' },
+  { key: 'D',          descKey: 'shortcut.deleteBlock' },
+  { key: 'Q',          descKey: 'shortcut.tabSwitchCard' },
+  { key: 'P',          descKey: 'shortcut.togglePreview' },
+  { key: 'O',          descKey: 'shortcut.enterSortMode' },
+  { key: 'A',          descKey: 'shortcut.addBlock' },
+  { key: 'R',          descKey: 'shortcut.run' },
+  { key: 'T',          descKey: 'shortcut.scrollToTags' },
+  { key: 'S',          descKey: 'shortcut.save' },
+  { key: 'C',          descKey: 'shortcut.cancelCard' },
 ];
 
 const CARD_EDITOR_SHORTCUTS_SORT = [
-  { key: 'J / K', descKey: 'settings.shortcutFocusCardNextPrev' },
-  { key: 'U / D', descKey: 'settings.shortcutMoveBlock' },
-  { key: 'O',     descKey: 'settings.shortcutExitSortMode' },
+  { key: 'J / K', descKey: 'shortcut.focusCardNextPrev' },
+  { key: 'U / D', descKey: 'shortcut.moveBlock' },
+  { key: 'O',     descKey: 'shortcut.exitSortMode' },
 ];
 
 export default function EditCardScreen() {
@@ -187,8 +187,8 @@ export default function EditCardScreen() {
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
         sections={[
-          { title: t('settings.shortcutNormalMode'), items: CARD_EDITOR_SHORTCUTS_NORMAL },
-          { title: t('settings.shortcutSortMode'), items: CARD_EDITOR_SHORTCUTS_SORT },
+          { title: t('shortcut.normalMode'), items: CARD_EDITOR_SHORTCUTS_NORMAL },
+          { title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT },
         ]}
       />
     </>

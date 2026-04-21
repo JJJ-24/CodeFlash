@@ -43,7 +43,10 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const flashAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!collapsed && prevCollapsedRef.current) {
+    if (collapsed) {
+      setFocused(false);
+      altInputRef.current?.blur();
+    } else if (prevCollapsedRef.current === true) {
       setFocused(false);
     }
     prevCollapsedRef.current = collapsed;

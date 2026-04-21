@@ -74,7 +74,17 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }, [editTrigger]);
 
   useEffect(() => {
-    if (prevCollapsedRef.current === true && collapsed === false) {
+    if (isPreview) {
+      setFocused(false);
+      inputRef.current?.blur();
+    }
+  }, [isPreview]);
+
+  useEffect(() => {
+    if (collapsed) {
+      setFocused(false);
+      inputRef.current?.blur();
+    } else if (prevCollapsedRef.current === true) {
       setFocused(false);
       if (pendingFocusRef.current) {
         pendingFocusRef.current = false;

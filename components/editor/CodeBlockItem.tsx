@@ -89,7 +89,17 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const theme = useTheme();
 
   useEffect(() => {
-    if (prevCollapsedRef.current === true && collapsed === false) {
+    if (isPreview) {
+      setFocused(false);
+      codeInputRef.current?.blur();
+    }
+  }, [isPreview]);
+
+  useEffect(() => {
+    if (collapsed) {
+      setFocused(false);
+      codeInputRef.current?.blur();
+    } else if (prevCollapsedRef.current === true) {
       setFocused(false);
     }
     prevCollapsedRef.current = collapsed;

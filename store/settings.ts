@@ -10,10 +10,12 @@ const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
 const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
 const DECK_SORT_KEY = '@codeflash_deck_sort';
 const TAG_SORT_KEY = '@codeflash_tag_sort';
+const CARD_SORT_KEY = '@codeflash_card_sort';
 const SHUFFLE_KEY = '@codeflash_shuffle';
 const SEARCH_FIELD_KEY = '@codeflash_last_search_field';
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
+export type CardSortOrder = 'manual' | 'newest' | 'oldest';
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
@@ -48,6 +50,8 @@ interface SettingsState {
   setDeckSortOrder: (v: DeckSortOrder) => void;
   tagSortOrder: DeckSortOrder;
   setTagSortOrder: (v: DeckSortOrder) => void;
+  cardSortOrder: CardSortOrder;
+  setCardSortOrder: (v: CardSortOrder) => void;
   shuffleEnabled: boolean;
   setShuffleEnabled: (v: boolean) => void;
   lastSearchField: string;
@@ -97,6 +101,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ tagSortOrder: v });
     AsyncStorage.setItem(TAG_SORT_KEY, v);
   },
+  cardSortOrder: 'manual',
+  setCardSortOrder: (v) => {
+    set({ cardSortOrder: v });
+    AsyncStorage.setItem(CARD_SORT_KEY, v);
+  },
   shuffleEnabled: false,
   setShuffleEnabled: (v) => {
     set({ shuffleEnabled: v });
@@ -117,15 +126,16 @@ Promise.all([
   AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY),
   AsyncStorage.getItem(DECK_SORT_KEY),
   AsyncStorage.getItem(TAG_SORT_KEY),
+  AsyncStorage.getItem(CARD_SORT_KEY),
   AsyncStorage.getItem(SHUFFLE_KEY),
   AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
   AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
   AsyncStorage.getItem(SEARCH_FIELD_KEY),
-]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, shuffle, notifHour, notifMinute, searchField]) => {
+]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField]) => {
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
-    'deckSortOrder' | 'tagSortOrder' | 'shuffleEnabled' | 'lastSearchField'
+    'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -134,6 +144,7 @@ Promise.all([
   if (notifEnabled !== null) update.notificationEnabled = notifEnabled === 'true';
   if (deckSort !== null) update.deckSortOrder = deckSort as DeckSortOrder;
   if (tagSort !== null) update.tagSortOrder = tagSort as DeckSortOrder;
+  if (cardSort !== null) update.cardSortOrder = cardSort as CardSortOrder;
   if (shuffle !== null) update.shuffleEnabled = shuffle === 'true';
   if (notifHour !== null) update.notificationHour = Number(notifHour);
   if (notifMinute !== null) update.notificationMinute = Number(notifMinute);

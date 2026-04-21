@@ -141,7 +141,9 @@
     "searchFieldBack": "Back",
     "searchFieldMemo": "Memo",
     "duplicate": "Duplicate",
-    "duplicateSuccess": "Copied {{count}} card(s)"
+    "duplicateSuccess": "Copied {{count}} card(s)",
+    "sortDescNewest": "Newest first",
+    "sortDescOldest": "Oldest first"
   },
   "tabs": {
     "home": "Home",
@@ -301,6 +303,7 @@
     "deleteDeck": "Delete focused deck",
     "newDeck": "New deck",
     "toggleSort": "Cycle sort order",
+    "toggleCardSort": "Cycle sort order (All only)",
     "search": "Search",
     "tags": "Tag manager",
     "tabNextPrev": "Switch tab (Home/Study/Stats/Settings)",

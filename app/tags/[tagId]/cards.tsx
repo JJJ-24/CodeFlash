@@ -52,7 +52,7 @@ export default function TagCardsScreen() {
   const theme = useTheme();
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
-  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { keyboardShortcutsEnabled, cardSortOrder } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
@@ -88,10 +88,14 @@ export default function TagCardsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getCardsByTagId(db, tagId).then(setCards);
+      getCardsByTagId(db, tagId).then((raw) => {
+        if (cardSortOrder === 'newest') setCards([...raw].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+        else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
+        else setCards(raw);
+      });
       onScreenFocus();
       return () => { onScreenBlur(); };
-    }, [db, tagId, onScreenFocus, onScreenBlur])
+    }, [db, tagId, cardSortOrder, onScreenFocus, onScreenBlur])
   );
 
   return (

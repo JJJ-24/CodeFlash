@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useSettingsStore } from '@/store/settings';
 
 import { getCardById, getTodayCreatedCardIdsByDeckId, getTodayCreatedCardIdsByTagId } from '@/lib/database/cards';
 import {
@@ -70,6 +71,10 @@ export function useStudySession() {
             const j = Math.floor(Math.random() * (i + 1));
             [cards[i], cards[j]] = [cards[j], cards[i]];
           }
+        } else {
+          const cardSort = useSettingsStore.getState().cardSortOrder;
+          if (cardSort === 'newest') cards.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          else if (cardSort === 'oldest') cards.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
         }
 
         gradedCardsRef.current = new Map();

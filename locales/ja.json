@@ -141,7 +141,9 @@
     "searchFieldBack": "裏面",
     "searchFieldMemo": "メモ",
     "duplicate": "複製",
-    "duplicateSuccess": "{{count}}枚コピーしました"
+    "duplicateSuccess": "{{count}}枚コピーしました",
+    "sortDescNewest": "新しい順",
+    "sortDescOldest": "古い順"
   },
   "tabs": {
     "home": "ホーム",
@@ -280,7 +282,7 @@
     "duplicateSelected": "選択したカードを複製",
     "startStudy": "学習開始",
     "startStudyFocused": "フォーカス中の項目で学習開始",
-    "filterSwitch": "フィルター切替（もう一度/うろ覚え/わかった/バッチリ）",
+    "filterSwitch": "フィルター切替（すべて/済み/復習/新規）",
     "newCard": "新規カード作成",
     "toggleSelect": "選択モード切替",
     "toggleCheck": "フォーカス中のカードを選択/解除",
@@ -301,6 +303,7 @@
     "deleteDeck": "フォーカス中のデッキを削除",
     "newDeck": "新規デッキ作成",
     "toggleSort": "並び替え切替",
+    "toggleCardSort": "ソート切替（「すべて」のみ）",
     "search": "検索",
     "tags": "タグ管理",
     "tabNextPrev": "タブ切替（ホーム/学習/統計/設定）",

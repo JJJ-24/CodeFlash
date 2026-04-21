@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
   Keyboard,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -43,7 +44,7 @@ import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
-import type { DeckDetailFilter } from '@/store/settings';
+import type { CardSortOrder, DeckDetailFilter } from '@/store/settings';
 import type { Block, Card, Deck } from '@/types';
 
 type FilterKey = DeckDetailFilter;
@@ -62,7 +63,7 @@ export default function DeckDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, updateCard } = useCardStore();
-  const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled } = useSettingsStore();
+  const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
   const [todayCreatedCount, setTodayCreatedCount] = useState(0);
@@ -88,6 +89,7 @@ export default function DeckDetailScreen() {
     { key: 'P', descKey: 'shortcut.editCard' },
     { key: 'D',         descKey: 'shortcut.deleteCard' },
     { key: 'N',         descKey: 'shortcut.newCard' },
+    { key: 'Q',         descKey: 'shortcut.toggleCardSort' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
     { key: 'B',         descKey: 'shortcut.back' },
   ];
@@ -263,9 +265,14 @@ export default function DeckDetailScreen() {
   if (!deck) return null;
 
   const deckCards = cards.filter((c) => c.deckId === id);
-  const displayedCards = selectedFilter === 'all'
+  const filteredCards = selectedFilter === 'all'
     ? deckCards
     : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id));
+  const displayedCards = cardSortOrder === 'newest'
+    ? [...filteredCards].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    : cardSortOrder === 'oldest'
+    ? [...filteredCards].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    : filteredCards;
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
 
@@ -310,12 +317,21 @@ export default function DeckDetailScreen() {
   const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
   const filterValueFontSize = filterItemMaxDigits >= 4 ? theme.fontSize.md : filterItemMaxDigits >= 3 ? theme.fontSize.lg : filterItemMaxDigits >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl;
 
+  const cardSortDesc = cardSortOrder === 'newest' ? t('card.sortDescNewest')
+    : cardSortOrder === 'oldest' ? t('card.sortDescOldest')
+    : t('home.sortDescManual');
   const filterDescMap: Record<FilterKey, string> = {
-    all: t('study.filterDescAll'),
+    all: cardSortDesc,
     learned: t('study.filterDescLearned'),
     review: t('study.filterDescReview'),
     new: t('study.filterDescNew'),
   };
+
+  const CARD_SORT_OPTIONS: { key: CardSortOrder; icon: 'reorder-three-outline' | 'arrow-down-outline' | 'arrow-up-outline' }[] = [
+    { key: 'manual',  icon: 'reorder-three-outline' },
+    { key: 'newest',  icon: 'arrow-down-outline' },
+    { key: 'oldest',  icon: 'arrow-up-outline' },
+  ];
 
   const ListHeader = deck.description ? (
     <View style={[styles.descBlock, { backgroundColor: theme.colors.background }]}>
@@ -399,6 +415,9 @@ export default function DeckDetailScreen() {
             }
           } else if (k === 'n') {
             router.push({ pathname: '/deck/[id]/card/new', params: { id } });
+          } else if (k === 'q' && selectedFilter === 'all') {
+            const orders: CardSortOrder[] = ['manual', 'newest', 'oldest'];
+            setCardSortOrder(orders[(orders.indexOf(cardSortOrder) + 1) % 3]);
           } else if (k === 's') {
             setSelectionMode((v) => !v);
             setSelectedCardIds(new Set());
@@ -499,12 +518,34 @@ export default function DeckDetailScreen() {
         </TouchableOpacity>
 
         <View style={styles.sectionTitleRow}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {selectionMode ? t('card.selectHint') : t('deck.detail')}
-          </Text>
-          <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {filterDescMap[selectedFilter]}
-          </Text>
+          <View style={styles.sectionTitleLeft}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {selectionMode ? t('card.selectHint') : t('deck.detail')}
+            </Text>
+            <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {filterDescMap[selectedFilter]}
+            </Text>
+          </View>
+          {selectedFilter === 'all' && !selectionMode && (
+            <View style={styles.sortButtons}>
+              {CARD_SORT_OPTIONS.map(({ key, icon }) => {
+                const active = cardSortOrder === key;
+                return (
+                  <Pressable
+                    key={key}
+                    style={[
+                      styles.sortBtn,
+                      { borderColor: active ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                      active && { backgroundColor: theme.colors.primary },
+                    ]}
+                    onPress={() => setCardSortOrder(key)}
+                  >
+                    <Ionicons name={icon} size={theme.fontSize.lg} color={active ? '#FFF' : theme.colors.textSecondary} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
         </View>
 
       </View>
@@ -528,7 +569,7 @@ export default function DeckDetailScreen() {
           onScrollToIndexFailed={() => {}}
           onDragEnd={({ data }) => {
             if (selectionMode) return;
-            if (selectedFilter !== 'all') return;
+            if (selectedFilter !== 'all' || cardSortOrder !== 'manual') return;
             reorderCards(data);
             updateCardSortOrders(db, data.map((c) => c.id));
           }}
@@ -565,7 +606,7 @@ export default function DeckDetailScreen() {
                 }}
                 onLongPress={() => {
                   if (selectionMode) return;
-                  if (selectedFilter !== 'all') {
+                  if (selectedFilter !== 'all' || cardSortOrder !== 'manual') {
                     Alert.alert(
                       t('card.reorderDisabledTitle'),
                       t('card.reorderDisabledMessage')
@@ -706,7 +747,10 @@ const styles = StyleSheet.create({
   },
   studyBtnText: { fontWeight: '700', color: '#FFF' },
   sectionTitle: { fontWeight: '700' },
-  sectionTitleRow: { flexDirection: 'column', gap: 2 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitleLeft: { flexDirection: 'column', gap: 2, flex: 1 },
+  sortButtons: { flexDirection: 'row', gap: 6 },
+  sortBtn: { borderRadius: 6, borderWidth: 1, paddingVertical: 7 },
   cardItem: {
     borderRadius: 10,
     paddingHorizontal: 16,

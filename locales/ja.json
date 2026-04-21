@@ -124,15 +124,15 @@
     "select": "選択",
     "cancelSelect": "キャンセル",
     "selectHint": "カードをタップして選択",
-    "selectedCount": "{{count}}件選択",
+    "selectedCount": "{{count}}枚選択",
     "moveToDeck": "移動",
     "moveConfirmTitle": "デッキに移動",
-    "moveConfirmMessage": "{{count}}件のカードを「{{deckName}}」に移動しますか？",
+    "moveConfirmMessage": "{{count}}枚のカードを「{{deckName}}」に移動しますか？",
     "selectDeckTitle": "移動先デッキを選択",
     "noDeckToMove": "移動先のデッキがありません",
     "selectAll": "全選択",
     "deleteSelected": "選択削除",
-    "deleteSelectedConfirm": "{{count}}件のカードを削除しますか？\n紐づく学習履歴も削除されます。",
+    "deleteSelectedConfirm": "{{count}}枚のカードを削除しますか？\n紐づく学習履歴も削除されます。",
     "newCardDeckTitle": "作成先デッキを選択",
     "searchPlaceholder": "カードを検索...",
     "searchNoResults": "一致するカードはありません",
@@ -140,7 +140,8 @@
     "searchFieldFront": "表面",
     "searchFieldBack": "裏面",
     "searchFieldMemo": "メモ",
-    "duplicate": "複製"
+    "duplicate": "複製",
+    "duplicateSuccess": "{{count}}枚コピーしました"
   },
   "tabs": {
     "home": "ホーム",

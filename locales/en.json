@@ -140,7 +140,8 @@
     "searchFieldFront": "Front",
     "searchFieldBack": "Back",
     "searchFieldMemo": "Memo",
-    "duplicate": "Duplicate"
+    "duplicate": "Duplicate",
+    "duplicateSuccess": "Copied {{count}} card(s)"
   },
   "tabs": {
     "home": "Home",

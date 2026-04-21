@@ -228,6 +228,7 @@ export default function DeckDetailScreen() {
     }
     exitSelectionMode();
     await loadCards();
+    Alert.alert(t('card.duplicate'), t('card.duplicateSuccess', { count: ids.length }));
   }
 
   function handleMoveToDeck(targetDeck: Deck) {

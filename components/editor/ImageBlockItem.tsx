@@ -80,7 +80,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const isEmpty = !block.uri;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : ((focused || isFocused) ? theme.colors.primary : theme.colors.inputBorder) }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : focused ? '#FB8C00' : isFocused ? theme.colors.primary : theme.colors.inputBorder, borderWidth: (focused || isFocused) ? 2 : 1 }]}>
       <BlockItemHeader
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}

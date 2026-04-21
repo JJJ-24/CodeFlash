@@ -140,7 +140,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   return (
     <View style={[
       styles.container,
-      { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : ((focused || isFocused) ? theme.colors.primary : theme.colors.inputBorder) },
+      { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : focused ? '#FB8C00' : isFocused ? theme.colors.primary : theme.colors.inputBorder, borderWidth: (focused || isFocused) ? 2 : 1 },
     ]}>
       <BlockItemHeader
         onMoveUp={onMoveUp}

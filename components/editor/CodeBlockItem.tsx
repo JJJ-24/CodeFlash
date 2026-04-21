@@ -109,7 +109,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: isRunning ? '#43A047' : flashTrigger > 0 || focused || isFocused ? theme.colors.primary : (theme.dark ? '#3A3A3A' : '#333') }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: isRunning ? '#43A047' : flashTrigger > 0 ? theme.colors.primary : focused ? '#FB8C00' : isFocused ? theme.colors.primary : (theme.dark ? '#3A3A3A' : '#333'), borderWidth: (isRunning || focused || isFocused) ? 2 : 1 }]}>
       <BlockItemHeader
         onDelete={onDelete}
         collapsed={collapsed}

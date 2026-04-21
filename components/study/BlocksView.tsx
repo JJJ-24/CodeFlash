@@ -196,21 +196,20 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     // （onEditBlur 内の keyboardRef.focus() が新ブロックの TextInput を blur させるため）
   }
 
-  const fs = (size: number) => Math.round(size * theme.fontScale);
   const markdownStyles = useMemo(() => ({
-    body: { fontSize: fs(17), color: theme.colors.text, lineHeight: fs(26) },
-    heading1: { fontSize: fs(24), fontWeight: '700' as const, marginBottom: 8 },
-    heading2: { fontSize: fs(20), fontWeight: '700' as const, marginBottom: 6 },
+    body: { fontSize: theme.fontSize.md, color: theme.colors.text, lineHeight: theme.fontSize.md * 1.5 },
+    heading1: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
+    heading2: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 6 },
     strong: { fontWeight: 'bold' as const },
     em: { fontStyle: 'italic' as const },
     code_inline: {
       backgroundColor: theme.dark ? '#2C2C2C' : '#F0F0F0',
       fontFamily: 'monospace',
-      fontSize: fs(14),
+      fontSize: theme.fontSize.sm,
       color: theme.colors.danger,
     },
-    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: fs(14) },
-    code_block: { fontFamily: 'monospace', fontSize: fs(14), color: '#D4D4D4', backgroundColor: '#1E1E1E' },
+    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: theme.fontSize.sm },
+    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: '#1E1E1E' },
     link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
     blockquote: {
       backgroundColor: theme.dark ? '#2A2A2A' : '#F0F0F0',

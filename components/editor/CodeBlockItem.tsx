@@ -117,7 +117,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         isLast={isLast}
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
-        style={{ backgroundColor: isRunning ? '#1E5024' : (theme.dark ? '#333333' : '#2D2D2D') }}
+        style={{ backgroundColor: isRunning ? '#1E5024' : focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
           <Text style={[styles.langText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>

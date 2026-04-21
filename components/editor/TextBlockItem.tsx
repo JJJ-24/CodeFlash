@@ -150,7 +150,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         isEmpty={isEmpty}
         isLast={isLast}
         style={{
-          backgroundColor: theme.dark ? '#252525' : '#FAFAFA',
+          backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
           borderBottomWidth: 1,
           borderBottomColor: theme.colors.border,
         }}

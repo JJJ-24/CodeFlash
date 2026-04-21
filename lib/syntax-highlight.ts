@@ -321,7 +321,7 @@ export function tokenize(code: string, language: string): Token[] {
   if (!code) return [];
   const lang = language.toLowerCase();
 
-  if (lang === 'plaintext') return [{ text: code, type: 'plain' }];
+  if (lang === 'text' || lang === 'plaintext') return [{ text: code, type: 'plain' }];
   if (lang === 'html') return tokenizeHtml(code);
   if (lang === 'css') return tokenizeCss(code);
   if (lang === 'json') return tokenizeJson(code);

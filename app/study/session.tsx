@@ -870,6 +870,9 @@ export default function StudySessionScreen() {
           autoCapitalize="none"
           spellCheck={false}
           onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
+          onSubmitEditing={() => {
+            if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
+          }}
           onBlur={() => {
             setTimeout(() => {
               if (!codeEditingRef.current && isScreenFocusedRef.current)
@@ -1130,6 +1133,9 @@ export default function StudySessionScreen() {
         spellCheck={false}
         disableKeyboardShortcuts={true}
         onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
+        onSubmitEditing={() => {
+          if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
+        }}
         onBlur={() => {
           setTimeout(() => {
             if (!codeEditingRef.current && isScreenFocusedRef.current)

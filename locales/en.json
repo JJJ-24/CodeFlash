@@ -271,7 +271,7 @@
     "memo": "Toggle memo",
     "fullscreen": "Toggle fullscreen",
     "run": "Run focused code block",
-    "edit": "Edit focused code block",
+    "edit": "Edit focused code block (or Return)",
     "back": "Go back",
     "links": "Toggle link list",
     "pencil": "Edit card",

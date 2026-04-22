@@ -217,11 +217,13 @@ export default function StudySessionScreen() {
   }, []);
   const handleCodeEditBlur = useCallback(() => {
     codeEditingRef.current = false;
-    if (!switchingCodeBlockRef.current) {
+    if (!switchingCodeBlockRef.current && isScreenFocusedRef.current) {
       // keyboardRef TextInput を強制リマウントして autoFocus でフォーカスを確実に取得する。
       // focus() の直接呼び出しは WebView 初期化との競合で失敗する場合があるため、
       // autoFocus（フルスクリーン切替と同じ仕組み）を使う。
       // Keyboard.dismiss() でソフトキーボードを明示的に閉じてからリマウントする。
+      // isScreenFocusedRef が false（カード編集画面等へ遷移済み）の場合はスキップし、
+      // 遷移先の hidden TextInput のフォーカスを奪わないようにする。
       Keyboard.dismiss();
       setKeyboardInputKey((k) => k + 1);
     }
@@ -233,8 +235,10 @@ export default function StudySessionScreen() {
   //   300ms 以内に実行すると setKeyboardInputKey をスキップしてしまう。）
   const handleForceKeyboardFocus = useCallback(() => {
     codeEditingRef.current = false;
-    Keyboard.dismiss();
-    setKeyboardInputKey((k) => k + 1);
+    if (isScreenFocusedRef.current) {
+      Keyboard.dismiss();
+      setKeyboardInputKey((k) => k + 1);
+    }
   }, []);
   /**
    * onSelectCodeBlock ファクトリ

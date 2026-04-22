@@ -17,22 +17,22 @@ import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 
 const CARD_EDITOR_SHORTCUTS_NORMAL = [
-  { key: 'J / K',      descKey: 'shortcut.focusCardNextPrev' },
-  { key: 'E',          descKey: 'shortcut.editBlock' },
-  { key: 'D',          descKey: 'shortcut.deleteBlock' },
-  { key: 'Q',          descKey: 'shortcut.cycleEditorMode' },
-  { key: ', / .',      descKey: 'shortcut.tabSwitchCard' },
-  { key: 'A',          descKey: 'shortcut.addBlock' },
-  { key: 'R',          descKey: 'shortcut.run' },
+  { key: ', / .',      descKey: 'shortcut.tabNextPrevCard' },
+  { key: 'J / K',      descKey: 'shortcut.focusNextPrev' },
+  { key: 'E',          descKey: 'shortcut.editFocusedItem' },
+  { key: 'R',          descKey: 'shortcut.runFocused' },
+  { key: 'D',          descKey: 'shortcut.delete' },
+  { key: 'A',          descKey: 'shortcut.toggleAddMenu' },
   { key: 'T',          descKey: 'shortcut.scrollToTags' },
+  { key: 'Q',          descKey: 'shortcut.cycleMode' },
   { key: 'S',          descKey: 'shortcut.save' },
-  { key: 'C',          descKey: 'shortcut.cancelCard' },
+  { key: 'X',          descKey: 'shortcut.closeWithoutSave' },
 ];
 
 const CARD_EDITOR_SHORTCUTS_SORT = [
-  { key: 'J / K', descKey: 'shortcut.focusCardNextPrev' },
-  { key: 'U / D', descKey: 'shortcut.moveBlock' },
-  { key: 'Q',     descKey: 'shortcut.cycleEditorMode' },
+  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+  { key: 'U / D', descKey: 'shortcut.moveFocused' },
+  { key: 'Q',     descKey: 'shortcut.cycleMode' },
 ];
 
 export default function NewCardScreen() {

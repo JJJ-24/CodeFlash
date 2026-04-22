@@ -29,11 +29,11 @@ import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 
 const HOME_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
-  { key: 'Return', descKey: 'shortcut.openDeck' },
-  { key: 'P',     descKey: 'shortcut.editDeck' },
-  { key: 'D',     descKey: 'shortcut.deleteDeck' },
-  { key: 'N',     descKey: 'shortcut.newDeck' },
-  { key: 'Q',     descKey: 'shortcut.toggleSort' },
+  { key: 'Return', descKey: 'shortcut.openFocused' },
+  { key: 'P',     descKey: 'shortcut.editFocused' },
+  { key: 'D',     descKey: 'shortcut.deleteFocused' },
+  { key: 'N',     descKey: 'shortcut.new' },
+  { key: 'Q',     descKey: 'shortcut.cycleSort' },
   { key: 'F',     descKey: 'shortcut.search' },
   { key: 'T',     descKey: 'shortcut.tags' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },

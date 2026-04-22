@@ -460,7 +460,7 @@ export function BlockEditor({
       } else {
         onDeleteCard?.();
       }
-    } else if (k === 'c') {
+    } else if (k === 'x') {
       onCancel?.();
     } else if (k === 's') {
       handleSave();

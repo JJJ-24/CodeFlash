@@ -84,17 +84,17 @@ export default function DeckDetailScreen() {
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space',     descKey: 'shortcut.startStudy' },
-    { key: '1–4',       descKey: 'shortcut.filterSwitch' },
-    { key: 'J / K',     descKey: 'shortcut.focusCardNextPrev' },
-    { key: 'P', descKey: 'shortcut.editCard' },
-    { key: 'D',         descKey: 'shortcut.deleteCard' },
-    { key: 'N',         descKey: 'shortcut.newCard' },
-    { key: 'Q',         descKey: 'shortcut.toggleCardSort' },
+    { key: '1–4',       descKey: 'shortcut.switchFilter' },
+    { key: 'J / K',     descKey: 'shortcut.focusNextPrev' },
+    { key: 'P',         descKey: 'shortcut.editFocusedItem' },
+    { key: 'D',         descKey: 'shortcut.deleteFocused' },
+    { key: 'N',         descKey: 'shortcut.new' },
+    { key: 'Q',         descKey: 'shortcut.cycleCardSort' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
     { key: 'B',         descKey: 'shortcut.back' },
   ];
   const DECK_SHORTCUTS_SELECT = [
-    { key: 'J / K',   descKey: 'shortcut.focusCardNextPrev' },
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'Space', descKey: 'shortcut.toggleCheck' },
     { key: 'A',     descKey: 'shortcut.selectAll' },
     { key: 'M',     descKey: 'shortcut.moveSelected' },

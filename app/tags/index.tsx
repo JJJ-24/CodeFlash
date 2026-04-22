@@ -29,11 +29,11 @@ import type { TagWithCount } from '@/store/tags';
 
 const TAG_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
-  { key: 'Return', descKey: 'shortcut.openTag' },
-  { key: 'P',     descKey: 'shortcut.editTag' },
-  { key: 'D',     descKey: 'shortcut.deleteTag' },
-  { key: 'N',     descKey: 'shortcut.newTag' },
-  { key: 'Q',     descKey: 'shortcut.toggleSort' },
+  { key: 'Return', descKey: 'shortcut.openFocused' },
+  { key: 'P',     descKey: 'shortcut.editFocused' },
+  { key: 'D',     descKey: 'shortcut.deleteFocused' },
+  { key: 'N',     descKey: 'shortcut.new' },
+  { key: 'Q',     descKey: 'shortcut.cycleSort' },
   { key: 'B',     descKey: 'shortcut.back' },
 ];
 

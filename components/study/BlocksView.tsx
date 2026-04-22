@@ -22,6 +22,7 @@ function LinkPressable({ href, suppress, children }: { href: string; suppress: (
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
+import { Image } from 'expo-image';
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { resolveImageUri } from '@/lib/image';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -229,6 +230,16 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         {children}
       </LinkPressable>
     ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    image: (node: any) => (
+      <Image
+        key={node.key}
+        source={{ uri: node.attributes.src }}
+        style={{ width: '100%', height: 200 }}
+        contentFit="contain"
+        accessibilityLabel={node.attributes.alt}
+      />
+    ),
   }), [suppress]);
 
   if (blocks.length === 0) {
@@ -337,4 +348,5 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
   },
+  imagePlaceholderText: {},
 });

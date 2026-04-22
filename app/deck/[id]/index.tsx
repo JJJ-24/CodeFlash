@@ -606,10 +606,17 @@ export default function DeckDetailScreen() {
                 }}
                 onLongPress={() => {
                   if (selectionMode) return;
-                  if (selectedFilter !== 'all' || cardSortOrder !== 'manual') {
+                  if (selectedFilter !== 'all') {
                     Alert.alert(
                       t('card.reorderDisabledTitle'),
                       t('card.reorderDisabledMessage')
+                    );
+                    return;
+                  }
+                  if (cardSortOrder !== 'manual') {
+                    Alert.alert(
+                      t('card.reorderDisabledTitle'),
+                      t('card.reorderDisabledMessageSort')
                     );
                     return;
                   }

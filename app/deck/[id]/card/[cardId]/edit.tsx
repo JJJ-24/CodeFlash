@@ -25,6 +25,7 @@ const CARD_EDITOR_SHORTCUTS_NORMAL = [
   { key: 'R',          descKey: 'shortcut.runFocused' },
   { key: 'D',          descKey: 'shortcut.delete' },
   { key: 'A',          descKey: 'shortcut.toggleAddMenu' },
+  { key: 'Return',     descKey: 'shortcut.addBlock' },
   { key: 'T',          descKey: 'shortcut.scrollToTags' },
   { key: 'Q',          descKey: 'shortcut.cycleMode' },
   { key: 'S',          descKey: 'shortcut.save' },

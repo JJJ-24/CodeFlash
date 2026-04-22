@@ -309,9 +309,10 @@
     "tabNextPrevCard": "Switch tab\n(Front/Back/Memo)",
     "cycleMode": "Cycle mode\n(Edit/Sort/Preview)",
     "toggleAddMenu": "Toggle add block menu",
+    "addBlock": "Add block focused item",
     "scrollToTags": "Scroll to tag selector",
     "save": "Save / Create",
-    "closeWithoutSave": "Close without saving)",
+    "closeWithoutSave": "Close without saving",
     "moveFocused": "Move focused item Up / Down",
     "sortMode": "Sort Mode"
   }

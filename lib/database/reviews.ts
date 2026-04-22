@@ -381,30 +381,22 @@ export async function getDeckMasteryList(
 export async function getPast7DaysReviewedCount(
   db: SQLiteDatabase
 ): Promise<{ date: string; count: number }[]> {
-  // ローカル7日前の0時〜翌日0時をUTC ISOで範囲指定
   const startLocal = new Date();
   startLocal.setDate(startLocal.getDate() - 6);
-  startLocal.setHours(0, 0, 0, 0);
-  const endLocal = new Date();
-  endLocal.setDate(endLocal.getDate() + 1);
-  endLocal.setHours(0, 0, 0, 0);
+  const startStr = localDateStr(startLocal);
+  const endStr = todayISO();
 
-  // reviews.lastReviewDate (UTC ISO) からローカル日付でグループ化
-  // cardId でユニークなので1カード1日1カウント
-  const rows = await db.getAllAsync<{ lastReviewDate: string }>(
-    `SELECT lastReviewDate FROM reviews WHERE lastReviewDate >= ? AND lastReviewDate < ?`,
-    [startLocal.toISOString(), endLocal.toISOString()]
+  // review_logs.reviewedDate はローカル YYYY-MM-DD で保存済み
+  const rows = await db.getAllAsync<{ date: string; count: number }>(
+    `SELECT reviewedDate AS date, COUNT(*) AS count
+     FROM review_logs
+     WHERE reviewedDate >= ? AND reviewedDate <= ?
+     GROUP BY reviewedDate
+     ORDER BY reviewedDate`,
+    [startStr, endStr]
   );
 
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    const d = localDateStr(new Date(row.lastReviewDate));
-    map.set(d, (map.get(d) ?? 0) + 1);
-  }
-
-  return Array.from(map.entries())
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  return rows;
 }
 
 /** 過去7日間の学習活動（学習あり=1、なし=0） */
@@ -432,26 +424,17 @@ export async function getDailyReviewCounts(
 
 /**
  * 学習ストリーク日数を計算する
- * 今日から過去に遡り、lastReviewDate に学習記録がある日が連続している日数を返す
- * UTC ISO で保存された lastReviewDate をローカル日付に変換して比較する
+ * 今日から過去に遡り、review_logs に学習記録がある日が連続している日数を返す
+ * review_logs.reviewedDate はローカル YYYY-MM-DD で保存されているため変換不要
  */
 export async function getStudyStreak(db: SQLiteDatabase): Promise<number> {
-  const rows = await db.getAllAsync<{ lastReviewDate: string }>(
-    `SELECT DISTINCT lastReviewDate FROM reviews`
+  const rows = await db.getAllAsync<{ reviewedDate: string }>(
+    `SELECT DISTINCT reviewedDate FROM review_logs`
   );
 
   if (rows.length === 0) return 0;
 
-  // UTC ISO 文字列をローカル YYYY-MM-DD に変換して Set に格納
-  const localDateSet = new Set(
-    rows.map((r) => {
-      const d = new Date(r.lastReviewDate);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    })
-  );
+  const localDateSet = new Set(rows.map((r) => r.reviewedDate));
 
   let streak = 0;
   const current = new Date(); // ローカル現在時刻から逆算

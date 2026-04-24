@@ -695,7 +695,18 @@ export function BlockEditor({
           <Pressable
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
+            onPress={() => {
+              // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
+              isTransitioningRef.current = true;
+              if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
+              isTransitionTimerRef.current = setTimeout(() => {
+                editingBlockKeyRef.current = null;
+                isTransitioningRef.current = false;
+                isTransitionTimerRef.current = null;
+                keyboardRef.current?.focus();
+              }, 200);
+              setActiveTab(tab.key);
+            }}
           >
             <Text
               style={[

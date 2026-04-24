@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -127,6 +128,7 @@ export default function StudySessionScreen() {
   const { width: screenWidth } = useWindowDimensions();
   // iPad: ステータスバーを隠す際にヘッダー高さが変わらないよう、初回 top inset を固定値として保持
   const insets = useSafeAreaInsets();
+  const initialTopInsetRef = useRef(insets.top);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
   const sessionTitle = deckId
@@ -306,7 +308,7 @@ export default function StudySessionScreen() {
         }, 200);
       }, 100);
     } else {
-      navigation.setOptions({ headerLeft: undefined });
+      navigation.setOptions({ headerLeft: renderHeaderLeft });
     }
   }, [completed]);
 
@@ -428,6 +430,19 @@ export default function StudySessionScreen() {
     }));
   }
 
+  const renderHeaderLeft = useCallback(
+    () => (
+      <Pressable
+        onPress={() => router.back()}
+        style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+        hitSlop={4}
+      >
+        <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+      </Pressable>
+    ),
+    [router, theme.colors.text],
+  );
+
   if (loading) {
     return (
       <View
@@ -499,21 +514,25 @@ export default function StudySessionScreen() {
       <>
         <StatusBar hidden={statusBarHidden} />
         <Stack.Screen
-          options={{
-            headerTitle: () => (
-              <Text
-                style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
-                numberOfLines={1}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-              >
-                {t("study.title")}
-              </Text>
-            ),
-            headerBackTitle: "",
-            headerBackVisible: false,
-            headerLeft: () => null,
-            headerRight: () => null,
-          }}
+          options={
+            (Platform as any).isPad
+              ? { headerShown: false }
+              : {
+                  headerTitle: () => (
+                    <Text
+                      style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
+                      numberOfLines={1}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                    >
+                      {t("study.title")}
+                    </Text>
+                  ),
+                  headerBackTitle: "",
+                  headerBackVisible: false,
+                  headerLeft: () => null,
+                  headerRight: () => null,
+                }
+          }
         />
         <TextInput
           ref={completeRef}
@@ -536,6 +555,25 @@ export default function StudySessionScreen() {
             }
           }}
         />
+        {(Platform as any).isPad && (
+          <View
+            style={{
+              height: initialTopInsetRef.current + 44,
+              backgroundColor: theme.colors.surface,
+              justifyContent: "flex-end",
+              alignItems: "center",
+              paddingBottom: 10,
+            }}
+          >
+            <Text
+              style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
+              numberOfLines={1}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
+              {t("study.title")}
+            </Text>
+          </View>
+        )}
         <View
           style={[
             styles.completeScreen,
@@ -561,14 +599,11 @@ export default function StudySessionScreen() {
             >
               {/* 評価済み ◯/◯ 枚 */}
               <Text
-                style={[
-                  styles.completeCount,
-                  {
-                    color: theme.colors.textSecondary,
-                    fontSize: theme.fontSize.lg,
-                    textAlign: "center",
-                  },
-                ]}
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: theme.fontSize.lg,
+                  textAlign: "center",
+                }}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
                 {t("study.reviewedOf", { reviewed, total: totalCards })}
@@ -634,13 +669,10 @@ export default function StudySessionScreen() {
                       {count}
                     </Text>
                     <Text
-                      style={[
-                        styles.gradeItemLabel,
-                        {
-                          color: theme.colors.textSecondary,
-                          fontSize: gradeLabelFontSize,
-                        },
-                      ]}
+                      style={{
+                        color: theme.colors.textSecondary,
+                        fontSize: gradeLabelFontSize,
+                      }}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
@@ -666,13 +698,10 @@ export default function StudySessionScreen() {
                     {correctRate}%
                   </Text>
                   <Text
-                    style={[
-                      styles.statLabel,
-                      {
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.fontSize.xs,
-                      },
-                    ]}
+                    style={{
+                      color: theme.colors.textSecondary,
+                      fontSize: theme.fontSize.xs,
+                    }}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {t("study.correctRate")}
@@ -695,13 +724,10 @@ export default function StudySessionScreen() {
                       {nextReviewStr}
                     </Text>
                     <Text
-                      style={[
-                        styles.statLabel,
-                        {
-                          color: theme.colors.textSecondary,
-                          fontSize: theme.fontSize.xs,
-                        },
-                      ]}
+                      style={{
+                        color: theme.colors.textSecondary,
+                        fontSize: theme.fontSize.xs,
+                      }}
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                     >
                       {t("study.nextReview")}
@@ -753,7 +779,7 @@ export default function StudySessionScreen() {
         color={theme.colors.textTertiary}
       />
       <Text
-        style={[styles.memoToggleText, { color: theme.colors.textTertiary }]}
+        style={{ color: theme.colors.textTertiary }}
         maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
       >
         {showMemo ? t("study.hideMemo") : t("study.showMemo")}
@@ -1054,7 +1080,10 @@ export default function StudySessionScreen() {
     <>
       <StatusBar hidden={statusBarHidden} />
       <Stack.Screen
-        options={{
+        options={
+          (Platform as any).isPad
+            ? { headerShown: false }
+            : {
                 headerTitle: () => (
                   <Pressable
                     onPress={
@@ -1066,7 +1095,7 @@ export default function StudySessionScreen() {
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 6,
-                      maxWidth: screenWidth * 0.5,
+                      maxWidth: screenWidth * 0.46,
                     }}
                   >
                     <Text
@@ -1091,17 +1120,19 @@ export default function StudySessionScreen() {
                   </Pressable>
                 ),
                 headerShown: true,
+                headerLeft: renderHeaderLeft,
                 headerRight: () => (
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     {cardLinks.length > 0 && (
                       <Pressable
                         onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
-                        style={{ paddingHorizontal: 8 }}
+                        style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+                        hitSlop={4}
                         accessibilityLabel={t("study.links")}
                       >
                         <Ionicons
                           name="link-sharp"
-                          size={Math.round(theme.fontSize.xl)}
+                          size={26}
                           color={theme.colors.primary}
                         />
                       </Pressable>
@@ -1112,17 +1143,19 @@ export default function StudySessionScreen() {
                           `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`,
                         )
                       }
-                      style={{ paddingHorizontal: 8 }}
+                      style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+                      hitSlop={4}
                     >
                       <Ionicons
                         name="pencil-sharp"
-                        size={Math.round(theme.fontSize.xl)}
+                        size={26}
                         color={theme.colors.primary}
                       />
                     </Pressable>
                   </View>
                 ),
-        }}
+              }
+        }
       />
       <TextInput
         key={keyboardInputKey}
@@ -1147,6 +1180,80 @@ export default function StudySessionScreen() {
           }, 50);
         }}
       />
+      {(Platform as any).isPad && (
+        <View
+          style={{
+            height: initialTopInsetRef.current + 44,
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 44,
+              flexDirection: "row",
+              alignItems: "center",
+              paddingHorizontal: 8,
+            }}
+          >
+            {/* タイトル：絶対配置で中央寄せ（ボタンの後ろに描画） */}
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                alignItems: "center",
+                flexDirection: "row",
+                justifyContent: "center",
+                paddingHorizontal: 56,
+                gap: 4,
+              }}
+            >
+              <Text
+                style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {sessionTitle}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+              )}
+            </Pressable>
+            {/* 戻るボタン */}
+            <Pressable
+              onPress={() => router.back()}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
+            >
+              <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+            </Pressable>
+            <View style={{ flex: 1 }} />
+            {/* 右側ボタン */}
+            {cardLinks.length > 0 && (
+              <Pressable
+                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
+                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+                hitSlop={4}
+                accessibilityLabel={t("study.links")}
+              >
+                <Ionicons name="link-sharp" size={26} color={theme.colors.primary} />
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`)}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
+            >
+              <Ionicons name="pencil-sharp" size={26} color={theme.colors.primary} />
+            </Pressable>
+          </View>
+        </View>
+      )}
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
@@ -1158,10 +1265,7 @@ export default function StudySessionScreen() {
           ]}
         >
           <View
-            style={[
-              styles.progressFill,
-              { flex: progressRatio, backgroundColor: theme.colors.primary },
-            ]}
+            style={{ flex: progressRatio, backgroundColor: theme.colors.primary }}
           />
           <View style={{ flex: 1 - progressRatio }} />
         </View>
@@ -1327,13 +1431,7 @@ export default function StudySessionScreen() {
                 color={theme.colors.textTertiary}
               />
               <Text
-                style={[
-                  styles.flipHintText,
-                  {
-                    color: theme.colors.textTertiary,
-                    fontSize: theme.fontSize.md,
-                  },
-                ]}
+                style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.md }}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {t("study.tapToFlip")}

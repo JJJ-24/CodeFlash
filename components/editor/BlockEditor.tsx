@@ -717,6 +717,7 @@ export function BlockEditor({
                 isTransitionTimerRef.current = null;
                 keyboardRef.current?.focus();
               }, 200);
+              setAddMenuVisible(false);
               setActiveTab(tab.key);
             }}
           >

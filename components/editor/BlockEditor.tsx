@@ -590,7 +590,19 @@ export function BlockEditor({
                 styles.addBtn,
                 { borderColor: theme.colors.iconSubtle },
               ]}
-              onPress={() => setAddMenuVisible(true)}
+              onPress={() => {
+                // 編集中ブロックを解除し keyboardRef に戻してからメニューを開く
+                isTransitioningRef.current = true;
+                editingBlockKeyRef.current = null;
+                if (isTransitionTimerRef.current) {
+                  clearTimeout(isTransitionTimerRef.current);
+                  isTransitionTimerRef.current = null;
+                }
+                keyboardRef.current?.focus();
+                setTimeout(() => { isTransitioningRef.current = false; }, 100);
+                setAddMenuFocusIndex(0);
+                setAddMenuVisible(true);
+              }}
             >
               <Text
                 style={[

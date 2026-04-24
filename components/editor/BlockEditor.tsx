@@ -407,9 +407,11 @@ export function BlockEditor({
       cycleMode();
     } else if (key === ',') {
       const tabOrder: Tab[] = ['front', 'back', 'memo'];
+      setEditTriggerMap({});
       setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) - 1 + 3) % 3]);
     } else if (key === '.') {
       const tabOrder: Tab[] = ['front', 'back', 'memo'];
+      setEditTriggerMap({});
       setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) + 1) % 3]);
     } else if (k === 'a') {
       if (!isPreviewRef.current) {
@@ -718,6 +720,7 @@ export function BlockEditor({
                 keyboardRef.current?.focus();
               }, 200);
               setAddMenuVisible(false);
+              setEditTriggerMap({});
               setActiveTab(tab.key);
             }}
           >

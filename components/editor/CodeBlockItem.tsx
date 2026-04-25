@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -47,11 +47,9 @@ interface Props {
   editTrigger?: number;
   onEditBlur?: () => void;
   runTrigger?: number;
-  /** スクロール中かどうかを返す（スクロールによる誤フォーカス防止） */
-  getIsScrolling?: () => boolean;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, runTrigger, getIsScrolling }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, runTrigger }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -62,20 +60,17 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
   const codeInputRef = useRef<TextInput>(null);
-  const hScrollRef = useRef<ScrollView>(null);
   const { insertPair, selection, handleSelectionChange, setSelectionToPos } = useInsertPair(
     block.content,
     (text) => onChange({ content: text }),
     codeInputRef,
   );
 
-  // enterEditMode から参照するために block.content を ref で保持（tapGesture を安定させるため）
   const contentRef = useRef(block.content);
   contentRef.current = block.content;
 
   const enterEditMode = useCallback(() => {
     setFocused(true);
-    // カーソルを最後の行の先頭（x:0）に設定 → iOS が行先頭を visible にするので右スクロールしない
     const lastNewline = contentRef.current.lastIndexOf('\n');
     const lastLineStart = lastNewline === -1 ? 0 : lastNewline + 1;
     setSelectionToPos(lastLineStart);
@@ -83,26 +78,16 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   }, [setSelectionToPos]);
 
   const tapGesture = useMemo(
-    () =>
-      Gesture.Tap()
-        .maxDeltaX(8)
-        .maxDeltaY(8)
-        .onEnd(() => { runOnJS(enterEditMode)(); }),
+    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterEditMode)(); }),
     [enterEditMode],
   );
 
   useEffect(() => {
-    if (autoFocus) {
-      setFocused(true);
-      setTimeout(() => codeInputRef.current?.focus(), 50);
-    }
+    if (autoFocus) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); }
   }, []);
 
   useEffect(() => {
-    if ((editTrigger ?? 0) > 0) {
-      setFocused(true);
-      setTimeout(() => codeInputRef.current?.focus(), 50);
-    }
+    if ((editTrigger ?? 0) > 0) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); }
   }, [editTrigger]);
 
   useEffect(() => {
@@ -201,10 +186,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 <SyntaxHighlightedCode code={block.content} language={block.language} />
               </ScrollView>
             ) : focused ? (
-              <ScrollView ref={hScrollRef} horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ width: width - 32 }}>
                 <TextInput
                   ref={codeInputRef}
-                  style={[styles.codeInput, { fontSize: theme.fontSize.md }]}
+                  style={[styles.codeInput, { fontSize: theme.fontSize.md, width: width - 32 }]}
                   value={block.content}
                   selection={selection}
                   onChangeText={(v) =>
@@ -219,12 +204,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   scrollEnabled={false}
                   placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
-                  onFocus={() => {
-                    setFocused(true);
-                    onFocusInput?.();
-                    // 行先頭カーソルで iOS が x:0 を維持するが、念のため 150ms 後にもリセット
-                    setTimeout(() => hScrollRef.current?.scrollTo({ x: 0, animated: false }), 150);
-                  }}
+                  onFocus={() => { setFocused(true); onFocusInput?.(); }}
                   onBlur={() => { setFocused(false); onEditBlur?.(); }}
                   textAlignVertical="top"
                   autoCapitalize="none"
@@ -235,9 +215,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
               </ScrollView>
             ) : (
               <GestureDetector gesture={tapGesture}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ minHeight: 56 }}>
                   <SyntaxHighlightedCode code={block.content} language={block.language} />
-                </ScrollView>
+                </View>
               </GestureDetector>
             )}
             <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>

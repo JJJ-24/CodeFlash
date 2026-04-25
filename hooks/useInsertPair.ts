@@ -40,5 +40,12 @@ export function useInsertPair(
     selectionRef.current = { start: pos, end: pos };
   }, []);
 
-  return { insertPair, selection, handleSelectionChange, initCursorPosition };
+  /** タップによる編集開始時にカーソル位置を設定し、iOS の自動スクロールを制御する */
+  const setSelectionToPos = useCallback((pos: number) => {
+    selectionRef.current = { start: pos, end: pos };
+    setSelection({ start: pos, end: pos });
+    setTimeout(() => setSelection(undefined), 200);
+  }, []);
+
+  return { insertPair, selection, handleSelectionChange, initCursorPosition, setSelectionToPos };
 }

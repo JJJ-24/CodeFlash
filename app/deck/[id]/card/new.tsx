@@ -92,7 +92,7 @@ export default function NewCardScreen() {
             </Pressable>
           ),
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
+            <Pressable onPress={() => { editorRef.current?.prepareForNavigation(); router.back(); }} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),

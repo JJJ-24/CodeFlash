@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Animated, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -31,12 +31,11 @@ interface Props {
   editTrigger?: number;
   /** TextInput のフォーカスが外れたとき BlockEditor に通知するコールバック */
   onEditBlur?: () => void;
-  /** スクロール中かどうかを返す（スクロールによる誤フォーカス防止） */
-  getIsScrolling?: () => boolean;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur, getIsScrolling }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur }: Props) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -53,11 +52,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }, []);
 
   const tapGesture = useMemo(
-    () =>
-      Gesture.Tap()
-        .maxDeltaX(8)
-        .maxDeltaY(8)
-        .onEnd(() => { runOnJS(enterEditMode)(); }),
+    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterEditMode)(); }),
     [enterEditMode],
   );
 
@@ -77,17 +72,11 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }, [flashTrigger]);
 
   useEffect(() => {
-    if (autoFocus) {
-      setFocused(true);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
+    if (autoFocus) { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); }
   }, []);
 
   useEffect(() => {
-    if ((editTrigger ?? 0) > 0) {
-      setFocused(true);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
+    if ((editTrigger ?? 0) > 0) { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); }
   }, [editTrigger]);
 
   useEffect(() => {
@@ -211,22 +200,24 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       ) : (
         <View style={styles.inputArea}>
           {focused ? (
-            <TextInput
-              ref={inputRef}
-              style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
-              value={block.content}
-              onChangeText={onChange}
-              multiline
-              scrollEnabled={false}
-              placeholder={t('card.textBlockPlaceholder')}
-              placeholderTextColor={theme.colors.textTertiary}
-              onFocus={() => { setFocused(true); onFocusInput?.(); }}
-              onBlur={() => { setFocused(false); onEditBlur?.(); }}
-              textAlignVertical="top"
-              autoCorrect={false}
-              spellCheck={false}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-            />
+            <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ width: width - 32 }}>
+              <TextInput
+                ref={inputRef}
+                style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md, width: width - 32 }]}
+                value={block.content}
+                onChangeText={onChange}
+                multiline
+                scrollEnabled={false}
+                placeholder={t('card.textBlockPlaceholder')}
+                placeholderTextColor={theme.colors.textTertiary}
+                onFocus={() => { setFocused(true); onFocusInput?.(); }}
+                onBlur={() => { setFocused(false); onEditBlur?.(); }}
+                textAlignVertical="top"
+                autoCorrect={false}
+                spellCheck={false}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              />
+            </ScrollView>
           ) : (
             <GestureDetector gesture={tapGesture}>
               <Text

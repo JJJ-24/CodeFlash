@@ -118,8 +118,6 @@ export function BlockEditor({
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const scrollViewHeightRef = useRef(windowHeight);
-  const isScrollingRef = useRef(false);
-  const getIsScrolling = useCallback(() => isScrollingRef.current, []);
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
   const keyboardRef = useRef<TextInput>(null);
   const focusedBlockIndexRef = useRef<number | null>(null);
@@ -135,7 +133,6 @@ export function BlockEditor({
   const editingBlockKeyRef = useRef<string | null>(null);
   const isNavigatingRef = useRef(false);
   const addAreaYRef = useRef(0);
-  const addAreaHeightRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [editorMode, setEditorMode] = useState<EditorMode>("edit");
@@ -310,26 +307,6 @@ export function BlockEditor({
       isTransitionTimerRef.current = null;
     }
     setFocusedBlockIndex(null);
-  }
-
-  // コードブロックタップ編集開始専用：キーボード出現後に ブロック最下部 + ブロック追加エリアが見えるようスクロール
-  function handleCodeBlockTapFocus(blockKey: string) {
-    editingBlockKeyRef.current = blockKey;
-    if (isTransitionTimerRef.current) {
-      clearTimeout(isTransitionTimerRef.current);
-      isTransitionTimerRef.current = null;
-    }
-    setFocusedBlockIndex(null);
-    // キーボードアニメーション完了後（350ms）に add エリアが見えるよう最終補正
-    setTimeout(() => {
-      if (!scrollRef.current || addAreaYRef.current <= 0) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (scrollRef.current as any).measure((_fx: number, _fy: number, _w: number, h: number) => {
-        const addAreaBottom = addAreaYRef.current + addAreaHeightRef.current;
-        const targetY = addAreaBottom - h + 16;
-        scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true });
-      });
-    }, 350);
   }
 
   function handleBlockEditBlur() {
@@ -537,7 +514,7 @@ export function BlockEditor({
     <>
       {/* ブロック追加ボタン */}
       {!isPreview && (
-        <View style={styles.addArea} onLayout={(e) => { addAreaYRef.current = e.nativeEvent.layout.y; addAreaHeightRef.current = e.nativeEvent.layout.height; }}>
+        <View style={styles.addArea} onLayout={(e) => { addAreaYRef.current = e.nativeEvent.layout.y; }}>
           {addMenuVisible ? (
             <View
               style={[
@@ -817,9 +794,7 @@ export function BlockEditor({
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={100}
-        onScrollBeginDrag={() => { isScrollingRef.current = true; }}
-        onScrollEndDrag={() => { setTimeout(() => { isScrollingRef.current = false; }, 150); }}
-        onMomentumScrollEnd={() => { isScrollingRef.current = false; }}
+
       >
         {currentBlocks.map((block, index) => {
           const moveUp = isSortMode && index > 0 ? () => moveBlock(activeTab, block._key, 'up') : undefined;
@@ -851,7 +826,6 @@ export function BlockEditor({
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
-                  getIsScrolling={getIsScrolling}
                 />
               )}
               {block.type === "code" && (
@@ -869,7 +843,6 @@ export function BlockEditor({
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   runTrigger={runTriggerMap[block._key] ?? 0}
-                  getIsScrolling={getIsScrolling}
                   onRunStart={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
@@ -877,7 +850,7 @@ export function BlockEditor({
                       scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - 300), animated: true });
                     }, 300);
                   }}
-                  onFocusInput={() => handleCodeBlockTapFocus(block._key)}
+                  onFocusInput={() => handleBlockTapFocus(block._key)}
                 />
               )}
               {block.type === "image" && (

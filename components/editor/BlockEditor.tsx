@@ -80,6 +80,8 @@ export interface BlockEditorData {
 
 export interface BlockEditorRef {
   save: () => void;
+  /** ナビゲーション遷移直前に呼ぶ。blur タイマーによる focus() が遷移を妨害しないようにする */
+  prepareForNavigation: () => void;
 }
 
 interface Props {
@@ -131,7 +133,9 @@ export function BlockEditor({
   const addMenuVisibleRef = useRef(false);
   const addMenuFocusIndexRef = useRef(0);
   const editingBlockKeyRef = useRef<string | null>(null);
+  const isNavigatingRef = useRef(false);
   const addAreaYRef = useRef(0);
+  const addAreaHeightRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [editorMode, setEditorMode] = useState<EditorMode>("edit");
@@ -308,9 +312,29 @@ export function BlockEditor({
     setFocusedBlockIndex(null);
   }
 
+  // コードブロックタップ編集開始専用：キーボード出現後に ブロック最下部 + ブロック追加エリアが見えるようスクロール
+  function handleCodeBlockTapFocus(blockKey: string) {
+    editingBlockKeyRef.current = blockKey;
+    if (isTransitionTimerRef.current) {
+      clearTimeout(isTransitionTimerRef.current);
+      isTransitionTimerRef.current = null;
+    }
+    setFocusedBlockIndex(null);
+    // キーボードアニメーション完了後（350ms）に add エリアが見えるよう最終補正
+    setTimeout(() => {
+      if (!scrollRef.current || addAreaYRef.current <= 0) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (scrollRef.current as any).measure((_fx: number, _fy: number, _w: number, h: number) => {
+        const addAreaBottom = addAreaYRef.current + addAreaHeightRef.current;
+        const targetY = addAreaBottom - h + 16;
+        scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true });
+      });
+    }, 350);
+  }
+
   function handleBlockEditBlur() {
     editingBlockKeyRef.current = null;
-    if (isTransitioningRef.current) return;
+    if (isTransitioningRef.current || isNavigatingRef.current) return;
     if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
     isTransitionTimerRef.current = setTimeout(() => {
       keyboardRef.current?.focus();
@@ -326,15 +350,19 @@ export function BlockEditor({
     setEditTriggerMap(prev => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
     setTimeout(() => { isTransitioningRef.current = false; }, 300);
     // ブロック末尾（カーソル位置）が画面最下部に来るようスクロール
-    // 2段階: t=100ms で scrollRectToVisible を即時上書き、t=350ms でキーボード出現後に最終補正
-    const scrollToBlockEnd = (animated: boolean) => {
+    const scrollToBlockEnd = () => {
       const pos = blockPositions.current[key];
       if (!pos || !scrollRef.current) return;
       const viewH = scrollViewHeightRef.current;
-      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - viewH + 24), animated });
+      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - viewH + 24), animated: false });
     };
-    setTimeout(() => scrollToBlockEnd(false), 100);
-    setTimeout(() => scrollToBlockEnd(true), 350);
+    setTimeout(() => scrollToBlockEnd(), 100);
+    setTimeout(() => {
+      const pos = blockPositions.current[key];
+      if (!pos || !scrollRef.current) return;
+      const viewH = scrollViewHeightRef.current;
+      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - viewH + 24), animated: true });
+    }, 350);
   }
 
   function handleKeyPress(key: string) {
@@ -434,16 +462,11 @@ export function BlockEditor({
     } else if (k === 'd') {
       if (idx !== null && blocks[idx]) {
         const block = blocks[idx];
-        const isLast = blocks.length === 1;
         const isEmpty =
           block.type === 'image'
             ? !(block as ImageBlock).uri
             : (block as TextBlock | CodeBlock).content.trim() === '';
-        if (isLast) {
-          Alert.alert(t('card.deleteBlock'), t('card.deleteBlockRequired'), [
-            { text: t('common.ok') },
-          ]);
-        } else if (isEmpty) {
+        if (isEmpty) {
           deleteBlock(tab, block._key);
           setFocusedBlockIndex(null);
         } else {
@@ -463,6 +486,11 @@ export function BlockEditor({
         onDeleteCard?.();
       }
     } else if (k === 'x') {
+      isNavigatingRef.current = true;
+      if (isTransitionTimerRef.current) {
+        clearTimeout(isTransitionTimerRef.current);
+        isTransitionTimerRef.current = null;
+      }
       onCancel?.();
     } else if (k === 's') {
       handleSave();
@@ -475,6 +503,11 @@ export function BlockEditor({
 
   async function handleSave() {
     if (isFrontEmpty) return;
+    isNavigatingRef.current = true;
+    if (isTransitionTimerRef.current) {
+      clearTimeout(isTransitionTimerRef.current);
+      isTransitionTimerRef.current = null;
+    }
     await onSave({
       frontBlocks: fromEditBlocks(frontBlocks),
       backBlocks: fromEditBlocks(backBlocks),
@@ -483,7 +516,16 @@ export function BlockEditor({
     });
   }
 
-  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+    prepareForNavigation: () => {
+      isNavigatingRef.current = true;
+      if (isTransitionTimerRef.current) {
+        clearTimeout(isTransitionTimerRef.current);
+        isTransitionTimerRef.current = null;
+      }
+    },
+  }), [handleSave]);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "front", label: t("card.front") },
@@ -495,7 +537,7 @@ export function BlockEditor({
     <>
       {/* ブロック追加ボタン */}
       {!isPreview && (
-        <View style={styles.addArea} onLayout={(e) => { addAreaYRef.current = e.nativeEvent.layout.y; }}>
+        <View style={styles.addArea} onLayout={(e) => { addAreaYRef.current = e.nativeEvent.layout.y; addAreaHeightRef.current = e.nativeEvent.layout.height; }}>
           {addMenuVisible ? (
             <View
               style={[
@@ -780,7 +822,6 @@ export function BlockEditor({
         onMomentumScrollEnd={() => { isScrollingRef.current = false; }}
       >
         {currentBlocks.map((block, index) => {
-          const isLast = currentBlocks.length === 1;
           const moveUp = isSortMode && index > 0 ? () => moveBlock(activeTab, block._key, 'up') : undefined;
           const moveDown = isSortMode && index < currentBlocks.length - 1 ? () => moveBlock(activeTab, block._key, 'down') : undefined;
           const flashTrigger = selectedBlockKey === block._key ? moveCount : 0;
@@ -805,7 +846,6 @@ export function BlockEditor({
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
-                  isLast={isLast}
                   onCollapsedDoubleTap={() => setEditorMode("edit")}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
@@ -824,7 +864,6 @@ export function BlockEditor({
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
-                  isLast={isLast}
                   autoFocus={block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
@@ -838,7 +877,7 @@ export function BlockEditor({
                       scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - 300), animated: true });
                     }, 300);
                   }}
-                  onFocusInput={() => handleBlockTapFocus(block._key)}
+                  onFocusInput={() => handleCodeBlockTapFocus(block._key)}
                 />
               )}
               {block.type === "image" && (
@@ -850,7 +889,6 @@ export function BlockEditor({
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
-                  isLast={isLast}
                   autoFocus={block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
                   onEditBlur={handleBlockEditBlur}

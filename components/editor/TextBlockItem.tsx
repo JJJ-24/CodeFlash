@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Animated, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,7 +23,6 @@ interface Props {
   onMoveDown?: () => void;
   collapsed?: boolean;
   flashTrigger?: number;
-  isLast?: boolean;
   onCollapsedDoubleTap?: () => void;
   onFocusInput?: () => void;
   /** キーボードナビゲーションでこのブロックが選択されているか */
@@ -34,9 +35,8 @@ interface Props {
   getIsScrolling?: () => boolean;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur, getIsScrolling }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur, getIsScrolling }: Props) {
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -46,6 +46,21 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     setTimeout(() => setCopied(false), 1000);
   }
   const inputRef = useRef<TextInput>(null);
+
+  const enterEditMode = useCallback(() => {
+    setFocused(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
+
+  const tapGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .maxDeltaX(8)
+        .maxDeltaY(8)
+        .onEnd(() => { runOnJS(enterEditMode)(); }),
+    [enterEditMode],
+  );
+
   const doubleTapCountRef = useRef(0);
   const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFocusRef = useRef(false);
@@ -63,12 +78,14 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
 
   useEffect(() => {
     if (autoFocus) {
+      setFocused(true);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, []);
 
   useEffect(() => {
     if ((editTrigger ?? 0) > 0) {
+      setFocused(true);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [editTrigger]);
@@ -88,7 +105,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       setFocused(false);
       if (pendingFocusRef.current) {
         pendingFocusRef.current = false;
-        setTimeout(() => inputRef.current?.focus(), 80);
+        setFocused(true);
+        setTimeout(() => inputRef.current?.focus(), 100);
       }
     }
     prevCollapsedRef.current = collapsed;
@@ -158,7 +176,6 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}
-        isLast={isLast}
         style={{
           backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
           borderBottomWidth: 1,
@@ -193,31 +210,33 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         </View>
       ) : (
         <View style={styles.inputArea}>
-          <ScrollView horizontal scrollEnabled showsHorizontalScrollIndicator={false} style={{ width: width - 32 }}>
+          {focused ? (
             <TextInput
               ref={inputRef}
-              style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md, width: width - 32 }]}
+              style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
               value={block.content}
               onChangeText={onChange}
               multiline
               scrollEnabled={false}
               placeholder={t('card.textBlockPlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
-              onFocus={() => {
-                if (getIsScrolling?.()) {
-                  setTimeout(() => inputRef.current?.blur(), 0);
-                  return;
-                }
-                setFocused(true);
-                onFocusInput?.();
-              }}
+              onFocus={() => { setFocused(true); onFocusInput?.(); }}
               onBlur={() => { setFocused(false); onEditBlur?.(); }}
               textAlignVertical="top"
               autoCorrect={false}
               spellCheck={false}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             />
-          </ScrollView>
+          ) : (
+            <GestureDetector gesture={tapGesture}>
+              <Text
+                style={[styles.input, { color: block.content ? theme.colors.text : theme.colors.textTertiary, fontSize: theme.fontSize.md, fontStyle: block.content ? 'normal' : 'italic' }]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {block.content || t('card.textBlockPlaceholder')}
+              </Text>
+            </GestureDetector>
+          )}
           {block.content.trim() ? (
             <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
               <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />

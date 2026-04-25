@@ -25,14 +25,13 @@ interface Props {
   onMoveDown?: () => void;
   collapsed?: boolean;
   flashTrigger?: number;
-  isLast?: boolean;
   onFocusInput?: () => void;
   onEditBlur?: () => void;
   autoFocus?: boolean;
   isFocused?: boolean;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, isLast, onFocusInput, onEditBlur, autoFocus, isFocused }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -90,7 +89,6 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}
-        isLast={isLast}
         style={{
           backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
           borderBottomWidth: 1,

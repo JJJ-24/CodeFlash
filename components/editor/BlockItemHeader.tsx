@@ -13,21 +13,14 @@ interface Props {
   collapsed?: boolean;
   style?: StyleProp<ViewStyle>;
   isEmpty?: boolean;
-  isLast?: boolean;
 }
 
-export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, collapsed, style, isEmpty, isLast }: Props) {
+export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, collapsed, style, isEmpty }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const isSortMode = onMoveUp !== undefined || onMoveDown !== undefined;
 
   function confirmDelete() {
-    if (isLast) {
-      Alert.alert(t('card.deleteBlock'), t('card.deleteBlockRequired'), [
-        { text: t('common.ok') },
-      ]);
-      return;
-    }
     if (isEmpty) {
       onDelete();
       return;

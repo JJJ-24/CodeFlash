@@ -21,10 +21,11 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
+import { getCardPreview } from '@/lib/cardPreview';
 import { useSettingsStore } from '@/store/settings';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
-import type { Card, Tag, TextBlock } from '@/types';
+import type { Card, Tag } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
@@ -33,16 +34,6 @@ const TAG_CARDS_SHORTCUTS = [
   { key: 'N',     descKey: 'shortcut.new' },
   { key: 'B',     descKey: 'shortcut.back' },
 ];
-
-function getPreviewText(blocks: Card['frontContent']): string {
-  for (const block of blocks) {
-    if (block.type === 'text') {
-      const text = (block as TextBlock).content.trim();
-      if (text) return text;
-    }
-  }
-  return '';
-}
 
 export default function TagCardsScreen() {
   const { tagId } = useLocalSearchParams<{ tagId: string }>();
@@ -63,7 +54,7 @@ export default function TagCardsScreen() {
   const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
 
   function confirmDeleteCard(card: Card) {
-    const rawPreview = getPreviewText(card.frontContent);
+    const rawPreview = getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ');
     const preview = rawPreview || t('card.noText');
     const name = preview.length > 20 ? preview.slice(0, 20) + '…' : preview;
     Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
@@ -181,7 +172,7 @@ export default function TagCardsScreen() {
           }
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedCardIndex(null)} />}
           renderItem={({ item, index }) => {
-            const preview = getPreviewText(item.frontContent);
+            const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
             const isFocused = focusedCardIndex === index;
             return (
               <Pressable

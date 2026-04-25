@@ -45,14 +45,10 @@ import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
 import type { CardSortOrder, DeckDetailFilter } from '@/store/settings';
-import type { Block, Card, Deck } from '@/types';
+import { getCardPreview } from '@/lib/cardPreview';
+import type { Card, Deck } from '@/types';
 
 type FilterKey = DeckDetailFilter;
-
-function getPreviewText(blocks: Block[]): string {
-  const first = blocks.find((b) => b.type === 'text');
-  return first?.content?.trim() ?? '';
-}
 
 export default function DeckDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -160,7 +156,7 @@ export default function DeckDetailScreen() {
   }, [deck]);
 
   function confirmDeleteCard(card: Card) {
-    const preview = getPreviewText(card.frontContent);
+    const preview = getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ');
     const name = (preview || t('card.noText')).slice(0, 20) + ((preview || t('card.noText')).length > 20 ? '…' : '');
     Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -574,7 +570,7 @@ export default function DeckDetailScreen() {
             updateCardSortOrders(db, data.map((c) => c.id));
           }}
           renderItem={({ item, drag, getIndex }: RenderItemParams<Card>) => {
-          const preview = getPreviewText(item.frontContent);
+          const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
           const isSelected = selectedCardIds.has(item.id);
           const isFocused = focusedCardIndex !== null && getIndex() === focusedCardIndex;
           function toggleSelect() {

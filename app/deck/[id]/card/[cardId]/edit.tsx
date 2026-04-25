@@ -13,6 +13,7 @@ import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockE
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteCard, getCardById, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
+import { getCardPreview } from '@/lib/cardPreview';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
@@ -99,7 +100,7 @@ export default function EditCardScreen() {
   }
 
   function confirmDelete() {
-    const rawPreview = card?.frontContent.find((b) => b.type === 'text')?.content?.trim() ?? '';
+    const rawPreview = card ? getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ') : '';
     const preview = rawPreview || t('card.noText');
     const name = preview.length > 20 ? preview.slice(0, 20) + '…' : preview;
     Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
@@ -145,7 +146,7 @@ export default function EditCardScreen() {
             </Pressable>
           ),
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
+            <Pressable onPress={() => { editorRef.current?.prepareForNavigation(); router.back(); }} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),

@@ -14,20 +14,11 @@ import {
 
 import { searchCards } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
+import { getCardPreview } from '@/lib/cardPreview';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
-import type { Card, TextBlock } from '@/types';
-
-function getPreviewText(blocks: Card['frontContent']): string {
-  for (const block of blocks) {
-    if (block.type === 'text') {
-      const text = (block as TextBlock).content.trim();
-      if (text) return text;
-    }
-  }
-  return '';
-}
+import type { Card } from '@/types';
 
 export default function SearchScreen() {
   const db = useSQLiteContext();
@@ -125,7 +116,7 @@ export default function SearchScreen() {
             <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
           )}
           renderItem={({ item }) => {
-            const preview = getPreviewText(item.frontContent);
+            const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
             const deckName = deckMap[item.deckId] ?? '';
             return (
               <Pressable

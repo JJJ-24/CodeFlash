@@ -118,6 +118,7 @@ export function BlockEditor({
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const scrollViewHeightRef = useRef(windowHeight);
+  const scrollPosRef = useRef<Record<Tab, number>>({ front: 0, back: 0, memo: 0 });
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
   const keyboardRef = useRef<TextInput>(null);
   const focusedBlockIndexRef = useRef<number | null>(null);
@@ -261,9 +262,10 @@ export function BlockEditor({
     }
   }, [addMenuVisible]);
 
-  // タブ切替でブロックフォーカスをリセット
+  // タブ切替でブロックフォーカスをリセット＋スクロール位置を個別に復元
   useEffect(() => {
     setFocusedBlockIndex(null);
+    scrollRef.current?.scrollTo({ y: scrollPosRef.current[activeTab], animated: false });
   }, [activeTab]);
 
   // ブロック数変化時にフォーカスインデックスを補正
@@ -794,7 +796,7 @@ export function BlockEditor({
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={100}
-
+        onScroll={(e) => { scrollPosRef.current[activeTabRef.current] = e.nativeEvent.contentOffset.y; }}
       >
         {currentBlocks.map((block, index) => {
           const moveUp = isSortMode && index > 0 ? () => moveBlock(activeTab, block._key, 'up') : undefined;

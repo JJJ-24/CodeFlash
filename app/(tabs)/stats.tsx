@@ -679,7 +679,7 @@ export default function StatsScreen() {
             <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
               {t('stats.unlearned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{unlearned}</Text>
             </Text>
-            <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{learnedPct}%</Text>
+            <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{learnedPct}%</Text>
           </View>
           <View style={[styles.progressBarBg, { backgroundColor: theme.colors.progressBg }]}>
             <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
@@ -770,10 +770,10 @@ const styles = StyleSheet.create({
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
 
   // Progress
-  progressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
-  progressLabel: { flex: 1 },
+  progressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 60 },
+  progressLabel: {},
   progressNum: { fontWeight: '700' },
-  progressPct: { fontWeight: '700' },
+  progressPct: { fontWeight: '700', marginLeft: 'auto' },
   progressBarBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#1976D2', borderRadius: 5 },
 

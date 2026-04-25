@@ -2,15 +2,14 @@
   "home": {
     "title": "デッキ一覧",
     "empty": "デッキがまだありません",
-    "emptySub": "+ ボタンからデッキを作成しましょう",
+    "emptySub": "+ ボタンからデッキを作成しよう",
     "cards": "{{count}} 枚",
     "sortManual": "  手動  ",
     "sortName": "  名前  ",
     "sortCardCount": "  枚数  ",
     "sortDescManual": "長押しで並べ替え",
     "sortDescName": "名前順",
-    "sortDescCardCount": "カード枚数の多い順",
-    "tagListTitle": "タグ一覧"
+    "sortDescCardCount": "カード枚数の多い順"
   },
   "deck": {
     "new": "新規デッキ",
@@ -29,7 +28,7 @@
     "save": "保存",
     "study": "学習開始",
     "noCards": "カードがまだありません",
-    "noCardsSub": "+ ボタンからカードを作成しましょう",
+    "noCardsSub": "+ ボタンからカードを作成しよう",
     "noCardsInFilter": "該当するカードはありません"
   },
   "study": {
@@ -54,7 +53,7 @@
     "linksTitle": "リンク一覧",
     "filterDescAll": "すべてのカード",
     "filterDescLearned": "今日学習したカード",
-    "filterDescReview": "学習が必要なカード",
+    "filterDescReview": "今日学習が必要なカード",
     "filterDescNew": "今日作成したカード",
     "reviewedOf": "学習済み {{reviewed}} / {{total}} 枚",
     "skipped": "評価なし",
@@ -67,6 +66,7 @@
     "shuffle": "シャッフル"
   },
   "tag": {
+    "tagListTitle": "タグ一覧",
     "title": "タグ管理",
     "new": "新規タグ",
     "edit": "タグ編集",
@@ -78,7 +78,7 @@
     "create": "作成",
     "save": "保存",
     "empty": "タグがまだありません",
-    "emptySub": "+ ボタンからタグを作成しましょう",
+    "emptySub": "+ ボタンからタグを作成しよう",
     "cards": "{{count}} 枚",
     "duplicateName": "同じ名前のタグがすでに存在します"
   },
@@ -247,9 +247,9 @@
     "importSuccess": "インポートが完了しました",
     "importError": "インポートに失敗しました",
     "importInvalidFile": "ファイルの形式が正しくありません",
-    "exportImageTitle": "画像の扱い",
+    "exportImageTitle": "画像について",
     "exportImageMessage": "画像データを含めますか？\n含めると別端末でも画像が表示されますが、ファイルサイズが大きくなります。",
-    "exportWithImages": "含める（完全バックアップ）",
+    "exportWithImages": "含める（完全）",
     "exportWithoutImages": "含めない（軽量）",
     "exportLargeSizeTitle": "ファイルサイズの確認",
     "exportLargeSizeMessage": "画像を含めると約{{size}}MBになります。続けますか？",
@@ -259,7 +259,7 @@
     "exportTsvSubtitle": "TSV 形式でカードを出力",
     "importTsvSubtitle": "TSV ファイルからカードを追加・更新",
     "tsvExportNoteTitle": "TSV エクスポートについて",
-    "tsvExportNoteMessage": "以下の点にご注意ください。\n\n・学習履歴は含まれません\n・コードブロック・画像ブロックはテキストに変換されます（再インポートでは復元されません）",
+    "tsvExportNoteMessage": "以下の点にご注意ください。\n\n■ 学習履歴は含まれません\n■ コード・画像ブロックはテキストに変換されます（再インポートでは復元されません）",
     "importTsv": "TSV インポート",
     "tsvImportNoteTitle": "TSV インポートについて",
     "tsvImportNoteMessage": "本アプリからエクスポートしたTSVを再インポートする場合は、id 列を削除しないでください。\nid 列がないと既存カードへの上書きではなく、新規作成になります。",

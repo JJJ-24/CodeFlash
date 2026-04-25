@@ -9,8 +9,7 @@
     "sortCardCount": "Count",
     "sortDescManual": "Long-press to reorder",
     "sortDescName": "Sorted by deck name",
-    "sortDescCardCount": "Most cards first",
-    "tagListTitle": "Tags"
+    "sortDescCardCount": "Most cards first"
   },
   "deck": {
     "new": "New Deck",
@@ -67,6 +66,7 @@
     "shuffle": "Shuffle"
   },
   "tag": {
+    "tagListTitle": "Tags",
     "title": "Tags",
     "new": "New Tag",
     "edit": "Edit Tag",

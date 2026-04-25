@@ -279,7 +279,7 @@
     "links": "リンク一覧 表示/非表示",
     "pencil": "カード編集",
     "startStudy": "学習開始",
-    "startStudyFocused": "学習開始（フォーカス項目）",
+    "startStudyFocused": "学習開始（フォーカス項目）\n[Return]でも可",
     "switchFilter": "フィルター切替\n（すべて/済み/復習/新規）",
     "new": "新規作成",
     "toggleSelect": "選択モード切替",

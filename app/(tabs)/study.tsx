@@ -49,7 +49,7 @@ function sumValues(map: Record<string, number>): number {
 const STUDY_TAB_SHORTCUTS = [
   { key: '1–4',   descKey: 'shortcut.switchFilter' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
-  { key: 'Return', descKey: 'shortcut.startStudyFocused' },
+  { key: 'Space', descKey: 'shortcut.startStudyFocused' },
   { key: 'S',     descKey: 'shortcut.toggleShuffle' },
   { key: 'Q',     descKey: 'shortcut.switchDeckTab' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
@@ -186,6 +186,7 @@ export default function StudyScreen() {
     else if (key === '3') { setActiveFilter('review'); }
     else if (key === '4') { setActiveFilter('new'); }
     else if (key === 's' || key === 'S') { setShuffleEnabled(!shuffleEnabled); }
+    else if (key === ' ') { startStudyFocused(); }
     else if (key === 'q' || key === 'Q') {
       setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
     }

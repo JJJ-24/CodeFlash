@@ -279,7 +279,7 @@
     "links": "Toggle link list",
     "pencil": "Edit card",
     "startStudy": "Start studying",
-    "startStudyFocused": "Start studying focused item",
+    "startStudyFocused": "Start studying focused item\n[Return] also works",
     "switchFilter": "Switch filter\n(All/Done/Due/New)",
     "new": "New",
     "toggleSelect": "Toggle selection mode",

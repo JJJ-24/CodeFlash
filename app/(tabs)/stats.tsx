@@ -672,18 +672,16 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setFocusedItem('total'); activeSheet === 'total' ? closeSheet() : openSheet('total'); }}
         >
-          <View style={styles.progressHeader}>
-            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {t('stats.learned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{learned}</Text>
-            </Text>
-            <Text style={[styles.progressLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {t('stats.unlearned')}: <Text style={[styles.progressNum, { color: theme.colors.text }]}>{unlearned}</Text>
-            </Text>
+          <View style={styles.masteryHeader}>
+            <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.allDecks')}</Text>
             <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{learnedPct}%</Text>
           </View>
           <View style={[styles.progressBarBg, { backgroundColor: theme.colors.progressBg }]}>
             <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
           </View>
+          <Text style={[styles.progressSubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+            {t('stats.learned')}: {learned}{'        '}{t('stats.unlearned')}: {unlearned}
+          </Text>
         </Pressable>
       </View>
 
@@ -768,14 +766,14 @@ const styles = StyleSheet.create({
   barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
+  barCount: { textAlign: 'center' },
+  barLabel: { textAlign: 'center', fontWeight: '600' },
 
   // Progress
-  progressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 60 },
-  progressLabel: {},
-  progressNum: { fontWeight: '700' },
-  progressPct: { fontWeight: '700', marginLeft: 'auto' },
+  progressPct: { fontWeight: '700' },
   progressBarBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#1976D2', borderRadius: 5 },
+  progressSubLabel: { marginTop: 6 },
 
   // Deck mastery
   deckMasteryList: { gap: 8 },
@@ -785,5 +783,6 @@ const styles = StyleSheet.create({
   masteryPct: { fontWeight: '700' },
   masteryBarBg: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 4 },
   masteryBarFill: { height: '100%', borderRadius: 4 },
+  masterySubLabel: {},
 
 });

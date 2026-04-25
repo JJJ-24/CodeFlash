@@ -45,6 +45,7 @@ import {
   donutArcPath,
 } from "@/lib/donut";
 import { FlipSuppressContext } from "@/lib/FlipSuppressContext";
+import { getReviewByCardId } from "@/lib/database/reviews";
 import { updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
 import { extractLinks } from "@/lib/study/extractLinks";
@@ -142,6 +143,7 @@ export default function StudySessionScreen() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
   const [grading, setGrading] = useState(false);
+  const [prevGrade, setPrevGrade] = useState<Grade | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
@@ -322,6 +324,14 @@ export default function StudySessionScreen() {
     frontScrollRef.current?.scrollTo({ y: 0, animated: false });
     backScrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentIndex]);
+
+  // カードが切り替わったら前回グレードを取得
+  useEffect(() => {
+    if (!currentCard) { setPrevGrade(null); return; }
+    getReviewByCardId(db, currentCard.id).then((r) => {
+      setPrevGrade(r != null ? (r.lastGrade as Grade) : null);
+    });
+  }, [currentCard?.id]);
 
   // フリップ時にメモを隠し、コードブロック選択をリセット
   useEffect(() => {
@@ -871,6 +881,7 @@ export default function StudySessionScreen() {
           >
             {t(labelKey)}
           </Text>
+          <View style={[styles.prevGradeDot, { backgroundColor: prevGrade === grade ? color : 'transparent' }]} />
         </TouchableOpacity>
       ))}
     </View>
@@ -1529,13 +1540,14 @@ const styles = StyleSheet.create({
   gradeRow: { flexDirection: "row", gap: 8 },
   gradeBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: (Platform as any).isPad ? 14 : 10,
     borderRadius: 12,
     borderWidth: 1.5,
     alignItems: "center",
   },
   gradeBtnDisabled: { opacity: 0.4 },
   gradeBtnText: { fontWeight: "700" },
+  prevGradeDot: { width: 5, height: 5, borderRadius: 3, marginTop: 5 },
   completeScreen: {
     flex: 1,
     alignItems: "center",

@@ -128,7 +128,7 @@ export default function NewTagScreen() {
             onPress={handleSave}
             disabled={!canSave}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('tag.create')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.create')}</Text>
           </TouchableOpacity>
         </View>
       </View>

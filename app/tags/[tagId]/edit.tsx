@@ -163,7 +163,7 @@ export default function EditTagScreen() {
             onPress={handleSave}
             disabled={!canSave}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('tag.save')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.save')}</Text>
           </TouchableOpacity>
         </View>
       </View>

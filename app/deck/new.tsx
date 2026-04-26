@@ -128,7 +128,7 @@ export default function NewDeckScreen() {
             onPress={handleCreate}
             disabled={!canSave}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('deck.create')}</Text>
+            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.create')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -321,7 +321,7 @@ export default function DeckDetailScreen() {
   }
 
   const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
-    { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('stats.all') },
+    { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('common.all') },
     { key: 'learned', count: todayReviewed, color: FILTER_COLORS.learned, label: t('stats.learned') },
     { key: 'review', count: dueCount, color: FILTER_COLORS.due, label: t('stats.statDue') },
     { key: 'new', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },

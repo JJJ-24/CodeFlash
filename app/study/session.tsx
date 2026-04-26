@@ -792,7 +792,7 @@ export default function StudySessionScreen() {
         style={{ color: theme.colors.textTertiary }}
         maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
       >
-        {showMemo ? t("study.hideMemo") : t("study.showMemo")}
+        {showMemo ? t("study.hideMemo") : t("common.memo")}
       </Text>
     </Pressable>
   );

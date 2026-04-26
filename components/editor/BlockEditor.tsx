@@ -507,9 +507,9 @@ export function BlockEditor({
   }), [handleSave]);
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "front", label: t("card.front") },
-    { key: "back", label: t("card.back") },
-    { key: "memo", label: t("card.memo") },
+    { key: "front", label: t("common.front") },
+    { key: "back", label: t("common.back") },
+    { key: "memo", label: t("common.memo") },
   ];
 
   const footerContent = (

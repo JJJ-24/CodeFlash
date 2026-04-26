@@ -145,7 +145,7 @@ export default function StudyScreen() {
   );
 
   function makeDisplayInfo(n: number) {
-    return { count: n, subText: n > 0 ? t('study.targetCards', { count: n }) : t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
+    return { count: n, subText: t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };
   }
 
   function getDeckDisplayInfo(deck: Deck) {
@@ -268,7 +268,7 @@ export default function StudyScreen() {
   };
 
   const filterBlocks: { key: Filter; value: number; color: string; label: string }[] = [
-    { key: 'all', value: totalAll, color: theme.colors.primary, label: t('stats.all') },
+    { key: 'all', value: totalAll, color: theme.colors.primary, label: t('common.all') },
     { key: 'learned', value: totalLearned, color: FILTER_COLORS.learned, label: t('stats.learned') },
     { key: 'review', value: totalReview, color: FILTER_COLORS.due, label: t('stats.statDue') },
     { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('stats.newToday') },

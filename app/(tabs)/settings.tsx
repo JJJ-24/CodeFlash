@@ -333,7 +333,7 @@ export default function SettingsScreen() {
       <SegmentedCard
         label={t('settings.initialFilter')}
         options={[
-          { value: 'all' as InitialFilterPreference,    label: t('settings.initialFilterAll') },
+          { value: 'all' as InitialFilterPreference,    label: t('common.all') },
           { value: 'review' as InitialFilterPreference, label: t('settings.initialFilterReview') },
           { value: 'none' as InitialFilterPreference,   label: t('settings.initialFilterNone') },
         ]}

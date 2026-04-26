@@ -253,7 +253,7 @@ export default function TagCardsScreen() {
                       {item.name}
                     </Text>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('home.cards', { count: item.cardCount })}
+                      {t('common.cardsCount', { count: item.cardCount })}
                     </Text>
                   </Pressable>
                 )}

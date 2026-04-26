@@ -35,10 +35,10 @@ export default function SearchScreen() {
   const [searchField, setSearchField] = useState<SearchField>(lastSearchField as SearchField);
 
   const FIELD_OPTIONS: { value: SearchField; labelKey: string }[] = [
-    { value: 'all',  labelKey: 'card.searchFieldAll' },
-    { value: 'front', labelKey: 'card.searchFieldFront' },
-    { value: 'back',  labelKey: 'card.searchFieldBack' },
-    { value: 'memo',  labelKey: 'card.searchFieldMemo' },
+    { value: 'all',  labelKey: 'common.all' },
+    { value: 'front', labelKey: 'common.front' },
+    { value: 'back',  labelKey: 'common.back' },
+    { value: 'memo',  labelKey: 'common.memo' },
   ];
 
   useEffect(() => {

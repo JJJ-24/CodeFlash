@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useSettingsStore } from '@/store/settings';
 
 import { getCardById, getTodayCreatedCardIdsByDeckId, getTodayCreatedCardIdsByTagId } from '@/lib/database/cards';
+import { todayISO } from '@/lib/database/utils';
 import {
   getAllCardIdsByDeckId,
   getAllCardIdsByTagId,
@@ -14,7 +15,11 @@ import {
   saveReview,
 } from '@/lib/database/reviews';
 import { calculateNextReview, INITIAL_REVIEW_STATE } from '@/lib/sm2';
-import type { Grade } from '@/lib/sm2';
+import type { Grade, ReviewState } from '@/lib/sm2';
+
+// セッションをまたいで今日の元状態を保持するモジュールレベルキャッシュ
+// key: cardId, value: { state: 評価前の元状態, date: ISO日付 }
+const _originalStateCache = new Map<string, { state: ReviewState; date: string }>();
 import type { Card } from '@/types';
 
 export interface SessionResult {
@@ -108,13 +113,30 @@ export function useStudySession() {
       if (!card) return;
 
       const existing = await getReviewByCardId(db, card.id);
-      const state = existing ?? { ...INITIAL_REVIEW_STATE };
-      const reviewResult = calculateNextReview(state, grade);
+      const today = todayISO();
+      const isDue = existing === null || existing.nextReviewDate.slice(0, 10) <= today;
+      const reviewedToday = existing !== null && existing.lastReviewDate !== null && existing.lastReviewDate.slice(0, 10) === today;
 
-      await saveReview(db, { cardId: card.id, ...reviewResult, lastGrade: grade });
+      // 今日の元状態キャッシュを確認
+      const cached = _originalStateCache.get(card.id);
+      const cachedOriginal = cached?.date === today ? cached.state : null;
+
+      let nextReviewDate: string;
+      if (isDue || reviewedToday || cachedOriginal !== null) {
+        if (cachedOriginal === null) {
+          // 今日初回評価: 評価前の元状態をキャッシュに保存
+          _originalStateCache.set(card.id, { state: existing ?? { ...INITIAL_REVIEW_STATE }, date: today });
+        }
+        const baseState = cachedOriginal ?? (existing ?? { ...INITIAL_REVIEW_STATE });
+        const reviewResult = calculateNextReview(baseState, grade);
+        await saveReview(db, { cardId: card.id, ...reviewResult, lastGrade: grade });
+        nextReviewDate = reviewResult.nextReviewDate;
+      } else {
+        nextReviewDate = existing!.nextReviewDate;
+      }
 
       // カードごとの評価を記録（同一カードを再評価した場合は上書き）
-      gradedCardsRef.current.set(card.id, { grade, nextReviewDate: reviewResult.nextReviewDate });
+      gradedCardsRef.current.set(card.id, { grade, nextReviewDate });
 
       // Map から集計し直す（戻って再評価しないカードの評価も保持される）
       const gradeCount = { again: 0, hard: 0, good: 0, easy: 0 };

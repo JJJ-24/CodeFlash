@@ -125,8 +125,7 @@ export default function HomeScreen() {
   const { decks, setDecks, removeDeck, reorderDecks } = useDeckStore();
   const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled } = useSettingsStore();
   const { width } = useWindowDimensions();
-  // 学習画面の4ブロック幅に合わせる（padding:16×2=32, gap:8×3=24）
-  const blockWidth = (width - 32 - 24) / 4;
+  const blockWidth = (width - 32) / 4.1;
   const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
@@ -335,6 +334,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   fixedHeader: { paddingHorizontal: 16, paddingTop: 16 },
   statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
+  statsRow: { flexDirection: 'row', marginHorizontal: -2 },
   statItem: {
     borderRadius: 12,
     padding: 16,

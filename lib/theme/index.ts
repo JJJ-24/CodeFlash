@@ -36,15 +36,16 @@ export interface AppColors {
 }
 
 export interface AppFontSize {
-  xs: number;   // 12 — バーチャートラベル等の極小テキスト
-  sm: number;   // 14 — サブラベル・説明文
-  md: number;   // 16 — 本文・デッキ名等
-  lg: number;   // 18 — セクションタイトル・モーダルタイトル
-  xl: number;   // 20 — 大見出し
-  xxl: number;  // 22 — 統計数値
+  xs: number;    // 12 — バーチャートラベル等の極小テキスト
+  sm: number;    // 14 — サブラベル・説明文
+  md: number;    // 16 — 本文・デッキ名等
+  lg: number;    // 18 — セクションタイトル・モーダルタイトル
+  xl: number;    // 20 — 大見出し
+  xxl: number;   // 22 — 統計数値
+  xxxl: number;  // 28 — フィルターブロック大数値
 }
 
-const BASE_FONT_SIZE: AppFontSize = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20, xxl: 22 };
+const BASE_FONT_SIZE: AppFontSize = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20, xxl: 22, xxxl: 28 };
 
 export interface AppTheme {
   dark: boolean;
@@ -130,9 +131,10 @@ export const SHADOW = {
  *  allowFontScaling={false} と組み合わせて使い、iOS Dynamic Type の影響を受けない絶対サイズを保証する。
  *  アプリ内フォントサイズ設定（small/medium/large）は反映しつつ、最小・最大を桁数ごとにクランプする。 */
 export function fontSizeForDigits(theme: AppTheme, digits: number): number {
-  if (digits >= 4) return Math.min(18, Math.max(14, theme.fontSize.md));
-  if (digits >= 3) return Math.min(20, Math.max(16, theme.fontSize.lg));
-  return Math.min(28, Math.max(20, theme.fontSize.xxl));
+  if (digits >= 5) return Math.min(14, Math.max(14, theme.fontSize.sm));
+  if (digits >= 4) return Math.min(18, Math.max(18, theme.fontSize.lg));
+  if (digits >= 3) return Math.min(23, Math.max(20, theme.fontSize.xxl));
+  return Math.min(30, Math.max(26, theme.fontSize.xxxl));
 }
 
 export function useTheme(): AppTheme {
@@ -150,8 +152,9 @@ export function useTheme(): AppTheme {
       sm:  Math.round(BASE_FONT_SIZE.sm  * scale),
       md:  Math.round(BASE_FONT_SIZE.md  * scale),
       lg:  Math.round(BASE_FONT_SIZE.lg  * scale),
-      xl:  Math.round(BASE_FONT_SIZE.xl  * scale),
-      xxl: Math.round(BASE_FONT_SIZE.xxl * scale),
+      xl:   Math.round(BASE_FONT_SIZE.xl   * scale),
+      xxl:  Math.round(BASE_FONT_SIZE.xxl  * scale),
+      xxxl: Math.round(BASE_FONT_SIZE.xxxl * scale),
     },
   };
 }

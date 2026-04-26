@@ -20,7 +20,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import {
   deleteCard,
@@ -311,7 +311,7 @@ export default function DeckDetailScreen() {
   ];
 
   const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
-  const filterValueFontSize = filterItemMaxDigits >= 4 ? theme.fontSize.md : filterItemMaxDigits >= 3 ? theme.fontSize.lg : filterItemMaxDigits >= 2 ? theme.fontSize.xxl : theme.fontSize.xxl;
+  const filterValueFontSize = fontSizeForDigits(theme, filterItemMaxDigits);
 
   const cardSortDesc = cardSortOrder === 'newest' ? t('card.sortDescNewest')
     : cardSortOrder === 'oldest' ? t('card.sortDescOldest')
@@ -488,7 +488,7 @@ export default function DeckDetailScreen() {
                   if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
                 }}
               >
-                <Text numberOfLines={1} style={[styles.statValue, { color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
+                <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color, fontSize: filterValueFontSize }]}>{count}</Text>
                 <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{label}</Text>
               </Pressable>
             );

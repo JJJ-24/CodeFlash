@@ -178,7 +178,7 @@ export default function HomeScreen() {
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, String(decks.length).length) }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{decks.length}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, String(decks.length).length) }]}>{decks.length}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.all')}</Text>
         </Pressable>
       </View>

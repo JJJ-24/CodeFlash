@@ -564,7 +564,7 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: '#FFF', fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: '#FFF', fontSize: statValueFontSize }]}>
             {streak}
           </Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -580,7 +580,7 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{todayReviewed}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: statValueFontSize }]}>{todayReviewed}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.learned')}</Text>
         </Pressable>
         <Pressable
@@ -591,7 +591,7 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{todayDue}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: statValueFontSize }]}>{todayDue}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.statDue')}</Text>
         </Pressable>
         <Pressable
@@ -602,7 +602,7 @@ export default function StatsScreen() {
           ]}
           onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
-          <Text numberOfLines={1} style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: statValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{todayCreated}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: statValueFontSize }]}>{todayCreated}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.newToday')}</Text>
         </Pressable>
         </View>

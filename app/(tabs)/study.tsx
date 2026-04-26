@@ -303,7 +303,7 @@ export default function StudyScreen() {
                 ]}
                 onPress={() => { setActiveFilter(block.key); }}
               >
-                <Text numberOfLines={1} style={[styles.summaryValue, { color: block.color, fontSize: filterValueFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{block.value}</Text>
+                <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: block.color, fontSize: filterValueFontSize }]}>{block.value}</Text>
                 <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{block.label}</Text>
               </Pressable>
             );

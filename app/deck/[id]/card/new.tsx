@@ -16,7 +16,7 @@ import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 
-const CARD_EDITOR_SHORTCUTS_NORMAL = [
+const CARD_EDITOR_SHORTCUTS_EDIT = [
   { key: ', / .',      descKey: 'shortcut.tabNextPrevCard' },
   { key: 'J / K',      descKey: 'shortcut.focusNextPrev' },
   { key: 'E',          descKey: 'shortcut.editFocusedItem' },
@@ -34,6 +34,16 @@ const CARD_EDITOR_SHORTCUTS_SORT = [
   { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
   { key: 'U / D', descKey: 'shortcut.moveFocused' },
   { key: 'Q',     descKey: 'shortcut.cycleMode' },
+];
+
+const CARD_EDITOR_SHORTCUTS_PREVIEW = [
+  { key: ', / .',  descKey: 'shortcut.tabNextPrevCard' },
+  { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
+  { key: 'R',      descKey: 'shortcut.runFocused' },
+  { key: 'T',      descKey: 'shortcut.scrollToTags' },
+  { key: 'Q',      descKey: 'shortcut.cycleMode' },
+  { key: 'S',      descKey: 'shortcut.save' },
+  { key: 'X',      descKey: 'shortcut.closeWithoutSave' },
 ];
 
 export default function NewCardScreen() {
@@ -116,8 +126,9 @@ export default function NewCardScreen() {
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
         sections={[
-          { title: t('shortcut.normalMode'), items: CARD_EDITOR_SHORTCUTS_NORMAL },
+          { title: t('shortcut.editMode'), items: CARD_EDITOR_SHORTCUTS_EDIT },
           { title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT },
+          { title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW },
         ]}
       />
     </>

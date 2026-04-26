@@ -316,6 +316,8 @@
     "save": "保存/作成",
     "closeWithoutSave": "保存せずに閉じる",
     "moveFocused": "上/下 移動（フォーカス項目）",
-    "sortMode": "並替モード"
+    "sortMode": "並替モード",
+    "editMode": "編集モード",
+    "previewMode": "プレビューモード"
   }
 }

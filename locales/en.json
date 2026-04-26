@@ -316,6 +316,8 @@
     "save": "Save / Create",
     "closeWithoutSave": "Close without saving",
     "moveFocused": "Move focused item Up / Down",
-    "sortMode": "Sort Mode"
+    "sortMode": "Sort Mode",
+    "editMode": "Edit Mode",
+    "previewMode": "Preview Mode"
   }
 }

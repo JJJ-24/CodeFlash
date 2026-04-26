@@ -10,7 +10,6 @@
   "deck": {
     "new": "New Deck",
     "edit": "Edit Deck",
-    "detail": "Cards",
     "delete": "Delete Deck",
     "deleteConfirm": "Delete \"{{name}}\"?\nAll associated cards and review history (stats) will also be deleted.",
     "name": "Deck Name",
@@ -130,10 +129,7 @@
     "upcomingSchedule": "Next 7 Days",
     "totalProgress": "Overall Progress",
     "allDecks": "All Decks",
-    "learned": "Done",
-    "statDue": "Due",
     "unlearned": "Unlearned",
-    "newToday": "New",
     "deckMastery": "Deck Mastery",
     "empty": "No study data yet",
     "emptySub": "Start studying to see your stats here",
@@ -166,6 +162,9 @@
     "loading": "Loading...",
     "search": "Search",
     "all": "All",
+    "learned": "Done",
+    "due": "Due",
+    "new": "New",
     "front": "Front",
     "back": "Back",
     "memo": "Memo",
@@ -191,9 +190,6 @@
     "keyboardEnabled": "Enable Keyboard Shortcuts",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "initialFilter": "Default Filter",
-    "initialFilterLearned": "Done",
-    "initialFilterReview": "Due",
-    "initialFilterNew": "New",
     "initialFilterNone": "Last"
   },
   "notification": {

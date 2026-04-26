@@ -322,9 +322,9 @@ export default function DeckDetailScreen() {
 
   const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
     { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('common.all') },
-    { key: 'learned', count: todayReviewed, color: FILTER_COLORS.learned, label: t('stats.learned') },
-    { key: 'review', count: dueCount, color: FILTER_COLORS.due, label: t('stats.statDue') },
-    { key: 'new', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('stats.newToday') },
+    { key: 'learned', count: todayReviewed, color: FILTER_COLORS.learned, label: t('common.learned') },
+    { key: 'review', count: dueCount, color: FILTER_COLORS.due, label: t('common.due') },
+    { key: 'new', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('common.new') },
   ];
 
   const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
@@ -525,7 +525,7 @@ export default function DeckDetailScreen() {
         <View style={styles.sectionTitleRow}>
           <View style={styles.sectionTitleLeft}>
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {selectionMode ? t('card.selectHint') : t('deck.detail')}
+              {selectionMode ? t('card.selectHint') : t('card.list')}
             </Text>
             <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {filterDescMap[selectedFilter]}

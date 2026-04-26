@@ -265,7 +265,7 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
         <View style={[styles.masteryBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
       <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-        {t('stats.learned')}: {mastery.learnedCount}{'        '}{t('stats.unlearned')}: {mastery.newCount}
+        {t('common.learned')}: {mastery.learnedCount}{'        '}{t('stats.unlearned')}: {mastery.newCount}
       </Text>
     </Pressable>
   );
@@ -581,7 +581,7 @@ export default function StatsScreen() {
           onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: statValueFontSize }]}>{todayReviewed}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.learned')}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.learned')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -592,7 +592,7 @@ export default function StatsScreen() {
           onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: statValueFontSize }]}>{todayDue}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.statDue')}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.due')}</Text>
         </Pressable>
         <Pressable
           style={[
@@ -603,7 +603,7 @@ export default function StatsScreen() {
           onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: statValueFontSize }]}>{todayCreated}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.newToday')}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.new')}</Text>
         </Pressable>
         </View>
       </View>
@@ -662,7 +662,7 @@ export default function StatsScreen() {
             <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
           </View>
           <Text style={[styles.progressSubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-            {t('stats.learned')}: {learned}{'        '}{t('stats.unlearned')}: {unlearned}
+            {t('common.learned')}: {learned}{'        '}{t('stats.unlearned')}: {unlearned}
           </Text>
         </Pressable>
       </View>

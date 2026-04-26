@@ -269,9 +269,9 @@ export default function StudyScreen() {
 
   const filterBlocks: { key: Filter; value: number; color: string; label: string }[] = [
     { key: 'all', value: totalAll, color: theme.colors.primary, label: t('common.all') },
-    { key: 'learned', value: totalLearned, color: FILTER_COLORS.learned, label: t('stats.learned') },
-    { key: 'review', value: totalReview, color: FILTER_COLORS.due, label: t('stats.statDue') },
-    { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('stats.newToday') },
+    { key: 'learned', value: totalLearned, color: FILTER_COLORS.learned, label: t('common.learned') },
+    { key: 'review', value: totalReview, color: FILTER_COLORS.due, label: t('common.due') },
+    { key: 'new', value: totalNew, color: theme.colors.textSecondary, label: t('common.new') },
   ];
 
   const filterBlockMaxDigits = Math.max(...filterBlocks.map(b => String(b.value).length));

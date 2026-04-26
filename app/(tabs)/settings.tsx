@@ -334,7 +334,7 @@ export default function SettingsScreen() {
         label={t('settings.initialFilter')}
         options={[
           { value: 'all' as InitialFilterPreference,    label: t('common.all') },
-          { value: 'review' as InitialFilterPreference, label: t('settings.initialFilterReview') },
+          { value: 'review' as InitialFilterPreference, label: t('common.due') },
           { value: 'none' as InitialFilterPreference,   label: t('settings.initialFilterNone') },
         ]}
         value={initialFilterPreference}

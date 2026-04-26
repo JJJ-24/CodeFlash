@@ -10,7 +10,6 @@
   "deck": {
     "new": "新規デッキ",
     "edit": "デッキ編集",
-    "detail": "カード一覧",
     "delete": "デッキを削除",
     "deleteConfirm": "「{{name}}」を削除しますか？\n紐付いたカードと学習履歴（統計）もすべて削除されます。",
     "name": "デッキ名",
@@ -130,10 +129,7 @@
     "upcomingSchedule": "今後7日間の復習予定",
     "totalProgress": "全体学習率",
     "allDecks": "すべてのデッキ",
-    "learned": "済み",
-    "statDue": "復習",
     "unlearned": "新規未習",
-    "newToday": "新規",
     "deckMastery": "デッキ別習熟度",
     "empty": "まだ学習データがありません",
     "emptySub": "学習を開始するとここに統計が表示されます",
@@ -166,6 +162,9 @@
     "loading": "読み込み中...",
     "search": "検索",
     "all": "すべて",
+    "learned": "済み",
+    "due": "復習",
+    "new": "新規",
     "front": "表面",
     "back": "裏面",
     "memo": "メモ",
@@ -191,9 +190,6 @@
     "keyboardEnabled": "ショートカットを使用",
     "keyboardShortcuts": "ショートカットキー一覧",
     "initialFilter": "初期表示フィルター",
-    "initialFilterLearned": "済み",
-    "initialFilterReview": "復習",
-    "initialFilterNew": "新規",
     "initialFilterNone": "直近"
   },
   "notification": {

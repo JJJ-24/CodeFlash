@@ -116,23 +116,31 @@ export async function getTodayReviewedCountByDeck(
 /** レビュー記録を保存（なければ INSERT、あれば UPDATE） */
 export async function saveReview(db: SQLiteDatabase, review: Review): Promise<void> {
   await db.runAsync(
-    `INSERT INTO reviews (cardId, easeFactor, interval, repetitions, nextReviewDate, lastReviewDate, lastGrade)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO reviews (cardId, easeFactor, interval, repetitions, nextReviewDate, lastReviewDate, lastGrade, stability, difficulty, fsrsState, fsrsReps, fsrsLapses, fsrsScheduledDays)
+     VALUES (?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(cardId) DO UPDATE SET
-       easeFactor     = excluded.easeFactor,
-       interval       = excluded.interval,
-       repetitions    = excluded.repetitions,
-       nextReviewDate = excluded.nextReviewDate,
-       lastReviewDate = excluded.lastReviewDate,
-       lastGrade      = excluded.lastGrade`,
+       easeFactor        = excluded.easeFactor,
+       nextReviewDate    = excluded.nextReviewDate,
+       lastReviewDate    = excluded.lastReviewDate,
+       lastGrade         = excluded.lastGrade,
+       stability         = excluded.stability,
+       difficulty        = excluded.difficulty,
+       fsrsState         = excluded.fsrsState,
+       fsrsReps          = excluded.fsrsReps,
+       fsrsLapses        = excluded.fsrsLapses,
+       fsrsScheduledDays = excluded.fsrsScheduledDays`,
     [
       review.cardId,
       review.easeFactor,
-      review.interval,
-      review.repetitions,
       review.nextReviewDate,
       review.lastReviewDate,
       review.lastGrade,
+      review.stability,
+      review.difficulty,
+      review.fsrsState,
+      review.fsrsReps,
+      review.fsrsLapses,
+      review.fsrsScheduledDays,
     ]
   );
   await db.runAsync(

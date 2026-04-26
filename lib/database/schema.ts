@@ -77,4 +77,16 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   if (!reviewCols.some((c) => c.name === 'lastGrade')) {
     await db.execAsync(`ALTER TABLE reviews ADD COLUMN lastGrade INTEGER NOT NULL DEFAULT 2;`);
   }
+
+  // FSRS カラムのマイグレーション
+  if (!reviewCols.some((c) => c.name === 'stability')) {
+    await db.execAsync(`
+      ALTER TABLE reviews ADD COLUMN stability REAL;
+      ALTER TABLE reviews ADD COLUMN difficulty REAL;
+      ALTER TABLE reviews ADD COLUMN fsrsState INTEGER;
+      ALTER TABLE reviews ADD COLUMN fsrsReps INTEGER;
+      ALTER TABLE reviews ADD COLUMN fsrsLapses INTEGER;
+      ALTER TABLE reviews ADD COLUMN fsrsScheduledDays INTEGER;
+    `);
+  }
 }

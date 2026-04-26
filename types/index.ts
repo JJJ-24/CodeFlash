@@ -59,10 +59,17 @@ export interface CardTag {
 
 export interface Review {
   cardId: string;
-  easeFactor: number;
-  interval: number;
-  repetitions: number;
+  easeFactor: number;    // 仮想値（FSRS difficulty から変換、マスタリー表示用）
+  interval: number;      // レガシー（未使用）
+  repetitions: number;   // レガシー（未使用）
   nextReviewDate: string;
   lastReviewDate: string;
   lastGrade: number; // 0=もう一度, 1=難しい, 2=普通, 3=簡単
+  // FSRS フィールド（SM-2 時代のレビューは null）
+  stability: number | null;
+  difficulty: number | null;
+  fsrsState: number | null;
+  fsrsReps: number | null;
+  fsrsLapses: number | null;
+  fsrsScheduledDays: number | null;
 }

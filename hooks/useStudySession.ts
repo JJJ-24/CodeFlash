@@ -14,13 +14,13 @@ import {
   getTodayReviewedCardIdsByTagId,
   saveReview,
 } from '@/lib/database/reviews';
-import { calculateNextReview, INITIAL_REVIEW_STATE } from '@/lib/sm2';
-import type { Grade, ReviewState } from '@/lib/sm2';
+import { calculateNextReviewFSRS } from '@/lib/fsrs';
+import type { Grade } from '@/lib/sm2';
+import type { Review } from '@/types';
 
 // セッションをまたいで今日の元状態を保持するモジュールレベルキャッシュ
-// key: cardId, value: { state: 評価前の元状態, date: ISO日付 }
-const _originalStateCache = new Map<string, { state: ReviewState; date: string }>();
-import type { Card } from '@/types';
+// key: cardId, value: { review: 評価前の元レビュー状態（新規カードは null）, date: ISO日付 }
+const _originalStateCache = new Map<string, { review: Review | null; date: string }>();
 
 export interface SessionResult {
   totalCards: number;
@@ -117,19 +117,32 @@ export function useStudySession() {
       const isDue = existing === null || existing.nextReviewDate.slice(0, 10) <= today;
       const reviewedToday = existing !== null && existing.lastReviewDate !== null && existing.lastReviewDate.slice(0, 10) === today;
 
-      // 今日の元状態キャッシュを確認
-      const cached = _originalStateCache.get(card.id);
-      const cachedOriginal = cached?.date === today ? cached.state : null;
-
       let nextReviewDate: string;
-      if (isDue || reviewedToday || cachedOriginal !== null) {
-        if (cachedOriginal === null) {
+      const cachedEntry = _originalStateCache.get(card.id);
+      const hasCachedToday = cachedEntry !== undefined && cachedEntry.date === today;
+
+      if (isDue || reviewedToday || hasCachedToday) {
+        if (!hasCachedToday) {
           // 今日初回評価: 評価前の元状態をキャッシュに保存
-          _originalStateCache.set(card.id, { state: existing ?? { ...INITIAL_REVIEW_STATE }, date: today });
+          _originalStateCache.set(card.id, { review: existing, date: today });
         }
-        const baseState = cachedOriginal ?? (existing ?? { ...INITIAL_REVIEW_STATE });
-        const reviewResult = calculateNextReview(baseState, grade);
-        await saveReview(db, { cardId: card.id, ...reviewResult, lastGrade: grade });
+        const baseReview = hasCachedToday ? cachedEntry!.review : existing;
+        const reviewResult = calculateNextReviewFSRS(baseReview, grade);
+        await saveReview(db, {
+          cardId: card.id,
+          lastGrade: grade,
+          easeFactor: reviewResult.easeFactor,
+          interval: 0,
+          repetitions: 0,
+          stability: reviewResult.stability,
+          difficulty: reviewResult.difficulty,
+          fsrsState: reviewResult.fsrsState,
+          fsrsReps: reviewResult.fsrsReps,
+          fsrsLapses: reviewResult.fsrsLapses,
+          fsrsScheduledDays: reviewResult.fsrsScheduledDays,
+          nextReviewDate: reviewResult.nextReviewDate,
+          lastReviewDate: reviewResult.lastReviewDate,
+        });
         nextReviewDate = reviewResult.nextReviewDate;
       } else {
         nextReviewDate = existing!.nextReviewDate;

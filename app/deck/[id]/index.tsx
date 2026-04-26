@@ -72,6 +72,7 @@ export default function DeckDetailScreen() {
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const focusedCardIdRef = useRef<string | null>(null);
@@ -200,16 +201,21 @@ export default function DeckDetailScreen() {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
-            const ids = Array.from(selectedCardIds);
-            for (const cardId of ids) {
-              await deleteCard(db, cardId, id as string);
-              removeCard(cardId);
+            setIsProcessing(true);
+            try {
+              const ids = Array.from(selectedCardIds);
+              for (const cardId of ids) {
+                await deleteCard(db, cardId, id as string);
+                removeCard(cardId);
+              }
+              if (deck) {
+                updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
+              }
+              exitSelectionMode();
+              await loadCards();
+            } finally {
+              setIsProcessing(false);
             }
-            if (deck) {
-              updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
-            }
-            exitSelectionMode();
-            await loadCards();
           },
         },
       ]
@@ -217,16 +223,22 @@ export default function DeckDetailScreen() {
   }
 
   async function handleDuplicate() {
-    const ids = Array.from(selectedCardIds);
-    for (const cardId of ids) {
-      await duplicateCard(db, cardId);
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const ids = Array.from(selectedCardIds);
+      for (const cardId of ids) {
+        await duplicateCard(db, cardId);
+      }
+      if (deck) {
+        updateDeck({ ...deck, cardCount: deck.cardCount + ids.length });
+      }
+      exitSelectionMode();
+      await loadCards();
+      Alert.alert(t('card.duplicate'), t('card.duplicateSuccess', { count: ids.length }));
+    } finally {
+      setIsProcessing(false);
     }
-    if (deck) {
-      updateDeck({ ...deck, cardCount: deck.cardCount + ids.length });
-    }
-    exitSelectionMode();
-    await loadCards();
-    Alert.alert(t('card.duplicate'), t('card.duplicateSuccess', { count: ids.length }));
   }
 
   function handleMoveToDeck(targetDeck: Deck) {
@@ -239,19 +251,24 @@ export default function DeckDetailScreen() {
         {
           text: t('common.ok'),
           onPress: async () => {
-            const ids = Array.from(selectedCardIds);
-            await moveCardsToDeck(db, ids, id as string, targetDeck.id);
-            ids.forEach((cardId) => {
-              const card = cards.find((c) => c.id === cardId);
-              if (card) updateCard({ ...card, deckId: targetDeck.id });
-            });
-            if (deck) {
-              updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
+            setIsProcessing(true);
+            try {
+              const ids = Array.from(selectedCardIds);
+              await moveCardsToDeck(db, ids, id as string, targetDeck.id);
+              ids.forEach((cardId) => {
+                const card = cards.find((c) => c.id === cardId);
+                if (card) updateCard({ ...card, deckId: targetDeck.id });
+              });
+              if (deck) {
+                updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
+              }
+              const tgt = decks.find((d) => d.id === targetDeck.id);
+              if (tgt) updateDeck({ ...tgt, cardCount: tgt.cardCount + ids.length });
+              exitSelectionMode();
+              await loadCards();
+            } finally {
+              setIsProcessing(false);
             }
-            const tgt = decks.find((d) => d.id === targetDeck.id);
-            if (tgt) updateDeck({ ...tgt, cardCount: tgt.cardCount + ids.length });
-            exitSelectionMode();
-            await loadCards();
           },
         },
       ]
@@ -376,9 +393,9 @@ export default function DeckDetailScreen() {
               }
             }
             else if (k === 'a') { toggleSelectAll(); }
-            else if (k === 'm') { if (selectedCardIds.size > 0) setShowDeckPicker(true); }
-            else if (k === 'd') { if (selectedCardIds.size > 0) handleDeleteSelected(); }
-            else if (k === 'c') { if (selectedCardIds.size > 0) handleDuplicate(); }
+            else if (k === 'm') { if (selectedCardIds.size > 0 && !isProcessing) setShowDeckPicker(true); }
+            else if (k === 'd') { if (selectedCardIds.size > 0 && !isProcessing) handleDeleteSelected(); }
+            else if (k === 'c') { if (selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); }
             else if (k === 's') { exitSelectionMode(); }
             return;
           }
@@ -654,22 +671,22 @@ export default function DeckDetailScreen() {
             <Pressable
               style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
               onPress={handleDuplicate}
-              disabled={selectedCardIds.size === 0}
+              disabled={selectedCardIds.size === 0 || isProcessing}
               accessibilityLabel={t('card.duplicate')}
             >
-              <Ionicons name="copy-outline" size={22} color="#FFF" />
+              <Ionicons name={isProcessing ? 'hourglass-outline' : 'copy-outline'} size={22} color="#FFF" />
             </Pressable>
             <Pressable
-              style={[styles.iconBtn, { backgroundColor: '#C62828' }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
+              style={[styles.iconBtn, { backgroundColor: '#C62828' }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
               onPress={handleDeleteSelected}
-              disabled={selectedCardIds.size === 0}
+              disabled={selectedCardIds.size === 0 || isProcessing}
             >
               <Ionicons name="trash-outline" size={22} color="#FFF" />
             </Pressable>
             <Pressable
-              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, selectedCardIds.size === 0 && { opacity: 0.4 }]}
-              onPress={() => setShowDeckPicker(true)}
-              disabled={selectedCardIds.size === 0}
+              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={() => { if (!isProcessing) setShowDeckPicker(true); }}
+              disabled={selectedCardIds.size === 0 || isProcessing}
             >
               <Ionicons name="arrow-forward-circle-outline" size={22} color="#FFF" />
             </Pressable>
@@ -731,6 +748,7 @@ const styles = StyleSheet.create({
   },
   statValue: { fontWeight: '700' },
   statLabel: { marginTop: 2, textAlign: 'center' },
+  filterDesc: { marginTop: 2 },
   studyBtn: {
     flexDirection: 'row',
     borderRadius: 12,

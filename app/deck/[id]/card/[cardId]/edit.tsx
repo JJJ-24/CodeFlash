@@ -14,40 +14,11 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteCard, getCardById, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
+import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
 import type { Card } from '@/types';
-
-const CARD_EDITOR_SHORTCUTS_EDIT = [
-  { key: ', / .',      descKey: 'shortcut.tabNextPrevCard' },
-  { key: 'J / K',      descKey: 'shortcut.focusNextPrev' },
-  { key: 'E',          descKey: 'shortcut.editFocusedItem' },
-  { key: 'R',          descKey: 'shortcut.runFocused' },
-  { key: 'D',          descKey: 'shortcut.delete' },
-  { key: 'A',          descKey: 'shortcut.toggleAddMenu' },
-  { key: 'Return',     descKey: 'shortcut.addBlock' },
-  { key: 'T',          descKey: 'shortcut.scrollToTags' },
-  { key: 'Q',          descKey: 'shortcut.cycleMode' },
-  { key: 'S',          descKey: 'shortcut.save' },
-  { key: 'X',          descKey: 'shortcut.closeWithoutSave' },
-];
-
-const CARD_EDITOR_SHORTCUTS_SORT = [
-  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-  { key: 'U / D', descKey: 'shortcut.moveFocused' },
-  { key: 'Q',     descKey: 'shortcut.cycleMode' },
-];
-
-const CARD_EDITOR_SHORTCUTS_PREVIEW = [
-  { key: ', / .',  descKey: 'shortcut.tabNextPrevCard' },
-  { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
-  { key: 'R',      descKey: 'shortcut.runFocused' },
-  { key: 'T',      descKey: 'shortcut.scrollToTags' },
-  { key: 'Q',      descKey: 'shortcut.cycleMode' },
-  { key: 'S',      descKey: 'shortcut.save' },
-  { key: 'X',      descKey: 'shortcut.closeWithoutSave' },
-];
 
 export default function EditCardScreen() {
   const { id, cardId, tab } = useLocalSearchParams<{ id: string; cardId: string; tab?: string }>();

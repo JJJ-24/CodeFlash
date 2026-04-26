@@ -9,7 +9,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -18,6 +17,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import { EmptyState } from '@/components/EmptyState';
+import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -104,16 +104,8 @@ export default function TagsScreen() {
         }}
       />
 
-      <TextInput
+      <HiddenKeyboardInput
         ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
@@ -251,7 +243,6 @@ export default function TagsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   list: { padding: 16, gap: 12, paddingBottom: 96 },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   sectionTitleCol: { flexDirection: 'column', gap: 2, flex: 1 },

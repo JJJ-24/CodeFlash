@@ -1,10 +1,9 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { setStatusBarHidden } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -13,13 +12,14 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
+import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import {
   getDueCountPerDeck,
@@ -58,7 +58,6 @@ const STUDY_TAB_SHORTCUTS = [
 export default function StudyScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const navigation = useNavigation();
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
@@ -84,17 +83,7 @@ export default function StudyScreen() {
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const listRef = useRef<FlatList<any>>(null);
 
-  useLayoutEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigation as any).setOptions({
-      headerRight: keyboardShortcutsEnabled ? () => (
-        <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
-          <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-        </Pressable>
-      ) : undefined,
-      headerRightContainerStyle: keyboardShortcutsEnabled ? { paddingRight: 8 } : undefined,
-    });
-  }, [keyboardShortcutsEnabled, theme]);
+  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
 
   useEffect(() => {
     if (activeTab === 'decks') {
@@ -491,13 +480,8 @@ export default function StudyScreen() {
 
       </Pressable>
 
-      {/* 隠しキーボード入力 */}
-      <TextInput
+      <HiddenKeyboardInput
         ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        keyboardType="ascii-capable"
         onKeyPress={handleKeyPress}
         onSubmitEditing={startStudyFocused}
         onBlur={onInputBlur}
@@ -515,7 +499,6 @@ export default function StudyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
 
   filterSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 24 },
   summaryRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },

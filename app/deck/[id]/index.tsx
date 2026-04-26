@@ -13,7 +13,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -22,6 +21,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import {
   deleteCard,
   duplicateCard,
@@ -357,16 +357,8 @@ export default function DeckDetailScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <TextInput
+      <HiddenKeyboardInput
         ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
@@ -722,7 +714,6 @@ export default function DeckDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   container: { paddingBottom: 96, paddingTop: 20 },
   fixedHeader: { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
   descBlock: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 12 },

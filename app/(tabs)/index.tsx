@@ -1,8 +1,8 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -10,7 +10,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -19,13 +18,16 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { EmptyState } from '@/components/EmptyState';
+import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
+import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
+import type { Deck } from '@/types';
 
 const HOME_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
@@ -38,7 +40,6 @@ const HOME_SHORTCUTS = [
   { key: 'T',     descKey: 'shortcut.tags' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
 ];
-import type { Deck } from '@/types';
 
 function truncate(str: string, max = 20): string {
   return str.length > max ? str.slice(0, max) + '…' : str;
@@ -119,7 +120,6 @@ const SORT_OPTIONS: { key: DeckSortOrder; icon: React.ComponentProps<typeof Ioni
 export default function HomeScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const navigation = useNavigation();
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, setDecks, removeDeck, reorderDecks } = useDeckStore();
@@ -131,17 +131,7 @@ export default function HomeScreen() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
-  useLayoutEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigation as any).setOptions({
-      headerRight: keyboardShortcutsEnabled ? () => (
-        <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
-          <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-        </Pressable>
-      ) : undefined,
-      headerRightContainerStyle: keyboardShortcutsEnabled ? { paddingRight: 8 } : undefined,
-    });
-  }, [keyboardShortcutsEnabled, theme]);
+  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
 
   useEffect(() => {
     getAllDecks(db).then(setDecks);
@@ -227,58 +217,54 @@ export default function HomeScreen() {
     </View>
   );
 
+  const handleKeyPress = useCallback(({ nativeEvent: { key } }: { nativeEvent: { key: string } }) => {
+    if (!keyboardShortcutsEnabled) return;
+    const k = key.toLowerCase();
+    if (k === 'q') {
+      cycleSortOrder();
+    } else if (k === 'j') {
+      moveDeckFocus('next');
+    } else if (k === 'k') {
+      moveDeckFocus('prev');
+    } else if (k === 'p') {
+      if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
+        router.push({ pathname: '/deck/[id]/edit', params: { id: sortedDecks[focusedDeckIndex].id } });
+      }
+    } else if (k === 'd') {
+      if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
+        const deck = sortedDecks[focusedDeckIndex];
+        const name = truncate(deck.name);
+        Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.delete'), style: 'destructive', onPress: () => handleDelete(deck.id) },
+        ]);
+      }
+    } else if (k === 'n') {
+      router.push({ pathname: '/deck/new' });
+    } else if (k === 'f') {
+      router.push('/search');
+    } else if (k === 't') {
+      router.push('/tags');
+    } else if (key === '.') {
+      router.navigate('/(tabs)/study');
+    } else if (key === ',') {
+      router.navigate('/(tabs)/settings');
+    }
+  }, [keyboardShortcutsEnabled, cycleSortOrder, moveDeckFocus, focusedDeckIndex, sortedDecks, router, t, handleDelete]);
+
+  const handleSubmitEditing = useCallback(() => {
+    if (!keyboardShortcutsEnabled) return;
+    if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
+      router.push({ pathname: '/deck/[id]', params: { id: sortedDecks[focusedDeckIndex].id } });
+    }
+  }, [keyboardShortcutsEnabled, focusedDeckIndex, sortedDecks, router]);
+
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <TextInput
+      <HiddenKeyboardInput
         ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
-        onKeyPress={({ nativeEvent: { key } }) => {
-          if (!keyboardShortcutsEnabled) return;
-          const k = key.toLowerCase();
-          if (k === 'q') {
-            cycleSortOrder();
-          } else if (k === 'j') {
-            moveDeckFocus('next');
-          } else if (k === 'k') {
-            moveDeckFocus('prev');
-          } else if (k === 'p') {
-            if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-              router.push({ pathname: '/deck/[id]/edit', params: { id: sortedDecks[focusedDeckIndex].id } });
-            }
-          } else if (k === 'd') {
-            if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-              const deck = sortedDecks[focusedDeckIndex];
-              const name = truncate(deck.name);
-              Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
-                { text: t('common.cancel'), style: 'cancel' },
-                { text: t('common.delete'), style: 'destructive', onPress: () => handleDelete(deck.id) },
-              ]);
-            }
-          } else if (k === 'n') {
-            router.push({ pathname: '/deck/new' });
-          } else if (k === 'f') {
-            router.push('/search');
-          } else if (k === 't') {
-            router.push('/tags');
-          } else if (key === '.') {
-            router.navigate('/(tabs)/study');
-          } else if (key === ',') {
-            router.navigate('/(tabs)/settings');
-          }
-        }}
-        onSubmitEditing={() => {
-          if (!keyboardShortcutsEnabled) return;
-          if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-            router.push({ pathname: '/deck/[id]', params: { id: sortedDecks[focusedDeckIndex].id } });
-          }
-        }}
+        onKeyPress={handleKeyPress}
+        onSubmitEditing={handleSubmitEditing}
         onBlur={onInputBlur}
       />
       <Pressable style={{ flex: 1 }} onPress={() => setFocusedDeckIndex(null)}>
@@ -347,7 +333,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   fixedHeader: { paddingHorizontal: 16, paddingTop: 16 },
   statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
   statItem: {

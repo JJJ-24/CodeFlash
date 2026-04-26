@@ -1,9 +1,8 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
@@ -27,8 +26,10 @@ import {
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
+import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import type { Deck } from '@/types';
@@ -365,7 +366,6 @@ type FocusedItem = null | 'total' | number;
 export default function StatsScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const navigation = useNavigation();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const { initialFilterPreference, keyboardShortcutsEnabled } = useSettingsStore();
@@ -381,17 +381,7 @@ export default function StatsScreen() {
   const [sheetTitle, setSheetTitle] = useState('');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
-  useLayoutEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigation as any).setOptions({
-      headerRight: keyboardShortcutsEnabled ? () => (
-        <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
-          <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-        </Pressable>
-      ) : undefined,
-      headerRightContainerStyle: keyboardShortcutsEnabled ? { paddingRight: 8 } : undefined,
-    });
-  }, [keyboardShortcutsEnabled, theme]);
+  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
           deckMastery, decks, heatmapData } = stats;
@@ -533,16 +523,8 @@ export default function StatsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <TextInput
+      <HiddenKeyboardInput
         ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
           if (key === ' ') {
@@ -733,7 +715,6 @@ export default function StatsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   summarySection: { paddingHorizontal: 16, paddingTop: 16 },
   content: { paddingHorizontal: 16, paddingBottom: 32, gap: 4 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },

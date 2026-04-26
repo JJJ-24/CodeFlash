@@ -1,7 +1,7 @@
 import { useLayoutEffect } from 'react';
 import { Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from 'expo-router';
 import { useTheme } from '@/lib/theme';
 
 export function useShortcutsHeader(enabled: boolean, onPress: () => void) {

@@ -305,6 +305,53 @@ function tokenizeJson(code: string): Token[] {
   return mergeAdjacentSameType(tokens);
 }
 
+// JS/TS: 識別子の直後が `= (...) =>` または `= async (...) =>` の形かチェック
+function isArrowFnDeclaration(code: string, afterWord: number): boolean {
+  let m = afterWord;
+  while (m < code.length && code[m] === ' ') m++;
+  // '=' が必要。'==' や '=>' は除外
+  if (code[m] !== '=' || code[m + 1] === '=' || code[m + 1] === '>') return false;
+  m++;
+  while (m < code.length && code[m] === ' ') m++;
+  // async キーワードをスキップ
+  if (code.startsWith('async', m) && /[ \t(]/.test(code[m + 5] ?? '')) {
+    m += 5;
+    while (m < code.length && code[m] === ' ') m++;
+  }
+  // '(' が必要
+  if (code[m] !== '(') return false;
+  // 対応する ')' を探す（ネスト対応）
+  let depth = 0;
+  while (m < code.length) {
+    if (code[m] === '(') depth++;
+    else if (code[m] === ')') { depth--; if (depth === 0) break; }
+    m++;
+  }
+  if (m >= code.length) return false;
+  m++; // ')' の次
+  while (m < code.length && code[m] === ' ') m++;
+  // TS 戻り値型アノテーション ': ...' をスキップ
+  if (code[m] === ':') {
+    m++;
+    while (m < code.length && code[m] === ' ') m++;
+    let angleDepth = 0, braceDepth = 0, parenDepth = 0;
+    while (m < code.length) {
+      const ch = code[m];
+      if (ch === '\n') return false;
+      if (ch === '<') angleDepth++;
+      else if (ch === '>') { if (angleDepth > 0) angleDepth--; }
+      else if (ch === '{') braceDepth++;
+      else if (ch === '}') { if (braceDepth > 0) braceDepth--; else return false; }
+      else if (ch === '(') parenDepth++;
+      else if (ch === ')') { if (parenDepth > 0) parenDepth--; else return false; }
+      if (ch === '=' && code[m + 1] === '>' && angleDepth === 0 && braceDepth === 0 && parenDepth === 0) return true;
+      m++;
+    }
+    return false;
+  }
+  return code.startsWith('=>', m);
+}
+
 function mergeAdjacentSameType(tokens: Token[]): Token[] {
   const result: Token[] = [];
   for (const t of tokens) {
@@ -489,6 +536,7 @@ export function tokenize(code: string, language: string): Token[] {
       let k = j;
       while (k < code.length && code[k] === ' ') k++;
       const isCall = code[k] === '(' && !keywords.has(word);
+      const isArrowFn = (lang === 'javascript' || isTs) && !keywords.has(word) && isArrowFnDeclaration(code, j);
 
       let type: TokenType = 'plain';
       if (keywords.has(word)) {
@@ -496,6 +544,8 @@ export function tokenize(code: string, language: string): Token[] {
       } else if (isTs && TS_TYPES.has(word)) {
         type = 'type';
       } else if (isCall) {
+        type = 'type';
+      } else if (isArrowFn) {
         type = 'type';
       } else if (/^[A-Z][a-zA-Z0-9_]*$/.test(word) && (isTs || lang === 'java' || lang === 'swift' || isCpp)) {
         type = 'type';

@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,6 +39,16 @@ export default function NewTagScreen() {
   const [error, setError] = useState('');
 
   const canSave = !!name.trim() && !saving;
+  const isDirty = name.trim() !== '';
+
+  function handleClose() {
+    if (!isDirty) { router.back(); return; }
+    Alert.alert(t('common.discardChanges'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
+      ...(canSave ? [{ text: t('common.create'), onPress: handleSave }] : []),
+    ]);
+  }
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -63,7 +74,7 @@ export default function NewTagScreen() {
 
           headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.new')}</Text>,
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
+            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),

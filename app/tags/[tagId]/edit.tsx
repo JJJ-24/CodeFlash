@@ -49,6 +49,16 @@ export default function EditTagScreen() {
   }, [tagId]);
 
   const canSave = !!name.trim() && !saving;
+  const isDirty = name.trim() !== (existingTag?.name ?? '') || color !== (existingTag?.color ?? PRESET_COLORS[0]);
+
+  function handleClose() {
+    if (!isDirty) { router.back(); return; }
+    Alert.alert(t('common.discardChanges'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
+      ...(canSave ? [{ text: t('common.save'), onPress: handleSave }] : []),
+    ]);
+  }
 
   async function handleSave() {
     if (!existingTag) return;
@@ -92,7 +102,7 @@ export default function EditTagScreen() {
 
           headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.edit')}</Text>,
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 4 }}>
+            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),

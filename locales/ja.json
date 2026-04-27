@@ -168,7 +168,9 @@
     "front": "表面",
     "back": "裏面",
     "memo": "メモ",
-    "cardsCount": "{{count}} 枚"
+    "cardsCount": "{{count}} 枚",
+    "discardChanges": "変更内容があります",
+    "discard": "保存せずに閉じる"
   },
   "editor": {
     "textBlock": "テキスト",

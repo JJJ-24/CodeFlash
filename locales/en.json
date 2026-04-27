@@ -168,7 +168,9 @@
     "front": "Front",
     "back": "Back",
     "memo": "Memo",
-    "cardsCount": "{{count}} cards"
+    "cardsCount": "{{count}} cards",
+    "discardChanges": "You have unsaved changes",
+    "discard": "Close without saving"
   },
   "editor": {
     "textBlock": "Text",

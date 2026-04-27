@@ -269,10 +269,15 @@ export function BlockEditor({
   }, [activeTab]);
 
   // ブロック数変化時にフォーカスインデックスを補正
+  // functional update にすることで、同一コミット内で先に走る [activeTab] effect の
+  // setFocusedBlockIndex(null) をバッチ後の最新値として参照できる（古い値で上書きしない）
   useEffect(() => {
-    if (focusedBlockIndex !== null && focusedBlockIndex >= currentBlocks.length) {
-      setFocusedBlockIndex(currentBlocks.length > 0 ? currentBlocks.length - 1 : null);
-    }
+    setFocusedBlockIndex(prev => {
+      if (prev !== null && prev >= currentBlocks.length) {
+        return currentBlocks.length > 0 ? currentBlocks.length - 1 : null;
+      }
+      return prev;
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBlocks.length]);
 
@@ -425,10 +430,12 @@ export function BlockEditor({
     } else if (key === ',') {
       const tabOrder: Tab[] = ['front', 'back', 'memo'];
       setEditTriggerMap({});
+      setRunTriggerMap({});
       setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) - 1 + 3) % 3]);
     } else if (key === '.') {
       const tabOrder: Tab[] = ['front', 'back', 'memo'];
       setEditTriggerMap({});
+      setRunTriggerMap({});
       setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) + 1) % 3]);
     } else if (k === 'a') {
       if (!isPreviewRef.current) {
@@ -752,6 +759,7 @@ export function BlockEditor({
               }, 200);
               setAddMenuVisible(false);
               setEditTriggerMap({});
+              setRunTriggerMap({});
               setActiveTab(tab.key);
             }}
           >

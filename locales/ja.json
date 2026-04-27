@@ -266,6 +266,7 @@
     "nextPrev": "前へ/次へ（評価なし）",
     "scrollUpDown": "上/下 スクロール",
     "toggleShuffle": "シャッフル切替",
+    "toggleHideEmpty": "対象なし 表示/非表示",
     "switchDeckTab": "デッキ/タグ 切替",
     "openFocused": "展開（フォーカス項目）",
     "editFocused": "編集（フォーカス項目）",

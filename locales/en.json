@@ -266,6 +266,7 @@
     "nextPrev": "Previous / Next (no grade)",
     "scrollUpDown": "Scroll Up / Down",
     "toggleShuffle": "Toggle shuffle",
+    "toggleHideEmpty": "Hide / Show empty items",
     "switchDeckTab": "Switch Decks / Tags",
     "openFocused": "Open focused item",
     "editFocused": "Edit focused item",

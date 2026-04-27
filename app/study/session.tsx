@@ -106,16 +106,30 @@ export default function StudySessionScreen() {
 
   // モーダル遷移中は onBlur による自動再フォーカスを抑制するためのフラグ
   const { keyboardRef, isScreenFocusedRef, onScreenBlur } = useKeyboardFocus();
+  // 初回フォーカス（画面遷移）かどうかを追跡するフラグ
+  const isFirstFocusRef = useRef(true);
+  const statusBarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useFocusEffect(
     useCallback(() => {
       isScreenFocusedRef.current = true;
       refreshCurrentCard();
-      setStatusBarHidden(true); // サブ画面（カード編集等）から戻った際に再非表示
+      if (isFirstFocusRef.current) {
+        // 初回: フェードアニメーション完了後にステータスバーを非表示（前画面のレイアウトズレを防ぐ）
+        isFirstFocusRef.current = false;
+        statusBarTimerRef.current = setTimeout(() => setStatusBarHidden(true), 300);
+      } else {
+        // サブ画面（カード編集等）から戻った際は即座に再非表示
+        setStatusBarHidden(true);
+      }
       // モーダルから戻った際にキーボードショートカットを復元
       setTimeout(() => {
         if (!codeEditingRef.current) keyboardRef.current?.focus();
       }, 100);
       return () => {
+        if (statusBarTimerRef.current) {
+          clearTimeout(statusBarTimerRef.current);
+          statusBarTimerRef.current = null;
+        }
         onScreenBlur();
         setStatusBarHidden(false);
         // コンポーネントのアンマウントとバッチ処理されて StatusBar 再レンダリングが
@@ -139,7 +153,7 @@ export default function StudySessionScreen() {
       ? (tags.find((tg) => tg.id === tagId)?.name ?? t("study.title"))
       : t("study.title");
 
-  const [statusBarHidden, setStatusBarHidden] = useState(true);
+  const [statusBarHidden, setStatusBarHidden] = useState(false);
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
@@ -303,15 +317,12 @@ export default function StudySessionScreen() {
     if (completed) {
       setEditedCodeBlocks({});
       completeReadyRef.current = false;
-      navigation.setOptions({ headerLeft: () => null });
       setTimeout(() => {
         completeRef.current?.focus();
         setTimeout(() => {
           completeReadyRef.current = true;
         }, 200);
       }, 100);
-    } else {
-      navigation.setOptions({ headerLeft: renderHeaderLeft });
     }
   }, [completed]);
 
@@ -441,26 +452,78 @@ export default function StudySessionScreen() {
     }));
   }
 
-  const renderHeaderLeft = useCallback(
-    () => (
-      <Pressable
-        onPress={() => router.back()}
-        style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-        hitSlop={4}
-      >
-        <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
-      </Pressable>
-    ),
-    [router, theme.colors.text],
-  );
+  // iPhone 用インラインカスタムヘッダー（headerShown:false のため全状態で共通利用）
+  const iPhoneHeader = !(Platform as any).isPad ? (
+    <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+        flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
+      }}>
+        <Pressable
+          onPress={!completed && keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+          style={{
+            position: 'absolute', left: 0, right: 0,
+            alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
+            paddingHorizontal: 56, gap: 4,
+          }}
+        >
+          <Text
+            style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
+            numberOfLines={1}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          >
+            {sessionTitle}
+          </Text>
+          {!completed && keyboardShortcutsEnabled && (
+            <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+          )}
+        </Pressable>
+        {!completed ? (
+          <Pressable
+            onPress={() => router.back()}
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
+        <View style={{ flex: 1 }} />
+        {!completed && currentCard && (
+          <>
+            {cardLinks.length > 0 && (
+              <Pressable
+                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
+                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+                hitSlop={4}
+                accessibilityLabel={t("study.links")}
+              >
+                <Ionicons name="link-sharp" size={26} color={theme.colors.primary} />
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`)}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
+            >
+              <Ionicons name="pencil-sharp" size={26} color={theme.colors.primary} />
+            </Pressable>
+          </>
+        )}
+      </View>
+    </View>
+  ) : null;
 
   if (loading) {
     return (
-      <View
-        style={[styles.center, { backgroundColor: theme.colors.background }]}
-      >
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <>
+        <StatusBar hidden={statusBarHidden} />
+        {iPhoneHeader}
+        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </>
     );
   }
 
@@ -524,27 +587,7 @@ export default function StudySessionScreen() {
     return (
       <>
         <StatusBar hidden={statusBarHidden} />
-        <Stack.Screen
-          options={
-            (Platform as any).isPad
-              ? { headerShown: false }
-              : {
-                  headerTitle: () => (
-                    <Text
-                      style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text }}
-                      numberOfLines={1}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-                    >
-                      {t("study.title")}
-                    </Text>
-                  ),
-                  headerBackTitle: "",
-                  headerBackVisible: false,
-                  headerLeft: () => null,
-                  headerRight: () => null,
-                }
-          }
-        />
+        <Stack.Screen options={{ headerShown: false }} />
         <TextInput
           ref={completeRef}
           style={styles.hiddenKeyboardInput}
@@ -566,7 +609,7 @@ export default function StudySessionScreen() {
             }
           }}
         />
-        {(Platform as any).isPad && (
+        {(Platform as any).isPad ? (
           <View
             style={{
               height: initialTopInsetRef.current + 44,
@@ -584,7 +627,7 @@ export default function StudySessionScreen() {
               {t("study.title")}
             </Text>
           </View>
-        )}
+        ) : iPhoneHeader}
         <View
           style={[
             styles.completeScreen,
@@ -771,7 +814,14 @@ export default function StudySessionScreen() {
     );
   }
 
-  if (!currentCard) return null;
+  if (!currentCard) {
+    return (
+      <>
+        <StatusBar hidden={statusBarHidden} />
+        {iPhoneHeader}
+      </>
+    );
+  }
 
   const progressRatio =
     result.totalCards > 0 ? (currentIndex + 1) / result.totalCards : 0;
@@ -1091,84 +1141,7 @@ export default function StudySessionScreen() {
   return (
     <>
       <StatusBar hidden={statusBarHidden} />
-      <Stack.Screen
-        options={
-          (Platform as any).isPad
-            ? { headerShown: false }
-            : {
-                headerTitle: () => (
-                  <Pressable
-                    onPress={
-                      keyboardShortcutsEnabled
-                        ? () => setShowShortcutsModal(true)
-                        : undefined
-                    }
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                      maxWidth: screenWidth * 0.46,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontWeight: "600",
-                        fontSize: theme.fontSize.lg,
-                        color: theme.colors.text,
-                        flexShrink: 1,
-                      }}
-                      numberOfLines={1}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-                    >
-                      {sessionTitle}
-                    </Text>
-                    {keyboardShortcutsEnabled && (
-                      <MaterialIcons
-                        name="keyboard"
-                        size={22}
-                        color={theme.colors.primary}
-                      />
-                    )}
-                  </Pressable>
-                ),
-                headerShown: true,
-                headerLeft: renderHeaderLeft,
-                headerRight: () => (
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    {cardLinks.length > 0 && (
-                      <Pressable
-                        onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
-                        style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-                        hitSlop={4}
-                        accessibilityLabel={t("study.links")}
-                      >
-                        <Ionicons
-                          name="link-sharp"
-                          size={26}
-                          color={theme.colors.primary}
-                        />
-                      </Pressable>
-                    )}
-                    <Pressable
-                      onPress={() =>
-                        router.push(
-                          `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`,
-                        )
-                      }
-                      style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-                      hitSlop={4}
-                    >
-                      <Ionicons
-                        name="pencil-sharp"
-                        size={26}
-                        color={theme.colors.primary}
-                      />
-                    </Pressable>
-                  </View>
-                ),
-              }
-        }
-      />
+      <Stack.Screen options={{ headerShown: false }} />
       <TextInput
         key={keyboardInputKey}
         ref={keyboardRef}
@@ -1192,7 +1165,7 @@ export default function StudySessionScreen() {
           }, 50);
         }}
       />
-      {(Platform as any).isPad && (
+      {(Platform as any).isPad ? (
         <View
           style={{
             height: initialTopInsetRef.current + 44,
@@ -1211,7 +1184,6 @@ export default function StudySessionScreen() {
               paddingHorizontal: 8,
             }}
           >
-            {/* タイトル：絶対配置で中央寄せ（ボタンの後ろに描画） */}
             <Pressable
               onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
               style={{
@@ -1236,7 +1208,6 @@ export default function StudySessionScreen() {
                 <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
               )}
             </Pressable>
-            {/* 戻るボタン */}
             <Pressable
               onPress={() => router.back()}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
@@ -1245,7 +1216,6 @@ export default function StudySessionScreen() {
               <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
             </Pressable>
             <View style={{ flex: 1 }} />
-            {/* 右側ボタン */}
             {cardLinks.length > 0 && (
               <Pressable
                 onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
@@ -1265,7 +1235,7 @@ export default function StudySessionScreen() {
             </Pressable>
           </View>
         </View>
-      )}
+      ) : iPhoneHeader}
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >

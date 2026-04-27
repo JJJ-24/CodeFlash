@@ -1,8 +1,8 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { setStatusBarHidden } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -57,6 +57,8 @@ export default function DeckDetailScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { width: screenWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const initialTopInsetRef = useRef(insets.top);
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, updateCard } = useCardStore();
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
@@ -401,7 +403,6 @@ export default function DeckDetailScreen() {
           }
           if (key === ' ') {
             if (displayedCards.length === 0) return;
-            setStatusBarHidden(true, 'fade');
             router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
           } else if (FILTER_KEY_MAP[key]) {
             const f = FILTER_KEY_MAP[key];
@@ -437,53 +438,62 @@ export default function DeckDetailScreen() {
         }}
         onBlur={onInputBlur}
       />
-      <Stack.Screen
-        options={{
-          headerTitle: () => (
-            <Pressable
-              onPress={keyboardShortcutsEnabled && !selectionMode ? () => setShowShortcutsModal(true) : undefined}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.46 }}
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* インラインカスタムヘッダー */}
+      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+        <View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
+        }}>
+          <Pressable
+            onPress={keyboardShortcutsEnabled && !selectionMode ? () => setShowShortcutsModal(true) : undefined}
+            style={{
+              position: 'absolute', left: 0, right: 0,
+              alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
+              paddingHorizontal: 56, gap: 4,
+            }}
+          >
+            <Text
+              style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
+              numberOfLines={1}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {deck.name}
-              </Text>
-              {keyboardShortcutsEnabled && !selectionMode && (
-                <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-              )}
-            </Pressable>
-          ),
-          headerBackTitle: '',
-          headerLeft: () => (
-            <Pressable
-              onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
-              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-              hitSlop={4}
-            >
-              <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
-            </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable
-              onPress={() => {
-                if (selectionMode) {
-                  exitSelectionMode();
-                } else {
-                  setSelectionMode(true);
-                  setSelectedCardIds(new Set());
-                  setFocusedCardIndex(null);
-                }
-              }}
-              style={{ paddingHorizontal: 4 }}
-            >
-              <Ionicons
-                name={selectionMode ? 'close' : 'albums-outline'}
-                size={26}
-                color={theme.colors.primary}
-              />
-            </Pressable>
-          ),
-        }}
-      />
+              {deck?.name ?? ''}
+            </Text>
+            {keyboardShortcutsEnabled && !selectionMode && (
+              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }} />
+          <Pressable
+            onPress={() => {
+              if (selectionMode) {
+                exitSelectionMode();
+              } else {
+                setSelectionMode(true);
+                setSelectedCardIds(new Set());
+                setFocusedCardIndex(null);
+              }
+            }}
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
+          >
+            <Ionicons
+              name={selectionMode ? 'close' : 'albums-outline'}
+              size={26}
+              color={theme.colors.primary}
+            />
+          </Pressable>
+        </View>
+      </View>
 
       {/* 固定ヘッダー: 統計・学習ボタン・セクションタイトル */}
       <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
@@ -516,7 +526,7 @@ export default function DeckDetailScreen() {
           style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, (selectionMode || displayedCards.length === 0) && { opacity: 0.5 }]}
           activeOpacity={0.8}
           disabled={selectionMode || displayedCards.length === 0}
-          onPress={() => { setStatusBarHidden(true, 'fade'); router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } }); }}
+          onPress={() => { router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } }); }}
         >
           <Ionicons name="play" size={20} color="#FFF" />
           <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.study')}</Text>

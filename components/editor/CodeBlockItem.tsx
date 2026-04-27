@@ -46,10 +46,11 @@ interface Props {
   isFocused?: boolean;
   editTrigger?: number;
   onEditBlur?: () => void;
+  onRunButtonPress?: () => void;
   runTrigger?: number;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, runTrigger }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, onRunButtonPress, runTrigger }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -65,6 +66,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     (text) => onChange({ content: text }),
     codeInputRef,
   );
+
+  const skipEditBlurRef = useRef(false);
 
   const contentRef = useRef(block.content);
   contentRef.current = block.content;
@@ -161,7 +164,15 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           {!collapsed && block.executable && (
             <TouchableOpacity
               style={[styles.runBtn, { paddingHorizontal: Math.round(theme.fontSize.sm * 1.5) }, isRunning && styles.runBtnDisabled]}
-              onPress={() => run(block.content, block.language)}
+              onPress={() => {
+                if (focused) {
+                  skipEditBlurRef.current = true;
+                  codeInputRef.current?.blur();
+                  setFocused(false);
+                }
+                onRunButtonPress?.();
+                run(block.content, block.language);
+              }}
               disabled={isRunning}
             >
               {isRunning
@@ -205,7 +216,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   placeholder={t('card.codePlaceholder')}
                   placeholderTextColor="#6B7280"
                   onFocus={() => { setFocused(true); onFocusInput?.(); }}
-                  onBlur={() => { setFocused(false); onEditBlur?.(); }}
+                  onBlur={() => { setFocused(false); if (!skipEditBlurRef.current) { onEditBlur?.(); } skipEditBlurRef.current = false; }}
                   textAlignVertical="top"
                   autoCapitalize="none"
                   autoCorrect={false}

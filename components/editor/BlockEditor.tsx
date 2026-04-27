@@ -311,6 +311,16 @@ export function BlockEditor({
     setFocusedBlockIndex(null);
   }
 
+  function handleCodeBlockRunButtonPress(blockKey: string) {
+    editingBlockKeyRef.current = null;
+    if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
+    const idx = currentBlocksRef.current.findIndex(b => b._key === blockKey);
+    setFocusedBlockIndex(idx !== -1 ? idx : null);
+    isTransitionTimerRef.current = setTimeout(() => {
+      keyboardRef.current?.focus();
+    }, 200);
+  }
+
   function handleBlockEditBlur() {
     editingBlockKeyRef.current = null;
     if (isTransitioningRef.current || isNavigatingRef.current) return;
@@ -845,6 +855,7 @@ export function BlockEditor({
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   runTrigger={runTriggerMap[block._key] ?? 0}
+                  onRunButtonPress={() => handleCodeBlockRunButtonPress(block._key)}
                   onRunStart={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];

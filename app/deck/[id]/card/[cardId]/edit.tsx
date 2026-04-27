@@ -38,6 +38,7 @@ export default function EditCardScreen() {
   const [saving, setSaving] = useState(false);
   const [frontEmpty, setFrontEmpty] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const initialSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -46,7 +47,16 @@ export default function EditCardScreen() {
         getTagsByCardId(db, cardId),
       ]);
       setCard(loaded);
-      setInitialTagIds(tags.map((t) => t.id));
+      const tagIdList = tags.map((t) => t.id);
+      setInitialTagIds(tagIdList);
+      if (loaded) {
+        initialSnapshotRef.current = JSON.stringify({
+          frontBlocks: loaded.frontContent,
+          backBlocks: loaded.backContent,
+          memoBlocks: loaded.memoContent,
+          tagIds: tagIdList,
+        });
+      }
     })();
   }, [cardId]);
 
@@ -78,6 +88,21 @@ export default function EditCardScreen() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleClose() {
+    const current = editorRef.current?.getData();
+    const snapshot = initialSnapshotRef.current;
+    if (!current || !snapshot || JSON.stringify(current) === snapshot) {
+      editorRef.current?.prepareForNavigation();
+      router.back();
+      return;
+    }
+    Alert.alert(t('common.discardChanges'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.discard'), style: 'destructive', onPress: () => { editorRef.current?.prepareForNavigation(); router.back(); } },
+      ...(!frontEmpty ? [{ text: t('common.save'), onPress: () => editorRef.current?.save() }] : []),
+    ]);
   }
 
   function confirmDelete() {
@@ -127,7 +152,7 @@ export default function EditCardScreen() {
             </Pressable>
           ),
           headerLeft: () => (
-            <Pressable onPress={() => { editorRef.current?.prepareForNavigation(); router.back(); }} style={{ paddingHorizontal: 4 }}>
+            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),
@@ -152,7 +177,7 @@ export default function EditCardScreen() {
           onSave={handleSave}
           onFrontEmptyChange={setFrontEmpty}
           saving={saving}
-          onCancel={() => router.back()}
+          onCancel={handleClose}
           onDeleteCard={confirmDelete}
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>

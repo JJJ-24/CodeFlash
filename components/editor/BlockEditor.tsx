@@ -82,6 +82,8 @@ export interface BlockEditorRef {
   save: () => void;
   /** ナビゲーション遷移直前に呼ぶ。blur タイマーによる focus() が遷移を妨害しないようにする */
   prepareForNavigation: () => void;
+  /** 現在のエディタデータを返す（未保存の変更を検知するために使用） */
+  getData: () => BlockEditorData;
 }
 
 interface Props {
@@ -521,7 +523,13 @@ export function BlockEditor({
         isTransitionTimerRef.current = null;
       }
     },
-  }), [handleSave]);
+    getData: () => ({
+      frontBlocks: fromEditBlocks(frontBlocks),
+      backBlocks: fromEditBlocks(backBlocks),
+      memoBlocks: fromEditBlocks(memoBlocks),
+      tagIds,
+    }),
+  }), [handleSave, frontBlocks, backBlocks, memoBlocks, tagIds]);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "front", label: t("common.front") },

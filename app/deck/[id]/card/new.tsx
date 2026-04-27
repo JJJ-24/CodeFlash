@@ -3,7 +3,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
@@ -32,6 +32,29 @@ export default function NewCardScreen() {
   const [saving, setSaving] = useState(false);
   const [frontEmpty, setFrontEmpty] = useState(true);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  const initialSnapshotRef = useRef<string>(
+    JSON.stringify({
+      frontBlocks: [{ type: 'text', content: '' }],
+      backBlocks: [{ type: 'text', content: '' }],
+      memoBlocks: [{ type: 'text', content: '' }],
+      tagIds: tagId ? [tagId] : [],
+    })
+  );
+
+  function handleClose() {
+    const current = editorRef.current?.getData();
+    if (!current || JSON.stringify(current) === initialSnapshotRef.current) {
+      editorRef.current?.prepareForNavigation();
+      router.back();
+      return;
+    }
+    Alert.alert(t('common.discardChanges'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.discard'), style: 'destructive', onPress: () => { editorRef.current?.prepareForNavigation(); router.back(); } },
+      ...(!frontEmpty ? [{ text: t('common.create'), onPress: () => editorRef.current?.save() }] : []),
+    ]);
+  }
 
   async function handleSave(data: BlockEditorData) {
     setSaving(true);
@@ -73,7 +96,7 @@ export default function NewCardScreen() {
             </Pressable>
           ),
           headerLeft: () => (
-            <Pressable onPress={() => { editorRef.current?.prepareForNavigation(); router.back(); }} style={{ paddingHorizontal: 4 }}>
+            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
           ),
@@ -85,7 +108,7 @@ export default function NewCardScreen() {
         }}
       />
       <View style={styles.container}>
-        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={decks.find((d) => d.id === deckId)?.name} onCancel={() => router.back()} />
+        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={decks.find((d) => d.id === deckId)?.name} onCancel={handleClose} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.create')}</Text>

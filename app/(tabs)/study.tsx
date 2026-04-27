@@ -77,6 +77,7 @@ export default function StudyScreen() {
   const [activeFilter, setActiveFilter] = useState<Filter>('review');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
+  const [hideEmpty, setHideEmpty] = useState(false);
   const focusedDeckIdRef = useRef<string | null>(null);
   const focusedTagIdRef = useRef<string | null>(null);
   const fromSessionRef = useRef(false);
@@ -88,11 +89,11 @@ export default function StudyScreen() {
   useEffect(() => {
     if (activeTab === 'decks') {
       const id = focusedDeckIdRef.current;
-      const idx = id ? sortedDecks.findIndex(d => d.id === id) : -1;
+      const idx = id ? visibleDecks.findIndex(d => d.id === id) : -1;
       setFocusedItemIndex(idx === -1 ? null : idx);
     } else {
       const id = focusedTagIdRef.current;
-      const idx = id ? sortedTags.findIndex(t => t.id === id) : -1;
+      const idx = id ? visibleTags.findIndex(t => t.id === id) : -1;
       setFocusedItemIndex(idx === -1 ? null : idx);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -180,7 +181,7 @@ export default function StudyScreen() {
       setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
     }
     else if (key === 'j' || key === 'J') {
-      const items = activeTab === 'decks' ? sortedDecks : sortedTags;
+      const items = activeTab === 'decks' ? visibleDecks : visibleTags;
       setFocusedItemIndex(prev => {
         const next = prev === null ? (items.length > 0 ? 0 : null) : prev >= items.length - 1 ? null : prev + 1;
         const item = next != null ? items[next] : null;
@@ -190,7 +191,7 @@ export default function StudyScreen() {
       });
     }
     else if (key === 'k' || key === 'K') {
-      const items = activeTab === 'decks' ? sortedDecks : sortedTags;
+      const items = activeTab === 'decks' ? visibleDecks : visibleTags;
       setFocusedItemIndex(prev => {
         const next = prev === null ? (items.length > 0 ? items.length - 1 : null) : prev <= 0 ? null : prev - 1;
         const item = next != null ? items[next] : null;
@@ -206,7 +207,7 @@ export default function StudyScreen() {
   function startStudyFocused() {
     if (!keyboardShortcutsEnabled) return;
     if (focusedItemIndex === null) return;
-    const items = activeTab === 'decks' ? sortedDecks : sortedTags;
+    const items = activeTab === 'decks' ? visibleDecks : visibleTags;
     const item = items[focusedItemIndex];
     if (!item) return;
     const info = activeTab === 'decks'
@@ -234,24 +235,50 @@ export default function StudyScreen() {
     return tags;
   }, [tags, tagSortOrder]);
 
-  // ソート変更後もフォーカスを同じデッキに維持（ホームでソート変更後に学習タブへ戻った場合）
+  const visibleDecks = useMemo(() => {
+    if (!hideEmpty) return sortedDecks;
+    return sortedDecks.filter(deck => {
+      const counts: Record<Filter, number> = {
+        all: deck.cardCount,
+        learned: todayReviewedPerDeck[deck.id] ?? 0,
+        review: dueCounts[deck.id] ?? 0,
+        new: todayCreatedPerDeck[deck.id] ?? 0,
+      };
+      return counts[activeFilter] > 0;
+    });
+  }, [sortedDecks, hideEmpty, activeFilter, todayReviewedPerDeck, dueCounts, todayCreatedPerDeck]);
+
+  const visibleTags = useMemo(() => {
+    if (!hideEmpty) return sortedTags;
+    return sortedTags.filter(tag => {
+      const counts: Record<Filter, number> = {
+        all: totalPerTag[tag.id] ?? 0,
+        learned: todayReviewedPerTag[tag.id] ?? 0,
+        review: tagDueCounts[tag.id] ?? 0,
+        new: todayCreatedPerTag[tag.id] ?? 0,
+      };
+      return counts[activeFilter] > 0;
+    });
+  }, [sortedTags, hideEmpty, activeFilter, totalPerTag, todayReviewedPerTag, tagDueCounts, todayCreatedPerTag]);
+
+  // ソート・フィルター変更後もフォーカスを同じデッキに維持
   useEffect(() => {
     const id = focusedDeckIdRef.current;
     if (id == null) return;
-    const newIdx = sortedDecks.findIndex(d => d.id === id);
+    const newIdx = visibleDecks.findIndex(d => d.id === id);
     setFocusedItemIndex(newIdx === -1 ? null : newIdx);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedDecks]);
+  }, [visibleDecks]);
 
-  // タグ並び替え後もフォーカスを同じタグに維持（タグ管理で並び替え後に学習タブへ戻った場合）
+  // ソート・フィルター変更後もフォーカスを同じタグに維持
   useEffect(() => {
     if (activeTab !== 'tags') return;
     const id = focusedTagIdRef.current;
     if (id == null) return;
-    const newIdx = sortedTags.findIndex(t => t.id === id);
+    const newIdx = visibleTags.findIndex(t => t.id === id);
     setFocusedItemIndex(newIdx === -1 ? null : newIdx);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedTags]);
+  }, [visibleTags]);
 
   const totalAll = activeTab === 'decks'
     ? decks.reduce((s, d) => s + d.cardCount, 0)
@@ -319,6 +346,25 @@ export default function StudyScreen() {
             </Text>
           </View>
           <Pressable
+            onPress={() => {
+              setHideEmpty(prev => !prev);
+              setFocusedItemIndex(null);
+              focusedDeckIdRef.current = null;
+              focusedTagIdRef.current = null;
+            }}
+            style={[
+              styles.shuffleBtn,
+              { borderColor: hideEmpty ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+              hideEmpty && { backgroundColor: theme.colors.primary },
+            ]}
+          >
+            <Ionicons
+              name={hideEmpty ? 'funnel' : 'funnel-outline'}
+              size={theme.fontSize.xl}
+              color={hideEmpty ? theme.colors.primaryText : theme.colors.textSecondary}
+            />
+          </Pressable>
+          <Pressable
             onPress={() => setShuffleEnabled(!shuffleEnabled)}
             style={[
               styles.shuffleBtn,
@@ -368,7 +414,7 @@ export default function StudyScreen() {
         ) : (
           <FlatList
             ref={listRef}
-            data={sortedDecks}
+            data={visibleDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}
@@ -427,7 +473,7 @@ export default function StudyScreen() {
         ) : (
           <FlatList
             ref={listRef}
-            data={sortedTags}
+            data={visibleTags}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onScrollToIndexFailed={() => {}}

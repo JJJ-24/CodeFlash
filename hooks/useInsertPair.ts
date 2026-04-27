@@ -6,7 +6,7 @@ import type { TextInput } from 'react-native';
 export function useInsertPair(
   content: string,
   onContentChange: (text: string) => void,
-  codeInputRef: RefObject<TextInput>,
+  codeInputRef: RefObject<TextInput | null>,
 ) {
   const selectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const insertTimeRef = useRef(0);

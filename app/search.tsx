@@ -188,4 +188,7 @@ const styles = StyleSheet.create({
   resultText: { flex: 1, gap: 2 },
   preview: { fontWeight: '500', lineHeight: 22 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyText: {},
+  deckName: {},
+  fieldOptionText: {},
 });

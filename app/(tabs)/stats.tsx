@@ -202,6 +202,8 @@ const pieStyles = StyleSheet.create({
   gradeGrid: { flexDirection: 'row', justifyContent: 'center', paddingTop: 4, paddingBottom: 4, alignSelf: 'center', width: '100%' },
   gradeGridItem: { flex: 1, alignItems: 'center', gap: 2 },
   gradeGridCount: { fontWeight: '700' },
+  gradeGridLabel: {},
+  gradeGridPct: {},
 });
 
 function BarChart({

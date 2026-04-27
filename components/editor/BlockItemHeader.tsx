@@ -66,4 +66,5 @@ const styles = StyleSheet.create({
   moveButtons: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   moveBtn: { padding: 4 },
   deleteBtn: { padding: 6 },
+  deleteBtnText: {},
 });

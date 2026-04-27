@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { ViewStyle } from 'react-native';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -18,7 +19,7 @@ interface Props {
   onClose: () => void;
   shortcuts?: ShortcutItem[];
   sections?: ShortcutSection[];
-  maxHeight?: string | number;
+  maxHeight?: ViewStyle['maxHeight'];
 }
 
 export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeight = '70%' }: Props) {

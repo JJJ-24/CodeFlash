@@ -154,6 +154,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   previewName: { fontWeight: '600' },
+  previewDesc: {},
   langRow: { flexDirection: 'row', gap: 10 },
   langBtn: {
     flex: 1,

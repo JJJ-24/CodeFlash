@@ -48,6 +48,7 @@ import { FlipSuppressContext } from "@/lib/FlipSuppressContext";
 import { getReviewByCardId } from "@/lib/database/reviews";
 import { updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
+import type { Block } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
 import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER } from "@/lib/theme";
 import { useDeckStore } from "@/store/decks";
@@ -775,7 +776,7 @@ export default function StudySessionScreen() {
   const progressRatio =
     result.totalCards > 0 ? (currentIndex + 1) / result.totalCards : 0;
   const hasMemo = currentCard.memoContent.some(
-    (b) =>
+    (b: Block) =>
       (b.type !== "image" && "content" in b && b.content.trim() !== "") ||
       (b.type === "image" && !!b.uri),
   );

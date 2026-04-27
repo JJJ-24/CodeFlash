@@ -204,6 +204,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  pickBtnIcon: { textAlign: 'center' },
+  pickBtnText: { textAlign: 'center' },
   altInput: {
     margin: 12,
     marginTop: 8,

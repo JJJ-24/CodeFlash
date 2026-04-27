@@ -200,7 +200,7 @@ export default function StudyScreen() {
       });
     }
     else if (key === '.') { router.navigate('/(tabs)/stats'); }
-    else if (key === ',') { router.navigate('/(tabs)/'); }
+    else if (key === ',') { router.navigate('/(tabs)'); }
   }
 
   function startStudyFocused() {
@@ -547,5 +547,6 @@ const styles = StyleSheet.create({
   },
   dueChipText: { fontWeight: '700', color: '#FFF' },
   tagColorDot: { width: 16, height: 16, borderRadius: 8 },
-
+  filterDesc: {},
+  dueLabel: {},
 });

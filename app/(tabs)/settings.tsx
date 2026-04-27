@@ -445,7 +445,7 @@ export default function SettingsScreen() {
       onKeyPress={({ nativeEvent: { key } }) => {
         if (!keyboardShortcutsEnabled) return;
         const k = key.toLowerCase();
-        if (key === '.') { router.navigate('/(tabs)/'); }
+        if (key === '.') { router.navigate('/(tabs)'); }
         else if (key === ',') { router.navigate('/(tabs)/stats'); }
       }}
       onBlur={onInputBlur}
@@ -485,6 +485,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
   },
+  segmentText: {},
   segmentTextActive: { fontWeight: '700' },
 dataRow: {
     flexDirection: 'row',
@@ -494,6 +495,7 @@ dataRow: {
   },
   dataRowText: { flex: 1, gap: 2 },
   dataRowTitle: { fontWeight: '600' },
+  dataRowSubtitle: {},
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',

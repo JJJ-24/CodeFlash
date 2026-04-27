@@ -43,6 +43,7 @@ export function calculateNextReviewFSRS(existing: Review | null, grade: Grade): 
       lapses: existing.fsrsLapses ?? 0,
       state: (existing.fsrsState ?? State.New) as State,
       last_review: lastReview,
+      learning_steps: 0,
     };
   }
 

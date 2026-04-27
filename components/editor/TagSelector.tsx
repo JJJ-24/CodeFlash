@@ -88,4 +88,5 @@ const styles = StyleSheet.create({
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
   chipText: { fontWeight: '500' },
+  empty: {},
 });

@@ -16,7 +16,7 @@ import {
 } from '@/lib/database/reviews';
 import { calculateNextReviewFSRS } from '@/lib/fsrs';
 import type { Grade } from '@/lib/sm2';
-import type { Review } from '@/types';
+import type { Card, Review } from '@/types';
 
 // セッションをまたいで今日の元状態を保持するモジュールレベルキャッシュ
 // key: cardId, value: { review: 評価前の元レビュー状態（新規カードは null）, date: ISO日付 }

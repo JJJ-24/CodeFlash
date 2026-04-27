@@ -355,4 +355,5 @@ const styles = StyleSheet.create({
   deckPickerName: { fontWeight: '600', flex: 1, marginRight: 8 },
   noDeckText: { paddingHorizontal: 20, paddingVertical: 16 },
   modalCancel: { paddingVertical: 16, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth },
+  emptyText: {},
 });

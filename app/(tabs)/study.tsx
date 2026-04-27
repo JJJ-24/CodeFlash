@@ -366,7 +366,7 @@ export default function StudyScreen() {
             ]}
           >
             <Ionicons
-              name={hideEmpty ? 'funnel' : 'funnel-outline'}
+              name="funnel-outline"
               size={theme.fontSize.xl}
               color={hideEmpty ? theme.colors.primaryText : theme.colors.textSecondary}
             />

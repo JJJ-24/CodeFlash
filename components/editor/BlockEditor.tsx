@@ -826,7 +826,7 @@ export function BlockEditor({
       >
         {(isPreview || isSortMode) && (
           <View style={styles.modeLabel}>
-            <Text style={[styles.modeLabelText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+            <Text style={[styles.modeLabelText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
               {isPreview ? t('editor.previewModeLabel') : t('editor.sortModeLabel')}
             </Text>
           </View>

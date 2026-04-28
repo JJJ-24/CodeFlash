@@ -14,7 +14,9 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
@@ -42,6 +44,9 @@ export default function TagsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const initialTopInsetRef = useRef(insets.top);
+  const lastFocusTimeRef = useRef(0);
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled, tagSortOrder, setTagSortOrder } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
@@ -78,6 +83,7 @@ export default function TagsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      lastFocusTimeRef.current = Date.now();
       getAllTags(db).then(setTags);
       onScreenFocus();
       return () => { onScreenBlur(); };
@@ -86,23 +92,38 @@ export default function TagsScreen() {
 
   return (
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          headerTitle: () => (
-            <Pressable
-              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-            >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('tag.title')}
-              </Text>
-              {keyboardShortcutsEnabled && (
-                <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-              )}
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      {/* インラインカスタムヘッダー */}
+      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+        <View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
+        }}>
+          <Pressable
+            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+            style={{
+              position: 'absolute', left: 0, right: 0,
+              alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+            }}
+          >
+            <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('tag.title')}
+            </Text>
+            {keyboardShortcutsEnabled && (
+              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }} />
+          <View style={{ width: 36 }} />
+        </View>
+      </View>
 
       <HiddenKeyboardInput
         ref={keyboardRef}
@@ -218,11 +239,6 @@ export default function TagsScreen() {
         />
       )}
 
-      {/* FAB: 戻る */}
-      <Pressable style={[styles.fabBack, { backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>
-        <Ionicons name="chevron-back" size={28} color="#FFF" />
-      </Pressable>
-
       {/* FAB */}
       <Pressable
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
@@ -270,21 +286,6 @@ const styles = StyleSheet.create({
   countBadgeText: { fontWeight: '700', color: '#FFF' },
   iconBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  fabBack: {
-    position: 'absolute',
-    left: 20,
-    bottom: 32,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-  },
   fab: {
     position: 'absolute',
     right: 20,

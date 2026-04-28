@@ -1,8 +1,9 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -41,6 +42,9 @@ export default function TagCardsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const initialTopInsetRef = useRef(insets.top);
+  const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
   const { keyboardShortcutsEnabled, cardSortOrder } = useSettingsStore();
@@ -79,6 +83,7 @@ export default function TagCardsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      lastFocusTimeRef.current = Date.now();
       getCardsByTagId(db, tagId).then((raw) => {
         if (cardSortOrder === 'newest') setCards([...raw].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
         else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
@@ -91,27 +96,43 @@ export default function TagCardsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          headerTitle: () => (
-            <Pressable
-              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-              style={[styles.headerTitle, { maxWidth: screenWidth * 0.5 }]}
+      <Stack.Screen options={{ headerShown: false }} />
+      {/* インラインカスタムヘッダー */}
+      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+        <View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
+        }}>
+          <Pressable
+            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+            style={{
+              position: 'absolute', left: 0, right: 0,
+              alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
+              paddingHorizontal: 56, gap: 4,
+            }}
+          >
+            <Text
+              style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1, maxWidth: screenWidth * 0.46 }}
+              numberOfLines={1}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
-              <Text
-                style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1 }}
-                numberOfLines={1}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-              >
-                {tag?.name ?? ''}
-              </Text>
-              {keyboardShortcutsEnabled && (
-                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-              )}
-            </Pressable>
-          ),
-        }}
-      />
+              {tag?.name ?? ''}
+            </Text>
+            {keyboardShortcutsEnabled && (
+              <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }} />
+          <View style={{ width: 36 }} />
+        </View>
+      </View>
 
       <TextInput
         ref={keyboardRef}
@@ -207,11 +228,6 @@ export default function TagCardsScreen() {
         />
       )}
 
-      {/* FAB: 戻る */}
-      <Pressable style={[styles.fabBack, { backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>
-        <Ionicons name="chevron-back" size={28} color="#FFF" />
-      </Pressable>
-
       {/* FAB: 新規カード作成 */}
       <Pressable
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
@@ -280,7 +296,6 @@ export default function TagCardsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
-  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   list: { paddingTop: 16, paddingBottom: 96 },
   cardItem: {
     borderRadius: 10,
@@ -298,21 +313,6 @@ const styles = StyleSheet.create({
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   iconBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  fabBack: {
-    position: 'absolute',
-    left: 20,
-    bottom: 32,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-  },
   fab: {
     position: 'absolute',
     right: 20,

@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { searchCards } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
@@ -25,6 +26,8 @@ export default function SearchScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const initialTopInsetRef = useRef(insets.top);
   const { decks } = useDeckStore();
   const { lastSearchField, setLastSearchField } = useSettingsStore();
   const inputRef = useRef<TextInput>(null);
@@ -62,7 +65,32 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.search')}</Text> }} />
+      <Stack.Screen options={{ headerShown: false }} />
+      {/* インラインカスタムヘッダー */}
+      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+        <View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
+        }}>
+          <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }}>
+            <Text
+              style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
+              {t('common.search')}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.back()}
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }} />
+          <View style={{ width: 36 }} />
+        </View>
+      </View>
       {/* 検索バー */}
       <View style={[styles.searchBar, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <Ionicons name="search-outline" size={18} color={theme.colors.textTertiary} />

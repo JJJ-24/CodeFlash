@@ -67,15 +67,15 @@ function RootStack() {
       <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'modal' }} />
       <Stack.Screen name="deck/[id]/card/new" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="deck/[id]/card/[cardId]/edit" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="tags/index" options={{ title: '' }} />
+      <Stack.Screen name="tags/index" options={{ headerShown: false }} />
       <Stack.Screen name="tags/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="tags/[tagId]/edit" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="tags/[tagId]/cards" />
+      <Stack.Screen name="tags/[tagId]/cards" options={{ headerShown: false }} />
       <Stack.Screen
         name="study/session"
         options={{ headerShown: false, animation: 'fade', title: '' }}
       />
-      <Stack.Screen name="search" />
+      <Stack.Screen name="search" options={{ headerShown: false }} />
     </Stack>
     </ThemeProvider>
   );

@@ -800,14 +800,14 @@ export function BlockEditor({
                 style={[
                   styles.modeBtn,
                   { backgroundColor: theme.colors.background, paddingHorizontal: (Platform as any).isPad ? 32 : 9 },
-                  active && { backgroundColor: theme.colors.primaryLight },
+                  active && { backgroundColor: theme.colors.primary },
                 ]}
                 onPress={() => setEditorMode(mode)}
               >
                 <Ionicons
                   name={icon}
                   size={theme.fontSize.lg}
-                  color={active ? theme.colors.primary : theme.colors.textSecondary}
+                  color={active ? '#FFFFFF' : theme.colors.textSecondary}
                 />
               </Pressable>
             );
@@ -824,6 +824,13 @@ export function BlockEditor({
         scrollEventThrottle={100}
         onScroll={(e) => { scrollPosRef.current[activeTabRef.current] = e.nativeEvent.contentOffset.y; }}
       >
+        {isPreview && (
+          <View style={styles.modeLabel}>
+            <Text style={[styles.modeLabelText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
+              {t('editor.previewModeLabel')}
+            </Text>
+          </View>
+        )}
         {currentBlocks.map((block, index) => {
           const moveUp = isSortMode && index > 0 ? () => moveBlock(activeTab, block._key, 'up') : undefined;
           const moveDown = isSortMode && index < currentBlocks.length - 1 ? () => moveBlock(activeTab, block._key, 'down') : undefined;
@@ -928,6 +935,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignSelf: "center",
     gap: 4,
+  },
+  modeLabel: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  modeLabelText: {
+    fontWeight: '500',
   },
   modeBtn: {
     paddingVertical: 7,

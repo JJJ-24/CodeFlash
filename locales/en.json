@@ -177,7 +177,8 @@
     "codeBlock": "Code",
     "addBlock": "+ Add Block",
     "preview": "Preview",
-    "selectLanguage": "Select Language"
+    "selectLanguage": "Select Language",
+    "previewModeLabel": "Preview Mode"
   },
   "settings": {
     "theme": "Theme",

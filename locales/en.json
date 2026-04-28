@@ -50,7 +50,9 @@
     "nextReviewToday": "Today",
     "nextReviewTomorrow": "Tomorrow",
     "nextReviewDays": "In {{count}} days",
-    "shuffle": "Shuffle"
+    "shuffle": "Shuffle",
+    "finishConfirmTitle": "Finish Session",
+    "finishConfirmMessage": "Skip the remaining {{count}} cards and go to the summary?"
   },
   "tag": {
     "tagListTitle": "Tags",

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
   Platform,
   Pressable,
@@ -102,6 +103,7 @@ export default function StudySessionScreen() {
     goBack,
     goNext,
     refreshCurrentCard,
+    finishSession,
   } = useStudySession();
 
   // モーダル遷移中は onBlur による自動再フォーカスを抑制するためのフラグ
@@ -402,6 +404,8 @@ export default function StudySessionScreen() {
       const ref = isFlipped ? backScrollRef : frontScrollRef;
       const y = isFlipped ? backScrollYRef.current : frontScrollYRef.current;
       ref.current?.scrollTo({ y: y + SCROLL_STEP, animated: true });
+    } else if (key.toLowerCase() === "q") {
+      handleFinishSession();
     } else if (key.toLowerCase() === "b") {
       router.back();
     } else if (key.toLowerCase() === "l") {
@@ -419,6 +423,18 @@ export default function StudySessionScreen() {
       else if (key === "3") handleGradeWithSlide(2);
       else if (key === "4") handleGradeWithSlide(3);
     }
+  }
+
+  function handleFinishSession() {
+    const remaining = result.totalCards - result.reviewed;
+    Alert.alert(
+      t("study.finishConfirmTitle"),
+      t("study.finishConfirmMessage", { count: remaining }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.ok"), onPress: finishSession },
+      ],
+    );
   }
 
   async function handleGrade(grade: Grade) {
@@ -509,6 +525,13 @@ export default function StudySessionScreen() {
             >
               <Ionicons name="pencil-sharp" size={26} color={theme.colors.primary} />
             </Pressable>
+            <Pressable
+              onPress={handleFinishSession}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
+            >
+              <Ionicons name="checkmark-done-outline" size={26} color={theme.colors.primary} />
+            </Pressable>
           </>
         )}
       </View>
@@ -534,15 +557,15 @@ export default function StudySessionScreen() {
     const totalCards = result.totalCards;
     const skipped = totalCards - reviewed;
     const skipColor = theme.dark ? "#6B7280" : "#9CA3AF";
-    // 凡例用（再度→難しい→普通→簡単→評価なし の従来順）
+    // 凡例用（評価なし→再度→難しい→普通→簡単 の順）
     const gradeItems: { key: string; count: number; color: string }[] = [
+      ...(skipped > 0
+        ? [{ key: t("study.skipped"), count: skipped, color: skipColor }]
+        : []),
       { key: t("grade.again"), count: again, color: GRADE_COLORS.again },
       { key: t("grade.hard"), count: hard, color: GRADE_COLORS.hard },
       { key: t("grade.good"), count: good, color: GRADE_COLORS.good },
       { key: t("grade.easy"), count: easy, color: GRADE_COLORS.easy },
-      ...(skipped > 0
-        ? [{ key: t("study.skipped"), count: skipped, color: skipColor }]
-        : []),
     ];
     // チャート描画用（12時から時計回りに 簡単→普通→難しい→再度→評価なし）
     const gradeChartItems: { count: number; color: string }[] = [
@@ -1220,6 +1243,13 @@ export default function StudySessionScreen() {
               hitSlop={4}
             >
               <Ionicons name="pencil-sharp" size={26} color={theme.colors.primary} />
+            </Pressable>
+            <Pressable
+              onPress={handleFinishSession}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
+            >
+              <Ionicons name="checkmark-done-outline" size={26} color={theme.colors.primary} />
             </Pressable>
           </View>
         </View>

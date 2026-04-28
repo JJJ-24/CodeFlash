@@ -195,6 +195,10 @@ export function useStudySession() {
     }
   }, [db]);
 
+  const finishSession = useCallback(() => {
+    setCompleted(true);
+  }, []);
+
   return {
     loading,
     completed,
@@ -206,5 +210,6 @@ export function useStudySession() {
     goBack,
     goNext,
     refreshCurrentCard,
+    finishSession,
   };
 }

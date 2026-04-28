@@ -50,7 +50,9 @@
     "nextReviewToday": "今日",
     "nextReviewTomorrow": "明日",
     "nextReviewDays": "{{count}}日後",
-    "shuffle": "シャッフル"
+    "shuffle": "シャッフル",
+    "finishConfirmTitle": "学習を終了",
+    "finishConfirmMessage": "残り{{count}}枚をスキップして集計画面へ移動しますか？"
   },
   "tag": {
     "tagListTitle": "タグ一覧",

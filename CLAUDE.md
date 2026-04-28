@@ -39,11 +39,11 @@ app/                     # Expo Router ルート（ファイル = 画面）
 lib/
 ├── database/            # SQLite CRUD 関数（entity ごとにファイル分離）
 │   ├── schema.ts        # テーブル定義 + migrateDbIfNeeded()
-│   ├── utils.ts         # generateId()・todayISO() の共通ユーティリティ
+│   ├── utils.ts         # generateId()・todayISO()・localDateStr() の共通ユーティリティ
 │   ├── decks.ts         # Deck CRUD
 │   ├── cards.ts         # Card CRUD（JSON シリアライズ含む）
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
-│   └── reviews.ts       # SM-2 レビューデータ操作
+│   └── reviews.ts       # レビューデータ操作（FSRS スケジューリング結果の永続化）
 ├── code-execution/      # コード実行サンドボックス
 │   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成
 │   ├── constants.ts     # LANGUAGES・LANG_LABELS
@@ -55,10 +55,16 @@ lib/
 ├── FlipSuppressContext.ts  # コードブロックのボタンタップ時にカードフリップを一時抑制する Context
 ├── export.ts            # 全テーブル（review_logs 含む）を JSON エクスポート
 ├── import.ts            # merge（INSERT OR IGNORE）/ replace（全削除後挿入）の2モードでインポート
-├── notifications.ts     # requestPermission()・scheduleDailyReminder()・updateBadgeCount(db)：毎日繰り返し通知スケジュール＋アイコンバッジ更新
+├── tsv.ts               # TSV形式でのデッキエクスポート/インポート（Anki互換）
+├── notifications.ts     # requestPermission()・scheduleDailyReminder()・updateBadgeCount(db)
+├── fsrs.ts              # FSRS スケジューリングエンジン（ts-fsrs ライブラリのラッパー）。実際の次回復習日計算はここ
+├── sm2.ts               # Grade 型（0〜3）の定義元。アルゴリズム本体は fsrs.ts に移行済み
+├── donut.ts             # ドーナツグラフの定数（DONUT_SIZE 等）とパス計算（donutArcPath）
+├── cardPreview.ts       # getCardPreview()：ブロック配列からプレビューテキストを生成
+├── cardEditorShortcuts.ts  # CARD_EDITOR_SHORTCUTS_EDIT / _SORT の定義（ShortcutsModal 用）
 ├── study/
 │   └── extractLinks.ts  # カードブロックからリンクを抽出（学習画面 L キー = リンク一覧用）
-└── sm2.ts               # SM-2 間隔反復アルゴリズム実装
+└── ...
 
 store/                   # Zustand ストア（インメモリキャッシュ）
 ├── decks.ts             # useDeckStore
@@ -75,13 +81,20 @@ components/
 │   └── BlockItemHeader.tsx  # ブロックの共通ヘッダー（並び替えハンドル・削除ボタン）。各 *BlockItem が使用
 ├── stats/
 │   └── ActivityHeatmap.tsx  # 学習履歴ヒートマップ（草グラフ）。weeks props で表示週数を制御
-└── study/               # FlipCard（reanimated）, BlocksView, CodeRunnerView, SyntaxHighlightedCode, ZoomableImage
+├── study/               # FlipCard（reanimated）, BlocksView, CodeRunnerView, SyntaxHighlightedCode, ZoomableImage, LinksSheet
+├── DeckPickerModal.tsx  # デッキ選択モーダル（タグカード一覧・カード移動で共用）
+├── EmptyState.tsx       # 空状態表示（アイコン＋タイトル＋サブタイトル）
+└── HiddenKeyboardInput.tsx  # Bluetooth キーボード入力用 hidden TextInput（ascii-capable 固定）
 
 hooks/
-├── useStudySession.ts        # 学習セッション管理（キュー管理・SM-2連携）
+├── useStudySession.ts        # 学習セッション管理（キュー管理・FSRS連携・finishSession）
 ├── useCodeExecution.ts       # コード実行状態管理（run/clear/reset/handleMessage）
 ├── useCodeBlockSelection.ts  # コードブロックフォーカス選択状態管理
-└── useSwipeGesture.ts        # 学習セッションのスワイプジェスチャー管理
+├── useSwipeGesture.ts        # 学習セッションのスワイプジェスチャー管理
+├── useListNavigation.ts      # リスト J/K フォーカスのヌルサイクル（ID ベース追跡で並び替え後も正しい位置を保持）
+├── useKeyboardFocus.ts       # hidden TextInput のフォーカス管理（onScreenFocus/onScreenBlur/onInputBlur）
+├── useShortcutsHeader.tsx    # ショートカットモーダルのヘッダータイトル UI を生成するフック
+└── useInsertPair.ts          # ブラケット・クォートの自動閉じ挿入
 
 types/index.ts           # 全ドメイン型（唯一の定義元）
 locales/ja.json          # 日本語翻訳
@@ -115,6 +128,31 @@ Stack (_layout.tsx)
 └── search                              — カード全文検索（ホーム画面ヘッダーの検索アイコンから遷移）
 ```
 
+### カスタムヘッダーパターン
+
+push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`・`search`・`study/session`）は React Navigation の標準ヘッダーを使わず、`headerShown: false` ＋ インラインカスタムヘッダー View を採用している（遷移アニメーション中の戻るボタン残像を防ぐため）。
+
+```jsx
+// _layout.tsx でも設定
+<Stack.Screen name="deck/[id]" options={{ headerShown: false }} />
+
+// 画面コンポーネント内でも明示
+<Stack.Screen options={{ headerShown: false }} />
+
+// カスタムヘッダー構造
+<View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+  <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+    {/* タイトル: position: absolute で left:0 right:0 に広げて中央配置 */}
+    {/* 戻るボタン(左) + スペーサー + アクションボタン(右) */}
+  </View>
+</View>
+```
+
+- `initialTopInsetRef = useRef(insets.top)` でマウント時の safe area 高さを固定（キーボード表示時に揺れない）
+- 戻るボタンには 350ms ガード（モーダルを閉じた直後の誤タップ防止）
+- モーダル画面（`presentation: 'modal'`）は標準ヘッダーのまま
+
 ### 型定義
 
 `types/index.ts` がドメイン型の唯一の定義元。ブロックは `TextBlock | CodeBlock | ImageBlock` のユニオン型で、カードの `frontContent / backContent / memoContent` は SQLite に JSON文字列として保存される。
@@ -129,10 +167,10 @@ Stack (_layout.tsx)
 
 - **`lib/database/utils.ts`**: `generateId()`・`todayISO()`・`localDateStr(d: Date)` をエクスポート。DB ファイルだけでなく UI コンポーネントからも import して使用する。日付集計は `toISOString().slice(0,10)` が UTC 日付を返すため、ローカル日付が必要な箇所は `localDateStr()` を使う。
 - **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` / `review_logs` を明示的に先に削除する
-- **SM-2 グレード対応**: `grade 0` = もう一度, `1` = 難しい, `2` = 普通, `3` = 簡単（`lib/sm2.ts` 参照）
+- **グレード対応**: `grade 0` = もう一度(again), `1` = うろ覚え(hard), `2` = わかった(good), `3` = バッチリ(easy)。型は `lib/sm2.ts` の `Grade = 0 | 1 | 2 | 3`。実際の次回復習日計算は `lib/fsrs.ts` の `calculateNextReviewFSRS()` が `ts-fsrs` ライブラリを使って行う（SM-2 ではなく FSRS アルゴリズム）。
 - **`getDeckMasteryList` の戻り値**: `avgEase: number | null`（未学習デッキは NULL）・`learnedCount: number`・`newCount: number`（未学習枚数）を返す。`LEFT JOIN` で未学習デッキも含む。`masteryPercent()` は `avgEase == null` のとき 0 を返す。統計画面の `MasteryItem` 型も `avgEase: number | null` で定義。
 - **「新規」フィルターの意味**: 学習タブ・カード一覧・統計タブの「新規」ブロックは「今日作成したカード数」を表す。学習してもカウントは減らず、翌日に 0 にリセットされる。実際のクエリは `getTodayCreatedCardIdsByDeckId` を使う。
-- **エクスポート/インポート**: `lib/export.ts` と `lib/import.ts` が担当。`review_logs` テーブルも含めて全テーブルをエクスポートする。インポートは `merge`（`INSERT OR IGNORE`）と `replace`（全削除後に挿入）の2モード。
+- **エクスポート/インポート**: `lib/export.ts` と `lib/import.ts` が JSON 形式、`lib/tsv.ts` が TSV 形式を担当。`review_logs` テーブルも含めて全テーブルをエクスポートする。インポートは `merge`（`INSERT OR IGNORE`）と `replace`（全削除後に挿入）の2モード。
 - **カード全文検索**: `app/search.tsx` はホーム画面ヘッダーの検索アイコンから遷移。`searchCards(db, query)` が `frontContent LIKE ?` で検索（JSON文字列のまま LIKE 可能）し `ORDER BY updatedAt DESC LIMIT 100`。クエリ変更ごとにリアルタイム検索。結果タップで `/deck/[id]/card/[cardId]/edit` へ遷移。
 - **カード複製**: `lib/database/cards.ts` の `duplicateCard(db, cardId)` が元カードの内容・タグを複製して新カードを作成。カード一覧の選択モードバーの複製ボタン（`copy-outline`）から呼び出す。
 
@@ -144,7 +182,6 @@ Stack (_layout.tsx)
 - **`FILTER_COLORS`**: `lib/theme/index.ts` にエクスポートされた定数。`learned: '#4CAF50'`、`due: '#F57C00'`。フィルター色を複数画面で使う場合はここから import する（ハードコード禁止）。
 - **CodeRunnerView のヘッダー色**: 状態（選択中・編集中・実行中）に応じてヘッダー背景色が変わる（選択: `#1A3050`、編集: `#4A3400`、実行: `#1E5024`）。ボーダー色と連動しているため、状態管理を変更する際は両方を確認する。
 - **選択バーのアクションボタン**: 削除・移動などのバーボタンは言語/フォントサイズ非依存にするためアイコンのみ（テキストなし）の円形ボタンにする。`iconBtn` スタイル: `{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }`。無効時は `opacity: 0.4`。
-- **ヘッダータイトルの切り詰め**: ヘッダー右側にアイコンを置く場合、タイトル文字列に `maxWidth: screenWidth * 0.5` と `flexShrink: 1` を付与する。`useWindowDimensions` でスクリーン幅を取得する。React Navigation のヘッダータイトルコンテナは絶対配置のため `flexShrink` 単独では効かない。
 
 #### i18n
 
@@ -156,29 +193,31 @@ Stack (_layout.tsx)
 - **フィルターキーの統一**: 全画面でフィルターキーは `'all' | 'learned' | 'review' | 'new'` に統一。`DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>` で型を派生させている（`store/settings.ts`）。
 - **初期フィルター「保持」の挙動**: 学習・統計タブはタブがアンマウントされないため React state が残る。カード一覧（stack screen）は `lastDeckDetailFilter`（AsyncStorage 永続化）で最後のフィルターを復元する。
 - **`BlockEditor` の初期タブ**: `initialTab?: 'front' | 'back' | 'memo'` prop で開くタブを制御できる。学習セッションの編集ボタンは `?tab=back` クエリパラメータを付与して裏面タブを初期表示する（`deck/[id]/card/[cardId]/edit.tsx` が受け取り）。
-- **学習セッションのヘッダータイトル**: デッキ学習時はデッキ名、タグ学習時はタグ名を表示する。`useDeckStore` / `useTagStore` から `deckId` / `tagId` で検索して取得し、`Stack.Screen` の `headerTitle` に渡す。
+- **学習セッションのヘッダータイトル**: デッキ学習時はデッキ名、タグ学習時はタグ名を表示する。カスタムヘッダー内の Text に直接セットする（`sessionTitle` 変数）。
 - **ホーム画面のフィルターブロック**: `app/(tabs)/index.tsx` の `selectedFilter` は将来のブロック追加（タグ別フィルタ等）を想定した拡張ポイント。現状は `'all'` のみ。型は `useState<'all'>` のユニオン型を拡張して対応する。
 
 #### Bluetooth キーボード
 
 学習セッション（`app/study/session.tsx`）とカード一覧（`app/deck/[id]/index.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。矢印キーは iOS の `onKeyPress` では検知できないため未対応。`Tab` キーは iPadOS がシステムフォーカス移動（UIFocusSystem）に使用するため `onKeyPress` で検知不可。
 
+共通の hidden TextInput は `components/HiddenKeyboardInput.tsx` に切り出されている。フォーカス管理は `hooks/useKeyboardFocus.ts`（`onScreenFocus`/`onScreenBlur`/`onInputBlur`）、リストのヌルサイクルは `hooks/useListNavigation.ts` が担当。
+
 **キー設計の方針**: J/Kでフォーカス移動後の「決定」操作は `Return`（`onSubmitEditing`）に統一。ただし学習開始（大きなアクション）は `Space`（`onKeyPress`）、学習セッション内の表裏反転も `Space` のまま。選択モードの選択/解除も `Space` のまま。`Return` は iOS の `onKeyPress` では検知できないため `onSubmitEditing` で拾う。タブ間切替は `,`（前タブ）/ `.`（次タブ）で統一。
 
 - **ホームキー（デッキ一覧）**: J/K = フォーカス移動、Return = フォーカスデッキを開く、P = デッキ編集、D = デッキ削除、N = 新規デッキ、Q = ソート切替、F = 検索、T = タグ管理、`,`/`.` = タブ切替
-- **学習タブキー**: 1–4 = フィルター切替、J/K = フォーカス移動、Return = フォーカス項目で学習開始、S = シャッフル切替、Q = デッキ/タグタブ切替、`,`/`.` = タブ切替
+- **学習タブキー**: 1–4 = フィルター切替、J/K = フォーカス移動、Return = フォーカス項目で学習開始、S = シャッフル切替、H = 対象カードなし行の表示/非表示トグル、Q = デッキ/タグタブ切替、`,`/`.` = タブ切替
 - **統計タブキー**: 1–4 = ブロック選択、J/K = フォーカス移動、Return = フォーカスデッキのグラフ開閉（シート表示中は Return で閉じる）、`,`/`.` = タブ切替
 - **設定タブキー**: `,`/`.` = タブ切替
-- **学習画面キー**: `,`/`.` = 次/前カード、Space = 表裏反転、1–4 = グレード、J/K = コードブロック次/前フォーカス、E / Return = フォーカス中のコードブロックを編集、M = メモ開閉、F = 全画面、P = カード編集、L = リンク一覧
+- **学習画面キー**: `,`/`.` = 次/前カード、Space = 表裏反転、1–4 = グレード、J/K = コードブロック次/前フォーカス、E / Return = フォーカス中のコードブロックを編集、M = メモ開閉、F = 全画面、P = カード編集、L = リンク一覧、Q = セッション終了（残カードをスキップして集計画面へ、確認ダイアログあり）
 - **カード一覧キー（通常モード）**: Space = 学習開始、Return / P = フォーカスカード編集、1–4 = フィルター切替、J/K = カードフォーカス次/前、Q = ソート切替（「すべて」のみ）、N = 新規カード、S = 選択モード開始、D = フォーカス中のカードを削除、B = 戻る
 - **カード一覧キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、D = 削除、C = 複製、S = 選択モード終了
 - **タグ管理キー**: J/K = フォーカス移動、Return = フォーカスタグのカード一覧を開く、P = タグ編集、D = タグ削除、N = 新規タグ、Q = ソート切替、B = 戻る
 - **タグカード一覧キー**: J/K = フォーカス移動、Return / P = フォーカスカード編集、D = カード削除、N = 新規カード（デッキ選択）、B = 戻る
-- **カード編集・新規作成キー（編集モード）**: J/K = フォーカス移動（ヌルサイクル）、Return / E = フォーカスブロックを編集開始（TextInput にカーソル移動）、D = フォーカスブロックを削除（フォーカスなし時は編集画面のみカード削除）、Q = モード切替（編集→並べ替え→プレビュー→編集）、`,`/`.` = タブ切替（表面/裏面/メモ）、A = ブロック追加メニュー開閉、R = フォーカスコードブロック実行（executable のみ）、T = タグ選択エリアへスクロール、S = 保存/作成、C = キャンセル
+- **カード編集・新規作成キー（編集モード）**: J/K = フォーカス移動（ヌルサイクル）、Return / E = フォーカスブロックを編集開始（TextInput にカーソル移動）、D = フォーカスブロックを削除（フォーカスなし時は編集画面のみカード削除）、Q = モード切替（編集→並べ替え→プレビュー→編集）、`,`/`.` = タブ切替（表面/裏面/メモ）、A = ブロック追加メニュー開閉、R = フォーカスコードブロック実行（executable のみ）、T = タグ選択エリアへスクロール、S = 保存/作成、X = キャンセル（未保存確認あり）
 - **カード編集・新規作成キー（並び替えモード）**: J/K = フォーカス移動、U = フォーカスブロックを上に移動、D = フォーカスブロックを下に移動、Q = モード切替（並べ替え→プレビュー→編集→並べ替え）
 - **カード編集キーのフォーカス管理**: 非入力モード → hidden TextInput がフォーカスを保持し onKeyPress でキーを受け取る。ブロック TextInput がフォーカスを得るとすべてのショートカットが無効化される（hidden TextInput がフォーカスを失う）。ブロック TextInput の onBlur 発火時 → 200ms 後に hidden TextInput を re-focus（isTransitioningRef が true の場合はスキップ）。
 - **J/Kキーのコードブロックサイクル（学習画面）**: J = 次へ / K = 前へ。表面表示中は表面のコードブロックのみサイクル。裏面表示中は裏面＋メモのコードブロックを**通しで**サイクルする（裏面ブロック0→1→…→メモブロック0→1→…→裏面ブロック0）。サイクルの両端で `null`（フォーカスなし）を経由する**ヌルサイクル**方式。メモブロックに到達するとメモを自動展開する。combined index は `selectedCodeBlockSide`（`'back'` か `'memo'`）と `selectedCodeBlockIdx` の組み合わせで管理する。
-- **J/Kキーのカードフォーカス（カード一覧）**: `app/deck/[id]/index.tsx` でも同じヌルサイクル方式。`focusedCardIndex` が `null` → 0 → 1 → … → last → `null` と循環（K は逆順）。フォーカス中のカードは `borderColor` で強調（通常モード: `theme.colors.primary`〈青〉、選択モードカーソル: `#F57C00`〈オレンジ〉、選択モード選択済み: `theme.colors.primary`〈青〉）。
+- **J/Kキーのカードフォーカス（カード一覧）**: `hooks/useListNavigation.ts` のヌルサイクル方式。`focusedIndex` が `null` → 0 → 1 → … → last → `null` と循環（K は逆順）。`keyExtractor` を渡すと ID ベース追跡になり、並び替え後も正しいカードにフォーカスを維持する。フォーカス中のカードは `borderColor` で強調（通常モード: `theme.colors.primary`〈青〉、選択モードカーソル: `#F57C00`〈オレンジ〉、選択モード選択済み: `theme.colors.primary`〈青〉）。
 
 #### BlockEditor
 
@@ -187,6 +226,8 @@ Stack (_layout.tsx)
 
 #### 学習・設定機能
 
+- **スケジューリングアルゴリズム**: `lib/fsrs.ts` が `ts-fsrs` ライブラリを使って FSRS アルゴリズムで次回復習日を計算する。`lib/sm2.ts` は `Grade` 型の定義のみ残存。`reviews` テーブルには FSRS 用カラム（`fsrsState`・`fsrsReps`・`fsrsLapses`・`fsrsScheduledDays`）がマイグレーション済み。
+- **学習セッション終了**: `useStudySession.finishSession()` を呼ぶと残カードを何もせず即座に完了画面へ遷移する。学習画面ヘッダー右端の `checkmark-done-outline` ボタン、または `Q` キーから確認ダイアログ経由で呼び出す。
 - **デッキソート**: `store/settings.ts` の `deckSortOrder`（`'manual' | 'name' | 'cardCount'`）で制御。`'manual'` 時のみ長押しドラッグが有効。他のソートは Zustand の `decks` 配列を `.sort()` するだけで DB 順序を変えない。
 - **シャッフル学習**: `store/settings.ts` の `shuffleEnabled`（AsyncStorage永続化）で管理。学習タブ「学習一覧」行の右端にトグルボタン（ソートボタンと同形状）。ON 時は `useStudySession.loadSession` に `shuffle: true` を渡し、カード配列を Fisher-Yates でシャッフルする。セッション遷移時は `params: { shuffle: '1' | '0' }` で受け渡し。
 - **通知リマインダー**: `lib/notifications.ts` の `scheduleDailyReminder(hour, minute)` が identifier `'daily-reminder'` 固定で毎日繰り返し通知をスケジュール（再呼び出し前に既存通知をキャンセル）。設定画面でオン/オフと時刻を管理。`useSettingsStore` に `notificationEnabled`・`notificationHour`・`notificationMinute` を AsyncStorage 永続化で保存。
@@ -209,13 +250,13 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 - VSCode: 保存時に ESLint 自動修正とインポート整理が実行される
 - `patch-package`: `postinstall` フックで自動適用。`patches/` 配下に差分ファイルを置く
 
-**技術スタック:** React Native 0.81 / React 19 / Expo 54 / expo-router 6 / expo-sqlite / Zustand 5 / i18next。アニメーションに react-native-reanimated、ジェスチャー操作に react-native-gesture-handler が利用可能。
+**技術スタック:** React Native 0.81 / React 19 / Expo 54 / expo-router 6 / expo-sqlite / Zustand 5 / i18next / ts-fsrs。アニメーションに react-native-reanimated、ジェスチャー操作に react-native-gesture-handler が利用可能。
 
 ### 実装チケット
 
 `docs/` 配下に機能チケット（000〜023）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
 
-完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・T/Yキーヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）・シャッフル学習（学習タブのトグルボタン、Fisher-Yates）・統計画面改善（全体学習率セクション・デッキ別習熟度に新規枚数追加・草グラフ右端余白）・学習タブをカードスタイルに変更・学習タブの行アイコンを `play` に変更を追加実装。
+完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2/FSRS・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・ヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示・枠なし横幅フル表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）・シャッフル学習（学習タブのトグルボタン、Fisher-Yates）・統計画面改善（全体学習率セクション・デッキ別習熟度に新規枚数追加・草グラフ右端余白）・学習タブをカードスタイルに変更・学習タブの行アイコンを `play` に変更・TSV エクスポート/インポート・FSRS アルゴリズム移行・カスタムヘッダー統一（push 遷移全画面）・学習セッション終了ボタン（ヘッダー右端 + Q キー）を追加実装。
 
 未着手: 014（iCloud同期）・015（Web版）・016（買い切り課金）・017（App Store申請）・018（SQL/C++実行）・019（マーケットプレイス）・020（AI生成）
 
@@ -226,3 +267,4 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 - **セクションタイトル**: `theme.fontSize.lg, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。
 - **コードブロック（学習画面）**: `components/study/SyntaxHighlightedCode.tsx` は `theme.fontSize.md` を使用。フォントサイズ設定に連動する。
 - **locales の改行**: ラベルに改行が必要な場合は `"カード\n総数"` のように `\n` を埋め込む（`Text` コンポーネントがそのまま改行として解釈する）。
+- **ドーナツグラフ**: 定数・パス計算は `lib/donut.ts` からインポート。ドーナツの「穴」部分の fill は描画先の背景色（`theme.colors.surface` など）に合わせる。

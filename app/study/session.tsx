@@ -1227,16 +1227,6 @@ export default function StudySessionScreen() {
               <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
             </Pressable>
             <View style={{ flex: 1 }} />
-            {cardLinks.length > 0 && (
-              <Pressable
-                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
-                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-                hitSlop={4}
-                accessibilityLabel={t("study.links")}
-              >
-                <Ionicons name="link-sharp" size={26} color={theme.colors.primary} />
-              </Pressable>
-            )}
             <Pressable
               onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`)}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}

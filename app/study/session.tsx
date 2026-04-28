@@ -508,16 +508,6 @@ export default function StudySessionScreen() {
         <View style={{ flex: 1 }} />
         {!completed && currentCard && (
           <>
-            {cardLinks.length > 0 && (
-              <Pressable
-                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
-                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-                hitSlop={4}
-                accessibilityLabel={t("study.links")}
-              >
-                <Ionicons name="link-sharp" size={26} color={theme.colors.primary} />
-              </Pressable>
-            )}
             <Pressable
               onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`)}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
@@ -1006,7 +996,6 @@ export default function StudySessionScreen() {
                 color={theme.colors.iconSubtle}
               />
             </Pressable>
-            <View style={{ flex: 1 }} />
             {cardLinks.length > 0 && (
               <Pressable
                 style={styles.fullscreenEditBtn}
@@ -1015,11 +1004,12 @@ export default function StudySessionScreen() {
               >
                 <Ionicons
                   name="link-sharp"
-                  size={Math.round(theme.fontSize.xl)}
+                  size={Math.round(theme.fontSize.xxl)}
                   color={theme.colors.iconSubtle}
                 />
               </Pressable>
             )}
+            <View style={{ flex: 1 }} />
             <Pressable
               style={styles.fullscreenEditBtn}
               onPress={() =>
@@ -1030,6 +1020,16 @@ export default function StudySessionScreen() {
             >
               <Ionicons
                 name="pencil-sharp"
+                size={Math.round(theme.fontSize.xl)}
+                color={theme.colors.iconSubtle}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.fullscreenEditBtn}
+              onPress={handleFinishSession}
+            >
+              <Ionicons
+                name="checkmark-done-outline"
                 size={Math.round(theme.fontSize.xl)}
                 color={theme.colors.iconSubtle}
               />
@@ -1395,25 +1395,40 @@ export default function StudySessionScreen() {
           </Animated.View>
         </GestureDetector>
 
-        {/* 全画面ボタン（カードエリア右上） */}
-        <Pressable
-          style={styles.fullscreenBtn}
-          onPress={() => {
-            codeEditingRef.current = false;
-            setIsFullscreen(true);
-            cbs.setEditTrigger(0);
-            cbs.setRunTrigger(0);
-            setTimeout(() => {
-              keyboardRef.current?.focus();
-            }, 100);
-          }}
-        >
-          <Ionicons
-            name="expand-outline"
-            size={Math.round(theme.fontSize.xxl)}
-            color={theme.colors.iconSubtle}
-          />
-        </Pressable>
+        {/* 全画面ボタン＋リンクボタン（カードエリア左上） */}
+        <View style={styles.fullscreenBtnRow}>
+          <Pressable
+            style={styles.fullscreenBtn}
+            onPress={() => {
+              codeEditingRef.current = false;
+              setIsFullscreen(true);
+              cbs.setEditTrigger(0);
+              cbs.setRunTrigger(0);
+              setTimeout(() => {
+                keyboardRef.current?.focus();
+              }, 100);
+            }}
+          >
+            <Ionicons
+              name="expand-outline"
+              size={Math.round(theme.fontSize.xxl)}
+              color={theme.colors.iconSubtle}
+            />
+          </Pressable>
+          {cardLinks.length > 0 && (
+            <Pressable
+              style={styles.fullscreenBtn}
+              onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
+              accessibilityLabel={t("study.links")}
+            >
+              <Ionicons
+                name="link-sharp"
+                size={Math.round(theme.fontSize.xxl)}
+                color={theme.colors.iconSubtle}
+              />
+            </Pressable>
+          )}
+        </View>
 
         {/* ヒント or 自己評価ボタン */}
         <View style={styles.bottom}>
@@ -1593,13 +1608,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   backBtnText: { fontWeight: "700" },
-  fullscreenBtn: {
+  fullscreenBtnRow: {
     position: "absolute",
     top: 8,
     left: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  fullscreenBtn: {
     padding: 6,
     borderRadius: 8,
-    zIndex: 10,
   },
   fullscreenHeader: {
     flexDirection: "row",

@@ -178,7 +178,8 @@
     "addBlock": "＋ ブロックを追加",
     "preview": "プレビュー",
     "selectLanguage": "言語を選択",
-    "previewModeLabel": "プレビューモード"
+    "previewModeLabel": "プレビューモード",
+    "sortModeLabel": "並び替えモード"
   },
   "settings": {
     "theme": "テーマ",

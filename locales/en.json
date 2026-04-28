@@ -178,7 +178,8 @@
     "addBlock": "+ Add Block",
     "preview": "Preview",
     "selectLanguage": "Select Language",
-    "previewModeLabel": "Preview Mode"
+    "previewModeLabel": "Preview Mode",
+    "sortModeLabel": "Sort Mode"
   },
   "settings": {
     "theme": "Theme",

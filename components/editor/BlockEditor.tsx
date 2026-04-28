@@ -824,10 +824,10 @@ export function BlockEditor({
         scrollEventThrottle={100}
         onScroll={(e) => { scrollPosRef.current[activeTabRef.current] = e.nativeEvent.contentOffset.y; }}
       >
-        {isPreview && (
+        {(isPreview || isSortMode) && (
           <View style={styles.modeLabel}>
             <Text style={[styles.modeLabelText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}>
-              {t('editor.previewModeLabel')}
+              {isPreview ? t('editor.previewModeLabel') : t('editor.sortModeLabel')}
             </Text>
           </View>
         )}

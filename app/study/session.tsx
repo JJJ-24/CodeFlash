@@ -628,11 +628,10 @@ export default function StudySessionScreen() {
             </Text>
           </View>
         ) : iPhoneHeader}
-        <View
-          style={[
-            styles.completeScreen,
-            { backgroundColor: theme.colors.background },
-          ]}
+        <ScrollView
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
+          contentContainerStyle={styles.completeScreen}
+          bounces={false}
         >
           <Ionicons name="checkmark-circle" size={80} color="#43A047" />
           <Text
@@ -647,7 +646,7 @@ export default function StudySessionScreen() {
           {reviewed > 0 && (
             <View
               style={[
-                styles.summaryCard,
+                styles.summarySection,
                 { backgroundColor: theme.colors.surface },
               ]}
             >
@@ -693,24 +692,10 @@ export default function StudySessionScreen() {
                 </Svg>
               </View>
 
+              <View style={[styles.sectionSeparator, { backgroundColor: theme.colors.border }]} />
+
               {/* グレード別枚数 */}
-              <View
-                style={[
-                  styles.summaryGradeRow,
-                  {
-                    gap: Math.max(
-                      2,
-                      Math.min(
-                        16,
-                        Math.floor(
-                          (screenWidth - 104 - gradeItems.length * 44) /
-                            Math.max(1, gradeItems.length - 1),
-                        ),
-                      ),
-                    ),
-                  },
-                ]}
-              >
+              <View style={styles.summaryGradeRow}>
                 {gradeItems.map(({ key, count, color }) => (
                   <View key={key} style={styles.gradeItem}>
                     <Text
@@ -736,6 +721,8 @@ export default function StudySessionScreen() {
                   </View>
                 ))}
               </View>
+
+              <View style={[styles.sectionSeparator, { backgroundColor: theme.colors.border }]} />
 
               {/* 正答率・次回予定 */}
               <View style={styles.statRow}>
@@ -805,11 +792,12 @@ export default function StudySessionScreen() {
                   fontSize: theme.fontSize.lg,
                 },
               ]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             >
               {t("common.ok")}
             </Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </>
     );
   }
@@ -1520,38 +1508,37 @@ const styles = StyleSheet.create({
   gradeBtnText: { fontWeight: "700" },
   prevGradeDot: { width: 5, height: 5, borderRadius: 3, marginTop: 5 },
   completeScreen: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
-    padding: 32,
+    gap: 24,
+    paddingVertical: 32,
   },
   completeTitle: { fontWeight: "700" },
-  summaryCard: {
+  summarySection: {
     width: "100%",
-    maxWidth: 480,
-    alignSelf: "center",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  sectionSeparator: {
+    height: StyleSheet.hairlineWidth,
   },
   donutContainer: {
     alignItems: "center",
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 4,
   },
   summaryGradeRow: {
     flexDirection: "row",
     justifyContent: "center",
+    paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
+    gap: 16,
   },
   gradeItem: {
     flex: 1,
+    maxWidth: 80,
     alignItems: "center",
     gap: 2,
   },
@@ -1560,7 +1547,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 48,
-    paddingTop: 14,
+    paddingTop: 16,
+    paddingBottom: 4,
   },
   statItem: {
     alignItems: "center",

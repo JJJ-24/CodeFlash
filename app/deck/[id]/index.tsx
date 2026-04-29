@@ -88,7 +88,7 @@ export default function DeckDetailScreen() {
     { key: 'P',         descKey: 'shortcut.editFocusedItem' },
     { key: 'D',         descKey: 'shortcut.deleteFocused' },
     { key: 'N',         descKey: 'shortcut.new' },
-    { key: 'Q',         descKey: 'shortcut.cycleCardSort' },
+    { key: 'M',         descKey: 'shortcut.cycleCardSort' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
     { key: 'B',         descKey: 'shortcut.back' },
   ];
@@ -421,7 +421,7 @@ export default function DeckDetailScreen() {
             }
           } else if (k === 'n') {
             router.push({ pathname: '/deck/[id]/card/new', params: { id } });
-          } else if (k === 'q' && selectedFilter === 'all') {
+          } else if (k === 'm' && selectedFilter === 'all') {
             const orders: CardSortOrder[] = ['manual', 'newest', 'oldest'];
             setCardSortOrder(orders[(orders.indexOf(cardSortOrder) + 1) % 3]);
           } else if (k === 's') {

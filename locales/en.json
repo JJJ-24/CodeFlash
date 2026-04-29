@@ -293,6 +293,7 @@
     "moveFocused": "Move focused item Up / Down",
     "sortMode": "Sort Mode",
     "editMode": "Edit Mode",
-    "previewMode": "Preview Mode"
+    "previewMode": "Preview Mode",
+    "finishSession": "Finish session (with confirmation)"
   }
 }

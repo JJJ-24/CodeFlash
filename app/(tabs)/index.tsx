@@ -35,7 +35,7 @@ const HOME_SHORTCUTS = [
   { key: 'P',     descKey: 'shortcut.editFocused' },
   { key: 'D',     descKey: 'shortcut.deleteFocused' },
   { key: 'N',     descKey: 'shortcut.new' },
-  { key: 'Q',     descKey: 'shortcut.cycleSort' },
+  { key: 'M',     descKey: 'shortcut.cycleSort' },
   { key: 'F',     descKey: 'shortcut.search' },
   { key: 'T',     descKey: 'shortcut.tags' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
@@ -219,7 +219,7 @@ export default function HomeScreen() {
   const handleKeyPress = useCallback(({ nativeEvent: { key } }: { nativeEvent: { key: string } }) => {
     if (!keyboardShortcutsEnabled) return;
     const k = key.toLowerCase();
-    if (k === 'q') {
+    if (k === 'm') {
       cycleSortOrder();
     } else if (k === 'j') {
       moveDeckFocus('next');

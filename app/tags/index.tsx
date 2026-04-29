@@ -35,7 +35,7 @@ const TAG_SHORTCUTS = [
   { key: 'P',     descKey: 'shortcut.editFocused' },
   { key: 'D',     descKey: 'shortcut.deleteFocused' },
   { key: 'N',     descKey: 'shortcut.new' },
-  { key: 'Q',     descKey: 'shortcut.cycleSort' },
+  { key: 'M',     descKey: 'shortcut.cycleSort' },
   { key: 'B',     descKey: 'shortcut.back' },
 ];
 
@@ -142,7 +142,7 @@ export default function TagsScreen() {
             }
           } else if (k === 'n') {
             router.push('/tags/new');
-          } else if (k === 'q') {
+          } else if (k === 'm') {
             const idx = SORT_OPTIONS.findIndex(o => o.key === tagSortOrder);
             setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
           } else if (k === 'b') {

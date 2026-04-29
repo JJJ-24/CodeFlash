@@ -51,7 +51,7 @@ const STUDY_TAB_SHORTCUTS = [
   { key: 'Space', descKey: 'shortcut.startStudyFocused' },
   { key: 'S',     descKey: 'shortcut.toggleShuffle' },
   { key: 'H',     descKey: 'shortcut.toggleHideEmpty' },
-  { key: 'Q',     descKey: 'shortcut.switchDeckTab' },
+  { key: 'M',     descKey: 'shortcut.switchDeckTab' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
 ];
 
@@ -183,7 +183,7 @@ export default function StudyScreen() {
       focusedTagIdRef.current = null;
     }
     else if (key === ' ') { startStudyFocused(); }
-    else if (key === 'q' || key === 'Q') {
+    else if (key === 'm' || key === 'M') {
       setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
     }
     else if (key === 'j' || key === 'J') {

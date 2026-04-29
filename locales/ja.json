@@ -293,6 +293,7 @@
     "moveFocused": "上/下 移動（フォーカス項目）",
     "sortMode": "並べ替えモード",
     "editMode": "編集モード",
-    "previewMode": "プレビューモード"
+    "previewMode": "プレビューモード",
+    "finishSession": "学習セッション終了（確認あり）"
   }
 }

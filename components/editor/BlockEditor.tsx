@@ -411,7 +411,7 @@ export function BlockEditor({
           moveBlock(tab, blocks[idx]._key, 'down');
           setFocusedBlockIndex(idx + 1);
         }
-      } else if (k === 'q') {
+      } else if (k === 'm') {
         cycleMode();
       }
       return;

@@ -78,6 +78,7 @@ const SESSION_SHORTCUTS = [
   { key: "B", descKey: "shortcut.back" },
   { key: "L", descKey: "shortcut.links" },
   { key: "P", descKey: "shortcut.pencil" },
+  { key: "Q", descKey: "shortcut.finishSession" },
 ];
 
 export default function StudySessionScreen() {

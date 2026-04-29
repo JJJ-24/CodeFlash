@@ -181,7 +181,7 @@
     "preview": "プレビュー",
     "selectLanguage": "言語を選択",
     "previewModeLabel": "プレビューモード",
-    "sortModeLabel": "並び替えモード"
+    "sortModeLabel": "並べ替えモード"
   },
   "settings": {
     "theme": "テーマ",
@@ -275,8 +275,8 @@
     "openFocused": "展開（フォーカス項目）",
     "editFocused": "編集（フォーカス項目）",
     "deleteFocused": "削除（フォーカス項目）",
-    "cycleSort": "ソート切替",
-    "cycleCardSort": "ソート切替（「すべて」のみ）",
+    "cycleSort": "モード切替（ソート）",
+    "cycleCardSort": "モード切替（ソート）\n（「すべて」選択時）",
     "search": "検索",
     "tags": "タグ管理",
     "tabNextPrev": "タブ切替\n（ホーム/学習/統計/設定）",
@@ -284,7 +284,7 @@
     "openChart": "グラフ表示（フォーカス項目）\n[Return]でも可",
     "delete": "削除（フォーカス項目）/\nカード削除（フォーカスなし）",
     "tabNextPrevCard": "タブ切替\n（表面/裏面/メモ）",
-    "cycleMode": "モード切替\n（編集/並替/プレビュー）",
+    "cycleMode": "モード切替\n（編集/並べ替え/プレビュー）",
     "toggleAddMenu": "ブロック追加メニュー開閉",
     "addBlock": "ブロック追加（フォーカス項目）",
     "scrollToTags": "タグ位置へスクロール",
@@ -294,6 +294,6 @@
     "sortMode": "並べ替えモード",
     "editMode": "編集モード",
     "previewMode": "プレビューモード",
-    "finishSession": "学習セッション終了（確認あり）"
+    "finishSession": "学習終了（確認あり）"
   }
 }

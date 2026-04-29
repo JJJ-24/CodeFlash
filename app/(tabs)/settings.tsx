@@ -169,8 +169,8 @@ export default function SettingsScreen() {
       t('dataManagement.exportImageMessage'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('dataManagement.exportWithoutImages'), onPress: () => doExport(false) },
         { text: t('dataManagement.exportWithImages'), onPress: handleExportWithImages },
+        { text: t('dataManagement.exportWithoutImages'), onPress: () => doExport(false) },
       ]
     );
   }

@@ -223,7 +223,7 @@
     "importError": "インポートに失敗しました",
     "importInvalidFile": "ファイルの形式が正しくありません",
     "exportImageTitle": "画像について",
-    "exportImageMessage": "画像データを含めると別端末でも画像が表示されますが、ファイルサイズが大きくなります",
+    "exportImageMessage": "画像データを含めるとファイルサイズが大きくなります",
     "exportWithImages": "含める（完全）",
     "exportWithoutImages": "含めない（軽量）",
     "exportLargeSizeTitle": "ファイルサイズの確認",

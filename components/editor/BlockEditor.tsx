@@ -427,7 +427,7 @@ export function BlockEditor({
         if (prev === null) return blocks.length > 0 ? blocks.length - 1 : null;
         return prev > 0 ? prev - 1 : null;
       });
-    } else if (k === 'q') {
+    } else if (k === 'm') {
       cycleMode();
     } else if (key === ',') {
       const tabOrder: Tab[] = ['front', 'back', 'memo'];

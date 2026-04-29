@@ -52,6 +52,7 @@ type MedalInfo = { name: 'trophy' | 'ribbon' | 'diamond'; color: string } | null
 function getStreakMedal(streak: number): MedalInfo {
   if (streak >= 1000) return { name: 'diamond',  color: '#000000' };
   if (streak >= 730) return { name: 'diamond',  color: '#FFD700' };
+  if (streak >= 500) return { name: 'diamond',  color: '#ff9ff9' };
   if (streak >= 365) return { name: 'diamond',  color: '#00BCD4' };
   if (streak >= 300) return { name: 'trophy',   color: '#FFD700' };
   if (streak >= 200) return { name: 'trophy',   color: '#C0C0C0' };

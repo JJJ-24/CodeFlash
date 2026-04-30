@@ -99,7 +99,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
       </BlockItemHeader>
 
       {collapsed ? (
-        <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+        <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {hasImage ? `📷 ${t('card.imageBlock')}` : t('editor.imageNoSelection')}
         </Text>
       ) : (

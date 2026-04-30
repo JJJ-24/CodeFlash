@@ -44,7 +44,7 @@
     "filterDescReview": "今日学習が必要なカード",
     "filterDescNew": "未学習のカード",
     "reviewedOf": "学習済み {{reviewed}} / {{total}} 枚",
-    "skipped": "評価なし",
+    "skipped": "保留",
     "correctRate": "正答率",
     "nextReview": "次回予定",
     "nextReviewToday": "今日",
@@ -69,10 +69,10 @@
     "duplicateName": "同じ名前のタグがすでに存在します"
   },
   "grade": {
-    "again": "もう一度",
-    "hard": "うろ覚え",
-    "good": "わかった",
-    "easy": "バッチリ"
+    "again": "再考",
+    "hard": "苦手",
+    "good": "正解",
+    "easy": "即答"
   },
   "card": {
     "new": "新規カード",
@@ -122,15 +122,15 @@
     "dueToday": "今日の予定",
     "streak": "連続",
     "upcomingSchedule": "今後7日間の復習予定",
+    "past7DaysReviewed": "過去7日間の学習済み",
+    "past7DaysActivity": "過去7日間の学習日数",
+    "past7DaysCreated": "過去7日間の新規作成",
+    "activityHeatmap": "学習履歴",
     "totalProgress": "全体学習率",
     "allDecks": "すべてのデッキ",
     "deckMastery": "デッキ別習熟度",
     "empty": "まだ学習データがありません",
     "emptySub": "学習を開始するとここに統計が表示されます",
-    "past7DaysReviewed": "過去7日間の学習済み",
-    "past7DaysActivity": "過去7日間の学習日数",
-    "past7DaysCreated": "過去7日間の新規作成",
-    "activityHeatmap": "学習履歴",
     "learnedOf": "学習済み {{learned}} / {{total}} 枚"
   },
   "code": {
@@ -244,7 +244,7 @@
   },
   "shortcut": {
     "flip": "カードを裏返す",
-    "grade": "評価\n（もう一度/うろ覚え/わかった/バッチリ）",
+    "grade": "評価\n（再考/苦手/正解/即答）",
     "memo": "メモ 表示/非表示",
     "fullscreen": "全画面モード切替",
     "runFocused": "実行（フォーカス項目）",

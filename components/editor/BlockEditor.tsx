@@ -754,37 +754,38 @@ export function BlockEditor({
         {tabs.map((tab) => (
           <Pressable
             key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => {
-              // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
-              isTransitioningRef.current = true;
-              if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
-              isTransitionTimerRef.current = setTimeout(() => {
-                editingBlockKeyRef.current = null;
-                isTransitioningRef.current = false;
-                isTransitionTimerRef.current = null;
-                keyboardRef.current?.focus();
-              }, 200);
-              setAddMenuVisible(false);
-              setEditTriggerMap({});
-              setRunTriggerMap({});
-              setActiveTab(tab.key);
-            }}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                {
-                  color: theme.colors.textTertiary,
-                  fontSize: theme.fontSize.md,
-                },
-                activeTab === tab.key && styles.tabTextActive,
-              ]}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            style={[styles.tab, (Platform as any).isPad && styles.tabPad, activeTab === tab.key && styles.tabActive]}
+              onPress={() => {
+                // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
+                isTransitioningRef.current = true;
+                if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
+                isTransitionTimerRef.current = setTimeout(() => {
+                  editingBlockKeyRef.current = null;
+                  isTransitioningRef.current = false;
+                  isTransitionTimerRef.current = null;
+                  keyboardRef.current?.focus();
+                }, 200);
+                setAddMenuVisible(false);
+                setEditTriggerMap({});
+                setRunTriggerMap({});
+                setActiveTab(tab.key);
+              }}
             >
-              {tab.label}
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: theme.colors.textTertiary,
+                    fontSize: theme.fontSize.md,
+                  },
+                  activeTab === tab.key && styles.tabTextActive,
+                ]}
+                maxFontSizeMultiplier={1.0}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
         ))}
         {/* モード3択ボタン */}
         <View style={styles.modeButtons}>
@@ -926,6 +927,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
+  },
+  tabPad: {
+    paddingHorizontal: 28,
   },
   tabActive: { borderBottomColor: "#1976D2" },
   tabText: { fontWeight: "500" },

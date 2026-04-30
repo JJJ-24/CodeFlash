@@ -145,7 +145,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
   ];
 
   const maxCountDigits = Math.max(...slices.map(s => String(s.value).length));
-  const gradeCountFontSize = maxCountDigits >= 3 ? theme.fontSize.md : theme.fontSize.lg;
+  const gradeCountFontSize = fontSizeForDigits(theme, maxCountDigits, 1.3);
   const maxLabelLen = Math.max(...slices.map(s => s.label.length));
   const gradeLabelFontSize = maxLabelLen >= 3 ? theme.fontSize.xs : theme.fontSize.sm;
 
@@ -180,7 +180,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           const pct = Math.round((slice.value / total) * 100);
           return (
             <View key={slice.label} style={pieStyles.gradeGridItem}>
-              <Text numberOfLines={1} style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text numberOfLines={1} style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} allowFontScaling={false}>
                 {slice.value}
               </Text>
               <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>

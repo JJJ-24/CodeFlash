@@ -130,11 +130,13 @@ export const SHADOW = {
 /** 数値の桁数に応じて統計ブロックの数字フォントサイズを返す。
  *  allowFontScaling={false} と組み合わせて使い、iOS Dynamic Type の影響を受けない絶対サイズを保証する。
  *  アプリ内フォントサイズ設定（small/medium/large）は反映しつつ、最小・最大を桁数ごとにクランプする。 */
-export function fontSizeForDigits(theme: AppTheme, digits: number): number {
-  if (digits >= 5) return Math.min(14, Math.max(14, theme.fontSize.sm));
-  if (digits >= 4) return Math.min(18, Math.max(18, theme.fontSize.lg));
-  if (digits >= 3) return Math.min(23, Math.max(20, theme.fontSize.xxl));
-  return Math.min(30, Math.max(26, theme.fontSize.xxxl));
+export function fontSizeForDigits(theme: AppTheme, digits: number, scale = 1): number {
+  let size: number;
+  if (digits >= 5) size = Math.min(14, Math.max(14, theme.fontSize.sm));
+  else if (digits >= 4) size = Math.min(18, Math.max(18, theme.fontSize.lg));
+  else if (digits >= 3) size = Math.min(23, Math.max(20, theme.fontSize.xxl));
+  else size = Math.min(30, Math.max(26, theme.fontSize.xxxl));
+  return size * scale;
 }
 
 export function useTheme(): AppTheme {

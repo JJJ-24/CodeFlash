@@ -51,7 +51,7 @@ import { updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
 import type { Block } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
-import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER } from "@/lib/theme";
+import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits } from "@/lib/theme";
 import { useDeckStore } from "@/store/decks";
 import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
@@ -566,6 +566,8 @@ export default function StudySessionScreen() {
       { count: again,   color: GRADE_COLORS.again },
       ...(skipped > 0 ? [{ count: skipped, color: skipColor }] : []),
     ];
+    const gradeMaxCountDigits = Math.max(...gradeItems.map(g => String(g.count).length));
+    const gradeCountFontSize = fontSizeForDigits(theme, gradeMaxCountDigits, 1.2);
     const gradeMaxLabelLen = Math.max(...gradeItems.map(g => g.key.length));
     const gradeLabelFontSize = gradeMaxLabelLen >= 3 ? theme.fontSize.xs : theme.fontSize.sm;
     const reviewRate =
@@ -715,9 +717,10 @@ export default function StudySessionScreen() {
                     <Text
                       style={[
                         styles.gradeItemCount,
-                        { color, fontSize: theme.fontSize.lg },
+                        { color, fontSize: gradeCountFontSize },
                       ]}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                      allowFontScaling={false}
+                      numberOfLines={1}
                     >
                       {count}
                     </Text>

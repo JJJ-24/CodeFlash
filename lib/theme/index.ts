@@ -24,6 +24,7 @@ export interface AppColors {
   textTertiary: string;
   border: string;
   inputBorder: string;
+  buttonBorder: string;
   primary: string;
   primaryText: string;
   primaryLight: string;
@@ -64,6 +65,7 @@ export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
     textTertiary: '#9E9E9E',
     border: '#F0F0F0',
     inputBorder: '#E0E0E0',
+    buttonBorder: '#D8D8D8',
     primary: '#1976D2',
     primaryText: '#FFFFFF',
     primaryLight: '#E3F2FD',
@@ -86,6 +88,7 @@ export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
     textTertiary: '#757575',
     border: '#2C2C2C',
     inputBorder: '#3A3A3A',
+    buttonBorder: '#2C2C2C',
     primary: '#1976D2',
     primaryText: '#FFFFFF',
     primaryLight: 'rgba(25, 118, 210, 0.15)',

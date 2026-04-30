@@ -359,7 +359,7 @@ export default function StudyScreen() {
             }}
             style={[
               styles.shuffleBtn,
-              { borderColor: hideEmpty ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+              { borderColor: hideEmpty ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
               hideEmpty && { backgroundColor: theme.colors.primary },
             ]}
           >
@@ -373,7 +373,7 @@ export default function StudyScreen() {
             onPress={() => setShuffleEnabled(!shuffleEnabled)}
             style={[
               styles.shuffleBtn,
-              { borderColor: shuffleEnabled ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+              { borderColor: shuffleEnabled ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
               shuffleEnabled && { backgroundColor: theme.colors.primary },
             ]}
           >

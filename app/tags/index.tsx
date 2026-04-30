@@ -177,7 +177,7 @@ export default function TagsScreen() {
                 onPress={() => setTagSortOrder(key)}
                 style={[
                   styles.sortBtn,
-                  { borderColor: active ? theme.colors.primary : theme.colors.border, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                  { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                   active && { backgroundColor: theme.colors.primary },
                 ]}
               >

@@ -932,8 +932,9 @@ export default function StudySessionScreen() {
             adjustsFontSizeToFit
             style={[
               styles.gradeBtnText,
-              { color, fontSize: theme.fontSize.sm },
+              { color, fontSize: theme.fontSize.lg },
             ]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
           >
             {t(labelKey)}
           </Text>
@@ -1545,7 +1546,7 @@ const styles = StyleSheet.create({
   },
   gradeBtnDisabled: { opacity: 0.4 },
   gradeBtnText: { fontWeight: "700" },
-  prevGradeDot: { width: 5, height: 5, borderRadius: 3, marginTop: 5 },
+  prevGradeDot: { width: 5, height: 5, borderRadius: 3, marginTop: 0 },
   completeScreen: {
     flexGrow: 1,
     alignItems: "center",

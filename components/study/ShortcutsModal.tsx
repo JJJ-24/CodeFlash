@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ViewStyle } from 'react-native';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -45,7 +45,7 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
                   </View>
                   {section.items.map((item) => (
                     <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
-                      <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                      <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }, (Platform as any).isPad && styles.keyBadgePad]}>
                         <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
                           {item.key}
                         </Text>
@@ -60,7 +60,7 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
             ) : (
               (shortcuts ?? []).map((item) => (
                 <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
-                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }]}>
+                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }, (Platform as any).isPad && styles.keyBadgePad]}>
                     <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
                       {item.key}
                     </Text>
@@ -117,5 +117,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+  },
+  keyBadgePad: {
+    width: 130,
   },
 });

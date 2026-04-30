@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSettingsStore } from '@/store/settings';
 
-import { getCardById, getTodayCreatedCardIdsByDeckId, getTodayCreatedCardIdsByTagId } from '@/lib/database/cards';
+import { getCardById, getUnlearnedCardIdsByDeckId, getUnlearnedCardIdsByTagId } from '@/lib/database/cards';
 import { todayISO } from '@/lib/database/utils';
 import {
   getAllCardIdsByDeckId,
@@ -58,12 +58,12 @@ export function useStudySession() {
         if (params.deckId) {
           if (filter === 'all')            cardIds = await getAllCardIdsByDeckId(db, params.deckId);
           else if (filter === 'today')     cardIds = await getTodayReviewedCardIdsByDeckId(db, params.deckId);
-          else if (filter === 'unlearned') cardIds = await getTodayCreatedCardIdsByDeckId(db, params.deckId);
+          else if (filter === 'unlearned') cardIds = await getUnlearnedCardIdsByDeckId(db, params.deckId);
           else                             cardIds = await getDueCardIdsByDeckId(db, params.deckId);
         } else if (params.tagId) {
           if (filter === 'all')            cardIds = await getAllCardIdsByTagId(db, params.tagId);
           else if (filter === 'today')     cardIds = await getTodayReviewedCardIdsByTagId(db, params.tagId);
-          else if (filter === 'unlearned') cardIds = await getTodayCreatedCardIdsByTagId(db, params.tagId);
+          else if (filter === 'unlearned') cardIds = await getUnlearnedCardIdsByTagId(db, params.tagId);
           else                             cardIds = await getDueCardIdsByTagId(db, params.tagId);
         }
 

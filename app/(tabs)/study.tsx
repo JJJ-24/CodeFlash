@@ -28,8 +28,8 @@ import {
   getTotalCardCountPerTag,
 } from '@/lib/database/reviews';
 import {
-  getTodayCreatedCountPerDeck,
-  getTodayCreatedCountPerTag,
+  getUnlearnedCountPerDeck,
+  getUnlearnedCountPerTag,
 } from '@/lib/database/cards';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
@@ -126,8 +126,8 @@ export default function StudyScreen() {
           getDueCountPerTag(db),
           getTodayReviewedCountPerDeck(db),
           getTodayReviewedCountPerTag(db),
-          getTodayCreatedCountPerDeck(db),
-          getTodayCreatedCountPerTag(db),
+          getUnlearnedCountPerDeck(db),
+          getUnlearnedCountPerTag(db),
           getTotalCardCountPerTag(db),
         ]);
         setDecks(loadedDecks);

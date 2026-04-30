@@ -129,7 +129,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
 
   // 凡例用（新規未習→再度→難しい→普通→簡単 の順）
   const slices: PieSlice[] = [
-    ...(dist.unlearned > 0 ? [{ value: dist.unlearned, color: '#9E9E9E', label: t('stats.unlearned') }] : []),
+    ...(dist.unlearned > 0 ? [{ value: dist.unlearned, color: '#9E9E9E', label: t('common.new') }] : []),
     { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
     { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
     { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
@@ -141,7 +141,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
     { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
     { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
     { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
-    { value: dist.unlearned, color: '#9E9E9E',           label: t('stats.unlearned') },
+    { value: dist.unlearned, color: '#9E9E9E',           label: t('common.new') },
   ];
 
   const maxCountDigits = Math.max(...slices.map(s => String(s.value).length));
@@ -268,7 +268,7 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
         <View style={[styles.masteryBarFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
       <Text style={[styles.masterySubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-        {t('common.learned')}: {mastery.learnedCount}{'        '}{t('stats.unlearned')}: {mastery.newCount}
+        {t('common.learned')}: {mastery.learnedCount}{'        '}{t('common.new')}: {mastery.newCount}
       </Text>
     </Pressable>
   );
@@ -665,7 +665,7 @@ export default function StatsScreen() {
             <View style={[styles.progressBarFill, { width: `${learnedPct}%` }]} />
           </View>
           <Text style={[styles.progressSubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-            {t('common.learned')}: {learned}{'        '}{t('stats.unlearned')}: {unlearned}
+            {t('common.learned')}: {learned}{'        '}{t('common.new')}: {unlearned}
           </Text>
         </Pressable>
       </View>

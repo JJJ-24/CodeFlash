@@ -242,6 +242,58 @@ export async function getTodayCreatedCardIdsByTagId(db: SQLiteDatabase, tagId: s
   return rows.map(r => r.id);
 }
 
+/** 未学習カード数（デッキ別マップ） */
+export async function getUnlearnedCountPerDeck(db: SQLiteDatabase): Promise<Record<string, number>> {
+  const rows = await db.getAllAsync<{ deckId: string; count: number }>(
+    `SELECT c.deckId, COUNT(*) as count FROM cards c
+     WHERE c.id NOT IN (SELECT cardId FROM reviews)
+     GROUP BY c.deckId`
+  );
+  return Object.fromEntries(rows.map(r => [r.deckId, r.count]));
+}
+
+/** 未学習カード数（タグ別マップ） */
+export async function getUnlearnedCountPerTag(db: SQLiteDatabase): Promise<Record<string, number>> {
+  const rows = await db.getAllAsync<{ tagId: string; count: number }>(
+    `SELECT ct.tagId, COUNT(*) as count
+     FROM cards c
+     JOIN card_tags ct ON c.id = ct.cardId
+     WHERE c.id NOT IN (SELECT cardId FROM reviews)
+     GROUP BY ct.tagId`
+  );
+  return Object.fromEntries(rows.map(r => [r.tagId, r.count]));
+}
+
+/** 未学習カード数（デッキ単体） */
+export async function getUnlearnedCountByDeck(db: SQLiteDatabase, deckId: string): Promise<number> {
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND id NOT IN (SELECT cardId FROM reviews)`,
+    [deckId]
+  );
+  return row?.count ?? 0;
+}
+
+/** 未学習カードID一覧（デッキ単体） */
+export async function getUnlearnedCardIdsByDeckId(db: SQLiteDatabase, deckId: string): Promise<string[]> {
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT id FROM cards WHERE deckId = ? AND id NOT IN (SELECT cardId FROM reviews) ORDER BY sortOrder ASC`,
+    [deckId]
+  );
+  return rows.map(r => r.id);
+}
+
+/** 未学習カードID一覧（タグ横断） */
+export async function getUnlearnedCardIdsByTagId(db: SQLiteDatabase, tagId: string): Promise<string[]> {
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT c.id FROM cards c
+     JOIN card_tags ct ON c.id = ct.cardId
+     WHERE ct.tagId = ? AND c.id NOT IN (SELECT cardId FROM reviews)
+     ORDER BY c.sortOrder ASC`,
+    [tagId]
+  );
+  return rows.map(r => r.id);
+}
+
 /** 過去7日間の日別新規カード作成数（ローカル日付ベース） */
 export async function getPast7DaysCreatedCount(
   db: SQLiteDatabase

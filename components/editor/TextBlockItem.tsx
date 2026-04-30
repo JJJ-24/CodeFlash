@@ -181,7 +181,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
             numberOfLines={2}
             maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
           >
-            {block.content || t('card.emptyTextBlock')}
+            {block.content || t('editor.emptyTextBlock')}
           </Text>
         </Pressable>
       ) : isPreview ? (
@@ -208,7 +208,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
                 onChangeText={onChange}
                 multiline
                 scrollEnabled={false}
-                placeholder={t('card.textBlockPlaceholder')}
+                placeholder={t('editor.textBlockPlaceholder')}
                 placeholderTextColor={theme.colors.textTertiary}
                 onFocus={() => { setFocused(true); onFocusInput?.(); }}
                 onBlur={() => { setFocused(false); onEditBlur?.(); }}
@@ -224,7 +224,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
                 style={[styles.input, { color: block.content ? theme.colors.text : theme.colors.textTertiary, fontSize: theme.fontSize.md, fontStyle: block.content ? 'normal' : 'italic' }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
-                {block.content || t('card.textBlockPlaceholder')}
+                {block.content || t('editor.textBlockPlaceholder')}
               </Text>
             </GestureDetector>
           )}

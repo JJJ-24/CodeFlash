@@ -468,7 +468,7 @@ export function BlockEditor({
           deleteBlock(tab, block._key);
           setFocusedBlockIndex(null);
         } else {
-          Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
+          Alert.alert(t('editor.deleteBlock'), t('editor.deleteBlockConfirm'), [
             { text: t('common.cancel'), style: 'cancel' },
             {
               text: t('common.delete'),

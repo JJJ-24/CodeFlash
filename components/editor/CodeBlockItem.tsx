@@ -187,7 +187,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       {/* コード入力エリア */}
       {collapsed ? (
         <Text style={[styles.collapsedPreview, { fontSize: theme.fontSize.sm }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-          {block.content || t('card.emptyCodeBlock')}
+          {block.content || t('editor.emptyCodeBlock')}
         </Text>
       ) : (
         <>
@@ -213,7 +213,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   onSelectionChange={handleSelectionChange}
                   multiline
                   scrollEnabled={false}
-                  placeholder={t('card.codePlaceholder')}
+                  placeholder={t('editor.codePlaceholder')}
                   placeholderTextColor="#6B7280"
                   onFocus={() => { setFocused(true); onFocusInput?.(); }}
                   onBlur={() => { setFocused(false); if (!skipEditBlurRef.current) { onEditBlur?.(); } skipEditBlurRef.current = false; }}

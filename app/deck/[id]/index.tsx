@@ -26,8 +26,8 @@ import {
   deleteCard,
   duplicateCard,
   getCardsByDeckId,
-  getTodayCreatedCardIdsByDeckId,
-  getTodayCreatedCountByDeck,
+  getUnlearnedCardIdsByDeckId,
+  getUnlearnedCountByDeck,
   moveCardsToDeck,
   updateCardSortOrders,
 } from '@/lib/database/cards';
@@ -64,7 +64,7 @@ export default function DeckDetailScreen() {
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
-  const [todayCreatedCount, setTodayCreatedCount] = useState(0);
+  const [unlearnedCount, setUnlearnedCount] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(
     () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
   );
@@ -111,24 +111,24 @@ export default function DeckDetailScreen() {
   const deck = decks.find((d) => d.id === id) ?? null;
 
   const loadCards = useCallback(async () => {
-    const [loaded, reviewed, due, todayCreated, todayIds, dueIds, todayCreatedIds] = await Promise.all([
+    const [loaded, reviewed, due, unlearned, todayIds, dueIds, unlearnedIds] = await Promise.all([
       getCardsByDeckId(db, id),
       getTodayReviewedCountByDeck(db, id),
       getDueCountByDeck(db, id),
-      getTodayCreatedCountByDeck(db, id),
+      getUnlearnedCountByDeck(db, id),
       getTodayReviewedCardIdsByDeckId(db, id),
       getDueCardIdsByDeckId(db, id),
-      getTodayCreatedCardIdsByDeckId(db, id),
+      getUnlearnedCardIdsByDeckId(db, id),
     ]);
     setCards(loaded);
     setTodayReviewed(reviewed);
     setDueCount(due);
-    setTodayCreatedCount(todayCreated);
+    setUnlearnedCount(unlearned);
     setFilterCardIds({
       all: new Set(loaded.map((c) => c.id)),
       learned: new Set(todayIds),
       review: new Set(dueIds),
-      new: new Set(todayCreatedIds),
+      new: new Set(unlearnedIds),
     });
   }, [db, id, setCards]);
 
@@ -326,7 +326,7 @@ export default function DeckDetailScreen() {
     { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('common.all') },
     { key: 'learned', count: todayReviewed, color: FILTER_COLORS.learned, label: t('common.learned') },
     { key: 'review', count: dueCount, color: FILTER_COLORS.due, label: t('common.due') },
-    { key: 'new', count: todayCreatedCount, color: theme.colors.textSecondary, label: t('common.new') },
+    { key: 'new', count: unlearnedCount, color: theme.colors.textSecondary, label: t('common.new') },
   ];
 
   const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));

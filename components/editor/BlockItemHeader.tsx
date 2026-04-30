@@ -25,7 +25,7 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
       onDelete();
       return;
     }
-    Alert.alert(t('card.deleteBlock'), t('card.deleteBlockConfirm'), [
+    Alert.alert(t('editor.deleteBlock'), t('editor.deleteBlockConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('common.delete'), style: 'destructive', onPress: onDelete },
     ]);

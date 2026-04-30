@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
@@ -573,7 +573,7 @@ export default function StatsScreen() {
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.streak')}
           </Text>
-          {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={theme.fontSize.xl} color={m.color} style={styles.streakMedalBadge} /> : null; })()}
+          {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={(Platform as any).isPad ? theme.fontSize.xxxl : theme.fontSize.xl} color={m.color} style={[styles.streakMedalBadge, (Platform as any).isPad && styles.streakMedalBadgePad]} /> : null; })()}
         </Pressable>
         <Pressable
           style={[
@@ -736,6 +736,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontWeight: '700' },
   summaryLabel: { marginTop: 2, textAlign: 'center' },
   streakMedalBadge: { position: 'absolute', top: 2, right: 2 },
+  streakMedalBadgePad: { top: 8, right: 8 },
 
   // Section
   section: { marginTop: 16 },

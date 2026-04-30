@@ -353,6 +353,7 @@ export default function DeckDetailScreen() {
       {/* 行数計測用の非表示 Text */}
       <Text
         style={[styles.description, { color: 'transparent', fontSize: theme.fontSize.md, position: 'absolute', opacity: 0 }]}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
         onTextLayout={(e) => setDescTruncatable(e.nativeEvent.lines.length > 2)}
       >
         {deck.description}

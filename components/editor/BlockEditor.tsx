@@ -1,13 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
   useState,
   type Dispatch,
   type Ref,
-  type SetStateAction,
+  type SetStateAction
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,7 +24,7 @@ import {
 } from "react-native";
 
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
-import { useTheme, MAX_FONT_MULTIPLIER } from "@/lib/theme";
+import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
@@ -120,13 +119,19 @@ export function BlockEditor({
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const scrollViewHeightRef = useRef(windowHeight);
-  const scrollPosRef = useRef<Record<Tab, number>>({ front: 0, back: 0, memo: 0 });
+  const scrollPosRef = useRef<Record<Tab, number>>({
+    front: 0,
+    back: 0,
+    memo: 0,
+  });
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
   const keyboardRef = useRef<TextInput>(null);
   const focusedBlockIndexRef = useRef<number | null>(null);
   const isTransitioningRef = useRef(false);
-  const isTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activeTabRef = useRef<Tab>('front');
+  const isTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const activeTabRef = useRef<Tab>("front");
   const editorModeRef = useRef<EditorMode>("edit");
   const isSortModeRef = useRef(false);
   const isPreviewRef = useRef(false);
@@ -156,9 +161,15 @@ export function BlockEditor({
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
   const [moveCount, setMoveCount] = useState(0);
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
-  const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(null);
-  const [editTriggerMap, setEditTriggerMap] = useState<Record<string, number>>({});
-  const [runTriggerMap, setRunTriggerMap] = useState<Record<string, number>>({});
+  const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(
+    null,
+  );
+  const [editTriggerMap, setEditTriggerMap] = useState<Record<string, number>>(
+    {},
+  );
+  const [runTriggerMap, setRunTriggerMap] = useState<Record<string, number>>(
+    {},
+  );
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -195,28 +206,28 @@ export function BlockEditor({
   }
 
   // メニューフォーカスインデックスに対応するブロックを追加（またはキャンセル）
-  const ADD_MENU_ITEMS = ['text', 'code', 'image', 'cancel'] as const;
+  const ADD_MENU_ITEMS = ["text", "code", "image", "cancel"] as const;
   function selectAddMenuItem(idx: number) {
     const item = ADD_MENU_ITEMS[idx];
-    if (item === 'cancel') {
+    if (item === "cancel") {
       setAddMenuVisible(false);
     } else {
       addBlock(item);
     }
   }
 
-  function moveBlock(tab: Tab, key: string, direction: 'up' | 'down') {
+  function moveBlock(tab: Tab, key: string, direction: "up" | "down") {
     const blocks = blocksByTab[tab];
     const idx = blocks.findIndex((b) => b._key === key);
     if (idx === -1) return;
-    if (direction === 'up' && idx === 0) return;
-    if (direction === 'down' && idx === blocks.length - 1) return;
+    if (direction === "up" && idx === 0) return;
+    if (direction === "down" && idx === blocks.length - 1) return;
 
     setSelectedBlockKey(key);
     setMoveCount((c) => c + 1);
     setterByTab[tab]((prev) => {
       const next = [...prev];
-      const target = direction === 'up' ? idx - 1 : idx + 1;
+      const target = direction === "up" ? idx - 1 : idx + 1;
       [next[idx], next[target]] = [next[target], next[idx]];
       return next;
     });
@@ -224,7 +235,10 @@ export function BlockEditor({
     setTimeout(() => {
       const pos = blockPositions.current[key];
       if (pos && scrollRef.current) {
-        scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 60), animated: true });
+        scrollRef.current.scrollTo({
+          y: Math.max(0, pos.y - 60),
+          animated: true,
+        });
       }
     }, 150);
   }
@@ -259,7 +273,10 @@ export function BlockEditor({
       setTimeout(() => {
         // scrollToEnd ではメニュー下のタグ欄まで行き過ぎるため、
         // addArea の先頭が画面上端付近に来るようスクロールする
-        scrollRef.current?.scrollTo({ y: Math.max(0, addAreaYRef.current - 16), animated: true });
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, addAreaYRef.current - 16),
+          animated: true,
+        });
       }, 50);
     }
   }, [addMenuVisible]);
@@ -267,20 +284,23 @@ export function BlockEditor({
   // タブ切替でブロックフォーカスをリセット＋スクロール位置を個別に復元
   useEffect(() => {
     setFocusedBlockIndex(null);
-    scrollRef.current?.scrollTo({ y: scrollPosRef.current[activeTab], animated: false });
+    scrollRef.current?.scrollTo({
+      y: scrollPosRef.current[activeTab],
+      animated: false,
+    });
   }, [activeTab]);
 
   // ブロック数変化時にフォーカスインデックスを補正
   // functional update にすることで、同一コミット内で先に走る [activeTab] effect の
   // setFocusedBlockIndex(null) をバッチ後の最新値として参照できる（古い値で上書きしない）
   useEffect(() => {
-    setFocusedBlockIndex(prev => {
+    setFocusedBlockIndex((prev) => {
       if (prev !== null && prev >= currentBlocks.length) {
         return currentBlocks.length > 0 ? currentBlocks.length - 1 : null;
       }
       return prev;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBlocks.length]);
 
   // フォーカス中ブロックへスクロール
@@ -291,9 +311,12 @@ export function BlockEditor({
     setTimeout(() => {
       const pos = blockPositions.current[block._key];
       if (!pos || !scrollRef.current) return;
-      scrollRef.current.scrollTo({ y: Math.max(0, pos.y - 80), animated: true });
+      scrollRef.current.scrollTo({
+        y: Math.max(0, pos.y - 80),
+        animated: true,
+      });
     }, 50);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusedBlockIndex]);
 
   // 編集画面マウント時に hidden TextInput をフォーカス
@@ -301,7 +324,7 @@ export function BlockEditor({
     if (!isNewCard && keyboardShortcutsEnabled) {
       setTimeout(() => keyboardRef.current?.focus(), 150);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ブロックの TextInput がフォーカスされたとき呼ぶ（タップ・Return/E キー共通）。
@@ -320,8 +343,9 @@ export function BlockEditor({
 
   function handleCodeBlockRunButtonPress(blockKey: string) {
     editingBlockKeyRef.current = null;
-    if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
-    const idx = currentBlocksRef.current.findIndex(b => b._key === blockKey);
+    if (isTransitionTimerRef.current)
+      clearTimeout(isTransitionTimerRef.current);
+    const idx = currentBlocksRef.current.findIndex((b) => b._key === blockKey);
     setFocusedBlockIndex(idx !== -1 ? idx : null);
     isTransitionTimerRef.current = setTimeout(() => {
       keyboardRef.current?.focus();
@@ -331,7 +355,8 @@ export function BlockEditor({
   function handleBlockEditBlur() {
     editingBlockKeyRef.current = null;
     if (isTransitioningRef.current || isNavigatingRef.current) return;
-    if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
+    if (isTransitionTimerRef.current)
+      clearTimeout(isTransitionTimerRef.current);
     isTransitionTimerRef.current = setTimeout(() => {
       keyboardRef.current?.focus();
     }, 200);
@@ -343,21 +368,29 @@ export function BlockEditor({
     if (idx === null || !blocks[idx]) return;
     const key = blocks[idx]._key;
     isTransitioningRef.current = true;
-    setEditTriggerMap(prev => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
-    setTimeout(() => { isTransitioningRef.current = false; }, 300);
+    setEditTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
+    setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, 300);
     // ブロック末尾（カーソル位置）が画面最下部に来るようスクロール
     const scrollToBlockEnd = () => {
       const pos = blockPositions.current[key];
       if (!pos || !scrollRef.current) return;
       const viewH = scrollViewHeightRef.current;
-      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - viewH + 24), animated: false });
+      scrollRef.current.scrollTo({
+        y: Math.max(0, pos.y + pos.h - viewH + 24),
+        animated: false,
+      });
     };
     setTimeout(() => scrollToBlockEnd(), 100);
     setTimeout(() => {
       const pos = blockPositions.current[key];
       if (!pos || !scrollRef.current) return;
       const viewH = scrollViewHeightRef.current;
-      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - viewH + 24), animated: true });
+      scrollRef.current.scrollTo({
+        y: Math.max(0, pos.y + pos.h - viewH + 24),
+        animated: true,
+      });
     }, 350);
   }
 
@@ -372,11 +405,11 @@ export function BlockEditor({
 
     // ブロック追加メニュー表示中はメニューナビゲーションを優先
     if (addMenuVisibleRef.current) {
-      if (k === 'j') {
-        setAddMenuFocusIndex(prev => (prev + 1) % menuLen);
-      } else if (k === 'k') {
-        setAddMenuFocusIndex(prev => (prev - 1 + menuLen) % menuLen);
-      } else if (k === 'a') {
+      if (k === "j") {
+        setAddMenuFocusIndex((prev) => (prev + 1) % menuLen);
+      } else if (k === "k") {
+        setAddMenuFocusIndex((prev) => (prev - 1 + menuLen) % menuLen);
+      } else if (k === "a") {
         setAddMenuVisible(false);
       }
       // Return は onSubmitEditing で処理
@@ -385,63 +418,64 @@ export function BlockEditor({
 
     const cycleMode = () => {
       const modes: EditorMode[] = ["edit", "sort", "preview"];
-      setEditorMode(prev => modes[(modes.indexOf(prev) + 1) % 3]);
+      setEditorMode((prev) => modes[(modes.indexOf(prev) + 1) % 3]);
     };
 
     if (inSort) {
-      if (k === 'j') {
+      if (k === "j") {
         setSelectedBlockKey(null);
-        setFocusedBlockIndex(prev => {
+        setFocusedBlockIndex((prev) => {
           if (prev === null) return blocks.length > 0 ? 0 : null;
           return prev < blocks.length - 1 ? prev + 1 : null;
         });
-      } else if (k === 'k') {
+      } else if (k === "k") {
         setSelectedBlockKey(null);
-        setFocusedBlockIndex(prev => {
-          if (prev === null) return blocks.length > 0 ? blocks.length - 1 : null;
+        setFocusedBlockIndex((prev) => {
+          if (prev === null)
+            return blocks.length > 0 ? blocks.length - 1 : null;
           return prev > 0 ? prev - 1 : null;
         });
-      } else if (k === 'u') {
+      } else if (k === "u") {
         if (idx !== null && blocks[idx] && idx > 0) {
-          moveBlock(tab, blocks[idx]._key, 'up');
+          moveBlock(tab, blocks[idx]._key, "up");
           setFocusedBlockIndex(idx - 1);
         }
-      } else if (k === 'd') {
+      } else if (k === "d") {
         if (idx !== null && blocks[idx] && idx < blocks.length - 1) {
-          moveBlock(tab, blocks[idx]._key, 'down');
+          moveBlock(tab, blocks[idx]._key, "down");
           setFocusedBlockIndex(idx + 1);
         }
-      } else if (k === 'm') {
+      } else if (k === "m") {
         cycleMode();
       }
       return;
     }
 
-    if (k === 'j') {
-      setFocusedBlockIndex(prev => {
+    if (k === "j") {
+      setFocusedBlockIndex((prev) => {
         if (prev === null) return blocks.length > 0 ? 0 : null;
         return prev < blocks.length - 1 ? prev + 1 : null;
       });
-    } else if (k === 'k') {
-      setFocusedBlockIndex(prev => {
+    } else if (k === "k") {
+      setFocusedBlockIndex((prev) => {
         if (prev === null) return blocks.length > 0 ? blocks.length - 1 : null;
         return prev > 0 ? prev - 1 : null;
       });
-    } else if (k === 'm') {
+    } else if (k === "m") {
       cycleMode();
-    } else if (key === ',') {
-      const tabOrder: Tab[] = ['front', 'back', 'memo'];
+    } else if (key === ",") {
+      const tabOrder: Tab[] = ["front", "back", "memo"];
       setEditTriggerMap({});
       setRunTriggerMap({});
-      setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) - 1 + 3) % 3]);
-    } else if (key === '.') {
-      const tabOrder: Tab[] = ['front', 'back', 'memo'];
+      setActiveTab((prev) => tabOrder[(tabOrder.indexOf(prev) - 1 + 3) % 3]);
+    } else if (key === ".") {
+      const tabOrder: Tab[] = ["front", "back", "memo"];
       setEditTriggerMap({});
       setRunTriggerMap({});
-      setActiveTab(prev => tabOrder[(tabOrder.indexOf(prev) + 1) % 3]);
-    } else if (k === 'a') {
+      setActiveTab((prev) => tabOrder[(tabOrder.indexOf(prev) + 1) % 3]);
+    } else if (k === "a") {
       if (!isPreviewRef.current) {
-        setAddMenuVisible(v => {
+        setAddMenuVisible((v) => {
           if (!v) {
             // メニューを開く: ブロックフォーカス解除・メニュー先頭を選択
             setFocusedBlockIndex(null);
@@ -450,29 +484,32 @@ export function BlockEditor({
           return !v;
         });
       }
-    } else if (k === 'r') {
-      if (idx !== null && blocks[idx]?.type === 'code') {
+    } else if (k === "r") {
+      if (idx !== null && blocks[idx]?.type === "code") {
         const blockKey = blocks[idx]._key;
         if ((blocks[idx] as CodeBlock & { _key: string }).executable) {
-          setRunTriggerMap(prev => ({ ...prev, [blockKey]: (prev[blockKey] ?? 0) + 1 }));
+          setRunTriggerMap((prev) => ({
+            ...prev,
+            [blockKey]: (prev[blockKey] ?? 0) + 1,
+          }));
         }
       }
-    } else if (k === 'd') {
+    } else if (k === "d") {
       if (idx !== null && blocks[idx]) {
         const block = blocks[idx];
         const isEmpty =
-          block.type === 'image'
+          block.type === "image"
             ? !(block as ImageBlock).uri
-            : (block as TextBlock | CodeBlock).content.trim() === '';
+            : (block as TextBlock | CodeBlock).content.trim() === "";
         if (isEmpty) {
           deleteBlock(tab, block._key);
           setFocusedBlockIndex(null);
         } else {
-          Alert.alert(t('editor.deleteBlock'), t('editor.deleteBlockConfirm'), [
-            { text: t('common.cancel'), style: 'cancel' },
+          Alert.alert(t("editor.deleteBlock"), t("editor.deleteBlockConfirm"), [
+            { text: t("common.cancel"), style: "cancel" },
             {
-              text: t('common.delete'),
-              style: 'destructive',
+              text: t("common.delete"),
+              style: "destructive",
               onPress: () => {
                 deleteBlock(tab, block._key);
                 setFocusedBlockIndex(null);
@@ -483,18 +520,18 @@ export function BlockEditor({
       } else {
         onDeleteCard?.();
       }
-    } else if (k === 'x') {
+    } else if (k === "x") {
       isNavigatingRef.current = true;
       if (isTransitionTimerRef.current) {
         clearTimeout(isTransitionTimerRef.current);
         isTransitionTimerRef.current = null;
       }
       onCancel?.();
-    } else if (k === 's') {
+    } else if (k === "s") {
       handleSave();
-    } else if (k === 'e') {
+    } else if (k === "e") {
       startEditFocusedBlock();
-    } else if (k === 't') {
+    } else if (k === "t") {
       scrollRef.current?.scrollToEnd({ animated: true });
     }
   }
@@ -514,22 +551,26 @@ export function BlockEditor({
     });
   }
 
-  useImperativeHandle(ref, () => ({
-    save: handleSave,
-    prepareForNavigation: () => {
-      isNavigatingRef.current = true;
-      if (isTransitionTimerRef.current) {
-        clearTimeout(isTransitionTimerRef.current);
-        isTransitionTimerRef.current = null;
-      }
-    },
-    getData: () => ({
-      frontBlocks: fromEditBlocks(frontBlocks),
-      backBlocks: fromEditBlocks(backBlocks),
-      memoBlocks: fromEditBlocks(memoBlocks),
-      tagIds,
+  useImperativeHandle(
+    ref,
+    () => ({
+      save: handleSave,
+      prepareForNavigation: () => {
+        isNavigatingRef.current = true;
+        if (isTransitionTimerRef.current) {
+          clearTimeout(isTransitionTimerRef.current);
+          isTransitionTimerRef.current = null;
+        }
+      },
+      getData: () => ({
+        frontBlocks: fromEditBlocks(frontBlocks),
+        backBlocks: fromEditBlocks(backBlocks),
+        memoBlocks: fromEditBlocks(memoBlocks),
+        tagIds,
+      }),
     }),
-  }), [handleSave, frontBlocks, backBlocks, memoBlocks, tagIds]);
+    [handleSave, frontBlocks, backBlocks, memoBlocks, tagIds],
+  );
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "front", label: t("common.front") },
@@ -541,7 +582,12 @@ export function BlockEditor({
     <>
       {/* ブロック追加ボタン */}
       {!isPreview && (
-        <View style={styles.addArea} onLayout={(e) => { addAreaYRef.current = e.nativeEvent.layout.y; }}>
+        <View
+          style={styles.addArea}
+          onLayout={(e) => {
+            addAreaYRef.current = e.nativeEvent.layout.y;
+          }}
+        >
           {addMenuVisible ? (
             <View
               style={[
@@ -556,11 +602,20 @@ export function BlockEditor({
                 style={[
                   styles.addMenuItem,
                   { borderBottomColor: theme.colors.border },
-                  addMenuFocusIndex === 0 && { backgroundColor: theme.colors.primaryLight },
+                  addMenuFocusIndex === 0 && {
+                    backgroundColor: theme.colors.primaryLight,
+                  },
                 ]}
                 onPress={() => addBlock("text")}
               >
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>T</Text>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  T
+                </Text>
                 <Text
                   style={[
                     styles.addMenuLabel,
@@ -575,11 +630,20 @@ export function BlockEditor({
                 style={[
                   styles.addMenuItem,
                   { borderBottomColor: theme.colors.border },
-                  addMenuFocusIndex === 1 && { backgroundColor: theme.colors.primaryLight },
+                  addMenuFocusIndex === 1 && {
+                    backgroundColor: theme.colors.primaryLight,
+                  },
                 ]}
                 onPress={() => addBlock("code")}
               >
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{"</>"}</Text>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={[styles.addMenuIcon, { fontSize: theme.fontSize.lg }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {"</>"}
+                </Text>
                 <Text
                   style={[
                     styles.addMenuLabel,
@@ -594,12 +658,18 @@ export function BlockEditor({
                 style={[
                   styles.addMenuItem,
                   { borderBottomColor: theme.colors.border },
-                  addMenuFocusIndex === 2 && { backgroundColor: theme.colors.primaryLight },
+                  addMenuFocusIndex === 2 && {
+                    backgroundColor: theme.colors.primaryLight,
+                  },
                 ]}
                 onPress={() => addBlock("image")}
               >
                 <View style={styles.addMenuIconWrap}>
-                  <Ionicons name="image-outline" size={theme.fontSize.xxl} color="#1976D2" />
+                  <Ionicons
+                    name="image-outline"
+                    size={theme.fontSize.xxl}
+                    color="#1976D2"
+                  />
                 </View>
                 <Text
                   style={[
@@ -615,7 +685,9 @@ export function BlockEditor({
                 onPress={() => setAddMenuVisible(false)}
                 style={[
                   styles.addMenuCancel,
-                  addMenuFocusIndex === 3 && { backgroundColor: theme.colors.primaryLight },
+                  addMenuFocusIndex === 3 && {
+                    backgroundColor: theme.colors.primaryLight,
+                  },
                 ]}
               >
                 <Text
@@ -634,10 +706,7 @@ export function BlockEditor({
             </View>
           ) : (
             <Pressable
-              style={[
-                styles.addBtn,
-                { borderColor: theme.colors.iconSubtle },
-              ]}
+              style={[styles.addBtn, { borderColor: theme.colors.iconSubtle }]}
               onPress={() => {
                 // 編集中ブロックを解除し keyboardRef に戻してからメニューを開く
                 isTransitioningRef.current = true;
@@ -647,7 +716,9 @@ export function BlockEditor({
                   isTransitionTimerRef.current = null;
                 }
                 keyboardRef.current?.focus();
-                setTimeout(() => { isTransitioningRef.current = false; }, 100);
+                setTimeout(() => {
+                  isTransitioningRef.current = false;
+                }, 100);
                 setAddMenuFocusIndex(0);
                 setAddMenuVisible(true);
               }}
@@ -689,10 +760,29 @@ export function BlockEditor({
       {/* デッキ名 */}
       {deckName != null && (
         <View style={[styles.deckRow, { borderColor: theme.colors.border }]}>
-          <Text style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          <Text
+            style={[
+              styles.tagLabel,
+              {
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSize.md,
+              },
+            ]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+          >
             {t("deck.name")}
           </Text>
-          <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg, paddingLeft: 8 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          <Text
+            style={[
+              styles.deckName,
+              {
+                color: theme.colors.text,
+                fontSize: theme.fontSize.lg,
+                paddingLeft: 8,
+              },
+            ]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+          >
             {deckName}
           </Text>
         </View>
@@ -714,7 +804,10 @@ export function BlockEditor({
   );
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <TextInput
         ref={keyboardRef}
         style={styles.hiddenKeyboardInput}
@@ -754,53 +847,66 @@ export function BlockEditor({
         {tabs.map((tab) => (
           <Pressable
             key={tab.key}
-            style={[styles.tab, (Platform as any).isPad && styles.tabPad, activeTab === tab.key && styles.tabActive]}
-              onPress={() => {
-                // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
-                isTransitioningRef.current = true;
-                if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
-                isTransitionTimerRef.current = setTimeout(() => {
-                  editingBlockKeyRef.current = null;
-                  isTransitioningRef.current = false;
-                  isTransitionTimerRef.current = null;
-                  keyboardRef.current?.focus();
-                }, 200);
-                setAddMenuVisible(false);
-                setEditTriggerMap({});
-                setRunTriggerMap({});
-                setActiveTab(tab.key);
-              }}
+            style={[
+              styles.tab,
+              (Platform as any).isPad && styles.tabPad,
+              activeTab === tab.key && styles.tabActive,
+            ]}
+            onPress={() => {
+              // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
+              isTransitioningRef.current = true;
+              if (isTransitionTimerRef.current)
+                clearTimeout(isTransitionTimerRef.current);
+              isTransitionTimerRef.current = setTimeout(() => {
+                editingBlockKeyRef.current = null;
+                isTransitioningRef.current = false;
+                isTransitionTimerRef.current = null;
+                keyboardRef.current?.focus();
+              }, 200);
+              setAddMenuVisible(false);
+              setEditTriggerMap({});
+              setRunTriggerMap({});
+              setActiveTab(tab.key);
+            }}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color: theme.colors.textTertiary,
+                  fontSize: theme.fontSize.md,
+                },
+                activeTab === tab.key && styles.tabTextActive,
+              ]}
+              maxFontSizeMultiplier={1.0}
+              numberOfLines={1}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: theme.colors.textTertiary,
-                    fontSize: theme.fontSize.md,
-                  },
-                  activeTab === tab.key && styles.tabTextActive,
-                ]}
-                maxFontSizeMultiplier={1.0}
-                numberOfLines={1}
-              >
-                {tab.label}
-              </Text>
-            </Pressable>
+              {tab.label}
+            </Text>
+          </Pressable>
         ))}
         {/* モード3択ボタン */}
         <View style={styles.modeButtons}>
-          {([
-            { mode: "edit" as EditorMode,    icon: "pencil-outline"       as const },
-            { mode: "sort" as EditorMode,    icon: "reorder-three-outline" as const },
-            { mode: "preview" as EditorMode, icon: "eye-outline"           as const },
-          ] as const).map(({ mode, icon }) => {
+          {(
+            [
+              { mode: "edit" as EditorMode, icon: "pencil-outline" as const },
+              {
+                mode: "sort" as EditorMode,
+                icon: "reorder-three-outline" as const,
+              },
+              { mode: "preview" as EditorMode, icon: "eye-outline" as const },
+            ] as const
+          ).map(({ mode, icon }) => {
             const active = editorMode === mode;
             return (
               <Pressable
                 key={mode}
                 style={[
                   styles.modeBtn,
-                  { backgroundColor: theme.colors.background, paddingHorizontal: (Platform as any).isPad ? 32 : 9 },
+                  {
+                    backgroundColor: theme.colors.background,
+                    paddingHorizontal: (Platform as any).isPad ? 32 : 9,
+                  },
                   active && { backgroundColor: theme.colors.primary },
                 ]}
                 onPress={() => setEditorMode(mode)}
@@ -808,7 +914,7 @@ export function BlockEditor({
                 <Ionicons
                   name={icon}
                   size={theme.fontSize.lg}
-                  color={active ? '#FFFFFF' : theme.colors.textSecondary}
+                  color={active ? "#FFFFFF" : theme.colors.textSecondary}
                 />
               </Pressable>
             );
@@ -820,21 +926,43 @@ export function BlockEditor({
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.content}
-        onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
+        onLayout={(e) => {
+          scrollViewHeightRef.current = e.nativeEvent.layout.height;
+        }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={100}
-        onScroll={(e) => { scrollPosRef.current[activeTabRef.current] = e.nativeEvent.contentOffset.y; }}
+        onScroll={(e) => {
+          scrollPosRef.current[activeTabRef.current] =
+            e.nativeEvent.contentOffset.y;
+        }}
       >
         {(isPreview || isSortMode) && (
           <View style={styles.modeLabel}>
-            <Text style={[styles.modeLabelText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {isPreview ? t('editor.previewModeLabel') : t('editor.sortModeLabel')}
+            <Text
+              style={[
+                styles.modeLabelText,
+                {
+                  color: theme.colors.textSecondary,
+                  fontSize: theme.fontSize.sm,
+                },
+              ]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
+            >
+              {isPreview
+                ? t("editor.previewModeLabel")
+                : t("editor.sortModeLabel")}
             </Text>
           </View>
         )}
         {currentBlocks.map((block, index) => {
-          const moveUp = isSortMode && index > 0 ? () => moveBlock(activeTab, block._key, 'up') : undefined;
-          const moveDown = isSortMode && index < currentBlocks.length - 1 ? () => moveBlock(activeTab, block._key, 'down') : undefined;
+          const moveUp =
+            isSortMode && index > 0
+              ? () => moveBlock(activeTab, block._key, "up")
+              : undefined;
+          const moveDown =
+            isSortMode && index < currentBlocks.length - 1
+              ? () => moveBlock(activeTab, block._key, "down")
+              : undefined;
           const flashTrigger = selectedBlockKey === block._key ? moveCount : 0;
           return (
             <View
@@ -850,9 +978,13 @@ export function BlockEditor({
                 <TextBlockItem
                   block={block as TextBlock}
                   isPreview={isPreview}
-                  onChange={(content) => updateBlock(activeTab, block._key, { content })}
+                  onChange={(content) =>
+                    updateBlock(activeTab, block._key, { content })
+                  }
                   onDelete={() => deleteBlock(activeTab, block._key)}
-                  autoFocus={(isNewCard && index === 0) || block._key === newBlockKey}
+                  autoFocus={
+                    (isNewCard && index === 0) || block._key === newBlockKey
+                  }
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
@@ -868,7 +1000,9 @@ export function BlockEditor({
                 <CodeBlockItem
                   block={block as CodeBlock}
                   isPreview={isPreview}
-                  onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+                  onChange={(patch) =>
+                    updateBlock(activeTab, block._key, patch)
+                  }
                   onDelete={() => deleteBlock(activeTab, block._key)}
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
@@ -879,12 +1013,17 @@ export function BlockEditor({
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   runTrigger={runTriggerMap[block._key] ?? 0}
-                  onRunButtonPress={() => handleCodeBlockRunButtonPress(block._key)}
+                  onRunButtonPress={() =>
+                    handleCodeBlockRunButtonPress(block._key)
+                  }
                   onRunStart={() => {
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
                       if (!pos || !scrollRef.current) return;
-                      scrollRef.current.scrollTo({ y: Math.max(0, pos.y + pos.h - 300), animated: true });
+                      scrollRef.current.scrollTo({
+                        y: Math.max(0, pos.y + pos.h - 300),
+                        animated: true,
+                      });
                     }, 300);
                   }}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
@@ -893,7 +1032,9 @@ export function BlockEditor({
               {block.type === "image" && (
                 <ImageBlockItem
                   block={block as ImageBlock}
-                  onChange={(patch) => updateBlock(activeTab, block._key, patch)}
+                  onChange={(patch) =>
+                    updateBlock(activeTab, block._key, patch)
+                  }
                   onDelete={() => deleteBlock(activeTab, block._key)}
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
@@ -915,7 +1056,12 @@ export function BlockEditor({
 }
 
 const styles = StyleSheet.create({
-  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
+  hiddenKeyboardInput: {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    opacity: 0,
+  },
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -941,12 +1087,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   modeLabel: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 6,
     marginBottom: 4,
   },
   modeLabelText: {
-    fontWeight: '500',
+    fontWeight: "500",
   },
   modeBtn: {
     paddingVertical: 7,
@@ -988,7 +1134,12 @@ const styles = StyleSheet.create({
   addMenuCancel: { paddingVertical: 12, alignItems: "center" },
   tagSection: { gap: 8, marginTop: 12 },
   tagLabel: { fontWeight: "600" },
-  deckRow: { gap: 4, marginTop: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  deckRow: {
+    gap: 4,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   deckName: { fontWeight: "600" },
   validationError: { textAlign: "center" },
 });

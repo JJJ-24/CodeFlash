@@ -52,7 +52,7 @@
     "nextReviewDays": "In {{count}} days",
     "shuffle": "Shuffle",
     "finishConfirmTitle": "Finish Session",
-    "finishConfirmMessage": "Skip the remaining {{count}} cards and go to the summary?"
+    "finishConfirmMessage": "Skip {{count}} ungraded cards and go to summary?"
   },
   "tag": {
     "tagListTitle": "Tags",

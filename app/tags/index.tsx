@@ -229,6 +229,7 @@ export default function TagsScreen() {
                   <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.iconBtn}>
                     <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
                   </Pressable>
+                  <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
                 </Pressable>
               </ScaleDecorator>
             );

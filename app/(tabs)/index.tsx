@@ -90,7 +90,7 @@ function DeckCard({
           hitSlop={8}
           style={styles.iconBtn}
         >
-          <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
+          <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
         </Pressable>
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
       </View>

@@ -26,7 +26,7 @@ import { getCardPreview } from '@/lib/cardPreview';
 import { useSettingsStore } from '@/store/settings';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
-import type { Card, Tag } from '@/types';
+import type { Card } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
@@ -216,7 +216,7 @@ export default function TagCardsScreen() {
                 </Text>
                 <View style={styles.cardActions}>
                   <Pressable onPress={() => navigateToEdit(item)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
+                    <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                   </Pressable>
                 </View>
               </Pressable>

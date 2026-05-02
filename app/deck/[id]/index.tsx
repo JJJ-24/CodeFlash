@@ -646,7 +646,7 @@ export default function DeckDetailScreen() {
                 {!selectionMode && (
                   <View style={styles.cardActions}>
                     <Pressable onPress={() => navigateToCardEdit(item.id)} hitSlop={8} style={{ padding: 4 }}>
-                      <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
+                      <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                     </Pressable>
                   </View>
                 )}

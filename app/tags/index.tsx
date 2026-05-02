@@ -227,7 +227,7 @@ export default function TagsScreen() {
                     <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
                   </View>
                   <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
+                    <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                   </Pressable>
                   <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
                 </Pressable>

@@ -36,7 +36,7 @@ function extractImageFilenames(cards: Record<string, unknown>[]): string[] {
 /** 画像ファイルの合計サイズ（バイト）を返す。Base64後は約1.33倍になる */
 export async function estimateImageExportSize(db: SQLiteDatabase): Promise<number> {
   const cards = await db.getAllAsync<Record<string, unknown>>(
-    'SELECT frontContent, backContent, memoContent FROM cards'
+    'SELECT frontContent, backContent, memoContent FROM card_contents'
   );
   const filenames = extractImageFilenames(cards);
   let total = 0;
@@ -51,7 +51,15 @@ export async function estimateImageExportSize(db: SQLiteDatabase): Promise<numbe
 
 export async function exportDatabase(db: SQLiteDatabase, includeImages = false): Promise<void> {
   const decks = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM decks ORDER BY sortOrder ASC');
-  const cards = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM cards ORDER BY sortOrder ASC');
+  const cards = await db.getAllAsync<Record<string, unknown>>(
+    `SELECT c.id, c.deckId, c.sortOrder, c.createdAt, c.updatedAt,
+            COALESCE(cc.frontContent, '[]') AS frontContent,
+            COALESCE(cc.backContent,  '[]') AS backContent,
+            COALESCE(cc.memoContent,  '[]') AS memoContent
+     FROM cards c
+     LEFT JOIN card_contents cc ON cc.cardId = c.id
+     ORDER BY c.sortOrder ASC`
+  );
   const tags = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM tags ORDER BY sortOrder ASC');
   const card_tags = await db.getAllAsync<{ cardId: string; tagId: string }>('SELECT * FROM card_tags');
   const reviews = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM reviews');

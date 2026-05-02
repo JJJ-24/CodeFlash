@@ -28,6 +28,7 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
       await db.runAsync('DELETE FROM review_logs');
       await db.runAsync('DELETE FROM reviews');
       await db.runAsync('DELETE FROM card_tags');
+      await db.runAsync('DELETE FROM card_contents');
       await db.runAsync('DELETE FROM cards');
       await db.runAsync('DELETE FROM decks');
       await db.runAsync('DELETE FROM tags');
@@ -51,16 +52,22 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
 
     for (const card of data.cards) {
       await db.runAsync(
-        'INSERT OR REPLACE INTO cards (id, deckId, frontContent, backContent, memoContent, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO cards (id, deckId, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)',
         [
           card.id as string,
           card.deckId as string,
-          (card.frontContent as string) ?? '[]',
-          (card.backContent as string) ?? '[]',
-          (card.memoContent as string) ?? '[]',
           (card.sortOrder as number) ?? 0,
           card.createdAt as string,
           card.updatedAt as string,
+        ]
+      );
+      await db.runAsync(
+        'INSERT OR REPLACE INTO card_contents (cardId, frontContent, backContent, memoContent) VALUES (?, ?, ?, ?)',
+        [
+          card.id as string,
+          (card.frontContent as string) ?? '[]',
+          (card.backContent as string) ?? '[]',
+          (card.memoContent as string) ?? '[]',
         ]
       );
     }

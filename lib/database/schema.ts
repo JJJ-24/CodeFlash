@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
 
     CREATE TABLE IF NOT EXISTS decks (
       id          TEXT PRIMARY KEY NOT NULL,
@@ -23,6 +24,13 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       createdAt    TEXT NOT NULL,
       updatedAt    TEXT NOT NULL,
       FOREIGN KEY (deckId) REFERENCES decks(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS card_contents (
+      cardId       TEXT PRIMARY KEY NOT NULL,
+      frontContent TEXT NOT NULL DEFAULT '[]',
+      backContent  TEXT NOT NULL DEFAULT '[]',
+      memoContent  TEXT NOT NULL DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS tags (
@@ -89,4 +97,31 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       ALTER TABLE reviews ADD COLUMN fsrsScheduledDays INTEGER;
     `);
   }
+
+  // card_contents テーブルへの分離マイグレーション
+  // cards に frontContent が残っている場合（旧スキーマ）は card_contents へ移行して cards を再作成する
+  const cardCols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(cards)');
+  if (cardCols.some((c) => c.name === 'frontContent')) {
+    await db.runAsync(
+      'INSERT OR IGNORE INTO card_contents (cardId, frontContent, backContent, memoContent) SELECT id, frontContent, backContent, memoContent FROM cards'
+    );
+    await db.execAsync(`
+      CREATE TABLE cards_new (
+        id        TEXT PRIMARY KEY NOT NULL,
+        deckId    TEXT NOT NULL,
+        sortOrder INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      );
+      INSERT INTO cards_new (id, deckId, sortOrder, createdAt, updatedAt)
+        SELECT id, deckId, sortOrder, createdAt, updatedAt FROM cards;
+      DROP TABLE cards;
+      ALTER TABLE cards_new RENAME TO cards;
+    `);
+  }
+
+  // deckId インデックス（大量カードのデッキ別クエリ高速化）
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_cards_deckId ON cards (deckId);
+  `);
 }

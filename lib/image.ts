@@ -86,7 +86,7 @@ export async function cleanupOrphanImages(db: SQLiteDatabase): Promise<void> {
 
   // DB 上の全カードから参照されている画像ファイル名を収集
   const rows = await db.getAllAsync<{ frontContent: string; backContent: string; memoContent: string }>(
-    'SELECT frontContent, backContent, memoContent FROM cards'
+    'SELECT frontContent, backContent, memoContent FROM card_contents'
   );
   const referencedFilenames = new Set<string>();
   for (const row of rows) {

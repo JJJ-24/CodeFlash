@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSettingsStore } from '@/store/settings';
 
-import { getCardById, getUnlearnedCardIdsByDeckId, getUnlearnedCardIdsByTagId } from '@/lib/database/cards';
+import { getCardById, getCardsByIds, getUnlearnedCardIdsByDeckId, getUnlearnedCardIdsByTagId } from '@/lib/database/cards';
 import { todayISO } from '@/lib/database/utils';
 import {
   getAllCardIdsByDeckId,
@@ -67,9 +67,7 @@ export function useStudySession() {
           else                             cardIds = await getDueCardIdsByTagId(db, params.tagId);
         }
 
-        let cards = (
-          await Promise.all(cardIds.map((id) => getCardById(db, id)))
-        ).filter((c): c is Card => c !== null);
+        let cards = await getCardsByIds(db, cardIds);
 
         if (params.shuffle) {
           for (let i = cards.length - 1; i > 0; i--) {

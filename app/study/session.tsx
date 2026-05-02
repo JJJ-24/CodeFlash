@@ -90,6 +90,13 @@ export default function StudySessionScreen() {
   }>();
   const router = useRouter();
   const navigation = useNavigation();
+  function safeBack() {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/study');
+    }
+  }
   const { t } = useTranslation();
   const theme = useTheme();
   const db = useSQLiteContext();
@@ -408,7 +415,7 @@ export default function StudySessionScreen() {
     } else if (key.toLowerCase() === "q") {
       handleFinishSession();
     } else if (key.toLowerCase() === "b") {
-      router.back();
+      safeBack();
     } else if (key.toLowerCase() === "l") {
       if (cardLinks.length > 0) { Keyboard.dismiss(); setShowLinksModal((v) => !v); }
     } else if (key.toLowerCase() === "p") {
@@ -495,9 +502,9 @@ export default function StudySessionScreen() {
             <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
           )}
         </Pressable>
-        {!completed ? (
+        {!completed && !loading ? (
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
             hitSlop={4}
           >
@@ -615,13 +622,13 @@ export default function StudySessionScreen() {
           onKeyPress={({ nativeEvent: { key } }) => {
             if (key === "Enter") {
               completeReadyRef.current = false;
-              router.back();
+              safeBack();
             }
           }}
           onBlur={() => {
             if (completeReadyRef.current) {
               completeReadyRef.current = false;
-              router.back();
+              safeBack();
             }
           }}
         />
@@ -798,7 +805,7 @@ export default function StudySessionScreen() {
 
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: theme.colors.primary }]}
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             activeOpacity={0.8}
           >
             <Text
@@ -1225,7 +1232,7 @@ export default function StudySessionScreen() {
               )}
             </Pressable>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => safeBack()}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
               hitSlop={4}
             >

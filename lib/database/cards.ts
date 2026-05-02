@@ -8,13 +8,23 @@ import { addTagToCard, getTagsByCardId } from './tags';
 type RawCard = {
   id: string;
   deckId: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
   frontContent: string;
   backContent: string;
   memoContent: string;
-  createdAt: string;
-  updatedAt: string;
-  sortOrder: number;
 };
+
+// cards + card_contents を JOIN して取得する共通 SELECT 句
+const CARD_SELECT = `
+  SELECT c.id, c.deckId, c.sortOrder, c.createdAt, c.updatedAt,
+         COALESCE(cc.frontContent, '[]') AS frontContent,
+         COALESCE(cc.backContent,  '[]') AS backContent,
+         COALESCE(cc.memoContent,  '[]') AS memoContent
+  FROM cards c
+  LEFT JOIN card_contents cc ON cc.cardId = c.id
+`;
 
 function parseBlocks(json: string): Block[] {
   try {
@@ -39,7 +49,7 @@ function toCard(raw: RawCard): Card {
 
 export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promise<Card[]> {
   const rows = await db.getAllAsync<RawCard>(
-    `SELECT c.* FROM cards c
+    `${CARD_SELECT}
      JOIN card_tags ct ON c.id = ct.cardId
      WHERE ct.tagId = ?
      ORDER BY c.sortOrder ASC`,
@@ -51,11 +61,11 @@ export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promis
 export type SearchField = 'all' | 'front' | 'back' | 'memo';
 
 function hiraganaToKatakana(str: string): string {
-  return str.replace(/[\u3041-\u3096]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+  return str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 }
 
 function katakanaToHiragana(str: string): string {
-  return str.replace(/[\u30A1-\u30F6]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  return str.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 }
 
 function kanaVariantPatterns(query: string): string[] {
@@ -72,50 +82,68 @@ function kanaLikeClause(col: string, patterns: string[]): { clause: string; para
 
 export async function searchCards(db: SQLiteDatabase, query: string, field: SearchField = 'all'): Promise<Card[]> {
   const patterns = kanaVariantPatterns(query);
-  let sql: string;
+  // CARD_SELECT に LEFT JOIN card_contents cc が含まれるため cc.* で参照可能
+  let whereClause: string;
   let params: string[];
   switch (field) {
     case 'front': {
-      const c = kanaLikeClause('frontContent', patterns);
-      sql = `SELECT * FROM cards WHERE ${c.clause} ORDER BY updatedAt DESC LIMIT 100`;
-      params = c.params;
-      break;
+      const c = kanaLikeClause('cc.frontContent', patterns);
+      whereClause = c.clause; params = c.params; break;
     }
     case 'back': {
-      const c = kanaLikeClause('backContent', patterns);
-      sql = `SELECT * FROM cards WHERE ${c.clause} ORDER BY updatedAt DESC LIMIT 100`;
-      params = c.params;
-      break;
+      const c = kanaLikeClause('cc.backContent', patterns);
+      whereClause = c.clause; params = c.params; break;
     }
     case 'memo': {
-      const c = kanaLikeClause('memoContent', patterns);
-      sql = `SELECT * FROM cards WHERE ${c.clause} ORDER BY updatedAt DESC LIMIT 100`;
-      params = c.params;
-      break;
+      const c = kanaLikeClause('cc.memoContent', patterns);
+      whereClause = c.clause; params = c.params; break;
     }
     default: {
-      const f = kanaLikeClause('frontContent', patterns);
-      const b = kanaLikeClause('backContent', patterns);
-      const m = kanaLikeClause('memoContent', patterns);
-      sql = `SELECT * FROM cards WHERE ${f.clause} OR ${b.clause} OR ${m.clause} ORDER BY updatedAt DESC LIMIT 100`;
+      const f = kanaLikeClause('cc.frontContent', patterns);
+      const b = kanaLikeClause('cc.backContent', patterns);
+      const m = kanaLikeClause('cc.memoContent', patterns);
+      whereClause = `${f.clause} OR ${b.clause} OR ${m.clause}`;
       params = [...f.params, ...b.params, ...m.params];
     }
   }
-  const rows = await db.getAllAsync<RawCard>(sql, params);
+  const rows = await db.getAllAsync<RawCard>(
+    `${CARD_SELECT} WHERE ${whereClause} ORDER BY c.updatedAt DESC LIMIT 100`,
+    params
+  );
   return rows.map(toCard);
 }
 
 export async function getCardsByDeckId(db: SQLiteDatabase, deckId: string): Promise<Card[]> {
   const rows = await db.getAllAsync<RawCard>(
-    'SELECT * FROM cards WHERE deckId = ? ORDER BY sortOrder ASC',
+    `${CARD_SELECT} WHERE c.deckId = ? ORDER BY c.sortOrder ASC`,
     [deckId]
   );
   return rows.map(toCard);
 }
 
 export async function getCardById(db: SQLiteDatabase, id: string): Promise<Card | null> {
-  const row = await db.getFirstAsync<RawCard>('SELECT * FROM cards WHERE id = ?', [id]);
+  const row = await db.getFirstAsync<RawCard>(
+    `${CARD_SELECT} WHERE c.id = ?`,
+    [id]
+  );
   return row ? toCard(row) : null;
+}
+
+export async function getCardsByIds(db: SQLiteDatabase, ids: string[]): Promise<Card[]> {
+  if (ids.length === 0) return [];
+  const CHUNK = 500;
+  const allRows: RawCard[] = [];
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    const placeholders = chunk.map(() => '?').join(',');
+    const rows = await db.getAllAsync<RawCard>(
+      `${CARD_SELECT} WHERE c.id IN (${placeholders})`,
+      chunk
+    );
+    allRows.push(...rows);
+  }
+  const map = new Map(allRows.map(r => [r.id, toCard(r)]));
+  return ids.map(id => map.get(id)).filter((c): c is Card => c !== undefined);
 }
 
 export async function createCard(
@@ -129,18 +157,16 @@ export async function createCard(
     [data.deckId]
   );
   const sortOrder = (row?.maxOrder ?? 0) + 1;
+  const frontJson = JSON.stringify(data.frontContent);
+  const backJson  = JSON.stringify(data.backContent);
+  const memoJson  = JSON.stringify(data.memoContent);
   await db.runAsync(
-    'INSERT INTO cards (id, deckId, frontContent, backContent, memoContent, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [
-      id,
-      data.deckId,
-      JSON.stringify(data.frontContent),
-      JSON.stringify(data.backContent),
-      JSON.stringify(data.memoContent),
-      sortOrder,
-      now,
-      now,
-    ]
+    'INSERT INTO cards (id, deckId, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)',
+    [id, data.deckId, sortOrder, now, now]
+  );
+  await db.runAsync(
+    'INSERT INTO card_contents (cardId, frontContent, backContent, memoContent) VALUES (?, ?, ?, ?)',
+    [id, frontJson, backJson, memoJson]
   );
   await db.runAsync(
     'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
@@ -156,15 +182,15 @@ export async function updateCard(
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.runAsync(
-    'UPDATE cards SET frontContent = ?, backContent = ?, memoContent = ?, updatedAt = ? WHERE id = ?',
+    'UPDATE card_contents SET frontContent = ?, backContent = ?, memoContent = ? WHERE cardId = ?',
     [
       JSON.stringify(data.frontContent),
       JSON.stringify(data.backContent),
       JSON.stringify(data.memoContent),
-      now,
       id,
     ]
   );
+  await db.runAsync('UPDATE cards SET updatedAt = ? WHERE id = ?', [now, id]);
 }
 
 export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
@@ -298,7 +324,6 @@ export async function getUnlearnedCardIdsByTagId(db: SQLiteDatabase, tagId: stri
 export async function getPast7DaysCreatedCount(
   db: SQLiteDatabase
 ): Promise<{ date: string; count: number }[]> {
-  // ローカル7日前の0時〜翌日0時をUTC ISOで範囲指定
   const startLocal = new Date();
   startLocal.setDate(startLocal.getDate() - 6);
   startLocal.setHours(0, 0, 0, 0);
@@ -311,7 +336,6 @@ export async function getPast7DaysCreatedCount(
     [startLocal.toISOString(), endLocal.toISOString()]
   );
 
-  // ローカル日付でグループ化
   const map = new Map<string, number>();
   for (const row of rows) {
     const d = localDateStr(new Date(row.createdAt));
@@ -329,28 +353,36 @@ export async function moveCardsToDeck(
   fromDeckId: string,
   toDeckId: string
 ): Promise<void> {
+  if (cardIds.length === 0) return;
+  const CHUNK = 500;
   const now = new Date().toISOString();
-  await db.withTransactionAsync(async () => {
-    const row = await db.getFirstAsync<{ maxOrder: number | null }>(
-      'SELECT MAX(sortOrder) as maxOrder FROM cards WHERE deckId = ?',
-      [toDeckId]
+
+  // 移動先の末尾 sortOrder を取得（1 bridge call）
+  const row = await db.getFirstAsync<{ maxOrder: number | null }>(
+    'SELECT MAX(sortOrder) as maxOrder FROM cards WHERE deckId = ?',
+    [toDeckId]
+  );
+  const offset = (row?.maxOrder ?? 0) + 1;
+
+  // BEGIN〜COMMIT を一括 execAsync（1 bridge call）でネイティブ側に渡す。
+  // 埋め込み値: UUID（hex+ハイフンのみ）・ISOタイムスタンプ（数字/区切り文字のみ）は SQL インジェクション不可。
+  const parts: string[] = ['BEGIN;'];
+  for (let i = 0; i < cardIds.length; i += CHUNK) {
+    const chunk = cardIds.slice(i, i + CHUNK);
+    const idList = chunk.map((id) => `'${id}'`).join(',');
+    parts.push(
+      `UPDATE cards SET deckId='${toDeckId}',updatedAt='${now}',sortOrder=sortOrder+${offset} WHERE id IN (${idList});`
     );
-    let nextOrder = (row?.maxOrder ?? 0) + 1;
-    for (const cardId of cardIds) {
-      await db.runAsync(
-        'UPDATE cards SET deckId = ?, sortOrder = ?, updatedAt = ? WHERE id = ?',
-        [toDeckId, nextOrder++, now, cardId]
-      );
-    }
-    await db.runAsync(
-      'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
-      [fromDeckId, now, fromDeckId]
-    );
-    await db.runAsync(
-      'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
-      [toDeckId, now, toDeckId]
-    );
-  });
+  }
+  parts.push(
+    `UPDATE decks SET cardCount=(SELECT COUNT(*) FROM cards WHERE deckId='${fromDeckId}'),updatedAt='${now}' WHERE id='${fromDeckId}';`
+  );
+  parts.push(
+    `UPDATE decks SET cardCount=(SELECT COUNT(*) FROM cards WHERE deckId='${toDeckId}'),updatedAt='${now}' WHERE id='${toDeckId}';`
+  );
+  parts.push('COMMIT;');
+
+  await db.execAsync(parts.join('\n'));
 }
 
 export async function duplicateCard(db: SQLiteDatabase, cardId: string): Promise<Card> {
@@ -373,13 +405,12 @@ export async function duplicateCard(db: SQLiteDatabase, cardId: string): Promise
 }
 
 export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string): Promise<void> {
-  // 画像ブロックのファイルを削除
   const card = await getCardById(db, id);
   if (card) {
     const allBlocks = [...card.frontContent, ...card.backContent, ...card.memoContent];
     await deleteImagesInBlocks(allBlocks).catch(() => {});
   }
-  // foreign_keys pragma が未設定のため明示的に関連レコードを削除
+  await db.runAsync('DELETE FROM card_contents WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM card_tags WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM reviews WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM review_logs WHERE cardId = ?', [id]);
@@ -389,4 +420,36 @@ export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string)
     'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
     [deckId, now, deckId]
   );
+}
+
+export async function deleteCardsBulk(
+  db: SQLiteDatabase,
+  cardIds: string[],
+  deckId: string
+): Promise<void> {
+  if (cardIds.length === 0) return;
+  const cards = await getCardsByIds(db, cardIds);
+  await Promise.all(
+    cards.map((card) => {
+      const blocks = [...card.frontContent, ...card.backContent, ...card.memoContent];
+      return deleteImagesInBlocks(blocks).catch(() => {});
+    })
+  );
+  const CHUNK = 500;
+  const now = new Date().toISOString();
+  await db.withTransactionAsync(async () => {
+    for (let i = 0; i < cardIds.length; i += CHUNK) {
+      const chunk = cardIds.slice(i, i + CHUNK);
+      const placeholders = chunk.map(() => '?').join(',');
+      await db.runAsync(`DELETE FROM card_contents WHERE cardId IN (${placeholders})`, chunk);
+      await db.runAsync(`DELETE FROM card_tags WHERE cardId IN (${placeholders})`, chunk);
+      await db.runAsync(`DELETE FROM reviews WHERE cardId IN (${placeholders})`, chunk);
+      await db.runAsync(`DELETE FROM review_logs WHERE cardId IN (${placeholders})`, chunk);
+      await db.runAsync(`DELETE FROM cards WHERE id IN (${placeholders})`, chunk);
+    }
+    await db.runAsync(
+      'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
+      [deckId, now, deckId]
+    );
+  });
 }

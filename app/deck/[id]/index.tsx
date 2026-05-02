@@ -24,6 +24,7 @@ import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import {
   deleteCard,
+  deleteCardsBulk,
   duplicateCard,
   getCardsByDeckId,
   getUnlearnedCardIdsByDeckId,
@@ -60,7 +61,7 @@ export default function DeckDetailScreen() {
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
   const { decks, updateDeck } = useDeckStore();
-  const { cards, setCards, removeCard, reorderCards, updateCard } = useCardStore();
+  const { cards, setCards, removeCard, reorderCards } = useCardStore();
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
   const [todayReviewed, setTodayReviewed] = useState(0);
   const [dueCount, setDueCount] = useState(0);
@@ -206,10 +207,7 @@ export default function DeckDetailScreen() {
             setIsProcessing(true);
             try {
               const ids = Array.from(selectedCardIds);
-              for (const cardId of ids) {
-                await deleteCard(db, cardId, id as string);
-                removeCard(cardId);
-              }
+              await deleteCardsBulk(db, ids, id as string);
               if (deck) {
                 updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
               }
@@ -257,10 +255,6 @@ export default function DeckDetailScreen() {
             try {
               const ids = Array.from(selectedCardIds);
               await moveCardsToDeck(db, ids, id as string, targetDeck.id);
-              ids.forEach((cardId) => {
-                const card = cards.find((c) => c.id === cardId);
-                if (card) updateCard({ ...card, deckId: targetDeck.id });
-              });
               if (deck) {
                 updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
               }

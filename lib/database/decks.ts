@@ -56,6 +56,10 @@ export async function deleteDeck(db: SQLiteDatabase, id: string): Promise<void> 
     'DELETE FROM card_tags WHERE cardId IN (SELECT id FROM cards WHERE deckId = ?)',
     [id]
   );
+  await db.runAsync(
+    'DELETE FROM card_contents WHERE cardId IN (SELECT id FROM cards WHERE deckId = ?)',
+    [id]
+  );
   await db.runAsync('DELETE FROM cards WHERE deckId = ?', [id]);
   await db.runAsync('DELETE FROM decks WHERE id = ?', [id]);
 }

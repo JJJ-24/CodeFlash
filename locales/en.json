@@ -265,7 +265,7 @@
     "exitSelect": "Exit selection mode",
     "normalMode": "Normal Mode",
     "selectMode": "Selection Mode",
-    "focusNextPrev": "Move focus (Next/Prev)",
+    "focusNextPrev": "Move focus\n(Next/Prev)",
     "nextPrev": "Previous / Next (no grade)",
     "scrollUpDown": "Scroll Up / Down",
     "toggleShuffle": "Toggle shuffle",

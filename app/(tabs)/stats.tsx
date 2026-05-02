@@ -240,7 +240,12 @@ function BarChart({
 
         return (
           <View key={item.date} style={styles.barCol}>
-            <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit={!(Platform as any).isPad}
+              style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
               {item.count > 0 ? item.count : ''}
             </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />

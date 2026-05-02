@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
@@ -40,6 +41,7 @@ export default function EditTagScreen() {
   const [color, setColor] = useState(existingTag?.color ?? PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (existingTag) {
@@ -80,19 +82,14 @@ export default function EditTagScreen() {
 
   function confirmDelete() {
     if (!existingTag) return;
-    const tagName = existingTag.name.length > 20 ? existingTag.name.slice(0, 20) + '…' : existingTag.name;
-    Alert.alert(t('tag.delete'), t('tag.deleteConfirm', { name: tagName }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteTag(db, tagId);
-          removeTag(tagId);
-          router.back();
-        },
-      },
-    ]);
+    setShowDeleteModal(true);
+  }
+
+  async function handleDeleteConfirm() {
+    setShowDeleteModal(false);
+    await deleteTag(db, tagId);
+    removeTag(tagId);
+    router.back();
   }
 
   return (
@@ -176,6 +173,12 @@ export default function EditTagScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <ConfirmDeleteModal
+        visible={showDeleteModal}
+        message={t('tag.deleteConfirm', { name: existingTag ? (existingTag.name.length > 20 ? existingTag.name.slice(0, 20) + '…' : existingTag.name) : '' })}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </>
   );
 }

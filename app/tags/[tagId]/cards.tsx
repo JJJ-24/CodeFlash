@@ -6,7 +6,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -17,6 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
@@ -55,23 +55,26 @@ export default function TagCardsScreen() {
   const tag = tags.find((t) => t.id === tagId) ?? null;
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteModalMessage, setDeleteModalMessage] = useState('');
+  const [pendingDeleteCard, setPendingDeleteCard] = useState<Card | null>(null);
   const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
 
   function confirmDeleteCard(card: Card) {
     const rawPreview = getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ');
     const preview = rawPreview || t('card.noText');
     const name = preview.length > 20 ? preview.slice(0, 20) + '…' : preview;
-    Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteCard(db, card.id, card.deckId);
-          setCards((prev) => prev.filter((c) => c.id !== card.id));
-        },
-      },
-    ]);
+    setPendingDeleteCard(card);
+    setDeleteModalMessage(t('card.deleteConfirm', { name }));
+    setShowDeleteModal(true);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!pendingDeleteCard) return;
+    setShowDeleteModal(false);
+    await deleteCard(db, pendingDeleteCard.id, pendingDeleteCard.deckId);
+    setCards((prev) => prev.filter((c) => c.id !== pendingDeleteCard.id));
+    setPendingDeleteCard(null);
   }
 
   function navigateToEdit(card: Card) {
@@ -293,6 +296,12 @@ export default function TagCardsScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         shortcuts={TAG_CARDS_SHORTCUTS}
+      />
+      <ConfirmDeleteModal
+        visible={showDeleteModal}
+        message={deleteModalMessage}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => { setShowDeleteModal(false); setPendingDeleteCard(null); }}
       />
     </View>
   );

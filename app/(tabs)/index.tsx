@@ -5,7 +5,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   Platform,
   Pressable,
   StyleSheet,
@@ -17,6 +16,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -115,6 +115,8 @@ export default function HomeScreen() {
   const blockWidth = (width - 32) / 4.1;
   const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDeleteDeck, setPendingDeleteDeck] = useState<Deck | null>(null);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -133,6 +135,13 @@ export default function HomeScreen() {
   async function handleDelete(id: string) {
     await deleteDeck(db, id);
     removeDeck(id);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!pendingDeleteDeck) return;
+    setShowDeleteModal(false);
+    await handleDelete(pendingDeleteDeck.id);
+    setPendingDeleteDeck(null);
   }
 
   const sortedDecks = useMemo(() => {
@@ -218,12 +227,8 @@ export default function HomeScreen() {
       }
     } else if (k === 'd') {
       if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-        const deck = sortedDecks[focusedDeckIndex];
-        const name = truncate(deck.name);
-        Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('common.delete'), style: 'destructive', onPress: () => handleDelete(deck.id) },
-        ]);
+        setPendingDeleteDeck(sortedDecks[focusedDeckIndex]);
+        setShowDeleteModal(true);
       }
     } else if (k === 'n') {
       router.push({ pathname: '/deck/new' });
@@ -311,6 +316,12 @@ export default function HomeScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         shortcuts={HOME_SHORTCUTS}
+      />
+      <ConfirmDeleteModal
+        visible={showDeleteModal}
+        message={t('deck.deleteConfirm', { name: truncate(pendingDeleteDeck?.name ?? '') })}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => { setShowDeleteModal(false); setPendingDeleteDeck(null); }}
       />
     </GestureHandlerRootView>
   );

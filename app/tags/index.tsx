@@ -3,7 +3,6 @@ import { Stack, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -18,6 +17,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -65,20 +65,20 @@ export default function TagsScreen() {
     { key: 'cardCount', icon: 'layers-outline' },
   ];
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDeleteTag, setPendingDeleteTag] = useState<TagWithCount | null>(null);
 
   function confirmDelete(tag: TagWithCount) {
-    const name = tag.name.length > 20 ? tag.name.slice(0, 20) + '…' : tag.name;
-    Alert.alert(t('tag.delete'), t('tag.deleteConfirm', { name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteTag(db, tag.id);
-          removeTag(tag.id);
-        },
-      },
-    ]);
+    setPendingDeleteTag(tag);
+    setShowDeleteModal(true);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!pendingDeleteTag) return;
+    setShowDeleteModal(false);
+    await deleteTag(db, pendingDeleteTag.id);
+    removeTag(pendingDeleteTag.id);
+    setPendingDeleteTag(null);
   }
 
   useFocusEffect(
@@ -258,6 +258,12 @@ export default function TagsScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         shortcuts={TAG_SHORTCUTS}
+      />
+      <ConfirmDeleteModal
+        visible={showDeleteModal}
+        message={t('tag.deleteConfirm', { name: pendingDeleteTag ? (pendingDeleteTag.name.length > 20 ? pendingDeleteTag.name.slice(0, 20) + '…' : pendingDeleteTag.name) : '' })}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => { setShowDeleteModal(false); setPendingDeleteTag(null); }}
       />
     </GestureHandlerRootView>
   );

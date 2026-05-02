@@ -38,6 +38,7 @@ import {
   getTodayReviewedCardIdsByDeckId,
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -78,6 +79,9 @@ export default function DeckDetailScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteModalMessage, setDeleteModalMessage] = useState('');
+  const pendingDeleteActionRef = useRef<(() => Promise<void>) | null>(null);
   const focusedCardIdRef = useRef<string | null>(null);
   const [focusedCardId, setFocusedCardIdState] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -162,22 +166,15 @@ export default function DeckDetailScreen() {
   function confirmDeleteCard(card: Card) {
     const preview = getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ');
     const name = (preview || t('card.noText')).slice(0, 20) + ((preview || t('card.noText')).length > 20 ? '…' : '');
-    Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteCard(db, card.id, id);
-          removeCard(card.id);
-          setFocusedCardIndex(null);
-          if (deck) {
-            updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
-          }
-          loadCards();
-        },
-      },
-    ]);
+    pendingDeleteActionRef.current = async () => {
+      await deleteCard(db, card.id, id);
+      removeCard(card.id);
+      setFocusedCardIndex(null);
+      if (deck) updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
+      await loadCards();
+    };
+    setDeleteModalMessage(t('card.deleteConfirm', { name }));
+    setShowDeleteModal(true);
   }
 
   function exitSelectionMode() {
@@ -195,31 +192,26 @@ export default function DeckDetailScreen() {
   }
 
   function handleDeleteSelected() {
-    Alert.alert(
-      t('card.delete'),
-      t('card.deleteSelectedConfirm', { count: selectedCardIds.size }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            setIsProcessing(true);
-            try {
-              const ids = Array.from(selectedCardIds);
-              await deleteCardsBulk(db, ids, id as string);
-              if (deck) {
-                updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
-              }
-              exitSelectionMode();
-              await loadCards();
-            } finally {
-              setIsProcessing(false);
-            }
-          },
-        },
-      ]
-    );
+    pendingDeleteActionRef.current = async () => {
+      setIsProcessing(true);
+      try {
+        const ids = Array.from(selectedCardIds);
+        await deleteCardsBulk(db, ids, id as string);
+        if (deck) updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
+        exitSelectionMode();
+        await loadCards();
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+    setDeleteModalMessage(t('card.deleteSelectedConfirm', { count: selectedCardIds.size }));
+    setShowDeleteModal(true);
+  }
+
+  async function handleDeleteConfirm() {
+    setShowDeleteModal(false);
+    await pendingDeleteActionRef.current?.();
+    pendingDeleteActionRef.current = null;
   }
 
   async function handleDuplicate() {
@@ -727,6 +719,12 @@ export default function DeckDetailScreen() {
           { title: t('shortcut.normalMode'), items: DECK_SHORTCUTS_NORMAL },
           { title: t('shortcut.selectMode'), items: DECK_SHORTCUTS_SELECT },
         ]}
+      />
+      <ConfirmDeleteModal
+        visible={showDeleteModal}
+        message={deleteModalMessage}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setShowDeleteModal(false)}
       />
     </GestureHandlerRootView>
   );

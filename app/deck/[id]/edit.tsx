@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -36,6 +37,7 @@ export default function EditDeckScreen() {
   const [description, setDescription] = useState(deck?.description ?? '');
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -51,19 +53,14 @@ export default function EditDeckScreen() {
   }
 
   function confirmDelete() {
-    const name = deck ? (deck.name.length > 20 ? deck.name.slice(0, 20) + '…' : deck.name) : '';
-    Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteDeck(db, id);
-          removeDeck(id);
-          router.back();
-        },
-      },
-    ]);
+    setShowDeleteModal(true);
+  }
+
+  async function handleDeleteConfirm() {
+    setShowDeleteModal(false);
+    await deleteDeck(db, id);
+    removeDeck(id);
+    router.back();
   }
 
   if (!deck) return null;
@@ -159,6 +156,12 @@ export default function EditDeckScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <ConfirmDeleteModal
+        visible={showDeleteModal}
+        message={t('deck.deleteConfirm', { name: deck.name.length > 20 ? deck.name.slice(0, 20) + '…' : deck.name })}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </>
   );
 }

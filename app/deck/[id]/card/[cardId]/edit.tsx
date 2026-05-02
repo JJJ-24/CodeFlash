@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
@@ -38,6 +39,7 @@ export default function EditCardScreen() {
   const [saving, setSaving] = useState(false);
   const [frontEmpty, setFrontEmpty] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const initialSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -106,23 +108,16 @@ export default function EditCardScreen() {
   }
 
   function confirmDelete() {
-    const rawPreview = card ? getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ') : '';
-    const preview = rawPreview || t('card.noText');
-    const name = preview.length > 20 ? preview.slice(0, 20) + '…' : preview;
-    Alert.alert(t('card.delete'), t('card.deleteConfirm', { name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: async () => {
-          await deleteCard(db, cardId, id);
-          removeCard(cardId);
-          const deck = decks.find((d) => d.id === id);
-          if (deck) updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
-          router.back();
-        },
-      },
-    ]);
+    setShowDeleteModal(true);
+  }
+
+  async function handleDeleteConfirm() {
+    setShowDeleteModal(false);
+    await deleteCard(db, cardId, id);
+    removeCard(cardId);
+    const deck = decks.find((d) => d.id === id);
+    if (deck) updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
+    router.back();
   }
 
   if (!card) {
@@ -132,6 +127,10 @@ export default function EditCardScreen() {
       </View>
     );
   }
+
+  const rawDeletePreview = getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ');
+  const deletePreview = rawDeletePreview || t('card.noText');
+  const deleteCardName = deletePreview.length > 20 ? deletePreview.slice(0, 20) + '…' : deletePreview;
 
   return (
     <>
@@ -198,6 +197,12 @@ export default function EditCardScreen() {
           { title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT },
           { title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW },
         ]}
+      />
+      <ConfirmDeleteModal
+        visible={showDeleteModal}
+        message={t('card.deleteConfirm', { name: deleteCardName })}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setShowDeleteModal(false)}
       />
     </>
   );

@@ -115,7 +115,6 @@ export default function EditDeckScreen() {
               value={name}
               onChangeText={setName}
               maxLength={50}
-              autoFocus
               returnKeyType="next"
               autoCorrect={false}
               spellCheck={false}

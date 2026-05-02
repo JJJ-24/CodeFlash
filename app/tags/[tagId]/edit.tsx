@@ -125,7 +125,6 @@ export default function EditTagScreen() {
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
               onChangeText={(v) => { setName(v); setError(''); }}
-              autoFocus
               autoCorrect={false}
               spellCheck={false}
               maxLength={50}

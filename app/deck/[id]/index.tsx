@@ -315,6 +315,7 @@ export default function DeckDetailScreen() {
 
   const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
   const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterItemMaxDigits);
+  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
 
   const cardSortDesc = cardSortOrder === 'newest' ? t('card.sortDescNewest')
     : cardSortOrder === 'oldest' ? t('card.sortDescOldest')
@@ -490,7 +491,7 @@ export default function DeckDetailScreen() {
                 key={key}
                 style={[
                   styles.statItem,
-                  { backgroundColor: theme.colors.surface },
+                  { backgroundColor: theme.colors.surface, minHeight: filterBlockMinHeight },
                   isSelected && { margin: 0, borderWidth: 2, borderColor: color },
                   selectionMode && { opacity: 0.5 },
                 ]}
@@ -748,6 +749,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     margin: 2,
     ...SHADOW.card,
   },

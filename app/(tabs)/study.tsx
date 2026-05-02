@@ -308,6 +308,7 @@ export default function StudyScreen() {
 
   const filterBlockMaxDigits = Math.max(...filterBlocks.map(b => String(b.value).length));
   const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterBlockMaxDigits);
+  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
 
   if (loading) {
     return (
@@ -330,7 +331,7 @@ export default function StudyScreen() {
                 key={block.key}
                 style={[
                   styles.summaryCard,
-                  { backgroundColor: theme.colors.surface },
+                  { backgroundColor: theme.colors.surface, minHeight: filterBlockMinHeight },
                   selected && { margin: 0, borderWidth: 2, borderColor: block.color },
                 ]}
                 onPress={() => { setActiveFilter(block.key); }}
@@ -556,6 +557,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     margin: 2,
     ...SHADOW.card,
   },

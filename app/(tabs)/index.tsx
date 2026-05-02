@@ -113,6 +113,7 @@ export default function HomeScreen() {
   const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled } = useSettingsStore();
   const { width } = useWindowDimensions();
   const blockWidth = (width - 32) / 4.1;
+  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
   const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -168,7 +169,7 @@ export default function HomeScreen() {
         <Pressable
           style={[
             styles.statItem,
-            { backgroundColor: theme.colors.surface, width: blockWidth },
+            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
             selectedFilter === 'all' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
           ]}
           onPress={() => setSelectedFilter('all')}
@@ -336,6 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     margin: 2,
     ...SHADOW.card,
   },

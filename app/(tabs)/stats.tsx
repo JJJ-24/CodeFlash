@@ -564,13 +564,14 @@ export default function StatsScreen() {
         const statNums = [streak, todayReviewed, todayDue, todayCreated];
         const maxDigits = Math.max(...statNums.map(n => String(n).length));
         const statValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : maxDigits);
+        const statBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
         return (
       <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
         <View style={styles.summaryRow}>
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.primary },
+            { backgroundColor: theme.colors.primary, minHeight: statBlockMinHeight },
             selectedBlock === 'streak' && { margin: 0, borderWidth: 2, borderColor: blockColors.streak },
           ]}
           onPress={() => { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
@@ -586,7 +587,7 @@ export default function StatsScreen() {
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.surface },
+            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight },
             selectedBlock === 'learned' && { margin: 0, borderWidth: 2, borderColor: blockColors.learned },
           ]}
           onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
@@ -597,7 +598,7 @@ export default function StatsScreen() {
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.surface },
+            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight },
             selectedBlock === 'due' && { margin: 0, borderWidth: 2, borderColor: blockColors.due },
           ]}
           onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
@@ -608,7 +609,7 @@ export default function StatsScreen() {
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.surface },
+            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight },
             selectedBlock === 'new' && { margin: 0, borderWidth: 2, borderColor: blockColors.new },
           ]}
           onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
@@ -737,6 +738,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     margin: 2,
     overflow: 'visible',
     ...SHADOW.card,

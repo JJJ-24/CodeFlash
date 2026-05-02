@@ -145,7 +145,10 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
   ];
 
   const maxCountDigits = Math.max(...slices.map(s => String(s.value).length));
-  const gradeCountFontSize = fontSizeForDigits(theme, maxCountDigits, 1.3);
+  const gradeCountScale = (Platform as any).isPad
+    ? (maxCountDigits >= 5 ? 1.0 : maxCountDigits >= 4 ? 1.2 : maxCountDigits >= 3 ? 1.3 : 1.3)
+    : (maxCountDigits >= 3 ? 1.3 : 1.0);
+  const gradeCountFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : maxCountDigits, gradeCountScale);
   const maxLabelLen = Math.max(...slices.map(s => s.label.length));
   const gradeLabelFontSize = maxLabelLen >= 3 ? theme.fontSize.xs : theme.fontSize.sm;
 

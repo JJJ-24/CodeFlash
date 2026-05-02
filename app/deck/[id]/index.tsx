@@ -324,7 +324,7 @@ export default function DeckDetailScreen() {
   ];
 
   const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
-  const filterValueFontSize = fontSizeForDigits(theme, filterItemMaxDigits);
+  const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterItemMaxDigits);
 
   const cardSortDesc = cardSortOrder === 'newest' ? t('card.sortDescNewest')
     : cardSortOrder === 'oldest' ? t('card.sortDescOldest')

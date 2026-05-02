@@ -307,7 +307,7 @@ export default function StudyScreen() {
   ];
 
   const filterBlockMaxDigits = Math.max(...filterBlocks.map(b => String(b.value).length));
-  const filterValueFontSize = fontSizeForDigits(theme, filterBlockMaxDigits);
+  const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterBlockMaxDigits);
 
   if (loading) {
     return (

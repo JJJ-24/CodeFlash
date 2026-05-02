@@ -164,7 +164,7 @@ export default function HomeScreen() {
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, String(decks.length).length) }]}>{decks.length}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(decks.length).length) }]}>{decks.length}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
         </Pressable>
       </View>

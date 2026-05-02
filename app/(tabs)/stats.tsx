@@ -555,7 +555,7 @@ export default function StatsScreen() {
       {(() => {
         const statNums = [streak, todayReviewed, todayDue, todayCreated];
         const maxDigits = Math.max(...statNums.map(n => String(n).length));
-        const statValueFontSize = fontSizeForDigits(theme, maxDigits);
+        const statValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : maxDigits);
         return (
       <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
         <View style={styles.summaryRow}>

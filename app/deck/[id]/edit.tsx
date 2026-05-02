@@ -2,9 +2,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -67,14 +67,11 @@ export default function EditDeckScreen() {
 
   const canSave = !!name.trim() && !saving;
   const isDirty = name.trim() !== deck.name || description.trim() !== (deck.description ?? '');
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }
-    Alert.alert(t('common.discardChanges'), undefined, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
-      ...(canSave ? [{ text: t('common.save'), onPress: handleSave }] : []),
-    ]);
+    setShowDiscardModal(true);
   }
 
   return (
@@ -161,6 +158,20 @@ export default function EditDeckScreen() {
         message={t('deck.deleteConfirm', { name: deck.name.length > 20 ? deck.name.slice(0, 20) + '…' : deck.name })}
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
+      />
+      <ConfirmModal
+        visible={showDiscardModal}
+        message={t('common.discardChanges')}
+        actions={canSave
+          ? [
+              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); handleSave(); } },
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
+            ]
+          : [
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
+            ]
+        }
+        onClose={() => setShowDiscardModal(false)}
       />
     </>
   );

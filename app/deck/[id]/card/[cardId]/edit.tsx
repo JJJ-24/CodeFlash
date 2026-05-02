@@ -3,10 +3,11 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
@@ -40,6 +41,7 @@ export default function EditCardScreen() {
   const [frontEmpty, setFrontEmpty] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const initialSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -100,11 +102,7 @@ export default function EditCardScreen() {
       router.back();
       return;
     }
-    Alert.alert(t('common.discardChanges'), undefined, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.discard'), style: 'destructive', onPress: () => { editorRef.current?.prepareForNavigation(); router.back(); } },
-      ...(!frontEmpty ? [{ text: t('common.save'), onPress: () => editorRef.current?.save() }] : []),
-    ]);
+    setShowDiscardModal(true);
   }
 
   function confirmDelete() {
@@ -203,6 +201,20 @@ export default function EditCardScreen() {
         message={t('card.deleteConfirm', { name: deleteCardName })}
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
+      />
+      <ConfirmModal
+        visible={showDiscardModal}
+        message={t('common.discardChanges')}
+        actions={!frontEmpty
+          ? [
+              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); editorRef.current?.save(); } },
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); } },
+            ]
+          : [
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); } },
+            ]
+        }
+        onClose={() => setShowDiscardModal(false)}
       />
     </>
   );

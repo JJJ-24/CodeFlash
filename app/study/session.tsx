@@ -12,7 +12,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   Platform,
   Pressable,
@@ -29,6 +28,7 @@ import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
 
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { BlocksView } from "@/components/study/BlocksView";
 import { FlipCard, type FlipCardRef } from "@/components/study/FlipCard";
 import { LinksSheet } from "@/components/study/LinksSheet";
@@ -172,6 +172,7 @@ export default function StudySessionScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
   const [kbHeight, setKbHeight] = useState(0);
 
   // キーボード表示時に paddingBottom を追加してスクロール余白を確保する
@@ -434,15 +435,7 @@ export default function StudySessionScreen() {
   }
 
   function handleFinishSession() {
-    const remaining = result.totalCards - result.reviewed;
-    Alert.alert(
-      t("study.finishConfirmTitle"),
-      t("study.finishConfirmMessage", { count: remaining }),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        { text: t("common.ok"), onPress: finishSession },
-      ],
-    );
+    setShowFinishModal(true);
   }
 
   async function handleGrade(grade: Grade) {
@@ -1470,6 +1463,15 @@ export default function StudySessionScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         shortcuts={SESSION_SHORTCUTS}
+      />
+      <ConfirmModal
+        visible={showFinishModal}
+        title={t("study.finishConfirmTitle")}
+        message={t("study.finishConfirmMessage", { count: result.totalCards - result.reviewed })}
+        actions={[
+          { label: t("common.ok"), onPress: () => { setShowFinishModal(false); finishSession(); } },
+        ]}
+        onClose={() => setShowFinishModal(false)}
       />
     </>
   );

@@ -51,7 +51,7 @@
     "nextReviewTomorrow": "明日",
     "nextReviewDays": "{{count}}日後",
     "shuffle": "シャッフル",
-    "finishConfirmTitle": "学習を終了",
+    "finishConfirmTitle": "学習終了",
     "finishConfirmMessage": "未評価の{{count}}枚をスキップして集計画面へ移動します"
   },
   "tag": {

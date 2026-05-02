@@ -4,12 +4,14 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useCallback, useRef, useState } from 'react';
 
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 
+import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
+import { InfoModal } from '@/components/InfoModal';
 
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
@@ -91,11 +93,16 @@ export default function SettingsScreen() {
   const pendingTsvUriRef = useRef<string | null>(null);
   const tsvProcessingRef = useRef(false);
 
+  type ModalConfig =
+    | { kind: 'info'; title?: string; message: string }
+    | { kind: 'confirm'; title?: string; message: string; actions: ModalAction[] };
+  const [modal, setModal] = useState<ModalConfig | null>(null);
+
   async function handleNotificationToggle(value: boolean) {
     if (value) {
       const granted = await requestPermission();
       if (!granted) {
-        Alert.alert(t('notification.permissionDenied'), t('notification.permissionDeniedMessage'));
+        setModal({ kind: 'info', title: t('notification.permissionDenied'), message: t('notification.permissionDeniedMessage') });
         return;
       }
       setNotificationEnabled(true);
@@ -122,7 +129,7 @@ export default function SettingsScreen() {
       setLoading(true);
       await exportDatabase(db, includeImages);
     } catch {
-      Alert.alert(t('dataManagement.exportError'));
+      setModal({ kind: 'info', message: t('dataManagement.exportError') });
     } finally {
       setLoading(false);
     }
@@ -137,79 +144,49 @@ export default function SettingsScreen() {
       const PERF_WARN_BYTES = 50 * 1024 * 1024;
       const sizeMB = ((sizeBytes * 4) / 3 / 1024 / 1024).toFixed(1);
       if (sizeBytes > PERF_WARN_BYTES) {
-        Alert.alert(
-          t('dataManagement.exportLargeSizeTitle'),
-          t('dataManagement.exportPerfWarnMessage', { size: sizeMB }),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            { text: t('dataManagement.exportContinue'), onPress: () => doExport(true) },
-          ]
-        );
+        setModal({ kind: 'confirm', title: t('dataManagement.exportLargeSizeTitle'), message: t('dataManagement.exportPerfWarnMessage', { size: sizeMB }), actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); doExport(true); } }] });
       } else if (sizeBytes > WARN_BYTES) {
-        Alert.alert(
-          t('dataManagement.exportLargeSizeTitle'),
-          t('dataManagement.exportLargeSizeMessage', { size: sizeMB }),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            { text: t('dataManagement.exportContinue'), onPress: () => doExport(true) },
-          ]
-        );
+        setModal({ kind: 'confirm', title: t('dataManagement.exportLargeSizeTitle'), message: t('dataManagement.exportLargeSizeMessage', { size: sizeMB }), actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); doExport(true); } }] });
       } else {
         await doExport(true);
       }
     } catch {
       setLoading(false);
-      Alert.alert(t('dataManagement.exportError'));
+      setModal({ kind: 'info', message: t('dataManagement.exportError') });
     }
   }
 
   function handleExport() {
-    Alert.alert(
-      t('dataManagement.exportImageTitle'),
-      t('dataManagement.exportImageMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('dataManagement.exportWithImages'), onPress: handleExportWithImages },
-        { text: t('dataManagement.exportWithoutImages'), onPress: () => doExport(false) },
-      ]
-    );
+    setModal({
+      kind: 'confirm',
+      title: t('dataManagement.exportImageTitle'),
+      message: t('dataManagement.exportImageMessage'),
+      actions: [
+        { label: t('dataManagement.exportWithImages'), onPress: () => { setModal(null); handleExportWithImages(); } },
+        { label: t('dataManagement.exportWithoutImages'), onPress: () => { setModal(null); doExport(false); } },
+      ],
+    });
   }
 
   async function handleTsvExport() {
-    Alert.alert(
-      t('dataManagement.tsvExportNoteTitle'),
-      t('dataManagement.tsvExportNoteMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('dataManagement.exportContinue'),
-          onPress: () => {
-            setTsvAction('export');
-            setTsvDeckPickerVisible(true);
-          },
-        },
-      ]
-    );
+    setModal({
+      kind: 'confirm',
+      title: t('dataManagement.tsvExportNoteTitle'),
+      message: t('dataManagement.tsvExportNoteMessage'),
+      actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); setTsvAction('export'); setTsvDeckPickerVisible(true); } }],
+    });
   }
 
   async function handleTsvImport() {
     const uri = await pickTsvFile();
     if (!uri) return;
     pendingTsvUriRef.current = uri;
-    Alert.alert(
-      t('dataManagement.tsvImportNoteTitle'),
-      t('dataManagement.tsvImportNoteMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('dataManagement.exportContinue'),
-          onPress: () => {
-            setTsvAction('import');
-            setTsvDeckPickerVisible(true);
-          },
-        },
-      ]
-    );
+    setModal({
+      kind: 'confirm',
+      title: t('dataManagement.tsvImportNoteTitle'),
+      message: t('dataManagement.tsvImportNoteMessage'),
+      actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); setTsvAction('import'); setTsvDeckPickerVisible(true); } }],
+    });
   }
 
   async function handleTsvDeckSelected(deck: Deck) {
@@ -221,7 +198,7 @@ export default function SettingsScreen() {
         setLoading(true);
         await exportDeckToTsv(db, deck.id, deck.name);
       } catch {
-        Alert.alert(t('dataManagement.exportError'));
+        setModal({ kind: 'info', message: t('dataManagement.exportError') });
       } finally {
         setLoading(false);
         tsvProcessingRef.current = false;
@@ -238,9 +215,9 @@ export default function SettingsScreen() {
         const [updatedDecks, updatedTags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
         setDecks(updatedDecks);
         setTags(updatedTags);
-        Alert.alert(t('dataManagement.tsvImportSuccess', { created, updated }));
+        setModal({ kind: 'info', message: t('dataManagement.tsvImportSuccess', { created, updated }) });
       } catch {
-        Alert.alert(t('dataManagement.tsvImportError'));
+        setModal({ kind: 'info', message: t('dataManagement.tsvImportError') });
       } finally {
         setLoading(false);
         pendingTsvUriRef.current = null;
@@ -263,46 +240,35 @@ export default function SettingsScreen() {
         const [decks, tags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
         setDecks(decks);
         setTags(tags);
-        Alert.alert(t('dataManagement.importSuccess'));
+        setModal({ kind: 'info', message: t('dataManagement.importSuccess') });
       } catch (e) {
         const msg = e instanceof Error && e.message === 'INVALID_FORMAT'
           ? t('dataManagement.importInvalidFile')
           : t('dataManagement.importError');
-        Alert.alert(msg);
+        setModal({ kind: 'info', message: msg });
       } finally {
         setLoading(false);
       }
     };
 
-    Alert.alert(
-      t('dataManagement.importConfirmTitle'),
-      t('dataManagement.importConfirmMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
+    setModal({
+      kind: 'confirm',
+      title: t('dataManagement.importConfirmTitle'),
+      message: t('dataManagement.importConfirmMessage'),
+      actions: [
+        { label: t('dataManagement.importMerge'), onPress: () => { setModal(null); doImport('merge'); } },
         {
-          text: t('dataManagement.importMerge'),
-          onPress: () => doImport('merge'),
+          label: t('dataManagement.importReplace'),
+          destructive: true,
+          onPress: () => setModal({
+            kind: 'confirm',
+            title: t('dataManagement.importReplaceConfirmTitle'),
+            message: t('dataManagement.importReplaceConfirmMessage'),
+            actions: [{ label: t('dataManagement.importReplace'), destructive: true, onPress: () => { setModal(null); doImport('replace'); } }],
+          }),
         },
-        {
-          text: t('dataManagement.importReplace'),
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              t('dataManagement.importReplaceConfirmTitle'),
-              t('dataManagement.importReplaceConfirmMessage'),
-              [
-                { text: t('common.cancel'), style: 'cancel' },
-                {
-                  text: t('dataManagement.importReplace'),
-                  style: 'destructive',
-                  onPress: () => doImport('replace'),
-                },
-              ]
-            );
-          },
-        },
-      ]
-    );
+      ],
+    });
   }
 
   return (
@@ -459,6 +425,23 @@ export default function SettingsScreen() {
       onClose={() => setTsvDeckPickerVisible(false)}
     />
     {loading && <View style={styles.loadingOverlay} onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} />}
+    {modal?.kind === 'info' && (
+      <InfoModal
+        visible
+        title={modal.title}
+        message={modal.message}
+        onClose={() => setModal(null)}
+      />
+    )}
+    {modal?.kind === 'confirm' && (
+      <ConfirmModal
+        visible
+        title={modal.title}
+        message={modal.message}
+        actions={modal.actions}
+        onClose={() => setModal(null)}
+      />
+    )}
     </View>
   );
 }

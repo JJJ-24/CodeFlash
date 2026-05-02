@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   FlatList,
   Keyboard,
   Platform,
@@ -39,6 +38,8 @@ import {
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
+import { InfoModal } from '@/components/InfoModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -78,6 +79,8 @@ export default function DeckDetailScreen() {
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
+  const [infoModal, setInfoModal] = useState<{ title?: string; message: string } | null>(null);
+  const [pendingMoveDeck, setPendingMoveDeck] = useState<Deck | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
@@ -227,7 +230,7 @@ export default function DeckDetailScreen() {
       }
       exitSelectionMode();
       await loadCards();
-      Alert.alert(t('card.duplicate'), t('card.duplicateSuccess', { count: ids.length }));
+      setInfoModal({ title: t('card.duplicate'), message: t('card.duplicateSuccess', { count: ids.length }) });
     } finally {
       setIsProcessing(false);
     }
@@ -235,32 +238,27 @@ export default function DeckDetailScreen() {
 
   function handleMoveToDeck(targetDeck: Deck) {
     setShowDeckPicker(false);
-    Alert.alert(
-      t('card.moveConfirmTitle'),
-      t('card.moveConfirmMessage', { count: selectedCardIds.size, deckName: targetDeck.name }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.ok'),
-          onPress: async () => {
-            setIsProcessing(true);
-            try {
-              const ids = Array.from(selectedCardIds);
-              await moveCardsToDeck(db, ids, id as string, targetDeck.id);
-              if (deck) {
-                updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
-              }
-              const tgt = decks.find((d) => d.id === targetDeck.id);
-              if (tgt) updateDeck({ ...tgt, cardCount: tgt.cardCount + ids.length });
-              exitSelectionMode();
-              await loadCards();
-            } finally {
-              setIsProcessing(false);
-            }
-          },
-        },
-      ]
-    );
+    setPendingMoveDeck(targetDeck);
+  }
+
+  async function doMove() {
+    if (!pendingMoveDeck) return;
+    const targetDeck = pendingMoveDeck;
+    setPendingMoveDeck(null);
+    setIsProcessing(true);
+    try {
+      const ids = Array.from(selectedCardIds);
+      await moveCardsToDeck(db, ids, id as string, targetDeck.id);
+      if (deck) {
+        updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - ids.length, 0) });
+      }
+      const tgt = decks.find((d) => d.id === targetDeck.id);
+      if (tgt) updateDeck({ ...tgt, cardCount: tgt.cardCount + ids.length });
+      exitSelectionMode();
+      await loadCards();
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   if (!deck) return null;
@@ -609,17 +607,11 @@ export default function DeckDetailScreen() {
                 onLongPress={() => {
                   if (selectionMode) return;
                   if (selectedFilter !== 'all') {
-                    Alert.alert(
-                      t('card.reorderDisabledTitle'),
-                      t('card.reorderDisabledMessage')
-                    );
+                    setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
                     return;
                   }
                   if (cardSortOrder !== 'manual') {
-                    Alert.alert(
-                      t('card.reorderDisabledTitle'),
-                      t('card.reorderDisabledMessageSort')
-                    );
+                    setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
                     return;
                   }
                   drag();
@@ -725,6 +717,19 @@ export default function DeckDetailScreen() {
         message={deleteModalMessage}
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
+      />
+      <InfoModal
+        visible={!!infoModal}
+        title={infoModal?.title}
+        message={infoModal?.message ?? ''}
+        onClose={() => setInfoModal(null)}
+      />
+      <ConfirmModal
+        visible={!!pendingMoveDeck}
+        title={t('card.moveConfirmTitle')}
+        message={t('card.moveConfirmMessage', { count: selectedCardIds.size, deckName: pendingMoveDeck?.name ?? '' })}
+        actions={[{ label: t('common.ok'), onPress: doMove }]}
+        onClose={() => setPendingMoveDeck(null)}
       />
     </GestureHandlerRootView>
   );

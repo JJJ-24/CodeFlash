@@ -3,7 +3,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
@@ -52,14 +52,11 @@ export default function EditTagScreen() {
 
   const canSave = !!name.trim() && !saving;
   const isDirty = name.trim() !== (existingTag?.name ?? '') || color !== (existingTag?.color ?? PRESET_COLORS[0]);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }
-    Alert.alert(t('common.discardChanges'), undefined, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
-      ...(canSave ? [{ text: t('common.save'), onPress: handleSave }] : []),
-    ]);
+    setShowDiscardModal(true);
   }
 
   async function handleSave() {
@@ -178,6 +175,20 @@ export default function EditTagScreen() {
         message={t('tag.deleteConfirm', { name: existingTag ? (existingTag.name.length > 20 ? existingTag.name.slice(0, 20) + '…' : existingTag.name) : '' })}
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
+      />
+      <ConfirmModal
+        visible={showDiscardModal}
+        message={t('common.discardChanges')}
+        actions={canSave
+          ? [
+              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); handleSave(); } },
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
+            ]
+          : [
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
+            ]
+        }
+        onClose={() => setShowDiscardModal(false)}
       />
     </>
   );

@@ -3,7 +3,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { createDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
 
@@ -52,14 +52,11 @@ export default function NewDeckScreen() {
 
   const canSave = !!name.trim() && !saving;
   const isDirty = name.trim() !== '' || description.trim() !== '';
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }
-    Alert.alert(t('common.discardChanges'), undefined, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
-      ...(canSave ? [{ text: t('common.create'), onPress: handleCreate }] : []),
-    ]);
+    setShowDiscardModal(true);
   }
 
   return (
@@ -143,6 +140,20 @@ export default function NewDeckScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      <ConfirmModal
+        visible={showDiscardModal}
+        message={t('common.discardChanges')}
+        actions={canSave
+          ? [
+              { label: t('common.create'), onPress: () => { setShowDiscardModal(false); handleCreate(); } },
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
+            ]
+          : [
+              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
+            ]
+        }
+        onClose={() => setShowDiscardModal(false)}
+      />
     </>
   );
 }

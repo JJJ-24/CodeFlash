@@ -726,7 +726,7 @@ export default function StudySessionScreen() {
                     </Text>
                     <Text
                       style={{
-                        color: theme.colors.textSecondary,
+                        color,
                         fontSize: gradeLabelFontSize,
                       }}
                       numberOfLines={1}

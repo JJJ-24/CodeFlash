@@ -452,7 +452,7 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
+                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && activeFilter !== 'new' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
                     </View>
                   )}
@@ -511,7 +511,7 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
+                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && activeFilter !== 'new' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
                     </View>
                   )}

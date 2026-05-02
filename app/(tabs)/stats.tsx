@@ -186,7 +186,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
               <Text numberOfLines={1} style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} allowFontScaling={false}>
                 {slice.value}
               </Text>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: slice.color, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
                 {slice.label}
               </Text>
               <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridPct, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>

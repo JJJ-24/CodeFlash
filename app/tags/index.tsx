@@ -239,9 +239,17 @@ export default function TagsScreen() {
         />
       )}
 
-      {/* FAB */}
+      {/* FAB: 戻る */}
       <Pressable
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]}
+        onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+      >
+        <Ionicons name="chevron-back" size={28} color="#FFF" />
+      </Pressable>
+
+      {/* FAB: 新規タグ作成 */}
+      <Pressable
+        style={[styles.fab, { right: 20, backgroundColor: theme.colors.primary }]}
         onPress={() => router.push('/tags/new')}
       >
         <Ionicons name="add" size={28} color="#FFF" />

@@ -165,14 +165,14 @@ export default function EditTagScreen() {
             style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]}
             onPress={confirmDelete}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.delete')}</Text>
+            <Ionicons name="trash-outline" size={26} color="#FFF" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]}
             onPress={handleSave}
             disabled={!canSave}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.save')}</Text>
+            <Ionicons name="checkmark-sharp" size={26} color="#FFF" />
           </TouchableOpacity>
         </View>
       </View>

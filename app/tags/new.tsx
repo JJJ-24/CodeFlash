@@ -139,7 +139,7 @@ export default function NewTagScreen() {
             onPress={handleSave}
             disabled={!canSave}
           >
-            <Text style={[styles.actionBtnTextLight, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('common.create')}</Text>
+            <Ionicons name="checkmark-sharp" size={26} color="#FFF" />
           </TouchableOpacity>
         </View>
       </View>

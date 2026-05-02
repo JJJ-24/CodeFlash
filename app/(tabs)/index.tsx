@@ -48,28 +48,17 @@ function truncate(str: string, max = 20): string {
 function DeckCard({
   deck,
   drag,
-  onDelete,
   onEdit,
   onPress,
   isFocused,
 }: {
   deck: Deck;
   drag: (() => void) | null;
-  onDelete: (id: string) => void;
   onEdit: (id: string) => void;
   onPress: () => void;
   isFocused?: boolean;
 }) {
-  const { t } = useTranslation();
   const theme = useTheme();
-
-  function confirmDelete() {
-    const name = truncate(deck.name);
-    Alert.alert(t('deck.delete'), t('deck.deleteConfirm', { name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(deck.id) },
-    ]);
-  }
 
   return (
     <TouchableOpacity
@@ -102,9 +91,6 @@ function DeckCard({
           style={styles.iconBtn}
         >
           <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
-        </Pressable>
-        <Pressable onPress={confirmDelete} hitSlop={8} style={styles.iconBtn}>
-          <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
         </Pressable>
       </View>
     </TouchableOpacity>
@@ -292,7 +278,6 @@ export default function HomeScreen() {
                 <DeckCard
                   deck={item}
                   drag={deckSortOrder === 'manual' ? drag : null}
-                  onDelete={handleDelete}
                   onEdit={(id) => router.push({ pathname: '/deck/[id]/edit', params: { id } })}
                   onPress={() => {
                     const idx = getIndex();

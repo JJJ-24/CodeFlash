@@ -229,9 +229,6 @@ export default function TagsScreen() {
                   <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.iconBtn}>
                     <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
                   </Pressable>
-                  <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
-                  </Pressable>
                 </Pressable>
               </ScaleDecorator>
             );

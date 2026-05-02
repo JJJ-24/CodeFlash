@@ -218,9 +218,6 @@ export default function TagCardsScreen() {
                   <Pressable onPress={() => navigateToEdit(item)} hitSlop={8} style={styles.iconBtn}>
                     <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
                   </Pressable>
-                  <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
-                  </Pressable>
                 </View>
               </Pressable>
             );

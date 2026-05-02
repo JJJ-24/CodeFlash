@@ -648,9 +648,6 @@ export default function DeckDetailScreen() {
                     <Pressable onPress={() => navigateToCardEdit(item.id)} hitSlop={8} style={{ padding: 4 }}>
                       <Ionicons name="pencil-sharp" size={theme.fontSize.lg} color={theme.colors.primary} />
                     </Pressable>
-                    <Pressable onPress={() => confirmDeleteCard(item)} hitSlop={8} style={{ padding: 4 }}>
-                      <Ionicons name="trash-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
-                    </Pressable>
                   </View>
                 )}
               </Pressable>

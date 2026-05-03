@@ -162,14 +162,10 @@ export default function DeckDetailScreen() {
           if (!cancelled) listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
         }, 50);
       });
-      const tid2 = setTimeout(() => {
-        listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
-      }, 800);
       // 前の画面でソフトキーボードが残留していた場合に確実に閉じる
       Keyboard.dismiss();
       onScreenFocus();
       return () => {
-        clearTimeout(tid2);
         cancelled = true;
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
@@ -595,6 +591,7 @@ export default function DeckDetailScreen() {
               listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
             }
           }}
+          onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
           ListHeaderComponent={ListHeader}
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }} />}
           ListEmptyComponent={

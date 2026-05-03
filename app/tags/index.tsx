@@ -97,12 +97,8 @@ export default function TagsScreen() {
           if (!cancelled) (listRef.current as any)?.scrollToOffset({ offset: targetOffset, animated: false });
         }, 50);
       });
-      const tid2 = setTimeout(() => {
-        (listRef.current as any)?.scrollToOffset({ offset: targetOffset, animated: false });
-      }, 800);
       onScreenFocus();
       return () => {
-        clearTimeout(tid2);
         cancelled = true;
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
@@ -230,6 +226,7 @@ export default function TagsScreen() {
               (listRef.current as any)?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
             }
           }}
+          onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
           onDragEnd={({ data }) => {
             reorderTags(data);
             updateTagSortOrders(db, data.map((t) => t.id));

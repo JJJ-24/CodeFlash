@@ -136,13 +136,9 @@ export default function HomeScreen() {
       const tid1 = setTimeout(() => {
         listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
       }, 50);
-      const tid2 = setTimeout(() => {
-        listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
-      }, 800);
       onScreenFocus();
       return () => {
         clearTimeout(tid1);
-        clearTimeout(tid2);
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
         onScreenBlur();
@@ -301,6 +297,7 @@ export default function HomeScreen() {
                 listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
               }
             }}
+            onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
             onDragEnd={({ data }) => {
               if (deckSortOrder !== 'manual') return;
               reorderDecks(data);

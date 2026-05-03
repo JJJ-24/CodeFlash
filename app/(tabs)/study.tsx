@@ -81,8 +81,11 @@ export default function StudyScreen() {
   const focusedDeckIdRef = useRef<string | null>(null);
   const focusedTagIdRef = useRef<string | null>(null);
   const fromSessionRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
+  const prevActiveTabRef = useRef<Tab>('decks');
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-  const listRef = useRef<FlatList<any>>(null);
+  const deckListRef = useRef<FlatList<any>>(null);
+  const tagListRef = useRef<FlatList<any>>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
 
@@ -101,8 +104,13 @@ export default function StudyScreen() {
 
   useEffect(() => {
     if (focusedItemIndex === null) return;
-    listRef.current?.scrollToIndex({ index: focusedItemIndex, animated: true, viewPosition: 0.5 });
-  }, [focusedItemIndex]);
+    if (prevActiveTabRef.current !== activeTab) {
+      prevActiveTabRef.current = activeTab;
+      return;
+    }
+    const ref = activeTab === 'decks' ? deckListRef : tagListRef;
+    ref.current?.scrollToIndex({ index: focusedItemIndex, animated: true, viewPosition: 0.5 });
+  }, [focusedItemIndex, activeTab]);
 
   useFocusEffect(
     useCallback(() => {
@@ -114,7 +122,7 @@ export default function StudyScreen() {
       fromSessionRef.current = false;
       onScreenFocus();
       (async () => {
-        if (!isFromSession) setLoading(true);
+        if (!initialLoadDoneRef.current && !isFromSession) setLoading(true);
         const [
           loadedDecks, deckCounts, loadedTags, tagCounts,
           todayDeck, todayTag,
@@ -139,6 +147,7 @@ export default function StudyScreen() {
         setTodayCreatedPerDeck(createdDeck);
         setTodayCreatedPerTag(createdTag);
         setTotalPerTag(totalTag);
+        initialLoadDoneRef.current = true;
         setLoading(false);
       })();
       return () => { onScreenBlur(); };
@@ -412,14 +421,14 @@ export default function StudyScreen() {
       </View>
 
       {/* デッキタブ */}
-      {activeTab === 'decks' && (
-        sortedDecks.length === 0 ? (
+      <View style={activeTab !== 'decks' ? { display: 'none' } : { flex: 1 }}>
+        {sortedDecks.length === 0 ? (
           <View style={styles.center}>
             <EmptyState icon="book-outline" title={t('study.noDecks')} />
           </View>
         ) : (
           <FlatList
-            ref={listRef}
+            ref={deckListRef}
             data={visibleDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -466,18 +475,18 @@ export default function StudyScreen() {
               );
             }}
           />
-        )
-      )}
+        )}
+      </View>
 
       {/* タグタブ */}
-      {activeTab === 'tags' && (
-        sortedTags.length === 0 ? (
+      <View style={activeTab !== 'tags' ? { display: 'none' } : { flex: 1 }}>
+        {sortedTags.length === 0 ? (
           <View style={styles.center}>
             <EmptyState icon="pricetag-outline" title={t('study.noTags')} />
           </View>
         ) : (
           <FlatList
-            ref={listRef}
+            ref={tagListRef}
             data={visibleTags}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -525,8 +534,8 @@ export default function StudyScreen() {
               );
             }}
           />
-        )
-      )}
+        )}
+      </View>
 
       </Pressable>
 

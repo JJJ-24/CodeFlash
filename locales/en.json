@@ -214,7 +214,7 @@
     "importSubtitle": "Restore from a backup file",
     "importConfirmTitle": "Confirm Import",
     "importConfirmMessage": "Select how to import.",
-    "importMerge": "Merge (Add & Overwrite)",
+    "importMerge": "Merge",
     "importReplace": "Replace All",
     "importReplaceConfirmTitle": "Are you sure?",
     "importReplaceConfirmMessage": "All current decks, cards, tags, and study history will be deleted and replaced with the imported data. \nThis cannot be undone.",
@@ -239,7 +239,7 @@
     "tsvImportNoteMessage": "If you are re-importing a TSV exported from this app, do not delete the id column.\nWithout the id column, existing cards will not be updated — new cards will be created instead.",
     "selectDeckForExport": "Select Deck to Export",
     "selectDeckForImport": "Select Destination Deck",
-    "tsvImportSuccess": "Imported: {{created}} new, {{updated}} updated",
+    "tsvImportSuccess": "Imported: {{created}} new\n{{updated}} updated",
     "tsvImportError": "Failed to read TSV file"
   },
   "shortcut": {

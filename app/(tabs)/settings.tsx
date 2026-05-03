@@ -15,7 +15,7 @@ import { InfoModal } from '@/components/InfoModal';
 
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
-import { estimateImageExportSize, exportDatabase } from '@/lib/export';
+import { estimateExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
 import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
 import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
@@ -138,11 +138,11 @@ export default function SettingsScreen() {
   async function handleExportWithImages() {
     try {
       setLoading(true);
-      const sizeBytes = await estimateImageExportSize(db);
+      const sizeBytes = await estimateExportSize(db, true);
       setLoading(false);
       const WARN_BYTES = 10 * 1024 * 1024;
       const PERF_WARN_BYTES = 50 * 1024 * 1024;
-      const sizeMB = ((sizeBytes * 4) / 3 / 1024 / 1024).toFixed(1);
+      const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
       if (sizeBytes > PERF_WARN_BYTES) {
         setModal({ kind: 'confirm', title: t('dataManagement.exportLargeSizeTitle'), message: t('dataManagement.exportPerfWarnMessage', { size: sizeMB }), actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); doExport(true); } }] });
       } else if (sizeBytes > WARN_BYTES) {
@@ -410,7 +410,6 @@ export default function SettingsScreen() {
       spellCheck={false}
       onKeyPress={({ nativeEvent: { key } }) => {
         if (!keyboardShortcutsEnabled) return;
-        const k = key.toLowerCase();
         if (key === '.') { router.navigate('/(tabs)'); }
         else if (key === ',') { router.navigate('/(tabs)/stats'); }
       }}

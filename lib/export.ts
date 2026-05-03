@@ -33,20 +33,48 @@ function extractImageFilenames(cards: Record<string, unknown>[]): string[] {
   return Array.from(filenames);
 }
 
-/** 画像ファイルの合計サイズ（バイト）を返す。Base64後は約1.33倍になる */
-export async function estimateImageExportSize(db: SQLiteDatabase): Promise<number> {
+/** エクスポートファイルの推定サイズ（バイト）を返す */
+export async function estimateExportSize(db: SQLiteDatabase, includeImages: boolean): Promise<number> {
+  // card_contents のテキストサイズ（最大要因）を SQLite で直接集計
+  const [contentRow, countRow] = await Promise.all([
+    db.getFirstAsync<{ total: number }>(
+      // CAST AS BLOB で UTF-8 の実バイト数を取得（LENGTH(TEXT) は文字数を返すため日本語で過小評価になる）
+      `SELECT COALESCE(SUM(LENGTH(CAST(frontContent AS BLOB))+LENGTH(CAST(backContent AS BLOB))+LENGTH(CAST(memoContent AS BLOB))), 0) AS total FROM card_contents`
+    ),
+    db.getFirstAsync<{ cards: number; decks: number; tags: number; cardTags: number; reviews: number; reviewLogs: number }>(
+      `SELECT
+         (SELECT COUNT(*) FROM cards)       AS cards,
+         (SELECT COUNT(*) FROM decks)       AS decks,
+         (SELECT COUNT(*) FROM tags)        AS tags,
+         (SELECT COUNT(*) FROM card_tags)   AS cardTags,
+         (SELECT COUNT(*) FROM reviews)     AS reviews,
+         (SELECT COUNT(*) FROM review_logs) AS reviewLogs`
+    ),
+  ]);
+  // JSON.stringify で " → \" エスケープされる分（コンテンツ文字列は {"type":"text","content":"..."} 形式で " が多い）
+  const contentBytes = Math.ceil((contentRow?.total ?? 0) * 1.15);
+  const c = countRow ?? { cards: 0, decks: 0, tags: 0, cardTags: 0, reviews: 0, reviewLogs: 0 };
+  // JSON キー名・インデント・タイムスタンプ等の構造オーバーヘッド概算（行数 × 1行あたりのバイト数）
+  const metaBytes = c.cards * 250 + c.decks * 350 + c.tags * 120 + c.cardTags * 70 + c.reviews * 300 + c.reviewLogs * 70;
+
+  if (!includeImages) return contentBytes + metaBytes;
+
+  // 画像ファイルの raw サイズ → base64 換算（× 4/3）
   const cards = await db.getAllAsync<Record<string, unknown>>(
     'SELECT frontContent, backContent, memoContent FROM card_contents'
   );
   const filenames = extractImageFilenames(cards);
-  let total = 0;
+  let rawImageBytes = 0;
   for (const filename of filenames) {
     const info = await FileSystem.getInfoAsync(IMAGE_DIR + filename);
-    if (info.exists && 'size' in info) {
-      total += (info.size as number) ?? 0;
-    }
+    if (info.exists && 'size' in info) rawImageBytes += (info.size as number) ?? 0;
   }
-  return total;
+  return contentBytes + metaBytes + Math.ceil(rawImageBytes * 4 / 3);
+}
+
+/** @deprecated estimateExportSize を使用してください */
+export async function estimateImageExportSize(db: SQLiteDatabase): Promise<number> {
+  return estimateExportSize(db, true);
 }
 
 export async function exportDatabase(db: SQLiteDatabase, includeImages = false): Promise<void> {

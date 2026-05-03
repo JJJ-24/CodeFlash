@@ -47,19 +47,17 @@ export async function updateDeckSortOrders(db: SQLiteDatabase, orderedIds: strin
 }
 
 export async function deleteDeck(db: SQLiteDatabase, id: string): Promise<void> {
-  // foreign_keys pragma が未設定のため明示的に関連レコードを削除
-  await db.runAsync(
-    'DELETE FROM reviews WHERE cardId IN (SELECT id FROM cards WHERE deckId = ?)',
-    [id]
-  );
-  await db.runAsync(
-    'DELETE FROM card_tags WHERE cardId IN (SELECT id FROM cards WHERE deckId = ?)',
-    [id]
-  );
-  await db.runAsync(
-    'DELETE FROM card_contents WHERE cardId IN (SELECT id FROM cards WHERE deckId = ?)',
-    [id]
-  );
-  await db.runAsync('DELETE FROM cards WHERE deckId = ?', [id]);
-  await db.runAsync('DELETE FROM decks WHERE id = ?', [id]);
+  // id は UUID（hex + ハイフンのみ）のため直接埋め込み可能。
+  // execAsync で1回のブリッジ呼び出しに集約し、withTransactionAsync（非排他）の
+  // await 間に他の非同期クエリが割り込むことで発生する SQLITE_BUSY を防ぐ。
+  await db.execAsync(`
+    BEGIN;
+    DELETE FROM review_logs WHERE cardId IN (SELECT id FROM cards WHERE deckId = '${id}');
+    DELETE FROM reviews     WHERE cardId IN (SELECT id FROM cards WHERE deckId = '${id}');
+    DELETE FROM card_tags   WHERE cardId IN (SELECT id FROM cards WHERE deckId = '${id}');
+    DELETE FROM card_contents WHERE cardId IN (SELECT id FROM cards WHERE deckId = '${id}');
+    DELETE FROM cards  WHERE deckId = '${id}';
+    DELETE FROM decks  WHERE id     = '${id}';
+    COMMIT;
+  `);
 }

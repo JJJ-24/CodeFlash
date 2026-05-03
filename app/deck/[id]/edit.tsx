@@ -38,6 +38,7 @@ export default function EditDeckScreen() {
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -67,7 +68,6 @@ export default function EditDeckScreen() {
 
   const canSave = !!name.trim() && !saving;
   const isDirty = name.trim() !== deck.name || description.trim() !== (deck.description ?? '');
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }

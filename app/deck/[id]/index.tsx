@@ -75,6 +75,8 @@ export default function DeckDetailScreen() {
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
   const restorationEndTimeRef = useRef(0);
+  const filterOffsetsRef = useRef<Record<FilterKey, number>>({ all: 0, learned: 0, review: 0, new: 0 });
+  const prevFilterRef = useRef<FilterKey>(selectedFilter);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const listRef = useRef<FlatList<Card>>(null);
 
@@ -175,6 +177,12 @@ export default function DeckDetailScreen() {
       };
     }, [loadCards])
   );
+
+  useEffect(() => {
+    filterOffsetsRef.current[prevFilterRef.current] = scrollOffsetRef.current;
+    prevFilterRef.current = selectedFilter;
+    listRef.current?.scrollToOffset({ offset: filterOffsetsRef.current[selectedFilter] ?? 0, animated: false });
+  }, [selectedFilter]);
 
   // deck が削除された後（編集モーダルから削除時）に自動で戻る
   const mountedRef = useRef(false);

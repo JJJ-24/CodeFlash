@@ -83,6 +83,8 @@ export default function StudyScreen() {
   const fromSessionRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
   const prevActiveTabRef = useRef<Tab>('decks');
+  const deckFilterOffsets = useRef<Record<Filter, number>>({ all: 0, learned: 0, review: 0, new: 0 });
+  const tagFilterOffsets = useRef<Record<Filter, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const deckListRef = useRef<FlatList<any>>(null);
   const tagListRef = useRef<FlatList<any>>(null);
@@ -111,6 +113,13 @@ export default function StudyScreen() {
     const ref = activeTab === 'decks' ? deckListRef : tagListRef;
     ref.current?.scrollToIndex({ index: focusedItemIndex, animated: true, viewPosition: 0.5 });
   }, [focusedItemIndex, activeTab]);
+
+  useEffect(() => {
+    const offsets = activeTab === 'decks' ? deckFilterOffsets : tagFilterOffsets;
+    const ref = activeTab === 'decks' ? deckListRef : tagListRef;
+    ref.current?.scrollToOffset({ offset: offsets.current[activeFilter] ?? 0, animated: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -432,6 +441,8 @@ export default function StudyScreen() {
             data={visibleDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
+            onScroll={(e) => { deckFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
+            scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}
             ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedItemIndex(null)} />}
             renderItem={({ item, index }) => {
@@ -490,6 +501,8 @@ export default function StudyScreen() {
             data={visibleTags}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
+            onScroll={(e) => { tagFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
+            scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}
             ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedItemIndex(null)} />}
             renderItem={({ item, index }) => {

@@ -75,7 +75,7 @@ function RootStack() {
         name="study/session"
         options={{ headerShown: false, animation: 'fade', title: '' }}
       />
-      <Stack.Screen name="search" options={{ headerShown: false }} />
+      <Stack.Screen name="search" options={{ headerShown: false, animation: 'none' }} />
     </Stack>
     </ThemeProvider>
   );

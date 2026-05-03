@@ -45,7 +45,10 @@ export default function SearchScreen() {
   ];
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -106,6 +109,7 @@ export default function SearchScreen() {
           clearButtonMode="while-editing"
           autoCorrect={false}
           autoCapitalize="none"
+          keyboardAppearance={theme.dark ? 'dark' : 'light'}
         />
       </View>
 

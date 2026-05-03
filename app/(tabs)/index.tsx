@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Platform,
@@ -119,6 +119,9 @@ export default function HomeScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteDeck, setPendingDeleteDeck] = useState<Deck | null>(null);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
+  const scrollOffsetRef = useRef(0);
+  const savedScrollOffsetRef = useRef(0);
+  const restorationEndTimeRef = useRef(0);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
 
@@ -128,8 +131,22 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      const targetOffset = savedScrollOffsetRef.current;
+      restorationEndTimeRef.current = Date.now() + 800;
+      const tid1 = setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
+      }, 50);
+      const tid2 = setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
+      }, 800);
       onScreenFocus();
-      return () => { onScreenBlur(); };
+      return () => {
+        clearTimeout(tid1);
+        clearTimeout(tid2);
+        restorationEndTimeRef.current = 0;
+        savedScrollOffsetRef.current = scrollOffsetRef.current;
+        onScreenBlur();
+      };
     }, [onScreenFocus, onScreenBlur])
   );
 
@@ -274,6 +291,16 @@ export default function HomeScreen() {
             data={sortedDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
+            onScrollOffsetChange={(offset) => {
+              scrollOffsetRef.current = offset;
+              if (
+                Date.now() < restorationEndTimeRef.current &&
+                savedScrollOffsetRef.current > 50 &&
+                offset < savedScrollOffsetRef.current - 30
+              ) {
+                listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+              }
+            }}
             onDragEnd={({ data }) => {
               if (deckSortOrder !== 'manual') return;
               reorderDecks(data);

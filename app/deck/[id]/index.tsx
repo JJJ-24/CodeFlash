@@ -72,6 +72,9 @@ export default function DeckDetailScreen() {
     () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
   );
   const lastFocusTimeRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const savedScrollOffsetRef = useRef(0);
+  const restorationEndTimeRef = useRef(0);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const listRef = useRef<FlatList<Card>>(null);
 
@@ -147,12 +150,29 @@ export default function DeckDetailScreen() {
         return;
       }
       lastFocusTimeRef.current = Date.now();
+      const targetOffset = savedScrollOffsetRef.current;
+      restorationEndTimeRef.current = Date.now() + 800;
       setDescExpanded(false);
-      loadCards();
+      let cancelled = false;
+      loadCards().then(() => {
+        if (cancelled) return;
+        setTimeout(() => {
+          if (!cancelled) listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
+        }, 50);
+      });
+      const tid2 = setTimeout(() => {
+        listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
+      }, 800);
       // 前の画面でソフトキーボードが残留していた場合に確実に閉じる
       Keyboard.dismiss();
       onScreenFocus();
-      return () => { onScreenBlur(); };
+      return () => {
+        clearTimeout(tid2);
+        cancelled = true;
+        restorationEndTimeRef.current = 0;
+        savedScrollOffsetRef.current = scrollOffsetRef.current;
+        onScreenBlur();
+      };
     }, [loadCards])
   );
 
@@ -557,6 +577,16 @@ export default function DeckDetailScreen() {
           data={displayedCards}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          onScrollOffsetChange={(offset) => {
+            scrollOffsetRef.current = offset;
+            if (
+              Date.now() < restorationEndTimeRef.current &&
+              savedScrollOffsetRef.current > 50 &&
+              offset < savedScrollOffsetRef.current - 30
+            ) {
+              listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+            }
+          }}
           ListHeaderComponent={ListHeader}
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }} />}
           ListEmptyComponent={

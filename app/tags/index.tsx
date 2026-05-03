@@ -47,6 +47,9 @@ export default function TagsScreen() {
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
   const lastFocusTimeRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const savedScrollOffsetRef = useRef(0);
+  const restorationEndTimeRef = useRef(0);
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled, tagSortOrder, setTagSortOrder } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
@@ -84,9 +87,27 @@ export default function TagsScreen() {
   useFocusEffect(
     useCallback(() => {
       lastFocusTimeRef.current = Date.now();
-      getAllTags(db).then(setTags);
+      const targetOffset = savedScrollOffsetRef.current;
+      restorationEndTimeRef.current = Date.now() + 800;
+      let cancelled = false;
+      getAllTags(db).then((loadedTags) => {
+        if (cancelled) return;
+        setTags(loadedTags);
+        setTimeout(() => {
+          if (!cancelled) (listRef.current as any)?.scrollToOffset({ offset: targetOffset, animated: false });
+        }, 50);
+      });
+      const tid2 = setTimeout(() => {
+        (listRef.current as any)?.scrollToOffset({ offset: targetOffset, animated: false });
+      }, 800);
       onScreenFocus();
-      return () => { onScreenBlur(); };
+      return () => {
+        clearTimeout(tid2);
+        cancelled = true;
+        restorationEndTimeRef.current = 0;
+        savedScrollOffsetRef.current = scrollOffsetRef.current;
+        onScreenBlur();
+      };
     }, [db, onScreenFocus, onScreenBlur])
   );
 
@@ -199,6 +220,16 @@ export default function TagsScreen() {
           data={sortedTags}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          onScrollOffsetChange={(offset) => {
+            scrollOffsetRef.current = offset;
+            if (
+              Date.now() < restorationEndTimeRef.current &&
+              savedScrollOffsetRef.current > 50 &&
+              offset < savedScrollOffsetRef.current - 30
+            ) {
+              (listRef.current as any)?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+            }
+          }}
           onDragEnd={({ data }) => {
             reorderTags(data);
             updateTagSortOrders(db, data.map((t) => t.id));

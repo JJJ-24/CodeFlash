@@ -4,6 +4,20 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { ExportData } from './export';
 
 const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
+const CHUNK = 500;
+
+async function bulkInsert(
+  db: SQLiteDatabase,
+  baseStmt: string,
+  rows: (string | number | null)[][],
+): Promise<void> {
+  if (rows.length === 0) return;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const placeholders = chunk.map((row) => `(${row.map(() => '?').join(',')})` ).join(',');
+    await db.runAsync(`${baseStmt} ${placeholders}`, chunk.flat());
+  }
+}
 
 export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 'merge' | 'replace' = 'merge'): Promise<void> {
   const json = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' });
@@ -34,88 +48,91 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
       await db.runAsync('DELETE FROM tags');
     }
 
-    for (const deck of data.decks) {
-      await db.runAsync(
-        'INSERT OR REPLACE INTO decks (id, name, description, language, cardCount, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          deck.id as string,
-          deck.name as string,
-          (deck.description as string) ?? '',
-          (deck.language as string) ?? 'ja',
-          (deck.cardCount as number) ?? 0,
-          (deck.sortOrder as number) ?? 0,
-          deck.createdAt as string,
-          deck.updatedAt as string,
-        ]
-      );
-    }
+    await bulkInsert(
+      db,
+      'INSERT OR REPLACE INTO decks (id,name,description,language,cardCount,sortOrder,createdAt,updatedAt) VALUES',
+      data.decks.map((d) => [
+        d.id as string,
+        d.name as string,
+        (d.description as string) ?? '',
+        (d.language as string) ?? 'ja',
+        (d.cardCount as number) ?? 0,
+        (d.sortOrder as number) ?? 0,
+        d.createdAt as string,
+        d.updatedAt as string,
+      ])
+    );
 
-    for (const card of data.cards) {
-      await db.runAsync(
-        'INSERT OR REPLACE INTO cards (id, deckId, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)',
-        [
-          card.id as string,
-          card.deckId as string,
-          (card.sortOrder as number) ?? 0,
-          card.createdAt as string,
-          card.updatedAt as string,
-        ]
-      );
-      await db.runAsync(
-        'INSERT OR REPLACE INTO card_contents (cardId, frontContent, backContent, memoContent) VALUES (?, ?, ?, ?)',
-        [
-          card.id as string,
-          (card.frontContent as string) ?? '[]',
-          (card.backContent as string) ?? '[]',
-          (card.memoContent as string) ?? '[]',
-        ]
-      );
-    }
+    await bulkInsert(
+      db,
+      'INSERT OR REPLACE INTO cards (id,deckId,sortOrder,createdAt,updatedAt) VALUES',
+      data.cards.map((c) => [
+        c.id as string,
+        c.deckId as string,
+        (c.sortOrder as number) ?? 0,
+        c.createdAt as string,
+        c.updatedAt as string,
+      ])
+    );
 
-    for (const tag of data.tags) {
-      await db.runAsync(
-        'INSERT OR REPLACE INTO tags (id, name, color, sortOrder, createdAt) VALUES (?, ?, ?, ?, ?)',
-        [
-          tag.id as string,
-          tag.name as string,
-          (tag.color as string) ?? '#888888',
-          (tag.sortOrder as number) ?? 0,
-          tag.createdAt as string,
-        ]
-      );
-    }
+    await bulkInsert(
+      db,
+      'INSERT OR REPLACE INTO card_contents (cardId,frontContent,backContent,memoContent) VALUES',
+      data.cards.map((c) => [
+        c.id as string,
+        (c.frontContent as string) ?? '[]',
+        (c.backContent as string) ?? '[]',
+        (c.memoContent as string) ?? '[]',
+      ])
+    );
 
-    for (const ct of data.card_tags) {
-      await db.runAsync(
-        'INSERT OR IGNORE INTO card_tags (cardId, tagId) VALUES (?, ?)',
-        [ct.cardId, ct.tagId]
-      );
-    }
+    await bulkInsert(
+      db,
+      'INSERT OR REPLACE INTO tags (id,name,color,sortOrder,createdAt) VALUES',
+      data.tags.map((t) => [
+        t.id as string,
+        t.name as string,
+        (t.color as string) ?? '#888888',
+        (t.sortOrder as number) ?? 0,
+        t.createdAt as string,
+      ])
+    );
 
-    for (const review of data.reviews) {
-      await db.runAsync(
-        'INSERT OR REPLACE INTO reviews (cardId, easeFactor, interval, repetitions, nextReviewDate, lastReviewDate, lastGrade) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [
-          review.cardId as string,
-          (review.easeFactor as number) ?? 2.5,
-          (review.interval as number) ?? 0,
-          (review.repetitions as number) ?? 0,
-          review.nextReviewDate as string,
-          review.lastReviewDate as string,
-          (review.lastGrade as number) ?? 2,
-        ]
-      );
-    }
+    await bulkInsert(
+      db,
+      'INSERT OR IGNORE INTO card_tags (cardId,tagId) VALUES',
+      data.card_tags.map((ct) => [ct.cardId, ct.tagId])
+    );
 
-    for (const log of (data.review_logs ?? [])) {
-      await db.runAsync(
-        // replace: 全削除済みなので OR REPLACE、merge: 既存日付は維持するため OR IGNORE
-        mode === 'replace'
-          ? 'INSERT OR REPLACE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)'
-          : 'INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)',
-        [log.cardId, log.reviewedDate]
-      );
-    }
+    // FSRS カラムを含めて全件インポート（旧エクスポートでは該当フィールドが undefined → null で挿入）
+    await bulkInsert(
+      db,
+      'INSERT OR REPLACE INTO reviews (cardId,easeFactor,interval,repetitions,nextReviewDate,lastReviewDate,lastGrade,stability,difficulty,fsrsState,fsrsReps,fsrsLapses,fsrsScheduledDays) VALUES',
+      data.reviews.map((r) => [
+        r.cardId as string,
+        (r.easeFactor as number) ?? 2.5,
+        (r.interval as number) ?? 0,
+        (r.repetitions as number) ?? 0,
+        r.nextReviewDate as string,
+        r.lastReviewDate as string,
+        (r.lastGrade as number) ?? 2,
+        (r.stability as number | undefined) ?? null,
+        (r.difficulty as number | undefined) ?? null,
+        (r.fsrsState as number | undefined) ?? null,
+        (r.fsrsReps as number | undefined) ?? null,
+        (r.fsrsLapses as number | undefined) ?? null,
+        (r.fsrsScheduledDays as number | undefined) ?? null,
+      ])
+    );
+
+    const logStmt = mode === 'replace'
+      ? 'INSERT OR REPLACE INTO review_logs (cardId,reviewedDate) VALUES'
+      : 'INSERT OR IGNORE INTO review_logs (cardId,reviewedDate) VALUES';
+    await bulkInsert(
+      db,
+      logStmt,
+      (data.review_logs ?? []).map((l) => [l.cardId, l.reviewedDate])
+    );
   });
 
   // 画像データが含まれる場合はファイルとして書き出す

@@ -3,8 +3,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { getCardsByDeckId, createCard, updateCard } from '@/lib/database/cards';
-import { createTag, addTagToCard, getTagRowsByDeckId } from '@/lib/database/tags';
+import { getCardsByDeckId, updateCard } from '@/lib/database/cards';
+import { generateId } from '@/lib/database/utils';
+import { createTag, getTagRowsByDeckId } from '@/lib/database/tags';
 import type { Block, TextBlock } from '@/types';
 
 const PRESET_COLORS = [
@@ -93,15 +94,27 @@ export async function pickTsvFile(): Promise<string | null> {
   return result.assets[0].uri;
 }
 
+// バルクインポート用の中間データ型
+type ParsedCard = {
+  id: string;
+  front: string;
+  back: string;
+  memo: string;
+  tagsRaw: string;
+  isUpdate: boolean;
+};
+
+const BULK_CHUNK = 500;
+
 export async function importTsv(db: SQLiteDatabase, fileUri: string, deckId: string): Promise<{ created: number; updated: number }> {
   const raw = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' });
   const lines = raw.split('\n').filter((l) => l.trim() !== '');
 
   // ヘッダー行の検出と列構成の判定
-  let start = 0;
-  let hasIdColumn = false;
   // ID列あり: cols[0]=id, cols[1]=front, cols[2]=back, cols[3]=memo, cols[4]=tags
   // ID列なし: cols[0]=front, cols[1]=back, cols[2]=tags
+  let start = 0;
+  let hasIdColumn = false;
   const tagsColWithId = 4;
   const tagsColNoId = 2;
 
@@ -119,61 +132,130 @@ export async function importTsv(db: SQLiteDatabase, fileUri: string, deckId: str
   const existingCardIds = new Set<string>();
   if (hasIdColumn) {
     const existingCards = await getCardsByDeckId(db, deckId);
-    for (const card of existingCards) {
-      existingCardIds.add(card.id);
-    }
+    for (const card of existingCards) existingCardIds.add(card.id);
   }
 
-  const tagCache = new Map<string, string>();
-
+  // --- フェーズ1: 全行をJSでパース（DB呼び出しゼロ） ---
   const toBlocks = (text: string): TextBlock[] =>
     text ? [{ type: 'text', content: text }] : [];
 
-  let created = 0;
-  let updated = 0;
+  const parsedCards: ParsedCard[] = [];
   for (let i = start; i < lines.length; i++) {
     const cols = lines[i].split('\t');
-
     if (hasIdColumn) {
-      const id = cols[0]?.trim() ?? '';
       const front = unescape(cols[1] ?? '').trim();
-      const back = unescape(cols[2] ?? '').trim();
-      const memo = unescape(cols[3] ?? '').trim();
-      const tagsRaw = cols[tagsColWithId] ?? '';
       if (!front) continue;
-
-      let cardId: string;
-      if (id && existingCardIds.has(id)) {
-        await updateCard(db, id, {
-          frontContent: toBlocks(front),
-          backContent: toBlocks(back),
-          memoContent: toBlocks(memo),
-        });
-        cardId = id;
-        updated++;
-      } else {
-        const card = await createCard(db, { deckId, frontContent: toBlocks(front), backContent: toBlocks(back), memoContent: toBlocks(memo) });
-        cardId = card.id;
-        created++;
-      }
-      for (const name of parseTagNames(tagsRaw)) {
-        const tagId = await resolveOrCreateTag(db, name, tagCache);
-        await addTagToCard(db, cardId, tagId);
-      }
+      const existingId = cols[0]?.trim() ?? '';
+      parsedCards.push({
+        id: (existingId && existingCardIds.has(existingId)) ? existingId : generateId(),
+        front,
+        back: unescape(cols[2] ?? '').trim(),
+        memo: unescape(cols[3] ?? '').trim(),
+        tagsRaw: cols[tagsColWithId] ?? '',
+        isUpdate: !!(existingId && existingCardIds.has(existingId)),
+      });
     } else {
-      // ID列なし（Anki・手作りTSV）: 常に新規作成
       const front = unescape(cols[0] ?? '').trim();
-      const back = unescape(cols[1] ?? '').trim();
-      const tagsRaw = cols[tagsColNoId] ?? '';
       if (!front) continue;
-
-      const card = await createCard(db, { deckId, frontContent: toBlocks(front), backContent: toBlocks(back), memoContent: [] });
-      created++;
-      for (const name of parseTagNames(tagsRaw)) {
-        const tagId = await resolveOrCreateTag(db, name, tagCache);
-        await addTagToCard(db, card.id, tagId);
-      }
+      parsedCards.push({
+        id: generateId(),
+        front,
+        back: unescape(cols[1] ?? '').trim(),
+        memo: '',
+        tagsRaw: cols[tagsColNoId] ?? '',
+        isUpdate: false,
+      });
     }
   }
+
+  // --- フェーズ2: タグ名を事前解決（createTag は外側で済ませる） ---
+  const tagCache = new Map<string, string>();
+  const allTagNames = new Set<string>();
+  for (const card of parsedCards) {
+    for (const name of parseTagNames(card.tagsRaw)) allTagNames.add(name);
+  }
+  for (const name of allTagNames) {
+    await resolveOrCreateTag(db, name, tagCache);
+  }
+
+  // --- フェーズ3: 現在の最大 sortOrder を1回だけ取得 ---
+  const orderRow = await db.getFirstAsync<{ maxOrder: number | null }>(
+    'SELECT MAX(sortOrder) as maxOrder FROM cards WHERE deckId = ?', [deckId]
+  );
+  let nextSortOrder = (orderRow?.maxOrder ?? 0) + 1;
+
+  const now = new Date().toISOString();
+  let created = 0;
+  let updated = 0;
+
+  // --- フェーズ4: 全INSERT/UPDATEを1トランザクション + Multi-row INSERT ---
+  await db.withTransactionAsync(async () => {
+    const creates = parsedCards.filter((c) => !c.isUpdate);
+    const updates = parsedCards.filter((c) => c.isUpdate);
+
+    // 新規カード: Multi-row INSERT で BULK_CHUNK 件ずつまとめて挿入
+    for (let i = 0; i < creates.length; i += BULK_CHUNK) {
+      const chunk = creates.slice(i, i + BULK_CHUNK);
+      const cardPlaceholders = chunk.map(() => '(?,?,?,?,?)').join(',');
+      const cardParams: (string | number)[] = [];
+      const contentPlaceholders = chunk.map(() => '(?,?,?,?)').join(',');
+      const contentParams: string[] = [];
+
+      for (const card of chunk) {
+        cardParams.push(card.id, deckId, nextSortOrder++, now, now);
+        contentParams.push(
+          card.id,
+          JSON.stringify(toBlocks(card.front)),
+          JSON.stringify(toBlocks(card.back)),
+          card.memo ? JSON.stringify(toBlocks(card.memo)) : '[]',
+        );
+      }
+
+      await db.runAsync(
+        `INSERT INTO cards (id,deckId,sortOrder,createdAt,updatedAt) VALUES ${cardPlaceholders}`,
+        cardParams
+      );
+      await db.runAsync(
+        `INSERT INTO card_contents (cardId,frontContent,backContent,memoContent) VALUES ${contentPlaceholders}`,
+        contentParams
+      );
+      created += chunk.length;
+    }
+
+    // 更新カード: 件数が少ない想定なので個別UPDATE
+    for (const card of updates) {
+      await updateCard(db, card.id, {
+        frontContent: toBlocks(card.front),
+        backContent: toBlocks(card.back),
+        memoContent: toBlocks(card.memo),
+      });
+      updated++;
+    }
+
+    // card_tags: Multi-row INSERT で一括挿入
+    const cardTagPairs: { cardId: string; tagId: string }[] = [];
+    for (const card of parsedCards) {
+      for (const name of parseTagNames(card.tagsRaw)) {
+        const tagId = tagCache.get(name);
+        if (tagId) cardTagPairs.push({ cardId: card.id, tagId });
+      }
+    }
+    for (let i = 0; i < cardTagPairs.length; i += BULK_CHUNK) {
+      const chunk = cardTagPairs.slice(i, i + BULK_CHUNK);
+      const placeholders = chunk.map(() => '(?,?)').join(',');
+      const params = chunk.flatMap((p) => [p.cardId, p.tagId]);
+      await db.runAsync(
+        `INSERT OR IGNORE INTO card_tags (cardId,tagId) VALUES ${placeholders}`,
+        params
+      );
+    }
+
+    // デッキ件数を最後に1回だけ更新
+    await db.runAsync(
+      'UPDATE decks SET cardCount=(SELECT COUNT(*) FROM cards WHERE deckId=?),updatedAt=? WHERE id=?',
+      [deckId, now, deckId]
+    );
+  });
+
   return { created, updated };
 }

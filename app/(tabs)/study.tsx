@@ -111,7 +111,12 @@ export default function StudyScreen() {
       return;
     }
     const ref = activeTab === 'decks' ? deckListRef : tagListRef;
-    ref.current?.scrollToIndex({ index: focusedItemIndex, animated: true, viewPosition: 0.5 });
+    const idx = focusedItemIndex;
+    // FlatList がネイティブ側でデータを更新し終えてからスクロールするため1ティック遅延
+    const timer = setTimeout(() => {
+      ref.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+    }, 0);
+    return () => clearTimeout(timer);
   }, [focusedItemIndex, activeTab]);
 
   useEffect(() => {
@@ -160,6 +165,7 @@ export default function StudyScreen() {
         setLoading(false);
       })();
       return () => { onScreenBlur(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [db, initialFilterPreference])
   );
 
@@ -290,7 +296,6 @@ export default function StudyScreen() {
     if (id == null) return;
     const newIdx = visibleDecks.findIndex(d => d.id === id);
     setFocusedItemIndex(newIdx === -1 ? null : newIdx);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleDecks]);
 
   // ソート・フィルター変更後もフォーカスを同じタグに維持

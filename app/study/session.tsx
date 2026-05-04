@@ -270,6 +270,13 @@ export default function StudySessionScreen() {
       setKeyboardInputKey((k) => k + 1);
     }
   }, []);
+  const handleCodeRunComplete = useCallback(() => {
+    // WebView 実行完了直後に iOS がネイティブレベルでステータスバー状態を
+    // 変化させる場合があるため、hidden=true を命令型 API で再アサートする
+    if (isScreenFocusedRef.current) {
+      expoSetStatusBarHidden(true, 'none');
+    }
+  }, []);
   /**
    * onSelectCodeBlock ファクトリ
    * - side: 選択されたブロックの面（null = 変更しない）
@@ -904,6 +911,7 @@ export default function StudySessionScreen() {
                 ? cbs.selectedCodeBlockIdx
                 : null
             }
+            onCodeRunStart={handleCodeRunComplete}
             exitAllEditTrigger={memoExitAllEditTrigger}
             scrollRef={backScrollRef}
             scrollBaseYRef={memoScrollBaseYRef}
@@ -1085,6 +1093,7 @@ export default function StudySessionScreen() {
                         selectedCodeBlockIdx={
                           !isFlipped ? cbs.selectedCodeBlockIdx : null
                         }
+                        onCodeRunStart={handleCodeRunComplete}
                         scrollRef={frontScrollRef}
                       />
                     </ScrollView>
@@ -1131,6 +1140,7 @@ export default function StudySessionScreen() {
                             ? cbs.selectedCodeBlockIdx
                             : null
                         }
+                        onCodeRunStart={handleCodeRunComplete}
                         exitAllEditTrigger={backExitAllEditTrigger}
                         scrollRef={backScrollRef}
                       />
@@ -1333,6 +1343,7 @@ export default function StudySessionScreen() {
                       selectedCodeBlockIdx={
                         !isFlipped ? cbs.selectedCodeBlockIdx : null
                       }
+                      onCodeRunStart={handleCodeRunComplete}
                       scrollRef={frontScrollRef}
                     />
                   </ScrollView>
@@ -1379,6 +1390,7 @@ export default function StudySessionScreen() {
                           ? cbs.selectedCodeBlockIdx
                           : null
                       }
+                      onCodeRunStart={handleCodeRunComplete}
                       exitAllEditTrigger={backExitAllEditTrigger}
                       scrollRef={backScrollRef}
                     />

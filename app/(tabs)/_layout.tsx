@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useFocusEffect, useRouter } from 'expo-router';
+import { Tabs, useFocusEffect } from 'expo-router';
 import { setStatusBarHidden } from 'expo-status-bar';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -16,12 +16,12 @@ function TabIcon({ name, color, size }: { name: IoniconsName; color: string; siz
 export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
-  const router = useRouter();
 
-  // 学習セッション等でステータスバーが非表示になった後、タブに戻るたびに確実に復元する
+  // 学習セッション等でステータスバーが非表示になった後、タブに戻るたびに確実に復元する。
+  // ホーム画面は useFocusEffect 内で多段タイマー復元も行うため、ここは他タブ向けのフォールバック。
   useFocusEffect(
     useCallback(() => {
-      setStatusBarHidden(false, 'fade');
+      setStatusBarHidden(false, 'none');
     }, [])
   );
 
@@ -41,17 +41,10 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('tabs.home'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.home')}</Text>,
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="home-outline" color={color} size={size} />
           ),
-          headerTitleAlign: 'center',
-          headerLeft: () => (
-            <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
-              <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
-            </Pressable>
-          ),
-          headerLeftContainerStyle: { paddingLeft: 8 },
         }}
       />
       <Tabs.Screen

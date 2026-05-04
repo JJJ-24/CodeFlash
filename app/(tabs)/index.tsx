@@ -1,6 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { setStatusBarHidden } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { EmptyState } from '@/components/EmptyState';
@@ -24,7 +26,6 @@ import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
@@ -122,8 +123,7 @@ export default function HomeScreen() {
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
   const restorationEndTimeRef = useRef(0);
-
-  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
+  const isFocusedRef = useRef(false);
 
   useEffect(() => {
     getAllDecks(db).then(setDecks);
@@ -131,6 +131,14 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      isFocusedRef.current = true;
+      // WKWebView がネイティブクリーンアップ時に iOS ステータスバー状態を上書きするため、
+      // フォーカス直後から複数タイミングで復元して確実に打ち勝つ。
+      // insets.top 監視ではノッチ/Dynamic Island iPhone でステータスバーを隠しても
+      // insets.top が変化しないため機能しない。
+      setStatusBarHidden(false, 'none');
+      const sbTid1 = setTimeout(() => { if (isFocusedRef.current) setStatusBarHidden(false, 'none'); }, 200);
+      const sbTid2 = setTimeout(() => { if (isFocusedRef.current) setStatusBarHidden(false, 'none'); }, 550);
       const targetOffset = savedScrollOffsetRef.current;
       restorationEndTimeRef.current = Date.now() + 800;
       const tid1 = setTimeout(() => {
@@ -138,6 +146,9 @@ export default function HomeScreen() {
       }, 50);
       onScreenFocus();
       return () => {
+        isFocusedRef.current = false;
+        clearTimeout(sbTid1);
+        clearTimeout(sbTid2);
         clearTimeout(tid1);
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
@@ -145,6 +156,9 @@ export default function HomeScreen() {
       };
     }, [onScreenFocus, onScreenBlur])
   );
+
+  const insets = useSafeAreaInsets();
+  const initialTopInsetRef = useRef(insets.top);
 
   async function handleDelete(id: string) {
     await deleteDeck(db, id);
@@ -272,6 +286,24 @@ export default function HomeScreen() {
         onSubmitEditing={handleSubmitEditing}
         onBlur={onInputBlur}
       />
+      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+          <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
+            <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
+          </Pressable>
+          <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', pointerEvents: 'none' }}>
+            <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('tabs.home')}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }} />
+          {keyboardShortcutsEnabled && (
+            <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
+              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+            </Pressable>
+          )}
+        </View>
+      </View>
       <Pressable style={{ flex: 1 }} onPress={() => setFocusedDeckIndex(null)}>
         <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
           {StatsHeader}

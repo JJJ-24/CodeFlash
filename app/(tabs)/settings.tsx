@@ -135,20 +135,17 @@ export default function SettingsScreen() {
     }
   }
 
-  async function handleExportWithImages() {
+  async function doExportWithSizeCheck(includeImages: boolean) {
     try {
       setLoading(true);
-      const sizeBytes = await estimateExportSize(db, true);
+      const sizeBytes = await estimateExportSize(db, includeImages);
       setLoading(false);
-      const WARN_BYTES = 10 * 1024 * 1024;
-      const PERF_WARN_BYTES = 50 * 1024 * 1024;
+      const WARN_BYTES = 80 * 1024 * 1024;
       const sizeMB = (sizeBytes / 1024 / 1024).toFixed(1);
-      if (sizeBytes > PERF_WARN_BYTES) {
-        setModal({ kind: 'confirm', title: t('dataManagement.exportLargeSizeTitle'), message: t('dataManagement.exportPerfWarnMessage', { size: sizeMB }), actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); doExport(true); } }] });
-      } else if (sizeBytes > WARN_BYTES) {
-        setModal({ kind: 'confirm', title: t('dataManagement.exportLargeSizeTitle'), message: t('dataManagement.exportLargeSizeMessage', { size: sizeMB }), actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); doExport(true); } }] });
+      if (sizeBytes > WARN_BYTES) {
+        setModal({ kind: 'confirm', title: t('dataManagement.exportLargeSizeTitle'), message: t('dataManagement.exportLargeSizeMessage', { size: sizeMB }), actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); doExport(includeImages); } }] });
       } else {
-        await doExport(true);
+        await doExport(includeImages);
       }
     } catch {
       setLoading(false);
@@ -162,8 +159,8 @@ export default function SettingsScreen() {
       title: t('dataManagement.exportImageTitle'),
       message: t('dataManagement.exportImageMessage'),
       actions: [
-        { label: t('dataManagement.exportWithImages'), onPress: () => { setModal(null); handleExportWithImages(); } },
-        { label: t('dataManagement.exportWithoutImages'), onPress: () => { setModal(null); doExport(false); } },
+        { label: t('dataManagement.exportWithImages'), onPress: () => { setModal(null); doExportWithSizeCheck(true); } },
+        { label: t('dataManagement.exportWithoutImages'), onPress: () => { setModal(null); doExportWithSizeCheck(false); } },
       ],
     });
   }

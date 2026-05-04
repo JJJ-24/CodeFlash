@@ -389,7 +389,7 @@ export default function StudyScreen() {
           >
             <Ionicons
               name="funnel-outline"
-              size={theme.fontSize.xl}
+              size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
               color={hideEmpty ? theme.colors.primaryText : theme.colors.textSecondary}
             />
           </Pressable>
@@ -403,7 +403,7 @@ export default function StudyScreen() {
           >
             <Ionicons
               name="shuffle-outline"
-              size={theme.fontSize.xl}
+              size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
               color={shuffleEnabled ? theme.colors.primaryText : theme.colors.textSecondary}
             />
           </Pressable>

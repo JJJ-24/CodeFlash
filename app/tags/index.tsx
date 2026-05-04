@@ -198,7 +198,7 @@ export default function TagsScreen() {
                   active && { backgroundColor: theme.colors.primary },
                 ]}
               >
-                <Ionicons name={icon} size={theme.fontSize.xl} color={active ? theme.colors.primaryText : theme.colors.textSecondary} />
+                <Ionicons name={icon} size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)} color={active ? theme.colors.primaryText : theme.colors.textSecondary} />
               </Pressable>
             );
           })}

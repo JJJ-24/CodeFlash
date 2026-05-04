@@ -229,7 +229,7 @@ export default function HomeScreen() {
               >
                 <Ionicons
                   name={icon}
-                  size={theme.fontSize.xl}
+                  size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
                   color={active ? theme.colors.primaryText : theme.colors.textSecondary}
                 />
               </Pressable>

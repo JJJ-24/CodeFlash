@@ -565,7 +565,7 @@ export default function DeckDetailScreen() {
                     ]}
                     onPress={() => setCardSortOrder(key)}
                   >
-                    <Ionicons name={icon} size={theme.fontSize.lg} color={active ? '#FFF' : theme.colors.textSecondary} />
+                    <Ionicons name={icon} size={(Platform as any).isPad ? Math.max(theme.fontSize.lg, 20) : Math.max(theme.fontSize.lg, 18)} color={active ? '#FFF' : theme.colors.textSecondary} />
                   </Pressable>
                 );
               })}

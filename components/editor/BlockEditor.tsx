@@ -874,7 +874,7 @@ export function BlockEditor({
                 styles.tabText,
                 {
                   color: theme.colors.textTertiary,
-                  fontSize: theme.fontSize.md,
+                  fontSize: (Platform as any).isPad ? Math.max(theme.fontSize.lg, 18) : Math.max(theme.fontSize.md, 16),
                 },
                 activeTab === tab.key && styles.tabTextActive,
               ]}
@@ -913,7 +913,7 @@ export function BlockEditor({
               >
                 <Ionicons
                   name={icon}
-                  size={theme.fontSize.lg}
+                  size={(Platform as any).isPad ? Math.max(theme.fontSize.lg, 20) : Math.max(theme.fontSize.lg, 18)}
                   color={active ? "#FFFFFF" : theme.colors.textSecondary}
                 />
               </Pressable>

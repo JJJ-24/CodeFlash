@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs, useFocusEffect, useRouter } from 'expo-router';
+import { setStatusBarHidden } from 'expo-status-bar';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Text } from 'react-native';
 
@@ -15,6 +17,13 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
+
+  // 学習セッション等でステータスバーが非表示になった後、タブに戻るたびに確実に復元する
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarHidden(false, 'fade');
+    }, [])
+  );
 
   return (
     <Tabs

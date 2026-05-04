@@ -542,7 +542,7 @@ export default function DeckDetailScreen() {
           <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.study')}</Text>
         </TouchableOpacity>
 
-        <View style={styles.sectionTitleRow}>
+        <Pressable style={styles.sectionTitleRow} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
           <View style={styles.sectionTitleLeft}>
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {selectionMode ? t('card.selectHint') : t('card.list')}
@@ -571,7 +571,7 @@ export default function DeckDetailScreen() {
               })}
             </View>
           )}
-        </View>
+        </Pressable>
 
       </View>
 

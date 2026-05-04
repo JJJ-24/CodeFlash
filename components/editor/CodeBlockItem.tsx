@@ -48,9 +48,10 @@ interface Props {
   onEditBlur?: () => void;
   onRunButtonPress?: () => void;
   runTrigger?: number;
+  onAutoFocused?: () => void;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, onRunButtonPress, runTrigger }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -86,7 +87,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   );
 
   useEffect(() => {
-    if (autoFocus) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); }
+    if (autoFocus) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); onAutoFocused?.(); }
   }, []);
 
   useEffect(() => {

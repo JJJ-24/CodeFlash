@@ -161,6 +161,7 @@ export function BlockEditor({
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
   const [moveCount, setMoveCount] = useState(0);
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
+  const [autoFocusedKeys, setAutoFocusedKeys] = useState<Set<string>>(new Set());
   const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(
     null,
   );
@@ -983,7 +984,8 @@ export function BlockEditor({
                   }
                   onDelete={() => deleteBlock(activeTab, block._key)}
                   autoFocus={
-                    (isNewCard && index === 0) || block._key === newBlockKey
+                    !autoFocusedKeys.has(block._key) &&
+                    ((isNewCard && index === 0) || block._key === newBlockKey)
                   }
                   onMoveUp={moveUp}
                   onMoveDown={moveDown}
@@ -993,6 +995,7 @@ export function BlockEditor({
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
+                  onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
                 />
               )}
@@ -1008,10 +1011,11 @@ export function BlockEditor({
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
-                  autoFocus={block._key === newBlockKey}
+                  autoFocus={!autoFocusedKeys.has(block._key) && block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
+                  onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   runTrigger={runTriggerMap[block._key] ?? 0}
                   onRunButtonPress={() =>
                     handleCodeBlockRunButtonPress(block._key)
@@ -1040,9 +1044,10 @@ export function BlockEditor({
                   onMoveDown={moveDown}
                   collapsed={isSortMode}
                   flashTrigger={flashTrigger}
-                  autoFocus={block._key === newBlockKey}
+                  autoFocus={!autoFocusedKeys.has(block._key) && block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
                   onEditBlur={handleBlockEditBlur}
+                  onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
                 />
               )}

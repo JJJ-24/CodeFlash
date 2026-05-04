@@ -31,9 +31,11 @@ interface Props {
   editTrigger?: number;
   /** TextInput のフォーカスが外れたとき BlockEditor に通知するコールバック */
   onEditBlur?: () => void;
+  /** マウント時の autoFocus が実行されたとき BlockEditor に通知するコールバック */
+  onAutoFocused?: () => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur, onAutoFocused }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -72,7 +74,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }, [flashTrigger]);
 
   useEffect(() => {
-    if (autoFocus) { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); }
+    if (autoFocus) { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); onAutoFocused?.(); }
   }, []);
 
   useEffect(() => {

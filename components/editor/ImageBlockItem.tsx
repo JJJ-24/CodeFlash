@@ -29,9 +29,10 @@ interface Props {
   onEditBlur?: () => void;
   autoFocus?: boolean;
   isFocused?: boolean;
+  onAutoFocused?: () => void;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused, onAutoFocused }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -54,6 +55,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   useEffect(() => {
     if (autoFocus) {
       setTimeout(() => altInputRef.current?.focus(), 50);
+      onAutoFocused?.();
     }
   }, []);
 

@@ -65,9 +65,9 @@ export default function DeckDetailScreen() {
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
-  const [todayReviewed, setTodayReviewed] = useState(0);
-  const [dueCount, setDueCount] = useState(0);
-  const [unlearnedCount, setUnlearnedCount] = useState(0);
+  const [todayReviewed, setTodayReviewed] = useState<number | null>(null);
+  const [dueCount, setDueCount] = useState<number | null>(null);
+  const [unlearnedCount, setUnlearnedCount] = useState<number | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(
     () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
   );
@@ -330,14 +330,14 @@ export default function DeckDetailScreen() {
     }
   }
 
-  const filterItems: { key: FilterKey; count: number; color: string; label: string }[] = [
+  const filterItems: { key: FilterKey; count: number | null; color: string; label: string }[] = [
     { key: 'all', count: deck.cardCount, color: theme.colors.primary, label: t('common.all') },
     { key: 'learned', count: todayReviewed, color: FILTER_COLORS.learned, label: t('common.learned') },
     { key: 'review', count: dueCount, color: FILTER_COLORS.due, label: t('common.due') },
     { key: 'new', count: unlearnedCount, color: theme.colors.textSecondary, label: t('common.new') },
   ];
 
-  const filterItemMaxDigits = Math.max(...filterItems.map(f => String(f.count).length));
+  const filterItemMaxDigits = Math.max(...filterItems.map(f => f.count != null ? String(f.count).length : 1));
   const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterItemMaxDigits);
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
 
@@ -525,7 +525,7 @@ export default function DeckDetailScreen() {
                   if (initialFilterPreference === 'none') setLastDeckDetailFilter(key);
                 }}
               >
-                <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color, fontSize: filterValueFontSize }]}>{count}</Text>
+                <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color, fontSize: filterValueFontSize }]}>{count ?? '—'}</Text>
                 <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{label}</Text>
               </Pressable>
             );

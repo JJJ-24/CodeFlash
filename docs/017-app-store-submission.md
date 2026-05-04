@@ -17,7 +17,7 @@ App Store（iOS）および Google Play（Android）へのストア申請準備�
 
 ### アセット準備
 - [x] アプリアイコン（1024x1024 PNG）
-- [ ] スプラッシュスクリーン
+- [x] スプラッシュスクリーン
 - [x] App Store スクリーンショット（iPhone 6.7", 6.5", 5.5"）
 - [x] iPad スクリーンショット（Pro 12.9"）
 - [ ] Google Play スクリーンショット（スマートフォン / タブレット）
@@ -31,7 +31,7 @@ App Store（iOS）および Google Play（Android）へのストア申請準備�
 - [x] キーワード設定
 - [x] プライバシーポリシー URL
 - [x] 利用規約 URL
-- [ ] TestFlight での内部テスト
+- [x] TestFlight での内部テスト
 - [ ] App Store 審査提出
 
 ### Google Play 申請

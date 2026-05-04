@@ -235,7 +235,7 @@
     "tsvExportNoteMessage": "以下の点にご注意ください\n\n■ 学習履歴は含まれません\n■ コード・画像ブロックはテキストに変換されます（再インポートでは復元されません）",
     "importTsv": "TSV インポート",
     "tsvImportNoteTitle": "TSV インポートについて",
-    "tsvImportNoteMessage": "本アプリからエクスポートしたTSVを再インポートする場合、id 列は削除しないでください。\n削除すると既存カードへの上書きではなく、新規作成になります。",
+    "tsvImportNoteMessage": "既存カードへ上書きするには id 列を残してください。\n削除・変更すると新規カードとして追加されます。",
     "selectDeckForExport": "エクスポートするデッキを選択",
     "selectDeckForImport": "インポート先デッキを選択",
     "tsvImportSuccess": "新規 {{created}} 枚\n更新 {{updated}} 枚\nをインポートしました",

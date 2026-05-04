@@ -28,7 +28,7 @@ npm run lint
 ```
 app/                     # Expo Router ルート（ファイル = 画面）
 ├── _layout.tsx          # ルートレイアウト: SQLiteProvider + Stack 登録
-├── search.tsx           # カード全文検索画面（全デッキ横断、frontContent LIKE 検索）
+├── search.tsx           # カード全文検索画面（全デッキ横断、フィールド別検索: all/front/back/memo）
 └── (tabs)/              # タブグループ（URLに影響しない透過グループ）
     ├── _layout.tsx      # タブバー定義（ホーム / 学習 / 統計 / 設定）
     ├── index.tsx        # ホーム画面（デッキ一覧）
@@ -39,7 +39,7 @@ app/                     # Expo Router ルート（ファイル = 画面）
 lib/
 ├── database/            # SQLite CRUD 関数（entity ごとにファイル分離）
 │   ├── schema.ts        # テーブル定義 + migrateDbIfNeeded()
-│   ├── utils.ts         # generateId()・todayISO()・localDateStr() の共通ユーティリティ
+│   ├── utils.ts         # generateId()・todayISO()・todayLocalRange()・localDateStr() の共通ユーティリティ
 │   ├── decks.ts         # Deck CRUD
 │   ├── cards.ts         # Card CRUD（JSON シリアライズ含む）
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
@@ -72,7 +72,7 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 ├── tags.ts              # useTagStore
 ├── reviews.ts           # useReviewStore（学習セッション状態）
 ├── theme.ts             # useThemeStore（preference: 'light'|'dark'|'system'、AsyncStorage永続化）
-└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastSelectedCodeLanguage・deckSortOrder・通知設定、AsyncStorage永続化）
+└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastSelectedCodeLanguage・deckSortOrder・tagSortOrder・cardSortOrder・shuffleEnabled・lastSearchField・通知設定、AsyncStorage永続化）
 
 components/
 ├── code/
@@ -81,10 +81,13 @@ components/
 │   └── BlockItemHeader.tsx  # ブロックの共通ヘッダー（並び替えハンドル・削除ボタン）。各 *BlockItem が使用
 ├── stats/
 │   └── ActivityHeatmap.tsx  # 学習履歴ヒートマップ（草グラフ）。weeks props で表示週数を制御
-├── study/               # FlipCard（reanimated）, BlocksView, CodeRunnerView, SyntaxHighlightedCode, ZoomableImage, LinksSheet
-├── DeckPickerModal.tsx  # デッキ選択モーダル（タグカード一覧・カード移動で共用）
-├── EmptyState.tsx       # 空状態表示（アイコン＋タイトル＋サブタイトル）
-└── HiddenKeyboardInput.tsx  # Bluetooth キーボード入力用 hidden TextInput（ascii-capable 固定）
+├── study/               # FlipCard（reanimated）, BlocksView, CodeRunnerView, SyntaxHighlightedCode, ZoomableImage, LinksSheet, ShortcutsModal
+├── ConfirmDeleteModal.tsx  # 削除確認モーダル（単一メッセージ + 確認/キャンセル）
+├── ConfirmModal.tsx        # 汎用確認モーダル（複数アクション対応）
+├── InfoModal.tsx           # 情報表示モーダル（OK のみ）
+├── DeckPickerModal.tsx     # デッキ選択モーダル（タグカード一覧・カード移動で共用）
+├── EmptyState.tsx          # 空状態表示（アイコン＋タイトル＋サブタイトル）
+└── HiddenKeyboardInput.tsx # Bluetooth キーボード入力用 hidden TextInput（ascii-capable 固定）
 
 hooks/
 ├── useStudySession.ts        # 学習セッション管理（キュー管理・FSRS連携・finishSession）
@@ -165,13 +168,13 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 #### DB・データ操作
 
-- **`lib/database/utils.ts`**: `generateId()`・`todayISO()`・`localDateStr(d: Date)` をエクスポート。DB ファイルだけでなく UI コンポーネントからも import して使用する。日付集計は `toISOString().slice(0,10)` が UTC 日付を返すため、ローカル日付が必要な箇所は `localDateStr()` を使う。
+- **`lib/database/utils.ts`**: `generateId()`・`todayISO()`・`todayLocalRange()`・`localDateStr(d: Date)` をエクスポート。DB ファイルだけでなく UI コンポーネントからも import して使用する。日付範囲クエリ（当日作成・当日学習済み判定など）は `todayLocalRange()` が返す `{ start, end }` を使う（`toISOString()` は UTC を返すためローカル日付がずれる）。
 - **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` / `review_logs` を明示的に先に削除する
 - **グレード対応**: `grade 0` = もう一度(again), `1` = うろ覚え(hard), `2` = わかった(good), `3` = バッチリ(easy)。型は `lib/sm2.ts` の `Grade = 0 | 1 | 2 | 3`。実際の次回復習日計算は `lib/fsrs.ts` の `calculateNextReviewFSRS()` が `ts-fsrs` ライブラリを使って行う（SM-2 ではなく FSRS アルゴリズム）。
 - **`getDeckMasteryList` の戻り値**: `avgEase: number | null`（未学習デッキは NULL）・`learnedCount: number`・`newCount: number`（未学習枚数）を返す。`LEFT JOIN` で未学習デッキも含む。`masteryPercent()` は `avgEase == null` のとき 0 を返す。統計画面の `MasteryItem` 型も `avgEase: number | null` で定義。
 - **「新規」フィルターの意味**: 学習タブ・カード一覧・統計タブの「新規」ブロックは「今日作成したカード数」を表す。学習してもカウントは減らず、翌日に 0 にリセットされる。実際のクエリは `getTodayCreatedCardIdsByDeckId` を使う。
 - **エクスポート/インポート**: `lib/export.ts` と `lib/import.ts` が JSON 形式、`lib/tsv.ts` が TSV 形式を担当。`review_logs` テーブルも含めて全テーブルをエクスポートする。インポートは `merge`（`INSERT OR IGNORE`）と `replace`（全削除後に挿入）の2モード。
-- **カード全文検索**: `app/search.tsx` はホーム画面ヘッダーの検索アイコンから遷移。`searchCards(db, query)` が `frontContent LIKE ?` で検索（JSON文字列のまま LIKE 可能）し `ORDER BY updatedAt DESC LIMIT 100`。クエリ変更ごとにリアルタイム検索。結果タップで `/deck/[id]/card/[cardId]/edit` へ遷移。
+- **カード全文検索**: `app/search.tsx` はホーム画面ヘッダーの検索アイコンから遷移。`searchCards(db, query, field)` が指定フィールド（`SearchField = 'all' | 'front' | 'back' | 'memo'`）を LIKE 検索（JSON文字列のまま LIKE 可能）し `ORDER BY updatedAt DESC LIMIT 100`。選択中フィールドは `useSettingsStore` の `lastSearchField` に AsyncStorage 永続化。クエリ変更ごとにリアルタイム検索。結果タップで `/deck/[id]/card/[cardId]/edit` へ遷移。
 - **カード複製**: `lib/database/cards.ts` の `duplicateCard(db, cardId)` が元カードの内容・タグを複製して新カードを作成。カード一覧の選択モードバーの複製ボタン（`copy-outline`）から呼び出す。
 
 #### テーマ・UI スタイル

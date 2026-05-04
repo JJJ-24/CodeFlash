@@ -660,7 +660,7 @@ export default function DeckDetailScreen() {
                     color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
                   />
                 )}
-                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {preview || t('card.noText')}
                 </Text>
                 {!selectionMode && (

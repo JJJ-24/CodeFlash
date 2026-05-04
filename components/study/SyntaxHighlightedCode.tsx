@@ -24,7 +24,7 @@ export function SyntaxHighlightedCode({ code, language }: Props) {
   const tokens = useMemo(() => tokenize(code, language), [code, language]);
 
   return (
-    <Text style={[styles.base, { fontSize: theme.fontSize.md, lineHeight: theme.fontSize.md * 1.5 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+    <Text style={[styles.base, { fontSize: theme.fontSize.lg, lineHeight: theme.fontSize.lg * 1.5 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
       {tokens.map((token, idx) => (
         <Text key={idx} style={{ color: TOKEN_COLORS[token.type] }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {token.text}

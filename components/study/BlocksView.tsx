@@ -198,19 +198,23 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   }
 
   const markdownStyles = useMemo(() => ({
-    body: { fontSize: theme.fontSize.md, color: theme.colors.text, lineHeight: theme.fontSize.md * 1.5 },
-    heading1: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
-    heading2: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 6 },
+    body: { fontSize: theme.fontSize.lg, color: theme.colors.text, lineHeight: theme.fontSize.lg * 1.5 },
+    heading1: { fontSize: theme.fontSize.xxl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
+    heading2: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 6 },
+    heading3: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+    heading4: { fontSize: theme.fontSize.md, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+    heading5: { fontSize: theme.fontSize.sm, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+    heading6: { fontSize: theme.fontSize.xs, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
     strong: { fontWeight: 'bold' as const },
     em: { fontStyle: 'italic' as const },
     code_inline: {
       backgroundColor: theme.dark ? '#2C2C2C' : '#F0F0F0',
       fontFamily: 'monospace',
-      fontSize: theme.fontSize.sm,
+      fontSize: theme.fontSize.md,
       color: theme.colors.danger,
     },
-    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: theme.fontSize.sm },
-    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: '#1E1E1E' },
+    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: theme.fontSize.md },
+    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.md, color: '#D4D4D4', backgroundColor: '#1E1E1E' },
     link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
     blockquote: {
       backgroundColor: theme.dark ? '#2A2A2A' : '#F0F0F0',

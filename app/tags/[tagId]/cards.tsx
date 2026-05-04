@@ -211,7 +211,7 @@ export default function TagCardsScreen() {
                 }}
               >
                 <Text
-                  style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                  style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
                   numberOfLines={2}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >

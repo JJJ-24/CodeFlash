@@ -145,7 +145,6 @@
     "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）"
   },
   "common": {
-    "create": "作成",
     "save": "保存",
     "cancel": "キャンセル",
     "showMore": "もっと見る",
@@ -164,7 +163,7 @@
     "memo": "メモ",
     "cardsCount": "{{count}} 枚",
     "discardChanges": "変更内容があります",
-    "discard": "保存せずに閉じる"
+    "discard": "保存しない"
   },
   "editor": {
     "deleteBlock": "ブロックを削除",
@@ -286,12 +285,12 @@
     "toggleAddMenu": "ブロック追加メニュー開閉",
     "addBlock": "ブロック追加（フォーカス項目）",
     "scrollToTags": "タグ位置へスクロール",
-    "save": "保存/作成",
-    "closeWithoutSave": "保存せずに閉じる",
+    "save": "保存",
+    "close": "閉じる",
     "moveFocused": "上/下 移動（フォーカス項目）",
     "sortMode": "並べ替えモード",
     "editMode": "編集モード",
     "previewMode": "プレビューモード",
-    "finishSession": "学習終了（確認あり）"
+    "finishSession": "学習終了"
   }
 }

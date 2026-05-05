@@ -145,7 +145,7 @@ export default function NewDeckScreen() {
         message={t('common.discardChanges')}
         actions={canSave
           ? [
-              { label: t('common.create'), onPress: () => { setShowDiscardModal(false); handleCreate(); } },
+              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); handleCreate(); } },
               { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
             ]
           : [

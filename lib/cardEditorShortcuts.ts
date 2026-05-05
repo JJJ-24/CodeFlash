@@ -9,7 +9,7 @@ export const CARD_EDITOR_SHORTCUTS_EDIT = [
   { key: 'T',          descKey: 'shortcut.scrollToTags' },
   { key: 'M',          descKey: 'shortcut.cycleMode' },
   { key: 'S',          descKey: 'shortcut.save' },
-  { key: 'X',          descKey: 'shortcut.closeWithoutSave' },
+  { key: 'X',          descKey: 'shortcut.close' },
 ];
 
 export const CARD_EDITOR_SHORTCUTS_SORT = [
@@ -25,5 +25,5 @@ export const CARD_EDITOR_SHORTCUTS_PREVIEW = [
   { key: 'T',      descKey: 'shortcut.scrollToTags' },
   { key: 'Q',      descKey: 'shortcut.cycleMode' },
   { key: 'S',      descKey: 'shortcut.save' },
-  { key: 'X',      descKey: 'shortcut.closeWithoutSave' },
+  { key: 'X',      descKey: 'shortcut.close' },
 ];

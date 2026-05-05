@@ -145,7 +145,6 @@
     "pyodideLoadError": "Failed to load Pyodide (check your internet connection)"
   },
   "common": {
-    "create": "Create",
     "save": "Save",
     "cancel": "Cancel",
     "showMore": "Show more",
@@ -164,7 +163,7 @@
     "memo": "Memo",
     "cardsCount": "{{count}} cards",
     "discardChanges": "You have unsaved changes",
-    "discard": "Close without saving"
+    "discard": "Don't Save"
   },
   "editor": {
     "deleteBlock": "Delete Block",
@@ -247,7 +246,7 @@
     "memo": "Toggle memo",
     "fullscreen": "Toggle fullscreen",
     "runFocused": "Run focused item",
-    "editFocusedItem": "Edit focused item\n[Return]",
+    "editFocusedItem": "Edit focused item\n[Return] also works",
     "back": "Go back",
     "links": "Toggle link list",
     "pencil": "Edit card",
@@ -265,7 +264,7 @@
     "normalMode": "Normal Mode",
     "selectMode": "Selection Mode",
     "focusNextPrev": "Move focus\n(Next/Prev)",
-    "nextPrev": "Previous / Next (no grade)",
+    "nextPrev": "Previous /\nNext (no grade)",
     "scrollUpDown": "Scroll Up / Down",
     "toggleShuffle": "Toggle shuffle",
     "toggleHideEmpty": "Hide / Show empty items",
@@ -279,19 +278,19 @@
     "tags": "Tag manager",
     "tabNextPrev": "Switch tab\n(Home/Study/Stats/Settings)",
     "cycleChart": "Cycle charts\n(Streak/Done/Due/New)",
-    "openChart": "Open chart focused item\n[Return]",
+    "openChart": "Open chart focused item\n[Return] also works",
     "deleteBlock": "Delete focused item/\nDelete card (no focus)",
     "tabNextPrevCard": "Switch tab\n(Front/Back/Memo)",
     "cycleMode": "Cycle mode\n(Edit/Sort/Preview)",
     "toggleAddMenu": "Toggle add block menu",
     "addBlock": "Add block focused item",
     "scrollToTags": "Scroll to tag selector",
-    "save": "Save / Create",
-    "closeWithoutSave": "Close without saving",
+    "save": "Save",
+    "close": "Close",
     "moveFocused": "Move focused item Up / Down",
     "sortMode": "Sort Mode",
     "editMode": "Edit Mode",
     "previewMode": "Preview Mode",
-    "finishSession": "Finish session (with confirmation)"
+    "finishSession": "Finish session"
   }
 }

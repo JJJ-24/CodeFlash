@@ -145,7 +145,7 @@ export default function NewTagScreen() {
         message={t('common.discardChanges')}
         actions={canSave
           ? [
-              { label: t('common.create'), onPress: () => { setShowDiscardModal(false); handleSave(); } },
+              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); handleSave(); } },
               { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
             ]
           : [

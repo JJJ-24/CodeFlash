@@ -128,7 +128,7 @@ export default function NewCardScreen() {
         message={t('common.discardChanges')}
         actions={!frontEmpty
           ? [
-              { label: t('common.create'), onPress: () => { setShowDiscardModal(false); editorRef.current?.save(); } },
+              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); editorRef.current?.save(); } },
               { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); } },
             ]
           : [

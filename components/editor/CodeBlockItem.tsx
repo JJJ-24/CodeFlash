@@ -49,9 +49,10 @@ interface Props {
   onRunButtonPress?: () => void;
   runTrigger?: number;
   onAutoFocused?: () => void;
+  blurTrigger?: number;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -93,6 +94,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   useEffect(() => {
     if ((editTrigger ?? 0) > 0) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); }
   }, [editTrigger]);
+
+  useEffect(() => {
+    if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); }
+  }, [blurTrigger]);
 
   useEffect(() => {
     if ((runTrigger ?? 0) > 0 && block.executable) {
@@ -141,6 +146,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         isEmpty={isEmpty}
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
+        onHeaderPress={focused ? () => { codeInputRef.current?.blur(); } : undefined}
         style={{ backgroundColor: isRunning ? '#1E5024' : focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>

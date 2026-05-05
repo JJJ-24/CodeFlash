@@ -171,6 +171,9 @@ export function BlockEditor({
   const [runTriggerMap, setRunTriggerMap] = useState<Record<string, number>>(
     {},
   );
+  const [blurTriggerMap, setBlurTriggerMap] = useState<Record<string, number>>(
+    {},
+  );
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -867,6 +870,7 @@ export function BlockEditor({
               setAddMenuVisible(false);
               setEditTriggerMap({});
               setRunTriggerMap({});
+              setBlurTriggerMap({});
               setActiveTab(tab.key);
             }}
           >
@@ -926,7 +930,7 @@ export function BlockEditor({
       <ScrollView
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={{ flexGrow: 1 }}
         onLayout={(e) => {
           scrollViewHeightRef.current = e.nativeEvent.layout.height;
         }}
@@ -937,6 +941,13 @@ export function BlockEditor({
             e.nativeEvent.contentOffset.y;
         }}
       >
+        <Pressable
+          style={[styles.content, { flexGrow: 1 }]}
+          onPress={() => {
+            const key = editingBlockKeyRef.current;
+            if (key) setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
+          }}
+        >
         {(isPreview || isSortMode) && (
           <View style={styles.modeLabel}>
             <Text
@@ -994,6 +1005,7 @@ export function BlockEditor({
                   onCollapsedDoubleTap={() => setEditorMode("edit")}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
+                  blurTrigger={blurTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
@@ -1014,6 +1026,7 @@ export function BlockEditor({
                   autoFocus={!autoFocusedKeys.has(block._key) && block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
+                  blurTrigger={blurTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   runTrigger={runTriggerMap[block._key] ?? 0}
@@ -1046,6 +1059,7 @@ export function BlockEditor({
                   flashTrigger={flashTrigger}
                   autoFocus={!autoFocusedKeys.has(block._key) && block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
+                  blurTrigger={blurTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
@@ -1055,6 +1069,7 @@ export function BlockEditor({
           );
         })}
         {footerContent}
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );

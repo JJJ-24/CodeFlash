@@ -13,9 +13,10 @@ interface Props {
   collapsed?: boolean;
   style?: StyleProp<ViewStyle>;
   isEmpty?: boolean;
+  onHeaderPress?: () => void;
 }
 
-export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, collapsed, style, isEmpty }: Props) {
+export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, collapsed, style, isEmpty, onHeaderPress }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const isSortMode = onMoveUp !== undefined || onMoveDown !== undefined;
@@ -33,7 +34,11 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
 
   return (
     <View style={[styles.header, style]}>
-      <View style={styles.contentArea}>{children}</View>
+      {onHeaderPress ? (
+        <Pressable style={styles.contentArea} onPress={onHeaderPress}>{children}</Pressable>
+      ) : (
+        <View style={styles.contentArea}>{children}</View>
+      )}
       {isSortMode ? (
         <View style={styles.moveButtons}>
           <Pressable onPress={onMoveUp} disabled={!onMoveUp} hitSlop={8} style={styles.moveBtn}>

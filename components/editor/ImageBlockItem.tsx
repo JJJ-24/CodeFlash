@@ -30,9 +30,10 @@ interface Props {
   autoFocus?: boolean;
   isFocused?: boolean;
   onAutoFocused?: () => void;
+  blurTrigger?: number;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused, onAutoFocused }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused, onAutoFocused, blurTrigger }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -51,6 +52,10 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
     }
     prevCollapsedRef.current = collapsed;
   }, [collapsed]);
+
+  useEffect(() => {
+    if ((blurTrigger ?? 0) > 0) { altInputRef.current?.blur(); }
+  }, [blurTrigger]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -91,6 +96,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}
+        onHeaderPress={focused ? () => { altInputRef.current?.blur(); } : undefined}
         style={{
           backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
           borderBottomWidth: 1,

@@ -29,13 +29,15 @@ interface Props {
   isFocused?: boolean;
   /** BlockEditor から編集開始を指示するトリガー（値が変化するたびにフォーカス） */
   editTrigger?: number;
+  /** BlockEditor からフォーカス解除を指示するトリガー（値が変化するたびにブラー） */
+  blurTrigger?: number;
   /** TextInput のフォーカスが外れたとき BlockEditor に通知するコールバック */
   onEditBlur?: () => void;
   /** マウント時の autoFocus が実行されたとき BlockEditor に通知するコールバック */
   onAutoFocused?: () => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, onEditBlur, onAutoFocused }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, blurTrigger, onEditBlur, onAutoFocused }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -80,6 +82,10 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   useEffect(() => {
     if ((editTrigger ?? 0) > 0) { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); }
   }, [editTrigger]);
+
+  useEffect(() => {
+    if ((blurTrigger ?? 0) > 0) { inputRef.current?.blur(); }
+  }, [blurTrigger]);
 
   useEffect(() => {
     if (isPreview) {
@@ -167,6 +173,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         onDelete={onDelete}
         collapsed={collapsed}
         isEmpty={isEmpty}
+        onHeaderPress={focused ? () => { inputRef.current?.blur(); } : undefined}
         style={{
           backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
           borderBottomWidth: 1,

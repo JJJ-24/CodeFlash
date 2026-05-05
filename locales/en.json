@@ -96,7 +96,7 @@
     "sortDescOldest": "Oldest first",
     "select": "Select",
     "selectHint": "Tap cards to select",
-    "selectedCount": "{{count}} selected",
+    "selectedCount": "{{count}} sel.",
     "moveToDeck": "Move",
     "moveConfirmTitle": "Move to Deck",
     "moveConfirmMessage": "Move {{count}} card(s) to \"{{deckName}}\"?",

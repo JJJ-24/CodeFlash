@@ -950,20 +950,22 @@ export function BlockEditor({
         >
         {(isPreview || isSortMode) && (
           <View style={styles.modeLabel}>
-            <Text
-              style={[
-                styles.modeLabelText,
-                {
-                  color: theme.colors.textSecondary,
-                  fontSize: theme.fontSize.sm,
-                },
-              ]}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
-            >
-              {isPreview
-                ? t("editor.previewModeLabel")
-                : t("editor.sortModeLabel")}
-            </Text>
+            <View style={[styles.modeLabelBadge, { backgroundColor: theme.colors.primaryLight }]}>
+              <Text
+                style={[
+                  styles.modeLabelText,
+                  {
+                    color: theme.colors.primary,
+                    fontSize: theme.fontSize.sm,
+                  },
+                ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
+              >
+                {isPreview
+                  ? t("editor.previewModeLabel")
+                  : t("editor.sortModeLabel")}
+              </Text>
+            </View>
           </View>
         )}
         {currentBlocks.map((block, index) => {
@@ -1111,8 +1113,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginBottom: 4,
   },
+  modeLabelBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
   modeLabelText: {
-    fontWeight: "500",
+    fontWeight: "700",
   },
   modeBtn: {
     paddingVertical: 7,

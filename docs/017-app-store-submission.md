@@ -32,7 +32,7 @@ App Store（iOS）および Google Play（Android）へのストア申請準備�
 - [x] プライバシーポリシー URL
 - [x] 利用規約 URL
 - [x] TestFlight での内部テスト
-- [ ] App Store 審査提出
+- [x] App Store 審査提出
 
 ### Google Play 申請
 - [ ] EAS Build の Android プロダクションビルド設定

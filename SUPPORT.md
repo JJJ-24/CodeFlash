@@ -1,3 +1,8 @@
+---
+layout: default
+title: Support
+---
+
 # CodeFlash サポート
 
 ご質問・バグ報告・機能のご要望は、以下のIssuesページからお願いします。

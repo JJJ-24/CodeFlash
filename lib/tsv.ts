@@ -22,6 +22,56 @@ function unescape(s: string): string {
   return s.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
 }
 
+// RFC 4180 対応 TSV パーサー（Numbers等のクォート付き複数行セルを処理）
+function parseTsvRows(raw: string): string[][] {
+  const rows: string[][] = [];
+  // BOM を除去
+  const text = raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw;
+  let i = 0;
+  const n = text.length;
+
+  while (i < n) {
+    const cols: string[] = [];
+
+    while (i < n) {
+      if (text[i] === '"') {
+        // クォート付きフィールド: 実際の改行・タブを含む可能性あり
+        i++;
+        let field = '';
+        while (i < n) {
+          if (text[i] === '"') {
+            if (i + 1 < n && text[i + 1] === '"') {
+              field += '"';
+              i += 2;
+            } else {
+              i++;
+              break;
+            }
+          } else {
+            field += text[i++];
+          }
+        }
+        cols.push(field.trim());
+        if (i < n && text[i] === '\t') { i++; }
+        else { if (i < n && text[i] === '\r') i++; if (i < n && text[i] === '\n') i++; break; }
+      } else {
+        // 非クォートフィールド: アプリ独自の \n \t \\ エスケープを処理
+        let field = '';
+        while (i < n && text[i] !== '\t' && text[i] !== '\n' && text[i] !== '\r') {
+          field += text[i++];
+        }
+        cols.push(unescape(field.trim()));
+        if (i < n && text[i] === '\t') { i++; }
+        else { if (i < n && text[i] === '\r') i++; if (i < n && text[i] === '\n') i++; break; }
+      }
+    }
+
+    if (cols.some((c) => c !== '')) rows.push(cols);
+  }
+
+  return rows;
+}
+
 function blocksToText(blocks: Block[]): string {
   return blocks
     .map((b) => {
@@ -108,7 +158,8 @@ const BULK_CHUNK = 500;
 
 export async function importTsv(db: SQLiteDatabase, fileUri: string, deckId: string): Promise<{ created: number; updated: number }> {
   const raw = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' });
-  const lines = raw.split('\n').filter((l) => l.trim() !== '');
+  // RFC 4180 対応パーサーで行列に分解（Numbers等のクォート付き複数行セルを処理）
+  const rows = parseTsvRows(raw);
 
   // ヘッダー行の検出と列構成の判定
   // ID列あり: cols[0]=id, cols[1]=front, cols[2]=back, cols[3]=memo, cols[4]=tags
@@ -118,12 +169,12 @@ export async function importTsv(db: SQLiteDatabase, fileUri: string, deckId: str
   const tagsColWithId = 4;
   const tagsColNoId = 2;
 
-  if (lines.length > 0) {
-    const first = lines[0].toLowerCase();
-    if (first.startsWith('id\t')) {
+  if (rows.length > 0) {
+    const firstCol = rows[0][0]?.toLowerCase() ?? '';
+    if (firstCol === 'id') {
       hasIdColumn = true;
       start = 1;
-    } else if (first.startsWith('front')) {
+    } else if (firstCol === 'front') {
       start = 1;
     }
   }
@@ -140,27 +191,28 @@ export async function importTsv(db: SQLiteDatabase, fileUri: string, deckId: str
     text ? [{ type: 'text', content: text }] : [];
 
   const parsedCards: ParsedCard[] = [];
-  for (let i = start; i < lines.length; i++) {
-    const cols = lines[i].split('\t');
+  for (let i = start; i < rows.length; i++) {
+    // parseTsvRows が unescape・trim 済みなので追加処理不要
+    const cols = rows[i];
     if (hasIdColumn) {
-      const front = unescape(cols[1] ?? '').trim();
+      const front = cols[1] ?? '';
       if (!front) continue;
-      const existingId = cols[0]?.trim() ?? '';
+      const existingId = cols[0] ?? '';
       parsedCards.push({
         id: (existingId && existingCardIds.has(existingId)) ? existingId : generateId(),
         front,
-        back: unescape(cols[2] ?? '').trim(),
-        memo: unescape(cols[3] ?? '').trim(),
+        back: cols[2] ?? '',
+        memo: cols[3] ?? '',
         tagsRaw: cols[tagsColWithId] ?? '',
         isUpdate: !!(existingId && existingCardIds.has(existingId)),
       });
     } else {
-      const front = unescape(cols[0] ?? '').trim();
+      const front = cols[0] ?? '';
       if (!front) continue;
       parsedCards.push({
         id: generateId(),
         front,
-        back: unescape(cols[1] ?? '').trim(),
+        back: cols[1] ?? '',
         memo: '',
         tagsRaw: cols[tagsColNoId] ?? '',
         isUpdate: false,

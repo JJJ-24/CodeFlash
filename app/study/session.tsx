@@ -428,7 +428,7 @@ export default function StudySessionScreen() {
       if (cardLinks.length > 0) { Keyboard.dismiss(); setShowLinksModal((v) => !v); }
     } else if (key.toLowerCase() === "p") {
       if (currentCard) {
-        const tab = isFlipped ? "back" : "front";
+        const tab = showMemo ? "memo" : isFlipped ? "back" : "front";
         router.push(
           `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${tab}`,
         );
@@ -517,7 +517,7 @@ export default function StudySessionScreen() {
         {!completed && currentCard && (
           <>
             <Pressable
-              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`)}
+              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? "memo" : isFlipped ? "back" : "front"}`)}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
               hitSlop={4}
             >
@@ -1027,7 +1027,7 @@ export default function StudySessionScreen() {
               style={styles.fullscreenEditBtn}
               onPress={() =>
                 router.push(
-                  `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`,
+                  `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? "memo" : isFlipped ? "back" : "front"}`,
                 )
               }
             >
@@ -1243,7 +1243,7 @@ export default function StudySessionScreen() {
             </Pressable>
             <View style={{ flex: 1 }} />
             <Pressable
-              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${isFlipped ? "back" : "front"}`)}
+              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? "memo" : isFlipped ? "back" : "front"}`)}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
               hitSlop={4}
             >

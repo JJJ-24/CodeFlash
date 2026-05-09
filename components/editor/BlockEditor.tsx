@@ -848,48 +848,59 @@ export function BlockEditor({
           },
         ]}
       >
-        {tabs.map((tab) => (
-          <Pressable
-            key={tab.key}
-            style={[
-              styles.tab,
-              (Platform as any).isPad && styles.tabPad,
-              activeTab === tab.key && styles.tabActive,
-            ]}
-            onPress={() => {
-              // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
-              isTransitioningRef.current = true;
-              if (isTransitionTimerRef.current)
-                clearTimeout(isTransitionTimerRef.current);
-              isTransitionTimerRef.current = setTimeout(() => {
-                editingBlockKeyRef.current = null;
-                isTransitioningRef.current = false;
-                isTransitionTimerRef.current = null;
-                keyboardRef.current?.focus();
-              }, 200);
-              setAddMenuVisible(false);
-              setEditTriggerMap({});
-              setRunTriggerMap({});
-              setBlurTriggerMap({});
-              setActiveTab(tab.key);
-            }}
-          >
-            <Text
+        {tabs.map((tab) => {
+          const blocks = blocksByTab[tab.key];
+          const hasDot = blocks.some((b) =>
+            b.type === 'image' ? !!b.uri : b.content.trim() !== ''
+          );
+          return (
+            <Pressable
+              key={tab.key}
               style={[
-                styles.tabText,
-                {
-                  color: theme.colors.textTertiary,
-                  fontSize: (Platform as any).isPad ? Math.max(theme.fontSize.lg, 18) : Math.max(theme.fontSize.md, 16),
-                },
-                activeTab === tab.key && styles.tabTextActive,
+                styles.tab,
+                (Platform as any).isPad && styles.tabPad,
+                activeTab === tab.key && styles.tabActive,
               ]}
-              maxFontSizeMultiplier={1.0}
-              numberOfLines={1}
+              onPress={() => {
+                // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
+                isTransitioningRef.current = true;
+                if (isTransitionTimerRef.current)
+                  clearTimeout(isTransitionTimerRef.current);
+                isTransitionTimerRef.current = setTimeout(() => {
+                  editingBlockKeyRef.current = null;
+                  isTransitioningRef.current = false;
+                  isTransitionTimerRef.current = null;
+                  keyboardRef.current?.focus();
+                }, 200);
+                setAddMenuVisible(false);
+                setEditTriggerMap({});
+                setRunTriggerMap({});
+                setBlurTriggerMap({});
+                setActiveTab(tab.key);
+              }}
             >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: theme.colors.textTertiary,
+                    fontSize: (Platform as any).isPad ? Math.max(theme.fontSize.lg, 18) : Math.max(theme.fontSize.md, 16),
+                  },
+                  activeTab === tab.key && styles.tabTextActive,
+                ]}
+                maxFontSizeMultiplier={1.0}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </Text>
+              {hasDot && (
+                <View style={styles.tabDotContainer}>
+                  <View style={[styles.tabDot, { backgroundColor: theme.colors.primary }]} />
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
         {/* モード3択ボタン */}
         <View style={styles.modeButtons}>
           {(
@@ -1102,6 +1113,18 @@ const styles = StyleSheet.create({
   tabActive: { borderBottomColor: "#1976D2" },
   tabText: { fontWeight: "500" },
   tabTextActive: { color: "#1976D2", fontWeight: "700" },
+  tabDotContainer: {
+    position: "absolute",
+    top: 4,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  tabDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
   modeButtons: {
     marginLeft: "auto",
     flexDirection: "row",

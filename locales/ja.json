@@ -66,7 +66,10 @@
     "color": "カラー",
     "empty": "タグがまだありません",
     "emptySub": "+ ボタンから\nタグを作成しよう",
-    "duplicateName": "同じ名前のタグがすでに存在します"
+    "duplicateName": "同じ名前のタグがすでに存在します",
+    "selectedCount": "{{count}}件選択",
+    "deleteSelectedConfirm": "{{count}}件のタグを削除します。\n紐づくカード合計：{{cardCount}}枚",
+    "changeColor": "色変更"
   },
   "grade": {
     "again": "再考",
@@ -163,7 +166,8 @@
     "memo": "メモ",
     "cardsCount": "{{count}} 枚",
     "discardChanges": "変更内容があります",
-    "discard": "保存しない"
+    "discard": "保存しない",
+    "apply": "適用"
   },
   "editor": {
     "deleteBlock": "ブロックを削除",
@@ -291,6 +295,8 @@
     "sortMode": "並べ替えモード",
     "editMode": "編集モード",
     "previewMode": "プレビューモード",
-    "finishSession": "学習終了"
+    "finishSession": "学習終了",
+    "changeColorSelected": "色変更（選択タグ）",
+    "deleteSelectedTags": "削除（選択タグ）"
   }
 }

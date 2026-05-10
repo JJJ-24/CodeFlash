@@ -1,18 +1,18 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import {
-  FlatList,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,19 +24,35 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
-import { deleteTag, getAllTags, updateTagSortOrders } from '@/lib/database/tags';
+import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
 
+const PRESET_COLORS = [
+  '#E53935', '#fd9023', '#F6BF26', '#33B679',
+  '#0B8043', '#039BE5', '#0e4cdd', '#7986CB',
+  '#8E24AA', '#828080', '#795548', '#F48FB1',
+];
+
 const TAG_SHORTCUTS = [
-  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+  { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
   { key: 'Return', descKey: 'shortcut.openFocused' },
-  { key: 'P',     descKey: 'shortcut.editFocused' },
-  { key: 'D',     descKey: 'shortcut.deleteFocused' },
-  { key: 'N',     descKey: 'shortcut.new' },
-  { key: 'M',     descKey: 'shortcut.cycleSort' },
-  { key: 'B',     descKey: 'shortcut.back' },
+  { key: 'P',      descKey: 'shortcut.editFocused' },
+  { key: 'D',      descKey: 'shortcut.deleteFocused' },
+  { key: 'N',      descKey: 'shortcut.new' },
+  { key: 'S',      descKey: 'shortcut.toggleSelect' },
+  { key: 'M',      descKey: 'shortcut.cycleSort' },
+  { key: 'B',      descKey: 'shortcut.back' },
+];
+
+const TAG_SELECTION_SHORTCUTS = [
+  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+  { key: 'Space', descKey: 'shortcut.toggleCheck' },
+  { key: 'A',     descKey: 'shortcut.selectAll' },
+  { key: 'C',     descKey: 'shortcut.changeColorSelected' },
+  { key: 'D',     descKey: 'shortcut.deleteSelectedTags' },
+  { key: 'S',     descKey: 'shortcut.exitSelect' },
 ];
 
 export default function TagsScreen() {
@@ -54,6 +70,13 @@ export default function TagsScreen() {
   const { keyboardShortcutsEnabled, tagSortOrder, setTagSortOrder } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [pickedColor, setPickedColor] = useState(PRESET_COLORS[0]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
   const sortedTags = useMemo(() => {
     if (tagSortOrder === 'name') return [...tags].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     if (tagSortOrder === 'cardCount') return [...tags].sort((a, b) => b.cardCount - a.cardCount);
@@ -61,6 +84,11 @@ export default function TagsScreen() {
   }, [tags, tagSortOrder]);
 
   const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
+
+  const selectedCardsCount = useMemo(
+    () => sortedTags.filter(t => selectedTagIds.has(t.id)).reduce((sum, t) => sum + t.cardCount, 0),
+    [sortedTags, selectedTagIds]
+  );
 
   const SORT_OPTIONS: { key: DeckSortOrder; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
     { key: 'manual',    icon: 'reorder-three-outline' },
@@ -70,6 +98,33 @@ export default function TagsScreen() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteTag, setPendingDeleteTag] = useState<TagWithCount | null>(null);
+
+  function enterSelectionMode() {
+    setSelectionMode(true);
+    setSelectedTagIds(new Set());
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedTagIds(new Set());
+  }
+
+  function toggleSelectTag(id: string) {
+    setSelectedTagIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedTagIds.size === sortedTags.length) {
+      setSelectedTagIds(new Set());
+    } else {
+      setSelectedTagIds(new Set(sortedTags.map(t => t.id)));
+    }
+  }
 
   function confirmDelete(tag: TagWithCount) {
     setPendingDeleteTag(tag);
@@ -82,6 +137,31 @@ export default function TagsScreen() {
     await deleteTag(db, pendingDeleteTag.id);
     removeTag(pendingDeleteTag.id);
     setPendingDeleteTag(null);
+  }
+
+  async function handleBulkDelete() {
+    if (selectedTagIds.size === 0 || isProcessing) return;
+    setIsProcessing(true);
+    setShowBulkDeleteModal(false);
+    const ids = Array.from(selectedTagIds);
+    const idsSet = new Set(ids);
+    await deleteTagsBulk(db, ids);
+    setTags(tags.filter(t => !idsSet.has(t.id)));
+    exitSelectionMode();
+    setIsProcessing(false);
+  }
+
+  async function handleBulkColorChange() {
+    if (selectedTagIds.size === 0 || isProcessing) return;
+    setIsProcessing(true);
+    setShowColorPicker(false);
+    const ids = Array.from(selectedTagIds);
+    const idsSet = new Set(ids);
+    const color = pickedColor;
+    await updateTagsColor(db, ids, color);
+    setTags(tags.map(t => idsSet.has(t.id) ? { ...t, color } : t));
+    exitSelectionMode();
+    setIsProcessing(false);
   }
 
   useFocusEffect(
@@ -138,7 +218,17 @@ export default function TagsScreen() {
             <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           </Pressable>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 36 }} />
+          <Pressable
+            onPress={selectionMode ? exitSelectionMode : enterSelectionMode}
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            hitSlop={4}
+          >
+            <Ionicons
+              name={selectionMode ? 'close' : 'albums-outline'}
+              size={26}
+              color={theme.colors.primary}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -147,27 +237,44 @@ export default function TagsScreen() {
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
           const k = key.toLowerCase();
-          if (k === 'j') { moveFocus('next'); }
-          else if (k === 'k') { moveFocus('prev'); }
-          else if (k === 'p') {
-            if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
-              router.push(`/tags/${sortedTags[focusedTagIndex].id}/edit`);
+          if (selectionMode) {
+            if (k === 'j') { moveFocus('next'); }
+            else if (k === 'k') { moveFocus('prev'); }
+            else if (k === ' ') {
+              if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+                toggleSelectTag(sortedTags[focusedTagIndex].id);
+              }
+            } else if (k === 'a') { toggleSelectAll(); }
+            else if (k === 'c') {
+              if (selectedTagIds.size > 0) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); }
+            } else if (k === 'd') {
+              if (selectedTagIds.size > 0) setShowBulkDeleteModal(true);
+            } else if (k === 's') { exitSelectionMode(); }
+          } else {
+            if (k === 'j') { moveFocus('next'); }
+            else if (k === 'k') { moveFocus('prev'); }
+            else if (k === 'p') {
+              if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+                router.push(`/tags/${sortedTags[focusedTagIndex].id}/edit`);
+              }
+            } else if (k === 'd') {
+              if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+                confirmDelete(sortedTags[focusedTagIndex]);
+              }
+            } else if (k === 'n') {
+              router.push('/tags/new');
+            } else if (k === 'm') {
+              const idx = SORT_OPTIONS.findIndex(o => o.key === tagSortOrder);
+              setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
+            } else if (k === 's') {
+              enterSelectionMode();
+            } else if (k === 'b') {
+              router.back();
             }
-          } else if (k === 'd') {
-            if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
-              confirmDelete(sortedTags[focusedTagIndex]);
-            }
-          } else if (k === 'n') {
-            router.push('/tags/new');
-          } else if (k === 'm') {
-            const idx = SORT_OPTIONS.findIndex(o => o.key === tagSortOrder);
-            setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
-          } else if (k === 'b') {
-            router.back();
           }
         }}
         onSubmitEditing={() => {
-          if (!keyboardShortcutsEnabled) return;
+          if (!keyboardShortcutsEnabled || selectionMode) return;
           if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
             router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: sortedTags[focusedTagIndex].id } });
           }
@@ -185,24 +292,26 @@ export default function TagsScreen() {
             {t(`home.sortDesc${tagSortOrder.charAt(0).toUpperCase()}${tagSortOrder.slice(1)}`)}
           </Text>
         </View>
-        <View style={styles.sortButtons}>
-          {SORT_OPTIONS.map(({ key, icon }) => {
-            const active = tagSortOrder === key;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => setTagSortOrder(key)}
-                style={[
-                  styles.sortBtn,
-                  { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
-                  active && { backgroundColor: theme.colors.primary },
-                ]}
-              >
-                <Ionicons name={icon} size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)} color={active ? theme.colors.primaryText : theme.colors.textSecondary} />
-              </Pressable>
-            );
-          })}
-        </View>
+        {!selectionMode && (
+          <View style={styles.sortButtons}>
+            {SORT_OPTIONS.map(({ key, icon }) => {
+              const active = tagSortOrder === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => setTagSortOrder(key)}
+                  style={[
+                    styles.sortBtn,
+                    { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    active && { backgroundColor: theme.colors.primary },
+                  ]}
+                >
+                  <Ionicons name={icon} size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)} color={active ? theme.colors.primaryText : theme.colors.textSecondary} />
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       {tags.length === 0 ? (
@@ -215,7 +324,7 @@ export default function TagsScreen() {
           style={{ backgroundColor: theme.colors.background }}
           data={sortedTags}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, selectionMode && { paddingBottom: 160 }]}
           onScrollOffsetChange={(offset) => {
             scrollOffsetRef.current = offset;
             if (
@@ -228,36 +337,56 @@ export default function TagsScreen() {
           }}
           onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
           onDragEnd={({ data }) => {
+            if (selectionMode) return;
             reorderTags(data);
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedTagIndex(null)} />}
           renderItem={({ item, drag, getIndex }: RenderItemParams<TagWithCount>) => {
             const isFocused = focusedTagIndex !== null && getIndex() === focusedTagIndex;
+            const isSelected = selectedTagIds.has(item.id);
             return (
               <ScaleDecorator>
                 <Pressable
                   style={[
                     styles.tagItem,
                     { backgroundColor: theme.colors.surface },
-                    isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+                    isFocused && !selectionMode && { borderWidth: 2, borderColor: theme.colors.primary },
+                    isFocused && selectionMode && { borderWidth: 2, borderColor: '#F57C00' },
+                    isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
                   ]}
                   onPress={() => {
                     const idx = getIndex();
+                    if (selectionMode) {
+                      if (idx !== undefined) setFocusedTagIndex(idx);
+                      toggleSelectTag(item.id);
+                      return;
+                    }
                     if (idx !== undefined) setFocusedTagIndex(idx);
                     router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
                   }}
-                  onLongPress={tagSortOrder === 'manual' ? drag : undefined}
+                  onLongPress={!selectionMode && tagSortOrder === 'manual' ? drag : undefined}
                 >
+                  {selectionMode && (
+                    <Ionicons
+                      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={24}
+                      color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
+                    />
+                  )}
                   <View style={[styles.colorDot, { backgroundColor: item.color }]} />
                   <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                   <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                     <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
                   </View>
-                  <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                  </Pressable>
-                  <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+                  {!selectionMode && (
+                    <>
+                      <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.editBtn}>
+                        <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                      </Pressable>
+                      <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+                    </>
+                  )}
                 </Pressable>
               </ScaleDecorator>
             );
@@ -266,26 +395,65 @@ export default function TagsScreen() {
       )}
 
       {/* FAB: 戻る */}
-      <Pressable
-        style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]}
-        onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
-      >
-        <Ionicons name="chevron-back" size={28} color="#FFF" />
-      </Pressable>
+      {!selectionMode && (
+        <Pressable
+          style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]}
+          onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+        >
+          <Ionicons name="chevron-back" size={28} color="#FFF" />
+        </Pressable>
+      )}
 
       {/* FAB: 新規タグ作成 */}
-      <Pressable
-        style={[styles.fab, { right: 20, backgroundColor: theme.colors.primary }]}
-        onPress={() => router.push('/tags/new')}
-      >
-        <Ionicons name="add" size={28} color="#FFF" />
+      {!selectionMode && (
+        <Pressable
+          style={[styles.fab, { right: 20, backgroundColor: theme.colors.primary }]}
+          onPress={() => router.push('/tags/new')}
+        >
+          <Ionicons name="add" size={28} color="#FFF" />
+        </Pressable>
+      )}
       </Pressable>
-      </Pressable>
+
+      {/* 選択モードバー */}
+      {selectionMode && (
+        <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+          <Pressable
+            onPress={toggleSelectAll}
+            style={[styles.iconBtn, { backgroundColor: theme.colors.primary }]}
+          >
+            <Ionicons
+              name={selectedTagIds.size > 0 && selectedTagIds.size === sortedTags.length ? 'checkmark-circle' : 'checkmark-circle-outline'}
+              size={22}
+              color="#FFF"
+            />
+          </Pressable>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('tag.selectedCount', { count: selectedTagIds.size })}
+          </Text>
+          <View style={styles.selectionActions}>
+            <Pressable
+              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedTagIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={() => { if (selectedTagIds.size > 0 && !isProcessing) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); } }}
+              disabled={selectedTagIds.size === 0 || isProcessing}
+            >
+              <Ionicons name="color-palette-outline" size={22} color="#FFF" />
+            </Pressable>
+            <Pressable
+              style={[styles.iconBtn, { backgroundColor: '#C62828' }, (selectedTagIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={() => { if (selectedTagIds.size > 0 && !isProcessing) setShowBulkDeleteModal(true); }}
+              disabled={selectedTagIds.size === 0 || isProcessing}
+            >
+              <Ionicons name="trash-outline" size={22} color="#FFF" />
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={TAG_SHORTCUTS}
+        shortcuts={selectionMode ? TAG_SELECTION_SHORTCUTS : TAG_SHORTCUTS}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}
@@ -293,6 +461,53 @@ export default function TagsScreen() {
         onConfirm={handleDeleteConfirm}
         onClose={() => { setShowDeleteModal(false); setPendingDeleteTag(null); }}
       />
+      <ConfirmDeleteModal
+        visible={showBulkDeleteModal}
+        message={t('tag.deleteSelectedConfirm', { count: selectedTagIds.size, cardCount: selectedCardsCount })}
+        onConfirm={handleBulkDelete}
+        onClose={() => setShowBulkDeleteModal(false)}
+      />
+
+      {/* カラーピッカーモーダル */}
+      <Modal
+        visible={showColorPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowColorPicker(false)}
+      >
+        <Pressable style={styles.colorPickerOverlay} onPress={() => setShowColorPicker(false)}>
+          <Pressable style={[styles.colorPickerSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+            <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, marginBottom: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('tag.changeColor')}
+            </Text>
+            <View style={styles.colorGrid}>
+              {PRESET_COLORS.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.colorCell, { backgroundColor: c }, pickedColor === c && styles.colorCellSelected]}
+                  onPress={() => setPickedColor(c)}
+                >
+                  {pickedColor === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.colorPickerButtons}>
+              <TouchableOpacity
+                style={[styles.colorPickerBtn, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, borderWidth: 1 }]}
+                onPress={() => setShowColorPicker(false)}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.colorPickerBtn, { backgroundColor: theme.colors.primary }]}
+                onPress={handleBulkColorChange}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.apply')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -324,7 +539,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   countBadgeText: { fontWeight: '700', color: '#FFF' },
-  iconBtn: { padding: 4 },
+  editBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   fab: {
     position: 'absolute',
@@ -340,5 +555,62 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 5,
+  },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 36,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  selectionActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorPickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  colorPickerSheet: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 24,
+  },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  colorCell: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorCellSelected: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  colorPickerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  colorPickerBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
   },
 });

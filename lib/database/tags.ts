@@ -55,6 +55,21 @@ export async function deleteTag(db: SQLiteDatabase, id: string): Promise<void> {
   await db.runAsync('DELETE FROM tags WHERE id = ?', [id]);
 }
 
+export async function deleteTagsBulk(db: SQLiteDatabase, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(`DELETE FROM card_tags WHERE tagId IN (${placeholders})`, ids);
+    await db.runAsync(`DELETE FROM tags WHERE id IN (${placeholders})`, ids);
+  });
+}
+
+export async function updateTagsColor(db: SQLiteDatabase, ids: string[], color: string): Promise<void> {
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  await db.runAsync(`UPDATE tags SET color = ? WHERE id IN (${placeholders})`, [color, ...ids]);
+}
+
 /** カードのタグ一覧を取得 */
 export async function getTagsByCardId(db: SQLiteDatabase, cardId: string): Promise<Tag[]> {
   return db.getAllAsync<Tag>(

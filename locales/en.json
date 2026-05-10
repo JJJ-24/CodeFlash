@@ -66,7 +66,10 @@
     "color": "Color",
     "empty": "No tags yet",
     "emptySub": "Tap the + button\nto create your first tag",
-    "duplicateName": "A tag with that name already exists"
+    "duplicateName": "A tag with that name already exists",
+    "selectedCount": "{{count}} selected",
+    "deleteSelectedConfirm": "Delete {{count}} tag(s)?\nTotal linked cards: {{cardCount}}",
+    "changeColor": "Change Color"
   },
   "grade": {
     "again": "Again",
@@ -163,7 +166,8 @@
     "memo": "Memo",
     "cardsCount": "{{count}} cards",
     "discardChanges": "You have unsaved changes",
-    "discard": "Don't Save"
+    "discard": "Don't Save",
+    "apply": "Apply"
   },
   "editor": {
     "deleteBlock": "Delete Block",
@@ -291,6 +295,8 @@
     "sortMode": "Sort Mode",
     "editMode": "Edit Mode",
     "previewMode": "Preview Mode",
-    "finishSession": "Finish session"
+    "finishSession": "Finish session",
+    "changeColorSelected": "Change color (selected tags)",
+    "deleteSelectedTags": "Delete selected tags"
   }
 }

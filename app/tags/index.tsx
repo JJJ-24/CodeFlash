@@ -102,11 +102,13 @@ export default function TagsScreen() {
   function enterSelectionMode() {
     setSelectionMode(true);
     setSelectedTagIds(new Set());
+    setFocusedTagIndex(null);
   }
 
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedTagIds(new Set());
+    setFocusedTagIndex(null);
   }
 
   function toggleSelectTag(id: string) {
@@ -204,7 +206,7 @@ export default function TagsScreen() {
             }}
           >
             <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('tag.title')}
+              {selectionMode ? t('shortcut.selectMode') : t('tag.title')}
             </Text>
             {keyboardShortcutsEnabled && (
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
@@ -286,11 +288,13 @@ export default function TagsScreen() {
       <View style={[styles.sectionRow, { paddingHorizontal: 16, paddingTop: 16, backgroundColor: theme.colors.background }]}>
         <View style={styles.sectionTitleCol}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('tag.tagListTitle')}
+            {selectionMode ? t('tag.selectHint') : t('tag.tagListTitle')}
           </Text>
-          <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t(`home.sortDesc${tagSortOrder.charAt(0).toUpperCase()}${tagSortOrder.slice(1)}`)}
-          </Text>
+          {!selectionMode && (
+            <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t(`home.sortDesc${tagSortOrder.charAt(0).toUpperCase()}${tagSortOrder.slice(1)}`)}
+            </Text>
+          )}
         </View>
         {!selectionMode && (
           <View style={styles.sortButtons}>
@@ -352,8 +356,8 @@ export default function TagsScreen() {
                     styles.tagItem,
                     { backgroundColor: theme.colors.surface },
                     isFocused && !selectionMode && { borderWidth: 2, borderColor: theme.colors.primary },
-                    isFocused && selectionMode && { borderWidth: 2, borderColor: '#F57C00' },
                     isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+                    isFocused && selectionMode && { borderWidth: 2, borderColor: '#F57C00' },
                   ]}
                   onPress={() => {
                     const idx = getIndex();
@@ -453,7 +457,10 @@ export default function TagsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={selectionMode ? TAG_SELECTION_SHORTCUTS : TAG_SHORTCUTS}
+        sections={selectionMode
+          ? [{ title: t('shortcut.selectMode'), items: TAG_SELECTION_SHORTCUTS }]
+          : [{ title: t('shortcut.normalMode'), items: TAG_SHORTCUTS }]
+        }
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}
@@ -491,20 +498,12 @@ export default function TagsScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.colorPickerButtons}>
-              <TouchableOpacity
-                style={[styles.colorPickerBtn, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, borderWidth: 1 }]}
-                onPress={() => setShowColorPicker(false)}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.colorPickerBtn, { backgroundColor: theme.colors.primary }]}
-                onPress={handleBulkColorChange}
-              >
-                <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.apply')}</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.colorPickerBtn, { backgroundColor: theme.colors.primary }]}
+              onPress={handleBulkColorChange}
+            >
+              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.apply')}</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
@@ -603,12 +602,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  colorPickerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   colorPickerBtn: {
-    flex: 1,
+    alignSelf: 'stretch',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

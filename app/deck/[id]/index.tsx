@@ -457,7 +457,7 @@ export default function DeckDetailScreen() {
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <Pressable
-            onPress={keyboardShortcutsEnabled && !selectionMode ? () => setShowShortcutsModal(true) : undefined}
+            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
             style={{
               position: 'absolute', left: 0, right: 0,
               alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
@@ -469,9 +469,9 @@ export default function DeckDetailScreen() {
               numberOfLines={1}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
-              {deck?.name ?? ''}
+              {selectionMode ? t('shortcut.selectMode') : (deck?.name ?? '')}
             </Text>
-            {keyboardShortcutsEnabled && !selectionMode && (
+            {keyboardShortcutsEnabled && (
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             )}
           </Pressable>
@@ -547,9 +547,11 @@ export default function DeckDetailScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {selectionMode ? t('card.selectHint') : t('card.list')}
             </Text>
-            <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {filterDescMap[selectedFilter]}
-            </Text>
+            {!selectionMode && (
+              <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {filterDescMap[selectedFilter]}
+              </Text>
+            )}
           </View>
           {selectedFilter === 'all' && !selectionMode && (
             <View style={styles.sortButtons}>
@@ -743,10 +745,10 @@ export default function DeckDetailScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="75%"
-        sections={[
-          { title: t('shortcut.normalMode'), items: DECK_SHORTCUTS_NORMAL },
-          { title: t('shortcut.selectMode'), items: DECK_SHORTCUTS_SELECT },
-        ]}
+        sections={selectionMode
+          ? [{ title: t('shortcut.selectMode'), items: DECK_SHORTCUTS_SELECT }]
+          : [{ title: t('shortcut.normalMode'), items: DECK_SHORTCUTS_NORMAL }]
+        }
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

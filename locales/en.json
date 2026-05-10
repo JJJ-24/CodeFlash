@@ -56,6 +56,7 @@
   },
   "tag": {
     "tagListTitle": "Tags",
+    "selectHint": "Tap tags to select",
     "title": "Tags",
     "new": "New Tag",
     "edit": "Edit Tag",

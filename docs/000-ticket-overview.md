@@ -42,6 +42,10 @@
 | [018](./018-code-execution-sql-cpp.md) | コード実行（SQL / C++） | 将来 | 未着手 | 009 |
 | [019](./019-deck-marketplace.md) | デッキ マーケットプレイス | 将来 | 未着手 | 002, 003 |
 | [020](./020-ai-card-generation.md) | AI カード自動生成 | 将来 | 未着手 | 003, 005 |
+| [024](./024-detailed-statistics.md) | 詳細な学習統計 | 将来 | 未着手 | 006, 007, 012 |
+| [025](./025-fsrs-customization.md) | スペーシング設定のカスタマイズ | 将来 | 未着手 | 006, 007 |
+| [026](./026-deck-sharing.md) | デッキ共有リンク | 将来 | 未着手 | 002, 003, 004, 021 |
+| [027](./027-widget.md) | ウィジェット | 将来 | 未着手 | 006, 007, 023 |
 
 ---
 
@@ -116,6 +120,22 @@ graph TD
     003 --> 020[020 AI生成]
     005 --> 020
 
+    006 --> 024[024 詳細統計]
+    007 --> 024
+    012 --> 024
+
+    006 --> 025[025 FSRS設定]
+    007 --> 025
+
+    002 --> 026[026 デッキ共有]
+    003 --> 026
+    004 --> 026
+    021 --> 026
+
+    006 --> 027[027 ウィジェット]
+    007 --> 027
+    023 --> 027
+
     style 001 fill:#4CAF50,color:#fff
     style 002 fill:#4CAF50,color:#fff
     style 003 fill:#4CAF50,color:#fff
@@ -139,6 +159,10 @@ graph TD
     style 018 fill:#9E9E9E,color:#fff
     style 019 fill:#9E9E9E,color:#fff
     style 020 fill:#9E9E9E,color:#fff
+    style 024 fill:#9E9E9E,color:#fff
+    style 025 fill:#9E9E9E,color:#fff
+    style 026 fill:#9E9E9E,color:#fff
+    style 027 fill:#9E9E9E,color:#fff
 ```
 
 **凡例:**

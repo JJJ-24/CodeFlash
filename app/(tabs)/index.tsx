@@ -1,4 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { getDefaultHeaderHeight } from '@react-navigation/elements';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { setStatusBarHidden } from 'expo-status-bar';
@@ -6,6 +7,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  PixelRatio,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,7 +18,7 @@ import {
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { EmptyState } from '@/components/EmptyState';
@@ -44,6 +46,13 @@ const HOME_SHORTCUTS = [
 
 function truncate(str: string, max = 20): string {
   return str.length > max ? str.slice(0, max) + '…' : str;
+}
+
+function computeHeaderHeights(topInset: number, frame: { width: number; height: number }) {
+  const total = getDefaultHeaderHeight(frame, false, topInset);
+  const hasDynamicIsland = Platform.OS === 'ios' && topInset > 50;
+  const statusBarHeight = hasDynamicIsland ? topInset - (5 + 1 / PixelRatio.get()) : topInset;
+  return { total, content: total - statusBarHeight };
 }
 
 function DeckCard({
@@ -158,7 +167,8 @@ export default function HomeScreen() {
   );
 
   const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
+  const frame = useSafeAreaFrame();
+  const headerRef = useRef(computeHeaderHeights(insets.top, frame));
 
   async function handleDelete(id: string) {
     await deleteDeck(db, id);
@@ -286,8 +296,8 @@ export default function HomeScreen() {
         onSubmitEditing={handleSubmitEditing}
         onBlur={onInputBlur}
       />
-      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+      <View style={{ height: headerRef.current.total, backgroundColor: theme.colors.surface }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerRef.current.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
           <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
             <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
           </Pressable>

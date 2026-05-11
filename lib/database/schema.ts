@@ -124,4 +124,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   await db.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_cards_deckId ON cards (deckId);
   `);
+
+  // grade_logs テーブル（カード別正答率算出用）
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS grade_logs (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      cardId      TEXT    NOT NULL,
+      grade       INTEGER NOT NULL,
+      reviewedAt  TEXT    NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_grade_logs_cardId ON grade_logs (cardId);
+  `);
 }

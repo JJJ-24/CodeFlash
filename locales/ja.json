@@ -138,13 +138,12 @@
     "learnedOf": "学習済み {{learned}} / {{total}} 枚",
     "proSection": "詳細統計",
     "monthlyActivity": "月別学習枚数",
-    "weakCards": "苦手カード",
-    "weakCardsEmpty": "苦手カードはありません",
-    "lapsesCount": "ミス {{count}} 回",
     "proUpgradePrompt": "Pro にアップグレードして\n詳細統計を確認しよう",
     "proFeatureMonthly": "月別学習グラフ",
-    "proFeatureWeak": "苦手カードランキング",
-    "showAllWeak": "すべて表示（{{count}} 枚）"
+    "proFeatureGradeRanking": "グレード別ランキング",
+    "gradeRanking": "グレード別ランキング",
+    "gradeRankingEmpty": "まだデータがありません\n（学習するとデータが蓄積されます）",
+    "gradeCount": "{{count}} 回"
   },
   "code": {
     "run": "実行",

@@ -147,6 +147,10 @@ export async function saveReview(db: SQLiteDatabase, review: Review): Promise<vo
     `INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)`,
     [review.cardId, localDateStr(new Date(review.lastReviewDate))]
   );
+  await db.runAsync(
+    `INSERT INTO grade_logs (cardId, grade, reviewedAt) VALUES (?, ?, ?)`,
+    [review.cardId, review.lastGrade, review.lastReviewDate]
+  );
 }
 
 /** カードのレビュー記録を取得（未学習なら null） */
@@ -458,6 +462,67 @@ export async function getMonthlyReviewCounts(
      FROM review_logs
      GROUP BY month
      ORDER BY month ASC`
+  );
+}
+
+export async function getGradeLogTotals(
+  db: SQLiteDatabase
+): Promise<{ again: number; hard: number; good: number; easy: number }> {
+  const row = await db.getFirstAsync<{ again: number; hard: number; good: number; easy: number }>(
+    `SELECT
+       SUM(CASE WHEN grade = 0 THEN 1 ELSE 0 END) as again,
+       SUM(CASE WHEN grade = 1 THEN 1 ELSE 0 END) as hard,
+       SUM(CASE WHEN grade = 2 THEN 1 ELSE 0 END) as good,
+       SUM(CASE WHEN grade = 3 THEN 1 ELSE 0 END) as easy
+     FROM grade_logs`
+  );
+  return { again: row?.again ?? 0, hard: row?.hard ?? 0, good: row?.good ?? 0, easy: row?.easy ?? 0 };
+}
+
+export async function getTopCardsByGrade(
+  db: SQLiteDatabase,
+  grade: 0 | 1 | 2 | 3,
+  limit = 10
+): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number }[]> {
+  return db.getAllAsync(
+    `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent, COUNT(gl.id) AS gradeCount
+     FROM grade_logs gl
+     JOIN cards c ON gl.cardId = c.id
+     JOIN card_contents cc ON c.id = cc.cardId
+     JOIN decks d ON c.deckId = d.id
+     WHERE gl.grade = ?
+     GROUP BY c.id
+     ORDER BY gradeCount DESC
+     LIMIT ?`,
+    [grade, limit]
+  );
+}
+
+export async function getCardCorrectRates(
+  db: SQLiteDatabase,
+  limit = 10
+): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; correctRate: number; recentCorrectRate: number; totalReviews: number }[]> {
+  return db.getAllAsync(
+    `SELECT
+       c.id AS cardId,
+       c.deckId,
+       d.name AS deckName,
+       cc.frontContent,
+       COUNT(gl.id) AS totalReviews,
+       ROUND(100.0 * SUM(CASE WHEN gl.grade >= 2 THEN 1 ELSE 0 END) / COUNT(gl.id)) AS correctRate,
+       (
+         SELECT ROUND(100.0 * SUM(CASE WHEN g2.grade >= 2 THEN 1 ELSE 0 END) / COUNT(g2.id))
+         FROM (SELECT grade, id FROM grade_logs WHERE cardId = c.id ORDER BY id DESC LIMIT 10) g2
+       ) AS recentCorrectRate
+     FROM grade_logs gl
+     JOIN cards c ON gl.cardId = c.id
+     JOIN card_contents cc ON c.id = cc.cardId
+     JOIN decks d ON c.deckId = d.id
+     GROUP BY c.id
+     HAVING COUNT(gl.id) >= 3
+     ORDER BY correctRate ASC, totalReviews DESC
+     LIMIT ?`,
+    [limit]
   );
 }
 

@@ -138,13 +138,12 @@
     "learnedOf": "Done {{learned}} / {{total}} cards",
     "proSection": "Detailed Stats",
     "monthlyActivity": "Monthly Reviews",
-    "weakCards": "Weak Cards",
-    "weakCardsEmpty": "No weak cards yet",
-    "lapsesCount": "{{count}} lapses",
     "proUpgradePrompt": "Upgrade to Pro to\nunlock detailed stats",
     "proFeatureMonthly": "Monthly activity chart",
-    "proFeatureWeak": "Weak card ranking",
-    "showAllWeak": "Show all ({{count}})"
+    "proFeatureGradeRanking": "Grade ranking",
+    "gradeRanking": "Grade Ranking",
+    "gradeRankingEmpty": "No data yet\n(data accumulates as you study)",
+    "gradeCount": "×{{count}}"
   },
   "code": {
     "run": "Run",

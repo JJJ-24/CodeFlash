@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
@@ -17,6 +17,7 @@ import {
   getDailyReviewCounts,
   getDeckGradeDistribution,
   getDeckMasteryList,
+  getGradeLogTotals,
   getLearnedUnlearnedCount,
   getMonthlyReviewCounts,
   getPast7DaysReviewedCount,
@@ -24,8 +25,8 @@ import {
   getStudyStreak,
   getTodayDueCount,
   getTodayReviewedCount,
+  getTopCardsByGrade,
   getUpcomingSchedule,
-  getWeakCards,
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
@@ -81,7 +82,8 @@ function masteryColor(pct: number): string {
 
 type ScheduleItem = { date: string; count: number };
 type MasteryItem = { deckId: string; avgEase: number | null; learnedCount: number; newCount: number };
-type WeakCard = { cardId: string; deckId: string; deckName: string; frontContent: string; fsrsLapses: number; easeFactor: number };
+type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number };
+type GradeTotals = { again: number; hard: number; good: number; easy: number };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
 type GradeDistribution = { again: number; hard: number; normal: number; easy: number; unlearned: number };
 
@@ -100,7 +102,7 @@ interface StatsData {
   deckMastery: MasteryItem[];
   decks: Deck[];
   heatmapData: { date: string; count: number }[];
-  weakCards: WeakCard[];
+  gradeTotals: GradeTotals;
   monthlyReviewed: { month: string; count: number }[];
 }
 
@@ -118,7 +120,7 @@ const INITIAL_STATS: StatsData = {
   deckMastery: [],
   decks: [],
   heatmapData: [],
-  weakCards: [],
+  gradeTotals: { again: 0, hard: 0, good: 0, easy: 0 },
   monthlyReviewed: [],
 };
 
@@ -455,12 +457,15 @@ export default function StatsScreen() {
   const [sheetDist, setSheetDist] = useState<GradeDistribution | null>(null);
   const [sheetTitle, setSheetTitle] = useState('');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  const [weakCardsExpanded, setWeakCardsExpanded] = useState(false);
+  const [selectedGradeBlock, setSelectedGradeBlock] = useState<0 | 1 | 2 | 3 | null>(null);
+  const [gradeBlockCards, setGradeBlockCards] = useState<GradeCard[]>([]);
+  const [gradeBlockLoading, setGradeBlockLoading] = useState(false);
+  const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
-          deckMastery, decks, heatmapData, weakCards, monthlyReviewed } = stats;
+          deckMastery, decks, heatmapData, gradeTotals, monthlyReviewed } = stats;
 
   // openSheet 内で参照するため useMemo で安定化
   const deckMap = useMemo(
@@ -481,7 +486,7 @@ export default function StatsScreen() {
         heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
         const heatmapStartStr = toLocalDateStr(heatmapStart);
 
-        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawWeak, rawMonthly] =
+        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawMonthly, gradeTotalsData] =
           await Promise.all([
             getTodayReviewedCount(db),
             getTodayDueCount(db),
@@ -495,8 +500,8 @@ export default function StatsScreen() {
             getPast7DaysCreatedCount(db),
             getTodayCreatedCount(db),
             getDailyReviewCounts(db, heatmapStartStr),
-            getWeakCards(db, 10),
             getMonthlyReviewCounts(db),
+            getGradeLogTotals(db),
           ]);
 
         // 今後7日分（今日が先頭）
@@ -522,9 +527,13 @@ export default function StatsScreen() {
           deckMastery: mastery,
           decks: allDecks,
           heatmapData: rawHeatmap,
-          weakCards: rawWeak,
+          gradeTotals: gradeTotalsData,
           monthlyReviewed: fillPast12Months(rawMonthly),
         });
+        if (selectedGradeBlockRef.current !== null) {
+          const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10);
+          setGradeBlockCards(cards);
+        }
       }
       load();
       return () => { onScreenBlur(); };
@@ -572,6 +581,22 @@ export default function StatsScreen() {
   }, [db, deckMastery, deckMap, t]);
 
   const closeSheet = useCallback(() => setActiveSheet(null), []);
+
+  const handleGradeBlockTap = useCallback(async (grade: 0 | 1 | 2 | 3) => {
+    if (selectedGradeBlock === grade) {
+      selectedGradeBlockRef.current = null;
+      setSelectedGradeBlock(null);
+      setGradeBlockCards([]);
+      return;
+    }
+    selectedGradeBlockRef.current = grade;
+    setSelectedGradeBlock(grade);
+    setGradeBlockCards([]);
+    setGradeBlockLoading(true);
+    const cards = await getTopCardsByGrade(db, grade, 10);
+    setGradeBlockCards(cards);
+    setGradeBlockLoading(false);
+  }, [db, selectedGradeBlock]);
 
   const hasData = learned > 0 || todayReviewed > 0;
   const total = learned + unlearned;
@@ -798,60 +823,84 @@ export default function StatsScreen() {
               <MonthBarChart data={monthlyReviewed} theme={theme} />
             </View>
 
-            {/* 苦手カード */}
+            {/* グレード別ランキング */}
             <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('stats.weakCards')}
+              {t('stats.gradeRanking')}
             </Text>
-            {weakCards.length === 0 ? (
-              <View style={[styles.card, { backgroundColor: theme.colors.surface, alignItems: 'center', paddingVertical: 20 }]}>
-                <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('stats.weakCardsEmpty')}
-                </Text>
-              </View>
-            ) : (
-              <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0, overflow: 'hidden' }]}>
-                {(weakCardsExpanded ? weakCards : weakCards.slice(0, 1)).map((card, idx, arr) => {
-                  const preview = getCardPreview(JSON.parse(card.frontContent) as Block[], '');
-                  return (
-                    <Pressable
-                      key={card.cardId}
-                      style={({ pressed }) => [
-                        styles.weakCardRow,
-                        idx < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
-                        pressed && { opacity: 0.7 },
-                      ]}
-                      onPress={() => router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`)}
-                    >
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={[styles.weakCardPreview, { color: theme.colors.text, fontSize: theme.fontSize.sm }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                          {preview || '—'}
-                        </Text>
-                        <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                          {card.deckName}
-                        </Text>
-                      </View>
-                      <View style={[styles.lapseBadge, { backgroundColor: '#E53935' }]}>
-                        <Text style={[styles.lapseBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                          {t('stats.lapsesCount', { count: card.fsrsLapses })}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-                {weakCards.length > 1 && (
+            {(() => {
+              const gradeItems = [
+                { grade: 0 as const, labelKey: 'grade.again', color: GRADE_COLORS.again, count: gradeTotals.again },
+                { grade: 1 as const, labelKey: 'grade.hard',  color: GRADE_COLORS.hard,  count: gradeTotals.hard  },
+                { grade: 2 as const, labelKey: 'grade.good',  color: GRADE_COLORS.good,  count: gradeTotals.good  },
+                { grade: 3 as const, labelKey: 'grade.easy',  color: GRADE_COLORS.easy,  count: gradeTotals.easy  },
+              ];
+              const gradeMaxDigits = Math.max(...gradeItems.map(g => String(g.count).length));
+              const gradeCountFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : gradeMaxDigits);
+              return (
+            <View style={styles.gradeBlockRow}>
+              {gradeItems.map(({ grade, labelKey, color, count }) => {
+                const isSelected = selectedGradeBlock === grade;
+                return (
                   <Pressable
-                    style={({ pressed }) => [
-                      styles.weakCardExpand,
-                      { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border },
-                      pressed && { opacity: 0.7 },
-                    ]}
-                    onPress={() => setWeakCardsExpanded((v) => !v)}
+                    key={grade}
+                    style={[styles.gradeBlock, { borderColor: color }, isSelected && { backgroundColor: color }]}
+                    onPress={() => handleGradeBlockTap(grade)}
                   >
-                    <Text style={[{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '600' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                      {weakCardsExpanded ? t('common.showLess') : t('stats.showAllWeak', { count: weakCards.length })}
+                    <Text style={[styles.gradeBlockCount, { color: isSelected ? '#fff' : color, fontSize: gradeCountFontSize }]} allowFontScaling={false} numberOfLines={1}>
+                      {count}
                     </Text>
-                    <Ionicons name={weakCardsExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={theme.colors.primary} />
+                    <Text style={[styles.gradeBlockLabel, { color: isSelected ? 'rgba(255,255,255,0.85)' : theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t(labelKey)}
+                    </Text>
                   </Pressable>
+                );
+              })}
+            </View>
+              );
+            })()}
+
+            {selectedGradeBlock !== null && (
+              <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0, overflow: 'hidden' }]}>
+                {gradeBlockLoading ? (
+                  <View style={{ padding: 20, alignItems: 'center' }}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                  </View>
+                ) : gradeBlockCards.length === 0 ? (
+                  <View style={{ padding: 20, alignItems: 'center' }}>
+                    <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('stats.gradeRankingEmpty')}
+                    </Text>
+                  </View>
+                ) : (
+                  gradeBlockCards.map((card, idx, arr) => {
+                    const preview = getCardPreview(JSON.parse(card.frontContent) as Block[], '');
+                    const badgeColor = [GRADE_COLORS.again, GRADE_COLORS.hard, GRADE_COLORS.good, GRADE_COLORS.easy][selectedGradeBlock];
+                    return (
+                      <Pressable
+                        key={card.cardId}
+                        style={({ pressed }) => [
+                          styles.weakCardRow,
+                          idx < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
+                          pressed && { opacity: 0.7 },
+                        ]}
+                        onPress={() => router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`)}
+                      >
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={[styles.weakCardPreview, { color: theme.colors.text, fontSize: theme.fontSize.sm }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                            {preview || '—'}
+                          </Text>
+                          <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                            {card.deckName}
+                          </Text>
+                        </View>
+                        <View style={[styles.lapseBadge, { backgroundColor: badgeColor }]}>
+                          <Text style={styles.lapseBadgeText} allowFontScaling={false}>
+                            {t('stats.gradeCount', { count: card.gradeCount })}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })
                 )}
               </View>
             )}
@@ -866,7 +915,7 @@ export default function StatsScreen() {
               {t('stats.proUpgradePrompt')}
             </Text>
             <View style={styles.proLockedFeatures}>
-              {(['proFeatureMonthly', 'proFeatureWeak'] as const).map((key) => (
+              {(['proFeatureMonthly', 'proFeatureGradeRanking'] as const).map((key) => (
                 <View key={key} style={styles.proLockedFeatureRow}>
                   <Ionicons name="checkmark-circle-outline" size={14} color={theme.colors.primary} />
                   <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
@@ -961,8 +1010,11 @@ const styles = StyleSheet.create({
   proBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   proBadgeText: { color: '#fff', fontWeight: '700', letterSpacing: 1 },
   proSubTitle: { fontWeight: '600', marginBottom: 6 },
+  gradeBlockRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
+  gradeBlock: { flex: 1, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4 },
+  gradeBlockCount: { fontWeight: '700' },
+  gradeBlockLabel: { marginTop: 2, fontWeight: '600' },
   weakCardRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  weakCardExpand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 4 },
   weakCardPreview: { fontWeight: '500' },
   lapseBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   lapseBadgeText: { color: '#fff', fontWeight: '600' },

@@ -591,8 +591,8 @@ export default function StatsScreen() {
     }
     selectedGradeBlockRef.current = grade;
     setSelectedGradeBlock(grade);
-    setGradeBlockCards([]);
     setGradeBlockLoading(true);
+    // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
     const cards = await getTopCardsByGrade(db, grade, 10);
     setGradeBlockCards(cards);
     setGradeBlockLoading(false);
@@ -861,7 +861,8 @@ export default function StatsScreen() {
 
             {selectedGradeBlock !== null && (
               <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0, overflow: 'hidden' }]}>
-                {gradeBlockLoading ? (
+                {gradeBlockLoading && gradeBlockCards.length === 0 ? (
+                  // 初回：カードなしでローディング中
                   <View style={{ padding: 20, alignItems: 'center' }}>
                     <ActivityIndicator color={theme.colors.primary} />
                   </View>
@@ -872,7 +873,9 @@ export default function StatsScreen() {
                     </Text>
                   </View>
                 ) : (
-                  gradeBlockCards.map((card, idx, arr) => {
+                  // 切り替え中は既存カードを薄表示、高さを維持してスクロール位置を保持
+                  <View style={{ opacity: gradeBlockLoading ? 0.4 : 1 }}>
+                  {gradeBlockCards.map((card, idx, arr) => {
                     const preview = getCardPreview(JSON.parse(card.frontContent) as Block[], '');
                     const badgeColor = [GRADE_COLORS.again, GRADE_COLORS.hard, GRADE_COLORS.good, GRADE_COLORS.easy][selectedGradeBlock];
                     return (
@@ -900,7 +903,8 @@ export default function StatsScreen() {
                         </View>
                       </Pressable>
                     );
-                  })
+                  })}
+                  </View>
                 )}
               </View>
             )}

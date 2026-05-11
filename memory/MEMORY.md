@@ -44,7 +44,8 @@
 - [project_pro_features.md](project_pro_features.md) — Pro 予定機能リスト（014/015/018/020/024/025/026）
 
 ## 次のステップ
-- チケット016 課金実装進行中（ペイウォール機能リスト修正・設定画面 Pro バッジ追加）
+- チケット016 課金実装完了（コード実装のみ。App Store Connect/RevenueCat 設定は 017 申請時）
+- チケット014 保留（クラウド同期方式未決定：iCloud/CloudKit vs Supabase/Firebase 検討中）
 - 017 App Store 申請進行中 → [project_app_store.md](project_app_store.md)
 - [project_border_colors.md](project_border_colors.md) — コードブロック枠線色の実装状況（未完了課題あり）
 - [project_study_run_shortcut_bug.md](project_study_run_shortcut_bug.md) — 編集→実行後ショートカット無効バグ（解決済み: handleForceKeyboardFocus で switchingCodeBlockRef ガードを迂回）

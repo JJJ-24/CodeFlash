@@ -9,9 +9,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { cancelAllReminders, scheduleDailyReminder, updateBadgeCount } from '@/lib/notifications';
+import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useThemeStore } from '@/store/theme';
+
+initializePurchases();
 
 function RootStack() {
   const theme = useTheme();
@@ -32,6 +35,7 @@ function RootStack() {
 
   useEffect(() => {
     cleanupOrphanImages(db).catch(() => {});
+    restoreProStatus().catch(() => {});
   }, []);
 
   // アプリがフォアグラウンドに戻るたびに通知を再スケジュール（OS による消去に対応）
@@ -76,6 +80,7 @@ function RootStack() {
         options={{ headerShown: false, animation: 'fade', title: '' }}
       />
       <Stack.Screen name="search" options={{ headerShown: false, animation: 'none' }} />
+      <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
     </Stack>
     </ThemeProvider>
   );

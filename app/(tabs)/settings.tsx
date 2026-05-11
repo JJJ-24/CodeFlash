@@ -21,6 +21,7 @@ import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/
 import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
+import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
 import { useThemeStore } from '@/store/theme';
@@ -70,6 +71,7 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const db = useSQLiteContext();
   const router = useRouter();
+  const { isPro } = useProStore();
   const { preference, setPreference, fontSizePreference, setFontSizePreference } = useThemeStore();
   const {
     initialFilterPreference, setInitialFilterPreference,
@@ -271,6 +273,36 @@ export default function SettingsScreen() {
   return (
     <View style={{ flex: 1 }}>
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container} pointerEvents={loading ? 'none' : 'auto'}>
+      {/* Pro プラン */}
+      <Pressable
+        style={[styles.card, styles.proCard, { backgroundColor: theme.colors.surface }]}
+        onPress={() => !isPro && router.push('/paywall')}
+        disabled={isPro}
+      >
+        <View style={styles.proRow}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <View style={styles.proTitleRow}>
+              <Text style={[styles.proTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                CodeFlash Pro
+              </Text>
+              {isPro && (
+                <View style={[styles.proBadge, { backgroundColor: theme.colors.primary }]}>
+                  <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]}>Pro</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.proSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {isPro ? t('pro.alreadyPro') : t('pro.paywallSubtitle')}
+            </Text>
+          </View>
+          {isPro ? (
+            <Ionicons name="checkmark-circle" size={22} color={theme.colors.primary} />
+          ) : (
+            <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+          )}
+        </View>
+      </Pressable>
+
       <SegmentedCard
         label={t('settings.theme')}
         options={[
@@ -452,6 +484,13 @@ const styles = StyleSheet.create({
     ...SHADOW.subtle,
   },
   sectionLabel: { fontWeight: '600' },
+  proCard: { paddingVertical: 16 },
+  proRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  proTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  proTitle: { fontWeight: '700' },
+  proSubtitle: { lineHeight: 18 },
+  proBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
+  proBadgeText: { color: '#fff', fontWeight: '700', letterSpacing: 1 },
   segmented: {
     flexDirection: 'row',
     borderRadius: 8,

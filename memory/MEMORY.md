@@ -39,9 +39,13 @@
 ## 解決済みバグ
 - [project_ipad_header_height.md](project_ipad_header_height.md) — iPad 学習画面ヘッダー高さ変化（解決済み: headerShown:false + インラインヘッダー + animation:'fade' in _layout.tsx）
 
+## Pro プラン方針
+- [project_pro_policy.md](project_pro_policy.md) — デッキ/カード/全画面は無料。Pro対象は未実装の拡張機能のみ
+- [project_pro_features.md](project_pro_features.md) — Pro 予定機能リスト（014/015/018/020/024/025/026）
+
 ## 次のステップ
+- チケット016 課金実装進行中（ペイウォール機能リスト修正・設定画面 Pro バッジ追加）
 - 017 App Store 申請進行中 → [project_app_store.md](project_app_store.md)
-- 016以降のチケット実装
 - [project_border_colors.md](project_border_colors.md) — コードブロック枠線色の実装状況（未完了課題あり）
 - [project_study_run_shortcut_bug.md](project_study_run_shortcut_bug.md) — 編集→実行後ショートカット無効バグ（解決済み: handleForceKeyboardFocus で switchingCodeBlockRef ガードを迂回）
 

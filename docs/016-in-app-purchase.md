@@ -1,7 +1,7 @@
 # 016 買い切り課金
 
 **フェーズ:** v1.1
-**ステータス:** 未着手
+**ステータス:** 進行中
 **依存:** 007, 012, 013
 **被依存:** 017
 
@@ -16,35 +16,36 @@
 ## Todo
 
 ### 課金基盤
-- [ ] `expo-in-app-purchases` or `react-native-purchases`（RevenueCat）の選定
+- [x] `react-native-purchases`（RevenueCat）の選定・インストール
+- [x] `lib/purchases.ts` — RevenueCat ラッパー（初期化・購入・リストア・ステータス取得）
 - [ ] App Store Connect でのアプリ内課金設定（非消耗型）
 - [ ] Google Play Console でのアプリ内課金設定
-- [ ] 購入処理の実装
-- [ ] リストア購入の実装
-- [ ] レシート検証（サーバー側 or RevenueCat 経由）
+- [x] 購入処理の実装（purchasePro）
+- [x] リストア購入の実装（restorePurchases）
+- [ ] レシート検証（RevenueCat 経由で自動処理）
+- [ ] lib/purchases.ts の API キーを本番キーに差し替え（APPLE_API_KEY / GOOGLE_API_KEY）
 
 ### Pro 機能ゲーティング
-- [ ] `useProStore` — Pro ステータス管理（Zustand）
+- [x] `useProStore` — Pro ステータス管理（Zustand + AsyncStorage）
 - [ ] 無料版制限の実装:
-  - [-] デッキ上限3つ（超えた場合はアップグレード促進）
-  - [-] カード上限50枚
+  - [~] デッキ上限：制限なし（無料で無制限）
+  - [~] カード上限：制限なし（無料で無制限）
   - [ ] JS・TS・Python実行のみ（SQL・C++はPro）
   - [ ] iCloud同期無効
-  - [-] 全画面モード無効
+  - [~] 全画面モード：制限なし（無料で使用可）
   - [ ] Web版無効
-- [ ] Pro 機能タップ時のアップグレード誘導モーダル
 
 ### ペイウォール UI
-- [ ] `app/paywall.tsx` — 購入画面
-  - [ ] 無料版 vs Pro 機能比較表
-  - [ ] 価格表示（¥980〜¥1,480）
-  - [ ] 購入ボタン
-  - [ ] リストアボタン
-  - [ ] 利用規約・プライバシーポリシーリンク
-- [ ] Pro バッジ表示
+- [x] `app/paywall.tsx` — 購入画面
+  - [x] 無料版 vs Pro 機能比較表
+  - [x] 価格表示（RevenueCat から動的取得）
+  - [x] 購入ボタン
+  - [x] リストアボタン
+  - [x] 利用規約・プライバシーポリシーリンク
+- [x] Pro バッジ表示（設定画面に「CodeFlash Pro」カード + バッジ追加）
 
 ### i18n
-- [ ] 課金関連テキストの翻訳キー追加
+- [x] 課金関連テキストの翻訳キー追加（ja.json / en.json）
 
 ---
 

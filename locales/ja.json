@@ -281,7 +281,8 @@
     "restoreSuccess": "購入を復元しました",
     "alreadyPro": "すでに Pro プランです",
     "upgradeButton": "Pro にアップグレード",
-    "loading": "価格を読み込み中..."
+    "loading": "価格を読み込み中...",
+    "iapNotice": "お支払いは Apple アカウントに請求されます。購入は自動的に更新されません。"
   },
   "shortcut": {
     "flip": "カードを裏返す",

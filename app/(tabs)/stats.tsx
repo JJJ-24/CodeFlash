@@ -876,7 +876,7 @@ export default function StatsScreen() {
               ))}
             </View>
             <View style={[styles.proLockedBtn, { backgroundColor: theme.colors.primary }]}>
-              <Text style={[styles.proLockedBtnText, { fontSize: theme.fontSize.sm }]}>
+              <Text style={[styles.proLockedBtnText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('pro.upgradeButton')}
               </Text>
             </View>

@@ -281,7 +281,8 @@
     "restoreSuccess": "Purchase restored successfully.",
     "alreadyPro": "You already have Pro.",
     "upgradeButton": "Upgrade to Pro",
-    "loading": "Loading price..."
+    "loading": "Loading price...",
+    "iapNotice": "Payment will be charged to your Apple account. Purchases do not auto-renew."
   },
   "shortcut": {
     "flip": "Flip card",

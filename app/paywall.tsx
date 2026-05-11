@@ -12,11 +12,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import { InfoModal } from '@/components/InfoModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { fetchOfferings, purchasePro, restorePurchases, type MockPackage } from '@/lib/purchases';
-import { useTheme } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 
 const PRIVACY_URL = 'https://jjj24.github.io/codeflash/privacy';
@@ -77,6 +78,7 @@ export default function PaywallScreen() {
   const [loading, setLoading]       = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring]   = useState(false);
+  const [infoModal, setInfoModal]   = useState<{ message: string; onClose?: () => void } | null>(null);
 
   useEffect(() => {
     fetchOfferings()
@@ -102,10 +104,12 @@ export default function PaywallScreen() {
     setRestoring(true);
     try {
       const ok = await restorePurchases();
-      Alert.alert(ok ? t('pro.restoreSuccess') : t('pro.alreadyPro'));
-      if (ok) router.back();
+      setInfoModal({
+        message: ok ? t('pro.restoreSuccess') : t('pro.alreadyPro'),
+        onClose: ok ? () => router.back() : undefined,
+      });
     } catch {
-      Alert.alert(t('pro.restoreError'));
+      setInfoModal({ message: t('pro.restoreError') });
     } finally {
       setRestoring(false);
     }
@@ -134,10 +138,10 @@ export default function PaywallScreen() {
         {/* ヘッダー */}
         <View style={s.header}>
           <View style={s.proBadge}>
-            <Text style={s.proBadgeText}>{t('pro.badge')}</Text>
+            <Text style={s.proBadgeText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('pro.badge')}</Text>
           </View>
-          <Text style={s.title}>{t('pro.paywallTitle')}</Text>
-          <Text style={s.subtitle}>{t('pro.paywallSubtitle')}</Text>
+          <Text style={s.title} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('pro.paywallTitle')}</Text>
+          <Text style={s.subtitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('pro.paywallSubtitle')}</Text>
         </View>
 
         {/* Pro 特典リスト */}
@@ -148,8 +152,8 @@ export default function PaywallScreen() {
                 <Ionicons name={f.icon} size={22} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.featureTitle}>{t(f.titleKey)}</Text>
-                <Text style={s.featureDesc}>{t(f.descKey)}</Text>
+                <Text style={s.featureTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t(f.titleKey)}</Text>
+                <Text style={s.featureDesc} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{t(f.descKey)}</Text>
               </View>
             </View>
           ))}
@@ -159,7 +163,7 @@ export default function PaywallScreen() {
         {isPro ? (
           <View style={s.alreadyPro}>
             <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
-            <Text style={[s.alreadyProText, { color: theme.colors.primary }]}>
+            <Text style={[s.alreadyProText, { color: theme.colors.primary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('pro.alreadyPro')}
             </Text>
           </View>
@@ -173,7 +177,7 @@ export default function PaywallScreen() {
               {purchasing ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={s.purchaseBtnText}>
+                <Text style={s.purchaseBtnText} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {loading ? t('pro.loading') : priceLabel}
                 </Text>
               )}
@@ -187,7 +191,7 @@ export default function PaywallScreen() {
               {restoring ? (
                 <ActivityIndicator color={theme.colors.primary} />
               ) : (
-                <Text style={[s.restoreBtnText, { color: theme.colors.primary }]}>
+                <Text style={[s.restoreBtnText, { color: theme.colors.primary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('pro.restoreButton')}
                 </Text>
               )}
@@ -198,20 +202,29 @@ export default function PaywallScreen() {
         {/* フッターリンク */}
         <View style={s.footer}>
           <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
-            <Text style={s.footerLink}>{t('pro.privacyPolicy')}</Text>
+            <Text style={s.footerLink} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{t('pro.privacyPolicy')}</Text>
           </Pressable>
-          <Text style={s.footerSep}>・</Text>
+          <Text style={s.footerSep} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>・</Text>
           <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
-            <Text style={s.footerLink}>{t('pro.terms')}</Text>
+            <Text style={s.footerLink} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{t('pro.terms')}</Text>
           </Pressable>
         </View>
 
         {Platform.OS === 'ios' && (
-          <Text style={s.iapNotice}>
-            お支払いは Apple アカウントに請求されます。購入は自動的に更新されません。
+          <Text style={s.iapNotice} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+            {t('pro.iapNotice')}
           </Text>
         )}
       </ScrollView>
+      <InfoModal
+        visible={infoModal !== null}
+        message={infoModal?.message ?? ''}
+        onClose={() => {
+          const cb = infoModal?.onClose;
+          setInfoModal(null);
+          cb?.();
+        }}
+      />
     </>
   );
 }
@@ -259,13 +272,14 @@ const styles = (colors: ReturnType<typeof useTheme>['colors'], fontSize: ReturnT
     },
     featureRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       paddingHorizontal: 16,
       paddingVertical: 14,
     },
     featureIcon: {
       width: 36,
       alignItems: 'center',
+      paddingTop: 1,
     },
     featureTitle: {
       fontSize: fontSize.sm,

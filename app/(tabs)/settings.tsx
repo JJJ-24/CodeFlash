@@ -288,7 +288,7 @@ export default function SettingsScreen() {
               </Text>
               {isPro && (
                 <View style={[styles.proBadge, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]}>Pro</Text>
+                  <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>Pro</Text>
                 </View>
               )}
             </View>

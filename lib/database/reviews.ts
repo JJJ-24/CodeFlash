@@ -430,6 +430,37 @@ export async function getDailyReviewCounts(
   );
 }
 
+/** 苦手カード（fsrsLapses 多い順・easeFactor 低い順） */
+export async function getWeakCards(
+  db: SQLiteDatabase,
+  limit = 10
+): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; fsrsLapses: number; easeFactor: number }[]> {
+  return db.getAllAsync<{ cardId: string; deckId: string; deckName: string; frontContent: string; fsrsLapses: number; easeFactor: number }>(
+    `SELECT c.id as cardId, c.deckId, d.name as deckName,
+            cc.frontContent, COALESCE(r.fsrsLapses, 0) as fsrsLapses, r.easeFactor
+     FROM cards c
+     JOIN card_contents cc ON c.id = cc.cardId
+     JOIN decks d ON c.deckId = d.id
+     JOIN reviews r ON c.id = r.cardId
+     WHERE r.fsrsLapses > 0
+     ORDER BY r.fsrsLapses DESC, r.easeFactor ASC
+     LIMIT ?`,
+    [limit]
+  );
+}
+
+/** 月別学習枚数（review_logs ベース） */
+export async function getMonthlyReviewCounts(
+  db: SQLiteDatabase
+): Promise<{ month: string; count: number }[]> {
+  return db.getAllAsync<{ month: string; count: number }>(
+    `SELECT substr(reviewedDate, 1, 7) as month, COUNT(*) as count
+     FROM review_logs
+     GROUP BY month
+     ORDER BY month ASC`
+  );
+}
+
 /**
  * 学習ストリーク日数を計算する
  * 今日から過去に遡り、review_logs に学習記録がある日が連続している日数を返す

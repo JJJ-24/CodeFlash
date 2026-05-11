@@ -135,7 +135,16 @@
     "deckMastery": "Deck Mastery",
     "empty": "No study data yet",
     "emptySub": "Start studying to see your stats here",
-    "learnedOf": "Done {{learned}} / {{total}} cards"
+    "learnedOf": "Done {{learned}} / {{total}} cards",
+    "proSection": "Detailed Stats",
+    "monthlyActivity": "Monthly Reviews",
+    "weakCards": "Weak Cards",
+    "weakCardsEmpty": "No weak cards yet",
+    "lapsesCount": "{{count}} lapses",
+    "proUpgradePrompt": "Upgrade to Pro to\nunlock detailed stats",
+    "proFeatureMonthly": "Monthly activity chart",
+    "proFeatureWeak": "Weak card ranking",
+    "showAllWeak": "Show all ({{count}})"
   },
   "code": {
     "run": "Run",

@@ -135,7 +135,16 @@
     "deckMastery": "デッキ別習熟度",
     "empty": "まだ学習データがありません",
     "emptySub": "学習を開始するとここに統計が表示されます",
-    "learnedOf": "学習済み {{learned}} / {{total}} 枚"
+    "learnedOf": "学習済み {{learned}} / {{total}} 枚",
+    "proSection": "詳細統計",
+    "monthlyActivity": "月別学習枚数",
+    "weakCards": "苦手カード",
+    "weakCardsEmpty": "苦手カードはありません",
+    "lapsesCount": "ミス {{count}} 回",
+    "proUpgradePrompt": "Pro にアップグレードして\n詳細統計を確認しよう",
+    "proFeatureMonthly": "月別学習グラフ",
+    "proFeatureWeak": "苦手カードランキング",
+    "showAllWeak": "すべて表示（{{count}} 枚）"
   },
   "code": {
     "run": "実行",

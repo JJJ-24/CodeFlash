@@ -18,12 +18,14 @@ import {
   getDeckGradeDistribution,
   getDeckMasteryList,
   getLearnedUnlearnedCount,
+  getMonthlyReviewCounts,
   getPast7DaysReviewedCount,
   getPast7DaysStudyActivity,
   getStudyStreak,
   getTodayDueCount,
   getTodayReviewedCount,
   getUpcomingSchedule,
+  getWeakCards,
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
@@ -31,8 +33,10 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { EmptyState } from '@/components/EmptyState';
+import { getCardPreview } from '@/lib/cardPreview';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
-import type { Deck } from '@/types';
+import { useProStore } from '@/store/pro';
+import type { Block, Deck } from '@/types';
 
 const STATS_SHORTCUTS = [
   { key: '1–4',   descKey: 'shortcut.cycleChart' },
@@ -77,6 +81,7 @@ function masteryColor(pct: number): string {
 
 type ScheduleItem = { date: string; count: number };
 type MasteryItem = { deckId: string; avgEase: number | null; learnedCount: number; newCount: number };
+type WeakCard = { cardId: string; deckId: string; deckName: string; frontContent: string; fsrsLapses: number; easeFactor: number };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
 type GradeDistribution = { again: number; hard: number; normal: number; easy: number; unlearned: number };
 
@@ -95,6 +100,8 @@ interface StatsData {
   deckMastery: MasteryItem[];
   decks: Deck[];
   heatmapData: { date: string; count: number }[];
+  weakCards: WeakCard[];
+  monthlyReviewed: { month: string; count: number }[];
 }
 
 const INITIAL_STATS: StatsData = {
@@ -111,6 +118,8 @@ const INITIAL_STATS: StatsData = {
   deckMastery: [],
   decks: [],
   heatmapData: [],
+  weakCards: [],
+  monthlyReviewed: [],
 };
 
 // ──────────────────────────────────────────────
@@ -259,6 +268,48 @@ function BarChart({
   );
 }
 
+const MONTH_BAR_COL_W = 44;
+const MONTH_LABELS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function MonthBarChart({ data, theme }: { data: { month: string; count: number }[]; theme: AppTheme }) {
+  const { i18n } = useTranslation();
+  const isJa = i18n.language.startsWith('ja');
+  const scrollRef = useRef<ScrollView>(null);
+  const maxCount = Math.max(...data.map((d) => d.count), 1);
+  const barCountH = Math.ceil(theme.fontSize.xs * 1.95);
+  const barLabelH = Math.ceil(theme.fontSize.sm * 1.95);
+  const chartH = BAR_MAX_HEIGHT + barCountH + barLabelH + 8;
+
+  return (
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      onLayout={() => scrollRef.current?.scrollToEnd({ animated: false })}
+    >
+      <View style={[styles.barChart, { height: chartH, width: data.length * MONTH_BAR_COL_W }]}>
+        {data.map((item, i) => {
+          const barH = Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, item.count > 0 ? 4 : 0);
+          const monthNum = parseInt(item.month.split('-')[1]);
+          const label = isJa ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
+          const isCurrentMonth = i === data.length - 1;
+          return (
+            <View key={item.month} style={[styles.barCol, { width: MONTH_BAR_COL_W }]}>
+              <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {item.count > 0 ? item.count : ''}
+              </Text>
+              <View style={[styles.bar, { height: barH, backgroundColor: theme.colors.primary, opacity: isCurrentMonth ? 1 : 0.35 }]} />
+              <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isCurrentMonth && { color: theme.colors.primary, fontWeight: '700' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {label}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
 function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery: MasteryItem; theme: AppTheme; onPress: () => void }) {
   const { t } = useTranslation();
   const pct = masteryPercent(mastery.avgEase);
@@ -360,6 +411,18 @@ function toLocalDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** 過去12ヶ月分を昇順で埋める（欠落月は count: 0） */
+function fillPast12Months(rows: { month: string; count: number }[]): { month: string; count: number }[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (11 - i));
+    const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const found = rows.find((r) => r.month === monthStr);
+    return { month: monthStr, count: found?.count ?? 0 };
+  });
+}
+
 /** 過去7日分を昇順で埋める（欠落日は count: 0、今日が最後） */
 function fillPast7Days(rows: ScheduleItem[]): ScheduleItem[] {
   return Array.from({ length: 7 }, (_, i) => {
@@ -380,6 +443,7 @@ export default function StatsScreen() {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const { initialFilterPreference, keyboardShortcutsEnabled } = useSettingsStore();
+  const { isPro } = useProStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<{ total: number; decks: number[] }>({ total: 0, decks: [] });
@@ -391,11 +455,12 @@ export default function StatsScreen() {
   const [sheetDist, setSheetDist] = useState<GradeDistribution | null>(null);
   const [sheetTitle, setSheetTitle] = useState('');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [weakCardsExpanded, setWeakCardsExpanded] = useState(false);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
-          deckMastery, decks, heatmapData } = stats;
+          deckMastery, decks, heatmapData, weakCards, monthlyReviewed } = stats;
 
   // openSheet 内で参照するため useMemo で安定化
   const deckMap = useMemo(
@@ -416,7 +481,7 @@ export default function StatsScreen() {
         heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
         const heatmapStartStr = toLocalDateStr(heatmapStart);
 
-        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap] =
+        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawWeak, rawMonthly] =
           await Promise.all([
             getTodayReviewedCount(db),
             getTodayDueCount(db),
@@ -430,6 +495,8 @@ export default function StatsScreen() {
             getPast7DaysCreatedCount(db),
             getTodayCreatedCount(db),
             getDailyReviewCounts(db, heatmapStartStr),
+            getWeakCards(db, 10),
+            getMonthlyReviewCounts(db),
           ]);
 
         // 今後7日分（今日が先頭）
@@ -455,6 +522,8 @@ export default function StatsScreen() {
           deckMastery: mastery,
           decks: allDecks,
           heatmapData: rawHeatmap,
+          weakCards: rawWeak,
+          monthlyReviewed: fillPast12Months(rawMonthly),
         });
       }
       load();
@@ -708,6 +777,113 @@ export default function StatsScreen() {
         </View>
       )}
 
+      {/* 詳細統計（Pro） */}
+      <View style={styles.section}>
+        <View style={styles.proSectionTitle}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('stats.proSection')}
+          </Text>
+          <View style={[styles.proBadge, { backgroundColor: theme.colors.primary }]}>
+            <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>Pro</Text>
+          </View>
+        </View>
+
+        {isPro ? (
+          <>
+            {/* 月別学習グラフ */}
+            <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('stats.monthlyActivity')}
+            </Text>
+            <View style={[styles.card, { backgroundColor: theme.colors.surface, marginBottom: 12 }]}>
+              <MonthBarChart data={monthlyReviewed} theme={theme} />
+            </View>
+
+            {/* 苦手カード */}
+            <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('stats.weakCards')}
+            </Text>
+            {weakCards.length === 0 ? (
+              <View style={[styles.card, { backgroundColor: theme.colors.surface, alignItems: 'center', paddingVertical: 20 }]}>
+                <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('stats.weakCardsEmpty')}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0, overflow: 'hidden' }]}>
+                {(weakCardsExpanded ? weakCards : weakCards.slice(0, 1)).map((card, idx, arr) => {
+                  const preview = getCardPreview(JSON.parse(card.frontContent) as Block[], '');
+                  return (
+                    <Pressable
+                      key={card.cardId}
+                      style={({ pressed }) => [
+                        styles.weakCardRow,
+                        idx < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
+                        pressed && { opacity: 0.7 },
+                      ]}
+                      onPress={() => router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`)}
+                    >
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.weakCardPreview, { color: theme.colors.text, fontSize: theme.fontSize.sm }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                          {preview || '—'}
+                        </Text>
+                        <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                          {card.deckName}
+                        </Text>
+                      </View>
+                      <View style={[styles.lapseBadge, { backgroundColor: '#E53935' }]}>
+                        <Text style={[styles.lapseBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                          {t('stats.lapsesCount', { count: card.fsrsLapses })}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+                {weakCards.length > 1 && (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.weakCardExpand,
+                      { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                    onPress={() => setWeakCardsExpanded((v) => !v)}
+                  >
+                    <Text style={[{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '600' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {weakCardsExpanded ? t('common.showLess') : t('stats.showAllWeak', { count: weakCards.length })}
+                    </Text>
+                    <Ionicons name={weakCardsExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={theme.colors.primary} />
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </>
+        ) : (
+          <Pressable
+            style={[styles.card, styles.proLockedCard, { backgroundColor: theme.colors.surface }]}
+            onPress={() => router.push('/paywall')}
+          >
+            <Ionicons name="lock-closed-outline" size={28} color={theme.colors.textSecondary} />
+            <Text style={[styles.proLockedTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('stats.proUpgradePrompt')}
+            </Text>
+            <View style={styles.proLockedFeatures}>
+              {(['proFeatureMonthly', 'proFeatureWeak'] as const).map((key) => (
+                <View key={key} style={styles.proLockedFeatureRow}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color={theme.colors.primary} />
+                  <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                    {t(`stats.${key}`)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <View style={[styles.proLockedBtn, { backgroundColor: theme.colors.primary }]}>
+              <Text style={[styles.proLockedBtnText, { fontSize: theme.fontSize.sm }]}>
+                {t('pro.upgradeButton')}
+              </Text>
+            </View>
+          </Pressable>
+        )}
+      </View>
+
       </ScrollView>
       <DonutSheet
         visible={activeSheet !== null}
@@ -780,4 +956,20 @@ const styles = StyleSheet.create({
   masteryBarFill: { height: '100%', borderRadius: 4 },
   masterySubLabel: {},
 
+  // Pro section
+  proSectionTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  proBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
+  proBadgeText: { color: '#fff', fontWeight: '700', letterSpacing: 1 },
+  proSubTitle: { fontWeight: '600', marginBottom: 6 },
+  weakCardRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  weakCardExpand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 4 },
+  weakCardPreview: { fontWeight: '500' },
+  lapseBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  lapseBadgeText: { color: '#fff', fontWeight: '600' },
+  proLockedCard: { alignItems: 'center', gap: 12, paddingVertical: 24 },
+  proLockedTitle: { fontWeight: '700', textAlign: 'center' },
+  proLockedFeatures: { gap: 4, alignSelf: 'stretch', paddingHorizontal: 16 },
+  proLockedFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  proLockedBtn: { borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10, marginTop: 4 },
+  proLockedBtnText: { color: '#fff', fontWeight: '700' },
 });

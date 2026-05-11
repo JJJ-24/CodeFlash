@@ -42,3 +42,13 @@ FSRS アルゴリズムのパラメータをユーザーが調整できるよう
 - `ts-fsrs` ライブラリは `FSRSParameters` でパラメータを受け取れる（`lib/fsrs.ts` 参照）
 - 設定値は `useSettingsStore`（AsyncStorage）に保存
 - パラメータ変更は既存の `reviews` データには遡及しない（新規学習から適用）
+
+## 検討事項
+
+### `enable_short_term` の扱い
+現在 `lib/fsrs.ts` は `enable_short_term: false` で初期化しており、短期ステップ（同日中の複数回レビュー）がスキップされる。これにより：
+- 新規カードが最初のレビュー後すぐに Review 状態になる
+- 2回目の「再考」がラプス（ミス）としてカウントされる
+- Anki などの標準 FSRS とは挙動が異なる
+
+`enable_short_term: true` にすれば標準 FSRS に近づくが、同日中に同じカードが複数回出る UI が必要になる（学習セッション内での再出題ロジックの追加）。Pro 設定として「短期ステップ ON/OFF」を選択できるようにすることを検討する。

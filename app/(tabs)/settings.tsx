@@ -277,7 +277,8 @@ export default function SettingsScreen() {
       <Pressable
         style={[styles.card, styles.proCard, { backgroundColor: theme.colors.surface }]}
         onPress={() => !isPro && router.push('/paywall')}
-        disabled={isPro}
+        onLongPress={() => { if (__DEV__ && isPro) useProStore.getState().setIsPro(false); }}
+        disabled={isPro && !__DEV__}
       >
         <View style={styles.proRow}>
           <View style={{ flex: 1, gap: 2 }}>

@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
@@ -24,6 +25,7 @@ import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
 import { getCardPreview } from '@/lib/cardPreview';
 import { useSettingsStore } from '@/store/settings';
+import { useProStore } from '@/store/pro';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
 import type { Card } from '@/types';
@@ -48,6 +50,8 @@ export default function TagCardsScreen() {
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
   const { keyboardShortcutsEnabled, cardSortOrder } = useSettingsStore();
+  const { isPro } = useProStore();
+  const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const { width: screenWidth } = useWindowDimensions();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
@@ -218,6 +222,11 @@ export default function TagCardsScreen() {
                   {preview || t('card.noText')}
                 </Text>
                 <View style={styles.cardActions}>
+                  {isPro && (
+                    <Pressable onPress={() => setStatsCardId(item.id)} hitSlop={8} style={styles.iconBtn}>
+                      <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                    </Pressable>
+                  )}
                   <Pressable onPress={() => navigateToEdit(item)} hitSlop={8} style={styles.iconBtn}>
                     <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                   </Pressable>
@@ -292,6 +301,7 @@ export default function TagCardsScreen() {
         </Pressable>
       </Modal>
 
+      <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}

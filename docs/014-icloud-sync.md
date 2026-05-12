@@ -1,7 +1,7 @@
 # 014 クラウド同期
 
 **フェーズ:** v1.1
-**ステータス:** 保留（方針検討中）
+**ステータス:** 未着手（方式仮決定：`@oleg_svetlichnyi/expo-icloud-storage` で SQLite ファイル同期）
 **依存:** 001, 002, 003, 004
 **被依存:** 016
 
@@ -126,27 +126,71 @@ CloudKit のレコード単位同期ではなく、**SQLite ファイルをま�
 
 ---
 
-## Todo（方式決定後に更新）
+## Todo（SQLite ファイル同期方式）
 
-### 共通
-- [ ] 同期方式の最終決定（iCloud vs Supabase/Firebase）
-- [ ] ライブラリ選定・インストール
-- [ ] 同期ロジック実装（Deck, Card, Tag, CardTag, Review）
-- [ ] last-write-wins コンフリクト解決（updatedAt 比較）
-- [ ] 差分同期
-- [ ] オフライン対応
+### 環境構築
+- [ ] Apple Developer Console で iCloud Container 作成（例：`iCloud.com.yourdomain.codeflash`）
+- [ ] App ID に iCloud capability を追加
+- [ ] `@oleg_svetlichnyi/expo-icloud-storage` をインストール
+- [ ] `app.json` に Config Plugin 設定追加（iCloudContainerEnvironment）
+- [ ] Development Build 再ビルド（`eas build` で entitlements 反映）
+- [ ] 実機 / TestFlight で動作確認（シミュレーター・Expo Go は不可）
 
-### 設定画面
-- [ ] 同期 ON/OFF 設定
+### 同期ロジック実装（`lib/sync/`）
+- [ ] `lib/sync/icloud.ts` — ライブラリのラッパー（upload/download/list/delete）
+- [ ] DB ファイル同期：
+  - [ ] アップロード前に SQLite を `closeAsync()` で閉じる
+  - [ ] アップロード後に `SQLiteProvider` 経由で再オープン → Zustand ストア全リフレッシュ
+  - [ ] ダウンロード後の DB 差し替え時も同様の close/swap/open 手順
+- [ ] 画像ファイル同期：
+  - [ ] `documentDirectory/images/` 配下のファイルを iCloud Drive に追従
+  - [ ] ローカルにない画像のダウンロード（カード表示時に lazy load も検討）
+  - [ ] 不要画像のクリーンアップ（DB に参照のない画像を削除）
+- [ ] 競合解決：last-write-wins
+  - [ ] DB に `lastSyncedAt`・`deviceUpdatedAt` メタデータ追加
+  - [ ] アップロード前にリモートの更新日時を確認し、ローカルが古ければマージ確認ダイアログ
+- [ ] 同期状態の管理：`store/sync.ts`（idle / syncing / error / lastSyncedAt）
+
+### 同期トリガー
+- [ ] アプリ起動時の自動ダウンロード（リモート > ローカルなら反映）
+- [ ] バックグラウンド移行時の自動アップロード（AppState change で発火）
+- [ ] 設定画面の手動同期ボタン
+- [ ] 同期中の UI 表示（ヘッダーにスピナー等）
+
+### Pro ゲーティング（016 チケット連携）
+- [ ] 設定画面の「クラウド同期」項目を Pro 限定に
+- [ ] 無料版ユーザーがタップしたら paywall へ遷移
+- [ ] `useProStore` で gating
+
+### 設定画面（`app/(tabs)/settings.tsx`）
+- [ ] 同期 ON/OFF トグル（`useSettingsStore` に `iCloudSyncEnabled` 追加・AsyncStorage 永続化）
 - [ ] 最終同期日時表示
 - [ ] 手動同期ボタン
+- [ ] iCloud アカウント未ログイン時の警告表示
+- [ ] iCloud 容量不足時のエラー表示
+
+### エラーハンドリング
+- [ ] iCloud 未ログイン時の検知と案内
+- [ ] iCloud 容量不足時の案内
+- [ ] ネットワーク切断時のリトライ
+- [ ] アップロード中にアプリ終了されたケースの対応
 
 ### i18n
-- [ ] 同期関連テキストの翻訳キー追加
+- [ ] 同期関連テキストの翻訳キー追加（ja.json / en.json）
+  - 同期中・最終同期・手動同期・エラーメッセージ・Pro 限定案内 等
+
+### テスト
+- [ ] 2端末で同じ Apple ID でログインし、双方向同期の動作確認
+- [ ] 競合シナリオ（両端末オフラインで編集 → 同時オンライン復帰）の挙動確認
+- [ ] 大量データ（1000カード以上 + 画像複数）でのパフォーマンス確認
+- [ ] iCloud OFF → ON 切替時の初回アップロード確認
 
 ---
 
 ## 技術メモ
 
-- CloudKit は Expo Go では動作しない → Development Build 必須（016 で構築済み）
+- ライブラリは Expo Go 非対応 → Development Build 必須（016 で構築済み）
 - Pro 機能（016 チケット）として提供
+- SQLite ファイルは `useSQLiteContext()` が掴んでいる間は差し替え不可 → 同期処理は専用ハンドラで安全に close/open する
+- 差分同期は採用しない（ファイル丸ごと同期）→ 競合は last-write-wins で割り切る
+- Android 対応が必要になった場合は Supabase/Firebase へ移行を検討（その時点で再評価）

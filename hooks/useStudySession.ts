@@ -27,6 +27,7 @@ export interface SessionResult {
   reviewed: number;
   gradeCount: { again: number; hard: number; good: number; easy: number };
   earliestNextReview: string | null;
+  avgResponseTimeMs: number | null;
 }
 
 export function useStudySession() {
@@ -38,7 +39,7 @@ export function useStudySession() {
   const [result, setResult] = useState<SessionResult>({ totalCards: 0, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
 
   // カードごとの評価履歴: 戻って再評価しない場合も最初の評価を保持する
-  const gradedCardsRef = useRef<Map<string, { grade: Grade; nextReviewDate: string }>>(new Map());
+  const gradedCardsRef = useRef<Map<string, { grade: Grade; nextReviewDate: string; responseTimeMs: number }>>(new Map());
   // 現在のカードが表示された時刻（回答時間計測用）
   const cardShownAtRef = useRef<number>(Date.now());
 
@@ -85,7 +86,7 @@ export function useStudySession() {
         gradedCardsRef.current = new Map();
         cardShownAtRef.current = Date.now();
         setQueue(cards);
-        setResult({ totalCards: cards.length, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
+        setResult({ totalCards: cards.length, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null, avgResponseTimeMs: null });
         if (cards.length === 0) setCompleted(true);
       } finally {
         setLoading(false);
@@ -153,23 +154,27 @@ export function useStudySession() {
       }
 
       // カードごとの評価を記録（同一カードを再評価した場合は上書き）
-      gradedCardsRef.current.set(card.id, { grade, nextReviewDate });
+      gradedCardsRef.current.set(card.id, { grade, nextReviewDate, responseTimeMs });
 
       // Map から集計し直す（戻って再評価しないカードの評価も保持される）
       const gradeCount = { again: 0, hard: 0, good: 0, easy: 0 };
       let earliestNextReview: string | null = null;
-      for (const { grade: g, nextReviewDate } of gradedCardsRef.current.values()) {
+      let totalResponseTimeMs = 0;
+      for (const { grade: g, nextReviewDate, responseTimeMs: rt } of gradedCardsRef.current.values()) {
         const key = (['again', 'hard', 'good', 'easy'] as const)[g];
         gradeCount[key]++;
         if (earliestNextReview === null || nextReviewDate < earliestNextReview) {
           earliestNextReview = nextReviewDate;
         }
+        totalResponseTimeMs += rt;
       }
+      const avgResponseTimeMs = Math.round(totalResponseTimeMs / gradedCardsRef.current.size);
       setResult((r) => ({
         ...r,
         reviewed: gradedCardsRef.current.size,
         gradeCount,
         earliestNextReview,
+        avgResponseTimeMs,
       }));
       goNext();
     },

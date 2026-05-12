@@ -581,18 +581,22 @@ export default function StudySessionScreen() {
       totalCards > 0 ? Math.round((reviewed / totalCards) * 100) : 0;
     const correctRate =
       reviewed > 0 ? Math.round(((hard + good + easy) / reviewed) * 100) : 0;
-    const nextReviewStr = result.earliestNextReview
+    const nextReviewDiffDays = result.earliestNextReview
       ? (() => {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const target = new Date(result.earliestNextReview.slice(0, 10));
           target.setHours(0, 0, 0, 0);
-          const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
-          if (diffDays <= 0) return t("study.nextReviewToday");
-          if (diffDays === 1) return t("study.nextReviewTomorrow");
-          return t("study.nextReviewDays", { count: diffDays });
+          return Math.round((target.getTime() - today.getTime()) / 86400000);
         })()
       : null;
+    const nextReviewValue = nextReviewDiffDays === null ? null
+      : nextReviewDiffDays <= 0 ? t("study.nextReviewToday")
+      : nextReviewDiffDays === 1 ? t("study.nextReviewTomorrow")
+      : String(nextReviewDiffDays);
+    const nextReviewUnit = nextReviewDiffDays !== null && nextReviewDiffDays > 1
+      ? t("study.unitDaysLater")
+      : '';
 
     let cumDeg = 0;
     const donutSlices =
@@ -656,16 +660,15 @@ export default function StudySessionScreen() {
           contentContainerStyle={styles.completeScreen}
           bounces={false}
         >
-          <Ionicons name="checkmark-circle" size={80} color="#43A047" />
-          <Text
-            style={[
-              styles.completeTitle,
-              { color: theme.colors.text, fontSize: theme.fontSize.xl },
-            ]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-          >
-            {t("study.complete")}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="checkmark-circle" size={32} color="#43A047" />
+            <Text
+              style={[styles.completeTitle, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
+              {t("study.complete")}
+            </Text>
+          </View>
           {reviewed > 0 && (
             <View
               style={[
@@ -748,54 +751,57 @@ export default function StudySessionScreen() {
 
               <View style={[styles.sectionSeparator, { backgroundColor: theme.colors.border }]} />
 
-              {/* 正答率・次回予定 */}
+              {/* 正答率・次回予定・平均回答時間 */}
               <View style={styles.statRow}>
                 <View style={styles.statItem}>
                   <Text
-                    style={[
-                      styles.statValue,
-                      { color: theme.colors.text, fontSize: theme.fontSize.xl },
-                    ]}
+                    style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
-                    {correctRate}%
+                    {correctRate}
                   </Text>
-                  <Text
-                    style={{
-                      color: theme.colors.textSecondary,
-                      fontSize: theme.fontSize.xs,
-                    }}
-                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-                  >
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {t("study.correctRate")}
                   </Text>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {t("study.unitPercent")}
+                  </Text>
                 </View>
-                {nextReviewStr && (
+                {nextReviewValue != null && (
                   <View style={styles.statItem}>
                     <Text
-                      style={[
-                        styles.statValue,
-                        {
-                          color: theme.colors.text,
-                          fontSize: theme.fontSize.xl,
-                        },
-                      ]}
+                      style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                     >
-                      {nextReviewStr}
+                      {nextReviewValue}
                     </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t("study.nextReview")}
+                    </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {nextReviewUnit}
+                    </Text>
+                  </View>
+                )}
+                {result.avgResponseTimeMs != null && (
+                  <View style={styles.statItem}>
                     <Text
-                      style={{
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.fontSize.xs,
-                      }}
+                      style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                     >
-                      {t("study.nextReview")}
+                      {(result.avgResponseTimeMs / 1000).toFixed(1)}
+                    </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t("study.avgResponseTime")}
+                    </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t("study.unitSeconds")}
                     </Text>
                   </View>
                 )}
@@ -1572,8 +1578,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 24,
-    paddingVertical: 32,
+    gap: 16,
+    paddingVertical: 16,
   },
   completeTitle: { fontWeight: "700" },
   summarySection: {
@@ -1607,14 +1613,14 @@ const styles = StyleSheet.create({
   statRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 48,
+    gap: 32,
     paddingTop: 16,
     paddingBottom: 4,
   },
   statItem: {
     alignItems: "center",
     gap: 4,
-    minWidth: 80,
+    width: 100,
   },
   statValue: { fontWeight: "700" },
   backBtn: {

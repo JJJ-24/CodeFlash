@@ -351,7 +351,11 @@ export default function HomeScreen() {
                 <DeckCard
                   deck={item}
                   drag={deckSortOrder === 'manual' ? drag : null}
-                  onEdit={(id) => router.push({ pathname: '/deck/[id]/edit', params: { id } })}
+                  onEdit={(id) => {
+                    const idx = getIndex();
+                    if (idx !== undefined) setFocusedDeckIndex(idx);
+                    router.push({ pathname: '/deck/[id]/edit', params: { id } });
+                  }}
                   onPress={() => {
                     const idx = getIndex();
                     if (idx !== undefined) setFocusedDeckIndex(idx);

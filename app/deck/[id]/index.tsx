@@ -677,7 +677,7 @@ export default function DeckDetailScreen() {
                         <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                       </Pressable>
                     )}
-                    <Pressable onPress={() => navigateToCardEdit(item.id)} hitSlop={8} style={{ padding: 4 }}>
+                    <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedCardIndex(idx); navigateToCardEdit(item.id); }} hitSlop={8} style={{ padding: 4 }}>
                       <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                     </Pressable>
                   </View>

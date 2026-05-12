@@ -227,7 +227,7 @@ export default function TagCardsScreen() {
                       <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                     </Pressable>
                   )}
-                  <Pressable onPress={() => navigateToEdit(item)} hitSlop={8} style={styles.iconBtn}>
+                  <Pressable onPress={() => { setFocusedCardIndex(index); navigateToEdit(item); }} hitSlop={8} style={styles.iconBtn}>
                     <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                   </Pressable>
                 </View>

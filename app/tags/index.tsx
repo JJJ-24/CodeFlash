@@ -386,7 +386,7 @@ export default function TagsScreen() {
                   </View>
                   {!selectionMode && (
                     <>
-                      <Pressable onPress={() => router.push(`/tags/${item.id}/edit`)} hitSlop={8} style={styles.editBtn}>
+                      <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedTagIndex(idx); router.push(`/tags/${item.id}/edit`); }} hitSlop={8} style={styles.editBtn}>
                         <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                       </Pressable>
                       <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />

@@ -479,6 +479,18 @@ export async function getGradeLogTotals(
   return { again: row?.again ?? 0, hard: row?.hard ?? 0, good: row?.good ?? 0, easy: row?.easy ?? 0 };
 }
 
+/** グレード別の平均回答時間（ミリ秒）。データなしの場合 null */
+export async function getAvgResponseTimeByGrade(
+  db: SQLiteDatabase,
+  grade: 0 | 1 | 2 | 3
+): Promise<number | null> {
+  const row = await db.getFirstAsync<{ avg: number | null }>(
+    `SELECT AVG(responseTimeMs) as avg FROM grade_logs WHERE grade = ? AND responseTimeMs IS NOT NULL`,
+    [grade]
+  );
+  return row?.avg ?? null;
+}
+
 export async function getTopCardsByGrade(
   db: SQLiteDatabase,
   grade: 0 | 1 | 2 | 3,

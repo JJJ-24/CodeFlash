@@ -25,6 +25,7 @@ import {
   getStudyStreak,
   getTodayDueCount,
   getTodayReviewedCount,
+  getAvgResponseTimeByGrade,
   getTopCardsByGrade,
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
@@ -460,6 +461,7 @@ export default function StatsScreen() {
   const [selectedGradeBlock, setSelectedGradeBlock] = useState<0 | 1 | 2 | 3 | null>(null);
   const [gradeBlockCards, setGradeBlockCards] = useState<GradeCard[]>([]);
   const [gradeBlockLoading, setGradeBlockLoading] = useState(false);
+  const [gradeAvgResponseTime, setGradeAvgResponseTime] = useState<number | null>(null);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -531,8 +533,12 @@ export default function StatsScreen() {
           monthlyReviewed: fillPast12Months(rawMonthly),
         });
         if (selectedGradeBlockRef.current !== null) {
-          const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10);
+          const [cards, avgTime] = await Promise.all([
+            getTopCardsByGrade(db, selectedGradeBlockRef.current, 10),
+            getAvgResponseTimeByGrade(db, selectedGradeBlockRef.current),
+          ]);
           setGradeBlockCards(cards);
+          setGradeAvgResponseTime(avgTime);
         }
       }
       load();
@@ -587,14 +593,19 @@ export default function StatsScreen() {
       selectedGradeBlockRef.current = null;
       setSelectedGradeBlock(null);
       setGradeBlockCards([]);
+      setGradeAvgResponseTime(null);
       return;
     }
     selectedGradeBlockRef.current = grade;
     setSelectedGradeBlock(grade);
     setGradeBlockLoading(true);
     // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
-    const cards = await getTopCardsByGrade(db, grade, 10);
+    const [cards, avgTime] = await Promise.all([
+      getTopCardsByGrade(db, grade, 10),
+      getAvgResponseTimeByGrade(db, grade),
+    ]);
     setGradeBlockCards(cards);
+    setGradeAvgResponseTime(avgTime);
     setGradeBlockLoading(false);
   }, [db, selectedGradeBlock]);
 
@@ -861,6 +872,16 @@ export default function StatsScreen() {
 
             {selectedGradeBlock !== null && (
               <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0, overflow: 'hidden' }]}>
+                {gradeAvgResponseTime != null && (
+                  <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('stats.gradeAvgTime')}
+                    </Text>
+                    <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {(gradeAvgResponseTime / 1000).toFixed(1)}{t('common.sec')}
+                    </Text>
+                  </View>
+                )}
                 {gradeBlockLoading && gradeBlockCards.length === 0 ? (
                   // 初回：カードなしでローディング中
                   <View style={{ padding: 20, alignItems: 'center' }}>

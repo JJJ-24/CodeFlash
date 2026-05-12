@@ -147,7 +147,8 @@
     "proFeatureGradeRanking": "グレード別ランキング",
     "gradeRanking": "グレード別ランキング",
     "gradeRankingEmpty": "まだデータがありません\n（学習するとデータが蓄積されます）",
-    "gradeCount": "{{count}} 回"
+    "gradeCount": "{{count}} 回",
+    "gradeAvgTime": "平均回答時間"
   },
   "code": {
     "run": "実行",
@@ -171,6 +172,7 @@
     "loading": "読み込み中...",
     "search": "検索",
     "all": "すべて",
+    "sec": "秒",
     "learned": "済み",
     "due": "復習",
     "new": "新規",

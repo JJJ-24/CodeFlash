@@ -147,7 +147,8 @@
     "proFeatureGradeRanking": "Grade ranking",
     "gradeRanking": "Grade Ranking",
     "gradeRankingEmpty": "No data yet\n(data accumulates as you study)",
-    "gradeCount": "×{{count}}"
+    "gradeCount": "×{{count}}",
+    "gradeAvgTime": "Avg. Response Time"
   },
   "code": {
     "run": "Run",
@@ -171,6 +172,7 @@
     "loading": "Loading...",
     "search": "Search",
     "all": "All",
+    "sec": "s",
     "learned": "Done",
     "due": "Due",
     "new": "New",

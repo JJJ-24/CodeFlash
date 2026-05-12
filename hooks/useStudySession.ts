@@ -39,6 +39,8 @@ export function useStudySession() {
 
   // カードごとの評価履歴: 戻って再評価しない場合も最初の評価を保持する
   const gradedCardsRef = useRef<Map<string, { grade: Grade; nextReviewDate: string }>>(new Map());
+  // 現在のカードが表示された時刻（回答時間計測用）
+  const cardShownAtRef = useRef<number>(Date.now());
 
   // レンダーごとに同期 — useFocusEffect から呼ばれる refreshCurrentCard が常に最新値を参照できる
   const queueRef = useRef<Card[]>([]);
@@ -81,6 +83,7 @@ export function useStudySession() {
         }
 
         gradedCardsRef.current = new Map();
+        cardShownAtRef.current = Date.now();
         setQueue(cards);
         setResult({ totalCards: cards.length, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
         if (cards.length === 0) setCompleted(true);
@@ -93,6 +96,7 @@ export function useStudySession() {
 
   const goBack = useCallback(() => {
     if (currentIndex <= 0) return;
+    cardShownAtRef.current = Date.now();
     setCurrentIndex((i) => i - 1);
   }, [currentIndex]);
 
@@ -101,6 +105,7 @@ export function useStudySession() {
     if (nextIndex >= queue.length) {
       setCompleted(true);
     } else {
+      cardShownAtRef.current = Date.now();
       setCurrentIndex(nextIndex);
     }
   }, [currentIndex, queue.length]);
@@ -110,6 +115,7 @@ export function useStudySession() {
       const card = queue[currentIndex];
       if (!card) return;
 
+      const responseTimeMs = Date.now() - cardShownAtRef.current;
       const existing = await getReviewByCardId(db, card.id);
       const today = todayISO();
       const isDue = existing === null || existing.nextReviewDate.slice(0, 10) <= today;
@@ -140,7 +146,7 @@ export function useStudySession() {
           fsrsScheduledDays: reviewResult.fsrsScheduledDays,
           nextReviewDate: reviewResult.nextReviewDate,
           lastReviewDate: reviewResult.lastReviewDate,
-        });
+        }, responseTimeMs);
         nextReviewDate = reviewResult.nextReviewDate;
       } else {
         nextReviewDate = existing!.nextReviewDate;

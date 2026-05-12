@@ -114,7 +114,7 @@ export async function getTodayReviewedCountByDeck(
 }
 
 /** レビュー記録を保存（なければ INSERT、あれば UPDATE） */
-export async function saveReview(db: SQLiteDatabase, review: Review): Promise<void> {
+export async function saveReview(db: SQLiteDatabase, review: Review, responseTimeMs?: number): Promise<void> {
   await db.runAsync(
     `INSERT INTO reviews (cardId, easeFactor, interval, repetitions, nextReviewDate, lastReviewDate, lastGrade, stability, difficulty, fsrsState, fsrsReps, fsrsLapses, fsrsScheduledDays)
      VALUES (?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -148,8 +148,8 @@ export async function saveReview(db: SQLiteDatabase, review: Review): Promise<vo
     [review.cardId, localDateStr(new Date(review.lastReviewDate))]
   );
   await db.runAsync(
-    `INSERT INTO grade_logs (cardId, grade, reviewedAt) VALUES (?, ?, ?)`,
-    [review.cardId, review.lastGrade, review.lastReviewDate]
+    `INSERT INTO grade_logs (cardId, grade, reviewedAt, responseTimeMs) VALUES (?, ?, ?, ?)`,
+    [review.cardId, review.lastGrade, review.lastReviewDate, responseTimeMs ?? null]
   );
 }
 

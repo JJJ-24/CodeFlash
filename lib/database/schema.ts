@@ -135,4 +135,10 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     );
     CREATE INDEX IF NOT EXISTS idx_grade_logs_cardId ON grade_logs (cardId);
   `);
+
+  // grade_logs へ responseTimeMs カラム追加（回答時間ミリ秒）
+  const gradeLogCols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(grade_logs)');
+  if (!gradeLogCols.some((c) => c.name === 'responseTimeMs')) {
+    await db.execAsync(`ALTER TABLE grade_logs ADD COLUMN responseTimeMs INTEGER;`);
+  }
 }

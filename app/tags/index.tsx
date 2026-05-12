@@ -222,7 +222,8 @@ export default function TagsScreen() {
           <View style={{ flex: 1 }} />
           <Pressable
             onPress={selectionMode ? exitSelectionMode : enterSelectionMode}
-            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            disabled={!selectionMode && sortedTags.length === 0}
+            style={[{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, !selectionMode && sortedTags.length === 0 && { opacity: 0.3 }]}
             hitSlop={4}
           >
             <Ionicons

@@ -497,7 +497,8 @@ export default function DeckDetailScreen() {
                 setFocusedCardIndex(null);
               }
             }}
-            style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+            disabled={!selectionMode && displayedCards.length === 0}
+            style={[{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, !selectionMode && displayedCards.length === 0 && { opacity: 0.3 }]}
             hitSlop={4}
           >
             <Ionicons

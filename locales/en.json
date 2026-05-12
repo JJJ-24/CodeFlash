@@ -116,7 +116,11 @@
     "duplicate": "Duplicate",
     "duplicateSuccess": "Copied {{count}} card(s)",
     "searchPlaceholder": "Search cards...",
-    "searchNoResults": "No cards found"
+    "searchNoResults": "No cards found",
+    "statsTitle": "Card Stats",
+    "statsNoData": "No study history yet",
+    "statsTotal": "Total: {{count}}",
+    "statsTrend": "Grade Trend"
   },
   "tabs": {
     "home": "Home",

@@ -116,7 +116,11 @@
     "duplicate": "複製",
     "duplicateSuccess": "{{count}}枚コピーしました",
     "searchPlaceholder": "カードを検索...",
-    "searchNoResults": "一致するカードはありません"
+    "searchNoResults": "一致するカードはありません",
+    "statsTitle": "カード統計",
+    "statsNoData": "まだ学習記録がありません",
+    "statsTotal": "合計 {{count}}回",
+    "statsTrend": "評価の推移"
   },
   "tabs": {
     "home": "ホーム",

@@ -43,10 +43,12 @@ import { InfoModal } from '@/components/InfoModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
+import { useProStore } from '@/store/pro';
 import type { CardSortOrder, DeckDetailFilter } from '@/store/settings';
 import { getCardPreview } from '@/lib/cardPreview';
 import type { Card, Deck } from '@/types';
@@ -65,6 +67,8 @@ export default function DeckDetailScreen() {
   const { decks, updateDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
+  const { isPro } = useProStore();
+  const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const [todayReviewed, setTodayReviewed] = useState<number | null>(null);
   const [dueCount, setDueCount] = useState<number | null>(null);
   const [unlearnedCount, setUnlearnedCount] = useState<number | null>(null);
@@ -667,6 +671,11 @@ export default function DeckDetailScreen() {
                 </Text>
                 {!selectionMode && (
                   <View style={styles.cardActions}>
+                    {isPro && (
+                      <Pressable onPress={() => setStatsCardId(item.id)} hitSlop={8} style={{ padding: 4 }}>
+                        <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                      </Pressable>
+                    )}
                     <Pressable onPress={() => navigateToCardEdit(item.id)} hitSlop={8} style={{ padding: 4 }}>
                       <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                     </Pressable>
@@ -733,6 +742,7 @@ export default function DeckDetailScreen() {
         </>
       )}
 
+      <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <DeckPickerModal
         visible={showDeckPicker}
         title={t('card.selectDeckTitle')}

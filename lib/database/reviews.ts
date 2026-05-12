@@ -479,6 +479,44 @@ export async function getGradeLogTotals(
   return { again: row?.again ?? 0, hard: row?.hard ?? 0, good: row?.good ?? 0, easy: row?.easy ?? 0 };
 }
 
+/** カード別グレード集計（評価回数・グレード別平均回答時間） */
+export interface CardGradeStats {
+  again: number; hard: number; good: number; easy: number;
+  avgTimeAgain: number | null; avgTimeHard: number | null;
+  avgTimeGood: number | null; avgTimeEasy: number | null;
+}
+
+export async function getCardGradeStats(
+  db: SQLiteDatabase,
+  cardId: string
+): Promise<CardGradeStats> {
+  const row = await db.getFirstAsync<CardGradeStats>(
+    `SELECT
+       SUM(CASE WHEN grade = 0 THEN 1 ELSE 0 END) as again,
+       SUM(CASE WHEN grade = 1 THEN 1 ELSE 0 END) as hard,
+       SUM(CASE WHEN grade = 2 THEN 1 ELSE 0 END) as good,
+       SUM(CASE WHEN grade = 3 THEN 1 ELSE 0 END) as easy,
+       AVG(CASE WHEN grade = 0 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeAgain,
+       AVG(CASE WHEN grade = 1 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeHard,
+       AVG(CASE WHEN grade = 2 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeGood,
+       AVG(CASE WHEN grade = 3 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeEasy
+     FROM grade_logs WHERE cardId = ?`,
+    [cardId]
+  );
+  return row ?? { again: 0, hard: 0, good: 0, easy: 0, avgTimeAgain: null, avgTimeHard: null, avgTimeGood: null, avgTimeEasy: null };
+}
+
+/** カードの評価履歴（散布図用・古い順） */
+export async function getCardGradeHistory(
+  db: SQLiteDatabase,
+  cardId: string
+): Promise<{ grade: number }[]> {
+  return db.getAllAsync<{ grade: number }>(
+    `SELECT grade FROM grade_logs WHERE cardId = ? ORDER BY id ASC`,
+    [cardId]
+  );
+}
+
 /** グレード別の平均回答時間（ミリ秒）。データなしの場合 null */
 export async function getAvgResponseTimeByGrade(
   db: SQLiteDatabase,

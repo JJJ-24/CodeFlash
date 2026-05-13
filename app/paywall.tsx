@@ -29,17 +29,7 @@ type Feature = {
   descKey: string;
 };
 
-const FEATURES: Feature[] = [
-  {
-    icon: 'cloud-outline',
-    titleKey: 'pro.featureICloud',
-    descKey:  'pro.featureICloudDesc',
-  },
-  {
-    icon: 'sparkles-outline',
-    titleKey: 'pro.featureAI',
-    descKey:  'pro.featureAIDesc',
-  },
+const CURRENT_FEATURES: Feature[] = [
   {
     icon: 'bar-chart-outline',
     titleKey: 'pro.featureStats',
@@ -50,10 +40,13 @@ const FEATURES: Feature[] = [
     titleKey: 'pro.featureFSRS',
     descKey:  'pro.featureFSRSDesc',
   },
+];
+
+const UPCOMING_FEATURES: Feature[] = [
   {
-    icon: 'share-social-outline',
-    titleKey: 'pro.featureShare',
-    descKey:  'pro.featureShareDesc',
+    icon: 'cloud-outline',
+    titleKey: 'pro.featureICloud',
+    descKey:  'pro.featureICloudDesc',
   },
   {
     icon: 'terminal-outline',
@@ -61,9 +54,14 @@ const FEATURES: Feature[] = [
     descKey:  'pro.featureSQLDesc',
   },
   {
-    icon: 'globe-outline',
-    titleKey: 'pro.featureWeb',
-    descKey:  'pro.featureWebDesc',
+    icon: 'apps-outline',
+    titleKey: 'pro.featureWidget',
+    descKey:  'pro.featureWidgetDesc',
+  },
+  {
+    icon: 'color-palette-outline',
+    titleKey: 'pro.featureCustomization',
+    descKey:  'pro.featureCustomizationDesc',
   },
 ];
 
@@ -144,12 +142,33 @@ export default function PaywallScreen() {
           <Text style={s.subtitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('pro.paywallSubtitle')}</Text>
         </View>
 
-        {/* Pro 特典リスト */}
+        {/* 現在のPro機能 */}
+        <Text style={s.sectionTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {t('pro.sectionCurrent')}
+        </Text>
         <View style={s.featureList}>
-          {FEATURES.map((f) => (
+          {CURRENT_FEATURES.map((f) => (
             <View key={f.titleKey} style={s.featureRow}>
               <View style={s.featureIcon}>
                 <Ionicons name={f.icon} size={22} color={theme.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.featureTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t(f.titleKey)}</Text>
+                <Text style={s.featureDesc} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{t(f.descKey)}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* 今後追加予定 */}
+        <Text style={s.sectionTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {t('pro.sectionUpcoming')}
+        </Text>
+        <View style={s.featureList}>
+          {UPCOMING_FEATURES.map((f) => (
+            <View key={f.titleKey} style={s.featureRow}>
+              <View style={s.featureIcon}>
+                <Ionicons name={f.icon} size={22} color={theme.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.featureTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t(f.titleKey)}</Text>
@@ -263,6 +282,14 @@ const styles = (colors: ReturnType<typeof useTheme>['colors'], fontSize: ReturnT
       color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 20,
+    },
+    sectionTitle: {
+      fontSize: fontSize.sm,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      marginTop: 4,
+      marginBottom: -8,
+      paddingHorizontal: 4,
     },
     featureList: {
       backgroundColor: colors.surface,

@@ -1,11 +1,18 @@
 import { createEmptyCard, fsrs, generatorParameters, Rating, State } from 'ts-fsrs';
 import type { Card as FsrsCard } from 'ts-fsrs';
 import type { Grade } from '@/lib/sm2';
+import { useProStore } from '@/store/pro';
+import { FSRS_RETENTION_DEFAULT, useSettingsStore } from '@/store/settings';
 import type { Review } from '@/types';
 
-const f = fsrs(generatorParameters({ enable_fuzz: false, enable_short_term: false }));
-
 const GRADE_TO_RATING = [Rating.Again, Rating.Hard, Rating.Good, Rating.Easy] as const;
+
+/** Pro 購入時はユーザー設定の保持率、未購入時はデフォルト 90% を使う */
+function getRequestRetention(): number {
+  const isPro = useProStore.getState().isPro;
+  if (!isPro) return FSRS_RETENTION_DEFAULT;
+  return useSettingsStore.getState().fsrsDesiredRetention;
+}
 
 // FSRS difficulty (1〜10) → 仮想 SM-2 easeFactor (1.3〜3.0)：マスタリー表示用
 function difficultyToEaseFactor(difficulty: number): number {
@@ -26,6 +33,11 @@ export interface FsrsResult {
 
 export function calculateNextReviewFSRS(existing: Review | null, grade: Grade): FsrsResult {
   const now = new Date();
+  const f = fsrs(generatorParameters({
+    enable_fuzz: false,
+    enable_short_term: false,
+    request_retention: getRequestRetention(),
+  }));
 
   let card: FsrsCard;
   if (existing === null || existing.stability == null || existing.difficulty == null) {

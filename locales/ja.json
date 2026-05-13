@@ -217,7 +217,14 @@
     "keyboardEnabled": "ショートカットを使用",
     "keyboardShortcuts": "ショートカットキー一覧",
     "initialFilter": "初期表示フィルター",
-    "initialFilterNone": "直近"
+    "initialFilterNone": "直近",
+    "fsrs": "FSRSカスタマイズ",
+    "fsrsLockedSubtitle": "Pro にアップグレードして学習スタイルを最適化",
+    "fsrsPresetFocus": "集中",
+    "fsrsPresetStandard": "標準",
+    "fsrsPresetLongTerm": "気長",
+    "fsrsRetention": "目標保持率",
+    "fsrsRetentionHint": "高いほど復習頻度が増え、忘れにくくなります\n変更は次回学習以降のカードに反映されます"
   },
   "notification": {
     "title": "通知",

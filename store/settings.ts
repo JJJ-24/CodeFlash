@@ -13,9 +13,22 @@ const TAG_SORT_KEY = '@codeflash_tag_sort';
 const CARD_SORT_KEY = '@codeflash_card_sort';
 const SHUFFLE_KEY = '@codeflash_shuffle';
 const SEARCH_FIELD_KEY = '@codeflash_last_search_field';
+const FSRS_RETENTION_KEY = '@codeflash_fsrs_retention';
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 export type CardSortOrder = 'manual' | 'newest' | 'oldest';
+
+export type FsrsPreset = 'exam' | 'standard' | 'longTerm';
+
+export const FSRS_PRESET_RETENTION: Record<FsrsPreset, number> = {
+  exam:     0.95,
+  standard: 0.90,
+  longTerm: 0.80,
+};
+
+export const FSRS_RETENTION_MIN = 0.70;
+export const FSRS_RETENTION_MAX = 0.99;
+export const FSRS_RETENTION_DEFAULT = 0.90;
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
@@ -56,6 +69,8 @@ interface SettingsState {
   setShuffleEnabled: (v: boolean) => void;
   lastSearchField: string;
   setLastSearchField: (v: string) => void;
+  fsrsDesiredRetention: number;
+  setFsrsDesiredRetention: (v: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -116,6 +131,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ lastSearchField: v });
     AsyncStorage.setItem(SEARCH_FIELD_KEY, v);
   },
+  fsrsDesiredRetention: FSRS_RETENTION_DEFAULT,
+  setFsrsDesiredRetention: (v) => {
+    const clamped = Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
+    set({ fsrsDesiredRetention: clamped });
+    AsyncStorage.setItem(FSRS_RETENTION_KEY, String(clamped));
+  },
 }));
 
 Promise.all([
@@ -131,11 +152,13 @@ Promise.all([
   AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
   AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
   AsyncStorage.getItem(SEARCH_FIELD_KEY),
-]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField]) => {
+  AsyncStorage.getItem(FSRS_RETENTION_KEY),
+]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention]) => {
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
-    'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField'
+    'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField' |
+    'fsrsDesiredRetention'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -149,5 +172,9 @@ Promise.all([
   if (notifHour !== null) update.notificationHour = Number(notifHour);
   if (notifMinute !== null) update.notificationMinute = Number(notifMinute);
   if (searchField !== null) update.lastSearchField = searchField;
+  if (fsrsRetention !== null) {
+    const v = Number(fsrsRetention);
+    if (!Number.isNaN(v)) update.fsrsDesiredRetention = Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
+  }
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 });

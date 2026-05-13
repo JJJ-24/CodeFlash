@@ -217,7 +217,14 @@
     "keyboardEnabled": "Enable Keyboard Shortcuts",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "initialFilter": "Default Filter",
-    "initialFilterNone": "Last"
+    "initialFilterNone": "Last",
+    "fsrs": "FSRS Customization",
+    "fsrsLockedSubtitle": "Upgrade to Pro to optimize your learning style",
+    "fsrsPresetFocus": "Focus",
+    "fsrsPresetStandard": "Normal",
+    "fsrsPresetLongTerm": "Relax",
+    "fsrsRetention": "Desired Retention",
+    "fsrsRetentionHint": "Higher values mean more frequent reviews and better recall\nChanges apply only to cards reviewed from now on"
   },
   "notification": {
     "title": "Notifications",

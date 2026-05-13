@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Slider from '@react-native-community/slider';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -22,11 +23,16 @@ import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
-import { useSettingsStore } from '@/store/settings';
+import {
+  FSRS_PRESET_RETENTION,
+  FSRS_RETENTION_MAX,
+  FSRS_RETENTION_MIN,
+  useSettingsStore,
+} from '@/store/settings';
 import { useTagStore } from '@/store/tags';
 import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
-import type { InitialFilterPreference } from '@/store/settings';
+import type { FsrsPreset, InitialFilterPreference } from '@/store/settings';
 import type { Deck } from '@/types';
 
 
@@ -78,6 +84,7 @@ export default function SettingsScreen() {
     keyboardShortcutsEnabled, setKeyboardShortcutsEnabled,
     notificationEnabled, notificationHour, notificationMinute,
     setNotificationEnabled, setNotificationTime,
+    fsrsDesiredRetention, setFsrsDesiredRetention,
   } = useSettingsStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
@@ -99,6 +106,15 @@ export default function SettingsScreen() {
     | { kind: 'info'; title?: string; message: string }
     | { kind: 'confirm'; title?: string; message: string; actions: ModalAction[] };
   const [modal, setModal] = useState<ModalConfig | null>(null);
+
+  function handleFsrsPresetSelect(preset: FsrsPreset) {
+    setFsrsDesiredRetention(FSRS_PRESET_RETENTION[preset]);
+  }
+
+  function handleFsrsRetentionChange(value: number) {
+    const rounded = Math.round(value * 100) / 100;
+    setFsrsDesiredRetention(rounded);
+  }
 
   async function handleNotificationToggle(value: boolean) {
     if (value) {
@@ -385,6 +401,95 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* FSRSカスタマイズ */}
+      {!isPro ? (
+        <Pressable
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          onPress={() => router.push('/paywall')}
+        >
+          <View style={styles.proRow}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <View style={styles.proTitleRow}>
+                <Text style={[styles.proTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.fsrs')}
+                </Text>
+                <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.iconSubtle} />
+              </View>
+              <Text style={[styles.proSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.fsrsLockedSubtitle')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+          </View>
+        </Pressable>
+      ) : (
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.fsrs')}
+          </Text>
+
+          {/* プリセット */}
+          <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+            {(['longTerm', 'standard', 'exam'] as FsrsPreset[]).map((preset) => {
+                const active = FSRS_PRESET_RETENTION[preset] === fsrsDesiredRetention;
+                const labelKey = ({
+                  exam: 'settings.fsrsPresetFocus',
+                  standard: 'settings.fsrsPresetStandard',
+                  longTerm: 'settings.fsrsPresetLongTerm',
+                } as const)[preset];
+                return (
+                  <Pressable
+                    key={preset}
+                    style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                    onPress={() => handleFsrsPresetSelect(preset)}
+                  >
+                    <Text style={[
+                      styles.segmentText,
+                      { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
+                      active && styles.segmentTextActive,
+                    ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t(labelKey)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+          </View>
+
+          {/* 目標保持率 */}
+          <View style={{ gap: 6 }}>
+            <View style={styles.fsrsRetentionHeader}>
+              <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.fsrsRetention')}
+              </Text>
+              <Text style={[styles.fsrsRetentionValue, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {Math.round(fsrsDesiredRetention * 100)}%
+              </Text>
+            </View>
+            <Slider
+              minimumValue={FSRS_RETENTION_MIN}
+              maximumValue={FSRS_RETENTION_MAX}
+              step={0.01}
+              value={fsrsDesiredRetention}
+              onValueChange={handleFsrsRetentionChange}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.iconSubtle}
+              thumbTintColor={theme.colors.primary}
+            />
+            <View style={styles.fsrsRetentionScale}>
+              <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                {Math.round(FSRS_RETENTION_MIN * 100)}%
+              </Text>
+              <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                {Math.round(FSRS_RETENTION_MAX * 100)}%
+              </Text>
+            </View>
+            <Text style={[styles.fsrsHint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+              {t('settings.fsrsRetentionHint')}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* データ管理 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -527,4 +632,18 @@ dataRow: {
     paddingVertical: 6,
   },
   notificationLabel: { flex: 1 },
+  fsrsSubLabel: { fontWeight: '600' },
+  fsrsRetentionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  fsrsRetentionValue: { fontWeight: '700' },
+  fsrsRetentionScale: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: -4,
+  },
+  fsrsScaleText: {},
+  fsrsHint: { lineHeight: 16, marginTop: 2 },
 });

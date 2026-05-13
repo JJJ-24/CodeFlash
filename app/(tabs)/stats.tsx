@@ -278,38 +278,48 @@ function MonthBarChart({ data, theme }: { data: { month: string; count: number }
   const { i18n } = useTranslation();
   const isJa = i18n.language.startsWith('ja');
   const scrollRef = useRef<ScrollView>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const maxCount = Math.max(...data.map((d) => d.count), 1);
   const barCountH = Math.ceil(theme.fontSize.xs * 1.95);
   const barLabelH = Math.ceil(theme.fontSize.sm * 1.95);
   const chartH = BAR_MAX_HEIGHT + barCountH + barLabelH + 8;
 
+  // コンテナ幅が列の最小合計より広い（iPad 等）ときは列幅を均等に拡げ、横スクロールを無効化
+  const totalMinWidth = data.length * MONTH_BAR_COL_W;
+  const fitsInContainer = containerWidth > 0 && containerWidth >= totalMinWidth;
+  const colW = fitsInContainer ? containerWidth / data.length : MONTH_BAR_COL_W;
+  const innerWidth = fitsInContainer ? containerWidth : totalMinWidth;
+
   return (
-    <ScrollView
-      ref={scrollRef}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      onLayout={() => scrollRef.current?.scrollToEnd({ animated: false })}
-    >
-      <View style={[styles.barChart, { height: chartH, width: data.length * MONTH_BAR_COL_W }]}>
-        {data.map((item, i) => {
-          const barH = Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, item.count > 0 ? 4 : 0);
-          const monthNum = parseInt(item.month.split('-')[1]);
-          const label = isJa ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
-          const isCurrentMonth = i === data.length - 1;
-          return (
-            <View key={item.month} style={[styles.barCol, { width: MONTH_BAR_COL_W }]}>
-              <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {item.count > 0 ? item.count : ''}
-              </Text>
-              <View style={[styles.bar, { height: barH, backgroundColor: theme.colors.primary, opacity: isCurrentMonth ? 1 : 0.35 }]} />
-              <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isCurrentMonth && { color: theme.colors.primary, fontWeight: '700' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {label}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-    </ScrollView>
+    <View onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        scrollEnabled={!fitsInContainer}
+        showsHorizontalScrollIndicator={false}
+        onLayout={() => { if (!fitsInContainer) scrollRef.current?.scrollToEnd({ animated: false }); }}
+      >
+        <View style={[styles.barChart, { height: chartH, width: innerWidth }]}>
+          {data.map((item, i) => {
+            const barH = Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, item.count > 0 ? 4 : 0);
+            const monthNum = parseInt(item.month.split('-')[1]);
+            const label = isJa ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
+            const isCurrentMonth = i === data.length - 1;
+            return (
+              <View key={item.month} style={[styles.barCol, { width: colW }]}>
+                <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {item.count > 0 ? item.count : ''}
+                </Text>
+                <View style={[styles.bar, { height: barH, backgroundColor: theme.colors.primary, opacity: isCurrentMonth ? 1 : 0.35 }]} />
+                <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isCurrentMonth && { color: theme.colors.primary, fontWeight: '700' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 

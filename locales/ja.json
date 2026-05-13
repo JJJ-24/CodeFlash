@@ -274,7 +274,7 @@
     "featureFSRS": "FSRSカスタマイズ",
     "featureFSRSDesc": "FSRS パラメータを自分の学習スタイルに合わせて最適化",
     "featureICloud": "iCloud 同期",
-    "featureICloudDesc": "複数デバイス間でデータを自動同期（予定）",
+    "featureICloudDesc": "複数デバイス間でデータを同期（予定）",
     "featureSQL": "SQL / C++ 実行",
     "featureSQLDesc": "SQL・C++ のコードブロックを実行（予定）",
     "featureWidget": "ホームウィジェット",

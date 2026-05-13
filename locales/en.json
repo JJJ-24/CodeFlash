@@ -274,7 +274,7 @@
     "featureFSRS": "FSRS Customization",
     "featureFSRSDesc": "Tune FSRS parameters to match your learning style",
     "featureICloud": "iCloud Sync",
-    "featureICloudDesc": "Sync your data across devices automatically (coming soon)",
+    "featureICloudDesc": "Sync your data across devices (coming soon)",
     "featureSQL": "SQL / C++ Execution",
     "featureSQLDesc": "Run SQL and C++ code blocks (coming soon)",
     "featureWidget": "Home Widget",

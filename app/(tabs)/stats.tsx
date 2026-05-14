@@ -929,7 +929,7 @@ export default function StatsScreen() {
                             {card.deckName}
                           </Text>
                         </View>
-                        <Pressable onPress={() => setStatsCardId(card.cardId)} hitSlop={8} style={{ padding: 4, marginRight: 4 }}>
+                        <Pressable onPress={() => setStatsCardId(card.cardId)} hitSlop={8} style={{ padding: 4, marginRight: (Platform as any).isPad ? 16 : 4 }}>
                           <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                         </Pressable>
                         <View style={[styles.lapseBadge, { backgroundColor: badgeColor }]}>

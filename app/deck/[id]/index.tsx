@@ -671,7 +671,7 @@ export default function DeckDetailScreen() {
                   {preview || t('card.noText')}
                 </Text>
                 {!selectionMode && (
-                  <View style={styles.cardActions}>
+                  <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
                     {isPro && (
                       <Pressable onPress={() => setStatsCardId(item.id)} hitSlop={8} style={{ padding: 4 }}>
                         <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />

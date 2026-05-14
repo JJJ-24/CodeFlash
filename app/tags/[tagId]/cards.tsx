@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -221,7 +222,7 @@ export default function TagCardsScreen() {
                 >
                   {preview || t('card.noText')}
                 </Text>
-                <View style={styles.cardActions}>
+                <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
                   {isPro && (
                     <Pressable onPress={() => setStatsCardId(item.id)} hitSlop={8} style={styles.iconBtn}>
                       <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />

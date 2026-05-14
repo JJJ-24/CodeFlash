@@ -162,7 +162,7 @@ export default function SearchScreen() {
               >
                 <View style={styles.resultText}>
                   <Text
-                    style={[styles.preview, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                    style={[styles.preview, { color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: Math.ceil(theme.fontSize.md * 1.5) }]}
                     numberOfLines={2}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                   >
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   resultText: { flex: 1, gap: 2 },
-  preview: { fontWeight: '500', lineHeight: 22 },
+  preview: { fontWeight: '500' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: {},
   deckName: {},

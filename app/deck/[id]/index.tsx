@@ -667,7 +667,7 @@ export default function DeckDetailScreen() {
                     color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
                   />
                 )}
-                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {preview || t('card.noText')}
                 </Text>
                 {!selectionMode && (
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
     gap: 12,
     ...SHADOW.subtle,
   },
-  cardPreview: { flex: 1, lineHeight: 22 },
+  cardPreview: { flex: 1 },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   fab: {
     position: 'absolute',

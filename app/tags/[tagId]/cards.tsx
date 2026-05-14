@@ -216,7 +216,7 @@ export default function TagCardsScreen() {
                 }}
               >
                 <Text
-                  style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
+                  style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]}
                   numberOfLines={2}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     ...SHADOW.subtle,
   },
   sectionTitle: { fontWeight: '700', marginBottom: 12, marginHorizontal: 20 },
-  cardPreview: { flex: 1, lineHeight: 22 },
+  cardPreview: { flex: 1 },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   iconBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },

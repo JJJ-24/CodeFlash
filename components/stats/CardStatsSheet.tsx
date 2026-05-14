@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 
@@ -37,6 +38,8 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const db = useSQLiteContext();
+  const { width: screenWidth } = useWindowDimensions();
+  const sheetMaxWidth = Math.min(screenWidth * 0.92, 520);
 
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<CardGradeStats | null>(null);
@@ -70,15 +73,17 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
     >
       <Pressable style={styles.overlay} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <Text style={[styles.headerTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        {/* Header（全幅・タイトル中央） */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border, justifyContent: 'center' }]}>
+          <Text style={[styles.headerTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('card.statsTitle')}
           </Text>
-          <Pressable onPress={onClose} hitSlop={8}>
-            <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
-          </Pressable>
         </View>
+        {/* 閉じるボタン（画面右上 absolute） */}
+        <Pressable onPress={onClose} hitSlop={8} style={{ position: 'absolute', top: 14, right: 16, padding: 4, zIndex: 1 }}>
+          <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+        </Pressable>
+        <View style={{ maxWidth: sheetMaxWidth, width: '100%', alignSelf: 'center' }}>
 
         {loading ? (
           <View style={styles.center}>
@@ -122,33 +127,31 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
 
             {/* Scatter plot */}
             {history.length >= 2 && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('card.statsTrend')}
-                </Text>
-                <View style={styles.reviewDateRow}>
-                  <Text style={[styles.reviewDateLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t('card.statsFirstLabel')}
-                  </Text>
-                  <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {localDateStr(new Date(history[0].reviewedAt))}
-                  </Text>
-                </View>
-                <View style={styles.reviewDateRow}>
-                  <Text style={[styles.reviewDateLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t('card.statsLastLabel')}
-                  </Text>
-                  <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {localDateStr(new Date(history[history.length - 1].reviewedAt))}
-                  </Text>
-                </View>
-                <View style={{ marginTop: 12 }}>
-                  <ScatterPlot history={history} theme={theme} t={t} />
+              <View style={{ marginTop: 32 }}>
+                <ScatterPlot history={history} theme={theme} t={t} />
+                <View style={styles.reviewDatesRow}>
+                  <View style={{ flexDirection: 'row' }}>
+                    <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('card.statsFirstLabel')}
+                    </Text>
+                    <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {localDateStr(new Date(history[0].reviewedAt))}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row' }}>
+                    <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('card.statsLastLabel')}
+                    </Text>
+                    <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {localDateStr(new Date(history[history.length - 1].reviewedAt))}
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}
           </ScrollView>
         )}
+        </View>
       </View>
     </Modal>
   );
@@ -307,14 +310,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  reviewDateRow: {
+  reviewDatesRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 2,
-  },
-  reviewDateLabel: {
-    width: 56,
-    textAlign: 'right',
-    marginRight: 4,
+    gap: 24,
+    marginTop: 8,
   },
 });

@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { BlockItemHeader } from './BlockItemHeader';
+import { InfoModal } from '@/components/InfoModal';
 import { pickAndSaveImage, resolveImageUri } from '@/lib/image';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { ImageBlock } from '@/types';
@@ -39,6 +40,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
 
   const [picking, setPicking] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [sizeErrorVisible, setSizeErrorVisible] = useState(false);
   const prevCollapsedRef = useRef(collapsed);
   const altInputRef = useRef<TextInput>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
@@ -74,11 +76,14 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   async function handlePick() {
     setPicking(true);
     try {
-      const uri = await pickAndSaveImage();
-      if (uri) {
-        onChange({ uri });
-        setTimeout(() => altInputRef.current?.focus(), 100);
+      const result = await pickAndSaveImage();
+      if (!result) return;
+      if ('error' in result) {
+        setSizeErrorVisible(true);
+        return;
       }
+      onChange({ uri: result.uri });
+      setTimeout(() => altInputRef.current?.focus(), 100);
     } finally {
       setPicking(false);
     }
@@ -174,6 +179,12 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
       <Animated.View
         style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}
         pointerEvents="none"
+      />
+      <InfoModal
+        visible={sizeErrorVisible}
+        title={t('card.imageSizeErrorTitle')}
+        message={t('card.imageSizeError')}
+        onClose={() => setSizeErrorVisible(false)}
       />
     </View>
   );

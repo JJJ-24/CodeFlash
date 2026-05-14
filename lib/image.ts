@@ -1,11 +1,12 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import i18n from '@/lib/i18n';
-
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+
+export type PickAndSaveImageResult =
+  | { uri: string }
+  | { error: 'tooLarge' };
 
 const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
 
@@ -17,8 +18,8 @@ async function ensureImageDir() {
 }
 
 /** フォトライブラリから画像を選択してアプリストレージにコピーする。
- *  戻り値: `local://images/{uuid}.{ext}` 形式の URI。キャンセル時は null。 */
-export async function pickAndSaveImage(): Promise<string | null> {
+ *  戻り値: 成功時 `{ uri }`（`local://images/{uuid}.{ext}` 形式）、サイズ超過時 `{ error: 'tooLarge' }`、キャンセル/権限なしは null。 */
+export async function pickAndSaveImage(): Promise<PickAndSaveImageResult | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) return null;
 
@@ -33,11 +34,7 @@ export async function pickAndSaveImage(): Promise<string | null> {
   const asset = result.assets[0];
 
   if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
-    Alert.alert(
-      i18n.t('card.imageSizeErrorTitle'),
-      i18n.t('card.imageSizeError')
-    );
-    return null;
+    return { error: 'tooLarge' };
   }
 
   const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
@@ -47,7 +44,7 @@ export async function pickAndSaveImage(): Promise<string | null> {
   await ensureImageDir();
   await FileSystem.copyAsync({ from: asset.uri, to: IMAGE_DIR + filename });
 
-  return `local://images/${filename}`;
+  return { uri: `local://images/${filename}` };
 }
 
 /** `local://images/xxx.jpg` → 実際のファイルシステム URI に変換する */

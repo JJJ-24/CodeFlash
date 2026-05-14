@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { StyleProp, ViewStyle } from 'react-native';
 
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 interface Props {
@@ -20,16 +22,14 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
   const { t } = useTranslation();
   const theme = useTheme();
   const isSortMode = onMoveUp !== undefined || onMoveDown !== undefined;
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   function confirmDelete() {
     if (isEmpty) {
       onDelete();
       return;
     }
-    Alert.alert(t('editor.deleteBlock'), t('editor.deleteBlockConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.delete'), style: 'destructive', onPress: onDelete },
-    ]);
+    setConfirmVisible(true);
   }
 
   return (
@@ -55,6 +55,15 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
           </Pressable>
         )
       )}
+      <ConfirmDeleteModal
+        visible={confirmVisible}
+        message={t('editor.deleteBlockConfirm')}
+        onConfirm={() => {
+          setConfirmVisible(false);
+          onDelete();
+        }}
+        onClose={() => setConfirmVisible(false)}
+      />
     </View>
   );
 }

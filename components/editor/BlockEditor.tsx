@@ -10,7 +10,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -23,6 +22,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 
+import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
@@ -174,6 +174,7 @@ export function BlockEditor({
   const [blurTriggerMap, setBlurTriggerMap] = useState<Record<string, number>>(
     {},
   );
+  const [pendingDeleteBlock, setPendingDeleteBlock] = useState<{ tab: Tab; key: string } | null>(null);
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -509,17 +510,7 @@ export function BlockEditor({
           deleteBlock(tab, block._key);
           setFocusedBlockIndex(null);
         } else {
-          Alert.alert(t("editor.deleteBlock"), t("editor.deleteBlockConfirm"), [
-            { text: t("common.cancel"), style: "cancel" },
-            {
-              text: t("common.delete"),
-              style: "destructive",
-              onPress: () => {
-                deleteBlock(tab, block._key);
-                setFocusedBlockIndex(null);
-              },
-            },
-          ]);
+          setPendingDeleteBlock({ tab, key: block._key });
         }
       } else {
         onDeleteCard?.();
@@ -1084,6 +1075,18 @@ export function BlockEditor({
         {footerContent}
         </Pressable>
       </ScrollView>
+      <ConfirmDeleteModal
+        visible={pendingDeleteBlock !== null}
+        message={t("editor.deleteBlockConfirm")}
+        onConfirm={() => {
+          if (pendingDeleteBlock) {
+            deleteBlock(pendingDeleteBlock.tab, pendingDeleteBlock.key);
+            setFocusedBlockIndex(null);
+          }
+          setPendingDeleteBlock(null);
+        }}
+        onClose={() => setPendingDeleteBlock(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

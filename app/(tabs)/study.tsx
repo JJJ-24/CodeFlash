@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   summaryValue: { fontWeight: '700' },
-  summaryLabel: { marginTop: 2, textAlign: 'center' },
+  summaryLabel: { marginTop: 2, textAlign: 'center', fontWeight: '600' },
   sectionTitle: { fontWeight: '700' },
   listTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   listTitleBlock: { flex: 1, gap: 2 },

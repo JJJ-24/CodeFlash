@@ -261,7 +261,7 @@ function BarChart({
               {item.count > 0 ? item.count : ''}
             </Text>
             <View style={[styles.bar, { height: barH, backgroundColor: color, opacity: isToday ? 1 : 0.35 }]} />
-            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color, fontWeight: '700' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {labels[dayIndex]}
             </Text>
           </View>
@@ -311,7 +311,7 @@ function MonthBarChart({ data, theme }: { data: { month: string; count: number }
                   {item.count > 0 ? item.count : ''}
                 </Text>
                 <View style={[styles.bar, { height: barH, backgroundColor: theme.colors.primary, opacity: isCurrentMonth ? 1 : 0.35 }]} />
-                <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isCurrentMonth && { color: theme.colors.primary, fontWeight: '700' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isCurrentMonth && { color: theme.colors.primary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {label}
                 </Text>
               </View>
@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   summaryValue: { fontWeight: '700' },
-  summaryLabel: { marginTop: 2, textAlign: 'center' },
+  summaryLabel: { marginTop: 2, textAlign: 'center', fontWeight: '600' },
   streakMedalBadge: { position: 'absolute', top: 2, right: 2 },
   streakMedalBadgePad: { top: 8, right: 8 },
 
@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
   barCount: { textAlign: 'center' },
-  barLabel: { textAlign: 'center', fontWeight: '600' },
+  barLabel: { textAlign: 'center' },
 
   // Progress
   progressPct: { fontWeight: '700' },

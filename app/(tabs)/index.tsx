@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   statValue: { fontWeight: '700' },
-  statLabel: { marginTop: 2, textAlign: 'center' },
+  statLabel: { marginTop: 2, textAlign: 'center', fontWeight: '600' },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

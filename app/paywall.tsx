@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   Pressable,
@@ -16,7 +15,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { fetchOfferings, purchasePro, restorePurchases, type MockPackage } from '@/lib/purchases';
+import { fetchOfferings, purchasePro, restorePurchases, type PurchasesPackage } from '@/lib/purchases';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 
@@ -72,7 +71,7 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const { isPro } = useProStore();
 
-  const [pkg, setPkg]               = useState<MockPackage | null>(null);
+  const [pkg, setPkg]               = useState<PurchasesPackage | null>(null);
   const [loading, setLoading]       = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring]   = useState(false);
@@ -91,8 +90,10 @@ export default function PaywallScreen() {
     try {
       await purchasePro(pkg);
       router.back();
-    } catch {
-      Alert.alert(t('pro.purchaseError'));
+    } catch (e: any) {
+      if (!e?.userCancelled) {
+        setInfoModal({ message: t('pro.purchaseError') });
+      }
     } finally {
       setPurchasing(false);
     }

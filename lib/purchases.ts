@@ -1,36 +1,48 @@
+import Purchases, { type PurchasesPackage } from 'react-native-purchases';
+import { Platform } from 'react-native';
 import { useProStore } from '@/store/pro';
 
-export const PRO_PRODUCT_ID = 'codeflash_pro';
+export { type PurchasesPackage };
 
-// App Store Connect / RevenueCat のキー（TestFlight 接続時に差し替える）
-export const APPLE_API_KEY  = 'appl_REPLACE_WITH_YOUR_KEY';
+const ENTITLEMENT_ID  = 'Pro';
+export const APPLE_API_KEY  = 'appl_XqczZtgVWlvjjltqFwvShBaUuqs';
 export const GOOGLE_API_KEY = 'goog_REPLACE_WITH_YOUR_KEY';
 
-export type MockPackage = {
-  product: { priceString: string; productIdentifier: string };
-};
-
 export function initializePurchases() {
-  // TestFlight 接続時に react-native-purchases の初期化コードをここに追加する
+  const apiKey = Platform.OS === 'ios' ? APPLE_API_KEY : GOOGLE_API_KEY;
+  Purchases.configure({ apiKey });
 }
 
 export async function restoreProStatus(): Promise<boolean> {
-  return useProStore.getState().isPro;
+  try {
+    const customerInfo = await Purchases.getCustomerInfo();
+    const isPro = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    useProStore.getState().setIsPro(isPro);
+    return isPro;
+  } catch {
+    return useProStore.getState().isPro;
+  }
 }
 
-export async function fetchOfferings(): Promise<MockPackage | null> {
-  // TestFlight 接続時に RevenueCat の getOfferings() に差し替える
-  return { product: { priceString: '¥980', productIdentifier: PRO_PRODUCT_ID } };
+export async function fetchOfferings(): Promise<PurchasesPackage | null> {
+  try {
+    const offerings = await Purchases.getOfferings();
+    return offerings.current?.lifetime ?? null;
+  } catch {
+    return null;
+  }
 }
 
-export async function purchasePro(_pkg: MockPackage): Promise<boolean> {
-  // TestFlight 接続時に RevenueCat の purchasePackage() に差し替える
-  // 開発中は常に成功扱いにして isPro を true にする
-  useProStore.getState().setIsPro(true);
-  return true;
+export async function purchasePro(pkg: PurchasesPackage): Promise<boolean> {
+  const { customerInfo } = await Purchases.purchasePackage(pkg);
+  const isPro = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+  useProStore.getState().setIsPro(isPro);
+  return isPro;
 }
 
 export async function restorePurchases(): Promise<boolean> {
-  // TestFlight 接続時に RevenueCat の restorePurchases() に差し替える
-  return useProStore.getState().isPro;
+  const customerInfo = await Purchases.restorePurchases();
+  const isPro = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+  useProStore.getState().setIsPro(isPro);
+  return isPro;
 }

@@ -736,8 +736,9 @@ export default function StudySessionScreen() {
                     </Text>
                     <Text
                       style={{
-                        color,
+                        color: theme.colors.textSecondary,
                         fontSize: gradeLabelFontSize,
+                        fontWeight: '600',
                       }}
                       numberOfLines={1}
                       adjustsFontSizeToFit

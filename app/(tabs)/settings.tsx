@@ -413,7 +413,7 @@ export default function SettingsScreen() {
                 <Text style={[styles.proTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.fsrs')}
                 </Text>
-                <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.iconSubtle} />
+                <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />
               </View>
               <Text style={[styles.proSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.fsrsLockedSubtitle')}

@@ -147,6 +147,12 @@ export async function saveReview(db: SQLiteDatabase, review: Review, responseTim
     `INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?, ?)`,
     [review.cardId, localDateStr(new Date(review.lastReviewDate))]
   );
+  // 同日内の再評価は最後の1回のみを残す（FSRS の「同日 = やり直し」哲学と一貫）
+  const localToday = localDateStr(new Date(review.lastReviewDate));
+  await db.runAsync(
+    `DELETE FROM grade_logs WHERE cardId = ? AND date(reviewedAt, 'localtime') = ?`,
+    [review.cardId, localToday]
+  );
   await db.runAsync(
     `INSERT INTO grade_logs (cardId, grade, reviewedAt, responseTimeMs) VALUES (?, ?, ?, ?)`,
     [review.cardId, review.lastGrade, review.lastReviewDate, responseTimeMs ?? null]

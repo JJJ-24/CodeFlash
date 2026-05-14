@@ -14,6 +14,7 @@ const CARD_SORT_KEY = '@codeflash_card_sort';
 const SHUFFLE_KEY = '@codeflash_shuffle';
 const SEARCH_FIELD_KEY = '@codeflash_last_search_field';
 const FSRS_RETENTION_KEY = '@codeflash_fsrs_retention';
+const STUDY_HIDE_EMPTY_KEY = '@codeflash_study_hide_empty';
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 export type CardSortOrder = 'manual' | 'newest' | 'oldest';
@@ -71,6 +72,8 @@ interface SettingsState {
   setLastSearchField: (v: string) => void;
   fsrsDesiredRetention: number;
   setFsrsDesiredRetention: (v: number) => void;
+  studyHideEmpty: boolean;
+  setStudyHideEmpty: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -137,10 +140,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ fsrsDesiredRetention: clamped });
     AsyncStorage.setItem(FSRS_RETENTION_KEY, String(clamped));
   },
+  studyHideEmpty: false,
+  setStudyHideEmpty: (v) => {
+    set({ studyHideEmpty: v });
+    AsyncStorage.setItem(STUDY_HIDE_EMPTY_KEY, String(v));
+  },
 }));
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention] = await Promise.all([
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEY),
     AsyncStorage.getItem(FILTER_STORAGE_KEY),
     AsyncStorage.getItem(LANG_STORAGE_KEY),
@@ -154,12 +162,13 @@ export async function hydrateSettings(): Promise<void> {
     AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
     AsyncStorage.getItem(SEARCH_FIELD_KEY),
     AsyncStorage.getItem(FSRS_RETENTION_KEY),
+    AsyncStorage.getItem(STUDY_HIDE_EMPTY_KEY),
   ]);
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
     'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField' |
-    'fsrsDesiredRetention'
+    'fsrsDesiredRetention' | 'studyHideEmpty'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -177,6 +186,7 @@ export async function hydrateSettings(): Promise<void> {
     const v = Number(fsrsRetention);
     if (!Number.isNaN(v)) update.fsrsDesiredRetention = Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
   }
+  if (studyHideEmpty !== null) update.studyHideEmpty = studyHideEmpty === 'true';
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 }
 

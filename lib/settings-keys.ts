@@ -16,4 +16,5 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_shuffle',
   '@codeflash_last_search_field',
   '@codeflash_fsrs_retention',
+  '@codeflash_study_hide_empty',
 ] as const;

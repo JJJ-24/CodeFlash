@@ -62,7 +62,7 @@ export default function StudyScreen() {
   const theme = useTheme();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
-  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder } = useSettingsStore();
+  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder, studyHideEmpty: hideEmpty, setStudyHideEmpty } = useSettingsStore();
 
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
@@ -77,7 +77,6 @@ export default function StudyScreen() {
   const [activeFilter, setActiveFilter] = useState<Filter>('review');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
-  const [hideEmpty, setHideEmpty] = useState(false);
   const focusedDeckIdRef = useRef<string | null>(null);
   const focusedTagIdRef = useRef<string | null>(null);
   const fromSessionRef = useRef(false);
@@ -201,7 +200,7 @@ export default function StudyScreen() {
     else if (key === '4') { setActiveFilter('new'); }
     else if (key === 's' || key === 'S') { setShuffleEnabled(!shuffleEnabled); }
     else if (key === 'h' || key === 'H') {
-      setHideEmpty(prev => !prev);
+      setStudyHideEmpty(!hideEmpty);
       setFocusedItemIndex(null);
       focusedDeckIdRef.current = null;
       focusedTagIdRef.current = null;
@@ -376,7 +375,7 @@ export default function StudyScreen() {
           </View>
           <Pressable
             onPress={() => {
-              setHideEmpty(prev => !prev);
+              setStudyHideEmpty(!hideEmpty);
               setFocusedItemIndex(null);
               focusedDeckIdRef.current = null;
               focusedTagIdRef.current = null;

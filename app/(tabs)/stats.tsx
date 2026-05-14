@@ -30,6 +30,7 @@ import {
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
+import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
@@ -472,6 +473,7 @@ export default function StatsScreen() {
   const [gradeBlockCards, setGradeBlockCards] = useState<GradeCard[]>([]);
   const [gradeBlockLoading, setGradeBlockLoading] = useState(false);
   const [gradeAvgResponseTime, setGradeAvgResponseTime] = useState<number | null>(null);
+  const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -927,6 +929,9 @@ export default function StatsScreen() {
                             {card.deckName}
                           </Text>
                         </View>
+                        <Pressable onPress={() => setStatsCardId(card.cardId)} hitSlop={8} style={{ padding: 4, marginRight: 4 }}>
+                          <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                        </Pressable>
                         <View style={[styles.lapseBadge, { backgroundColor: badgeColor }]}>
                           <Text style={styles.lapseBadgeText} allowFontScaling={false}>
                             {t('stats.gradeCount', { count: card.gradeCount })}
@@ -981,6 +986,7 @@ export default function StatsScreen() {
         onClose={() => setShowShortcutsModal(false)}
         shortcuts={STATS_SHORTCUTS}
       />
+      <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
     </View>
   );
 }

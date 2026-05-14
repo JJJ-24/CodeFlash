@@ -139,21 +139,22 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 }));
 
-Promise.all([
-  AsyncStorage.getItem(STORAGE_KEY),
-  AsyncStorage.getItem(FILTER_STORAGE_KEY),
-  AsyncStorage.getItem(LANG_STORAGE_KEY),
-  AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY),
-  AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY),
-  AsyncStorage.getItem(DECK_SORT_KEY),
-  AsyncStorage.getItem(TAG_SORT_KEY),
-  AsyncStorage.getItem(CARD_SORT_KEY),
-  AsyncStorage.getItem(SHUFFLE_KEY),
-  AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
-  AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
-  AsyncStorage.getItem(SEARCH_FIELD_KEY),
-  AsyncStorage.getItem(FSRS_RETENTION_KEY),
-]).then(([keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention]) => {
+export async function hydrateSettings(): Promise<void> {
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention] = await Promise.all([
+    AsyncStorage.getItem(STORAGE_KEY),
+    AsyncStorage.getItem(FILTER_STORAGE_KEY),
+    AsyncStorage.getItem(LANG_STORAGE_KEY),
+    AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY),
+    AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY),
+    AsyncStorage.getItem(DECK_SORT_KEY),
+    AsyncStorage.getItem(TAG_SORT_KEY),
+    AsyncStorage.getItem(CARD_SORT_KEY),
+    AsyncStorage.getItem(SHUFFLE_KEY),
+    AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
+    AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
+    AsyncStorage.getItem(SEARCH_FIELD_KEY),
+    AsyncStorage.getItem(FSRS_RETENTION_KEY),
+  ]);
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
@@ -177,4 +178,6 @@ Promise.all([
     if (!Number.isNaN(v)) update.fsrsDesiredRetention = Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
   }
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
-});
+}
+
+hydrateSettings();

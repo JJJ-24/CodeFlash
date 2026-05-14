@@ -1,6 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { SQLiteDatabase } from 'expo-sqlite';
+
+import { SETTINGS_ASYNC_STORAGE_KEYS } from './settings-keys';
 
 const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
 
@@ -14,6 +17,7 @@ export type ExportData = {
   reviews: Record<string, unknown>[];
   review_logs: { cardId: string; reviewedDate: string }[];
   grade_logs?: { id: number; cardId: string; grade: number; reviewedAt: string; responseTimeMs: number | null }[];
+  settings?: Record<string, string>; // AsyncStorage の設定値
   imageData?: Record<string, string>; // key: ファイル名, value: base64
 };
 
@@ -98,6 +102,12 @@ export async function exportDatabase(db: SQLiteDatabase, includeImages = false):
     'SELECT id, cardId, grade, reviewedAt, responseTimeMs FROM grade_logs ORDER BY id ASC'
   );
 
+  const settingEntries = await AsyncStorage.multiGet(SETTINGS_ASYNC_STORAGE_KEYS as unknown as string[]);
+  const settings: Record<string, string> = {};
+  for (const [k, v] of settingEntries) {
+    if (v !== null) settings[k] = v;
+  }
+
   const data: ExportData = {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -108,6 +118,7 @@ export async function exportDatabase(db: SQLiteDatabase, includeImages = false):
     reviews,
     review_logs,
     grade_logs,
+    settings,
   };
 
   if (includeImages) {

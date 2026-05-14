@@ -1,6 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { SETTINGS_ASYNC_STORAGE_KEYS } from './settings-keys';
+import { hydrateSettings } from '@/store/settings';
+import { hydrateTheme } from '@/store/theme';
 import type { ExportData } from './export';
 
 const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
@@ -146,6 +150,20 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
       (data.grade_logs ?? []).map((g) => [g.id, g.cardId, g.grade, g.reviewedAt, g.responseTimeMs ?? null])
     );
   });
+
+  // AsyncStorage の設定値を復元（Pro ステータスは含まれない）
+  if (data.settings && typeof data.settings === 'object') {
+    const allowed = new Set<string>(SETTINGS_ASYNC_STORAGE_KEYS as unknown as string[]);
+    const pairs: [string, string][] = [];
+    for (const [k, v] of Object.entries(data.settings)) {
+      if (allowed.has(k) && typeof v === 'string') pairs.push([k, v]);
+    }
+    if (pairs.length > 0) {
+      await AsyncStorage.multiSet(pairs);
+      // ストアを再 hydrate して UI に即時反映
+      await Promise.all([hydrateTheme(), hydrateSettings()]);
+    }
+  }
 
   // 画像データが含まれる場合はファイルとして書き出す
   if (data.imageData && Object.keys(data.imageData).length > 0) {

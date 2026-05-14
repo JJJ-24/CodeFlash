@@ -42,12 +42,15 @@ export const useThemeStore = create<ThemeState>((set) => ({
 }));
 
 // アプリ起動時に保存済みの設定を復元
-Promise.all([
-  AsyncStorage.getItem(THEME_KEY),
-  AsyncStorage.getItem(FONT_SIZE_KEY),
-]).then(([theme, fontSize]) => {
+export async function hydrateTheme(): Promise<void> {
+  const [theme, fontSize] = await Promise.all([
+    AsyncStorage.getItem(THEME_KEY),
+    AsyncStorage.getItem(FONT_SIZE_KEY),
+  ]);
   const preference = (theme === 'light' || theme === 'dark' || theme === 'system') ? theme : 'system';
   const fontSizePreference = (fontSize === 'small' || fontSize === 'medium' || fontSize === 'large') ? fontSize : 'medium';
   applyNativeColorScheme(preference);
   useThemeStore.setState({ preference, fontSizePreference, hydrated: true });
-});
+}
+
+hydrateTheme();

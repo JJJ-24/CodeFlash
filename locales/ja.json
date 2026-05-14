@@ -336,6 +336,8 @@
     "openFocused": "展開（フォーカス項目）",
     "editFocused": "編集（フォーカス項目）",
     "deleteFocused": "削除（フォーカス項目）",
+    "toggleCardStats": "カード統計 表示/非表示\n（フォーカス項目）",
+    "proBadge": "Pro",
     "cycleSort": "モード切替（ソート）",
     "cycleCardSort": "モード切替（ソート）\n（「すべて」選択時）",
     "search": "検索",

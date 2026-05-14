@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Modal,
+  BackHandler,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +12,13 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 
 import { GRADE_COLORS, MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
@@ -38,12 +45,47 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const db = useSQLiteContext();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const sheetMaxWidth = Math.min(screenWidth * 0.92, 520);
 
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<CardGradeStats | null>(null);
   const [history, setHistory] = useState<{ grade: number; reviewedAt: string }[]>([]);
+
+  const visible = cardId !== null;
+  const [mounted, setMounted] = useState(visible);
+  const progress = useSharedValue(visible ? 1 : 0);
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      progress.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
+    } else {
+      progress.value = withTiming(
+        0,
+        { duration: 220, easing: Easing.in(Easing.cubic) },
+        (finished) => {
+          if (finished) runOnJS(setMounted)(false);
+        },
+      );
+    }
+  }, [visible, progress]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [mounted, onClose]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+  }));
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - progress.value) * screenHeight }],
+  }));
 
   useEffect(() => {
     if (!cardId) return;
@@ -64,15 +106,15 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
 
   const counts = stats ? [stats.again, stats.hard, stats.good, stats.easy] : [0, 0, 0, 0];
 
+  if (!mounted) return null;
+
   return (
-    <Modal
-      visible={cardId !== null}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.overlay} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <Animated.View style={[styles.overlay, overlayStyle]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
+      <Animated.View style={[styles.sheetWrapper, sheetStyle]} pointerEvents="box-none">
+        <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>
         {/* Header（全幅・タイトル中央） */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border, justifyContent: 'center' }]}>
           <Text style={[styles.headerTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -154,8 +196,9 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
           </ScrollView>
         )}
         </View>
-      </View>
-    </Modal>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -253,8 +296,12 @@ function ScatterPlot({ history, theme, t }: { history: { grade: number; reviewed
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  sheetWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
   },
   sheet: {
     maxHeight: '80%',

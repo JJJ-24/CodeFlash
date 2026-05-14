@@ -336,6 +336,8 @@
     "openFocused": "Open focused item",
     "editFocused": "Edit focused item",
     "deleteFocused": "Delete focused item",
+    "toggleCardStats": "Toggle card stats\n(focused item)",
+    "proBadge": "Pro",
     "cycleSort": "Cycle mode (sort)",
     "cycleCardSort": "Cycle mode (sort)\nWhen 'All' is selected",
     "search": "Search",

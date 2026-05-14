@@ -293,7 +293,7 @@ export default function SettingsScreen() {
       <Pressable
         style={[styles.card, styles.proCard, { backgroundColor: theme.colors.surface }]}
         onPress={() => !isPro && router.push('/paywall')}
-        onLongPress={() => { if (__DEV__ && isPro) useProStore.getState().setIsPro(false); }}
+        onLongPress={() => { if (__DEV__) useProStore.getState().setIsPro(!isPro); }}
         disabled={isPro && !__DEV__}
       >
         <View style={styles.proRow}>
@@ -319,6 +319,24 @@ export default function SettingsScreen() {
           )}
         </View>
       </Pressable>
+
+      {__DEV__ && (
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            DEV
+          </Text>
+          <View style={styles.notificationRow}>
+            <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              Pro 切替（開発用）
+            </Text>
+            <Switch
+              value={isPro}
+              onValueChange={(v) => useProStore.getState().setIsPro(v)}
+              trackColor={{ true: theme.colors.primary }}
+            />
+          </View>
+        </View>
+      )}
 
       <SegmentedCard
         label={t('settings.theme')}

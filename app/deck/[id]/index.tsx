@@ -103,6 +103,7 @@ export default function DeckDetailScreen() {
     { key: '1–4',       descKey: 'shortcut.switchFilter' },
     { key: 'J / K',     descKey: 'shortcut.focusNextPrev' },
     { key: 'P',         descKey: 'shortcut.editFocusedItem' },
+    { key: 'A',         descKey: 'shortcut.toggleCardStats', pro: true },
     { key: 'D',         descKey: 'shortcut.deleteFocused' },
     { key: 'N',         descKey: 'shortcut.new' },
     { key: 'M',         descKey: 'shortcut.cycleCardSort' },
@@ -177,6 +178,13 @@ export default function DeckDetailScreen() {
       };
     }, [loadCards])
   );
+
+  useEffect(() => {
+    if (statsCardId === null && keyboardShortcutsEnabled) {
+      const timer = setTimeout(() => keyboardRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [statsCardId, keyboardShortcutsEnabled, keyboardRef]);
 
   useEffect(() => {
     filterOffsetsRef.current[prevFilterRef.current] = scrollOffsetRef.current;
@@ -394,6 +402,12 @@ export default function DeckDetailScreen() {
         ref={keyboardRef}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
+          if (statsCardId !== null) {
+            if (key.toLowerCase() === 'a' || key === 'Escape') {
+              setStatsCardId(null);
+            }
+            return;
+          }
           const k = key.toLowerCase();
           if (selectionMode) {
             if (k === 'j') { moveFocus('next'); }
@@ -442,10 +456,18 @@ export default function DeckDetailScreen() {
             setSelectionMode((v) => !v);
             setSelectedCardIds(new Set());
             setFocusedCardIndex(null);
+          } else if (k === 'a') {
+            if (!isPro) return;
+            if (statsCardId) {
+              setStatsCardId(null);
+            } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+              setStatsCardId(displayedCards[focusedCardIndex].id);
+            }
           }
         }}
         onSubmitEditing={() => {
           if (!keyboardShortcutsEnabled) return;
+          if (statsCardId !== null) return;
           if (!selectionMode && focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
             navigateToCardEdit(displayedCards[focusedCardIndex].id);
           }

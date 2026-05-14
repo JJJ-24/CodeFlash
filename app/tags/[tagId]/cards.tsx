@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +34,7 @@ import type { Card } from '@/types';
 const TAG_CARDS_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'P',       descKey: 'shortcut.editFocusedItem' },
+  { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
   { key: 'D',     descKey: 'shortcut.deleteFocused' },
   { key: 'N',     descKey: 'shortcut.new' },
   { key: 'B',     descKey: 'shortcut.back' },
@@ -102,6 +103,13 @@ export default function TagCardsScreen() {
     }, [db, tagId, cardSortOrder, onScreenFocus, onScreenBlur])
   );
 
+  useEffect(() => {
+    if (statsCardId === null && keyboardShortcutsEnabled) {
+      const timer = setTimeout(() => keyboardRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [statsCardId, keyboardShortcutsEnabled, keyboardRef]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -154,6 +162,12 @@ export default function TagCardsScreen() {
         spellCheck={false}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
+          if (statsCardId !== null) {
+            if (key.toLowerCase() === 'a' || key === 'Escape') {
+              setStatsCardId(null);
+            }
+            return;
+          }
           const k = key.toLowerCase();
           if (k === 'j') { moveFocus('next'); }
           else if (k === 'k') { moveFocus('prev'); }
@@ -169,10 +183,18 @@ export default function TagCardsScreen() {
             setShowDeckPicker(true);
           } else if (k === 'b') {
             router.back();
+          } else if (k === 'a') {
+            if (!isPro) return;
+            if (statsCardId) {
+              setStatsCardId(null);
+            } else if (focusedCardIndex !== null && cards[focusedCardIndex]) {
+              setStatsCardId(cards[focusedCardIndex].id);
+            }
           }
         }}
         onSubmitEditing={() => {
           if (!keyboardShortcutsEnabled) return;
+          if (statsCardId !== null) return;
           if (focusedCardIndex !== null && cards[focusedCardIndex]) {
             navigateToEdit(cards[focusedCardIndex]);
           }

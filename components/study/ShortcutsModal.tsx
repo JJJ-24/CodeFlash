@@ -3,10 +3,12 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from '
 import type { ViewStyle } from 'react-native';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useProStore } from '@/store/pro';
 
 interface ShortcutItem {
   key: string;
   descKey: string;
+  pro?: boolean;
 }
 
 interface ShortcutSection {
@@ -25,6 +27,31 @@ interface Props {
 export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeight = '70%' }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const { isPro } = useProStore();
+
+  function renderItem(item: ShortcutItem) {
+    const locked = item.pro && !isPro;
+    const rowOpacity = locked ? 0.4 : 1;
+    return (
+      <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border, opacity: rowOpacity }]}>
+        <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }, (Platform as any).isPad && styles.keyBadgePad]}>
+          <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
+            {item.key}
+          </Text>
+        </View>
+        <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {t(item.descKey)}
+        </Text>
+        {locked && (
+          <View style={[styles.proBadge, { backgroundColor: theme.colors.primary }]}>
+            <Text style={{ color: '#FFF', fontSize: theme.fontSize.xs, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('shortcut.proBadge')}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -43,33 +70,11 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
                       {section.title}
                     </Text>
                   </View>
-                  {section.items.map((item) => (
-                    <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
-                      <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }, (Platform as any).isPad && styles.keyBadgePad]}>
-                        <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
-                          {item.key}
-                        </Text>
-                      </View>
-                      <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                        {t(item.descKey)}
-                      </Text>
-                    </View>
-                  ))}
+                  {section.items.map(renderItem)}
                 </View>
               ))
             ) : (
-              (shortcuts ?? []).map((item) => (
-                <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
-                  <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }, (Platform as any).isPad && styles.keyBadgePad]}>
-                    <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
-                      {item.key}
-                    </Text>
-                  </View>
-                  <Text style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t(item.descKey)}
-                  </Text>
-                </View>
-              ))
+              (shortcuts ?? []).map(renderItem)
             )}
           </ScrollView>
         </View>
@@ -120,5 +125,10 @@ const styles = StyleSheet.create({
   },
   keyBadgePad: {
     width: 130,
+  },
+  proBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
 });

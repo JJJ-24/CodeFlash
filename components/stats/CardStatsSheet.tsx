@@ -29,8 +29,8 @@ const GRADE_COLOR_LIST = [GRADE_COLORS.again, GRADE_COLORS.hard, GRADE_COLORS.go
 
 const PLOT_MARGIN_LEFT = 56;
 const PLOT_MARGIN_RIGHT = 16;
-const PLOT_MARGIN_TOP = 12;
-const PLOT_MARGIN_BOTTOM = 36;
+const PLOT_MARGIN_TOP = 24;
+const PLOT_MARGIN_BOTTOM = 28;
 const PLOT_HEIGHT = 160;
 const DOT_R = 5;
 
@@ -127,8 +127,10 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
 
             {/* Scatter plot */}
             {history.length >= 2 && (
-              <View style={{ marginTop: 32 }}>
-                <ScatterPlot history={history} theme={theme} t={t} />
+              <View style={{ marginTop: 16 }}>
+                <View style={{ backgroundColor: theme.colors.background, borderRadius: 12, paddingTop: 8, paddingBottom: 4, width: '100%', alignItems: 'stretch' }}>
+                  <ScatterPlot history={history} theme={theme} t={t} />
+                </View>
                 <View style={styles.reviewDatesRow}>
                   <View style={{ flexDirection: 'row' }}>
                     <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -185,7 +187,7 @@ function ScatterPlot({ history, theme, t }: { history: { grade: number; reviewed
             y1={y}
             x2={320 - PLOT_MARGIN_RIGHT}
             y2={y}
-            stroke={theme.colors.border}
+            stroke={theme.dark ? theme.colors.border : '#DCDCDC'}
             strokeWidth={0.8}
           />
         );

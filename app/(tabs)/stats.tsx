@@ -196,7 +196,7 @@ function GradeDistPieChart({ dist, theme }: { dist: GradeDistribution; theme: Ap
           const pct = Math.round((slice.value / total) * 100);
           return (
             <View key={slice.label} style={pieStyles.gradeGridItem}>
-              <Text numberOfLines={1} style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} allowFontScaling={false}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridCount, { color: slice.color, fontSize: gradeCountFontSize }]} allowFontScaling={false}>
                 {slice.value}
               </Text>
               <Text numberOfLines={1} adjustsFontSizeToFit style={[pieStyles.gradeGridLabel, { color: theme.colors.textSecondary, fontSize: gradeLabelFontSize }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
@@ -218,7 +218,7 @@ const pieStyles = StyleSheet.create({
   learnedHeader: { marginBottom: 4 },
   gradeGrid: { flexDirection: 'row', justifyContent: 'center', paddingTop: 4, paddingBottom: 4, alignSelf: 'center', width: '100%' },
   gradeGridItem: { flex: 1, alignItems: 'center', gap: 2 },
-  gradeGridCount: { fontWeight: '700' },
+  gradeGridCount: { fontWeight: '700', fontVariant: ['tabular-nums'] },
   gradeGridLabel: { fontWeight: '600' },
   gradeGridPct: {},
 });
@@ -387,14 +387,14 @@ function DonutSheet({
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
-        <View style={sheetStyles.header}>
-          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        <View style={[sheetStyles.header, { justifyContent: 'center' }]}>
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {title}
           </Text>
-          <Pressable onPress={onClose} style={sheetStyles.closeBtn}>
-            <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
-          </Pressable>
         </View>
+        <Pressable onPress={onClose} style={[sheetStyles.closeBtn, { position: 'absolute', top: 14, right: 16, zIndex: 1 }]}>
+          <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+        </Pressable>
         <View style={sheetStyles.body}>
           {dist ? (
             <GradeDistPieChart dist={dist} theme={theme} />
@@ -412,7 +412,7 @@ function DonutSheet({
 const sheetStyles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 32, maxHeight: '70%' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  title: { fontWeight: '700', flex: 1, marginRight: 12 },
+  title: { fontWeight: '700' },
   closeBtn: { padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
 });

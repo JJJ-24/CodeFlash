@@ -542,6 +542,8 @@ export async function getTopCardsByGrade(
   grade: 0 | 1 | 2 | 3,
   limit = 10
 ): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number }[]> {
+  // grade 0/1（苦手系）は遅いほど上、grade 2/3（得意系）は早いほど上。NULL は末尾。
+  const responseTimeOrder = grade <= 1 ? 'DESC' : 'ASC';
   return db.getAllAsync(
     `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent, COUNT(gl.id) AS gradeCount
      FROM grade_logs gl
@@ -550,7 +552,7 @@ export async function getTopCardsByGrade(
      JOIN decks d ON c.deckId = d.id
      WHERE gl.grade = ?
      GROUP BY c.id
-     ORDER BY gradeCount DESC
+     ORDER BY gradeCount DESC, AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) ${responseTimeOrder}
      LIMIT ?`,
     [grade, limit]
   );

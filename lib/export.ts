@@ -13,6 +13,7 @@ export type ExportData = {
   card_tags: { cardId: string; tagId: string }[];
   reviews: Record<string, unknown>[];
   review_logs: { cardId: string; reviewedDate: string }[];
+  grade_logs?: { id: number; cardId: string; grade: number; reviewedAt: string; responseTimeMs: number | null }[];
   imageData?: Record<string, string>; // key: ファイル名, value: base64
 };
 
@@ -41,21 +42,22 @@ export async function estimateExportSize(db: SQLiteDatabase, includeImages: bool
       // CAST AS BLOB で UTF-8 の実バイト数を取得（LENGTH(TEXT) は文字数を返すため日本語で過小評価になる）
       `SELECT COALESCE(SUM(LENGTH(CAST(frontContent AS BLOB))+LENGTH(CAST(backContent AS BLOB))+LENGTH(CAST(memoContent AS BLOB))), 0) AS total FROM card_contents`
     ),
-    db.getFirstAsync<{ cards: number; decks: number; tags: number; cardTags: number; reviews: number; reviewLogs: number }>(
+    db.getFirstAsync<{ cards: number; decks: number; tags: number; cardTags: number; reviews: number; reviewLogs: number; gradeLogs: number }>(
       `SELECT
          (SELECT COUNT(*) FROM cards)       AS cards,
          (SELECT COUNT(*) FROM decks)       AS decks,
          (SELECT COUNT(*) FROM tags)        AS tags,
          (SELECT COUNT(*) FROM card_tags)   AS cardTags,
          (SELECT COUNT(*) FROM reviews)     AS reviews,
-         (SELECT COUNT(*) FROM review_logs) AS reviewLogs`
+         (SELECT COUNT(*) FROM review_logs) AS reviewLogs,
+         (SELECT COUNT(*) FROM grade_logs)  AS gradeLogs`
     ),
   ]);
   // JSON.stringify で " → \" エスケープされる分（コンテンツ文字列は {"type":"text","content":"..."} 形式で " が多い）
   const contentBytes = Math.ceil((contentRow?.total ?? 0) * 1.15);
-  const c = countRow ?? { cards: 0, decks: 0, tags: 0, cardTags: 0, reviews: 0, reviewLogs: 0 };
+  const c = countRow ?? { cards: 0, decks: 0, tags: 0, cardTags: 0, reviews: 0, reviewLogs: 0, gradeLogs: 0 };
   // JSON キー名・インデント・タイムスタンプ等の構造オーバーヘッド概算（行数 × 1行あたりのバイト数）
-  const metaBytes = c.cards * 250 + c.decks * 350 + c.tags * 120 + c.cardTags * 70 + c.reviews * 300 + c.reviewLogs * 70;
+  const metaBytes = c.cards * 250 + c.decks * 350 + c.tags * 120 + c.cardTags * 70 + c.reviews * 300 + c.reviewLogs * 70 + c.gradeLogs * 110;
 
   if (!includeImages) return contentBytes + metaBytes;
 
@@ -92,6 +94,9 @@ export async function exportDatabase(db: SQLiteDatabase, includeImages = false):
   const card_tags = await db.getAllAsync<{ cardId: string; tagId: string }>('SELECT * FROM card_tags');
   const reviews = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM reviews');
   const review_logs = await db.getAllAsync<{ cardId: string; reviewedDate: string }>('SELECT * FROM review_logs');
+  const grade_logs = await db.getAllAsync<{ id: number; cardId: string; grade: number; reviewedAt: string; responseTimeMs: number | null }>(
+    'SELECT id, cardId, grade, reviewedAt, responseTimeMs FROM grade_logs ORDER BY id ASC'
+  );
 
   const data: ExportData = {
     version: 1,
@@ -102,6 +107,7 @@ export async function exportDatabase(db: SQLiteDatabase, includeImages = false):
     card_tags,
     reviews,
     review_logs,
+    grade_logs,
   };
 
   if (includeImages) {

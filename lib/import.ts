@@ -32,13 +32,15 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
     !Array.isArray(data.tags) ||
     !Array.isArray(data.card_tags) ||
     !Array.isArray(data.reviews) ||
-    (data.review_logs !== undefined && !Array.isArray(data.review_logs))
+    (data.review_logs !== undefined && !Array.isArray(data.review_logs)) ||
+    (data.grade_logs !== undefined && !Array.isArray(data.grade_logs))
   ) {
     throw new Error('INVALID_FORMAT');
   }
 
   await db.withTransactionAsync(async () => {
     if (mode === 'replace') {
+      await db.runAsync('DELETE FROM grade_logs');
       await db.runAsync('DELETE FROM review_logs');
       await db.runAsync('DELETE FROM reviews');
       await db.runAsync('DELETE FROM card_tags');
@@ -132,6 +134,16 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
       db,
       logStmt,
       (data.review_logs ?? []).map((l) => [l.cardId, l.reviewedDate])
+    );
+
+    // grade_logs（responseTimeMs 含む）。id を保持してマージ時の重複を回避する
+    const gradeStmt = mode === 'replace'
+      ? 'INSERT OR REPLACE INTO grade_logs (id,cardId,grade,reviewedAt,responseTimeMs) VALUES'
+      : 'INSERT OR IGNORE INTO grade_logs (id,cardId,grade,reviewedAt,responseTimeMs) VALUES';
+    await bulkInsert(
+      db,
+      gradeStmt,
+      (data.grade_logs ?? []).map((g) => [g.id, g.cardId, g.grade, g.reviewedAt, g.responseTimeMs ?? null])
     );
   });
 

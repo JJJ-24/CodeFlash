@@ -484,6 +484,7 @@ export interface CardGradeStats {
   again: number; hard: number; good: number; easy: number;
   avgTimeAgain: number | null; avgTimeHard: number | null;
   avgTimeGood: number | null; avgTimeEasy: number | null;
+  avgTime: number | null;
 }
 
 export async function getCardGradeStats(
@@ -499,20 +500,21 @@ export async function getCardGradeStats(
        AVG(CASE WHEN grade = 0 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeAgain,
        AVG(CASE WHEN grade = 1 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeHard,
        AVG(CASE WHEN grade = 2 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeGood,
-       AVG(CASE WHEN grade = 3 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeEasy
+       AVG(CASE WHEN grade = 3 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTimeEasy,
+       AVG(CASE WHEN responseTimeMs IS NOT NULL THEN responseTimeMs END) as avgTime
      FROM grade_logs WHERE cardId = ?`,
     [cardId]
   );
-  return row ?? { again: 0, hard: 0, good: 0, easy: 0, avgTimeAgain: null, avgTimeHard: null, avgTimeGood: null, avgTimeEasy: null };
+  return row ?? { again: 0, hard: 0, good: 0, easy: 0, avgTimeAgain: null, avgTimeHard: null, avgTimeGood: null, avgTimeEasy: null, avgTime: null };
 }
 
 /** カードの評価履歴（散布図用・古い順） */
 export async function getCardGradeHistory(
   db: SQLiteDatabase,
   cardId: string
-): Promise<{ grade: number }[]> {
-  return db.getAllAsync<{ grade: number }>(
-    `SELECT grade FROM grade_logs WHERE cardId = ? ORDER BY id ASC`,
+): Promise<{ grade: number; reviewedAt: string }[]> {
+  return db.getAllAsync<{ grade: number; reviewedAt: string }>(
+    `SELECT grade, reviewedAt FROM grade_logs WHERE cardId = ? ORDER BY id ASC`,
     [cardId]
   );
 }

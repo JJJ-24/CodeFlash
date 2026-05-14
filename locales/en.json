@@ -120,7 +120,11 @@
     "statsTitle": "Card Stats",
     "statsNoData": "No study history yet",
     "statsTotal": "Total: {{count}}",
-    "statsTrend": "Grade Trend"
+    "statsAvgTime": "Avg: {{time}}s",
+    "statsTrend": "Grade Trend",
+    "statsLatest": "Latest",
+    "statsFirstLabel": "First:",
+    "statsLastLabel": "Latest:"
   },
   "tabs": {
     "home": "Home",

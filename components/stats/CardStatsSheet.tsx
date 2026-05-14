@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -15,6 +15,7 @@ import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 
 import { GRADE_COLORS, MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { getCardGradeHistory, getCardGradeStats } from '@/lib/database/reviews';
+import { localDateStr } from '@/lib/database/utils';
 import type { CardGradeStats } from '@/lib/database/reviews';
 
 interface Props {
@@ -28,7 +29,7 @@ const GRADE_COLOR_LIST = [GRADE_COLORS.again, GRADE_COLORS.hard, GRADE_COLORS.go
 const PLOT_MARGIN_LEFT = 56;
 const PLOT_MARGIN_RIGHT = 16;
 const PLOT_MARGIN_TOP = 12;
-const PLOT_MARGIN_BOTTOM = 24;
+const PLOT_MARGIN_BOTTOM = 36;
 const PLOT_HEIGHT = 160;
 const DOT_R = 5;
 
@@ -39,7 +40,7 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
 
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<CardGradeStats | null>(null);
-  const [history, setHistory] = useState<{ grade: number }[]>([]);
+  const [history, setHistory] = useState<{ grade: number; reviewedAt: string }[]>([]);
 
   useEffect(() => {
     if (!cardId) return;
@@ -108,9 +109,16 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
               ))}
             </View>
 
-            <Text style={[styles.totalText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('card.statsTotal', { count: total })}
-            </Text>
+            <View style={styles.totalRow}>
+              <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('card.statsTotal', { count: total })}
+              </Text>
+              {stats?.avgTime != null && (
+                <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('card.statsAvgTime', { time: (stats.avgTime / 1000).toFixed(1) })}
+                </Text>
+              )}
+            </View>
 
             {/* Scatter plot */}
             {history.length >= 2 && (
@@ -118,7 +126,25 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
                 <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t('card.statsTrend')}
                 </Text>
-                <ScatterPlot history={history} theme={theme} t={t} />
+                <View style={styles.reviewDateRow}>
+                  <Text style={[styles.reviewDateLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {t('card.statsFirstLabel')}
+                  </Text>
+                  <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {localDateStr(new Date(history[0].reviewedAt))}
+                  </Text>
+                </View>
+                <View style={styles.reviewDateRow}>
+                  <Text style={[styles.reviewDateLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {t('card.statsLastLabel')}
+                  </Text>
+                  <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {localDateStr(new Date(history[history.length - 1].reviewedAt))}
+                  </Text>
+                </View>
+                <View style={{ marginTop: 12 }}>
+                  <ScatterPlot history={history} theme={theme} t={t} />
+                </View>
               </View>
             )}
           </ScrollView>
@@ -128,7 +154,7 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
   );
 }
 
-function ScatterPlot({ history, theme, t }: { history: { grade: number }[]; theme: ReturnType<typeof useTheme>; t: (key: string) => string }) {
+function ScatterPlot({ history, theme, t }: { history: { grade: number; reviewedAt: string }[]; theme: ReturnType<typeof useTheme>; t: (key: string) => string }) {
   const n = history.length;
   const plotW = 320 - PLOT_MARGIN_LEFT - PLOT_MARGIN_RIGHT;
   const plotH = PLOT_HEIGHT - PLOT_MARGIN_TOP - PLOT_MARGIN_BOTTOM;
@@ -178,16 +204,44 @@ function ScatterPlot({ history, theme, t }: { history: { grade: number }[]; them
       })}
 
       {/* Dots */}
-      {history.map((h, i) => (
-        <Circle
-          key={i}
-          cx={xScale(i)}
-          cy={yScale(h.grade)}
-          r={DOT_R}
-          fill={GRADE_COLOR_LIST[h.grade]}
-          opacity={0.85}
-        />
-      ))}
+      {history.map((h, i) => {
+        const isLatest = i === n - 1;
+        const cx = xScale(i);
+        const cy = yScale(h.grade);
+        return (
+          <React.Fragment key={i}>
+            <Circle
+              cx={cx}
+              cy={cy}
+              r={DOT_R}
+              fill={GRADE_COLOR_LIST[h.grade]}
+              opacity={0.85}
+            />
+            {isLatest && (
+              <>
+                <Circle
+                  cx={cx}
+                  cy={cy}
+                  r={DOT_R + 3}
+                  fill="none"
+                  stroke={theme.colors.primary}
+                  strokeWidth={2}
+                />
+                <SvgText
+                  x={cx}
+                  y={cy + DOT_R + 16}
+                  textAnchor="middle"
+                  fontSize={theme.fontSize.xs}
+                  fill={theme.colors.primary}
+                  fontWeight="600"
+                >
+                  {t('card.statsLatest')}
+                </SvgText>
+              </>
+            )}
+          </React.Fragment>
+        );
+      })}
     </Svg>
   );
 }
@@ -243,8 +297,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 40,
+    marginTop: 8,
+  },
   sectionTitle: {
     fontWeight: '600',
     marginBottom: 8,
+  },
+  reviewDateRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  reviewDateLabel: {
+    width: 56,
+    textAlign: 'right',
+    marginRight: 4,
   },
 });

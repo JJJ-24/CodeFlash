@@ -120,7 +120,11 @@
     "statsTitle": "カード統計",
     "statsNoData": "まだ学習記録がありません",
     "statsTotal": "合計 {{count}}回",
-    "statsTrend": "評価の推移"
+    "statsAvgTime": "平均 {{time}}秒",
+    "statsTrend": "評価の推移",
+    "statsLatest": "最新",
+    "statsFirstLabel": "初回：",
+    "statsLastLabel": "最新："
   },
   "tabs": {
     "home": "ホーム",

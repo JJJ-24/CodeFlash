@@ -1116,7 +1116,11 @@ export default function StatsScreen() {
                           isCardFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                           pressed && { opacity: 0.7 },
                         ]}
-                        onPress={() => router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`)}
+                        onPress={() => {
+                          setFocusedItem({ kind: 'card', idx });
+                          pendingFocusRankingRef.current = false;
+                          router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+                        }}
                       >
                         <View style={{ flex: 1, gap: 2 }}>
                           <Text style={[styles.weakCardPreview, { color: theme.colors.text, fontSize: theme.fontSize.sm }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -1126,7 +1130,15 @@ export default function StatsScreen() {
                             {card.deckName}
                           </Text>
                         </View>
-                        <Pressable onPress={() => setStatsCardId(card.cardId)} hitSlop={8} style={{ padding: 4, marginRight: (Platform as any).isPad ? 16 : 4 }}>
+                        <Pressable
+                          onPress={() => {
+                            setFocusedItem({ kind: 'card', idx });
+                            pendingFocusRankingRef.current = false;
+                            setStatsCardId(card.cardId);
+                          }}
+                          hitSlop={8}
+                          style={{ padding: 4, marginRight: (Platform as any).isPad ? 16 : 4 }}
+                        >
                           <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                         </Pressable>
                         <View style={[styles.lapseBadge, { backgroundColor: badgeColor }]}>

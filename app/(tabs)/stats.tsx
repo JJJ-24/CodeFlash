@@ -738,6 +738,8 @@ export default function StatsScreen() {
     }
     selectedGradeBlockRef.current = grade;
     setSelectedGradeBlock(grade);
+    setFocusedItem(null);
+    pendingFocusRankingRef.current = true;
     setGradeBlockLoading(true);
     // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
     const [cards, avgTime] = await Promise.all([

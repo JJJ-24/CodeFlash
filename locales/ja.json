@@ -345,6 +345,7 @@
     "tabNextPrev": "タブ切替\n（ホーム/学習/統計/設定）",
     "cycleChart": "グラフ切替\n（連続/済み/復習/新規）",
     "openChart": "グラフ表示（フォーカス項目）\n[Return]でも可",
+    "switchGrade": "グレード切替",
     "delete": "削除（フォーカス項目）/\nカード削除（フォーカスなし）",
     "tabNextPrevCard": "タブ切替\n（表面/裏面/メモ）",
     "cycleMode": "モード切替\n（編集/並べ替え/プレビュー）",

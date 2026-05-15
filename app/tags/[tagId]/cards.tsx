@@ -163,7 +163,7 @@ export default function TagCardsScreen() {
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
           if (statsCardId !== null) {
-            if (key.toLowerCase() === 'a' || key === 'Escape') {
+            if (key.toLowerCase() === 'a') {
               setStatsCardId(null);
             }
             return;

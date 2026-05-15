@@ -42,10 +42,13 @@ import { useProStore } from '@/store/pro';
 import type { Block, Deck } from '@/types';
 
 const STATS_SHORTCUTS = [
-  { key: '1–4',   descKey: 'shortcut.cycleChart' },
-  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
-  { key: 'Space', descKey: 'shortcut.openChart' },
-  { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+  { key: '1–4',         descKey: 'shortcut.cycleChart' },
+  { key: 'J / K',       descKey: 'shortcut.focusNextPrev' },
+  { key: 'Space',       descKey: 'shortcut.openChart' },
+  { key: '6-9',         descKey: 'shortcut.switchGrade', pro: true },
+  { key: 'P',           descKey: 'shortcut.editFocusedItem', pro: true },
+  { key: 'A',           descKey: 'shortcut.toggleCardStats', pro: true },
+  { key: ', / .',       descKey: 'shortcut.tabNextPrev' },
 ];
 
 const HEATMAP_WEEKS = 52; // 約1年分
@@ -448,8 +451,19 @@ function fillPast7Days(rows: ScheduleItem[]): ScheduleItem[] {
   });
 }
 
-// T/Y フォーカス対象: null = なし, 'total' = 全体学習率, number = デッキ別習熟度インデックス
-type FocusedItem = null | 'total' | number;
+// フォーカス対象（ヌルサイクル）
+type FocusedItem =
+  | null
+  | { kind: 'total' }
+  | { kind: 'deck'; idx: number }
+  | { kind: 'card'; idx: number };
+
+function isSameItem(a: FocusedItem, b: FocusedItem): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.kind !== b.kind) return false;
+  if (a.kind === 'total') return true;
+  return a.idx === (b as { idx: number }).idx;
+}
 
 export default function StatsScreen() {
   const db = useSQLiteContext();
@@ -460,7 +474,19 @@ export default function StatsScreen() {
   const { isPro } = useProStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
-  const sectionOffsets = useRef<{ total: number; decks: number[] }>({ total: 0, decks: [] });
+  const sectionOffsets = useRef<{
+    total: number;
+    decks: number[];
+    proSection: number;
+    ranking: number;
+    rankingOuter: number;
+    rankingInner: number;
+  }>({ total: 0, decks: [], proSection: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
+  const pendingFocusRankingRef = useRef(false);
+  const shouldScrollAfterLoadRef = useRef(false);
+  const cardLayoutMap = useRef<Map<string, { y: number; h: number }>>(new Map());
+  const scrollViewHeightRef = useRef(0);
+  const currentScrollYRef = useRef(0);
 
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
   const [stats, setStats] = useState<StatsData>(INITIAL_STATS);
@@ -558,29 +584,131 @@ export default function StatsScreen() {
     }, [db, initialFilterPreference, onScreenFocus, onScreenBlur])
   );
 
+  const focusList = useMemo<FocusedItem[]>(() => {
+    const list: FocusedItem[] = [
+      { kind: 'total' },
+      ...deckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })),
+    ];
+    if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) {
+      gradeBlockCards.forEach((_, i) => list.push({ kind: 'card', idx: i }));
+    }
+    return list;
+  }, [deckMastery, isPro, selectedGradeBlock, gradeBlockCards]);
+
+  function scrollToRankingTop() {
+    const y = sectionOffsets.current.proSection + sectionOffsets.current.ranking;
+    scrollViewRef.current?.scrollTo({ y: Math.max(y, 0), animated: true });
+  }
+
+  function scrollToCardIfNeeded(cardId: string) {
+    const layout = cardLayoutMap.current.get(cardId);
+    const scroll = scrollViewRef.current;
+    if (!layout || !scroll) return;
+    const absY =
+      sectionOffsets.current.proSection +
+      sectionOffsets.current.ranking +
+      sectionOffsets.current.rankingOuter +
+      sectionOffsets.current.rankingInner +
+      layout.y;
+    const viewportH = scrollViewHeightRef.current;
+    const curY = currentScrollYRef.current;
+    if (viewportH <= 0) {
+      // ScrollView height 未計測 → 大まかにカード上端を viewport 上から少し下に
+      scroll.scrollTo({ y: Math.max(absY - 100, 0), animated: true });
+      return;
+    }
+    // 既に画面内にあれば何もしない
+    if (absY >= curY && absY + layout.h <= curY + viewportH) return;
+    if (absY < curY) {
+      scroll.scrollTo({ y: Math.max(absY - 16, 0), animated: true });
+    } else {
+      scroll.scrollTo({ y: absY + layout.h - viewportH + 16, animated: true });
+    }
+  }
+
+  function scrollToFocus(item: FocusedItem) {
+    if (item === null) return;
+    if (item.kind === 'total') {
+      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total, animated: true });
+    } else if (item.kind === 'deck') {
+      const y = sectionOffsets.current.decks[item.idx] ?? 0;
+      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total + y, animated: true });
+    } else if (item.kind === 'card') {
+      const card = gradeBlockCards[item.idx];
+      if (card) scrollToCardIfNeeded(card.cardId);
+    }
+  }
+
   function moveFocus(dir: 'next' | 'prev') {
+    // グレード切替直後の bias：先頭/末尾のランキングカードへ
+    if (pendingFocusRankingRef.current) {
+      pendingFocusRankingRef.current = false;
+      if (gradeBlockCards.length > 0) {
+        const next: FocusedItem = { kind: 'card', idx: dir === 'next' ? 0 : gradeBlockCards.length - 1 };
+        setFocusedItem(next);
+        scrollToFocus(next);
+        return;
+      }
+    }
     setFocusedItem((prev) => {
       let next: FocusedItem;
       if (dir === 'next') {
-        if (prev === null) next = 'total';
-        else if (prev === 'total') next = deckMastery.length > 0 ? 0 : null;
-        else if (typeof prev === 'number') next = prev < deckMastery.length - 1 ? prev + 1 : null;
-        else next = null;
+        if (prev === null) {
+          next = focusList[0] ?? null;
+        } else {
+          const i = focusList.findIndex((it) => isSameItem(it, prev));
+          next = i < 0 || i + 1 >= focusList.length ? null : focusList[i + 1];
+        }
       } else {
-        if (prev === null) next = deckMastery.length > 0 ? deckMastery.length - 1 : 'total';
-        else if (typeof prev === 'number') next = prev > 0 ? prev - 1 : 'total';
-        else next = null; // 'total' → null
+        if (prev === null) {
+          next = focusList[focusList.length - 1] ?? null;
+        } else {
+          const i = focusList.findIndex((it) => isSameItem(it, prev));
+          next = i <= 0 ? null : focusList[i - 1];
+        }
       }
-      // スクロール
-      if (next === 'total') {
-        scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total, animated: true });
-      } else if (typeof next === 'number') {
-        const y = sectionOffsets.current.decks[next] ?? 0;
-        scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total + y, animated: true });
-      }
+      scrollToFocus(next);
       return next;
     });
   }
+
+  // フォーカスが現在の focusList から外れた場合（例：グレード切替でカードリストが空になった等）にクリア
+  useEffect(() => {
+    if (focusedItem === null) return;
+    const exists = focusList.some((it) => isSameItem(it, focusedItem));
+    if (!exists) setFocusedItem(null);
+  }, [focusList, focusedItem]);
+
+  function handleGradeKey(grade: 0 | 1 | 2 | 3) {
+    if (!isPro) return;
+    // 同じグレードを連打しても解除しない（1–4 キーと同じ idempotent な作り）。
+    // タップ側のトグル動作は handleGradeBlockTap 側でそのまま維持。
+    if (selectedGradeBlock !== grade) {
+      handleGradeBlockTap(grade);
+    }
+    setFocusedItem(null);
+    pendingFocusRankingRef.current = true;
+    shouldScrollAfterLoadRef.current = true;
+    // キャッシュ済みケース用に即時スクロール（measureLayout で最新位置を取得）
+    scrollToRankingTop();
+  }
+
+  // カード読み込み完了後、ランキング位置に再スクロール（async ロードで高さが変わるため）
+  useEffect(() => {
+    if (shouldScrollAfterLoadRef.current && !gradeBlockLoading && selectedGradeBlock !== null) {
+      shouldScrollAfterLoadRef.current = false;
+      // レイアウト確定を待つため次フレームで実行
+      requestAnimationFrame(() => scrollToRankingTop());
+    }
+  }, [gradeBlockLoading, gradeBlockCards, selectedGradeBlock]);
+
+  // CardStatsSheet 閉じた直後に hidden TextInput を再フォーカス（deck/[id]/index.tsx と同じパターン）
+  useEffect(() => {
+    if (statsCardId === null && keyboardShortcutsEnabled) {
+      const timer = setTimeout(() => keyboardRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [statsCardId, keyboardShortcutsEnabled, keyboardRef]);
 
   const openSheet = useCallback(async (target: 'total' | number) => {
     setActiveSheet(target);
@@ -655,8 +783,19 @@ export default function StatsScreen() {
         ref={keyboardRef}
         onKeyPress={({ nativeEvent: { key } }) => {
           if (!keyboardShortcutsEnabled) return;
+          // CardStatsSheet 表示中は A のみ通す（Escape は iOS が横取りするため未対応）
+          if (statsCardId !== null) {
+            if (key.toLowerCase() === 'a') setStatsCardId(null);
+            return;
+          }
           if (key === ' ') {
-            if (activeSheet !== null) { closeSheet(); } else if (focusedItem !== null) { openSheet(focusedItem); }
+            if (activeSheet !== null) {
+              closeSheet();
+            } else if (focusedItem?.kind === 'total') {
+              openSheet('total');
+            } else if (focusedItem?.kind === 'deck') {
+              openSheet(focusedItem.idx);
+            }
             return;
           }
           const k = key.toLowerCase();
@@ -667,13 +806,44 @@ export default function StatsScreen() {
           else if (key === '2') { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
           else if (key === '3') { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
           else if (key === '4') { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
+          else if (key === '6') { handleGradeKey(0); }
+          else if (key === '7') { handleGradeKey(1); }
+          else if (key === '8') { handleGradeKey(2); }
+          else if (key === '9') { handleGradeKey(3); }
+          else if (key === '0') {
+            // 隠しコマンド：グレード選択を解除（ランキング非表示に戻す）
+            if (isPro && selectedGradeBlock !== null) {
+              handleGradeBlockTap(selectedGradeBlock);
+              setFocusedItem(null);
+              pendingFocusRankingRef.current = false;
+            }
+          }
           else if (k === 'j') { moveFocus('next'); }
           else if (k === 'k') { moveFocus('prev'); }
+          else if (k === 'p') {
+            if (focusedItem?.kind === 'card') {
+              const card = gradeBlockCards[focusedItem.idx];
+              if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+            }
+          } else if (k === 'a') {
+            if (!isPro) return;
+            if (focusedItem?.kind === 'card') {
+              const card = gradeBlockCards[focusedItem.idx];
+              if (card) setStatsCardId(card.cardId);
+            }
+          }
         }}
         onSubmitEditing={() => {
           if (!keyboardShortcutsEnabled) return;
+          if (statsCardId !== null) return;
           if (activeSheet !== null) { closeSheet(); return; }
-          if (focusedItem !== null) { openSheet(focusedItem); }
+          if (focusedItem?.kind === 'card') {
+            const card = gradeBlockCards[focusedItem.idx];
+            if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+            return;
+          }
+          if (focusedItem?.kind === 'total') { openSheet('total'); return; }
+          if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); return; }
         }}
         onBlur={onInputBlur}
       />
@@ -738,7 +908,13 @@ export default function StatsScreen() {
       </View>
         );
       })()}
-      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.content}
+        onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
+        onScroll={(e) => { currentScrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={32}
+      >
 
       {/* 7日間バーチャート */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
@@ -778,10 +954,10 @@ export default function StatsScreen() {
           style={({ pressed }) => [
             styles.card,
             { backgroundColor: theme.colors.surface },
-            focusedItem === 'total' && { borderWidth: 2, borderColor: theme.colors.primary },
+            focusedItem?.kind === 'total' && { borderWidth: 2, borderColor: theme.colors.primary },
             pressed && { opacity: 0.7 },
           ]}
-          onPress={() => { setFocusedItem('total'); activeSheet === 'total' ? closeSheet() : openSheet('total'); }}
+          onPress={() => { setFocusedItem({ kind: 'total' }); activeSheet === 'total' ? closeSheet() : openSheet('total'); }}
         >
           <View style={styles.masteryHeader}>
             <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.allDecks')}</Text>
@@ -806,7 +982,7 @@ export default function StatsScreen() {
             {deckMastery.map((m, idx) => {
               const deck = deckMap[m.deckId];
               if (!deck) return null;
-              const isFocused = focusedItem === idx;
+              const isFocused = focusedItem?.kind === 'deck' && focusedItem.idx === idx;
               return (
                 <View
                   key={m.deckId}
@@ -817,7 +993,7 @@ export default function StatsScreen() {
                   ]}
                   onLayout={(e) => { sectionOffsets.current.decks[idx] = e.nativeEvent.layout.y; }}
                 >
-                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => { setFocusedItem(idx); activeSheet === idx ? closeSheet() : openSheet(idx); }} />
+                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => { setFocusedItem({ kind: 'deck', idx }); activeSheet === idx ? closeSheet() : openSheet(idx); }} />
                 </View>
               );
             })}
@@ -826,7 +1002,10 @@ export default function StatsScreen() {
       )}
 
       {/* 詳細統計（Pro） */}
-      <View style={styles.section}>
+      <View
+        style={styles.section}
+        onLayout={(e) => { sectionOffsets.current.proSection = e.nativeEvent.layout.y; }}
+      >
         <View style={styles.proSectionTitle}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.proSection')}
@@ -847,6 +1026,7 @@ export default function StatsScreen() {
             </View>
 
             {/* グレード別ランキング */}
+            <View onLayout={(e) => { sectionOffsets.current.ranking = e.nativeEvent.layout.y; }}>
             <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('stats.gradeRanking')}
             </Text>
@@ -883,9 +1063,12 @@ export default function StatsScreen() {
             })()}
 
             {selectedGradeBlock !== null && (
-              <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0, overflow: 'hidden' }]}>
+              <View
+                style={styles.gradeCardList}
+                onLayout={(e) => { sectionOffsets.current.rankingOuter = e.nativeEvent.layout.y; }}
+              >
                 {gradeAvgResponseTime != null && (
-                  <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={[styles.card, { backgroundColor: theme.colors.surface, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {t('stats.gradeAvgTime')}
                     </Text>
@@ -896,27 +1079,39 @@ export default function StatsScreen() {
                 )}
                 {gradeBlockLoading && gradeBlockCards.length === 0 ? (
                   // 初回：カードなしでローディング中
-                  <View style={{ padding: 20, alignItems: 'center' }}>
+                  <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 20, alignItems: 'center' }]}>
                     <ActivityIndicator color={theme.colors.primary} />
                   </View>
                 ) : gradeBlockCards.length === 0 ? (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
+                  <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 20, alignItems: 'center' }]}>
                     <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {t('stats.gradeRankingEmpty')}
                     </Text>
                   </View>
                 ) : (
                   // 切り替え中は既存カードを薄表示、高さを維持してスクロール位置を保持
-                  <View style={{ opacity: gradeBlockLoading ? 0.4 : 1 }}>
-                  {gradeBlockCards.map((card, idx, arr) => {
+                  <View
+                    style={[styles.gradeCardList, { opacity: gradeBlockLoading ? 0.4 : 1 }]}
+                    onLayout={(e) => { sectionOffsets.current.rankingInner = e.nativeEvent.layout.y; }}
+                  >
+                  {gradeBlockCards.map((card, idx) => {
                     const preview = getCardPreview(JSON.parse(card.frontContent) as Block[], '');
                     const badgeColor = [GRADE_COLORS.again, GRADE_COLORS.hard, GRADE_COLORS.good, GRADE_COLORS.easy][selectedGradeBlock];
+                    const isCardFocused = focusedItem?.kind === 'card' && focusedItem.idx === idx;
                     return (
                       <Pressable
                         key={card.cardId}
+                        onLayout={(e) => {
+                          cardLayoutMap.current.set(card.cardId, {
+                            y: e.nativeEvent.layout.y,
+                            h: e.nativeEvent.layout.height,
+                          });
+                        }}
                         style={({ pressed }) => [
+                          styles.card,
                           styles.weakCardRow,
-                          idx < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
+                          { backgroundColor: theme.colors.surface },
+                          isCardFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                           pressed && { opacity: 0.7 },
                         ]}
                         onPress={() => router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`)}
@@ -944,6 +1139,7 @@ export default function StatsScreen() {
                 )}
               </View>
             )}
+            </View>
           </>
         ) : (
           <Pressable
@@ -1055,6 +1251,7 @@ const styles = StyleSheet.create({
   gradeBlock: { flex: 1, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4 },
   gradeBlockCount: { fontWeight: '700' },
   gradeBlockLabel: { marginTop: 2, fontWeight: '600' },
+  gradeCardList: { gap: 8 },
   weakCardRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   weakCardPreview: { fontWeight: '500' },
   lapseBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },

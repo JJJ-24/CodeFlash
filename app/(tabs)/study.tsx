@@ -332,16 +332,13 @@ export default function StudyScreen() {
   const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterBlockMaxDigits);
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator color={theme.colors.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
+      ) : (
       <Pressable style={{ flex: 1 }} onPress={() => { setFocusedItemIndex(null); focusedDeckIdRef.current = null; focusedTagIdRef.current = null; }}>
       {/* フィルターブロック */}
       <View style={styles.filterSection}>
@@ -555,6 +552,7 @@ export default function StudyScreen() {
       </View>
 
       </Pressable>
+      )}
 
       <HiddenKeyboardInput
         ref={keyboardRef}

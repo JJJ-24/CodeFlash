@@ -19,8 +19,8 @@ import { fetchOfferings, purchasePro, restorePurchases, type PurchasesPackage } 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 
-const PRIVACY_URL = 'https://jjj24.github.io/codeflash/privacy';
-const TERMS_URL   = 'https://jjj24.github.io/codeflash/terms';
+const PRIVACY_URL = 'https://jjj-24.github.io/CodeFlash/privacy';
+const TERMS_URL   = 'https://jjj-24.github.io/CodeFlash/terms';
 
 type Feature = {
   icon: keyof typeof Ionicons.glyphMap;

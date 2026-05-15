@@ -80,6 +80,7 @@ function RootStack() {
         options={{ headerShown: false, animation: 'fade', title: '' }}
       />
       <Stack.Screen name="search" options={{ headerShown: false, animation: 'none' }} />
+      <Stack.Screen name="about" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
     </Stack>
     </ThemeProvider>

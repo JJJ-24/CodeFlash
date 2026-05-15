@@ -15,12 +15,10 @@ import { InfoModal } from '@/components/InfoModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { PRIVACY_URL, TERMS_URL } from '@/lib/links';
 import { fetchOfferings, purchasePro, restorePurchases, type PurchasesPackage } from '@/lib/purchases';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
-
-const PRIVACY_URL = 'https://jjj-24.github.io/CodeFlash/privacy';
-const TERMS_URL   = 'https://jjj-24.github.io/CodeFlash/terms';
 
 type Feature = {
   icon: keyof typeof Ionicons.glyphMap;

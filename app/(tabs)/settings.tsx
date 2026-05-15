@@ -549,6 +549,21 @@ export default function SettingsScreen() {
         )}
       </View>
 
+      {/* アプリについて */}
+      <Pressable
+        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+        onPress={() => router.push('/about')}
+      >
+        <View style={styles.dataRow}>
+          <View style={styles.dataRowText}>
+            <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('about.title')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+        </View>
+      </Pressable>
+
     </ScrollView>
 
     <TextInput

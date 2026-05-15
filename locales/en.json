@@ -230,6 +230,15 @@
     "fsrsRetention": "Desired Retention",
     "fsrsRetentionHint": "Higher values mean more frequent reviews and better recall\nChanges apply only to cards reviewed from now on"
   },
+  "about": {
+    "title": "About",
+    "version": "Version",
+    "privacyPolicy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "contact": "Contact",
+    "writeReview": "Write a Review",
+    "openLinkError": "Could not open the link"
+  },
   "notification": {
     "title": "Notifications",
     "dailyReminder": "Daily Reminder",

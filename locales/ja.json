@@ -230,6 +230,15 @@
     "fsrsRetention": "目標保持率",
     "fsrsRetentionHint": "高いほど復習頻度が増え、忘れにくくなります\n変更は次回学習以降のカードに反映されます"
   },
+  "about": {
+    "title": "アプリについて",
+    "version": "バージョン",
+    "privacyPolicy": "プライバシーポリシー",
+    "terms": "利用規約",
+    "contact": "お問い合わせ",
+    "writeReview": "レビューを書く",
+    "openLinkError": "リンクを開けませんでした"
+  },
   "notification": {
     "title": "通知",
     "dailyReminder": "毎日のリマインダー",

@@ -36,7 +36,7 @@ export function useStudySession() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [result, setResult] = useState<SessionResult>({ totalCards: 0, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null });
+  const [result, setResult] = useState<SessionResult>({ totalCards: 0, reviewed: 0, gradeCount: { again: 0, hard: 0, good: 0, easy: 0 }, earliestNextReview: null, avgResponseTimeMs: null });
 
   // カードごとの評価履歴: 戻って再評価しない場合も最初の評価を保持する
   const gradedCardsRef = useRef<Map<string, { grade: Grade; nextReviewDate: string; responseTimeMs: number }>>(new Map());

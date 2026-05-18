@@ -23,7 +23,7 @@ export const CARD_EDITOR_SHORTCUTS_PREVIEW = [
   { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
   { key: 'R',      descKey: 'shortcut.runFocused' },
   { key: 'T',      descKey: 'shortcut.scrollToTags' },
-  { key: 'Q',      descKey: 'shortcut.cycleMode' },
+  { key: 'M',      descKey: 'shortcut.cycleMode' },
   { key: 'S',      descKey: 'shortcut.save' },
   { key: 'X',      descKey: 'shortcut.close' },
 ];

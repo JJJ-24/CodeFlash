@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { BlockEditor } from '@/components/editor/BlockEditor';
-import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
+import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
@@ -34,6 +34,7 @@ export default function NewCardScreen() {
   const [frontEmpty, setFrontEmpty] = useState(true);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>('edit');
 
   const initialSnapshotRef = useRef<string>(
     JSON.stringify({
@@ -86,7 +87,7 @@ export default function NewCardScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
             >
               <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('card.new')}
+                {editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.new')}
               </Text>
               {keyboardShortcutsEnabled && (
                 <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
@@ -106,7 +107,7 @@ export default function NewCardScreen() {
         }}
       />
       <View style={styles.container}>
-        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={decks.find((d) => d.id === deckId)?.name} onCancel={handleClose} />
+        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={decks.find((d) => d.id === deckId)?.name} onCancel={handleClose} onModeChange={setEditorMode} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Ionicons name="checkmark-sharp" size={26} color="#FFF" />
@@ -117,11 +118,13 @@ export default function NewCardScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
-        sections={[
-          { title: t('shortcut.editMode'), items: CARD_EDITOR_SHORTCUTS_EDIT },
-          { title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT },
-          { title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW },
-        ]}
+        sections={
+          editorMode === 'sort'
+            ? [{ title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT }]
+            : editorMode === 'preview'
+            ? [{ title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW }]
+            : [{ title: t('shortcut.editMode'), items: CARD_EDITOR_SHORTCUTS_EDIT }]
+        }
       />
       <ConfirmModal
         visible={showDiscardModal}

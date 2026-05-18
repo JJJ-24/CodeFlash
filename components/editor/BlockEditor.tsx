@@ -33,7 +33,7 @@ import { TagSelector } from "./TagSelector";
 import { TextBlockItem } from "./TextBlockItem";
 
 type Tab = "front" | "back" | "memo";
-type EditorMode = "edit" | "sort" | "preview";
+export type EditorMode = "edit" | "sort" | "preview";
 
 // エディタ内部でブロックを一意に識別するためのローカルキー付き型
 type EditBlock = Block & { _key: string };
@@ -97,6 +97,8 @@ interface Props {
   onCancel?: () => void;
   /** フォーカスなし時の D キーでカード削除 */
   onDeleteCard?: () => void;
+  /** モード（edit / sort / preview）が変わったときに通知する */
+  onModeChange?: (mode: EditorMode) => void;
   ref?: Ref<BlockEditorRef>;
 }
 
@@ -110,6 +112,7 @@ export function BlockEditor({
   isNewCard,
   onCancel,
   onDeleteCard,
+  onModeChange,
   ref,
 }: Props) {
   const { t } = useTranslation();
@@ -267,6 +270,10 @@ export function BlockEditor({
   useEffect(() => {
     onFrontEmptyChange?.(isFrontEmpty);
   }, [isFrontEmpty]);
+
+  useEffect(() => {
+    onModeChange?.(editorMode);
+  }, [editorMode]);
 
   useEffect(() => {
     if (editorMode !== "sort") setSelectedBlockKey(null);
@@ -948,26 +955,6 @@ export function BlockEditor({
             if (key) setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
           }}
         >
-        {(isPreview || isSortMode) && (
-          <View style={styles.modeLabel}>
-            <View style={[styles.modeLabelBadge, { backgroundColor: theme.colors.primaryLight }]}>
-              <Text
-                style={[
-                  styles.modeLabelText,
-                  {
-                    color: theme.colors.primary,
-                    fontSize: theme.fontSize.sm,
-                  },
-                ]}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
-              >
-                {isPreview
-                  ? t("editor.previewModeLabel")
-                  : t("editor.sortModeLabel")}
-              </Text>
-            </View>
-          </View>
-        )}
         {currentBlocks.map((block, index) => {
           const moveUp =
             isSortMode && index > 0
@@ -1131,19 +1118,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignSelf: "center",
     gap: 4,
-  },
-  modeLabel: {
-    alignItems: "center",
-    paddingVertical: 6,
-    marginBottom: 4,
-  },
-  modeLabelBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  modeLabelText: {
-    fontWeight: "700",
   },
   modeBtn: {
     paddingVertical: 7,

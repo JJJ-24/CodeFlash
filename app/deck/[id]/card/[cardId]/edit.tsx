@@ -11,7 +11,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
-import type { BlockEditorData, BlockEditorRef } from '@/components/editor/BlockEditor';
+import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteCard, getCardById, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
@@ -42,6 +42,7 @@ export default function EditCardScreen() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>('edit');
   const initialSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -141,7 +142,7 @@ export default function EditCardScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
             >
               <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('card.edit')}
+                {editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.edit')}
               </Text>
               {keyboardShortcutsEnabled && (
                 <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
@@ -176,6 +177,7 @@ export default function EditCardScreen() {
           saving={saving}
           onCancel={handleClose}
           onDeleteCard={confirmDelete}
+          onModeChange={setEditorMode}
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
@@ -190,11 +192,13 @@ export default function EditCardScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
-        sections={[
-          { title: t('shortcut.editMode'), items: CARD_EDITOR_SHORTCUTS_EDIT },
-          { title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT },
-          { title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW },
-        ]}
+        sections={
+          editorMode === 'sort'
+            ? [{ title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT }]
+            : editorMode === 'preview'
+            ? [{ title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW }]
+            : [{ title: t('shortcut.editMode'), items: CARD_EDITOR_SHORTCUTS_EDIT }]
+        }
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

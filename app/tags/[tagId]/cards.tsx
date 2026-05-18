@@ -246,7 +246,7 @@ export default function TagCardsScreen() {
                 </Text>
                 <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
                   {isPro && (
-                    <Pressable onPress={() => setStatsCardId(item.id)} hitSlop={8} style={styles.iconBtn}>
+                    <Pressable onPress={() => { setFocusedCardIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={styles.iconBtn}>
                       <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                     </Pressable>
                   )}

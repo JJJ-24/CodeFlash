@@ -195,11 +195,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         </Pressable>
       ) : isPreview ? (
         <View style={styles.preview}>
-          {block.content.trim() ? (
-            <Markdown markdownit={markdownItLinkify} style={markdownStyles} rules={linkRule}>{block.content}</Markdown>
-          ) : (
-            <Text style={[styles.placeholder, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('card.emptyTextBlock')}</Text>
-          )}
+          <Markdown markdownit={markdownItLinkify} style={markdownStyles} rules={linkRule}>{block.content}</Markdown>
           {block.content.trim() ? (
             <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
               <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
@@ -275,7 +271,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.08)',
     borderRadius: 4,
   },
-  placeholder: { fontStyle: 'italic' },
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,

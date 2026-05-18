@@ -233,9 +233,15 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
               </ScrollView>
             ) : (
               <GestureDetector gesture={tapGesture}>
-                <View style={{ minHeight: 56 }}>
-                  <SyntaxHighlightedCode code={block.content} language={block.language} />
-                </View>
+                {isEmpty ? (
+                  <Text style={[styles.codeEmptyPrompt, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('editor.codePlaceholder')}
+                  </Text>
+                ) : (
+                  <View style={{ minHeight: 56 }}>
+                    <SyntaxHighlightedCode code={block.content} language={block.language} />
+                  </View>
+                )}
               </GestureDetector>
             )}
             <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
@@ -373,5 +379,12 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     lineHeight: 20,
     color: '#9E9E9E',
     fontFamily: 'monospace',
+  },
+  codeEmptyPrompt: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 56,
+    lineHeight: 22,
+    fontStyle: 'italic',
   },
 });

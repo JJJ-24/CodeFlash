@@ -197,7 +197,7 @@
     "deleteBlockConfirm": "このブロックを削除しますか？",
     "emptyTextBlock": "（空のテキストブロック）",
     "emptyCodeBlock": "（空のコードブロック）",
-    "textBlockPlaceholder": "テキストを入力\n（Markdown 記法対応）",
+    "textBlockPlaceholder": "テキストを入力\n（マークダウン記法対応）",
     "codePlaceholder": "コードを入力",
     "imageNoSelection": "（画像未選択）",
     "textBlock": "テキスト",

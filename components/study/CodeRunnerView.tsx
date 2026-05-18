@@ -15,8 +15,6 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
-import { useTranslation } from "react-i18next";
-
 import { ExecutionOutput } from "@/components/code/ExecutionOutput";
 import { SymbolPalette } from "@/components/code/SymbolPalette";
 import { SyntaxHighlightedCode } from "@/components/study/SyntaxHighlightedCode";
@@ -66,7 +64,6 @@ export function CodeRunnerView({
   anotherBlockEditing,
   onForceKeyboardFocus,
 }: Props) {
-  const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
   const {
@@ -450,13 +447,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#2A4A2A",
     borderColor: "#43A047",
   },
-  editBtnText: {
-    color: "#9CDCFE",
-    fontWeight: "600",
-  },
-  editBtnTextActive: {
-    color: "#43A047",
-  },
   runBtn: {
     backgroundColor: "#1976D2",
     borderRadius: 6,
@@ -468,10 +458,6 @@ const styles = StyleSheet.create({
   },
   runBtnDisabled: {
     backgroundColor: "#555",
-  },
-  runBtnText: {
-    color: "#FFF",
-    fontWeight: "600",
   },
   spinner: {
     marginHorizontal: 4,

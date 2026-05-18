@@ -47,7 +47,6 @@ function toEditBlocks(blocks: Block[]): EditBlock[] {
 }
 
 function fromEditBlocks(blocks: EditBlock[]): Block[] {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return blocks.map(({ _key, ...b }) => b as Block);
 }
 
@@ -305,7 +304,6 @@ export function BlockEditor({
       }
       return prev;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBlocks.length]);
 
   // フォーカス中ブロックへスクロール

@@ -95,23 +95,30 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const isEmpty = !block.uri;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : focused ? '#FB8C00' : isFocused ? theme.colors.primary : theme.colors.inputBorder, borderWidth: (focused || isFocused) ? 2 : 1 }]}>
-      <BlockItemHeader
-        onMoveUp={onMoveUp}
-        onMoveDown={onMoveDown}
-        onDelete={onDelete}
-        collapsed={collapsed}
-        isEmpty={isEmpty}
-        onHeaderPress={focused ? () => { altInputRef.current?.blur(); } : undefined}
-        hideDelete={isPreview}
-        style={{
-          backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.border,
-        }}
-      >
-        <Ionicons name="image-outline" size={theme.fontSize.xxl} color={theme.colors.textTertiary} />
-      </BlockItemHeader>
+    <View style={[
+      styles.container,
+      isPreview
+        ? { backgroundColor: 'transparent', borderWidth: 0 }
+        : { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : focused ? '#FB8C00' : isFocused ? theme.colors.primary : theme.colors.inputBorder, borderWidth: (focused || isFocused) ? 2 : 1 },
+    ]}>
+      {!isPreview && (
+        <BlockItemHeader
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+          onDelete={onDelete}
+          collapsed={collapsed}
+          isEmpty={isEmpty}
+          onHeaderPress={focused ? () => { altInputRef.current?.blur(); } : undefined}
+          hideDelete={isPreview}
+          style={{
+            backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
+            borderBottomWidth: 1,
+            borderBottomColor: theme.colors.border,
+          }}
+        >
+          <Ionicons name="image-outline" size={theme.fontSize.xxl} color={theme.colors.textTertiary} />
+        </BlockItemHeader>
+      )}
 
       {collapsed ? (
         <Text style={[styles.collapsedPreview, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -121,7 +128,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
         <>
           {/* 画像エリア */}
           {hasImage && imageUri ? (
-            <View style={styles.imageArea}>
+            <View style={[styles.imageArea, isPreview && { paddingHorizontal: 0, paddingTop: 0 }]}>
               <Image
                 source={{ uri: imageUri }}
                 style={styles.image}
@@ -145,7 +152,11 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 </Pressable>
               )}
             </View>
-          ) : !isPreview ? (
+          ) : isPreview ? (
+            <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
+              <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>🖼</Text>
+            </View>
+          ) : (
             <Pressable
               style={[styles.pickBtn, { borderColor: theme.colors.iconSubtle, backgroundColor: theme.colors.background }]}
               onPress={handlePick}
@@ -162,10 +173,16 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 </>
               )}
             </Pressable>
-          ) : null}
+          )}
 
           {/* 画像の説明 */}
-          {!isPreview && (
+          {isPreview ? (
+            !!block.alt && (
+              <Text style={[styles.altText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                {block.alt}
+              </Text>
+            )
+          ) : (
             <TextInput
               ref={altInputRef}
               style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder, fontSize: theme.fontSize.sm }]}
@@ -239,6 +256,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
+  altText: {
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 6,
+  },
+  imagePlaceholder: {
+    borderRadius: 8,
+    padding: 24,
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {},
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,

@@ -740,52 +740,55 @@ export function BlockEditor({
         </View>
       )}
 
-      {/* タグ選択 */}
-      <View style={styles.tagSection}>
-        <Text
-          style={[
-            styles.tagLabel,
-            {
-              color: theme.colors.textSecondary,
-              fontSize: theme.fontSize.md,
-            },
-          ]}
-          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-        >
-          {t("tag.title")}
-        </Text>
-        <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
-      </View>
+      {/* タグ選択・デッキ名（プレビュー時は非表示） */}
+      {!isPreview && (
+        <>
+          <View style={styles.tagSection}>
+            <Text
+              style={[
+                styles.tagLabel,
+                {
+                  color: theme.colors.textSecondary,
+                  fontSize: theme.fontSize.md,
+                },
+              ]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            >
+              {t("tag.title")}
+            </Text>
+            <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
+          </View>
 
-      {/* デッキ名 */}
-      {deckName != null && (
-        <View style={[styles.deckRow, { borderColor: theme.colors.border }]}>
-          <Text
-            style={[
-              styles.tagLabel,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.fontSize.md,
-              },
-            ]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-          >
-            {t("deck.name")}
-          </Text>
-          <Text
-            style={[
-              styles.deckName,
-              {
-                color: theme.colors.text,
-                fontSize: theme.fontSize.lg,
-                paddingLeft: 8,
-              },
-            ]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-          >
-            {deckName}
-          </Text>
-        </View>
+          {deckName != null && (
+            <View style={[styles.deckRow, { borderColor: theme.colors.border }]}>
+              <Text
+                style={[
+                  styles.tagLabel,
+                  {
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSize.md,
+                  },
+                ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {t("deck.name")}
+              </Text>
+              <Text
+                style={[
+                  styles.deckName,
+                  {
+                    color: theme.colors.text,
+                    fontSize: theme.fontSize.lg,
+                    paddingLeft: 8,
+                  },
+                ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {deckName}
+              </Text>
+            </View>
+          )}
+        </>
       )}
 
       {/* 表面が空の場合のバリデーションエラー */}
@@ -962,7 +965,7 @@ export function BlockEditor({
         }}
       >
         <Pressable
-          style={[styles.content, { flexGrow: 1 }]}
+          style={[styles.content, { flexGrow: 1 }, isPreview && { paddingHorizontal: 16 + 28 }]}
           onPress={() => {
             const key = editingBlockKeyRef.current;
             if (key) setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));

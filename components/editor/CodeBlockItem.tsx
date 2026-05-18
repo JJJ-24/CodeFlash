@@ -150,10 +150,16 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         hideDelete={isPreview}
         style={{ backgroundColor: isRunning ? '#1E5024' : focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
-        <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
-          <Text style={[styles.langText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>
-          <Text style={[styles.langChevron, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>▾</Text>
-        </Pressable>
+        {isPreview ? (
+          <View style={styles.langBtn}>
+            <Text style={[styles.langText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>
+          </View>
+        ) : (
+          <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
+            <Text style={[styles.langText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{LANG_LABELS[block.language] ?? block.language}</Text>
+            <Text style={[styles.langChevron, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>▾</Text>
+          </Pressable>
+        )}
 
         <View style={styles.headerRight}>
           {!collapsed && !isPreview && EXECUTABLE_LANGUAGES.includes(block.language) && (

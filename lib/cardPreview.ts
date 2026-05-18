@@ -15,6 +15,7 @@ export function getCardPreview(blocks: Block[], imageLabel: string): string {
       return `[${lang}]\n${firstLine}`;
     }
     if (block.type === 'image') {
+      if (!block.uri) continue;
       const alt = block.alt?.trim();
       const label = `[${imageLabel}]`;
       return alt ? `${label}\n${alt}` : label;

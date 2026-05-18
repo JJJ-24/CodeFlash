@@ -971,7 +971,7 @@ export function BlockEditor({
         }}
       >
         <Pressable
-          style={[styles.content, { flexGrow: 1 }, isPreview && { paddingHorizontal: 16 + 28 }]}
+          style={[styles.content, { flexGrow: 1 }, isPreview && { paddingHorizontal: 16 + 28 + (activeTab === "memo" ? 12 : 0) }]}
           onPress={() => {
             const key = editingBlockKeyRef.current;
             if (key) setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));

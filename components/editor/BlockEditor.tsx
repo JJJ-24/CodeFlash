@@ -461,6 +461,12 @@ export function BlockEditor({
       return;
     }
 
+    // プレビューモードでは ',' / '.' / M / S / X のみ受け付け、
+    // J / K / R / T / D / E / A は無効化
+    if (isPreviewRef.current && k !== "m" && k !== "," && k !== "." && k !== "s" && k !== "x") {
+      return;
+    }
+
     if (k === "j") {
       setFocusedBlockIndex((prev) => {
         if (prev === null) return blocks.length > 0 ? 0 : null;

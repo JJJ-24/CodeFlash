@@ -1272,7 +1272,7 @@ const styles = StyleSheet.create({
   lapseBadgeText: { color: '#fff', fontWeight: '600' },
   proLockedCard: { alignItems: 'center', gap: 12, paddingVertical: 24 },
   proLockedTitle: { fontWeight: '700', textAlign: 'center' },
-  proLockedFeatures: { gap: 4, alignSelf: 'stretch', paddingHorizontal: 16 },
+  proLockedFeatures: { gap: 4, alignSelf: 'center' },
   proLockedFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   proLockedBtn: { borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10, marginTop: 4 },
   proLockedBtnText: { color: '#fff', fontWeight: '700' },

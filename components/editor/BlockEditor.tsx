@@ -921,7 +921,20 @@ export function BlockEditor({
                   },
                   active && { backgroundColor: theme.colors.primary },
                 ]}
-                onPress={() => setEditorMode(mode)}
+                onPress={() => {
+                  if (editingBlockKeyRef.current) {
+                    isTransitioningRef.current = true;
+                    if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
+                    isTransitionTimerRef.current = setTimeout(() => {
+                      editingBlockKeyRef.current = null;
+                      isTransitioningRef.current = false;
+                      isTransitionTimerRef.current = null;
+                      keyboardRef.current?.focus();
+                    }, 200);
+                    setBlurTriggerMap({});
+                  }
+                  setEditorMode(mode);
+                }}
               >
                 <Ionicons
                   name={icon}

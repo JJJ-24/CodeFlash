@@ -32,9 +32,10 @@ interface Props {
   isFocused?: boolean;
   onAutoFocused?: () => void;
   blurTrigger?: number;
+  isPreview?: boolean;
 }
 
-export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused, onAutoFocused, blurTrigger }: Props) {
+export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused, onAutoFocused, blurTrigger, isPreview }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -102,6 +103,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
         collapsed={collapsed}
         isEmpty={isEmpty}
         onHeaderPress={focused ? () => { altInputRef.current?.blur(); } : undefined}
+        hideDelete={isPreview}
         style={{
           backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
           borderBottomWidth: 1,
@@ -127,21 +129,23 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 transition={200}
                 accessibilityLabel={block.alt || undefined}
               />
-              <Pressable
-                style={[styles.changeBtn, { backgroundColor: theme.colors.primaryLight }]}
-                onPress={handlePick}
-                disabled={picking}
-              >
-                {picking ? (
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
-                ) : (
-                  <Text style={[styles.changeBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                    {t('card.imageChange')}
-                  </Text>
-                )}
-              </Pressable>
+              {!isPreview && (
+                <Pressable
+                  style={[styles.changeBtn, { backgroundColor: theme.colors.primaryLight }]}
+                  onPress={handlePick}
+                  disabled={picking}
+                >
+                  {picking ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  ) : (
+                    <Text style={[styles.changeBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                      {t('card.imageChange')}
+                    </Text>
+                  )}
+                </Pressable>
+              )}
             </View>
-          ) : (
+          ) : !isPreview ? (
             <Pressable
               style={[styles.pickBtn, { borderColor: theme.colors.iconSubtle, backgroundColor: theme.colors.background }]}
               onPress={handlePick}
@@ -158,22 +162,24 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                 </>
               )}
             </Pressable>
-          )}
+          ) : null}
 
           {/* 画像の説明 */}
-          <TextInput
-            ref={altInputRef}
-            style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder, fontSize: theme.fontSize.sm }]}
-            value={block.alt}
-            onChangeText={(alt) => onChange({ alt })}
-            placeholder={t('card.imageAltPlaceholder')}
-            placeholderTextColor={theme.colors.textTertiary}
-            onFocus={() => { setFocused(true); onFocusInput?.(); }}
-            onBlur={() => { setFocused(false); onEditBlur?.(); }}
-            autoCorrect={false}
-            spellCheck={false}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
-          />
+          {!isPreview && (
+            <TextInput
+              ref={altInputRef}
+              style={[styles.altInput, { color: theme.colors.text, borderColor: theme.colors.inputBorder, fontSize: theme.fontSize.sm }]}
+              value={block.alt}
+              onChangeText={(alt) => onChange({ alt })}
+              placeholder={t('card.imageAltPlaceholder')}
+              placeholderTextColor={theme.colors.textTertiary}
+              onFocus={() => { setFocused(true); onFocusInput?.(); }}
+              onBlur={() => { setFocused(false); onEditBlur?.(); }}
+              autoCorrect={false}
+              spellCheck={false}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
+            />
+          )}
         </>
       )}
       <Animated.View

@@ -16,9 +16,10 @@ interface Props {
   style?: StyleProp<ViewStyle>;
   isEmpty?: boolean;
   onHeaderPress?: () => void;
+  hideDelete?: boolean;
 }
 
-export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, collapsed, style, isEmpty, onHeaderPress }: Props) {
+export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, collapsed, style, isEmpty, onHeaderPress, hideDelete }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const isSortMode = onMoveUp !== undefined || onMoveDown !== undefined;
@@ -49,7 +50,7 @@ export function BlockItemHeader({ children, onMoveUp, onMoveDown, onDelete, coll
           </Pressable>
         </View>
       ) : (
-        !collapsed && (
+        !collapsed && !hideDelete && (
           <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
             <Text style={[styles.deleteBtnText, { color: theme.colors.iconSubtle, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>✕</Text>
           </Pressable>

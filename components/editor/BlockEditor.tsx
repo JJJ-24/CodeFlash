@@ -1065,6 +1065,7 @@ export function BlockEditor({
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
+                  isPreview={isPreview}
                 />
               )}
             </View>

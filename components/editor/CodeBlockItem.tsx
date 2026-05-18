@@ -147,6 +147,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
         onHeaderPress={focused ? () => { codeInputRef.current?.blur(); } : undefined}
+        hideDelete={isPreview}
         style={{ backgroundColor: isRunning ? '#1E5024' : focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         <Pressable onPress={() => setLangModalVisible(true)} style={styles.langBtn}>
@@ -155,7 +156,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         </Pressable>
 
         <View style={styles.headerRight}>
-          {!collapsed && EXECUTABLE_LANGUAGES.includes(block.language) && (
+          {!collapsed && !isPreview && EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
               {!block.executable && <Text style={[styles.execLabel, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.run')}</Text>}
               <Switch

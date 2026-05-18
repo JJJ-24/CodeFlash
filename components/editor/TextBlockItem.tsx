@@ -174,6 +174,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         collapsed={collapsed}
         isEmpty={isEmpty}
         onHeaderPress={focused ? () => { inputRef.current?.blur(); } : undefined}
+        hideDelete={isPreview}
         style={{
           backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
           borderBottomWidth: 1,

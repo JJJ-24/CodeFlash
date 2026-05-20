@@ -5,7 +5,7 @@ title: Privacy Policy
 
 # プライバシーポリシー / Privacy Policy
 
-最終更新日 / Last updated: 2026-05-15
+最終更新日 / Last updated: 2026-05-21
 
 ## 日本語
 
@@ -34,11 +34,6 @@ CodeFlash Pro のご購入には Apple の課金システムを使用してい�
 本プライバシーポリシーは、必要に応じて更新することがあります。
 変更があった場合は、このページ上部の「最終更新日」を更新してお知らせします。
 本ポリシーを定期的にご確認されることをお勧めします。
-
-### 免責事項
-
-開発者は、都合により本アプリの仕様変更や提供を終了することができます。
-本アプリの利用によって生じたデータの消失、その他の損害、および本アプリが連携する第三者サービス（RevenueCat等）を原因とする問題に関して、開発者は一切の責任を負わないものとします。
 
 ### お問い合わせ
 
@@ -71,12 +66,6 @@ We do not share or sell any user data to third parties.
 ### Changes to This Policy
 
 This privacy policy may be updated from time to time. When changes are made, we will update the "Last updated" date at the top of this page. We recommend reviewing this policy periodically.
-
-### Disclaimer
-
-The developer reserves the right to modify or discontinue the app at any time.
-The developer shall not be liable for any data loss, damages arising from use of the app,
-or issues caused by third-party services (such as RevenueCat) connected to this app.
 
 ### Contact
 

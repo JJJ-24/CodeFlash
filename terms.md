@@ -5,7 +5,7 @@ title: Terms of Use
 
 # 利用規約 / Terms of Use
 
-最終更新日 / Last updated: 2026-05-16
+最終更新日 / Last updated: 2026-05-21
 
 ## 日本語
 
@@ -41,6 +41,7 @@ CodeFlash Pro は買い切り型の有料機能です。購入・返金は Apple
 
 1. 開発者は、本アプリに事実上または法律上の不具合（安全性、信頼性、正確性、完全性、有効性、特定の目的への適合性、セキュリティなどに関する欠陥、エラーやバグ、権利侵害などを含みます）がないことを明示的にも黙示的にも保証しておりません。
 2. 開発者は、本アプリの利用に起因してユーザーに生じたあらゆる損害（データの消失、端末の不具合など）について、開発者の故意または重過失による場合を除き、一切の責任を負いません。
+3. 開発者は、本アプリが連携する第三者サービス（RevenueCat 等）を原因とする問題について、一切の責任を負わないものとします。
 
 ### 第7条（サービスの変更・中断・終了）
 
@@ -96,6 +97,7 @@ All copyrights and other intellectual property rights related to the App belong 
 
 1. The Developer makes no warranties, express or implied, that the App is free from factual or legal defects (including, but not limited to, defects regarding safety, reliability, accuracy, completeness, effectiveness, fitness for a particular purpose, security, errors, bugs, or infringement of rights).
 2. Except in cases of the Developer's willful misconduct or gross negligence, the Developer shall not be liable for any damages incurred by the user arising from the use of the App (including, without limitation, loss of data or device malfunction).
+3. The Developer shall not be liable for any issues caused by third-party services (such as RevenueCat) connected to the App.
 
 ### Article 7 (Modification, Suspension, and Termination of Service)
 

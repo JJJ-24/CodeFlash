@@ -514,6 +514,18 @@ export async function getCardGradeStats(
   return row ?? { again: 0, hard: 0, good: 0, easy: 0, avgTimeAgain: null, avgTimeHard: null, avgTimeGood: null, avgTimeEasy: null, avgTime: null };
 }
 
+/** カードの次回学習日（reviews テーブル）。未学習なら null */
+export async function getCardNextReviewDate(
+  db: SQLiteDatabase,
+  cardId: string
+): Promise<string | null> {
+  const row = await db.getFirstAsync<{ nextReviewDate: string }>(
+    `SELECT nextReviewDate FROM reviews WHERE cardId = ?`,
+    [cardId]
+  );
+  return row?.nextReviewDate ?? null;
+}
+
 /** カードの評価履歴（散布図用・古い順） */
 export async function getCardGradeHistory(
   db: SQLiteDatabase,

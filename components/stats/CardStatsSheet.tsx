@@ -22,7 +22,7 @@ import Animated, {
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 
 import { GRADE_COLORS, MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
-import { getCardGradeHistory, getCardGradeStats } from '@/lib/database/reviews';
+import { getCardGradeHistory, getCardGradeStats, getCardNextReviewDate } from '@/lib/database/reviews';
 import { localDateStr } from '@/lib/database/utils';
 import type { CardGradeStats } from '@/lib/database/reviews';
 
@@ -51,6 +51,7 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<CardGradeStats | null>(null);
   const [history, setHistory] = useState<{ grade: number; reviewedAt: string }[]>([]);
+  const [nextReviewDate, setNextReviewDate] = useState<string | null>(null);
 
   const visible = cardId !== null;
   const [mounted, setMounted] = useState(visible);
@@ -90,10 +91,15 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
   useEffect(() => {
     if (!cardId) return;
     setLoading(true);
-    Promise.all([getCardGradeStats(db, cardId), getCardGradeHistory(db, cardId)])
-      .then(([s, h]) => {
+    Promise.all([
+      getCardGradeStats(db, cardId),
+      getCardGradeHistory(db, cardId),
+      getCardNextReviewDate(db, cardId),
+    ])
+      .then(([s, h, n]) => {
         setStats(s);
         setHistory(h);
+        setNextReviewDate(n);
       })
       .finally(() => setLoading(false));
   }, [cardId, db]);
@@ -105,6 +111,29 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
     : [null, null, null, null];
 
   const counts = stats ? [stats.again, stats.hard, stats.good, stats.easy] : [0, 0, 0, 0];
+
+  // 正答率（good + easy / 評価数合計）
+  const correctRate = total > 0
+    ? Math.round((((stats?.good ?? 0) + (stats?.easy ?? 0)) / total) * 100)
+    : 0;
+
+  // 次回学習日までの日数
+  const nextReviewDiffDays = nextReviewDate
+    ? (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(nextReviewDate.slice(0, 10));
+        target.setHours(0, 0, 0, 0);
+        return Math.round((target.getTime() - today.getTime()) / 86400000);
+      })()
+    : null;
+  const nextReviewValue = nextReviewDiffDays === null ? null
+    : nextReviewDiffDays <= 0 ? t('stats.nextReviewToday')
+    : nextReviewDiffDays === 1 ? t('stats.nextReviewTomorrow')
+    : String(nextReviewDiffDays);
+  const nextReviewUnit = nextReviewDiffDays !== null && nextReviewDiffDays > 1
+    ? t('stats.unitDaysLater')
+    : '';
 
   if (!mounted) return null;
 
@@ -118,7 +147,7 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
         {/* Header（全幅・タイトル中央） */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border, justifyContent: 'center' }]}>
           <Text style={[styles.headerTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('card.statsTitle')}
+            {t('stats.cardStatsTitle')}
           </Text>
         </View>
         {/* 閉じるボタン（画面右上 absolute） */}
@@ -134,13 +163,28 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
         ) : total === 0 ? (
           <View style={styles.center}>
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('card.statsNoData')}
+              {t('stats.cardNoData')}
             </Text>
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            {/* 評価数合計 */}
+            <Text style={{ textAlign: 'center' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}>
+                {t('stats.totalLabel')}
+              </Text>
+              <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.xl, fontWeight: '700' }}>
+                {total}
+              </Text>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}>
+                {t('stats.totalUnit')}
+              </Text>
+            </Text>
+
+            <View style={[styles.sectionSeparator, { backgroundColor: theme.colors.border, marginTop: 12 }]} />
+
             {/* Grade counts */}
-            <View style={styles.gradeGrid}>
+            <View style={[styles.gradeGrid, { marginTop: 12 }]}>
               {GRADE_LABELS.map((labelKey, i) => (
                 <View key={i} style={styles.gradeCell}>
                   <Text style={[styles.gradeCount, { color: GRADE_COLOR_LIST[i], fontSize: theme.fontSize.xl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -156,15 +200,58 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
               ))}
             </View>
 
-            <View style={styles.totalRow}>
-              <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('card.statsTotal', { count: total })}
-              </Text>
-              {stats?.avgTime != null && (
-                <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('card.statsAvgTime', { time: (stats.avgTime / 1000).toFixed(1) })}
+            <View style={[styles.sectionSeparator, { backgroundColor: theme.colors.border, marginTop: 12 }]} />
+
+            {/* 正答率・次回予定・平均時間（学習完了画面と同レイアウト） */}
+            <View style={styles.statRow}>
+              <View style={styles.statItem}>
+                <Text
+                  style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {correctRate}
                 </Text>
-              )}
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.correctRate')}
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.unitPercent')}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text
+                  style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {nextReviewValue ?? '—'}
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.nextReview')}
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {nextReviewUnit}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text
+                  style={[styles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {stats?.avgTime != null ? (stats.avgTime / 1000).toFixed(1) : '—'}
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.avgResponseTime')}
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.unitSeconds')}
+                </Text>
+              </View>
             </View>
 
             {/* Scatter plot */}
@@ -176,7 +263,7 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
                 <View style={styles.reviewDatesRow}>
                   <View style={{ flexDirection: 'row' }}>
                     <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('card.statsFirstLabel')}
+                      {t('stats.firstLabel')}
                     </Text>
                     <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {localDateStr(new Date(history[0].reviewedAt))}
@@ -184,7 +271,7 @@ export function CardStatsSheet({ cardId, onClose }: Props) {
                   </View>
                   <View style={{ flexDirection: 'row' }}>
                     <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('card.statsLastLabel')}
+                      {t('stats.lastLabel')}
                     </Text>
                     <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {localDateStr(new Date(history[history.length - 1].reviewedAt))}
@@ -283,7 +370,7 @@ function ScatterPlot({ history, theme, t }: { history: { grade: number; reviewed
                   fill={theme.colors.primary}
                   fontWeight="600"
                 >
-                  {t('card.statsLatest')}
+                  {t('stats.latest')}
                 </SvgText>
               </>
             )}
@@ -345,20 +432,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   gradeAvg: {},
-  totalText: {
-    textAlign: 'center',
-    marginTop: 8,
+  sectionSeparator: {
+    height: StyleSheet.hairlineWidth,
   },
-  totalRow: {
+  statRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 40,
-    marginTop: 8,
+    gap: 32,
+    paddingTop: 16,
+    paddingBottom: 4,
   },
-  sectionTitle: {
-    fontWeight: '600',
-    marginBottom: 8,
+  statItem: {
+    alignItems: 'center',
+    gap: 4,
+    width: 100,
   },
+  statValue: { fontWeight: '700' },
   reviewDatesRow: {
     flexDirection: 'row',
     justifyContent: 'center',

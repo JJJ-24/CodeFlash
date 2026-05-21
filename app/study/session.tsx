@@ -591,11 +591,11 @@ export default function StudySessionScreen() {
         })()
       : null;
     const nextReviewValue = nextReviewDiffDays === null ? null
-      : nextReviewDiffDays <= 0 ? t("study.nextReviewToday")
-      : nextReviewDiffDays === 1 ? t("study.nextReviewTomorrow")
+      : nextReviewDiffDays <= 0 ? t("stats.nextReviewToday")
+      : nextReviewDiffDays === 1 ? t("stats.nextReviewTomorrow")
       : String(nextReviewDiffDays);
     const nextReviewUnit = nextReviewDiffDays !== null && nextReviewDiffDays > 1
-      ? t("study.unitDaysLater")
+      ? t("stats.unitDaysLater")
       : '';
 
     let cumDeg = 0;
@@ -764,10 +764,10 @@ export default function StudySessionScreen() {
                     {correctRate}
                   </Text>
                   <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t("study.correctRate")}
+                    {t("stats.correctRate")}
                   </Text>
                   <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t("study.unitPercent")}
+                    {t("stats.unitPercent")}
                   </Text>
                 </View>
                 {nextReviewValue != null && (
@@ -781,7 +781,7 @@ export default function StudySessionScreen() {
                       {nextReviewValue}
                     </Text>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t("study.nextReview")}
+                      {t("stats.nextReview")}
                     </Text>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {nextReviewUnit}
@@ -799,10 +799,10 @@ export default function StudySessionScreen() {
                       {(result.avgResponseTimeMs / 1000).toFixed(1)}
                     </Text>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t("study.avgResponseTime")}
+                      {t("stats.avgResponseTime")}
                     </Text>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t("study.unitSeconds")}
+                      {t("stats.unitSeconds")}
                     </Text>
                   </View>
                 )}

@@ -26,6 +26,7 @@
   },
   "study": {
     "title": "Study",
+    "focusedReviewTitle": "Focused Review",
     "selectDeck": "Decks",
     "noDecks": "No decks yet",
     "tapToFlip": "Tap to flip",
@@ -153,6 +154,8 @@
     "gradeRankingDeckTitle": "Select deck",
     "gradeRankingDeckAll": "All decks",
     "gradeRankingDeckOpen": "Deck filter",
+    "focusedReviewStart": "Focused Review",
+    "focusedReviewNote": "Grades are reflected in stats only for cards that are due or already studied today",
     "correctRate": "Correct",
     "nextReview": "Next Review",
     "avgResponseTime": "Avg. Time",

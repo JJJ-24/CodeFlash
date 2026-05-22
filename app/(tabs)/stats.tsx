@@ -1412,6 +1412,25 @@ export default function StatsScreen() {
                 style={styles.gradeCardList}
                 onLayout={(e) => { sectionOffsets.current.rankingOuter = e.nativeEvent.layout.y; }}
               >
+                {gradeBlockCards.length > 0 && (
+                  <View style={{ marginBottom: 4 }}>
+                    <Pressable
+                      onPress={() => {
+                        const ids = gradeBlockCards.map((c) => c.cardId).join(',');
+                        router.push({ pathname: '/study/session', params: { cardIds: ids, mode: 'focused' } });
+                      }}
+                      style={({ pressed }) => [styles.focusedReviewBtn, { backgroundColor: FILTER_COLORS.due }, pressed && { opacity: 0.85 }]}
+                    >
+                      <Ionicons name="play" size={20} color="#FFF" />
+                      <Text style={[styles.focusedReviewBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                        {t('stats.focusedReviewStart')}
+                      </Text>
+                    </Pressable>
+                    <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, marginTop: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                      {t('stats.focusedReviewNote')}
+                    </Text>
+                  </View>
+                )}
                 {gradeBlockLoading && gradeBlockCards.length === 0 ? (
                   // 初回：カードなしでローディング中
                   <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 20, alignItems: 'center' }]}>
@@ -1625,6 +1644,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 14,
   },
+  focusedReviewBtn: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  focusedReviewBtnText: { fontWeight: '700', color: '#FFF' },
   gradeBlockRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
   gradeBlock: { flex: 1, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4 },
   gradeBlockCount: { fontWeight: '700' },

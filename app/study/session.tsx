@@ -82,12 +82,16 @@ const SESSION_SHORTCUTS = [
 ];
 
 export default function StudySessionScreen() {
-  const { deckId, tagId, filter, shuffle } = useLocalSearchParams<{
+  const { deckId, tagId, filter, shuffle, cardIds: cardIdsParam, mode } = useLocalSearchParams<{
     deckId?: string;
     tagId?: string;
     filter?: "all" | "today" | "due" | "unlearned";
     shuffle?: string;
+    cardIds?: string;
+    mode?: string;
   }>();
+  const cardIdsList = cardIdsParam ? cardIdsParam.split(',').filter(Boolean) : undefined;
+  const isFocusedReview = mode === 'focused';
   const router = useRouter();
   const navigation = useNavigation();
   function safeBack() {
@@ -157,11 +161,13 @@ export default function StudySessionScreen() {
   const initialTopInsetRef = useRef(insets.top);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
-  const sessionTitle = deckId
-    ? (decks.find((d) => d.id === deckId)?.name ?? t("study.title"))
-    : tagId
-      ? (tags.find((tg) => tg.id === tagId)?.name ?? t("study.title"))
-      : t("study.title");
+  const sessionTitle = isFocusedReview
+    ? t("study.focusedReviewTitle")
+    : deckId
+      ? (decks.find((d) => d.id === deckId)?.name ?? t("study.title"))
+      : tagId
+        ? (tags.find((tg) => tg.id === tagId)?.name ?? t("study.title"))
+        : t("study.title");
 
   const [statusBarHidden, setStatusBarHidden] = useState(false);
 
@@ -322,8 +328,10 @@ export default function StudySessionScreen() {
   );
 
   useEffect(() => {
-    loadSession({ deckId, tagId, filter, shuffle: shuffle === "1" });
-  }, [deckId, tagId, filter, shuffle]);
+    loadSession({ deckId, tagId, cardIds: cardIdsList, filter, shuffle: shuffle === "1" });
+    // cardIdsList は param 由来の派生値のため deps には cardIdsParam を入れる
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deckId, tagId, cardIdsParam, filter, shuffle]);
 
   useEffect(() => {
     if (completed) {

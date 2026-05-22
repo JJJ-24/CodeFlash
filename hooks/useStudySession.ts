@@ -50,7 +50,7 @@ export function useStudySession() {
   currentIndexRef.current = currentIndex;
 
   const loadSession = useCallback(
-    async (params: { deckId?: string; tagId?: string; filter?: 'all' | 'today' | 'due' | 'unlearned'; shuffle?: boolean }) => {
+    async (params: { deckId?: string; tagId?: string; cardIds?: string[]; filter?: 'all' | 'today' | 'due' | 'unlearned'; shuffle?: boolean }) => {
       setLoading(true);
       setCompleted(false);
       setCurrentIndex(0);
@@ -58,7 +58,10 @@ export function useStudySession() {
       try {
         let cardIds: string[] = [];
         const filter = params.filter ?? 'due';
-        if (params.deckId) {
+        if (params.cardIds) {
+          // 明示指定（重点復習モード等）：与えられた cardIds をそのまま使用し順序を維持
+          cardIds = params.cardIds;
+        } else if (params.deckId) {
           if (filter === 'all')            cardIds = await getAllCardIdsByDeckId(db, params.deckId);
           else if (filter === 'today')     cardIds = await getTodayReviewedCardIdsByDeckId(db, params.deckId);
           else if (filter === 'unlearned') cardIds = await getUnlearnedCardIdsByDeckId(db, params.deckId);
@@ -72,7 +75,11 @@ export function useStudySession() {
 
         let cards = await getCardsByIds(db, cardIds);
 
-        if (params.shuffle) {
+        if (params.cardIds) {
+          // 明示指定モード（重点復習等）：cardSort 設定は無視し、入力順を厳守
+          const order = new Map(params.cardIds.map((id, idx) => [id, idx]));
+          cards.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+        } else if (params.shuffle) {
           for (let i = cards.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [cards[i], cards[j]] = [cards[j], cards[i]];

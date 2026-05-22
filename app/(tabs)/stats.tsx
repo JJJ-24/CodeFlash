@@ -25,7 +25,7 @@ import {
   getStudyStreak,
   getTodayDueCount,
   getTodayReviewedCount,
-  getAvgResponseTimeByGrade,
+  getGradeAvgResponseTimes,
   getTopCardsByGrade,
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
@@ -87,8 +87,9 @@ function masteryColor(pct: number): string {
 
 type ScheduleItem = { date: string; count: number };
 type MasteryItem = { deckId: string; avgEase: number | null; learnedCount: number; newCount: number };
-type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number };
+type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null };
 type GradeTotals = { again: number; hard: number; good: number; easy: number };
+type GradeAvgTimes = { again: number | null; hard: number | null; good: number | null; easy: number | null };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
 type GradeDistribution = { again: number; hard: number; normal: number; easy: number; unlearned: number };
 
@@ -108,6 +109,7 @@ interface StatsData {
   decks: Deck[];
   heatmapData: { date: string; count: number }[];
   gradeTotals: GradeTotals;
+  gradeAvgTimes: GradeAvgTimes;
   monthlyReviewed: { month: string; count: number }[];
 }
 
@@ -126,6 +128,7 @@ const INITIAL_STATS: StatsData = {
   decks: [],
   heatmapData: [],
   gradeTotals: { again: 0, hard: 0, good: 0, easy: 0 },
+  gradeAvgTimes: { again: null, hard: null, good: null, easy: null },
   monthlyReviewed: [],
 };
 
@@ -470,7 +473,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime } = useSettingsStore();
   const { isPro } = useProStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -498,14 +501,13 @@ export default function StatsScreen() {
   const [selectedGradeBlock, setSelectedGradeBlock] = useState<0 | 1 | 2 | 3 | null>(null);
   const [gradeBlockCards, setGradeBlockCards] = useState<GradeCard[]>([]);
   const [gradeBlockLoading, setGradeBlockLoading] = useState(false);
-  const [gradeAvgResponseTime, setGradeAvgResponseTime] = useState<number | null>(null);
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
-          deckMastery, decks, heatmapData, gradeTotals, monthlyReviewed } = stats;
+          deckMastery, decks, heatmapData, gradeTotals, gradeAvgTimes, monthlyReviewed } = stats;
 
   // openSheet 内で参照するため useMemo で安定化
   const deckMap = useMemo(
@@ -526,7 +528,7 @@ export default function StatsScreen() {
         heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
         const heatmapStartStr = toLocalDateStr(heatmapStart);
 
-        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawMonthly, gradeTotalsData] =
+        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawMonthly, gradeTotalsData, gradeAvgTimesData] =
           await Promise.all([
             getTodayReviewedCount(db),
             getTodayDueCount(db),
@@ -542,6 +544,7 @@ export default function StatsScreen() {
             getDailyReviewCounts(db, heatmapStartStr),
             getMonthlyReviewCounts(db),
             getGradeLogTotals(db),
+            getGradeAvgResponseTimes(db),
           ]);
 
         // 今後7日分（今日が先頭）
@@ -568,15 +571,13 @@ export default function StatsScreen() {
           decks: allDecks,
           heatmapData: rawHeatmap,
           gradeTotals: gradeTotalsData,
+          gradeAvgTimes: gradeAvgTimesData,
           monthlyReviewed: fillPast12Months(rawMonthly),
         });
         if (selectedGradeBlockRef.current !== null) {
-          const [cards, avgTime] = await Promise.all([
-            getTopCardsByGrade(db, selectedGradeBlockRef.current, 10),
-            getAvgResponseTimeByGrade(db, selectedGradeBlockRef.current),
-          ]);
+          const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+          const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy);
           setGradeBlockCards(cards);
-          setGradeAvgResponseTime(avgTime);
         }
       }
       load();
@@ -733,7 +734,6 @@ export default function StatsScreen() {
       selectedGradeBlockRef.current = null;
       setSelectedGradeBlock(null);
       setGradeBlockCards([]);
-      setGradeAvgResponseTime(null);
       return;
     }
     selectedGradeBlockRef.current = grade;
@@ -742,14 +742,24 @@ export default function StatsScreen() {
     pendingFocusRankingRef.current = true;
     setGradeBlockLoading(true);
     // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
-    const [cards, avgTime] = await Promise.all([
-      getTopCardsByGrade(db, grade, 10),
-      getAvgResponseTimeByGrade(db, grade),
-    ]);
+    const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+    const cards = await getTopCardsByGrade(db, grade, 10, sortBy);
     setGradeBlockCards(cards);
-    setGradeAvgResponseTime(avgTime);
     setGradeBlockLoading(false);
   }, [db, selectedGradeBlock]);
+
+  // 平均時間ランキングトグル切り替え時：選択中のグレードブロックの TOP10 を再取得
+  const handleToggleRankingByTime = useCallback(async () => {
+    const newValue = !gradeRankingByTime;
+    setGradeRankingByTime(newValue);
+    if (selectedGradeBlockRef.current !== null) {
+      setGradeBlockLoading(true);
+      const sortBy = newValue ? 'time' : 'count';
+      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy);
+      setGradeBlockCards(cards);
+      setGradeBlockLoading(false);
+    }
+  }, [db, gradeRankingByTime, setGradeRankingByTime]);
 
   const hasData = learned > 0 || todayReviewed > 0;
   const total = learned + unlearned;
@@ -1029,30 +1039,56 @@ export default function StatsScreen() {
 
             {/* グレード別ランキング */}
             <View onLayout={(e) => { sectionOffsets.current.ranking = e.nativeEvent.layout.y; }}>
-            <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('stats.gradeRanking')}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('stats.gradeRanking')}
+              </Text>
+              <Pressable
+                onPress={handleToggleRankingByTime}
+                accessibilityLabel={t(gradeRankingByTime ? 'stats.gradeRankingToggleCount' : 'stats.gradeRankingToggleTime')}
+                style={[
+                  styles.rankingToggleBtn,
+                  { borderColor: gradeRankingByTime ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                  gradeRankingByTime && { backgroundColor: theme.colors.primary },
+                ]}
+              >
+                <Ionicons
+                  name="timer-outline"
+                  size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                  color={gradeRankingByTime ? theme.colors.primaryText : theme.colors.textSecondary}
+                />
+              </Pressable>
+            </View>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, marginBottom: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+              {t(gradeRankingByTime ? 'stats.gradeRankingModeTime' : 'stats.gradeRankingModeCount')}
             </Text>
             {(() => {
               const gradeItems = [
-                { grade: 0 as const, labelKey: 'grade.again', color: GRADE_COLORS.again, count: gradeTotals.again },
-                { grade: 1 as const, labelKey: 'grade.hard',  color: GRADE_COLORS.hard,  count: gradeTotals.hard  },
-                { grade: 2 as const, labelKey: 'grade.good',  color: GRADE_COLORS.good,  count: gradeTotals.good  },
-                { grade: 3 as const, labelKey: 'grade.easy',  color: GRADE_COLORS.easy,  count: gradeTotals.easy  },
+                { grade: 0 as const, labelKey: 'grade.again', color: GRADE_COLORS.again, count: gradeTotals.again, avgMs: gradeAvgTimes.again },
+                { grade: 1 as const, labelKey: 'grade.hard',  color: GRADE_COLORS.hard,  count: gradeTotals.hard,  avgMs: gradeAvgTimes.hard  },
+                { grade: 2 as const, labelKey: 'grade.good',  color: GRADE_COLORS.good,  count: gradeTotals.good,  avgMs: gradeAvgTimes.good  },
+                { grade: 3 as const, labelKey: 'grade.easy',  color: GRADE_COLORS.easy,  count: gradeTotals.easy,  avgMs: gradeAvgTimes.easy  },
               ];
-              const gradeMaxDigits = Math.max(...gradeItems.map(g => String(g.count).length));
+              const displayValues = gradeItems.map(g => gradeRankingByTime
+                ? (g.avgMs != null ? (g.avgMs / 1000).toFixed(1) : '—')
+                : String(g.count));
+              const gradeMaxDigits = Math.max(...displayValues.map(v => v.length));
               const gradeCountFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : gradeMaxDigits);
+              // モード切替で高さがブレないよう、最大想定フォント（1桁時）でブロック高さを固定
+              const gradeBlockMinHeight = 20 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
               return (
             <View style={styles.gradeBlockRow}>
-              {gradeItems.map(({ grade, labelKey, color, count }) => {
+              {gradeItems.map(({ grade, labelKey, color }, i) => {
                 const isSelected = selectedGradeBlock === grade;
+                const value = displayValues[i];
                 return (
                   <Pressable
                     key={grade}
-                    style={[styles.gradeBlock, { borderColor: color }, isSelected && { backgroundColor: color }]}
+                    style={[styles.gradeBlock, { borderColor: color, minHeight: gradeBlockMinHeight, justifyContent: 'center' }, isSelected && { backgroundColor: color }]}
                     onPress={() => handleGradeBlockTap(grade)}
                   >
                     <Text style={[styles.gradeBlockCount, { color: isSelected ? '#fff' : color, fontSize: gradeCountFontSize }]} allowFontScaling={false} numberOfLines={1}>
-                      {count}
+                      {value}
                     </Text>
                     <Text style={[styles.gradeBlockLabel, { color: isSelected ? 'rgba(255,255,255,0.85)' : theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {t(labelKey)}
@@ -1069,16 +1105,6 @@ export default function StatsScreen() {
                 style={styles.gradeCardList}
                 onLayout={(e) => { sectionOffsets.current.rankingOuter = e.nativeEvent.layout.y; }}
               >
-                {gradeAvgResponseTime != null && (
-                  <View style={[styles.card, { backgroundColor: theme.colors.surface, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('stats.gradeAvgTime')}
-                    </Text>
-                    <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {(gradeAvgResponseTime / 1000).toFixed(1)}{t('common.sec')}
-                    </Text>
-                  </View>
-                )}
                 {gradeBlockLoading && gradeBlockCards.length === 0 ? (
                   // 初回：カードなしでローディング中
                   <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 20, alignItems: 'center' }]}>
@@ -1143,7 +1169,9 @@ export default function StatsScreen() {
                         </Pressable>
                         <View style={[styles.lapseBadge, { backgroundColor: badgeColor }]}>
                           <Text style={styles.lapseBadgeText} allowFontScaling={false}>
-                            {t('stats.gradeCount', { count: card.gradeCount })}
+                            {gradeRankingByTime
+                              ? (card.avgResponseTimeMs != null ? `${(card.avgResponseTimeMs / 1000).toFixed(1)}${t('common.sec')}` : '—')
+                              : t('stats.gradeCount', { count: card.gradeCount })}
                           </Text>
                         </View>
                       </Pressable>
@@ -1261,6 +1289,12 @@ const styles = StyleSheet.create({
   proBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   proBadgeText: { color: '#fff', fontWeight: '700', letterSpacing: 1 },
   proSubTitle: { fontWeight: '600', marginBottom: 6 },
+  rankingToggleBtn: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   gradeBlockRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
   gradeBlock: { flex: 1, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4 },
   gradeBlockCount: { fontWeight: '700' },

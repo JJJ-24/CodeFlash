@@ -537,34 +537,49 @@ export async function getCardGradeHistory(
   );
 }
 
-/** グレード別の平均回答時間（ミリ秒）。データなしの場合 null */
-export async function getAvgResponseTimeByGrade(
-  db: SQLiteDatabase,
-  grade: 0 | 1 | 2 | 3
-): Promise<number | null> {
-  const row = await db.getFirstAsync<{ avg: number | null }>(
-    `SELECT AVG(responseTimeMs) as avg FROM grade_logs WHERE grade = ? AND responseTimeMs IS NOT NULL`,
-    [grade]
+/** 4 グレードすべての平均回答時間（ミリ秒）を一括取得。データなしのグレードは null */
+export async function getGradeAvgResponseTimes(
+  db: SQLiteDatabase
+): Promise<{ again: number | null; hard: number | null; good: number | null; easy: number | null }> {
+  const row = await db.getFirstAsync<{ again: number | null; hard: number | null; good: number | null; easy: number | null }>(
+    `SELECT
+       AVG(CASE WHEN grade = 0 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as again,
+       AVG(CASE WHEN grade = 1 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as hard,
+       AVG(CASE WHEN grade = 2 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as good,
+       AVG(CASE WHEN grade = 3 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as easy
+     FROM grade_logs`
   );
-  return row?.avg ?? null;
+  return { again: row?.again ?? null, hard: row?.hard ?? null, good: row?.good ?? null, easy: row?.easy ?? null };
 }
+
+export type GradeRankingSortBy = 'count' | 'time';
 
 export async function getTopCardsByGrade(
   db: SQLiteDatabase,
   grade: 0 | 1 | 2 | 3,
-  limit = 10
-): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number }[]> {
-  // grade 0/1（苦手系）は遅いほど上、grade 2/3（得意系）は早いほど上。NULL は末尾。
-  const responseTimeOrder = grade <= 1 ? 'DESC' : 'ASC';
+  limit = 10,
+  sortBy: GradeRankingSortBy = 'count'
+): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null }[]> {
+  // count モード：評価回数の多い順。同数のときは grade 0/1 は時間 DESC（遅い順）、grade 2/3 は時間 ASC（早い順）。
+  // time モード：平均回答時間の遅い順（全グレード共通）。同時間のときは評価回数の多い順。NULL は常に末尾。
+  let orderBy: string;
+  if (sortBy === 'time') {
+    orderBy = `AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) DESC, gradeCount DESC`;
+  } else {
+    const responseTimeOrder = grade <= 1 ? 'DESC' : 'ASC';
+    orderBy = `gradeCount DESC, AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) ${responseTimeOrder}`;
+  }
   return db.getAllAsync(
-    `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent, COUNT(gl.id) AS gradeCount
+    `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent,
+            COUNT(gl.id) AS gradeCount,
+            AVG(gl.responseTimeMs) AS avgResponseTimeMs
      FROM grade_logs gl
      JOIN cards c ON gl.cardId = c.id
      JOIN card_contents cc ON c.id = cc.cardId
      JOIN decks d ON c.deckId = d.id
      WHERE gl.grade = ?
      GROUP BY c.id
-     ORDER BY gradeCount DESC, AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) ${responseTimeOrder}
+     ORDER BY ${orderBy}
      LIMIT ?`,
     [grade, limit]
   );

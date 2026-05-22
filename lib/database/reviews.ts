@@ -473,17 +473,22 @@ export async function getMonthlyReviewCounts(
 
 export async function getGradeLogTotals(
   db: SQLiteDatabase,
-  since?: string
+  since?: string,
+  deckId?: string
 ): Promise<{ again: number; hard: number; good: number; easy: number }> {
-  const where = since ? 'WHERE reviewedAt >= ?' : '';
-  const params = since ? [since] : [];
+  const conds: string[] = [];
+  const params: (string | number)[] = [];
+  if (since)  { conds.push('gl.reviewedAt >= ?'); params.push(since); }
+  if (deckId) { conds.push('c.deckId = ?');      params.push(deckId); }
+  const where = conds.length > 0 ? `WHERE ${conds.join(' AND ')}` : '';
+  const join = deckId ? 'JOIN cards c ON gl.cardId = c.id' : '';
   const row = await db.getFirstAsync<{ again: number; hard: number; good: number; easy: number }>(
     `SELECT
-       SUM(CASE WHEN grade = 0 THEN 1 ELSE 0 END) as again,
-       SUM(CASE WHEN grade = 1 THEN 1 ELSE 0 END) as hard,
-       SUM(CASE WHEN grade = 2 THEN 1 ELSE 0 END) as good,
-       SUM(CASE WHEN grade = 3 THEN 1 ELSE 0 END) as easy
-     FROM grade_logs ${where}`,
+       SUM(CASE WHEN gl.grade = 0 THEN 1 ELSE 0 END) as again,
+       SUM(CASE WHEN gl.grade = 1 THEN 1 ELSE 0 END) as hard,
+       SUM(CASE WHEN gl.grade = 2 THEN 1 ELSE 0 END) as good,
+       SUM(CASE WHEN gl.grade = 3 THEN 1 ELSE 0 END) as easy
+     FROM grade_logs gl ${join} ${where}`,
     params
   );
   return { again: row?.again ?? 0, hard: row?.hard ?? 0, good: row?.good ?? 0, easy: row?.easy ?? 0 };
@@ -544,17 +549,22 @@ export async function getCardGradeHistory(
 /** 4 グレードすべての平均回答時間（ミリ秒）を一括取得。データなしのグレードは null */
 export async function getGradeAvgResponseTimes(
   db: SQLiteDatabase,
-  since?: string
+  since?: string,
+  deckId?: string
 ): Promise<{ again: number | null; hard: number | null; good: number | null; easy: number | null }> {
-  const where = since ? 'WHERE reviewedAt >= ?' : '';
-  const params = since ? [since] : [];
+  const conds: string[] = [];
+  const params: (string | number)[] = [];
+  if (since)  { conds.push('gl.reviewedAt >= ?'); params.push(since); }
+  if (deckId) { conds.push('c.deckId = ?');      params.push(deckId); }
+  const where = conds.length > 0 ? `WHERE ${conds.join(' AND ')}` : '';
+  const join = deckId ? 'JOIN cards c ON gl.cardId = c.id' : '';
   const row = await db.getFirstAsync<{ again: number | null; hard: number | null; good: number | null; easy: number | null }>(
     `SELECT
-       AVG(CASE WHEN grade = 0 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as again,
-       AVG(CASE WHEN grade = 1 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as hard,
-       AVG(CASE WHEN grade = 2 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as good,
-       AVG(CASE WHEN grade = 3 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as easy
-     FROM grade_logs ${where}`,
+       AVG(CASE WHEN gl.grade = 0 AND gl.responseTimeMs IS NOT NULL THEN gl.responseTimeMs END) as again,
+       AVG(CASE WHEN gl.grade = 1 AND gl.responseTimeMs IS NOT NULL THEN gl.responseTimeMs END) as hard,
+       AVG(CASE WHEN gl.grade = 2 AND gl.responseTimeMs IS NOT NULL THEN gl.responseTimeMs END) as good,
+       AVG(CASE WHEN gl.grade = 3 AND gl.responseTimeMs IS NOT NULL THEN gl.responseTimeMs END) as easy
+     FROM grade_logs gl ${join} ${where}`,
     params
   );
   return { again: row?.again ?? null, hard: row?.hard ?? null, good: row?.good ?? null, easy: row?.easy ?? null };
@@ -567,7 +577,8 @@ export async function getTopCardsByGrade(
   grade: 0 | 1 | 2 | 3,
   limit = 10,
   sortBy: GradeRankingSortBy = 'count',
-  since?: string
+  since?: string,
+  deckId?: string
 ): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null }[]> {
   // count モード：評価回数の多い順。同数のときは grade 0/1 は時間 DESC（遅い順）、grade 2/3 は時間 ASC（早い順）。
   // time モード：平均回答時間の遅い順（全グレード共通）。同時間のときは評価回数の多い順。NULL は常に末尾。
@@ -578,8 +589,11 @@ export async function getTopCardsByGrade(
     const responseTimeOrder = grade <= 1 ? 'DESC' : 'ASC';
     orderBy = `gradeCount DESC, AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) ${responseTimeOrder}`;
   }
-  const sinceCond = since ? 'AND gl.reviewedAt >= ?' : '';
-  const params: (string | number)[] = since ? [grade, since, limit] : [grade, limit];
+  const conds: string[] = ['gl.grade = ?'];
+  const params: (string | number)[] = [grade];
+  if (since)  { conds.push('gl.reviewedAt >= ?'); params.push(since); }
+  if (deckId) { conds.push('c.deckId = ?');      params.push(deckId); }
+  params.push(limit);
   return db.getAllAsync(
     `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent,
             COUNT(gl.id) AS gradeCount,
@@ -588,7 +602,7 @@ export async function getTopCardsByGrade(
      JOIN cards c ON gl.cardId = c.id
      JOIN card_contents cc ON c.id = cc.cardId
      JOIN decks d ON c.deckId = d.id
-     WHERE gl.grade = ? ${sinceCond}
+     WHERE ${conds.join(' AND ')}
      GROUP BY c.id
      ORDER BY ${orderBy}
      LIMIT ?`,

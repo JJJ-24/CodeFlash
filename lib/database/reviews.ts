@@ -472,15 +472,19 @@ export async function getMonthlyReviewCounts(
 }
 
 export async function getGradeLogTotals(
-  db: SQLiteDatabase
+  db: SQLiteDatabase,
+  since?: string
 ): Promise<{ again: number; hard: number; good: number; easy: number }> {
+  const where = since ? 'WHERE reviewedAt >= ?' : '';
+  const params = since ? [since] : [];
   const row = await db.getFirstAsync<{ again: number; hard: number; good: number; easy: number }>(
     `SELECT
        SUM(CASE WHEN grade = 0 THEN 1 ELSE 0 END) as again,
        SUM(CASE WHEN grade = 1 THEN 1 ELSE 0 END) as hard,
        SUM(CASE WHEN grade = 2 THEN 1 ELSE 0 END) as good,
        SUM(CASE WHEN grade = 3 THEN 1 ELSE 0 END) as easy
-     FROM grade_logs`
+     FROM grade_logs ${where}`,
+    params
   );
   return { again: row?.again ?? 0, hard: row?.hard ?? 0, good: row?.good ?? 0, easy: row?.easy ?? 0 };
 }
@@ -539,15 +543,19 @@ export async function getCardGradeHistory(
 
 /** 4 グレードすべての平均回答時間（ミリ秒）を一括取得。データなしのグレードは null */
 export async function getGradeAvgResponseTimes(
-  db: SQLiteDatabase
+  db: SQLiteDatabase,
+  since?: string
 ): Promise<{ again: number | null; hard: number | null; good: number | null; easy: number | null }> {
+  const where = since ? 'WHERE reviewedAt >= ?' : '';
+  const params = since ? [since] : [];
   const row = await db.getFirstAsync<{ again: number | null; hard: number | null; good: number | null; easy: number | null }>(
     `SELECT
        AVG(CASE WHEN grade = 0 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as again,
        AVG(CASE WHEN grade = 1 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as hard,
        AVG(CASE WHEN grade = 2 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as good,
        AVG(CASE WHEN grade = 3 AND responseTimeMs IS NOT NULL THEN responseTimeMs END) as easy
-     FROM grade_logs`
+     FROM grade_logs ${where}`,
+    params
   );
   return { again: row?.again ?? null, hard: row?.hard ?? null, good: row?.good ?? null, easy: row?.easy ?? null };
 }
@@ -558,7 +566,8 @@ export async function getTopCardsByGrade(
   db: SQLiteDatabase,
   grade: 0 | 1 | 2 | 3,
   limit = 10,
-  sortBy: GradeRankingSortBy = 'count'
+  sortBy: GradeRankingSortBy = 'count',
+  since?: string
 ): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null }[]> {
   // count モード：評価回数の多い順。同数のときは grade 0/1 は時間 DESC（遅い順）、grade 2/3 は時間 ASC（早い順）。
   // time モード：平均回答時間の遅い順（全グレード共通）。同時間のときは評価回数の多い順。NULL は常に末尾。
@@ -569,6 +578,8 @@ export async function getTopCardsByGrade(
     const responseTimeOrder = grade <= 1 ? 'DESC' : 'ASC';
     orderBy = `gradeCount DESC, AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) ${responseTimeOrder}`;
   }
+  const sinceCond = since ? 'AND gl.reviewedAt >= ?' : '';
+  const params: (string | number)[] = since ? [grade, since, limit] : [grade, limit];
   return db.getAllAsync(
     `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent,
             COUNT(gl.id) AS gradeCount,
@@ -577,11 +588,11 @@ export async function getTopCardsByGrade(
      JOIN cards c ON gl.cardId = c.id
      JOIN card_contents cc ON c.id = cc.cardId
      JOIN decks d ON c.deckId = d.id
-     WHERE gl.grade = ?
+     WHERE gl.grade = ? ${sinceCond}
      GROUP BY c.id
      ORDER BY ${orderBy}
      LIMIT ?`,
-    [grade, limit]
+    params
   );
 }
 

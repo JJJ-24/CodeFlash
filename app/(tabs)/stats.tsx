@@ -9,8 +9,8 @@ import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
-import { useSettingsStore } from '@/store/settings';
-import type { InitialFilterPreference } from '@/store/settings';
+import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS } from '@/store/settings';
+import type { InitialFilterPreference, GradeRankingPeriod } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import {
   getAllGradeDistribution,
@@ -423,6 +423,105 @@ const sheetStyles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 16 },
 });
 
+function PeriodPickerSheet({
+  visible,
+  value,
+  onSelect,
+  onClose,
+  theme,
+}: {
+  visible: boolean;
+  value: GradeRankingPeriod;
+  onSelect: (v: GradeRankingPeriod) => void;
+  onClose: () => void;
+  theme: AppTheme;
+}) {
+  const { t } = useTranslation();
+  const { height: screenHeight } = useWindowDimensions();
+  const sheetY = useSharedValue(screenHeight);
+  const overlayOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible) {
+      overlayOpacity.value = withTiming(1, { duration: 200 });
+      sheetY.value = withTiming(0, { duration: 250 });
+    } else {
+      overlayOpacity.value = withTiming(0, { duration: 200 });
+      sheetY.value = withTiming(screenHeight, { duration: 250 });
+    }
+  }, [visible, screenHeight]);
+
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
+
+  const options: { key: GradeRankingPeriod; labelKey: string }[] = [
+    { key: 'all', labelKey: 'stats.gradeRankingPeriodAll' },
+    { key: '90d', labelKey: 'stats.gradeRankingPeriod90d' },
+    { key: '30d', labelKey: 'stats.gradeRankingPeriod30d' },
+    { key: '7d',  labelKey: 'stats.gradeRankingPeriod7d' },
+  ];
+
+  return (
+    <View
+      pointerEvents={visible ? 'box-none' : 'none'}
+      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+    >
+      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      </Animated.View>
+      <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
+        <View style={[sheetStyles.header, { justifyContent: 'center' }]}>
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('stats.gradeRankingPeriodTitle')}
+          </Text>
+        </View>
+        <Pressable onPress={onClose} style={[sheetStyles.closeBtn, { position: 'absolute', top: 14, right: 16, zIndex: 1 }]}>
+          <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
+        </Pressable>
+        <View style={sheetStyles.body}>
+          {options.map((opt) => {
+            const isSelected = value === opt.key;
+            return (
+              <Pressable
+                key={opt.key}
+                onPress={() => { onSelect(opt.key); onClose(); }}
+                style={({ pressed }) => [
+                  {
+                    paddingVertical: 14,
+                    paddingHorizontal: 12,
+                    borderRadius: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: isSelected ? theme.colors.primary : 'transparent',
+                  },
+                  pressed && !isSelected && { backgroundColor: theme.colors.buttonBorder },
+                ]}
+              >
+                <Text style={{ color: isSelected ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: isSelected ? '600' : '400' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t(opt.labelKey)}
+                </Text>
+                {isSelected && (
+                  <Ionicons name="checkmark" size={20} color={theme.colors.primaryText} />
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+/** GradeRankingPeriod から since の ISO 文字列を計算（'all' のときは undefined） */
+function periodToSince(period: GradeRankingPeriod): string | undefined {
+  const days = GRADE_RANKING_PERIOD_DAYS[period];
+  if (days == null) return undefined;
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
+}
+
 /** Date をローカル YYYY-MM-DD 文字列に変換 */
 function toLocalDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -473,7 +572,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod } = useSettingsStore();
   const { isPro } = useProStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -502,6 +601,7 @@ export default function StatsScreen() {
   const [gradeBlockCards, setGradeBlockCards] = useState<GradeCard[]>([]);
   const [gradeBlockLoading, setGradeBlockLoading] = useState(false);
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
+  const [periodPickerVisible, setPeriodPickerVisible] = useState(false);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -527,6 +627,7 @@ export default function StatsScreen() {
         const heatmapStart = new Date();
         heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
         const heatmapStartStr = toLocalDateStr(heatmapStart);
+        const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
 
         const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawMonthly, gradeTotalsData, gradeAvgTimesData] =
           await Promise.all([
@@ -543,8 +644,8 @@ export default function StatsScreen() {
             getTodayCreatedCount(db),
             getDailyReviewCounts(db, heatmapStartStr),
             getMonthlyReviewCounts(db),
-            getGradeLogTotals(db),
-            getGradeAvgResponseTimes(db),
+            getGradeLogTotals(db, since),
+            getGradeAvgResponseTimes(db, since),
           ]);
 
         // 今後7日分（今日が先頭）
@@ -576,7 +677,7 @@ export default function StatsScreen() {
         });
         if (selectedGradeBlockRef.current !== null) {
           const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
-          const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy);
+          const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since);
           setGradeBlockCards(cards);
         }
       }
@@ -743,7 +844,8 @@ export default function StatsScreen() {
     setGradeBlockLoading(true);
     // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
     const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
-    const cards = await getTopCardsByGrade(db, grade, 10, sortBy);
+    const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
+    const cards = await getTopCardsByGrade(db, grade, 10, sortBy, since);
     setGradeBlockCards(cards);
     setGradeBlockLoading(false);
   }, [db, selectedGradeBlock]);
@@ -755,11 +857,30 @@ export default function StatsScreen() {
     if (selectedGradeBlockRef.current !== null) {
       setGradeBlockLoading(true);
       const sortBy = newValue ? 'time' : 'count';
-      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy);
+      const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
+      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since);
       setGradeBlockCards(cards);
       setGradeBlockLoading(false);
     }
   }, [db, gradeRankingByTime, setGradeRankingByTime]);
+
+  // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得
+  const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {
+    setGradeRankingPeriod(newPeriod);
+    const since = periodToSince(newPeriod);
+    const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+    setGradeBlockLoading(true);
+    const [totals, avgTimes, cards] = await Promise.all([
+      getGradeLogTotals(db, since),
+      getGradeAvgResponseTimes(db, since),
+      selectedGradeBlockRef.current !== null
+        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since)
+        : Promise.resolve(null),
+    ]);
+    setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
+    if (cards !== null) setGradeBlockCards(cards);
+    setGradeBlockLoading(false);
+  }, [db, setGradeRankingPeriod]);
 
   const hasData = learned > 0 || todayReviewed > 0;
   const total = learned + unlearned;
@@ -1043,25 +1164,55 @@ export default function StatsScreen() {
               <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('stats.gradeRanking')}
               </Text>
-              <Pressable
-                onPress={handleToggleRankingByTime}
-                accessibilityLabel={t(gradeRankingByTime ? 'stats.gradeRankingToggleCount' : 'stats.gradeRankingToggleTime')}
-                style={[
-                  styles.rankingToggleBtn,
-                  { borderColor: gradeRankingByTime ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
-                  gradeRankingByTime && { backgroundColor: theme.colors.primary },
-                ]}
-              >
-                <Ionicons
-                  name="timer-outline"
-                  size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
-                  color={gradeRankingByTime ? theme.colors.primaryText : theme.colors.textSecondary}
-                />
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <Pressable
+                  onPress={() => setPeriodPickerVisible(true)}
+                  accessibilityLabel={t('stats.gradeRankingPeriodOpen')}
+                  style={[
+                    styles.rankingToggleBtn,
+                    { borderColor: gradeRankingPeriod !== 'all' ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    gradeRankingPeriod !== 'all' && { backgroundColor: theme.colors.primary },
+                  ]}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                    color={gradeRankingPeriod !== 'all' ? theme.colors.primaryText : theme.colors.textSecondary}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={handleToggleRankingByTime}
+                  accessibilityLabel={t(gradeRankingByTime ? 'stats.gradeRankingToggleCount' : 'stats.gradeRankingToggleTime')}
+                  style={[
+                    styles.rankingToggleBtn,
+                    { borderColor: gradeRankingByTime ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    gradeRankingByTime && { backgroundColor: theme.colors.primary },
+                  ]}
+                >
+                  <Ionicons
+                    name="timer-outline"
+                    size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                    color={gradeRankingByTime ? theme.colors.primaryText : theme.colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
             </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, marginBottom: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, marginBottom: gradeRankingPeriod === 'all' ? 8 : 6 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
               {t(gradeRankingByTime ? 'stats.gradeRankingModeTime' : 'stats.gradeRankingModeCount')}
             </Text>
+            {gradeRankingPeriod !== 'all' && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                <Pressable
+                  onPress={() => handlePeriodChange('all')}
+                  style={[styles.filterChip, { backgroundColor: theme.colors.primary }]}
+                >
+                  <Ionicons name="close" size={14} color={theme.colors.primaryText} />
+                  <Text style={{ color: theme.colors.primaryText, fontSize: theme.fontSize.xs, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                    {t(`stats.gradeRankingPeriod${gradeRankingPeriod}` as const)}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
             {(() => {
               const gradeItems = [
                 { grade: 0 as const, labelKey: 'grade.again', color: GRADE_COLORS.again, count: gradeTotals.again, avgMs: gradeAvgTimes.again },
@@ -1225,6 +1376,13 @@ export default function StatsScreen() {
         shortcuts={STATS_SHORTCUTS}
       />
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
+      <PeriodPickerSheet
+        visible={periodPickerVisible}
+        value={gradeRankingPeriod}
+        onSelect={handlePeriodChange}
+        onClose={() => setPeriodPickerVisible(false)}
+        theme={theme}
+      />
     </View>
   );
 }
@@ -1294,6 +1452,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
   },
   gradeBlockRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
   gradeBlock: { flex: 1, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4 },

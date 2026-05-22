@@ -16,9 +16,18 @@ const SEARCH_FIELD_KEY = '@codeflash_last_search_field';
 const FSRS_RETENTION_KEY = '@codeflash_fsrs_retention';
 const STUDY_HIDE_EMPTY_KEY = '@codeflash_study_hide_empty';
 const GRADE_RANKING_BY_TIME_KEY = '@codeflash_grade_ranking_by_time';
+const GRADE_RANKING_PERIOD_KEY = '@codeflash_grade_ranking_period';
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 export type CardSortOrder = 'manual' | 'newest' | 'oldest';
+export type GradeRankingPeriod = 'all' | '90d' | '30d' | '7d';
+
+export const GRADE_RANKING_PERIOD_DAYS: Record<GradeRankingPeriod, number | null> = {
+  all: null,
+  '90d': 90,
+  '30d': 30,
+  '7d': 7,
+};
 
 export type FsrsPreset = 'exam' | 'standard' | 'longTerm';
 
@@ -77,6 +86,8 @@ interface SettingsState {
   setStudyHideEmpty: (v: boolean) => void;
   gradeRankingByTime: boolean;
   setGradeRankingByTime: (v: boolean) => void;
+  gradeRankingPeriod: GradeRankingPeriod;
+  setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -153,10 +164,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ gradeRankingByTime: v });
     AsyncStorage.setItem(GRADE_RANKING_BY_TIME_KEY, String(v));
   },
+  gradeRankingPeriod: 'all',
+  setGradeRankingPeriod: (v) => {
+    set({ gradeRankingPeriod: v });
+    AsyncStorage.setItem(GRADE_RANKING_PERIOD_KEY, v);
+  },
 }));
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime] = await Promise.all([
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEY),
     AsyncStorage.getItem(FILTER_STORAGE_KEY),
     AsyncStorage.getItem(LANG_STORAGE_KEY),
@@ -172,12 +188,13 @@ export async function hydrateSettings(): Promise<void> {
     AsyncStorage.getItem(FSRS_RETENTION_KEY),
     AsyncStorage.getItem(STUDY_HIDE_EMPTY_KEY),
     AsyncStorage.getItem(GRADE_RANKING_BY_TIME_KEY),
+    AsyncStorage.getItem(GRADE_RANKING_PERIOD_KEY),
   ]);
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
     'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField' |
-    'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime'
+    'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -197,6 +214,9 @@ export async function hydrateSettings(): Promise<void> {
   }
   if (studyHideEmpty !== null) update.studyHideEmpty = studyHideEmpty === 'true';
   if (gradeRankingByTime !== null) update.gradeRankingByTime = gradeRankingByTime === 'true';
+  if (gradeRankingPeriod !== null && (gradeRankingPeriod === 'all' || gradeRankingPeriod === '90d' || gradeRankingPeriod === '30d' || gradeRankingPeriod === '7d')) {
+    update.gradeRankingPeriod = gradeRankingPeriod;
+  }
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 }
 

@@ -221,7 +221,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                     onChange({
                       content: v
                         .replace(/[\u201c\u201d]/g, '"')
-                        .replace(/[\u2018\u2019]/g, "'"),
+                        .replace(/[\u2018\u2019]/g, "'")
+                        .replace(/[\u2028\u2029]/g, '\n'),
                     })
                   }
                   onSelectionChange={handleSelectionChange}

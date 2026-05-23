@@ -19,7 +19,12 @@ function escape(s: string): string {
 }
 
 function unescape(s: string): string {
-  return s.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
+  // U+2028 / U+2029 はスプレッドシート由来の不可視改行で iOS の nested <Text> 描画を壊すため \n に正規化
+  return s
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\\\/g, '\\')
+    .replace(/[\u2028\u2029]/g, '\n');
 }
 
 // RFC 4180 対応 TSV パーサー（Numbers等のクォート付き複数行セルを処理）
@@ -187,8 +192,9 @@ export async function importTsv(db: SQLiteDatabase, fileUri: string, deckId: str
   }
 
   // --- フェーズ1: 全行をJSでパース（DB呼び出しゼロ） ---
+  // U+2028 / U+2029 はクォート付きセル経由でも混入するため、ここでも \n に正規化する
   const toBlocks = (text: string): TextBlock[] =>
-    text ? [{ type: 'text', content: text }] : [];
+    text ? [{ type: 'text', content: text.replace(/[\u2028\u2029]/g, '\n') }] : [];
 
   const parsedCards: ParsedCard[] = [];
   for (let i = start; i < rows.length; i++) {

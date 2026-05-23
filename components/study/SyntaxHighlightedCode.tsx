@@ -21,7 +21,7 @@ interface Props {
 
 export function SyntaxHighlightedCode({ code, language }: Props) {
   const theme = useTheme();
-  const tokens = useMemo(() => tokenize(code, language), [code, language]);
+  const tokens = useMemo(() => tokenize(code.replace(/[\u2028\u2029]/g, '\n'), language), [code, language]);
 
   return (
     <Text style={[styles.base, { fontSize: theme.fontSize.lg, lineHeight: theme.fontSize.lg * 1.5 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>

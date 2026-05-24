@@ -300,7 +300,15 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.container} pointerEvents={loading ? 'none' : 'auto'}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={styles.container}
+      pointerEvents={loading ? 'none' : 'auto'}
+      contentInsetAdjustmentBehavior="never"
+      automaticallyAdjustContentInsets={false}
+      automaticallyAdjustsScrollIndicatorInsets={false}
+      scrollsToTop={false}
+    >
       {/* Pro プラン */}
       <Pressable
         style={[styles.card, styles.proCard, { backgroundColor: theme.colors.surface }]}

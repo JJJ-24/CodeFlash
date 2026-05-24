@@ -80,6 +80,8 @@ export default function StudyScreen() {
   const focusedDeckIdRef = useRef<string | null>(null);
   const focusedTagIdRef = useRef<string | null>(null);
   const fromSessionRef = useRef(false);
+  // タップ起因のフォーカス変化では scrollToIndex 副作用をスキップするためのフラグ
+  const skipScrollOnNextFocusRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
   const prevActiveTabRef = useRef<Tab>('decks');
   const deckFilterOffsets = useRef<Record<Filter, number>>({ all: 0, learned: 0, review: 0, new: 0 });
@@ -107,6 +109,11 @@ export default function StudyScreen() {
     if (focusedItemIndex === null) return;
     if (prevActiveTabRef.current !== activeTab) {
       prevActiveTabRef.current = activeTab;
+      return;
+    }
+    // タップで遷移する直前は中央へのスクロールが目障りなのでスキップ
+    if (skipScrollOnNextFocusRef.current) {
+      skipScrollOnNextFocusRef.current = false;
       return;
     }
     const ref = activeTab === 'decks' ? deckListRef : tagListRef;
@@ -463,6 +470,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
+                    skipScrollOnNextFocusRef.current = true;
                     setFocusedItemIndex(index);
                     focusedDeckIdRef.current = item.id;
                     fromSessionRef.current = true;
@@ -527,6 +535,7 @@ export default function StudyScreen() {
                   ]}
                   onPress={() => {
                     if (!tappable) return;
+                    skipScrollOnNextFocusRef.current = true;
                     setFocusedItemIndex(index);
                     focusedTagIdRef.current = item.id;
                     fromSessionRef.current = true;

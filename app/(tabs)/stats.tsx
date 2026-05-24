@@ -1172,6 +1172,10 @@ export default function StatsScreen() {
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        automaticallyAdjustsScrollIndicatorInsets={false}
+        scrollsToTop={false}
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
         onScroll={(e) => { currentScrollYRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={32}

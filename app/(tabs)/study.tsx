@@ -442,6 +442,10 @@ export default function StudyScreen() {
             data={visibleDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            scrollsToTop={false}
             onScroll={(e) => { deckFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
             scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}
@@ -502,6 +506,10 @@ export default function StudyScreen() {
             data={visibleTags}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            scrollsToTop={false}
             onScroll={(e) => { tagFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
             scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}

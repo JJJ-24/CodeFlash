@@ -216,6 +216,10 @@ export default function TagCardsScreen() {
           data={cards}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          automaticallyAdjustsScrollIndicatorInsets={false}
+          scrollsToTop={false}
           ListHeaderComponent={
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('card.list')}

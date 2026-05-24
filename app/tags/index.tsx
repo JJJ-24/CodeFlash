@@ -330,6 +330,10 @@ export default function TagsScreen() {
           data={sortedTags}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, selectionMode && { paddingBottom: 160 }]}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          automaticallyAdjustsScrollIndicatorInsets={false}
+          scrollsToTop={false}
           onScrollOffsetChange={(offset) => {
             scrollOffsetRef.current = offset;
             if (

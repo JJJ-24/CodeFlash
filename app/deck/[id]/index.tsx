@@ -623,6 +623,10 @@ export default function DeckDetailScreen() {
           data={displayedCards}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          automaticallyAdjustsScrollIndicatorInsets={false}
+          scrollsToTop={false}
           onScrollOffsetChange={(offset) => {
             scrollOffsetRef.current = offset;
             if (

@@ -329,6 +329,10 @@ export default function HomeScreen() {
             data={sortedDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            scrollsToTop={false}
             onScrollOffsetChange={(offset) => {
               scrollOffsetRef.current = offset;
               if (

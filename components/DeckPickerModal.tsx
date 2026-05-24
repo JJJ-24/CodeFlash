@@ -1,4 +1,6 @@
-import { FlatList, Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -12,11 +14,78 @@ interface Props {
   onClose: () => void;
   showCardCount?: boolean;
   emptyMessage?: string;
+  /** 渡された場合「+ 新規作成」行を表示。作成された Deck を返すと自動的に onSelect が呼ばれる */
+  onCreateDeck?: (name: string) => Promise<Deck>;
 }
 
-export function DeckPickerModal({ visible, title, decks, onSelect, onClose, showCardCount = false, emptyMessage }: Props) {
+export function DeckPickerModal({ visible, title, decks, onSelect, onClose, showCardCount = false, emptyMessage, onCreateDeck }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setCreating(false);
+      setNewName('');
+      setSubmitting(false);
+    }
+  }, [visible]);
+
+  async function handleCreate() {
+    const trimmed = newName.trim();
+    if (!trimmed || !onCreateDeck || submitting) return;
+    try {
+      setSubmitting(true);
+      const deck = await onCreateDeck(trimmed);
+      onSelect(deck);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const canSubmit = newName.trim().length > 0 && !submitting;
+
+  const header = onCreateDeck ? (
+    creating ? (
+      <View style={[styles.item, { borderBottomColor: theme.colors.border }]}>
+        <TextInput
+          autoFocus
+          value={newName}
+          onChangeText={setNewName}
+          placeholder={t('deck.name')}
+          placeholderTextColor={theme.colors.textSecondary}
+          style={{ flex: 1, marginRight: 8, fontSize: theme.fontSize.md, color: theme.colors.text, paddingVertical: 0 }}
+          onSubmitEditing={handleCreate}
+          editable={!submitting}
+          returnKeyType="done"
+          maxLength={50}
+        />
+        {submitting ? (
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+        ) : (
+          <Pressable onPress={handleCreate} disabled={!canSubmit} hitSlop={8}>
+            <Ionicons
+              name="checkmark"
+              size={Math.round(theme.fontSize.xxl)}
+              color={canSubmit ? theme.colors.primary : theme.colors.textSecondary}
+            />
+          </Pressable>
+        )}
+      </View>
+    ) : (
+      <Pressable
+        style={[styles.item, { borderBottomColor: theme.colors.border }]}
+        onPress={() => setCreating(true)}
+      >
+        <Ionicons name="add" size={Math.round(theme.fontSize.xl)} color={theme.colors.primary} style={{ marginRight: 8 }} />
+        <Text style={[styles.itemName, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {t('deck.createInline')}
+        </Text>
+      </Pressable>
+    )
+  ) : null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -28,6 +97,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
           <FlatList
             data={decks}
             keyExtractor={(item) => item.id}
+            ListHeaderComponent={header}
             renderItem={({ item }) => (
               <Pressable
                 style={[styles.item, { borderBottomColor: theme.colors.border }]}
@@ -44,9 +114,11 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
               </Pressable>
             )}
             ListEmptyComponent={
-              <Text style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {emptyMessage ?? t('card.noDeckToMove')}
-              </Text>
+              onCreateDeck ? null : (
+                <Text style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {emptyMessage ?? t('card.noDeckToMove')}
+                </Text>
+              )
             }
           />
           <Pressable style={[styles.cancel, { borderTopColor: theme.colors.border }]} onPress={onClose}>

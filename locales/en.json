@@ -9,6 +9,7 @@
   },
   "deck": {
     "new": "New Deck",
+    "createInline": "Create New Deck",
     "edit": "Edit Deck",
     "delete": "Delete Deck",
     "deleteConfirm": "Delete \"{{name}}\"?\nAll associated cards and review history (stats) will also be deleted.",

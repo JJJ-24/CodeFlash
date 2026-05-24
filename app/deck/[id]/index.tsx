@@ -45,6 +45,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
@@ -64,7 +65,7 @@ export default function DeckDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
-  const { decks, updateDeck } = useDeckStore();
+  const { decks, updateDeck, addDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
@@ -81,7 +82,7 @@ export default function DeckDetailScreen() {
   const restorationEndTimeRef = useRef(0);
   const filterOffsetsRef = useRef<Record<FilterKey, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const prevFilterRef = useRef<FilterKey>(selectedFilter);
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur, isScreenFocusedRef } = useKeyboardFocus();
   const listRef = useRef<FlatList<Card>>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
@@ -185,6 +186,18 @@ export default function DeckDetailScreen() {
       return () => clearTimeout(timer);
     }
   }, [statsCardId, keyboardShortcutsEnabled, keyboardRef]);
+
+  // DeckPickerModal の TextInput にフォーカスを渡すため hidden TextInput の自動再フォーカスを抑止する
+  useEffect(() => {
+    if (showDeckPicker) {
+      isScreenFocusedRef.current = false;
+      keyboardRef.current?.blur();
+    } else if (keyboardShortcutsEnabled) {
+      isScreenFocusedRef.current = true;
+      const timer = setTimeout(() => keyboardRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showDeckPicker, keyboardShortcutsEnabled, keyboardRef, isScreenFocusedRef]);
 
   useEffect(() => {
     filterOffsetsRef.current[prevFilterRef.current] = scrollOffsetRef.current;
@@ -773,6 +786,11 @@ export default function DeckDetailScreen() {
         onSelect={handleMoveToDeck}
         onClose={() => setShowDeckPicker(false)}
         showCardCount
+        onCreateDeck={async (name) => {
+          const deck = await createDeck(db, { name, description: '', language: 'ja' });
+          addDeck(deck);
+          return deck;
+        }}
       />
       <ShortcutsModal
         visible={showShortcutsModal}

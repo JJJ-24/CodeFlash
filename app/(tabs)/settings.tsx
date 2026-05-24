@@ -6,7 +6,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 
@@ -14,7 +14,7 @@ import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { InfoModal } from '@/components/InfoModal';
 
-import { getAllDecks } from '@/lib/database/decks';
+import { createDeck, getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
 import { estimateExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
@@ -86,7 +86,7 @@ export default function SettingsScreen() {
     setNotificationEnabled, setNotificationTime,
     fsrsDesiredRetention, setFsrsDesiredRetention,
   } = useSettingsStore();
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
+  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur, isScreenFocusedRef } = useKeyboardFocus();
 
   useFocusEffect(
     useCallback(() => {
@@ -94,13 +94,25 @@ export default function SettingsScreen() {
       return () => { onScreenBlur(); };
     }, [onScreenFocus, onScreenBlur])
   );
-  const { decks, setDecks } = useDeckStore();
+  const { decks, setDecks, addDeck } = useDeckStore();
   const { setTags } = useTagStore();
   const [loading, setLoading] = useState(false);
   const [tsvDeckPickerVisible, setTsvDeckPickerVisible] = useState(false);
   const [tsvAction, setTsvAction] = useState<'export' | 'import' | null>(null);
   const pendingTsvUriRef = useRef<string | null>(null);
   const tsvProcessingRef = useRef(false);
+
+  // DeckPickerModal の TextInput にフォーカスを渡すため hidden TextInput の自動再フォーカスを抑止する
+  useEffect(() => {
+    if (tsvDeckPickerVisible) {
+      isScreenFocusedRef.current = false;
+      keyboardRef.current?.blur();
+    } else if (keyboardShortcutsEnabled) {
+      isScreenFocusedRef.current = true;
+      const timer = setTimeout(() => keyboardRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [tsvDeckPickerVisible, keyboardShortcutsEnabled, keyboardRef, isScreenFocusedRef]);
 
   type ModalConfig =
     | { kind: 'info'; title?: string; message: string }
@@ -590,6 +602,11 @@ export default function SettingsScreen() {
       decks={decks}
       onSelect={handleTsvDeckSelected}
       onClose={() => setTsvDeckPickerVisible(false)}
+      onCreateDeck={tsvAction === 'import' ? async (name) => {
+        const deck = await createDeck(db, { name, description: '', language: 'ja' });
+        addDeck(deck);
+        return deck;
+      } : undefined}
     />
     {loading && <View style={styles.loadingOverlay} onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true} />}
     {modal?.kind === 'info' && (

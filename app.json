@@ -68,6 +68,13 @@
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#FFFFFF"
         }
+      ],
+      [
+        "@oleg_svetlichnyi/expo-icloud-storage",
+        {
+          "containerIdentifier": "iCloud.$(CFBundleIdentifier)",
+          "containerName": "$(PRODUCT_NAME)"
+        }
       ]
     ],
     "experiments": {

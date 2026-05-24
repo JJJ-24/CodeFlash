@@ -19,6 +19,12 @@ import { getAllTags } from '@/lib/database/tags';
 import { estimateExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
 import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
+import {
+  ICloudUnavailableError,
+  NoRemoteBackupError,
+  SchemaVersionMismatchError,
+  syncNow,
+} from '@/lib/sync/syncEngine';
 import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
@@ -29,6 +35,7 @@ import {
   FSRS_RETENTION_MIN,
   useSettingsStore,
 } from '@/store/settings';
+import { useSyncStore } from '@/store/sync';
 import { useTagStore } from '@/store/tags';
 import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
@@ -86,6 +93,15 @@ export default function SettingsScreen() {
     setNotificationEnabled, setNotificationTime,
     fsrsDesiredRetention, setFsrsDesiredRetention,
   } = useSettingsStore();
+  const {
+    enabled: syncEnabled,
+    setEnabled: setSyncEnabled,
+    status: syncStatus,
+    direction: syncDirection,
+    lastSyncedAt,
+    errorMessage: syncErrorMessage,
+    clearError: clearSyncError,
+  } = useSyncStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur, isScreenFocusedRef } = useKeyboardFocus();
 
   useFocusEffect(
@@ -253,6 +269,92 @@ export default function SettingsScreen() {
     } else {
       tsvProcessingRef.current = false;
     }
+  }
+
+  function describeSyncError(e: unknown): string {
+    if (e instanceof ICloudUnavailableError) return t('sync.iCloudUnavailable');
+    if (e instanceof SchemaVersionMismatchError) return t('sync.schemaVersionMismatch');
+    if (e instanceof NoRemoteBackupError) return t('sync.noRemoteBackup');
+    return e instanceof Error ? e.message : t('sync.syncError');
+  }
+
+  async function handleSyncToggle(value: boolean) {
+    clearSyncError();
+    if (value) {
+      // 有効化：その場で初回同期を試行
+      setSyncEnabled(true);
+      try {
+        await syncNow(db, 'auto');
+      } catch (e) {
+        // syncNow が store にエラーをセットするので追加表示は不要
+        setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
+      }
+    } else {
+      setSyncEnabled(false);
+    }
+  }
+
+  async function handleManualSync() {
+    if (syncStatus === 'syncing') return;
+    try {
+      await syncNow(db, 'auto');
+    } catch (e) {
+      setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
+    }
+  }
+
+  async function handleForceUpload() {
+    setModal({
+      kind: 'confirm',
+      title: t('sync.forceUpload'),
+      message: t('sync.forceUploadConfirm'),
+      actions: [{
+        label: t('sync.forceUpload'),
+        destructive: true,
+        onPress: async () => {
+          setModal(null);
+          try {
+            await syncNow(db, 'upload');
+          } catch (e) {
+            setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
+          }
+        },
+      }],
+    });
+  }
+
+  async function handleForceDownload() {
+    setModal({
+      kind: 'confirm',
+      title: t('sync.forceDownload'),
+      message: t('sync.forceDownloadConfirm'),
+      actions: [{
+        label: t('sync.forceDownload'),
+        destructive: true,
+        onPress: async () => {
+          setModal(null);
+          try {
+            await syncNow(db, 'download');
+          } catch (e) {
+            setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
+          }
+        },
+      }],
+    });
+  }
+
+  function formatLastSynced(): string {
+    if (!lastSyncedAt) return t('sync.lastSyncedNever');
+    const d = new Date(lastSyncedAt);
+    const datetime = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return t('sync.lastSyncedAt', { datetime });
+  }
+
+  function getSyncStatusText(): string {
+    if (syncStatus !== 'syncing') return '';
+    if (syncDirection === 'upload') return t('sync.syncingUpload');
+    if (syncDirection === 'download') return t('sync.syncingDownload');
+    return t('sync.syncing');
   }
 
   async function handleImport() {
@@ -528,6 +630,101 @@ export default function SettingsScreen() {
         </View>
       )}
 
+      {/* iCloud 同期 */}
+      {!isPro ? (
+        <Pressable
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          onPress={() => router.push('/paywall')}
+        >
+          <View style={styles.proRow}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <View style={styles.proTitleRow}>
+                <Text style={[styles.proTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('sync.title')}
+                </Text>
+                <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />
+              </View>
+              <Text style={[styles.proSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('sync.lockedSubtitle')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+          </View>
+        </Pressable>
+      ) : (
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('sync.title')}
+          </Text>
+          <View style={styles.notificationRow}>
+            <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('sync.enabled')}
+            </Text>
+            <Switch
+              value={syncEnabled}
+              onValueChange={handleSyncToggle}
+              trackColor={{ true: theme.colors.primary }}
+              disabled={syncStatus === 'syncing'}
+            />
+          </View>
+          {syncEnabled && (
+            <>
+              <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                {t('sync.description')}
+              </Text>
+              <View style={styles.syncStatusRow}>
+                <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {formatLastSynced()}
+                </Text>
+              </View>
+              {syncErrorMessage && syncStatus !== 'syncing' && (
+                <Text style={[{ color: theme.colors.danger, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {syncErrorMessage}
+                </Text>
+              )}
+              <Pressable
+                style={[styles.dataRow, { opacity: syncStatus === 'syncing' ? 0.6 : 1 }]}
+                onPress={handleManualSync}
+                disabled={syncStatus === 'syncing'}
+              >
+                <View style={styles.dataRowText}>
+                  <Text style={[styles.dataRowTitle, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {syncStatus === 'syncing' ? getSyncStatusText() : t('sync.syncNow')}
+                  </Text>
+                </View>
+                {syncStatus === 'syncing' ? (
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                ) : (
+                  <Ionicons name="sync" size={theme.fontSize.lg} color={theme.colors.primary} />
+                )}
+              </Pressable>
+              <View style={styles.syncAdvancedRow}>
+                <Pressable
+                  style={[styles.syncAdvancedBtn, { opacity: syncStatus === 'syncing' ? 0.4 : 1 }]}
+                  onPress={handleForceUpload}
+                  disabled={syncStatus === 'syncing'}
+                >
+                  <Ionicons name="cloud-upload-outline" size={theme.fontSize.md} color={theme.colors.textSecondary} />
+                  <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                    {t('sync.forceUpload')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.syncAdvancedBtn, { opacity: syncStatus === 'syncing' ? 0.4 : 1 }]}
+                  onPress={handleForceDownload}
+                  disabled={syncStatus === 'syncing'}
+                >
+                  <Ionicons name="cloud-download-outline" size={theme.fontSize.md} color={theme.colors.textSecondary} />
+                  <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                    {t('sync.forceDownload')}
+                  </Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
+      )}
+
       {/* データ管理 */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -704,4 +901,23 @@ dataRow: {
   },
   fsrsScaleText: {},
   fsrsHint: { lineHeight: 16, marginTop: 2 },
+  syncStatusRow: {
+    paddingVertical: 4,
+  },
+  syncAdvancedRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 4,
+  },
+  syncAdvancedBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(127,127,127,0.25)',
+  },
 });

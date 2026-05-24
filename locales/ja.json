@@ -299,6 +299,28 @@
     "tsvImportSuccess": "新規 {{created}} 枚\n更新 {{updated}} 枚\nをインポートしました",
     "tsvImportError": "TSV の読み込みに失敗しました"
   },
+  "sync": {
+    "title": "iCloud 同期",
+    "lockedSubtitle": "Pro にアップグレードして複数デバイスでデータ同期",
+    "enabled": "iCloud 同期を有効化",
+    "description": "同じ Apple ID でサインインしたデバイス間でデータを同期します",
+    "lastSyncedNever": "まだ同期されていません",
+    "lastSyncedAt": "最終同期: {{datetime}}",
+    "syncNow": "今すぐ同期",
+    "syncing": "同期中…",
+    "syncingUpload": "アップロード中…",
+    "syncingDownload": "ダウンロード中…",
+    "syncSuccess": "同期が完了しました",
+    "syncError": "同期に失敗しました",
+    "iCloudUnavailable": "iCloud が利用できません。設定アプリで iCloud Drive を有効にしてください",
+    "schemaVersionMismatch": "新しいバージョンのアプリで同期されたデータです。アプリを更新してください",
+    "noRemoteBackup": "iCloud にバックアップがありません",
+    "advanced": "詳細",
+    "forceUpload": "強制アップロード",
+    "forceUploadConfirm": "ローカルのデータを iCloud に強制的にアップロードします。\niCloud 上のデータは上書きされます。続けますか？",
+    "forceDownload": "強制ダウンロード",
+    "forceDownloadConfirm": "iCloud のデータをローカルに強制的にダウンロードします。\nローカルのデータは置き換えられます。続けますか？"
+  },
   "pro": {
     "badge": "Pro",
     "paywallTitle": "CodeFlash Pro",

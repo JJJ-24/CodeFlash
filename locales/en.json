@@ -299,6 +299,28 @@
     "tsvImportSuccess": "Imported: {{created}} new\n{{updated}} updated",
     "tsvImportError": "Failed to read TSV file"
   },
+  "sync": {
+    "title": "iCloud Sync",
+    "lockedSubtitle": "Upgrade to Pro to sync data across devices",
+    "enabled": "Enable iCloud sync",
+    "description": "Sync data across devices signed in to the same Apple ID",
+    "lastSyncedNever": "Not synced yet",
+    "lastSyncedAt": "Last synced: {{datetime}}",
+    "syncNow": "Sync Now",
+    "syncing": "Syncing…",
+    "syncingUpload": "Uploading…",
+    "syncingDownload": "Downloading…",
+    "syncSuccess": "Sync complete",
+    "syncError": "Sync failed",
+    "iCloudUnavailable": "iCloud is unavailable. Enable iCloud Drive in Settings.",
+    "schemaVersionMismatch": "Data was synced by a newer version of the app. Please update.",
+    "noRemoteBackup": "No backup found on iCloud",
+    "advanced": "Advanced",
+    "forceUpload": "Force Upload",
+    "forceUploadConfirm": "Force upload local data to iCloud.\nExisting iCloud data will be overwritten. Continue?",
+    "forceDownload": "Force Download",
+    "forceDownloadConfirm": "Force download iCloud data to this device.\nLocal data will be replaced. Continue?"
+  },
   "pro": {
     "badge": "Pro",
     "paywallTitle": "CodeFlash Pro",

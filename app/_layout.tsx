@@ -3,15 +3,18 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect } from 'react';
-import { ActivityIndicator, AppState, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, AppState, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { cancelAllReminders, scheduleDailyReminder, updateBadgeCount } from '@/lib/notifications';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
+import { useDbSwapController } from '@/lib/sync/dbSwap';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
+import { useSyncStore } from '@/store/sync';
 import { useThemeStore } from '@/store/theme';
 
 initializePurchases();
@@ -93,6 +96,16 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const isDark = preference === 'dark' || (preference === 'system' && colorScheme === 'dark');
   const surfaceColor = isDark ? '#1E1E1E' : '#FFFFFF';
+  const textColor = isDark ? '#FFFFFF' : '#1A1A1A';
+  const { swapping, dbKey } = useDbSwapController();
+  const { t } = useTranslation();
+  const syncStatus = useSyncStore((s) => s.status);
+  const syncDirection = useSyncStore((s) => s.direction);
+
+  const syncOverlayText =
+    syncDirection === 'upload' ? t('sync.syncingUpload')
+    : syncDirection === 'download' ? t('sync.syncingDownload')
+    : t('sync.syncing');
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: surfaceColor }}>
@@ -103,10 +116,29 @@ export default function RootLayout() {
           </View>
         }
       >
-        <SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
-          {hydrated ? <RootStack /> : <View style={{ flex: 1, backgroundColor: surfaceColor }} />}
-        </SQLiteProvider>
+        {swapping ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: surfaceColor }}>
+            <ActivityIndicator />
+          </View>
+        ) : (
+          <SQLiteProvider key={dbKey} databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
+            {hydrated ? <RootStack /> : <View style={{ flex: 1, backgroundColor: surfaceColor }} />}
+          </SQLiteProvider>
+        )}
       </Suspense>
+      {/* 同期中はアプリ全体をブロックして DB 書込み系の操作との競合を防ぐ */}
+      {syncStatus === 'syncing' && (
+        <View
+          style={[StyleSheet.absoluteFill, {
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)',
+          }]}
+        >
+          <ActivityIndicator size="large" />
+          <Text style={{ marginTop: 12, color: textColor, fontSize: 16 }}>{syncOverlayText}</Text>
+        </View>
+      )}
     </GestureHandlerRootView>
   );
 }

@@ -319,7 +319,14 @@
     "forceUpload": "強制アップロード",
     "forceUploadConfirm": "ローカルのデータを iCloud に強制的にアップロードします。\niCloud 上のデータは上書きされます。続けますか？",
     "forceDownload": "強制ダウンロード",
-    "forceDownloadConfirm": "iCloud のデータをローカルに強制的にダウンロードします。\nローカルのデータは置き換えられます。続けますか？"
+    "forceDownloadConfirm": "iCloud のデータをローカルに強制的にダウンロードします。\nローカルのデータは置き換えられます。続けますか？",
+    "restoreTitle": "バックアップから復元",
+    "restoreSubtitle": "自動バックアップ（最新3件）",
+    "restoreNone": "復元できるバックアップがありません。\nバックアップは同期でデータが置き換わる直前に自動作成されます。",
+    "restoreSelectMessage": "復元する時点を選んでください。現在のデータはこのバックアップで置き換えられます。",
+    "restoreConfirmMessage": "{{datetime}} 時点のデータで現在のデータを置き換えます。続けますか？",
+    "restoreConfirm": "復元する",
+    "restoreSuccess": "バックアップから復元しました"
   },
   "pro": {
     "badge": "Pro",

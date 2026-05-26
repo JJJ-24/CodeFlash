@@ -141,4 +141,31 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   if (!gradeLogCols.some((c) => c.name === 'responseTimeMs')) {
     await db.execAsync(`ALTER TABLE grade_logs ADD COLUMN responseTimeMs INTEGER;`);
   }
+
+  // === iCloud 同期用：ローカル変更追跡 ===
+  // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
+  // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。
+  // localChangedAt は epoch ミリ秒（remote meta.updatedAt と比較するため）。
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS sync_state (
+      id             INTEGER PRIMARY KEY CHECK (id = 1),
+      localVersion   INTEGER NOT NULL DEFAULT 0,
+      localChangedAt INTEGER NOT NULL DEFAULT 0
+    );
+    INSERT OR IGNORE INTO sync_state (id, localVersion, localChangedAt) VALUES (1, 0, 0);
+  `);
+  const SYNC_TRACKED_TABLES = [
+    'decks', 'cards', 'card_contents', 'tags', 'card_tags', 'reviews', 'review_logs', 'grade_logs',
+  ];
+  const bumpBody =
+    "UPDATE sync_state SET localVersion = localVersion + 1, " +
+    "localChangedAt = CAST((julianday('now') - 2440587.5) * 86400000.0 AS INTEGER) WHERE id = 1;";
+  let triggerSql = '';
+  for (const t of SYNC_TRACKED_TABLES) {
+    triggerSql +=
+      `CREATE TRIGGER IF NOT EXISTS sv_${t}_i AFTER INSERT ON ${t} BEGIN ${bumpBody} END;\n` +
+      `CREATE TRIGGER IF NOT EXISTS sv_${t}_u AFTER UPDATE ON ${t} BEGIN ${bumpBody} END;\n` +
+      `CREATE TRIGGER IF NOT EXISTS sv_${t}_d AFTER DELETE ON ${t} BEGIN ${bumpBody} END;\n`;
+  }
+  await db.execAsync(triggerSql);
 }

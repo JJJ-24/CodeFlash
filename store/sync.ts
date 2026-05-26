@@ -3,6 +3,8 @@ import { create } from 'zustand';
 
 const SYNC_ENABLED_KEY = '@codeflash_icloud_sync_enabled';
 const LAST_SYNCED_AT_KEY = '@codeflash_icloud_last_synced_at';
+const LAST_SYNCED_VERSION_KEY = '@codeflash_icloud_last_synced_version';
+const LAST_REMOTE_UPDATED_AT_KEY = '@codeflash_icloud_last_remote_updated_at';
 const DEVICE_ID_KEY = '@codeflash_device_id';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error';
@@ -13,15 +15,29 @@ interface SyncState {
   enabled: boolean;
   status: SyncStatus;
   direction: SyncDirection | null;
+  /** true のとき同期中はアプリ全体をオーバーレイでブロックする（ユーザー操作の同期のみ true。自動トリガーは false） */
+  blocking: boolean;
+  /** 最後に同期処理を行った実時刻（表示「最終同期」用。変更検知には使わない）。 */
   lastSyncedAt: number | null;
+  /** 最後に同期したときのローカル変更カウンタ（sync_state.localVersion）。ローカル変更検知の基準。 */
+  lastSyncedVersion: number | null;
+  /**
+   * 現在「追いついている」リモート版の meta.updatedAt。リモート変更検知（remoteChanged）の基準。
+   * 実時刻ではなくリモート版の時刻を使うことで、まだ伝播していない相手の更新
+   * （updatedAt が実時刻 now より前）を取りこぼさない & 端末間の時計ズレにも強い。
+   */
+  lastRemoteUpdatedAt: number | null;
   errorMessage: string | null;
   deviceId: string;
 
   setEnabled: (enabled: boolean) => void;
   setStatus: (status: SyncStatus, direction?: SyncDirection | null) => void;
+  setBlocking: (blocking: boolean) => void;
   setError: (message: string) => void;
   clearError: () => void;
   setLastSyncedAt: (timestamp: number) => void;
+  setLastSyncedVersion: (version: number) => void;
+  setLastRemoteUpdatedAt: (timestamp: number) => void;
 }
 
 function generateDeviceId(): string {
@@ -33,7 +49,10 @@ export const useSyncStore = create<SyncState>((set) => ({
   enabled: false,
   status: 'idle',
   direction: null,
+  blocking: false,
   lastSyncedAt: null,
+  lastSyncedVersion: null,
+  lastRemoteUpdatedAt: null,
   errorMessage: null,
   deviceId: '',
 
@@ -42,10 +61,14 @@ export const useSyncStore = create<SyncState>((set) => ({
     AsyncStorage.setItem(SYNC_ENABLED_KEY, String(enabled));
   },
   setStatus: (status, direction = null) => {
-    set({ status, direction });
+    // syncing 以外に遷移したら blocking は必ず解除する
+    set(status === 'syncing' ? { status, direction } : { status, direction, blocking: false });
+  },
+  setBlocking: (blocking) => {
+    set({ blocking });
   },
   setError: (message) => {
-    set({ status: 'error', direction: null, errorMessage: message });
+    set({ status: 'error', direction: null, blocking: false, errorMessage: message });
   },
   clearError: () => {
     set({ errorMessage: null });
@@ -54,12 +77,22 @@ export const useSyncStore = create<SyncState>((set) => ({
     set({ lastSyncedAt: timestamp });
     AsyncStorage.setItem(LAST_SYNCED_AT_KEY, String(timestamp));
   },
+  setLastSyncedVersion: (version) => {
+    set({ lastSyncedVersion: version });
+    AsyncStorage.setItem(LAST_SYNCED_VERSION_KEY, String(version));
+  },
+  setLastRemoteUpdatedAt: (timestamp) => {
+    set({ lastRemoteUpdatedAt: timestamp });
+    AsyncStorage.setItem(LAST_REMOTE_UPDATED_AT_KEY, String(timestamp));
+  },
 }));
 
 (async () => {
-  const [enabledRaw, lastSyncedRaw, deviceIdRaw] = await Promise.all([
+  const [enabledRaw, lastSyncedRaw, lastSyncedVersionRaw, lastRemoteUpdatedRaw, deviceIdRaw] = await Promise.all([
     AsyncStorage.getItem(SYNC_ENABLED_KEY),
     AsyncStorage.getItem(LAST_SYNCED_AT_KEY),
+    AsyncStorage.getItem(LAST_SYNCED_VERSION_KEY),
+    AsyncStorage.getItem(LAST_REMOTE_UPDATED_AT_KEY),
     AsyncStorage.getItem(DEVICE_ID_KEY),
   ]);
 
@@ -70,10 +103,14 @@ export const useSyncStore = create<SyncState>((set) => ({
   }
 
   const lastSyncedAt = lastSyncedRaw ? Number(lastSyncedRaw) : null;
+  const lastSyncedVersion = lastSyncedVersionRaw != null ? Number(lastSyncedVersionRaw) : null;
+  const lastRemoteUpdatedAt = lastRemoteUpdatedRaw != null ? Number(lastRemoteUpdatedRaw) : null;
 
   useSyncStore.setState({
     enabled: enabledRaw === 'true',
     lastSyncedAt: Number.isFinite(lastSyncedAt) ? lastSyncedAt : null,
+    lastSyncedVersion: lastSyncedVersion != null && Number.isFinite(lastSyncedVersion) ? lastSyncedVersion : null,
+    lastRemoteUpdatedAt: lastRemoteUpdatedAt != null && Number.isFinite(lastRemoteUpdatedAt) ? lastRemoteUpdatedAt : null,
     deviceId,
     hydrated: true,
   });

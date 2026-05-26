@@ -319,7 +319,14 @@
     "forceUpload": "Force Upload",
     "forceUploadConfirm": "Force upload local data to iCloud.\nExisting iCloud data will be overwritten. Continue?",
     "forceDownload": "Force Download",
-    "forceDownloadConfirm": "Force download iCloud data to this device.\nLocal data will be replaced. Continue?"
+    "forceDownloadConfirm": "Force download iCloud data to this device.\nLocal data will be replaced. Continue?",
+    "restoreTitle": "Restore from Backup",
+    "restoreSubtitle": "Automatic backups (last 3)",
+    "restoreNone": "No backups available to restore.\nBackups are created automatically just before sync replaces your data.",
+    "restoreSelectMessage": "Choose a point to restore. Your current data will be replaced with this backup.",
+    "restoreConfirmMessage": "Replace current data with the backup from {{datetime}}. Continue?",
+    "restoreConfirm": "Restore",
+    "restoreSuccess": "Restored from backup"
   },
   "pro": {
     "badge": "Pro",

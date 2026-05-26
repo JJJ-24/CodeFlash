@@ -1,0 +1,75 @@
+diff --git a/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift b/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift
+index 6853adf..4c4b6bb 100644
+--- a/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift
++++ b/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift
+@@ -39,13 +39,20 @@ public class ExpoIcloudStorageModule: Module {
+         func processUploading(_ query: NSMetadataQuery, _ self: Any) {
+             for i in 0 ..< query.resultCount {
+                 if let item = query.result(at: i) as? NSMetadataItem {
+-                    if let fileName = item.value(forAttribute: NSMetadataItemFSNameKey) as? String,
+-                       let percentUploaded = item.value(forAttribute: NSMetadataUbiquitousItemPercentUploadedKey) as? Double,
+-                       let fileSize = item.value(forAttribute: NSMetadataItemFSSizeKey) as? Int64 {
++                    let fileName = item.value(forAttribute: NSMetadataItemFSNameKey) as? String
++                    let percentUploaded = (item.value(forAttribute: NSMetadataUbiquitousItemPercentUploadedKey) as? NSNumber)?.doubleValue
++                    let fileSize = item.value(forAttribute: NSMetadataItemFSSizeKey) as? Int64
++                    if let fileName = fileName, let percentUploaded = percentUploaded, let fileSize = fileSize {
+                         progressCallback(percentUploaded, fileSize, fileName)
+                     }
+ 
+-                    if item.value(forAttribute: NSMetadataUbiquitousItemIsUploadedKey) is Bool {
++                    let isUploaded = (item.value(forAttribute: NSMetadataUbiquitousItemIsUploadedKey) as? NSNumber)?.boolValue ?? false
++
++                    // 元実装は `is Bool`（型チェックのみ）でアップロード開始直後に成功扱いになり、伝播しなかった。
++                    // 逆に isUploaded だけを待つと、環境によっては true にならず（更新通知が来ず）タイムアウトする。
++                    // バイトが上がりきった（percent>=100）か isUploaded のどちらかで完了とみなす。
++                    let uploadComplete = isUploaded || (percentUploaded ?? 0) >= 100.0
++                    if uploadComplete {
+                         // File is uploaded
+                         if let uploadedFileURL = item.value(forAttribute: NSMetadataItemURLKey) as? URL {
+                             query.stop()
+@@ -102,8 +109,10 @@ public class ExpoIcloudStorageModule: Module {
+         let fileManager = FileManager.default
+         let destinationURL = destinationDirURL.appendingPathComponent(fileManager.displayName(atPath: fileURL.path))
+         
+-        // First, check if the file exists in iCloud
+-        if !fileManager.fileExists(atPath: fileURL.path) {
++        // First, check if the file exists in iCloud（実体 or 未ダウンロードの placeholder）
++        let placeholderURL = fileURL.deletingLastPathComponent()
++            .appendingPathComponent("." + fileURL.lastPathComponent + ".icloud")
++        if !fileManager.fileExists(atPath: fileURL.path) && !fileManager.fileExists(atPath: placeholderURL.path) {
+             // File doesn't exist, return an error immediately instead of starting the download
+             completionHandler(.failure(NSError(domain: "expo-icloud-storage", code: 1004, userInfo: [NSLocalizedDescriptionKey: "File does not exist in iCloud: \(fileURL.path)"])))
+             return
+@@ -262,7 +271,16 @@ public class ExpoIcloudStorageModule: Module {
+                 return
+             }
+             let fileURL = currentDocumentsURL.appendingPathComponent(path, isDirectory: isDirectory)
+-            promise.resolve(FileManager.default.fileExists(atPath: fileURL.path))
++            let fm = FileManager.default
++            if fm.fileExists(atPath: fileURL.path) {
++                promise.resolve(true)
++                return
++            }
++            // 別端末からアップされた未ダウンロードの iCloud アイテムは
++            // ".<name>.icloud" placeholder として存在する。実体が無くても存在扱いにする。
++            let placeholderURL = fileURL.deletingLastPathComponent()
++                .appendingPathComponent("." + fileURL.lastPathComponent + ".icloud")
++            promise.resolve(fm.fileExists(atPath: placeholderURL.path))
+         }
+ 
+         AsyncFunction("createDirAsync") { (path: String, promise: Promise) in
+@@ -342,9 +360,12 @@ public class ExpoIcloudStorageModule: Module {
+                 return
+             }
+             
+-            // Check if the file exists before attempting to download
++            // Check if the file exists before attempting to download（実体 or placeholder）
+             let fileManager = FileManager.default
+-            if !fileManager.fileExists(atPath: path) {
++            let preDownloadURL = URL(fileURLWithPath: path)
++            let preDownloadPlaceholder = preDownloadURL.deletingLastPathComponent()
++                .appendingPathComponent("." + preDownloadURL.lastPathComponent + ".icloud")
++            if !fileManager.fileExists(atPath: path) && !fileManager.fileExists(atPath: preDownloadPlaceholder.path) {
+                 promise.reject(NSError(domain: "expo-icloud-storage", code: 1004, userInfo: [NSLocalizedDescriptionKey: "File does not exist in iCloud: \(path)"]))
+                 self.sendEvent("onDownloadFilesAsyncProgress", ["value": 0])
+                 return

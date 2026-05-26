@@ -11,7 +11,7 @@ import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { cancelAllReminders, scheduleDailyReminder, updateBadgeCount } from '@/lib/notifications';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
-import { useDbSwapController } from '@/lib/sync/dbSwap';
+import { triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useSyncStore } from '@/store/sync';
@@ -35,11 +35,25 @@ function RootStack() {
   };
   const db = useSQLiteContext();
   const { notificationEnabled, notificationHour, notificationMinute } = useSettingsStore();
+  const syncHydrated = useSyncStore((s) => s.hydrated);
+  const syncEnabled = useSyncStore((s) => s.enabled);
 
   useEffect(() => {
     cleanupOrphanImages(db).catch(() => {});
     restoreProStatus().catch(() => {});
   }, []);
+
+  // iCloud 同期の自動トリガー：起動／フォアグラウンド復帰でプル、バックグラウンド移行でアップ。
+  // hydrated・enabled の変化で張り直す（無効時はリスナーを張らない）。判定は trigger 内でも再確認する。
+  useEffect(() => {
+    if (!syncHydrated || !syncEnabled) return;
+    triggerForegroundSync(db);
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') triggerForegroundSync(db);
+      else if (next === 'background') triggerBackgroundUpload(db);
+    });
+    return () => sub.remove();
+  }, [db, syncHydrated, syncEnabled]);
 
   // アプリがフォアグラウンドに戻るたびに通知を再スケジュール（OS による消去に対応）
   useEffect(() => {
@@ -97,10 +111,13 @@ export default function RootLayout() {
   const isDark = preference === 'dark' || (preference === 'system' && colorScheme === 'dark');
   const surfaceColor = isDark ? '#1E1E1E' : '#FFFFFF';
   const textColor = isDark ? '#FFFFFF' : '#1A1A1A';
-  const { swapping, dbKey } = useDbSwapController();
   const { t } = useTranslation();
   const syncStatus = useSyncStore((s) => s.status);
   const syncDirection = useSyncStore((s) => s.direction);
+  const syncBlocking = useSyncStore((s) => s.blocking);
+  // ユーザー操作の同期（blocking）は決定フェーズから全画面ブロック。
+  // 自動同期は実際の転送（direction が立つ）中のみブロックし、リモート確認だけならチラつかせない。
+  const showSyncOverlay = syncStatus === 'syncing' && (syncBlocking || syncDirection !== null);
 
   const syncOverlayText =
     syncDirection === 'upload' ? t('sync.syncingUpload')
@@ -116,29 +133,29 @@ export default function RootLayout() {
           </View>
         }
       >
-        {swapping ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: surfaceColor }}>
-            <ActivityIndicator />
-          </View>
-        ) : (
-          <SQLiteProvider key={dbKey} databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
-            {hydrated ? <RootStack /> : <View style={{ flex: 1, backgroundColor: surfaceColor }} />}
-          </SQLiteProvider>
-        )}
+        <SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>
+          {hydrated ? <RootStack /> : <View style={{ flex: 1, backgroundColor: surfaceColor }} />}
+        </SQLiteProvider>
       </Suspense>
-      {/* 同期中はアプリ全体をブロックして DB 書込み系の操作との競合を防ぐ */}
-      {syncStatus === 'syncing' && (
-        <View
-          style={[StyleSheet.absoluteFill, {
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)',
-          }]}
-        >
-          <ActivityIndicator size="large" />
-          <Text style={{ marginTop: 12, color: textColor, fontSize: 16 }}>{syncOverlayText}</Text>
-        </View>
-      )}
+      {/* 同期中はアプリ全体をブロックして DB 書込み系の操作との競合を防ぐ。
+          ダウンロード復元は ATTACH によるデータ入れ替え（接続を閉じない）に変更したため
+          ツリーの unmount は発生しないが、入れ替え中の DB アクセス競合を避けるためブロックする。 */}
+      <View
+        pointerEvents={showSyncOverlay ? 'auto' : 'none'}
+        style={[StyleSheet.absoluteFill, {
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)',
+          opacity: showSyncOverlay ? 1 : 0,
+        }]}
+      >
+        {showSyncOverlay && (
+          <>
+            <ActivityIndicator size="large" />
+            <Text style={{ marginTop: 12, color: textColor, fontSize: 16 }}>{syncOverlayText}</Text>
+          </>
+        )}
+      </View>
     </GestureHandlerRootView>
   );
 }

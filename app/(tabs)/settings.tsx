@@ -21,7 +21,10 @@ import { importDatabase } from '@/lib/import';
 import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
 import {
   ICloudUnavailableError,
+  type LocalBackup,
+  listLocalBackups,
   NoRemoteBackupError,
+  restoreFromLocalBackup,
   SchemaVersionMismatchError,
   syncNow,
 } from '@/lib/sync/syncEngine';
@@ -335,6 +338,59 @@ export default function SettingsScreen() {
           setModal(null);
           try {
             await syncNow(db, 'download');
+          } catch (e) {
+            setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
+          }
+        },
+      }],
+    });
+  }
+
+  function formatBackupTime(timestamp: number): string {
+    const d = new Date(timestamp);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+
+  // 自動バックアップ一覧を提示。各世代をアクションボタンとして並べ、選択で確認へ進む。
+  async function handleRestore() {
+    let backups: LocalBackup[];
+    try {
+      backups = await listLocalBackups();
+    } catch {
+      backups = [];
+    }
+    if (backups.length === 0) {
+      setModal({ kind: 'info', title: t('sync.restoreTitle'), message: t('sync.restoreNone') });
+      return;
+    }
+    setModal({
+      kind: 'confirm',
+      title: t('sync.restoreTitle'),
+      message: t('sync.restoreSelectMessage'),
+      actions: backups.map((b) => ({
+        label: formatBackupTime(b.timestamp),
+        onPress: () => confirmRestore(b),
+      })),
+    });
+  }
+
+  function confirmRestore(backup: LocalBackup) {
+    setModal({
+      kind: 'confirm',
+      title: t('sync.restoreTitle'),
+      message: t('sync.restoreConfirmMessage', { datetime: formatBackupTime(backup.timestamp) }),
+      actions: [{
+        label: t('sync.restoreConfirm'),
+        destructive: true,
+        onPress: async () => {
+          setModal(null);
+          try {
+            await restoreFromLocalBackup(db, backup.path);
+            // 復元データを最新のローカル変更として、有効ならそのままリモートへ反映する
+            if (syncEnabled) {
+              try { await syncNow(db, 'auto'); } catch { /* 反映失敗は致命的でない。次回同期で再試行 */ }
+            }
+            setModal({ kind: 'info', title: t('sync.restoreTitle'), message: t('sync.restoreSuccess') });
           } catch (e) {
             setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
           }
@@ -720,6 +776,21 @@ export default function SettingsScreen() {
                   </Text>
                 </Pressable>
               </View>
+              <Pressable
+                style={[styles.dataRow, { opacity: syncStatus === 'syncing' ? 0.6 : 1 }]}
+                onPress={handleRestore}
+                disabled={syncStatus === 'syncing'}
+              >
+                <View style={styles.dataRowText}>
+                  <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.restoreTitle')}
+                  </Text>
+                  <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.restoreSubtitle')}
+                  </Text>
+                </View>
+                <Ionicons name="time-outline" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+              </Pressable>
             </>
           )}
         </View>

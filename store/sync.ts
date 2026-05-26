@@ -10,6 +10,24 @@ const DEVICE_ID_KEY = '@codeflash_device_id';
 export type SyncStatus = 'idle' | 'syncing' | 'error';
 export type SyncDirection = 'upload' | 'download' | 'check';
 
+/**
+ * 同期エラーの種別コード。人間向け文言は UI 側で i18n 翻訳する
+ * （ストアに翻訳済み文字列を入れると端末言語切替・言語不一致でズレるため）。
+ * - unavailable: iCloud 未ログイン／iCloud Drive 無効
+ * - schemaMismatch: リモートが新しいスキーマ（アプリ更新が必要）
+ * - noRemoteBackup: 強制ダウンロード時にリモートが存在しない
+ * - timeout: 転送がタイムアウト（無応答）
+ * - storageFull: iCloud 容量不足
+ * - unknown: 上記以外（想定外エラー）
+ */
+export type SyncErrorCode =
+  | 'unavailable'
+  | 'schemaMismatch'
+  | 'noRemoteBackup'
+  | 'timeout'
+  | 'storageFull'
+  | 'unknown';
+
 interface SyncState {
   hydrated: boolean;
   enabled: boolean;
@@ -27,13 +45,13 @@ interface SyncState {
    * （updatedAt が実時刻 now より前）を取りこぼさない & 端末間の時計ズレにも強い。
    */
   lastRemoteUpdatedAt: number | null;
-  errorMessage: string | null;
+  errorCode: SyncErrorCode | null;
   deviceId: string;
 
   setEnabled: (enabled: boolean) => void;
   setStatus: (status: SyncStatus, direction?: SyncDirection | null) => void;
   setBlocking: (blocking: boolean) => void;
-  setError: (message: string) => void;
+  setError: (code: SyncErrorCode) => void;
   clearError: () => void;
   setLastSyncedAt: (timestamp: number) => void;
   setLastSyncedVersion: (version: number) => void;
@@ -53,7 +71,7 @@ export const useSyncStore = create<SyncState>((set) => ({
   lastSyncedAt: null,
   lastSyncedVersion: null,
   lastRemoteUpdatedAt: null,
-  errorMessage: null,
+  errorCode: null,
   deviceId: '',
 
   setEnabled: (enabled) => {
@@ -67,11 +85,11 @@ export const useSyncStore = create<SyncState>((set) => ({
   setBlocking: (blocking) => {
     set({ blocking });
   },
-  setError: (message) => {
-    set({ status: 'error', direction: null, blocking: false, errorMessage: message });
+  setError: (code) => {
+    set({ status: 'error', direction: null, blocking: false, errorCode: code });
   },
   clearError: () => {
-    set({ errorMessage: null });
+    set({ errorCode: null });
   },
   setLastSyncedAt: (timestamp) => {
     set({ lastSyncedAt: timestamp });

@@ -163,21 +163,22 @@ CloudKit のレコード単位同期ではなく、**SQLite ファイルをま�
 - [ ] `useProStore` で gating
 
 ### 設定画面（`app/(tabs)/settings.tsx`）
-- [ ] 同期 ON/OFF トグル（`useSettingsStore` に `iCloudSyncEnabled` 追加・AsyncStorage 永続化）
-- [ ] 最終同期日時表示
-- [ ] 手動同期ボタン
-- [ ] iCloud アカウント未ログイン時の警告表示
-- [ ] iCloud 容量不足時のエラー表示
+- [x] 同期 ON/OFF トグル（`store/sync.ts` に enabled・AsyncStorage 永続化）
+- [x] 最終同期日時表示
+- [x] 手動同期ボタン
+- [x] iCloud アカウント未ログイン時の警告表示（unavailable エラーをインライン＋モーダル表示）
+- [x] iCloud 容量不足時のエラー表示（storageFull）
 
 ### エラーハンドリング
-- [ ] iCloud 未ログイン時の検知と案内
-- [ ] iCloud 容量不足時の案内
-- [ ] ネットワーク切断時のリトライ
-- [ ] アップロード中にアプリ終了されたケースの対応
+- [x] iCloud 未ログイン時の検知と案内（`ICloudUnavailableError` → code `unavailable`）
+- [x] iCloud 容量不足時の案内（ネイティブ文言ヒューリスティック → code `storageFull`）
+- [x] ネットワーク切断時のリトライ（転送 `withTimeout` でタイムアウト→`syncTimeout` 表示。明示的リトライループは持たず、次回フォアグラウンドの自動同期で再試行＝シンプル方針）
+- [x] アップロード中にアプリ終了されたケースの対応（meta=コミット標識設計。DB だけ／meta 無しの不完全リモートは `getRemoteStatus` が無効扱い＝古いまま破壊しない）
+- エラーは store に**コード**（`SyncErrorCode`）で保持し UI で i18n 翻訳（`syncErrorText`）。`toSyncErrorCode` がエラー→コード正規化。
 
 ### i18n
-- [ ] 同期関連テキストの翻訳キー追加（ja.json / en.json）
-  - 同期中・最終同期・手動同期・エラーメッセージ・Pro 限定案内 等
+- [x] 同期関連テキストの翻訳キー追加（ja.json / en.json）
+  - 同期中・最終同期・手動同期・エラーメッセージ（`syncTimeout`・`storageFull` 追加）・Pro 限定案内 等
 
 ### テスト
 - [ ] 2端末で同じ Apple ID でログインし、双方向同期の動作確認

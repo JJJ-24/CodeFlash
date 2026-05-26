@@ -20,13 +20,11 @@ import { estimateExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
 import { cancelAllReminders, requestPermission, scheduleDailyReminder } from '@/lib/notifications';
 import {
-  ICloudUnavailableError,
   type LocalBackup,
   listLocalBackups,
-  NoRemoteBackupError,
   restoreFromLocalBackup,
-  SchemaVersionMismatchError,
   syncNow,
+  toSyncErrorCode,
 } from '@/lib/sync/syncEngine';
 import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
@@ -38,7 +36,7 @@ import {
   FSRS_RETENTION_MIN,
   useSettingsStore,
 } from '@/store/settings';
-import { useSyncStore } from '@/store/sync';
+import { useSyncStore, type SyncErrorCode } from '@/store/sync';
 import { useTagStore } from '@/store/tags';
 import { useThemeStore } from '@/store/theme';
 import type { ColorSchemePreference, FontSizePreference } from '@/store/theme';
@@ -102,7 +100,7 @@ export default function SettingsScreen() {
     status: syncStatus,
     direction: syncDirection,
     lastSyncedAt,
-    errorMessage: syncErrorMessage,
+    errorCode: syncErrorCode,
     clearError: clearSyncError,
   } = useSyncStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur, isScreenFocusedRef } = useKeyboardFocus();
@@ -274,11 +272,20 @@ export default function SettingsScreen() {
     }
   }
 
+  /** 同期エラーコードを翻訳済みの文言にする（モーダル・インライン表示で共用）。 */
+  function syncErrorText(code: SyncErrorCode): string {
+    switch (code) {
+      case 'unavailable': return t('sync.iCloudUnavailable');
+      case 'schemaMismatch': return t('sync.schemaVersionMismatch');
+      case 'noRemoteBackup': return t('sync.noRemoteBackup');
+      case 'timeout': return t('sync.syncTimeout');
+      case 'storageFull': return t('sync.storageFull');
+      default: return t('sync.syncError');
+    }
+  }
+
   function describeSyncError(e: unknown): string {
-    if (e instanceof ICloudUnavailableError) return t('sync.iCloudUnavailable');
-    if (e instanceof SchemaVersionMismatchError) return t('sync.schemaVersionMismatch');
-    if (e instanceof NoRemoteBackupError) return t('sync.noRemoteBackup');
-    return e instanceof Error ? e.message : t('sync.syncError');
+    return syncErrorText(toSyncErrorCode(e));
   }
 
   async function handleSyncToggle(value: boolean) {
@@ -733,9 +740,9 @@ export default function SettingsScreen() {
                   {formatLastSynced()}
                 </Text>
               </View>
-              {syncErrorMessage && syncStatus !== 'syncing' && (
+              {syncErrorCode && syncStatus !== 'syncing' && (
                 <Text style={[{ color: theme.colors.danger, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {syncErrorMessage}
+                  {syncErrorText(syncErrorCode)}
                 </Text>
               )}
               <Pressable

@@ -10,7 +10,7 @@ import {
   IMAGE_DIR,
 } from "@/lib/image";
 import { useDeckStore } from "@/store/decks";
-import { useSyncStore } from "@/store/sync";
+import { useSyncStore, type SyncErrorCode } from "@/store/sync";
 import { useTagStore } from "@/store/tags";
 
 import {
@@ -308,6 +308,32 @@ export class NoRemoteBackupError extends Error {
   }
 }
 
+/** iCloud の容量不足で書き込みに失敗したことを表す。ネイティブ層のエラー文言から推定する。 */
+export class StorageFullError extends Error {
+  constructor() {
+    super("iCloud storage full");
+    this.name = "StorageFullError";
+  }
+}
+
+/** ネイティブ層の転送エラー文言から「iCloud 容量不足」を推定する（ライブラリは専用の型を投げないため）。 */
+function isStorageFullMessage(message: string): boolean {
+  return /quota|out of space|no space|insufficient|disk full|storage.*full|full.*storage|640/i.test(
+    message,
+  );
+}
+
+/** 投げられたエラーを UI 翻訳用のエラーコードに正規化する。 */
+export function toSyncErrorCode(e: unknown): SyncErrorCode {
+  if (e instanceof ICloudUnavailableError) return "unavailable";
+  if (e instanceof SchemaVersionMismatchError) return "schemaMismatch";
+  if (e instanceof NoRemoteBackupError) return "noRemoteBackup";
+  if (e instanceof StorageFullError) return "storageFull";
+  if (e instanceof SyncTimeoutError) return "timeout";
+  if (e instanceof Error && isStorageFullMessage(e.message)) return "storageFull";
+  return "unknown";
+}
+
 interface LocalChangeInfo {
   version: number;
   changedAt: number;
@@ -331,7 +357,7 @@ async function getLocalChangeInfo(
   };
 }
 
-class SyncTimeoutError extends Error {
+export class SyncTimeoutError extends Error {
   constructor() {
     super("Sync timed out");
     this.name = "SyncTimeoutError";
@@ -467,7 +493,7 @@ export async function syncNow(
   sync.setStatus("syncing");
 
   if (!(await isICloudAvailable())) {
-    sync.setError("iCloudが利用できません");
+    sync.setError("unavailable");
     throw new ICloudUnavailableError();
   }
 
@@ -569,8 +595,7 @@ export async function syncNow(
     sync.setLastSyncedVersion(syncedVersion);
     sync.setStatus("idle");
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    sync.setError(message);
+    sync.setError(toSyncErrorCode(e));
     throw e;
   }
 }

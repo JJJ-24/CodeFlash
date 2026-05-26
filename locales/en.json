@@ -315,6 +315,8 @@
     "iCloudUnavailable": "iCloud is unavailable. Enable iCloud Drive in Settings.",
     "schemaVersionMismatch": "Data was synced by a newer version of the app. Please update.",
     "noRemoteBackup": "No backup found on iCloud",
+    "syncTimeout": "Sync timed out. Check your connection and try again in a moment",
+    "storageFull": "Not enough iCloud storage. Free up some space and try again",
     "advanced": "Advanced",
     "forceUpload": "Force Upload",
     "forceUploadConfirm": "Force upload local data to iCloud.\nExisting iCloud data will be overwritten. Continue?",

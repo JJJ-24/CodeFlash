@@ -315,6 +315,8 @@
     "iCloudUnavailable": "iCloud が利用できません。設定アプリで iCloud Drive を有効にしてください",
     "schemaVersionMismatch": "新しいバージョンのアプリで同期されたデータです。アプリを更新してください",
     "noRemoteBackup": "iCloud にバックアップがありません",
+    "syncTimeout": "同期がタイムアウトしました。通信環境を確認して、しばらくしてからもう一度お試しください",
+    "storageFull": "iCloud の容量が不足しています。空き容量を確保してからもう一度お試しください",
     "advanced": "詳細",
     "forceUpload": "強制アップロード",
     "forceUploadConfirm": "ローカルのデータを iCloud に強制的にアップロードします。\niCloud 上のデータは上書きされます。続けますか？",

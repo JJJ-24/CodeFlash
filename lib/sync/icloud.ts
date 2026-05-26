@@ -16,6 +16,10 @@ const REMOTE_META_FILENAME = 'codeflash.meta.json';
 const REMOTE_DB_RELATIVE_PATH = `${REMOTE_DIR}/${REMOTE_DB_FILENAME}`;
 const REMOTE_META_RELATIVE_PATH = `${REMOTE_DIR}/${REMOTE_META_FILENAME}`;
 
+// 画像はファイル名が一意かつ内容不変（追加と削除のみ）なので、DB の Database/ とは別フォルダに
+// 追加のみ（add-only）で同期する。Database/ のようにアップロード前に一掃しない。
+const REMOTE_IMAGES_DIR = 'Images';
+
 const LOCAL_DB_PATH = `${FileSystem.documentDirectory}SQLite/codeflash.db`;
 const LOCAL_DB_PATH_PLAIN = LOCAL_DB_PATH.replace(/^file:\/\//, '');
 const LOCAL_SNAPSHOT_PATH = `${FileSystem.documentDirectory}SQLite/codeflash.sync-snapshot.db`;
@@ -192,6 +196,66 @@ export async function deleteRemoteDb(): Promise<void> {
   if (await isExistAsync(REMOTE_META_RELATIVE_PATH, false)) {
     await unlinkAsync(remoteMetaFullPath);
   }
+}
+
+async function ensureRemoteImagesDir(): Promise<void> {
+  const exists = await isExistAsync(REMOTE_IMAGES_DIR, true);
+  if (!exists) {
+    await createDirAsync(REMOTE_IMAGES_DIR);
+  }
+}
+
+/** iCloud 上のパス／ファイル名を実ファイル名に正規化する。
+ *  未ダウンロードのファイルは `.<name>.icloud` プレースホルダ名で現れるため、
+ *  先頭のディレクトリと `.icloud` 修飾を剥がして実ファイル名を取り出す。 */
+function normalizeRemoteFilename(pathOrName: string): string {
+  let name = pathOrName.split('/').pop() ?? pathOrName;
+  if (name.startsWith('.') && name.endsWith('.icloud')) {
+    name = name.slice(1, -'.icloud'.length);
+  }
+  return name;
+}
+
+/** リモート Images/ フォルダにある画像ファイル名の一覧を返す（実体・プレースホルダ両方を実名に正規化）。 */
+export async function listRemoteImageFilenames(): Promise<string[]> {
+  if (!defaultICloudContainerPath) return [];
+  const exists = await isExistAsync(REMOTE_IMAGES_DIR, true);
+  if (!exists) return [];
+  let paths: string[] = [];
+  try {
+    paths = await readDirAsync(REMOTE_IMAGES_DIR, { isFullPath: true });
+  } catch {
+    return [];
+  }
+  return paths.map(normalizeRemoteFilename).filter((n) => n.length > 0);
+}
+
+/** ローカル画像 1 件を iCloud の Images/ にアップロードする（add-only。同名は再アップしない前提）。 */
+export async function uploadImageFile(localFilePath: string, filename: string): Promise<void> {
+  if (!defaultICloudContainerPath) {
+    throw new Error('iCloud is not available');
+  }
+  await ensureRemoteImagesDir();
+  await uploadFileAsync({
+    destinationPath: `${REMOTE_IMAGES_DIR}/${filename}`,
+    filePath: localFilePath,
+  });
+}
+
+/** iCloud の Images/ から画像 1 件を destinationDir にダウンロードし、ローカルパスを返す。 */
+export async function downloadImageFile(filename: string, destinationDir: string): Promise<string> {
+  if (!defaultICloudContainerPath) {
+    throw new Error('iCloud is not available');
+  }
+  const remoteFullPath = `${defaultICloudContainerPath}/Documents/${REMOTE_IMAGES_DIR}/${filename}`;
+  return downloadFileAsync(remoteFullPath, destinationDir);
+}
+
+/** iCloud の Images/ から画像 1 件を削除する。 */
+export async function deleteRemoteImageFile(filename: string): Promise<void> {
+  if (!defaultICloudContainerPath) return;
+  const remoteFullPath = `${defaultICloudContainerPath}/Documents/${REMOTE_IMAGES_DIR}/${filename}`;
+  await unlinkAsync(remoteFullPath);
 }
 
 export const ICloudPaths = {

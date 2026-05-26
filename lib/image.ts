@@ -8,9 +8,11 @@ export type PickAndSaveImageResult =
   | { uri: string }
   | { error: 'tooLarge' };
 
-const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
+/** ローカル画像の保存ディレクトリ（`local://images/xxx` の実体）。iCloud 同期も参照する。 */
+export const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
 
-async function ensureImageDir() {
+/** images/ ディレクトリが無ければ作成する（同期エンジンからも使う）。 */
+export async function ensureImageDir() {
   const info = await FileSystem.getInfoAsync(IMAGE_DIR);
   if (!info.exists) {
     await FileSystem.makeDirectoryAsync(IMAGE_DIR, { intermediates: true });
@@ -75,13 +77,8 @@ export async function deleteImagesInBlocks(blocks: { type: string; uri?: string 
   );
 }
 
-/** DBに登録されていない孤立画像ファイルを検出して削除する */
-export async function cleanupOrphanImages(db: SQLiteDatabase): Promise<void> {
-  // images/ ディレクトリが存在しなければ何もしない
-  const dirInfo = await FileSystem.getInfoAsync(IMAGE_DIR);
-  if (!dirInfo.exists) return;
-
-  // DB 上の全カードから参照されている画像ファイル名を収集
+/** DB 上の全カードから参照されている画像ファイル名（`local://images/` の後ろ）を収集する。 */
+export async function getReferencedImageFilenames(db: SQLiteDatabase): Promise<Set<string>> {
   const rows = await db.getAllAsync<{ frontContent: string; backContent: string; memoContent: string }>(
     'SELECT frontContent, backContent, memoContent FROM card_contents'
   );
@@ -98,6 +95,16 @@ export async function cleanupOrphanImages(db: SQLiteDatabase): Promise<void> {
       } catch {}
     }
   }
+  return referencedFilenames;
+}
+
+/** DBに登録されていない孤立画像ファイルを検出して削除する */
+export async function cleanupOrphanImages(db: SQLiteDatabase): Promise<void> {
+  // images/ ディレクトリが存在しなければ何もしない
+  const dirInfo = await FileSystem.getInfoAsync(IMAGE_DIR);
+  if (!dirInfo.exists) return;
+
+  const referencedFilenames = await getReferencedImageFilenames(db);
 
   // ディレクトリ内のファイルのうち参照されていないものを削除
   const files = await FileSystem.readDirectoryAsync(IMAGE_DIR);

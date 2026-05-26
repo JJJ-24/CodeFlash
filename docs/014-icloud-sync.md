@@ -142,10 +142,10 @@ CloudKit のレコード単位同期ではなく、**SQLite ファイルをま�
   - [ ] アップロード前に SQLite を `closeAsync()` で閉じる
   - [ ] アップロード後に `SQLiteProvider` 経由で再オープン → Zustand ストア全リフレッシュ
   - [ ] ダウンロード後の DB 差し替え時も同様の close/swap/open 手順
-- [ ] 画像ファイル同期：
-  - [ ] `documentDirectory/images/` 配下のファイルを iCloud Drive に追従
-  - [ ] ローカルにない画像のダウンロード（カード表示時に lazy load も検討）
-  - [ ] 不要画像のクリーンアップ（DB に参照のない画像を削除）
+- [x] 画像ファイル同期：
+  - [x] `documentDirectory/images/` 配下のファイルを iCloud Drive に追従（リモート `Images/` フォルダへ add-only。ファイル名一意・内容不変なので上書きせず追加のみ）
+  - [x] ローカルにない画像のダウンロード（DL 復元後、新 DB が参照する未取得画像を取得。best-effort）
+  - [x] 不要画像のクリーンアップ（ローカルは `cleanupOrphanImages` で DL 後に掃除。リモートはアップロード時、meta コミット後に最新 DB が参照しない画像を `pruneRemoteImages` で削除）
 - [ ] 競合解決：last-write-wins
   - [ ] DB に `lastSyncedAt`・`deviceUpdatedAt` メタデータ追加
   - [ ] アップロード前にリモートの更新日時を確認し、ローカルが古ければマージ確認ダイアログ

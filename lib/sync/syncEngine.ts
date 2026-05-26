@@ -3,16 +3,26 @@ import type { SQLiteDatabase } from "expo-sqlite";
 
 import { getAllDecks } from "@/lib/database/decks";
 import { getAllTags } from "@/lib/database/tags";
+import {
+  cleanupOrphanImages,
+  ensureImageDir,
+  getReferencedImageFilenames,
+  IMAGE_DIR,
+} from "@/lib/image";
 import { useDeckStore } from "@/store/decks";
 import { useSyncStore } from "@/store/sync";
 import { useTagStore } from "@/store/tags";
 
 import {
+  deleteRemoteImageFile,
   downloadDb,
+  downloadImageFile,
   getRemoteStatus,
   ICloudPaths,
   isICloudAvailable,
+  listRemoteImageFilenames,
   uploadDb,
+  uploadImageFile,
   type RemoteDbMeta,
 } from "./icloud";
 
@@ -83,6 +93,74 @@ async function refreshGlobalCaches(db: SQLiteDatabase): Promise<void> {
   const [decks, tags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
   useDeckStore.getState().setDecks(decks);
   useTagStore.getState().setTags(tags);
+}
+
+/** 画像 1 枚あたりの転送タイムアウト（iCloud 転送が固まったら 1 枚を諦めて次へ）。 */
+const IMAGE_TRANSFER_TIMEOUT_MS = 30_000;
+
+/**
+ * 【アップロード方向】ローカル DB が参照する画像のうちリモートに無いものを追加アップロードする。
+ * 画像はファイル名が一意・内容不変なので add-only（同名は再アップしない・上書きしない）。
+ * meta（コミット標識）を書く前に呼び、ここで失敗したら meta を書かずに中断することで、
+ * 相手端末が「参照先の画像が無い DB」を取り込むのを防ぐ。
+ */
+async function uploadReferencedImages(db: SQLiteDatabase): Promise<void> {
+  const referenced = await getReferencedImageFilenames(db);
+  if (referenced.size === 0) return;
+  const remote = new Set(await listRemoteImageFilenames());
+  for (const filename of referenced) {
+    if (remote.has(filename)) continue;
+    const localPath = `${IMAGE_DIR}${filename}`;
+    const info = await FileSystem.getInfoAsync(localPath);
+    if (!info.exists) continue; // ローカルに実体が無い参照はスキップ（通常起きない）
+    await withTimeout(uploadImageFile(localPath, filename), IMAGE_TRANSFER_TIMEOUT_MS);
+  }
+}
+
+/**
+ * 【アップロード方向・meta コミット後】最新 DB（今アップロードした版）が参照しない
+ * リモート Images/ の画像を削除する。whole-file LWW では meta が指す最新 DB が唯一の正なので、
+ * それが参照しない画像は将来どの端末でも不要になる前提。容量を最新状態に追従させる。
+ * 必ず meta 書き込み成功後に呼ぶ（途中失敗時に現行リモート DB が参照中の画像を消さないため）。
+ * best-effort：1 枚の削除失敗で同期本体は止めない（次回アップロード後に再試行される）。
+ */
+async function pruneRemoteImages(db: SQLiteDatabase): Promise<void> {
+  const referenced = await getReferencedImageFilenames(db);
+  let remote: string[];
+  try {
+    remote = await listRemoteImageFilenames();
+  } catch {
+    return;
+  }
+  for (const filename of remote) {
+    if (referenced.has(filename)) continue;
+    try {
+      await withTimeout(deleteRemoteImageFile(filename), IMAGE_TRANSFER_TIMEOUT_MS);
+    } catch {
+      // 1 枚の削除失敗で他を止めない（best-effort）
+    }
+  }
+}
+
+/**
+ * 【ダウンロード方向】入れ替え後の DB が参照する画像のうちローカルに無いものを取得する。
+ * 画像取得の失敗は best-effort（壊れた画像表示になるだけで DB は安全、次回同期で回復する）。
+ */
+async function downloadReferencedImages(db: SQLiteDatabase): Promise<void> {
+  const referenced = await getReferencedImageFilenames(db);
+  if (referenced.size === 0) return;
+  await ensureImageDir();
+  const localFiles = new Set(await FileSystem.readDirectoryAsync(IMAGE_DIR));
+  const remote = new Set(await listRemoteImageFilenames());
+  for (const filename of referenced) {
+    if (localFiles.has(filename)) continue;
+    if (!remote.has(filename)) continue; // リモートにも無ければ取得しようがない
+    try {
+      await withTimeout(downloadImageFile(filename, IMAGE_DIR), IMAGE_TRANSFER_TIMEOUT_MS);
+    } catch {
+      // 1 枚の失敗で他の画像取得を止めない（best-effort）
+    }
+  }
 }
 
 /** 端末ローカルに残す自動バックアップの世代数（古いものから自動削除する）。 */
@@ -444,12 +522,20 @@ export async function syncNow(
       // VACUUM INTO でトランザクション的に一貫した完全コピーを別ファイルに作成。
       // 直接 codeflash.db を上げると WAL の未統合分が抜け落ちる可能性がある。
       await createDbSnapshot(db);
+      // 参照画像を先に追加アップロード（meta より前）。失敗すれば throw して meta を書かない。
+      await uploadReferencedImages(db);
       const meta: RemoteDbMeta = {
         updatedAt: Date.now(),
         deviceId: sync.deviceId,
         schemaVersion: SYNC_SCHEMA_VERSION,
       };
       await withTimeout(uploadDb(meta), TRANSFER_TIMEOUT_MS);
+      // meta コミット後、最新 DB が参照しなくなったリモート画像を掃除（best-effort）。
+      try {
+        await pruneRemoteImages(db);
+      } catch {
+        // 掃除の失敗で同期全体を失敗させない
+      }
       // スナップショット時点の version を同期済みとして記録
       syncedVersion = localInfo.version;
       // 自分が書き込んだリモート版の時刻を watermark にする
@@ -464,6 +550,14 @@ export async function syncNow(
       // 接続を開いたまま ATTACH でデータを入れ替える（ツリー再マウントを伴わずクラッシュしない）
       await replaceLocalDataFromDownloadedDb(db, downloadedPath);
       await refreshGlobalCaches(db);
+      // 新しい DB が参照する画像を取得し、参照されなくなったローカル画像を掃除する。
+      // どちらも best-effort（DB は入れ替え済み＝データは安全。画像不足は次回同期で回復）。
+      try {
+        await downloadReferencedImages(db);
+        await cleanupOrphanImages(db);
+      } catch {
+        // 画像処理の失敗で同期全体をエラーにしない
+      }
       // 入れ替えでトリガーが version を進めるので、入れ替え後の値を同期済みとして記録
       syncedVersion = (await getLocalChangeInfo(db)).version;
       // 取り込んだリモート版の時刻を watermark にする（強制DLで meta 欠落時のみ now で代替）

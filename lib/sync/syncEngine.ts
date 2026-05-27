@@ -9,6 +9,10 @@ import {
   getReferencedImageFilenames,
   IMAGE_DIR,
 } from "@/lib/image";
+import {
+  beginBackgroundTask,
+  endBackgroundTask,
+} from "@/modules/background-task";
 import { useDeckStore } from "@/store/decks";
 import { useSyncStore, type SyncErrorCode } from "@/store/sync";
 import { useTagStore } from "@/store/tags";
@@ -632,9 +636,15 @@ export async function triggerBackgroundUpload(
 ): Promise<void> {
   const s = useSyncStore.getState();
   if (!s.hydrated || !s.enabled || s.status === "syncing") return;
+  // iOS のバックグラウンド実行猶予（~30秒）を要求してから走らせる。これが無いと、
+  // 大量データ（スナップショット作成＋iCloud 配置に時間がかかる）の場合に
+  // OS がアプリを凍結してアップロードが一切ステージされない（次のフォアグラウンドまで反映されない）。
+  const bgTaskId = beginBackgroundTask();
   try {
     await syncNow(db, "background-upload", { silent: true });
   } catch {
     // 自動同期の失敗は無視
+  } finally {
+    endBackgroundTask(bgTaskId);
   }
 }

@@ -1,5 +1,5 @@
 diff --git a/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift b/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift
-index 6853adf..4c4b6bb 100644
+index 6853adf..86090a8 100644
 --- a/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift
 +++ b/node_modules/@oleg_svetlichnyi/expo-icloud-storage/ios/ExpoIcloudStorageModule.swift
 @@ -39,13 +39,20 @@ public class ExpoIcloudStorageModule: Module {
@@ -27,7 +27,46 @@ index 6853adf..4c4b6bb 100644
                          // File is uploaded
                          if let uploadedFileURL = item.value(forAttribute: NSMetadataItemURLKey) as? URL {
                              query.stop()
-@@ -102,8 +109,10 @@ public class ExpoIcloudStorageModule: Module {
+@@ -96,14 +103,49 @@ public class ExpoIcloudStorageModule: Module {
+         }
+     }
+ 
++    // 「配置で完了とみなす」アップロード。
++    // setUbiquitous でファイルを iCloud コンテナへ配置できた時点で完了として返す。
++    // 実バイト転送（NSMetadataQuery で percent>=100 を待つ処理）は行わず OS に委譲する。
++    // バックグラウンド移行時に大量データでも数秒で完了でき、転送はアプリ終了後も OS が完遂する。
++    // 配置自体に失敗（iCloud 無効・コンテナ不可など）したら reject するので失敗は検知できる。
++    private func stageFile(destinationPath: String, filePath: String, completionHandler: @escaping (Result<String, Error>) -> Void) {
++        guard let currentDocumentsURL = self.iCloudDocumentsURL else {
++            completionHandler(.failure(NSError(domain: "expo-icloud-storage", code: 1, userInfo: [NSLocalizedDescriptionKey: "iCloud documents directory not found or not accessible."])))
++            return
++        }
++        let filePathWithoutPrefix = filePath.replacingOccurrences(of: "file://", with: "")
++        let fileURL = URL(fileURLWithPath: filePathWithoutPrefix)
++        let fileManager = FileManager.default
++        let destinationURL = currentDocumentsURL.appendingPathComponent(destinationPath)
++
++        let parentDirectory = destinationURL.deletingLastPathComponent()
++        if !fileManager.fileExists(atPath: parentDirectory.path) {
++            completionHandler(.failure(NSError(domain: "expo-icloud-storage", code: 1003, userInfo: [NSLocalizedDescriptionKey: "Parent directory does not exist. Please create it first using createDirAsync."])))
++            return
++        }
++
++        do {
++            let newFileName = UUID().uuidString
++            let fileDirectory = fileURL.deletingLastPathComponent()
++            let temporaryFileURL = fileDirectory.appendingPathComponent(newFileName)
++            try fileManager.copyItem(at: fileURL, to: temporaryFileURL)
++            try fileManager.setUbiquitous(true, itemAt: temporaryFileURL, destinationURL: destinationURL)
++            completionHandler(.success(destinationURL.path))
++        } catch {
++            completionHandler(.failure(error))
++        }
++    }
++
+     private func downloadFile(path: String, destinationDir: String, progressCallback: @escaping (Double, Int64, String) -> Void, completionHandler: @escaping (Result<String, Error>) -> Void) {
+         let fileURL = URL(fileURLWithPath: path)
+         let destinationDirURL = URL(fileURLWithPath: destinationDir)
          let fileManager = FileManager.default
          let destinationURL = destinationDirURL.appendingPathComponent(fileManager.displayName(atPath: fileURL.path))
          
@@ -40,7 +79,7 @@ index 6853adf..4c4b6bb 100644
              // File doesn't exist, return an error immediately instead of starting the download
              completionHandler(.failure(NSError(domain: "expo-icloud-storage", code: 1004, userInfo: [NSLocalizedDescriptionKey: "File does not exist in iCloud: \(fileURL.path)"])))
              return
-@@ -262,7 +271,16 @@ public class ExpoIcloudStorageModule: Module {
+@@ -262,7 +304,16 @@ public class ExpoIcloudStorageModule: Module {
                  return
              }
              let fileURL = currentDocumentsURL.appendingPathComponent(path, isDirectory: isDirectory)
@@ -58,7 +97,7 @@ index 6853adf..4c4b6bb 100644
          }
  
          AsyncFunction("createDirAsync") { (path: String, promise: Promise) in
-@@ -342,9 +360,12 @@ public class ExpoIcloudStorageModule: Module {
+@@ -342,9 +393,12 @@ public class ExpoIcloudStorageModule: Module {
                  return
              }
              
@@ -73,3 +112,26 @@ index 6853adf..4c4b6bb 100644
                  promise.reject(NSError(domain: "expo-icloud-storage", code: 1004, userInfo: [NSLocalizedDescriptionKey: "File does not exist in iCloud: \(path)"]))
                  self.sendEvent("onDownloadFilesAsyncProgress", ["value": 0])
                  return
+@@ -442,6 +496,22 @@ public class ExpoIcloudStorageModule: Module {
+             })
+         }
+ 
++        // 「配置で完了とみなす」アップロード（実バイト転送の完了を待たない）。
++        AsyncFunction("uploadFileStagedAsync") { (destinationPath: String, filePath: String, promise: Promise) in
++            guard self.iCloudDocumentsURL != nil else {
++                promise.reject(NSError(domain: "expo-icloud-storage", code: 1001, userInfo: [NSLocalizedDescriptionKey: "iCloud documents directory not found or not accessible"]))
++                return
++            }
++            self.stageFile(destinationPath: destinationPath, filePath: filePath, completionHandler: { result in
++                switch result {
++                case let .success(destinationPath):
++                    promise.resolve(destinationPath)
++                case let .failure(error):
++                    promise.reject(error)
++                }
++            })
++        }
++
+         AsyncFunction("uploadFilesAsync") { (destinationDirectory: String, filePaths: [String], promise: Promise) in
+             guard let currentDocumentsURL = self.iCloudDocumentsURL else {
+                 promise.reject(NSError(domain: "expo-icloud-storage", code: 1001, userInfo: [NSLocalizedDescriptionKey: "iCloud documents directory not found or not accessible"]))

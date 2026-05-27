@@ -9,6 +9,42 @@ import {
   unlinkAsync,
   uploadFileAsync,
 } from '@oleg_svetlichnyi/expo-icloud-storage';
+import { requireNativeModule } from 'expo-modules-core';
+
+// 「配置で完了とみなす」アップロード（setUbiquitous で iCloud コンテナに配置できたら完了。
+// 実バイト転送は OS が裏で完遂する）。これにより大量データのバックグラウンドアップロードが
+// iOS の実行時間制限内に収まる。ネイティブの uploadFileStagedAsync（patch で追加）を直接呼ぶ。
+interface IcloudNativeModule {
+  uploadFileStagedAsync?: (destinationPath: string, filePath: string) => Promise<string>;
+}
+let nativeIcloud: IcloudNativeModule | null | undefined;
+function getNativeIcloud(): IcloudNativeModule | null {
+  if (nativeIcloud !== undefined) return nativeIcloud;
+  try {
+    nativeIcloud = requireNativeModule<IcloudNativeModule>('ExpoIcloudStorage');
+  } catch {
+    nativeIcloud = null;
+  }
+  return nativeIcloud;
+}
+
+/**
+ * ファイルを1つ「配置で完了とみなす」方式でアップロードする。
+ * setUbiquitous で iCloud コンテナに配置できたら即完了とみなす（実バイト転送は OS が裏で完遂する）。
+ * これにより大量データでも iOS のバックグラウンド実行時間制限内に確実にステージできる。
+ *
+ * 転送完了まで待っても相手端末への到達は早まらない（遅延の主因は Apple の端末間伝播であり、
+ * アプリからは短縮できないことを実機で確認済み）。そのため待たずに配置で完了とする。
+ * ネイティブに uploadFileStagedAsync（patch 追加分）が無い旧バイナリは uploadFileAsync にフォールバック。
+ */
+async function uploadFileStaged(destinationPath: string, filePath: string): Promise<void> {
+  const native = getNativeIcloud();
+  if (native && typeof native.uploadFileStagedAsync === 'function') {
+    await native.uploadFileStagedAsync(destinationPath, filePath);
+    return;
+  }
+  await uploadFileAsync({ destinationPath, filePath });
+}
 
 const REMOTE_DIR = 'Database';
 const REMOTE_DB_FILENAME = 'codeflash.db';
@@ -151,15 +187,9 @@ export async function uploadDb(meta: RemoteDbMeta): Promise<void> {
     // DB → meta の順でアップロードする。meta が「コミット標識」であり、
     // getRemoteStatus は meta が揃って初めて有効なリモートとして扱うため、
     // 途中で失敗しても不整合（DB だけ／meta だけ）を検出できる。
-    await uploadFileAsync({
-      destinationPath: REMOTE_DB_RELATIVE_PATH,
-      filePath: LOCAL_SNAPSHOT_PATH,
-    });
+    await uploadFileStaged(REMOTE_DB_RELATIVE_PATH, LOCAL_SNAPSHOT_PATH);
     await FileSystem.writeAsStringAsync(LOCAL_META_UPLOAD_TMP_PATH, JSON.stringify(meta));
-    await uploadFileAsync({
-      destinationPath: REMOTE_META_RELATIVE_PATH,
-      filePath: LOCAL_META_UPLOAD_TMP_PATH,
-    });
+    await uploadFileStaged(REMOTE_META_RELATIVE_PATH, LOCAL_META_UPLOAD_TMP_PATH);
     await FileSystem.deleteAsync(LOCAL_META_UPLOAD_TMP_PATH, { idempotent: true });
   } finally {
     await cleanupSnapshot();
@@ -236,10 +266,7 @@ export async function uploadImageFile(localFilePath: string, filename: string): 
     throw new Error('iCloud is not available');
   }
   await ensureRemoteImagesDir();
-  await uploadFileAsync({
-    destinationPath: `${REMOTE_IMAGES_DIR}/${filename}`,
-    filePath: localFilePath,
-  });
+  await uploadFileStaged(`${REMOTE_IMAGES_DIR}/${filename}`, localFilePath);
 }
 
 /** iCloud の Images/ から画像 1 件を destinationDir にダウンロードし、ローカルパスを返す。 */

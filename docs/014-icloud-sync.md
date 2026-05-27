@@ -129,19 +129,18 @@ CloudKit のレコード単位同期ではなく、**SQLite ファイルをま�
 ## Todo（SQLite ファイル同期方式）
 
 ### 環境構築
-- [ ] Apple Developer Console で iCloud Container 作成（例：`iCloud.com.yourdomain.codeflash`）
-- [ ] App ID に iCloud capability を追加
-- [ ] `@oleg_svetlichnyi/expo-icloud-storage` をインストール
-- [ ] `app.json` に Config Plugin 設定追加（iCloudContainerEnvironment）
-- [ ] Development Build 再ビルド（`eas build` で entitlements 反映）
-- [ ] 実機 / TestFlight で動作確認（シミュレーター・Expo Go は不可）
+- [x] Apple Developer Console で iCloud Container 作成（`iCloud.com.jjj24.codeflash`）
+- [x] App ID に iCloud capability を追加
+- [x] `@oleg_svetlichnyi/expo-icloud-storage` をインストール
+- [x] `app.json` に Config Plugin 設定追加（iCloudContainerEnvironment）
+- [x] Development Build 再ビルド（entitlements 反映）
+- [x] 実機で動作確認（シミュレーター・Expo Go は不可）
 
 ### 同期ロジック実装（`lib/sync/`）
-- [ ] `lib/sync/icloud.ts` — ライブラリのラッパー（upload/download/list/delete）
-- [ ] DB ファイル同期：
-  - [ ] アップロード前に SQLite を `closeAsync()` で閉じる
-  - [ ] アップロード後に `SQLiteProvider` 経由で再オープン → Zustand ストア全リフレッシュ
-  - [ ] ダウンロード後の DB 差し替え時も同様の close/swap/open 手順
+- [x] `lib/sync/icloud.ts` — ライブラリのラッパー（upload/download/list/delete・画像 upload/download/delete・既存ファイル削除回避策）
+- [x] DB ファイル同期（※当初の close/swap/open は Fabric の unmount アサーションでクラッシュしたため**廃止**。接続を開いたまま `ATTACH`＋テーブルコピーでデータ入れ替える方式に変更＝`syncEngine.ts: replaceLocalDataFromDownloadedDb`）：
+  - [x] アップロードは `VACUUM INTO` でスナップショットを作成して上げる（WAL 未統合分も含む完全コピー）
+  - [x] ダウンロード後は ATTACH でデータ入れ替え → `refreshGlobalCaches` で Zustand 全リフレッシュ（ツリー再マウント不要）
 - [x] 画像ファイル同期：
   - [x] `documentDirectory/images/` 配下のファイルを iCloud Drive に追従（リモート `Images/` フォルダへ add-only。ファイル名一意・内容不変なので上書きせず追加のみ）
   - [x] ローカルにない画像のダウンロード（DL 復元後、新 DB が参照する未取得画像を取得。best-effort）

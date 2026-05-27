@@ -22,7 +22,7 @@ export function initializePurchases() {
 export async function restoreProStatus(): Promise<boolean> {
   if (IS_EXPO_GO) return useProStore.getState().isPro;
   // 開発ビルドでは RevenueCat で上書きせず、手動 Pro トグルの値を維持する
-  // （dbSwap 後の再マウントで restoreProStatus が走ってトグルが OFF に戻るのを防ぐ）。
+  // （マウント時の restoreProStatus が走って開発用トグルが OFF に戻るのを防ぐ）。
   // 本番（リリースビルド）は __DEV__ が false なので従来どおり実エンタイトルメントで判定する。
   if (__DEV__) return useProStore.getState().isPro;
   try {

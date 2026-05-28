@@ -42,6 +42,32 @@ const SYNC_TABLES = [
   "grade_logs",
 ] as const;
 
+/**
+ * リモート版の識別子（端末をまたいで一意）。`${deviceId}:${updatedAt}`。
+ * リモート変更検知はこの識別子の一致/不一致で行う（時刻の大小比較は端末間の時計ズレに弱い）。
+ */
+function remoteMetaId(meta: RemoteDbMeta): string {
+  return `${meta.deviceId}:${meta.updatedAt}`;
+}
+
+/**
+ * リモートに「この端末がまだ取り込んでいない版」があるかを判定する。
+ * 識別子（deviceId:updatedAt）の一致で見るため、端末間の時計ズレに左右されない。
+ * これにより、相手端末の時計が進んでいて updatedAt が小さく見える更新でも取りこぼさない
+ * （旧来の `updatedAt > watermark` 比較では、後から伝播してきた相手の更新を「古い」と
+ * 誤判定して永久に取り込まず、2端末が各自の変更を抱えたまま固着するバグがあった）。
+ * lastRemoteId が未保存（このフィールド導入前の旧データ）のときのみ、旧来のタイムスタンプ比較にフォールバックする。
+ */
+function isRemoteNew(
+  meta: RemoteDbMeta,
+  lastRemoteId: string | null,
+  remoteWatermark: number | null,
+  lastSyncedAt: number | null,
+): boolean {
+  if (lastRemoteId != null) return remoteMetaId(meta) !== lastRemoteId;
+  return meta.updatedAt > (remoteWatermark ?? lastSyncedAt ?? 0);
+}
+
 async function tableColumns(
   db: SQLiteDatabase,
   schema: string,
@@ -406,9 +432,10 @@ function decideDirection(
   local: LocalChangeInfo,
   lastSyncedAt: number | null,
   lastSyncedVersion: number | null,
-  // 追いついているリモート版の updatedAt（remoteChanged 判定の基準）。
-  // null（このフィールド導入前の旧データ）の場合は lastSyncedAt で代替する。
+  // 追いついているリモート版の updatedAt（lastRemoteId 未保存の旧データ移行時のフォールバック用）。
   remoteWatermark: number | null,
+  // 追いついているリモート版の識別子（remoteChanged 判定の主基準。時計ズレに強い）。
+  lastRemoteId: string | null,
 ): "upload" | "download" | null {
   if (action === "upload") return "upload";
   if (action === "download") {
@@ -420,15 +447,15 @@ function decideDirection(
   const localChanged =
     lastSyncedVersion != null && local.version > lastSyncedVersion;
 
-  // リモートが「存在しない」または「meta が揃っていない」ケース。
+  // リモートに有効な版（一意名 DB ファイル）が1つも見当たらないケース。
   // 【データ安全上の最重要ガード】
-  // 既に同期済みの端末（neverSynced=false）でリモートが空／不完全に見えるのは、ほぼ
-  // 相手端末のアップロード中の一瞬の窓（uploadDb の clearRemoteDir → db → meta の間）か、
-  // iCloud のクロスデバイス伝播の遅延である。ここで古いローカルをアップロードすると、
-  // 相手がたった今上げた新しいデータを上書きして破壊してしまう（実際に発生したバグ）。
-  // そのため「一度も同期していない端末」だけを初回バックアップとしてアップロードし、
-  // 同期済みの端末は何もしない（次回の同期で正しいリモートを観測して解決する）。
-  // リモートが恒久的に消えた場合の再バックアップは手動「今すぐ同期」（強制 upload）で行える。
+  // 既に同期済みの端末（neverSynced=false）でリモートが空に見えるのは、ほぼ iCloud の
+  // クロスデバイス伝播の遅延か、旧形式データからの移行途中（新形式の版がまだ無い）である。
+  // ここで古いローカルをアップロードすると、相手がたった今上げた新しいデータを
+  // 上書きして破壊しうる（実際に発生したバグ）。そのため「一度も同期していない端末」だけを
+  // 初回バックアップとしてアップロードし、同期済みの端末は何もしない（次回の同期で正しい
+  // リモートを観測して解決する）。リモートが恒久的に消えた／旧形式のみの場合の再 publish は
+  // 手動「強制アップロード」で行える（その際 pruneOldDbFiles が旧形式・残骸も掃除する）。
   if (!remote.exists || !remote.meta) {
     return neverSynced ? "upload" : null;
   }
@@ -448,7 +475,8 @@ function decideDirection(
     if (neverSynced) return null; // 未復元状態ではリモートを上書きしない
     // リモートにも変更がある場合は上書き競合になるため、ここではアップせず
     // 次回フォアグラウンドの auto（LWW）に委ねる。
-    if (remote.meta.updatedAt > (remoteWatermark ?? lastSyncedAt)) return null;
+    if (isRemoteNew(remote.meta, lastRemoteId, remoteWatermark, lastSyncedAt))
+      return null;
     return localChanged ? "upload" : null;
   }
 
@@ -456,7 +484,12 @@ function decideDirection(
   // この端末で同期したことがない（再インストール・初回有効化）→ リモートを取得して復元
   if (neverSynced) return "download";
 
-  const remoteChanged = remote.meta.updatedAt > (remoteWatermark ?? lastSyncedAt);
+  const remoteChanged = isRemoteNew(
+    remote.meta,
+    lastRemoteId,
+    remoteWatermark,
+    lastSyncedAt,
+  );
 
   if (remoteChanged && localChanged) {
     // 両方で変更：LWW（直近のタイムスタンプを採用）
@@ -518,7 +551,7 @@ export async function syncNow(
     // それ以外はタイムアウト付きでリモート状態を取得する。
     const remote =
       action === "upload"
-        ? { exists: false, meta: null }
+        ? { exists: false, meta: null, dbFilename: null }
         : await withTimeout(getRemoteStatus(), REMOTE_STATUS_TIMEOUT_MS);
     const localInfo = await getLocalChangeInfo(db);
     const direction = decideDirection(
@@ -528,6 +561,7 @@ export async function syncNow(
       sync.lastSyncedAt,
       sync.lastSyncedVersion,
       sync.lastRemoteUpdatedAt,
+      sync.lastRemoteId,
     );
 
     if (direction === null) {
@@ -537,6 +571,7 @@ export async function syncNow(
       // 据え置き、次回の同期で正しいリモート版を観測して取得できるようにする。
       if (action !== "background-upload" && remote.meta) {
         sync.setLastRemoteUpdatedAt(remote.meta.updatedAt);
+        sync.setLastRemoteId(remoteMetaId(remote.meta));
         sync.setLastSyncedAt(Date.now());
         sync.setLastSyncedVersion(localInfo.version);
       }
@@ -548,6 +583,7 @@ export async function syncNow(
 
     let syncedVersion: number;
     let remoteUpdatedAt: number;
+    let remoteId: string;
     if (direction === "upload") {
       // VACUUM INTO でトランザクション的に一貫した完全コピーを別ファイルに作成。
       // 直接 codeflash.db を上げると WAL の未統合分が抜け落ちる可能性がある。
@@ -568,11 +604,15 @@ export async function syncNow(
       }
       // スナップショット時点の version を同期済みとして記録
       syncedVersion = localInfo.version;
-      // 自分が書き込んだリモート版の時刻を watermark にする
+      // 自分が書き込んだリモート版を「追いついている版」として記録（時刻＋識別子）
       remoteUpdatedAt = meta.updatedAt;
+      remoteId = remoteMetaId(meta);
     } else {
+      // getRemoteStatus が選んだ最新版ファイル名を取得（exists=true なら必ず付随する）。
+      const dbFilename = remote.dbFilename;
+      if (!dbFilename) throw new NoRemoteBackupError();
       const downloadedPath = await withTimeout(
-        downloadDb(),
+        downloadDb(dbFilename),
         TRANSFER_TIMEOUT_MS,
       );
       // 上書きでローカルの内容が失われる直前に、現在のローカルを端末へ退避（安全網）
@@ -590,11 +630,15 @@ export async function syncNow(
       }
       // 入れ替えでトリガーが version を進めるので、入れ替え後の値を同期済みとして記録
       syncedVersion = (await getLocalChangeInfo(db)).version;
-      // 取り込んだリモート版の時刻を watermark にする（強制DLで meta 欠落時のみ now で代替）
+      // 取り込んだリモート版を「追いついている版」として記録（強制DLで meta 欠落時のみ now/合成IDで代替）
       remoteUpdatedAt = remote.meta?.updatedAt ?? Date.now();
+      remoteId = remote.meta
+        ? remoteMetaId(remote.meta)
+        : `unknown:${remoteUpdatedAt}`;
     }
 
     sync.setLastRemoteUpdatedAt(remoteUpdatedAt);
+    sync.setLastRemoteId(remoteId);
     sync.setLastSyncedAt(Date.now());
     sync.setLastSyncedVersion(syncedVersion);
     sync.setStatus("idle");

@@ -5,6 +5,7 @@ const SYNC_ENABLED_KEY = '@codeflash_icloud_sync_enabled';
 const LAST_SYNCED_AT_KEY = '@codeflash_icloud_last_synced_at';
 const LAST_SYNCED_VERSION_KEY = '@codeflash_icloud_last_synced_version';
 const LAST_REMOTE_UPDATED_AT_KEY = '@codeflash_icloud_last_remote_updated_at';
+const LAST_REMOTE_ID_KEY = '@codeflash_icloud_last_remote_id';
 const DEVICE_ID_KEY = '@codeflash_device_id';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error';
@@ -45,6 +46,14 @@ interface SyncState {
    * （updatedAt が実時刻 now より前）を取りこぼさない & 端末間の時計ズレにも強い。
    */
   lastRemoteUpdatedAt: number | null;
+  /**
+   * この端末が最後に「追いついた」リモート版の識別子（`${deviceId}:${updatedAt}`）。
+   * リモート変更検知（remoteChanged）はこの識別子の一致/不一致で行う。
+   * lastRemoteUpdatedAt の大小比較だと、相手端末の時計が進んでいる場合に、後から
+   * 伝播してきた相手の更新を「自分の最終同期より古い」と誤判定して永久に取り込まない
+   * 不具合があった（A は自分の追加、B は自分の追加のまま固着）。識別子比較は時計ズレに左右されない。
+   */
+  lastRemoteId: string | null;
   errorCode: SyncErrorCode | null;
   deviceId: string;
 
@@ -56,6 +65,7 @@ interface SyncState {
   setLastSyncedAt: (timestamp: number) => void;
   setLastSyncedVersion: (version: number) => void;
   setLastRemoteUpdatedAt: (timestamp: number) => void;
+  setLastRemoteId: (id: string) => void;
 }
 
 function generateDeviceId(): string {
@@ -71,6 +81,7 @@ export const useSyncStore = create<SyncState>((set) => ({
   lastSyncedAt: null,
   lastSyncedVersion: null,
   lastRemoteUpdatedAt: null,
+  lastRemoteId: null,
   errorCode: null,
   deviceId: '',
 
@@ -103,14 +114,19 @@ export const useSyncStore = create<SyncState>((set) => ({
     set({ lastRemoteUpdatedAt: timestamp });
     AsyncStorage.setItem(LAST_REMOTE_UPDATED_AT_KEY, String(timestamp));
   },
+  setLastRemoteId: (id) => {
+    set({ lastRemoteId: id });
+    AsyncStorage.setItem(LAST_REMOTE_ID_KEY, id);
+  },
 }));
 
 (async () => {
-  const [enabledRaw, lastSyncedRaw, lastSyncedVersionRaw, lastRemoteUpdatedRaw, deviceIdRaw] = await Promise.all([
+  const [enabledRaw, lastSyncedRaw, lastSyncedVersionRaw, lastRemoteUpdatedRaw, lastRemoteIdRaw, deviceIdRaw] = await Promise.all([
     AsyncStorage.getItem(SYNC_ENABLED_KEY),
     AsyncStorage.getItem(LAST_SYNCED_AT_KEY),
     AsyncStorage.getItem(LAST_SYNCED_VERSION_KEY),
     AsyncStorage.getItem(LAST_REMOTE_UPDATED_AT_KEY),
+    AsyncStorage.getItem(LAST_REMOTE_ID_KEY),
     AsyncStorage.getItem(DEVICE_ID_KEY),
   ]);
 
@@ -129,6 +145,7 @@ export const useSyncStore = create<SyncState>((set) => ({
     lastSyncedAt: Number.isFinite(lastSyncedAt) ? lastSyncedAt : null,
     lastSyncedVersion: lastSyncedVersion != null && Number.isFinite(lastSyncedVersion) ? lastSyncedVersion : null,
     lastRemoteUpdatedAt: lastRemoteUpdatedAt != null && Number.isFinite(lastRemoteUpdatedAt) ? lastRemoteUpdatedAt : null,
+    lastRemoteId: lastRemoteIdRaw ?? null,
     deviceId,
     hydrated: true,
   });

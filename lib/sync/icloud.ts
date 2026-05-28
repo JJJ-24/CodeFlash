@@ -47,13 +47,27 @@ async function uploadFileStaged(destinationPath: string, filePath: string): Prom
 }
 
 const REMOTE_DIR = 'Database';
-const REMOTE_DB_FILENAME = 'codeflash.db';
-const REMOTE_META_FILENAME = 'codeflash.meta.json';
-const REMOTE_DB_RELATIVE_PATH = `${REMOTE_DIR}/${REMOTE_DB_FILENAME}`;
-const REMOTE_META_RELATIVE_PATH = `${REMOTE_DIR}/${REMOTE_META_FILENAME}`;
+
+// 【一意ファイル名方式】アップロードごとに版を `codeflash.v<schema>.<updatedAt>.<deviceId>.db`
+// という一意名で書く。同じ固定名を delete→再作成しないため、2端末がオフラインで同時に
+// アップロードしても iCloud 衝突コピー（`codeflash 2.db`）が生まれず、読む側は一覧から
+// 最新（updatedAt 最大）を選ぶだけで確実に収束する。メタ情報はファイル名に内包する
+// （別 meta.json を持たない → db と meta が別々に衝突解決されて中身が食い違う危険も消える）。
+const REMOTE_DB_PREFIX = 'codeflash.v';
+const REMOTE_DB_SUFFIX = '.db';
+/** `codeflash.v<schema>.<updatedAt>.<deviceId>.db` を組み立てる。deviceId はドット・空白を含まない前提。 */
+function buildRemoteDbName(meta: RemoteDbMeta): string {
+  return `${REMOTE_DB_PREFIX}${meta.schemaVersion}.${meta.updatedAt}.${meta.deviceId}${REMOTE_DB_SUFFIX}`;
+}
+/** リモート DB ファイル名を解析して meta を取り出す。形式不一致は null。 */
+function parseRemoteDbName(filename: string): RemoteDbMeta | null {
+  const m = /^codeflash\.v(\d+)\.(\d+)\.(.+)\.db$/.exec(filename);
+  if (!m) return null;
+  return { schemaVersion: Number(m[1]), updatedAt: Number(m[2]), deviceId: m[3] };
+}
 
 // 画像はファイル名が一意かつ内容不変（追加と削除のみ）なので、DB の Database/ とは別フォルダに
-// 追加のみ（add-only）で同期する。Database/ のようにアップロード前に一掃しない。
+// 追加のみ（add-only）で同期する。
 const REMOTE_IMAGES_DIR = 'Images';
 
 const LOCAL_DB_PATH = `${FileSystem.documentDirectory}SQLite/codeflash.db`;
@@ -61,7 +75,6 @@ const LOCAL_DB_PATH_PLAIN = LOCAL_DB_PATH.replace(/^file:\/\//, '');
 const LOCAL_SNAPSHOT_PATH = `${FileSystem.documentDirectory}SQLite/codeflash.sync-snapshot.db`;
 const LOCAL_SNAPSHOT_PATH_PLAIN = LOCAL_SNAPSHOT_PATH.replace(/^file:\/\//, '');
 const LOCAL_DOWNLOAD_DIR = `${FileSystem.documentDirectory}SQLite/icloud-download`;
-const LOCAL_META_UPLOAD_TMP_PATH = `${FileSystem.documentDirectory}SQLite/codeflash.meta.upload.json`;
 
 export interface RemoteDbMeta {
   updatedAt: number;
@@ -72,6 +85,8 @@ export interface RemoteDbMeta {
 export interface RemoteStatus {
   exists: boolean;
   meta: RemoteDbMeta | null;
+  /** 採用した最新版 DB のリモートファイル名（download に渡す）。meta があるときのみ非 null。 */
+  dbFilename: string | null;
 }
 
 /** iCloud が現在の端末／ユーザーで利用可能かを判定 */
@@ -98,38 +113,40 @@ async function ensureLocalDownloadDir(): Promise<void> {
   }
 }
 
-/** リモートの DB と meta の状態を取得 */
+/**
+ * リモートの最新 DB 版を取得する。
+ * Database/ 内の `codeflash.v<schema>.<updatedAt>.<deviceId>.db` を全て列挙し、
+ * updatedAt が最大のものを「最新版」として返す（whole-file LWW）。メタ情報はファイル名から復元する。
+ * meta を別ファイルとして読まないため、iCloud のクロスデバイス遅延中も一覧さえ取れれば判定できる。
+ */
 export async function getRemoteStatus(): Promise<RemoteStatus> {
   if (!defaultICloudContainerPath) {
-    return { exists: false, meta: null };
+    return { exists: false, meta: null, dbFilename: null };
   }
-  const dbExists = await isExistAsync(REMOTE_DB_RELATIVE_PATH, false);
-  if (!dbExists) {
-    return { exists: false, meta: null };
-  }
-  const metaExists = await isExistAsync(REMOTE_META_RELATIVE_PATH, false);
-  if (!metaExists) {
-    return { exists: true, meta: null };
-  }
+  let names: string[];
   try {
-    await ensureLocalDownloadDir();
-    // ライブラリのキャッシュ不具合への対策: 事前にローカルキャッシュを削除
-    await FileSystem.deleteAsync(`${LOCAL_DOWNLOAD_DIR}/${REMOTE_META_FILENAME}`, { idempotent: true });
-    const remoteMetaFullPath = `${defaultICloudContainerPath}/Documents/${REMOTE_META_RELATIVE_PATH}`;
-    const downloadedPath = await downloadFileAsync(remoteMetaFullPath, LOCAL_DOWNLOAD_DIR);
-    const text = await FileSystem.readAsStringAsync(downloadedPath);
-    const parsed = JSON.parse(text) as Partial<RemoteDbMeta>;
-    if (
-      typeof parsed.updatedAt === 'number' &&
-      typeof parsed.deviceId === 'string' &&
-      typeof parsed.schemaVersion === 'number'
-    ) {
-      return { exists: true, meta: parsed as RemoteDbMeta };
-    }
-    return { exists: true, meta: null };
+    const paths = await readDirAsync(REMOTE_DIR, { isFullPath: false });
+    names = paths.map(normalizeRemoteFilename);
   } catch {
-    return { exists: true, meta: null };
+    // ディレクトリ未作成（初回）など → リモート無し扱い
+    return { exists: false, meta: null, dbFilename: null };
   }
+
+  let best: { filename: string; meta: RemoteDbMeta } | null = null;
+  for (const name of names) {
+    const meta = parseRemoteDbName(name);
+    if (!meta || !Number.isFinite(meta.updatedAt)) continue;
+    if (!best || meta.updatedAt > best.meta.updatedAt) {
+      best = { filename: name, meta };
+    }
+  }
+
+  if (!best) {
+    // 一意名の版が1つも無い（旧形式 codeflash.db だけ等）→ 取り込み対象なし。
+    // 同期済み端末は上書きしない安全ガード（decideDirection）に委ね、初回端末が新形式で publish する。
+    return { exists: false, meta: null, dbFilename: null };
+  }
+  return { exists: true, meta: best.meta, dbFilename: best.filename };
 }
 
 /** スナップショット用 一時ファイルを完全削除（WAL/SHM 残骸も含めて） */
@@ -141,12 +158,12 @@ async function cleanupSnapshot(): Promise<void> {
 }
 
 /**
- * Database ディレクトリ内の全ファイルを削除する（best-effort）。
- * ライブラリは既存ファイルを上書きできないため、アップロード前に消しておく必要がある。
- * ついでに過去の競合コピー（"codeflash 2.db" 等）の残骸も一掃して自己修復する。
- * 個々の unlink 失敗は無視する（次回アップロード前の掃除で再試行される）。
+ * 自分が今アップロードした版より古い DB 版ファイル（および旧形式・衝突コピーの残骸）を削除する（best-effort）。
+ * updatedAt が自分以上の版（＝他端末が並行して上げた、より新しい／同等の版）は消さない。
+ * これで容量を最新に追従させつつ、並行アップロードで相手の新しい版を誤って消す事故を防ぐ。
+ * 個々の unlink 失敗は無視する（次回アップロード後の掃除で再試行される）。
  */
-async function clearRemoteDir(): Promise<void> {
+async function pruneOldDbFiles(keepUpdatedAt: number): Promise<void> {
   if (!defaultICloudContainerPath) return;
   let paths: string[] = [];
   try {
@@ -155,21 +172,28 @@ async function clearRemoteDir(): Promise<void> {
     return;
   }
   for (const p of paths) {
+    const name = normalizeRemoteFilename(p);
+    const meta = parseRemoteDbName(name);
+    // 一意名でない残骸（旧 codeflash.db / codeflash.meta.json / codeflash 2.db / meta.json 等）は掃除対象。
+    // 一意名の版は updatedAt が自分より新しい/同じものだけ残す。
+    if (meta && meta.updatedAt >= keepUpdatedAt) continue;
     try {
       await unlinkAsync(p);
     } catch {
-      // 無視
+      // 無視（best-effort）
     }
   }
 }
 
 /**
- * ローカル DB のスナップショットを iCloud にアップロード（meta も一緒に上げる）。
+ * ローカル DB のスナップショットを iCloud に一意名でアップロードする。
  * 呼び出し側で事前に `VACUUM INTO 'codeflash.sync-snapshot.db'` を実行し、
  * 完全コピーを LOCAL_SNAPSHOT_PATH に作成しておく必要がある。
  *
- * 注意: ライブラリ内部の `setUbiquitous` は destinationURL が既に存在する場合 silent fail する。
- * そのため事前にリモートの既存ファイルを必ず削除する。
+ * 一意名（`codeflash.v<schema>.<updatedAt>.<deviceId>.db`）なので既存ファイルを上書きしない
+ * ＝ライブラリの「上書き silent fail」も衝突コピー（codeflash 2.db）も発生しない。
+ * 配置完了したファイルそのものが「コミット標識」（別 meta.json を持たない）。
+ * アップロード成功後に古い版を掃除する（meta コミット後に呼ぶ pruneRemoteImages と同じ思想）。
  */
 export async function uploadDb(meta: RemoteDbMeta): Promise<void> {
   if (!defaultICloudContainerPath) {
@@ -181,50 +205,52 @@ export async function uploadDb(meta: RemoteDbMeta): Promise<void> {
   }
   await ensureRemoteDirectory();
   try {
-    // ライブラリは上書き不可のため、アップロード前に既存ファイル（＋競合コピーの残骸）を一掃する。
-    await clearRemoteDir();
-
-    // DB → meta の順でアップロードする。meta が「コミット標識」であり、
-    // getRemoteStatus は meta が揃って初めて有効なリモートとして扱うため、
-    // 途中で失敗しても不整合（DB だけ／meta だけ）を検出できる。
-    await uploadFileStaged(REMOTE_DB_RELATIVE_PATH, LOCAL_SNAPSHOT_PATH);
-    await FileSystem.writeAsStringAsync(LOCAL_META_UPLOAD_TMP_PATH, JSON.stringify(meta));
-    await uploadFileStaged(REMOTE_META_RELATIVE_PATH, LOCAL_META_UPLOAD_TMP_PATH);
-    await FileSystem.deleteAsync(LOCAL_META_UPLOAD_TMP_PATH, { idempotent: true });
+    await uploadFileStaged(`${REMOTE_DIR}/${buildRemoteDbName(meta)}`, LOCAL_SNAPSHOT_PATH);
   } finally {
     await cleanupSnapshot();
+  }
+  // 配置成功後に古い版・残骸を掃除（best-effort。自分以上の新しい並行版は残す）。
+  try {
+    await pruneOldDbFiles(meta.updatedAt);
+  } catch {
+    // 掃除失敗で同期本体は止めない
   }
 }
 
 /**
- * iCloud から DB をダウンロードし、ローカルダウンロードディレクトリに保存。
- * 戻り値はダウンロード済み DB ファイルへのフルパス。これを ATTACH してデータを入れ替える。
+ * iCloud から指定された版の DB ファイルをダウンロードし、ローカルパスを返す。これを ATTACH して入れ替える。
+ * @param dbFilename getRemoteStatus が返した最新版のファイル名（`codeflash.v....db`）。
  *
  * 注意: ライブラリ内部の downloadFileAsync は destinationDir に同名ファイルがあるとコピーせず
  * 古いキャッシュのパスをそのまま返してしまう。そのため事前にキャッシュを削除する。
  */
-export async function downloadDb(): Promise<string> {
+export async function downloadDb(dbFilename: string): Promise<string> {
   if (!defaultICloudContainerPath) {
     throw new Error('iCloud is not available');
   }
   await ensureLocalDownloadDir();
   // ライブラリのキャッシュ不具合への対策: 事前にローカルキャッシュを削除
-  await FileSystem.deleteAsync(`${LOCAL_DOWNLOAD_DIR}/${REMOTE_DB_FILENAME}`, { idempotent: true });
-  const remoteFullPath = `${defaultICloudContainerPath}/Documents/${REMOTE_DB_RELATIVE_PATH}`;
+  await FileSystem.deleteAsync(`${LOCAL_DOWNLOAD_DIR}/${dbFilename}`, { idempotent: true });
+  const remoteFullPath = `${defaultICloudContainerPath}/Documents/${REMOTE_DIR}/${dbFilename}`;
   const downloadedPath = await downloadFileAsync(remoteFullPath, LOCAL_DOWNLOAD_DIR);
   return downloadedPath;
 }
 
-/** リモート DB と meta を削除 */
+/** リモート Database/ 内の全 DB 版（旧形式・残骸含む）を削除する。 */
 export async function deleteRemoteDb(): Promise<void> {
   if (!defaultICloudContainerPath) return;
-  const remoteDbFullPath = `${defaultICloudContainerPath}/Documents/${REMOTE_DB_RELATIVE_PATH}`;
-  const remoteMetaFullPath = `${defaultICloudContainerPath}/Documents/${REMOTE_META_RELATIVE_PATH}`;
-  if (await isExistAsync(REMOTE_DB_RELATIVE_PATH, false)) {
-    await unlinkAsync(remoteDbFullPath);
+  let paths: string[] = [];
+  try {
+    paths = await readDirAsync(REMOTE_DIR, { isFullPath: true });
+  } catch {
+    return;
   }
-  if (await isExistAsync(REMOTE_META_RELATIVE_PATH, false)) {
-    await unlinkAsync(remoteMetaFullPath);
+  for (const p of paths) {
+    try {
+      await unlinkAsync(p);
+    } catch {
+      // 無視（best-effort）
+    }
   }
 }
 
@@ -291,6 +317,4 @@ export const ICloudPaths = {
   LOCAL_SNAPSHOT_PATH,
   LOCAL_SNAPSHOT_PATH_PLAIN,
   LOCAL_DOWNLOAD_DIR,
-  REMOTE_DB_RELATIVE_PATH,
-  REMOTE_META_RELATIVE_PATH,
 } as const;

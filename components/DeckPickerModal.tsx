@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -89,50 +89,59 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.sheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
-          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {title}
-          </Text>
-          <FlatList
-            data={decks}
-            keyExtractor={(item) => item.id}
-            ListHeaderComponent={header}
-            renderItem={({ item }) => (
-              <Pressable
-                style={[styles.item, { borderBottomColor: theme.colors.border }]}
-                onPress={() => onSelect(item)}
-              >
-                <Text style={[styles.itemName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {item.name}
-                </Text>
-                {showCardCount && (
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t('common.cardsCount', { count: item.cardCount })}
-                  </Text>
-                )}
-              </Pressable>
-            )}
-            ListEmptyComponent={
-              onCreateDeck ? null : (
-                <Text style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {emptyMessage ?? t('card.noDeckToMove')}
-                </Text>
-              )
-            }
-          />
-          <Pressable style={[styles.cancel, { borderTopColor: theme.colors.border }]} onPress={onClose}>
-            <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('common.cancel')}
+      {/* キーボード表示時にシート（下端固定）を持ち上げ、新規作成の入力欄が隠れないようにする */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Pressable style={styles.overlay} onPress={onClose}>
+          <Pressable style={[styles.sheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+            <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {title}
             </Text>
+            <FlatList
+              data={decks}
+              keyExtractor={(item) => item.id}
+              ListHeaderComponent={header}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.item, { borderBottomColor: theme.colors.border }]}
+                  onPress={() => onSelect(item)}
+                >
+                  <Text style={[styles.itemName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {item.name}
+                  </Text>
+                  {showCardCount && (
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('common.cardsCount', { count: item.cardCount })}
+                    </Text>
+                  )}
+                </Pressable>
+              )}
+              ListEmptyComponent={
+                onCreateDeck ? null : (
+                  <Text style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {emptyMessage ?? t('card.noDeckToMove')}
+                  </Text>
+                )
+              }
+            />
+            <Pressable style={[styles.cancel, { borderTopColor: theme.colors.border }]} onPress={onClose}>
+              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('common.cancel')}
+              </Text>
+            </Pressable>
           </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

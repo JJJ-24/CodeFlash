@@ -225,6 +225,7 @@
     "sortModeLabel": "並べ替えモード"
   },
   "settings": {
+    "display": "表示",
     "theme": "テーマ",
     "themeLight": "ライト",
     "themeDark": "ダーク",

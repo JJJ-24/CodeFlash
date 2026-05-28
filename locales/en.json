@@ -225,6 +225,7 @@
     "sortModeLabel": "Sort Mode"
   },
   "settings": {
+    "display": "Display",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",

@@ -98,6 +98,11 @@ function RootStack() {
       />
       <Stack.Screen name="search" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Screen name="about" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/display" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/notifications" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/study" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/sync" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/data" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
     </Stack>
     </ThemeProvider>

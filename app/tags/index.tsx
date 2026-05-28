@@ -18,6 +18,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -356,47 +357,53 @@ export default function TagsScreen() {
             const isSelected = selectedTagIds.has(item.id);
             return (
               <ScaleDecorator>
-                <Pressable
-                  style={[
-                    styles.tagItem,
-                    { backgroundColor: theme.colors.surface },
-                    isFocused && !selectionMode && { borderWidth: 2, borderColor: theme.colors.primary },
-                    isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
-                    isFocused && selectionMode && { borderWidth: 2, borderColor: '#F57C00' },
-                  ]}
-                  onPress={() => {
-                    const idx = getIndex();
-                    if (selectionMode) {
-                      if (idx !== undefined) setFocusedTagIndex(idx);
-                      toggleSelectTag(item.id);
-                      return;
-                    }
-                    if (idx !== undefined) setFocusedTagIndex(idx);
-                    router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
-                  }}
-                  onLongPress={!selectionMode && tagSortOrder === 'manual' ? drag : undefined}
+                {/* 手動並び替え・選択モード以外で左スワイプ削除を有効化 */}
+                <SwipeToDeleteRow
+                  enabled={!selectionMode && tagSortOrder !== 'manual'}
+                  onDelete={() => confirmDelete(item)}
                 >
-                  {selectionMode && (
-                    <Ionicons
-                      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={24}
-                      color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
-                    />
-                  )}
-                  <View style={[styles.colorDot, { backgroundColor: item.color }]} />
-                  <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
-                  <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                    <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
-                  </View>
-                  {!selectionMode && (
-                    <>
-                      <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedTagIndex(idx); router.push(`/tags/${item.id}/edit`); }} hitSlop={8} style={styles.editBtn}>
-                        <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                      </Pressable>
-                      <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
-                    </>
-                  )}
-                </Pressable>
+                  <Pressable
+                    style={[
+                      styles.tagItem,
+                      { backgroundColor: theme.colors.surface },
+                      isFocused && !selectionMode && { borderWidth: 2, borderColor: theme.colors.primary },
+                      isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+                      isFocused && selectionMode && { borderWidth: 2, borderColor: '#F57C00' },
+                    ]}
+                    onPress={() => {
+                      const idx = getIndex();
+                      if (selectionMode) {
+                        if (idx !== undefined) setFocusedTagIndex(idx);
+                        toggleSelectTag(item.id);
+                        return;
+                      }
+                      if (idx !== undefined) setFocusedTagIndex(idx);
+                      router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
+                    }}
+                    onLongPress={!selectionMode && tagSortOrder === 'manual' ? drag : undefined}
+                  >
+                    {selectionMode && (
+                      <Ionicons
+                        name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={24}
+                        color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
+                      />
+                    )}
+                    <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                    <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
+                    <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
+                      <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
+                    </View>
+                    {!selectionMode && (
+                      <>
+                        <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedTagIndex(idx); router.push(`/tags/${item.id}/edit`); }} hitSlop={8} style={styles.editBtn}>
+                          <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                        </Pressable>
+                        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+                      </>
+                    )}
+                  </Pressable>
+                </SwipeToDeleteRow>
               </ScaleDecorator>
             );
           }}

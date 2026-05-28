@@ -38,6 +38,7 @@ import {
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { InfoModal } from '@/components/InfoModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
@@ -669,59 +670,68 @@ export default function DeckDetailScreen() {
           }
           return (
             <ScaleDecorator>
-              <Pressable
-                style={[
-                  styles.cardItem,
-                  { backgroundColor: theme.colors.surface },
-                  selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
-                  selectionMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
-                  !selectionMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
-                ]}
-                onPress={() => {
-                  if (selectionMode) {
-                    toggleSelect();
-                  } else {
-                    const idx = getIndex();
-                    if (idx !== undefined) setFocusedCardIndex(idx);
-                    navigateToCardEdit(item.id);
-                  }
-                }}
-                onLongPress={() => {
-                  if (selectionMode) return;
-                  if (selectedFilter !== 'all') {
-                    setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
-                    return;
-                  }
-                  if (cardSortOrder !== 'manual') {
-                    setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
-                    return;
-                  }
-                  drag();
-                }}
+              {/* 実際にドラッグ並び替えが効く状態（フィルター=すべて かつ ソート=手動）と
+                  選択モードのときだけスワイプ削除を無効化。手動ソートでもフィルターが
+                  「すべて」以外ならドラッグ不可なのでスワイプ削除を許可する。 */}
+              <SwipeToDeleteRow
+                enabled={!selectionMode && !(selectedFilter === 'all' && cardSortOrder === 'manual')}
+                onDelete={() => confirmDeleteCard(item)}
+                containerStyle={styles.cardRowSpacing}
               >
-                {selectionMode && (
-                  <Ionicons
-                    name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={22}
-                    color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
-                  />
-                )}
-                <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {preview || t('card.noText')}
-                </Text>
-                {!selectionMode && (
-                  <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
-                    {isPro && (
-                      <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedCardIndex(idx); setStatsCardId(item.id); }} hitSlop={8} style={{ padding: 4 }}>
-                        <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                <Pressable
+                  style={[
+                    styles.cardItem,
+                    { backgroundColor: theme.colors.surface },
+                    selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+                    selectionMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
+                    !selectionMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+                  ]}
+                  onPress={() => {
+                    if (selectionMode) {
+                      toggleSelect();
+                    } else {
+                      const idx = getIndex();
+                      if (idx !== undefined) setFocusedCardIndex(idx);
+                      navigateToCardEdit(item.id);
+                    }
+                  }}
+                  onLongPress={() => {
+                    if (selectionMode) return;
+                    if (selectedFilter !== 'all') {
+                      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
+                      return;
+                    }
+                    if (cardSortOrder !== 'manual') {
+                      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
+                      return;
+                    }
+                    drag();
+                  }}
+                >
+                  {selectionMode && (
+                    <Ionicons
+                      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
+                    />
+                  )}
+                  <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {preview || t('card.noText')}
+                  </Text>
+                  {!selectionMode && (
+                    <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+                      {isPro && (
+                        <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedCardIndex(idx); setStatsCardId(item.id); }} hitSlop={8} style={{ padding: 4 }}>
+                          <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                        </Pressable>
+                      )}
+                      <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedCardIndex(idx); navigateToCardEdit(item.id); }} hitSlop={8} style={{ padding: 4 }}>
+                        <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                       </Pressable>
-                    )}
-                    <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedCardIndex(idx); navigateToCardEdit(item.id); }} hitSlop={8} style={{ padding: 4 }}>
-                      <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                    </Pressable>
-                  </View>
-                )}
-              </Pressable>
+                    </View>
+                  )}
+                </Pressable>
+              </SwipeToDeleteRow>
             </ScaleDecorator>
           );
         }}
@@ -866,12 +876,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginHorizontal: 16,
-    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     ...SHADOW.subtle,
+  },
+  // カードの外側マージンは SwipeToDeleteRow のコンテナへ（スワイプ領域に余白を含めない）
+  cardRowSpacing: {
+    marginHorizontal: 16,
+    marginBottom: 8,
   },
   cardPreview: { flex: 1 },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },

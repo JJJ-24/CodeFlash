@@ -21,6 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -352,21 +353,27 @@ export default function HomeScreen() {
             ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedDeckIndex(null)} />}
             renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
               <ScaleDecorator>
-                <DeckCard
-                  deck={item}
-                  drag={deckSortOrder === 'manual' ? drag : null}
-                  onEdit={(id) => {
-                    const idx = getIndex();
-                    if (idx !== undefined) setFocusedDeckIndex(idx);
-                    router.push({ pathname: '/deck/[id]/edit', params: { id } });
-                  }}
-                  onPress={() => {
-                    const idx = getIndex();
-                    if (idx !== undefined) setFocusedDeckIndex(idx);
-                    router.push({ pathname: '/deck/[id]', params: { id: item.id } });
-                  }}
-                  isFocused={focusedDeckIndex !== null && getIndex() === focusedDeckIndex}
-                />
+                {/* 手動並び替えモード以外で左スワイプ削除を有効化（手動時はドラッグ優先で無効） */}
+                <SwipeToDeleteRow
+                  enabled={deckSortOrder !== 'manual'}
+                  onDelete={() => { setPendingDeleteDeck(item); setShowDeleteModal(true); }}
+                >
+                  <DeckCard
+                    deck={item}
+                    drag={deckSortOrder === 'manual' ? drag : null}
+                    onEdit={(id) => {
+                      const idx = getIndex();
+                      if (idx !== undefined) setFocusedDeckIndex(idx);
+                      router.push({ pathname: '/deck/[id]/edit', params: { id } });
+                    }}
+                    onPress={() => {
+                      const idx = getIndex();
+                      if (idx !== undefined) setFocusedDeckIndex(idx);
+                      router.push({ pathname: '/deck/[id]', params: { id: item.id } });
+                    }}
+                    isFocused={focusedDeckIndex !== null && getIndex() === focusedDeckIndex}
+                  />
+                </SwipeToDeleteRow>
               </ScaleDecorator>
             )}
           />

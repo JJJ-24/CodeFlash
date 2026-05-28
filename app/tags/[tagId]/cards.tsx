@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -230,35 +231,37 @@ export default function TagCardsScreen() {
             const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
             const isFocused = focusedCardIndex === index;
             return (
-              <Pressable
-                style={[
-                  styles.cardItem,
-                  { backgroundColor: theme.colors.surface },
-                  isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
-                ]}
-                onPress={() => {
-                  setFocusedCardIndex(index);
-                  navigateToEdit(item);
-                }}
-              >
-                <Text
-                  style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]}
-                  numberOfLines={2}
-                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              <SwipeToDeleteRow onDelete={() => confirmDeleteCard(item)} containerStyle={styles.cardRowSpacing}>
+                <Pressable
+                  style={[
+                    styles.cardItem,
+                    { backgroundColor: theme.colors.surface },
+                    isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+                  ]}
+                  onPress={() => {
+                    setFocusedCardIndex(index);
+                    navigateToEdit(item);
+                  }}
                 >
-                  {preview || t('card.noText')}
-                </Text>
-                <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
-                  {isPro && (
-                    <Pressable onPress={() => { setFocusedCardIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={styles.iconBtn}>
-                      <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                  <Text
+                    style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]}
+                    numberOfLines={2}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                  >
+                    {preview || t('card.noText')}
+                  </Text>
+                  <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+                    {isPro && (
+                      <Pressable onPress={() => { setFocusedCardIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={styles.iconBtn}>
+                        <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                      </Pressable>
+                    )}
+                    <Pressable onPress={() => { setFocusedCardIndex(index); navigateToEdit(item); }} hitSlop={8} style={styles.iconBtn}>
+                      <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                     </Pressable>
-                  )}
-                  <Pressable onPress={() => { setFocusedCardIndex(index); navigateToEdit(item); }} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                  </Pressable>
-                </View>
-              </Pressable>
+                  </View>
+                </Pressable>
+              </SwipeToDeleteRow>
             );
           }}
         />
@@ -352,12 +355,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginHorizontal: 20,
-    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     ...SHADOW.subtle,
+  },
+  // カードの外側マージンは SwipeToDeleteRow のコンテナへ（スワイプ領域に余白を含めない）
+  cardRowSpacing: {
+    marginHorizontal: 20,
+    marginBottom: 8,
   },
   sectionTitle: { fontWeight: '700', marginBottom: 12, marginHorizontal: 20 },
   cardPreview: { flex: 1 },

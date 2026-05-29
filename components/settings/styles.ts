@@ -104,6 +104,41 @@ export const settingsStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(127,127,127,0.25)',
   },
+  // タグライン＋ⓘ
+  syncTaglineRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  syncTagline: { flex: 1 },
+  // 展開された説明ボックス
+  syncInfoBox: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  // 主ボタン（今すぐ同期）
+  syncPrimaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  syncPrimaryButtonText: { color: '#fff', fontWeight: '700' },
+  // 詳細操作の折りたたみヘッダー
+  syncAdvancedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  syncAdvancedHeaderText: { fontWeight: '600', flex: 1 },
+  // 詳細操作の各行（アイコン左）
+  syncAdvancedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  syncAdvancedItemText: { flex: 1 },
 
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

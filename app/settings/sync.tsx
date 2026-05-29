@@ -42,6 +42,13 @@ export default function SyncSettingsScreen() {
   } = useSyncStore();
   const [modal, setModal] = useState<ModalConfig | null>(null);
 
+  // ⓘタップでインライン展開する説明トグル
+  const [showTagline, setShowTagline] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showUploadInfo, setShowUploadInfo] = useState(false);
+  const [showDownloadInfo, setShowDownloadInfo] = useState(false);
+  const [showRestoreInfo, setShowRestoreInfo] = useState(false);
+
   /** 同期エラーコードを翻訳済みの文言にする（モーダル・インライン表示で共用）。 */
   function syncErrorText(code: SyncErrorCode): string {
     switch (code) {
@@ -225,89 +232,178 @@ export default function SyncSettingsScreen() {
     );
   }
 
+  const syncing = syncStatus === 'syncing';
+
   return (
     <SettingsDetail title={t('sync.title')} overlay={overlay}>
+      {/* セクション1: iCloud 同期カード */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.notificationRow}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t('sync.enabled')}
+            {t('sync.enabledShort')}
           </Text>
           <Switch
             value={syncEnabled}
             onValueChange={handleSyncToggle}
             trackColor={{ true: theme.colors.primary }}
-            disabled={syncStatus === 'syncing'}
+            disabled={syncing}
           />
         </View>
+
         {syncEnabled && (
           <>
-            <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {t('sync.description')}
-            </Text>
-            <View style={styles.syncStatusRow}>
-              <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {formatLastSynced()}
+            {/* タグライン + ⓘ */}
+            <Pressable
+              style={styles.syncTaglineRow}
+              onPress={() => setShowTagline((v) => !v)}
+              hitSlop={6}
+            >
+              <Text style={[styles.syncTagline, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('sync.tagline')}
               </Text>
-            </View>
-            {syncErrorCode && syncStatus !== 'syncing' && (
+              <Ionicons
+                name={showTagline ? 'information-circle' : 'information-circle-outline'}
+                size={theme.fontSize.lg}
+                color={theme.colors.iconSubtle}
+              />
+            </Pressable>
+            {showTagline && (
+              <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('sync.descriptionDetail')}
+                </Text>
+              </View>
+            )}
+
+            {/* 最終同期 */}
+            <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {formatLastSynced()}
+            </Text>
+
+            {/* エラー表示 */}
+            {syncErrorCode && !syncing && (
               <Text style={[{ color: theme.colors.danger, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {syncErrorText(syncErrorCode)}
               </Text>
             )}
+
+            {/* 主ボタン: 今すぐ同期 */}
             <Pressable
-              style={[styles.dataRow, { opacity: syncStatus === 'syncing' ? 0.6 : 1 }]}
+              style={[styles.syncPrimaryButton, { backgroundColor: theme.colors.primary, opacity: syncing ? 0.6 : 1 }]}
               onPress={handleManualSync}
-              disabled={syncStatus === 'syncing'}
+              disabled={syncing}
             >
-              <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {syncStatus === 'syncing' ? getSyncStatusText() : t('sync.syncNow')}
-                </Text>
-              </View>
-              {syncStatus === 'syncing' ? (
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+              {syncing ? (
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Ionicons name="sync" size={theme.fontSize.lg} color={theme.colors.primary} />
+                <Ionicons name="sync" size={theme.fontSize.md} color="#fff" />
               )}
+              <Text style={[styles.syncPrimaryButtonText, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {syncing ? getSyncStatusText() : t('sync.syncNow')}
+              </Text>
             </Pressable>
-            <View style={styles.syncAdvancedRow}>
-              <Pressable
-                style={[styles.syncAdvancedBtn, { opacity: syncStatus === 'syncing' ? 0.4 : 1 }]}
-                onPress={handleForceUpload}
-                disabled={syncStatus === 'syncing'}
-              >
-                <Ionicons name="cloud-upload-outline" size={theme.fontSize.md} color={theme.colors.textSecondary} />
-                <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                  {t('sync.forceUpload')}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.syncAdvancedBtn, { opacity: syncStatus === 'syncing' ? 0.4 : 1 }]}
-                onPress={handleForceDownload}
-                disabled={syncStatus === 'syncing'}
-              >
-                <Ionicons name="cloud-download-outline" size={theme.fontSize.md} color={theme.colors.textSecondary} />
-                <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                  {t('sync.forceDownload')}
-                </Text>
-              </Pressable>
-            </View>
+
+            {/* 詳細操作の折りたたみヘッダー */}
             <Pressable
-              style={[styles.dataRow, { opacity: syncStatus === 'syncing' ? 0.6 : 1 }]}
-              onPress={handleRestore}
-              disabled={syncStatus === 'syncing'}
+              style={styles.syncAdvancedHeader}
+              onPress={() => setShowAdvanced((v) => !v)}
+              hitSlop={4}
             >
-              <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('sync.restoreTitle')}
-                </Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('sync.restoreSubtitle')}
-                </Text>
-              </View>
-              <Ionicons name="time-outline" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+              <Ionicons
+                name={showAdvanced ? 'chevron-down' : 'chevron-forward'}
+                size={theme.fontSize.md}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={[styles.syncAdvancedHeaderText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('sync.advancedSection')}
+              </Text>
             </Pressable>
+
+            {showAdvanced && (
+              <>
+                {/* 強制アップロード */}
+                <Pressable
+                  style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1 }]}
+                  onPress={handleForceUpload}
+                  disabled={syncing}
+                >
+                  <Ionicons name="cloud-upload-outline" size={theme.fontSize.lg} color={theme.colors.text} />
+                  <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.forceUpload')}
+                  </Text>
+                  <Pressable onPress={() => setShowUploadInfo((v) => !v)} hitSlop={8}>
+                    <Ionicons
+                      name={showUploadInfo ? 'information-circle' : 'information-circle-outline'}
+                      size={theme.fontSize.lg}
+                      color={theme.colors.iconSubtle}
+                    />
+                  </Pressable>
+                </Pressable>
+                {showUploadInfo && (
+                  <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('sync.forceUploadInfo')}
+                    </Text>
+                  </View>
+                )}
+
+                {/* 強制ダウンロード */}
+                <Pressable
+                  style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1 }]}
+                  onPress={handleForceDownload}
+                  disabled={syncing}
+                >
+                  <Ionicons name="cloud-download-outline" size={theme.fontSize.lg} color={theme.colors.text} />
+                  <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.forceDownload')}
+                  </Text>
+                  <Pressable onPress={() => setShowDownloadInfo((v) => !v)} hitSlop={8}>
+                    <Ionicons
+                      name={showDownloadInfo ? 'information-circle' : 'information-circle-outline'}
+                      size={theme.fontSize.lg}
+                      color={theme.colors.iconSubtle}
+                    />
+                  </Pressable>
+                </Pressable>
+                {showDownloadInfo && (
+                  <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('sync.forceDownloadInfo')}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
           </>
+        )}
+      </View>
+
+      {/* セクション2: データ復元カード（同期とは別概念のため別カード） */}
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Pressable
+          style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1, paddingVertical: 4 }]}
+          onPress={handleRestore}
+          disabled={syncing}
+        >
+          <Ionicons name="time-outline" size={theme.fontSize.lg} color={theme.colors.text} />
+          <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('sync.restoreShort')}
+          </Text>
+          <Pressable onPress={() => setShowRestoreInfo((v) => !v)} hitSlop={8}>
+            <Ionicons
+              name={showRestoreInfo ? 'information-circle' : 'information-circle-outline'}
+              size={theme.fontSize.lg}
+              color={theme.colors.iconSubtle}
+            />
+          </Pressable>
+          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+        </Pressable>
+        {showRestoreInfo && (
+          <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('sync.restoreInfo')}
+            </Text>
+          </View>
         )}
       </View>
     </SettingsDetail>

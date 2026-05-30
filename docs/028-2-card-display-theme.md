@@ -1,7 +1,8 @@
 # 028-2 デッキ・カードのカスタマイズ（フェーズ2: カード表示テーマ）
 
 **フェーズ:** v1.5 候補
-**ステータス:** 未着手
+**ステータス:** 実装完了（動作確認済み・コミット済み）
+**配信:** Pro 機能
 **依存:** 013（ダークモード）, 016（Pro 課金）, 028-1（色付きアイコン）
 **被依存:** 028-3（フォント変更）
 
@@ -43,7 +44,7 @@
 ## Todo
 
 ### プリセット定義
-- [ ] `lib/theme/cardThemes.ts` を新規作成
+- [x] `lib/theme/cardThemes.ts` を新規作成
   ```ts
   export type CardThemeName = 'default' | 'paper' | 'mint' | 'graphite' | 'lavender' | 'sepia';
 
@@ -75,70 +76,70 @@
     },
   };
   ```
-- [ ] サムネイル用のスワッチ色（プレビュー丸ボタン用）も同ファイルからエクスポート
+- [x] サムネイル用のスワッチ色（プレビュー丸ボタン用）も同ファイルからエクスポート
 
 ### 設定ストア
-- [ ] `store/settings.ts`
-  - [ ] `cardThemePreference: CardThemeName`（初期値: `'default'`）を追加
-  - [ ] `setCardThemePreference(name: CardThemeName)` アクション
-  - [ ] AsyncStorage 永続化（専用キー `@codeflash_card_theme`）
-  - [ ] hydrate 完了まで `'default'` で描画
+- [x] `store/settings.ts`
+  - [x] `cardThemePreference: CardThemeName`（初期値: `'default'`）を追加
+  - [x] `setCardThemePreference(name: CardThemeName)` アクション
+  - [x] AsyncStorage 永続化（専用キー `@codeflash_card_theme`）
+  - [x] hydrate 完了まで `'default'` で描画
 
 ### テーマフック拡張
-- [ ] `lib/theme/index.ts` の `useTheme()` を拡張
-  - [ ] `useSettingsStore((s) => s.cardThemePreference)` を購読
-  - [ ] 戻り値に `cardTheme: CardThemePalette` を追加
-  - [ ] `cardTheme = CARD_THEMES[dark ? 'dark' : 'light'][preference]`
-- [ ] 既存呼び出し箇所への影響は **追加プロパティのみ**なので破壊的変更なし
+- [x] `lib/theme/index.ts` の `useTheme()` を拡張
+  - [x] `useSettingsStore((s) => s.cardThemePreference)` を購読
+  - [x] 戻り値に `cardTheme: CardThemePalette` を追加
+  - [x] `cardTheme = CARD_THEMES[dark ? 'dark' : 'light'][preference]`
+- [x] 既存呼び出し箇所への影響は **追加プロパティのみ**なので破壊的変更なし
 
 ### 適用箇所
-- [ ] `components/study/FlipCard.tsx`
-  - [ ] カード本体（表面・裏面）の `backgroundColor` を `theme.cardTheme.background` に
-  - [ ] 枠線色を `theme.cardTheme.border` に
-- [ ] `components/study/BlocksView.tsx`
-  - [ ] コードブロックの背景を `theme.cardTheme.codeBackground` に
-  - [ ] テキストブロックは透過（`FlipCard` の background が透ける）
-- [ ] `components/study/CodeRunnerView.tsx`
-  - [ ] ヘッダー背景（状態色: 選択/編集/実行）は **そのまま**維持
-  - [ ] アイドル時の背景のみ `theme.cardTheme.codeBackground` に揃える
-- [ ] **メモエリアの背景** を `theme.cardTheme.memoBackground` に（`app/study/session.tsx` または該当する Memo View）
-  - [ ] テーマと同系の「少し違う色」で表裏とのコントラストを保つ
-  - [ ] 既存の `theme.colors.memoBackground` 参照箇所のうち、学習画面外（カードエディタ等）は **据え置き**（学習画面のみ `cardTheme.memoBackground` を使う）
+- [x] `components/study/FlipCard.tsx`
+  - [x] カード本体（表面・裏面）の `backgroundColor` を `theme.cardTheme.background` に
+  - [x] 枠線色を `theme.cardTheme.border` に
+- [x] `components/study/BlocksView.tsx`
+  - [x] コードブロックの背景を `theme.cardTheme.codeBackground` に
+  - [x] テキストブロックは透過（`FlipCard` の background が透ける）
+- [x] `components/study/CodeRunnerView.tsx`
+  - [x] ヘッダー背景（状態色: 選択/編集/実行）は **そのまま**維持
+  - [x] アイドル時の背景のみ `theme.cardTheme.codeBackground` に揃える
+- [x] **メモエリアの背景** を `theme.cardTheme.memoBackground` に（`app/study/session.tsx` または該当する Memo View）
+  - [x] テーマと同系の「少し違う色」で表裏とのコントラストを保つ
+  - [x] 既存の `theme.colors.memoBackground` 参照箇所のうち、学習画面外（カードエディタ等）は **据え置き**（学習画面のみ `cardTheme.memoBackground` を使う）
 
 ### 設定画面 UI
-- [ ] `app/settings/display.tsx` に「カードテーマ」セクションを追加
-  - [ ] 横並びのスワッチ（直径 56 円形）+ 名前ラベル
-  - [ ] 選択中はチェックマーク + 太枠
-  - [ ] スワッチ色は `cardTheme.background` を表示（プリセットの「らしさ」を視認できる）
-  - [ ] Pro ガード: タップ時に `useProStore.getState().isPro === false` ならペイウォール起動
-- [ ] プレビュー領域（任意）
-  - [ ] 選択中テーマで「ミニカード」を1枚描画してリアルタイム確認
+- [x] `app/settings/display.tsx` に「カードテーマ」セクションを追加
+  - [x] 横並びのスワッチ（直径 56 円形）+ 名前ラベル
+  - [x] 選択中はチェックマーク + 太枠
+  - [x] スワッチ色は `cardTheme.background` を表示（プリセットの「らしさ」を視認できる）
+  - [x] Pro ガード: タップ時に `useProStore.getState().isPro === false` ならペイウォール起動
+- [x] プレビュー領域（任意）
+  - [x] 選択中テーマで「ミニカード」を1枚描画してリアルタイム確認
 
 ### Pro ガード
-- [ ] 選択時にペイウォール起動（保存時ではなく**選択時**=即時反映が前提のため）
-- [ ] 非 Pro でも `'default'` は常に選択可能（フォールバック）
-- [ ] Pro 失効時は `'default'` に戻す処理を `useProStore` の `setIsPro(false)` 内で実装
+- [x] 選択時にペイウォール起動（保存時ではなく**選択時**=即時反映が前提のため）
+- [x] 非 Pro でも `'default'` は常に選択可能（フォールバック）
+- [x] Pro 失効時は `'default'` に戻す処理を `useProStore` の `setIsPro(false)` 内で実装
 
 ### i18n
-- [ ] `ja.json` / `en.json` 両方に追加
-  - [ ] `display.cardTheme` — 「カードテーマ」/ "Card Theme"
-  - [ ] `display.cardThemeDefault` — 「デフォルト」/ "Default"
-  - [ ] `display.cardThemePaper` — 「ペーパー」/ "Paper"
-  - [ ] `display.cardThemeMint` — 「ミント」/ "Mint"
-  - [ ] `display.cardThemeGraphite` — 「グラファイト」/ "Graphite"
-  - [ ] `display.cardThemeLavender` — 「ラベンダー」/ "Lavender"
-  - [ ] `display.cardThemeSepia` — 「セピア」/ "Sepia"
-  - [ ] `paywall.cardTheme` — 「カードテーマ変更は Pro 機能です」/ "Card themes are a Pro feature"
+- [x] `ja.json` / `en.json` 両方に追加
+  - [x] `display.cardTheme` — 「カードテーマ」/ "Card Theme"
+  - [x] `display.cardThemeDefault` — 「デフォルト」/ "Default"
+  - [x] `display.cardThemePaper` — 「ペーパー」/ "Paper"
+  - [x] `display.cardThemeMint` — 「ミント」/ "Mint"
+  - [x] `display.cardThemeGraphite` — 「グラファイト」/ "Graphite"
+  - [x] `display.cardThemeLavender` — 「ラベンダー」/ "Lavender"
+  - [x] `display.cardThemeSepia` — 「セピア」/ "Sepia"
+  - [x] `paywall.cardTheme` — 「カードテーマ変更は Pro 機能です」/ "Card themes are a Pro feature"
 
 ### 動作確認
-- [ ] 各プリセットを選択して学習画面に即座に反映される
-- [ ] ライト/ダーク切替時にそれぞれのプリセット色に追従する
-- [ ] 端末を縦/横に回転してもテーマが維持される
-- [ ] コードブロック内のシンタックスハイライトが各テーマ背景でも視認できる
-- [ ] FSRS の「もう一度/うろ覚え/わかった/バッチリ」ボタン色が背景に埋もれない
-- [ ] 非 Pro が選択しようとするとペイウォールが出る
-- [ ] アプリ再起動後も選択テーマが保持される（AsyncStorage 永続化確認）
-- [ ] iCloud 同期（014）では本設定は **同期しない**（端末ごとの好みのため）
+- [x] 各プリセットを選択して学習画面に即座に反映される
+- [x] ライト/ダーク切替時にそれぞれのプリセット色に追従する
+- [x] 端末を縦/横に回転してもテーマが維持される
+- [x] コードブロック内のシンタックスハイライトが各テーマ背景でも視認できる
+- [x] FSRS の「もう一度/うろ覚え/わかった/バッチリ」ボタン色が背景に埋もれない
+- [x] 非 Pro が選択しようとするとペイウォールが出る
+- [x] アプリ再起動後も選択テーマが保持される（AsyncStorage 永続化確認）
+- [x] iCloud 同期（014）では本設定は **同期しない**（端末ごとの好みのため）
 
 ---
 

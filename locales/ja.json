@@ -23,7 +23,19 @@
     "study": "学習開始",
     "noCards": "カードがまだありません",
     "noCardsSub": "+ ボタンから\nカードを作成しよう",
-    "noCardsInFilter": "該当するカードはありません"
+    "noCardsInFilter": "該当するカードはありません",
+    "icon": "アイコン",
+    "iconNone": "アイコンなし",
+    "iconPickerTitle": "アイコンを選択",
+    "iconCategory": {
+      "none": "なし",
+      "study": "学習",
+      "code": "コード",
+      "science": "理科",
+      "language": "言語",
+      "life": "生活・その他"
+    },
+    "color": "カラー"
   },
   "study": {
     "title": "学習",

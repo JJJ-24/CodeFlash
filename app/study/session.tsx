@@ -161,10 +161,11 @@ export default function StudySessionScreen() {
   const initialTopInsetRef = useRef(insets.top);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
+  const sessionDeck = deckId ? decks.find((d) => d.id === deckId) : null;
   const sessionTitle = isFocusedReview
     ? t("study.focusedReviewTitle")
     : deckId
-      ? (decks.find((d) => d.id === deckId)?.name ?? t("study.title"))
+      ? (sessionDeck?.name ?? t("study.title"))
       : tagId
         ? (tags.find((tg) => tg.id === tagId)?.name ?? t("study.title"))
         : t("study.title");
@@ -499,6 +500,13 @@ export default function StudySessionScreen() {
             paddingHorizontal: 56, gap: 4,
           }}
         >
+          {sessionDeck?.iconName && (
+            <Ionicons
+              name={sessionDeck.iconName as any}
+              size={20}
+              color={sessionDeck.colorHex ?? theme.colors.primary}
+            />
+          )}
           <Text
             style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
             numberOfLines={1}

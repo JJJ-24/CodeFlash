@@ -338,9 +338,18 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.masteryRow, pressed && { opacity: 0.7 }]}>
       <View style={styles.masteryHeader}>
-        <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-          {deck.name}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+          {deck.iconName && (
+            <Ionicons
+              name={deck.iconName as any}
+              size={16}
+              color={deck.colorHex ?? theme.colors.primary}
+            />
+          )}
+          <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {deck.name}
+          </Text>
+        </View>
         <Text style={[styles.masteryPct, { color, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{pct}%</Text>
       </View>
       <View style={[styles.masteryBarBg, { backgroundColor: theme.colors.progressBg }]}>

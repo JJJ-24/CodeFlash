@@ -31,6 +31,8 @@ export interface Deck {
   createdAt: string;
   updatedAt: string;
   sortOrder: number;
+  iconName: string | null;
+  colorHex: string | null;
 }
 
 export interface Card {

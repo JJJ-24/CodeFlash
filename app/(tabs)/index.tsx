@@ -70,6 +70,8 @@ function DeckCard({
   isFocused?: boolean;
 }) {
   const theme = useTheme();
+  const iconColor = deck.colorHex ?? theme.colors.primary;
+  const iconBg = deck.colorHex ? deck.colorHex + '20' : theme.colors.primaryLight;
 
   return (
     <TouchableOpacity
@@ -82,6 +84,11 @@ function DeckCard({
       onLongPress={drag ?? undefined}
       activeOpacity={0.7}
     >
+      {deck.iconName && (
+        <View style={[styles.deckIcon, { backgroundColor: iconBg }]}>
+          <Ionicons name={deck.iconName as any} size={20} color={iconColor} />
+        </View>
+      )}
       <View style={styles.cardContent}>
         <Text style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {deck.name}
@@ -448,6 +455,14 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   cardContent: { flex: 1 },
+  deckIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   deckName: { fontWeight: '700', marginBottom: 4 },
   deckDesc: { marginBottom: 4 },
   cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12, alignItems: 'center' },

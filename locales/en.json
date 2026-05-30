@@ -23,7 +23,19 @@
     "study": "Start Studying",
     "noCards": "No cards yet",
     "noCardsSub": "Tap the + button\nto create your first card",
-    "noCardsInFilter": "No matching cards"
+    "noCardsInFilter": "No matching cards",
+    "icon": "Icon",
+    "iconNone": "No Icon",
+    "iconPickerTitle": "Select Icon",
+    "iconCategory": {
+      "none": "None",
+      "study": "Study",
+      "code": "Code",
+      "science": "Science",
+      "language": "Language",
+      "life": "Life & Other"
+    },
+    "color": "Color"
   },
   "study": {
     "title": "Study",

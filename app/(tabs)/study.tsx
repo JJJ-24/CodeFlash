@@ -477,6 +477,11 @@ export default function StudyScreen() {
                     router.push({ pathname: '/study/session', params: { deckId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
                 >
+                  {item.iconName && (
+                    <View style={[styles.deckIcon, { backgroundColor: (item.colorHex ?? theme.colors.primary) + '20' }]}>
+                      <Ionicons name={item.iconName as any} size={18} color={item.colorHex ?? theme.colors.primary} />
+                    </View>
+                  )}
                   <View style={styles.deckInfo}>
                     <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                     {!subTextActive && (
@@ -639,6 +644,7 @@ const styles = StyleSheet.create({
   },
   dueChipText: { fontWeight: '700', color: '#FFF' },
   tagColorDot: { width: 16, height: 16, borderRadius: 8 },
+  deckIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   filterDesc: {},
   dueLabel: {},
 });

@@ -504,6 +504,13 @@ export default function DeckDetailScreen() {
               paddingHorizontal: 56, gap: 4,
             }}
           >
+            {!selectionMode && deck?.iconName && (
+              <Ionicons
+                name={deck.iconName as any}
+                size={20}
+                color={deck.colorHex ?? theme.colors.primary}
+              />
+            )}
             <Text
               style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
               numberOfLines={1}

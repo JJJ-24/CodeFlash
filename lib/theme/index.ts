@@ -106,6 +106,13 @@ export const FILTER_COLORS = {
   due: '#F57C00',
 } as const;
 
+// デッキのカラーテーマ（028-1）。tags の PRESET_COLORS と同じパレットを採用。
+export const DECK_PRESET_COLORS = [
+  '#E53935', '#fd9023', '#F6BF26', '#33B679',
+  '#0B8043', '#039BE5', '#0e4cdd', '#7986CB',
+  '#8E24AA', '#828080', '#795548', '#F48FB1',
+] as const;
+
 export const GRADE_COLORS = {
   again: '#E53935',
   hard:  '#FB8C00',

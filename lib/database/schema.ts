@@ -142,6 +142,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE grade_logs ADD COLUMN responseTimeMs INTEGER;`);
   }
 
+  // decks へ iconName / colorHex カラム追加（028-1: 色付きアイコン）
+  // 既存デッキは NULL のまま動作（アイコンなし・primary フォールバック）
+  if (!cols.some((c) => c.name === 'iconName')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN iconName TEXT;`);
+  }
+  if (!cols.some((c) => c.name === 'colorHex')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN colorHex TEXT;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

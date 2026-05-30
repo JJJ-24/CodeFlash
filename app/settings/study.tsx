@@ -99,7 +99,7 @@ export default function StudySettingsScreen() {
               onPress={() => setShowRetentionInfo((v) => !v)}
               hitSlop={6}
             >
-              <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.fsrsRetention')}
               </Text>
               <Ionicons

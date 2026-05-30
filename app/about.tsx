@@ -63,7 +63,7 @@ export default function AboutScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 32 + 56 + 24 + insets.bottom }]}>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.row}>
             <View style={styles.rowText}>
@@ -117,6 +117,15 @@ export default function AboutScreen() {
         </View>
       </ScrollView>
 
+      {/* 左下フローティング戻るボタン（設定セクション画面と統一） */}
+      <Pressable
+        style={[styles.fab, { left: 20, bottom: Math.max(insets.bottom, 16) + 16, backgroundColor: theme.colors.primary }]}
+        onPress={() => router.back()}
+        hitSlop={6}
+      >
+        <Ionicons name="chevron-back" size={28} color="#FFF" />
+      </Pressable>
+
       {errorVisible && (
         <InfoModal
           visible
@@ -146,4 +155,17 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontWeight: '600' },
   rowSubtitle: {},
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
 });

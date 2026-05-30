@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -56,10 +56,36 @@ export function SettingsDetail({ title, children, overlay }: Props) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={settingsStyles.container}>
+      <ScrollView contentContainerStyle={[settingsStyles.container, { paddingBottom: 32 + 56 + 24 + insets.bottom }]}>
         {children}
       </ScrollView>
+
+      {/* 左下フローティング戻るボタン（カード一覧・タグ管理と同パターン） */}
+      <Pressable
+        style={[fabStyles.fab, { left: 20, bottom: Math.max(insets.bottom, 16) + 16, backgroundColor: theme.colors.primary }]}
+        onPress={() => router.back()}
+        hitSlop={6}
+      >
+        <Ionicons name="chevron-back" size={28} color="#FFF" />
+      </Pressable>
+
       {overlay}
     </View>
   );
 }
+
+const fabStyles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+});

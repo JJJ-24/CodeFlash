@@ -246,6 +246,15 @@
     "fontSizeSmall": "Small",
     "fontSizeMedium": "Medium",
     "fontSizeLarge": "Large",
+    "cardTheme": "Card Theme",
+    "cardThemeName": {
+      "default": "Default",
+      "paper": "Paper",
+      "mint": "Mint",
+      "graphite": "Graphite",
+      "lavender": "Lavender",
+      "sepia": "Sepia"
+    },
     "keyboard": "Keyboard",
     "keyboardEnabled": "Enable Keyboard Shortcuts",
     "keyboardShortcuts": "Keyboard Shortcuts",

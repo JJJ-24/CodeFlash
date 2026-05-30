@@ -246,6 +246,15 @@
     "fontSizeSmall": "小",
     "fontSizeMedium": "中",
     "fontSizeLarge": "大",
+    "cardTheme": "カードテーマ",
+    "cardThemeName": {
+      "default": "デフォルト",
+      "paper": "ペーパー",
+      "mint": "ミント",
+      "graphite": "グラファイト",
+      "lavender": "ラベンダー",
+      "sepia": "セピア"
+    },
     "keyboard": "キーボード",
     "keyboardEnabled": "ショートカットを使用",
     "keyboardShortcuts": "ショートカットキー一覧",

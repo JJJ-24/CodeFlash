@@ -213,8 +213,8 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       fontSize: theme.fontSize.md,
       color: theme.colors.danger,
     },
-    fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: theme.fontSize.md },
-    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.md, color: '#D4D4D4', backgroundColor: '#1E1E1E' },
+    fence: { backgroundColor: theme.cardTheme.codeBackground, borderRadius: 6, padding: 12, color: '#FFFFFF', fontFamily: 'monospace', fontSize: theme.fontSize.md },
+    code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.md, color: '#FFFFFF', backgroundColor: theme.cardTheme.codeBackground },
     link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
     blockquote: {
       backgroundColor: theme.dark ? '#2A2A2A' : '#F0F0F0',

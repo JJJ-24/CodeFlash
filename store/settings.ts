@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 
+import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
+
 const STORAGE_KEY = '@codeflash_keyboard_shortcuts';
 const FILTER_STORAGE_KEY = '@codeflash_initial_filter';
 const LANG_STORAGE_KEY = '@codeflash_last_code_language';
@@ -18,6 +20,7 @@ const STUDY_HIDE_EMPTY_KEY = '@codeflash_study_hide_empty';
 const GRADE_RANKING_BY_TIME_KEY = '@codeflash_grade_ranking_by_time';
 const GRADE_RANKING_PERIOD_KEY = '@codeflash_grade_ranking_period';
 const GRADE_RANKING_DECK_ID_KEY = '@codeflash_grade_ranking_deck_id';
+const CARD_THEME_KEY = '@codeflash_card_theme';
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 export type CardSortOrder = 'manual' | 'newest' | 'oldest';
@@ -91,6 +94,8 @@ interface SettingsState {
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   gradeRankingDeckId: string | null;
   setGradeRankingDeckId: (v: string | null) => void;
+  cardThemePreference: CardThemeName;
+  setCardThemePreference: (v: CardThemeName) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -178,10 +183,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     if (v === null) AsyncStorage.removeItem(GRADE_RANKING_DECK_ID_KEY);
     else AsyncStorage.setItem(GRADE_RANKING_DECK_ID_KEY, v);
   },
+  cardThemePreference: 'default',
+  setCardThemePreference: (v) => {
+    set({ cardThemePreference: v });
+    AsyncStorage.setItem(CARD_THEME_KEY, v);
+  },
 }));
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckId] = await Promise.all([
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckId, cardTheme] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEY),
     AsyncStorage.getItem(FILTER_STORAGE_KEY),
     AsyncStorage.getItem(LANG_STORAGE_KEY),
@@ -199,12 +209,14 @@ export async function hydrateSettings(): Promise<void> {
     AsyncStorage.getItem(GRADE_RANKING_BY_TIME_KEY),
     AsyncStorage.getItem(GRADE_RANKING_PERIOD_KEY),
     AsyncStorage.getItem(GRADE_RANKING_DECK_ID_KEY),
+    AsyncStorage.getItem(CARD_THEME_KEY),
   ]);
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
     'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField' |
-    'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckId'
+    'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckId' |
+    'cardThemePreference'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -228,6 +240,9 @@ export async function hydrateSettings(): Promise<void> {
     update.gradeRankingPeriod = gradeRankingPeriod;
   }
   if (gradeRankingDeckId !== null) update.gradeRankingDeckId = gradeRankingDeckId;
+  if (cardTheme !== null && (CARD_THEME_NAMES as readonly string[]).includes(cardTheme)) {
+    update.cardThemePreference = cardTheme as CardThemeName;
+  }
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 }
 

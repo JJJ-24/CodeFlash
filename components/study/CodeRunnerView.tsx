@@ -250,7 +250,7 @@ export function CodeRunnerView({
     <View
       style={[
         styles.container,
-        { backgroundColor: theme.colors.codeBackground },
+        { backgroundColor: theme.cardTheme.codeBackground },
         isRunning && { borderWidth: 2, borderColor: "#43A047" },
         isEditing && { borderWidth: 2, borderColor: "#FB8C00" },
         isSelected &&

@@ -898,7 +898,7 @@ export default function StudySessionScreen() {
           style={[
             styles.memoContent,
             {
-              backgroundColor: theme.colors.memoBackground,
+              backgroundColor: theme.cardTheme.memoBackground,
               borderLeftColor: theme.colors.inputBorder,
             },
           ]}
@@ -1010,7 +1010,7 @@ export default function StudySessionScreen() {
           }}
         />
         <View
-          style={[styles.container, { backgroundColor: theme.colors.surface }]}
+          style={[styles.container, { backgroundColor: theme.cardTheme.background }]}
         >
           {/* ヘッダー行（実体あり、スクロール外） */}
           <View style={styles.fullscreenHeader}>

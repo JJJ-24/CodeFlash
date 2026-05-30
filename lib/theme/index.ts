@@ -1,6 +1,9 @@
 import { Platform, useColorScheme } from 'react-native';
 
 import { FONT_SCALE, useThemeStore } from '@/store/theme';
+import { useSettingsStore } from '@/store/settings';
+import { useProStore } from '@/store/pro';
+import { CARD_THEMES, type CardThemePalette, type CardThemeName } from '@/lib/theme/cardThemes';
 
 const isPad = (Platform as any).isPad;
 
@@ -53,9 +56,11 @@ export interface AppTheme {
   colors: AppColors;
   fontScale: number;
   fontSize: AppFontSize;
+  /** 学習画面のカードテーマ（028-2）。学習画面以外では参照しない */
+  cardTheme: CardThemePalette;
 }
 
-export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
+export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme'> = {
   dark: false,
   colors: {
     background: '#F5F5F5',
@@ -78,7 +83,7 @@ export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
   },
 };
 
-export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize'> = {
+export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme'> = {
   dark: true,
   colors: {
     background: '#121212',
@@ -153,9 +158,13 @@ export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);
   const fontSizePreference = useThemeStore((s) => s.fontSizePreference);
+  const cardThemePreference = useSettingsStore((s) => s.cardThemePreference);
+  const isPro = useProStore((s) => s.isPro);
 
   const base = preference === 'light' ? lightTheme : preference === 'dark' ? darkTheme : (systemScheme === 'dark' ? darkTheme : lightTheme);
   const scale = FONT_SCALE[fontSizePreference];
+  // Pro 失効時は default にフォールバック（ユーザーの選好値は保持し、再 Pro 時に自動復元）
+  const effectiveCardTheme: CardThemeName = isPro ? cardThemePreference : 'default';
   return {
     ...base,
     fontScale: scale,
@@ -168,5 +177,6 @@ export function useTheme(): AppTheme {
       xxl:  Math.round(BASE_FONT_SIZE.xxl  * scale),
       xxxl: Math.round(BASE_FONT_SIZE.xxxl * scale),
     },
+    cardTheme: CARD_THEMES[base.dark ? 'dark' : 'light'][effectiveCardTheme],
   };
 }

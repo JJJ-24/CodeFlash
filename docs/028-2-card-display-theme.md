@@ -24,9 +24,10 @@
 
 ### 含むもの
 - グローバル設定 `cardThemePreference`（`'default' | 'paper' | 'mint' | 'graphite' | 'lavender' | 'sepia'`）
-- 各プリセットごとに `{ background, border, codeBackground }` の3色定義
+- 各プリセットごとに `{ background, memoBackground, border, codeBackground }` の4色定義
 - ライト・ダーク両モードで別パレットを用意（同名でも実色が異なる）
-- 適用箇所: 学習画面のカード本体・コードブロック背景
+- 適用箇所: 学習画面のカード本体（表面・裏面）・**メモ背景**・コードブロック背景
+- メモ背景は本体背景と**同系の若干違う色**で差分表現（現状の `surface` と `memoBackground` の関係を踏襲）
 - 設定画面（`app/settings/display.tsx`）にプリセット選択 UI
 - 非 Pro は選択 UI を見せつつ、選択時にペイウォール起動
 
@@ -35,6 +36,7 @@
 - カード単位のテーマ（デッキ単位の `colorHex` は 028-1 で完結）
 - ホーム/タブ/設定など学習画面外の背景
 - ユーザー定義の自由色（カスタムカラーピッカー）
+- グレードボタン（もう一度/うろ覚え/わかった/バッチリ）の色 — 既存カラー固定（可読性最優先）
 
 ---
 
@@ -46,27 +48,30 @@
   export type CardThemeName = 'default' | 'paper' | 'mint' | 'graphite' | 'lavender' | 'sepia';
 
   export interface CardThemePalette {
-    background: string;
+    background: string;       // 表面・裏面のカード本体背景
+    memoBackground: string;   // メモ背景（background と同系の少し異なる色）
     border: string;
     codeBackground: string;
   }
 
   export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThemePalette>> = {
     light: {
-      default:  { background: '#FFFFFF', border: '#F0F0F0', codeBackground: '#2A2A2A' },
-      paper:    { background: '#FAF7F0', border: '#E8DFC8', codeBackground: '#2A2A2A' },
-      mint:     { background: '#F2FBF7', border: '#C7E8D9', codeBackground: '#1F3530' },
-      graphite: { background: '#ECEEF1', border: '#D5D9E0', codeBackground: '#1B1F26' },
-      lavender: { background: '#F6F2FB', border: '#DBCFEA', codeBackground: '#27203A' },
-      sepia:    { background: '#F4ECDC', border: '#D9C7A4', codeBackground: '#2C2317' },
+      // ライト: memoBackground は background より僅かに濃い（現状 #FFFFFF → #EFEFEF の関係を踏襲）
+      default:  { background: '#FFFFFF', memoBackground: '#EFEFEF', border: '#F0F0F0', codeBackground: '#2A2A2A' },
+      paper:    { background: '#FAF7F0', memoBackground: '#F0EBE0', border: '#E8DFC8', codeBackground: '#2A2A2A' },
+      mint:     { background: '#F2FBF7', memoBackground: '#E5F2EB', border: '#C7E8D9', codeBackground: '#1F3530' },
+      graphite: { background: '#ECEEF1', memoBackground: '#DDE2EA', border: '#D5D9E0', codeBackground: '#1B1F26' },
+      lavender: { background: '#F6F2FB', memoBackground: '#ECE4F4', border: '#DBCFEA', codeBackground: '#27203A' },
+      sepia:    { background: '#F4ECDC', memoBackground: '#E8DEC6', border: '#D9C7A4', codeBackground: '#2C2317' },
     },
     dark: {
-      default:  { background: '#1E1E1E', border: '#2C2C2C', codeBackground: '#2A2A2A' },
-      paper:    { background: '#2A271F', border: '#3A3528', codeBackground: '#1F1C16' },
-      mint:     { background: '#1A2A24', border: '#274037', codeBackground: '#0F1F19' },
-      graphite: { background: '#1B1F26', border: '#2C3340', codeBackground: '#10141C' },
-      lavender: { background: '#221C2E', border: '#352B47', codeBackground: '#15101F' },
-      sepia:    { background: '#2A2117', border: '#3D3022', codeBackground: '#1A150E' },
+      // ダーク: memoBackground は background より僅かに明るい（現状 #1E1E1E → #383838 の関係を踏襲）
+      default:  { background: '#1E1E1E', memoBackground: '#383838', border: '#2C2C2C', codeBackground: '#2A2A2A' },
+      paper:    { background: '#2A271F', memoBackground: '#3A3528', border: '#3A3528', codeBackground: '#1F1C16' },
+      mint:     { background: '#1A2A24', memoBackground: '#25382F', border: '#274037', codeBackground: '#0F1F19' },
+      graphite: { background: '#1B1F26', memoBackground: '#2A303A', border: '#2C3340', codeBackground: '#10141C' },
+      lavender: { background: '#221C2E', memoBackground: '#322942', border: '#352B47', codeBackground: '#15101F' },
+      sepia:    { background: '#2A2117', memoBackground: '#382C1E', border: '#3D3022', codeBackground: '#1A150E' },
     },
   };
   ```
@@ -88,7 +93,7 @@
 
 ### 適用箇所
 - [ ] `components/study/FlipCard.tsx`
-  - [ ] カード本体の `backgroundColor` を `theme.cardTheme.background` に
+  - [ ] カード本体（表面・裏面）の `backgroundColor` を `theme.cardTheme.background` に
   - [ ] 枠線色を `theme.cardTheme.border` に
 - [ ] `components/study/BlocksView.tsx`
   - [ ] コードブロックの背景を `theme.cardTheme.codeBackground` に
@@ -96,7 +101,9 @@
 - [ ] `components/study/CodeRunnerView.tsx`
   - [ ] ヘッダー背景（状態色: 選択/編集/実行）は **そのまま**維持
   - [ ] アイドル時の背景のみ `theme.cardTheme.codeBackground` に揃える
-- [ ] メモエリアの背景は `theme.colors.memoBackground` のまま（学習中の文脈と分離するため）
+- [ ] **メモエリアの背景** を `theme.cardTheme.memoBackground` に（`app/study/session.tsx` または該当する Memo View）
+  - [ ] テーマと同系の「少し違う色」で表裏とのコントラストを保つ
+  - [ ] 既存の `theme.colors.memoBackground` 参照箇所のうち、学習画面外（カードエディタ等）は **据え置き**（学習画面のみ `cardTheme.memoBackground` を使う）
 
 ### 設定画面 UI
 - [ ] `app/settings/display.tsx` に「カードテーマ」セクションを追加

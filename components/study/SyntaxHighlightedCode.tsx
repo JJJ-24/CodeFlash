@@ -4,14 +4,17 @@ import { StyleSheet, Text } from 'react-native';
 import { tokenize, type TokenType } from '@/lib/syntax-highlight';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
+// Material Design 系の鮮やかパレット。彩度の高いカードテーマ背景上でも
+// 「フィルター越し」感が出ないよう、VSCode Dark+ より各色を強めに振っている。
+// number は黄色系にして comment（緑）と意味的に区別。
 const TOKEN_COLORS: Record<TokenType, string> = {
-  keyword:     '#569CD6',
-  string:      '#CE9178',
-  comment:     '#6A9955',
-  number:      '#B5CEA8',
-  type:        '#4EC9B0',
-  punctuation: '#D4D4D4',
-  plain:       '#D4D4D4',
+  keyword:     '#4FC3F7',  // 鮮やかな空色（より青い）
+  string:      '#FFB74D',  // 鮮やかな琥珀（salmon → vivid amber）
+  comment:     '#7CB342',  // やや明るい緑（控えめだが鮮やか）
+  number:      '#FFCA28',  // 鮮やかな黄色（comment と判別しやすく）
+  type:        '#26C6DA',  // 鮮やかなシアン
+  punctuation: '#FFFFFF',
+  plain:       '#FFFFFF',
 };
 
 interface Props {

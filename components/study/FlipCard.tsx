@@ -72,14 +72,14 @@ export const FlipCard = forwardRef<FlipCardRef, Props>(
           <View style={styles.cardContainer}>
             {/* 表面 — 裏向きのときはタッチを透過させる */}
             <Animated.View
-              style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, frontStyle]}
+              style={[styles.card, { backgroundColor: theme.cardTheme.background, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.cardTheme.border }, cardStyle, frontStyle]}
               pointerEvents={isFlipped ? 'none' : 'box-none'}
             >
               <View style={[styles.cardInner, innerStyle]}>{front}</View>
             </Animated.View>
             {/* 裏面 — 表向きのときはタッチを透過させる */}
             <Animated.View
-              style={[styles.card, { backgroundColor: theme.colors.surface }, cardStyle, backStyle]}
+              style={[styles.card, { backgroundColor: theme.cardTheme.background, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.cardTheme.border }, cardStyle, backStyle]}
               pointerEvents={isFlipped ? 'box-none' : 'none'}
             >
               <View style={[styles.cardInner, innerStyle]}>{back}</View>

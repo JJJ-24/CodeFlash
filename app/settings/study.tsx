@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
@@ -23,6 +24,7 @@ export default function StudySettingsScreen() {
   const router = useRouter();
   const { isPro } = useProStore();
   const { fsrsDesiredRetention, setFsrsDesiredRetention } = useSettingsStore();
+  const [showRetentionInfo, setShowRetentionInfo] = useState(false);
 
   function handleFsrsPresetSelect(preset: FsrsPreset) {
     setFsrsDesiredRetention(FSRS_PRESET_RETENTION[preset]);
@@ -92,9 +94,20 @@ export default function StudySettingsScreen() {
         {/* 目標保持率 */}
         <View style={{ gap: 6 }}>
           <View style={styles.fsrsRetentionHeader}>
-            <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('settings.fsrsRetention')}
-            </Text>
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              onPress={() => setShowRetentionInfo((v) => !v)}
+              hitSlop={6}
+            >
+              <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.fsrsRetention')}
+              </Text>
+              <Ionicons
+                name={showRetentionInfo ? 'information-circle' : 'information-circle-outline'}
+                size={theme.fontSize.lg}
+                color={theme.colors.iconSubtle}
+              />
+            </Pressable>
             <Text style={[styles.fsrsRetentionValue, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {Math.round(fsrsDesiredRetention * 100)}%
             </Text>
@@ -117,9 +130,13 @@ export default function StudySettingsScreen() {
               {Math.round(FSRS_RETENTION_MAX * 100)}%
             </Text>
           </View>
-          <Text style={[styles.fsrsHint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-            {t('settings.fsrsRetentionHint')}
-          </Text>
+          {showRetentionInfo && (
+            <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.fsrsRetentionInfo')}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </SettingsDetail>

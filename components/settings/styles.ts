@@ -84,7 +84,6 @@ export const settingsStyles = StyleSheet.create({
     marginTop: -4,
   },
   fsrsScaleText: {},
-  fsrsHint: { lineHeight: 16, marginTop: 2 },
 
   // 同期
   syncStatusRow: { paddingVertical: 4 },
@@ -104,9 +103,6 @@ export const settingsStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(127,127,127,0.25)',
   },
-  // タグライン＋ⓘ
-  syncTaglineRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  syncTagline: { flex: 1 },
   // 展開された説明ボックス
   syncInfoBox: {
     borderRadius: 8,
@@ -138,7 +134,7 @@ export const settingsStyles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
   },
-  syncAdvancedItemText: { flex: 1 },
+  syncAdvancedItemText: { flexShrink: 1 },
 
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

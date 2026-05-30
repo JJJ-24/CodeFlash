@@ -239,9 +239,18 @@ export default function SyncSettingsScreen() {
       {/* セクション1: iCloud 同期カード */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.notificationRow}>
-          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t('sync.enabledShort')}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+            <Text style={[{ color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('sync.enabledShort')}
+            </Text>
+            <Pressable onPress={() => setShowTagline((v) => !v)} hitSlop={8}>
+              <Ionicons
+                name={showTagline ? 'information-circle' : 'information-circle-outline'}
+                size={theme.fontSize.lg}
+                color={theme.colors.iconSubtle}
+              />
+            </Pressable>
+          </View>
           <Switch
             value={syncEnabled}
             onValueChange={handleSyncToggle}
@@ -249,24 +258,21 @@ export default function SyncSettingsScreen() {
             disabled={syncing}
           />
         </View>
+        {/* 同期OFF時のみ：タグラインが出ないので Switch 行直下に展開を出す */}
+        {!syncEnabled && showTagline && (
+          <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('sync.descriptionDetail')}
+            </Text>
+          </View>
+        )}
 
         {syncEnabled && (
           <>
-            {/* タグライン + ⓘ */}
-            <Pressable
-              style={styles.syncTaglineRow}
-              onPress={() => setShowTagline((v) => !v)}
-              hitSlop={6}
-            >
-              <Text style={[styles.syncTagline, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('sync.tagline')}
-              </Text>
-              <Ionicons
-                name={showTagline ? 'information-circle' : 'information-circle-outline'}
-                size={theme.fontSize.lg}
-                color={theme.colors.iconSubtle}
-              />
-            </Pressable>
+            {/* タグライン（説明） */}
+            <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('sync.tagline')}
+            </Text>
             {showTagline && (
               <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -396,6 +402,7 @@ export default function SyncSettingsScreen() {
               color={theme.colors.iconSubtle}
             />
           </Pressable>
+          <View style={{ flex: 1 }} />
           <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
         </Pressable>
         {showRestoreInfo && (

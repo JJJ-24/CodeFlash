@@ -44,6 +44,7 @@ export default function DisplaySettingsScreen() {
 
       <SegmentedCard
         label={t('settings.initialFilter')}
+        info={t('settings.initialFilterInfo')}
         options={[
           { value: 'all' as InitialFilterPreference, label: t('common.all') },
           { value: 'review' as InitialFilterPreference, label: t('common.due') },

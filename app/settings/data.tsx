@@ -182,11 +182,16 @@ export default function DataSettingsScreen() {
     });
   }
 
-  const rows: { title: string; subtitle: string; onPress: () => void }[] = [
-    { title: t('dataManagement.exportTitle'), subtitle: t('dataManagement.exportSubtitle'), onPress: handleExport },
-    { title: t('dataManagement.importTitle'), subtitle: t('dataManagement.importSubtitle'), onPress: handleImport },
-    { title: t('dataManagement.exportTsv'), subtitle: t('dataManagement.exportTsvSubtitle'), onPress: handleTsvExport },
-    { title: t('dataManagement.importTsv'), subtitle: t('dataManagement.importTsvSubtitle'), onPress: handleTsvImport },
+  const [showExportInfo, setShowExportInfo] = useState(false);
+  const [showImportInfo, setShowImportInfo] = useState(false);
+  const [showTsvExportInfo, setShowTsvExportInfo] = useState(false);
+  const [showTsvImportInfo, setShowTsvImportInfo] = useState(false);
+
+  const rows: { title: string; info: string; onPress: () => void; showInfo: boolean; setShowInfo: (v: boolean) => void }[] = [
+    { title: t('dataManagement.exportTitle'), info: t('dataManagement.exportInfo'), onPress: handleExport, showInfo: showExportInfo, setShowInfo: setShowExportInfo },
+    { title: t('dataManagement.importTitle'), info: t('dataManagement.importInfo'), onPress: handleImport, showInfo: showImportInfo, setShowInfo: setShowImportInfo },
+    { title: t('dataManagement.exportTsv'), info: t('dataManagement.exportTsvInfo'), onPress: handleTsvExport, showInfo: showTsvExportInfo, setShowInfo: setShowTsvExportInfo },
+    { title: t('dataManagement.importTsv'), info: t('dataManagement.importTsvInfo'), onPress: handleTsvImport, showInfo: showTsvImportInfo, setShowInfo: setShowTsvImportInfo },
   ];
 
   const overlay = (
@@ -215,21 +220,35 @@ export default function DataSettingsScreen() {
 
   return (
     <SettingsDetail title={t('dataManagement.title')} overlay={overlay}>
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        {loading ? (
+      {loading ? (
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <ActivityIndicator color={theme.colors.primary} />
-        ) : (
-          rows.map((row) => (
-            <Pressable key={row.title} style={styles.dataRow} onPress={row.onPress}>
-              <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{row.title}</Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{row.subtitle}</Text>
-              </View>
+        </View>
+      ) : (
+        rows.map((row) => (
+          <View key={row.title} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Pressable style={styles.dataRow} onPress={row.onPress}>
+              <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{row.title}</Text>
+              <Pressable onPress={() => row.setShowInfo(!row.showInfo)} hitSlop={8}>
+                <Ionicons
+                  name={row.showInfo ? 'information-circle' : 'information-circle-outline'}
+                  size={theme.fontSize.lg}
+                  color={theme.colors.iconSubtle}
+                />
+              </Pressable>
+              <View style={{ flex: 1 }} />
               <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
             </Pressable>
-          ))
-        )}
-      </View>
+            {row.showInfo && (
+              <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {row.info}
+                </Text>
+              </View>
+            )}
+          </View>
+        ))
+      )}
     </SettingsDetail>
   );
 }

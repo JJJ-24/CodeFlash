@@ -1,16 +1,18 @@
 import '@/lib/i18n';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import * as Network from 'expo-network';
 import { Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, AppState, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Animated, AppState, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { cancelAllReminders, scheduleDailyReminder, updateBadgeCount } from '@/lib/notifications';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
+import { syncNoticeText } from '@/lib/sync/errorText';
 import { triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
@@ -52,7 +54,33 @@ function RootStack() {
       if (next === 'active') triggerForegroundSync(db);
       else if (next === 'background') triggerBackgroundUpload(db);
     });
-    return () => sub.remove();
+    // ネット接続が復帰したとき（アプリ起動中）に自動同期する。AppState は変化しないため、
+    // 使用中にオフライン→オンラインへ戻っても、これが無いと次の前面復帰／背面化まで同期されない。
+    // オフライン中に追加した変更を、接続が戻った時点でアップロードできる。
+    //
+    // 復帰判定は「到達性まで確定（isInternetReachable === true）」を条件にする。WiFi 接続直後は
+    // 「つながったが到達性は未確定」という中間状態のイベントが来るため、ここで発火させると
+    // 直後の同期判定がまだ offline と出て「接続したのにオフライン」バナーになってしまう。
+    const isReachable = (st: Network.NetworkState) =>
+      st.isConnected === true && st.isInternetReachable === true;
+    let wasOnline = true;
+    Network.getNetworkStateAsync()
+      .then((st) => {
+        wasOnline = isReachable(st);
+      })
+      .catch(() => {});
+    const netSub = Network.addNetworkStateListener((state) => {
+      const online = isReachable(state);
+      // オフライン→オンラインへの遷移時だけ発火（triggerForegroundSync 側でスロットル・
+      // 多重起動ガードも効くため、オンライン中の細かな変化で連発しても実害はない）。
+      // 復帰経路ではオフライン案内バナーは出さない（過渡的な offline 判定での誤表示防止）。
+      if (online && !wasOnline) triggerForegroundSync(db, { showOfflineNotice: false });
+      wasOnline = online;
+    });
+    return () => {
+      sub.remove();
+      netSub.remove();
+    };
   }, [db, syncHydrated, syncEnabled]);
 
   // アプリがフォアグラウンドに戻るたびに通知を再スケジュール（OS による消去に対応）
@@ -109,6 +137,66 @@ function RootStack() {
   );
 }
 
+/**
+ * 同期の状況を画面のどこにいても短時間だけ知らせる控えめなバナー。
+ * 自動同期の経路（起動／復帰／接続復帰）だけがセットする通知（store の noticeId）を見て表示する。
+ * 手動同期の結果は設定画面のアラート＋赤字インラインに任せ、ここには出さない（多重通知を避ける）。
+ * - 'error'（赤）: オンラインでの自動同期失敗など
+ * - 'info'（控えめ）: オフライン起動で未同期の変更があるときの案内
+ * pointerEvents="none" で操作は一切ブロックしない。画面下部に数秒だけ出して自動的に消える。
+ */
+function SyncNoticeBanner({ isDark }: { isDark: boolean }) {
+  const { t } = useTranslation();
+  const noticeId = useSyncStore((s) => s.noticeId);
+  const [visible, setVisible] = useState(false);
+  const [text, setText] = useState('');
+  const [kind, setKind] = useState<'error' | 'info'>('info');
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // noticeId が変化した瞬間に表示（同じ内容でも showNotice のたびに id が進むので再点灯する）。
+    if (noticeId === 0) return; // 初期状態（まだ何も通知していない）
+    const { noticeKind, noticeCode } = useSyncStore.getState();
+    if (!noticeKind || !noticeCode) return;
+    setKind(noticeKind);
+    setText(syncNoticeText(noticeCode, t));
+    setVisible(true);
+    Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    const timer = setTimeout(() => {
+      Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(
+        ({ finished }) => {
+          if (finished) setVisible(false);
+        },
+      );
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [noticeId, t, opacity]);
+
+  if (!visible) return null;
+  const backgroundColor =
+    kind === 'error'
+      ? isDark ? '#5C1A16' : '#B3261E'
+      : isDark ? '#334155' : '#475569';
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: 16,
+        right: 16,
+        bottom: 96,
+        opacity,
+        backgroundColor,
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+      }}
+    >
+      <Text style={{ color: '#fff', fontSize: 14, lineHeight: 20 }}>{text}</Text>
+    </Animated.View>
+  );
+}
+
 export default function RootLayout() {
   const hydrated = useThemeStore((s) => s.hydrated);
   const preference = useThemeStore((s) => s.preference);
@@ -161,6 +249,7 @@ export default function RootLayout() {
           </>
         )}
       </View>
+      <SyncNoticeBanner isDark={isDark} />
     </GestureHandlerRootView>
   );
 }

@@ -10,6 +10,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
 
+import { syncErrorText } from '@/lib/sync/errorText';
 import {
   type LocalBackup,
   listLocalBackups,
@@ -19,7 +20,7 @@ import {
 } from '@/lib/sync/syncEngine';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
-import { useSyncStore, type SyncErrorCode } from '@/store/sync';
+import { useSyncStore } from '@/store/sync';
 
 type ModalConfig =
   | { kind: 'info'; title?: string; message: string }
@@ -49,20 +50,8 @@ export default function SyncSettingsScreen() {
   const [showDownloadInfo, setShowDownloadInfo] = useState(false);
   const [showRestoreInfo, setShowRestoreInfo] = useState(false);
 
-  /** 同期エラーコードを翻訳済みの文言にする（モーダル・インライン表示で共用）。 */
-  function syncErrorText(code: SyncErrorCode): string {
-    switch (code) {
-      case 'unavailable': return t('sync.iCloudUnavailable');
-      case 'schemaMismatch': return t('sync.schemaVersionMismatch');
-      case 'noRemoteBackup': return t('sync.noRemoteBackup');
-      case 'timeout': return t('sync.syncTimeout');
-      case 'storageFull': return t('sync.storageFull');
-      default: return t('sync.syncError');
-    }
-  }
-
   function describeSyncError(e: unknown): string {
-    return syncErrorText(toSyncErrorCode(e));
+    return syncErrorText(toSyncErrorCode(e), t);
   }
 
   async function handleSyncToggle(value: boolean) {
@@ -289,7 +278,7 @@ export default function SyncSettingsScreen() {
             {/* エラー表示 */}
             {syncErrorCode && !syncing && (
               <Text style={[{ color: theme.colors.danger, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {syncErrorText(syncErrorCode)}
+                {syncErrorText(syncErrorCode, t)}
               </Text>
             )}
 

@@ -15,6 +15,7 @@ export type SyncDirection = 'upload' | 'download' | 'check';
  * 同期エラーの種別コード。人間向け文言は UI 側で i18n 翻訳する
  * （ストアに翻訳済み文字列を入れると端末言語切替・言語不一致でズレるため）。
  * - unavailable: iCloud 未ログイン／iCloud Drive 無効
+ * - offline: 端末がインターネット未接続（オフライン）
  * - schemaMismatch: リモートが新しいスキーマ（アプリ更新が必要）
  * - noRemoteBackup: 強制ダウンロード時にリモートが存在しない
  * - timeout: 転送がタイムアウト（無応答）
@@ -23,11 +24,19 @@ export type SyncDirection = 'upload' | 'download' | 'check';
  */
 export type SyncErrorCode =
   | 'unavailable'
+  | 'offline'
   | 'schemaMismatch'
   | 'noRemoteBackup'
   | 'timeout'
   | 'storageFull'
   | 'unknown';
+
+/**
+ * 全画面の一時通知バナー（noticeKind/noticeCode）に出す内容のコード。
+ * エラー系（SyncErrorCode）に加えて、エラーではない案内系を持つ：
+ * - offlinePending: オフラインで起動し、未同期のローカル変更がある（接続すれば同期される旨の案内）
+ */
+export type SyncNoticeCode = SyncErrorCode | 'offlinePending';
 
 interface SyncState {
   hydrated: boolean;
@@ -57,6 +66,17 @@ interface SyncState {
   errorCode: SyncErrorCode | null;
   deviceId: string;
 
+  /**
+   * 全画面に出す一時通知バナーの内容。自動同期の経路だけがセットする
+   * （手動同期の結果は設定画面のアラート＋赤字インラインに任せ、バナーは出さない）。
+   * - 'error': 赤バナー（オンラインでの自動同期失敗など）
+   * - 'info': 控えめな案内バナー（オフライン起動で未同期変更ありなど）
+   */
+  noticeKind: 'error' | 'info' | null;
+  noticeCode: SyncNoticeCode | null;
+  /** 同じ内容の通知でもバナーを再点灯させるための連番（バナーはこの変化を見て表示する）。 */
+  noticeId: number;
+
   setEnabled: (enabled: boolean) => void;
   setStatus: (status: SyncStatus, direction?: SyncDirection | null) => void;
   setBlocking: (blocking: boolean) => void;
@@ -66,6 +86,7 @@ interface SyncState {
   setLastSyncedVersion: (version: number) => void;
   setLastRemoteUpdatedAt: (timestamp: number) => void;
   setLastRemoteId: (id: string) => void;
+  showNotice: (kind: 'error' | 'info', code: SyncNoticeCode) => void;
 }
 
 function generateDeviceId(): string {
@@ -84,6 +105,9 @@ export const useSyncStore = create<SyncState>((set) => ({
   lastRemoteId: null,
   errorCode: null,
   deviceId: '',
+  noticeKind: null,
+  noticeCode: null,
+  noticeId: 0,
 
   setEnabled: (enabled) => {
     set({ enabled });
@@ -117,6 +141,9 @@ export const useSyncStore = create<SyncState>((set) => ({
   setLastRemoteId: (id) => {
     set({ lastRemoteId: id });
     AsyncStorage.setItem(LAST_REMOTE_ID_KEY, id);
+  },
+  showNotice: (kind, code) => {
+    set((s) => ({ noticeKind: kind, noticeCode: code, noticeId: s.noticeId + 1 }));
   },
 }));
 

@@ -339,6 +339,8 @@
     "syncSuccess": "Sync complete",
     "syncError": "Sync failed",
     "iCloudUnavailable": "iCloud is unavailable. Enable iCloud Drive in Settings.",
+    "offline": "You're offline. Connect to the internet and try again.",
+    "offlinePending": "You're offline. Your changes will sync to iCloud once you reconnect.",
     "schemaVersionMismatch": "Data was synced by a newer version of the app. Please update.",
     "noRemoteBackup": "No backup found on iCloud",
     "syncTimeout": "Sync timed out. Check your connection and try again in a moment",

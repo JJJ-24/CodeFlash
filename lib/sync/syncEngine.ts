@@ -29,6 +29,7 @@ import {
   uploadImageFile,
   type RemoteDbMeta,
 } from "./icloud";
+import { getNetworkSnapshot, isOnline } from "./network";
 
 // ダウンロード DB から入れ替えるテーブル（親→子の順。FK は未設定だが論理順を維持）
 const SYNC_TABLES = [
@@ -312,10 +313,28 @@ export type SyncAction = "upload" | "download" | "auto" | "background-upload";
  *  高速なアプリ切替で meta DL を連発しない最小限の間引き。手動「今すぐ同期」には影響しない。 */
 export const FOREGROUND_SYNC_THROTTLE_MS = 5_000;
 
+/** 前面復帰時、未接続に見えてもオフライン案内を出す前に待って再確認する時間。
+ *  WiFi 接続処理（iPad はハンドシェイクに数秒かかる）の途中で前面復帰したときに
+ *  「オフラインです」と誤表示するのを防ぐ。本当に未接続ならこの時間後も未接続のまま。 */
+const OFFLINE_NOTICE_RECHECK_MS = 3_000;
+
+/** 指定ミリ秒だけ待つ。 */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class ICloudUnavailableError extends Error {
   constructor() {
     super("iCloud unavailable");
     this.name = "ICloudUnavailableError";
+  }
+}
+
+/** 端末がオフライン（インターネット未接続）で同期できないことを表す。 */
+export class OfflineError extends Error {
+  constructor() {
+    super("Offline");
+    this.name = "OfflineError";
   }
 }
 
@@ -356,6 +375,7 @@ function isStorageFullMessage(message: string): boolean {
 /** 投げられたエラーを UI 翻訳用のエラーコードに正規化する。 */
 export function toSyncErrorCode(e: unknown): SyncErrorCode {
   if (e instanceof ICloudUnavailableError) return "unavailable";
+  if (e instanceof OfflineError) return "offline";
   if (e instanceof SchemaVersionMismatchError) return "schemaMismatch";
   if (e instanceof NoRemoteBackupError) return "noRemoteBackup";
   if (e instanceof StorageFullError) return "storageFull";
@@ -413,6 +433,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 /** アップロード/ダウンロードのタイムアウト（iCloud 転送が固まったら中断してオーバーレイを解放） */
 const TRANSFER_TIMEOUT_MS = 90_000;
+/** 自動同期(silent)時の転送タイムアウト。手動より短くして、iCloud の反映待ち（端末間伝播ラグ）で
+ *  実体がまだ降りてこないときに早めに諦め、次回トリガーで再試行できるようにする。
+ *  silent 転送は UI をブロックしないので、この間ユーザー操作は止まらない。 */
+const SILENT_TRANSFER_TIMEOUT_MS = 30_000;
 /** リモート状態取得のタイムアウト（meta の iCloud 実体化待ちで固まるのを防ぐ） */
 const REMOTE_STATUS_TIMEOUT_MS = 30_000;
 
@@ -509,8 +533,9 @@ function decideDirection(
  *   - 'upload'：強制アップロード
  *   - 'download'：強制ダウンロード（remote が無ければ NoRemoteBackupError）
  *   - 'background-upload'：ローカル変更があればアップロードのみ（ダウンロードしない）
- * @param opts.silent true のときオーバーレイで全操作をブロックしない（自動トリガー用）。
- *   ただし実際に転送（upload/download）が走る間は direction が立つため、その間だけはブロックされる。
+ * @param opts.silent true のとき自動トリガー用の控えめ動作にする：転送中はオーバーレイで
+ *   全操作をブロックしない（iCloud の反映待ちで転送が長引いても UI を止めない）。ダウンロードは
+ *   実際にローカルを書き換える一瞬だけブロックする。タイムアウトはエラー表示せず次回再試行する。
  */
 export async function syncNow(
   db: SQLiteDatabase,
@@ -532,6 +557,15 @@ export async function syncNow(
   if (!(await isICloudAvailable())) {
     sync.setError("unavailable");
     throw new ICloudUnavailableError();
+  }
+
+  // オフラインなら同期に突入しない。iCloud アカウントが有効でもネットワークが無いと、
+  // リモート一覧（.icloud プレースホルダ名）は取れるのに実体ダウンロードが数十秒ハングして
+  // タイムアウトするだけ＝無駄にオーバーレイで全操作をブロックしてしまう。ここで早期に弾く。
+  // 自動トリガー（silent）は呼び出し前に既に弾いているので、ここに来るのは主に手動同期。
+  if (!(await isOnline())) {
+    sync.setError("offline");
+    throw new OfflineError();
   }
 
   try {
@@ -579,7 +613,16 @@ export async function syncNow(
       return;
     }
 
-    sync.setStatus("syncing", direction);
+    // 手動同期は転送中も全画面ブロック（blocking=true で既にオーバーレイ表示中）。方向もここで
+    // セットしてオーバーレイのテキストを「アップロード中／ダウンロード中」にする。
+    // 自動同期(silent)は転送中はブロックしない（direction を立てない＝オーバーレイを出さない）。
+    // ダウンロードは実際にローカルを書き換える直前にだけ direction を立てて短時間だけブロックする。
+    // これにより、iCloud の反映待ちで転送が長引いても UI は止まらない。
+    if (!opts?.silent) sync.setStatus("syncing", direction);
+
+    const transferTimeout = opts?.silent
+      ? SILENT_TRANSFER_TIMEOUT_MS
+      : TRANSFER_TIMEOUT_MS;
 
     let syncedVersion: number;
     let remoteUpdatedAt: number;
@@ -595,7 +638,7 @@ export async function syncNow(
         deviceId: sync.deviceId,
         schemaVersion: SYNC_SCHEMA_VERSION,
       };
-      await withTimeout(uploadDb(meta), TRANSFER_TIMEOUT_MS);
+      await withTimeout(uploadDb(meta), transferTimeout);
       // meta コミット後、最新 DB が参照しなくなったリモート画像を掃除（best-effort）。
       try {
         await pruneRemoteImages(db);
@@ -613,8 +656,20 @@ export async function syncNow(
       if (!dbFilename) throw new NoRemoteBackupError();
       const downloadedPath = await withTimeout(
         downloadDb(dbFilename),
-        TRANSFER_TIMEOUT_MS,
+        transferTimeout,
       );
+      // 自動同期では転送中にブロックしなかったため、ダウンロード中にユーザーがローカルを
+      // 編集した可能性がある。その場合は上書きせず中断し、編集を守る
+      // （次回同期で localChanged=true となり LWW で解決される）。
+      if (opts?.silent) {
+        const after = await getLocalChangeInfo(db);
+        if (after.version !== localInfo.version) {
+          sync.setStatus("idle");
+          return;
+        }
+        // ここからローカルを書き換える＝この瞬間だけ短時間ブロックする。
+        sync.setStatus("syncing", "download");
+      }
       // 上書きでローカルの内容が失われる直前に、現在のローカルを端末へ退避（安全網）
       await backupLocalDbBeforeReplace(db);
       // 接続を開いたまま ATTACH でデータを入れ替える（ツリー再マウントを伴わずクラッシュしない）
@@ -643,19 +698,94 @@ export async function syncNow(
     sync.setLastSyncedVersion(syncedVersion);
     sync.setStatus("idle");
   } catch (e) {
-    sync.setError(toSyncErrorCode(e));
+    const code = toSyncErrorCode(e);
+    // 自動同期(silent)のタイムアウトは、オンライン確認済みなのに転送が固まる＝iCloud の
+    // 反映待ち（端末間の伝播ラグ）であることが多く、通信障害ではない。「通信環境を確認して」
+    // という誤解を招くエラー表示にせず、idle に戻して次回トリガーで静かに再試行する
+    // （バナーも設定画面の赤字も出さない。errorCode は冒頭の clearError で空のまま）。
+    if (opts?.silent && code === "timeout") {
+      sync.setStatus("idle");
+    } else {
+      sync.setError(code);
+    }
     throw e;
   }
 }
 
 /**
- * フォアグラウンド復帰／起動時の自動同期トリガー。
+ * silent 自動同期がタイムアウト（iCloud の反映待ちで実体がまだ降りてこない）したときの
+ * 自動再試行スケジュール。端末間の伝播は数十秒〜数分かかるため、間隔を空けて数回だけ再試行する。
+ * これが無いと、再接続直後の1回が反映前に当たって失敗したきり、次の前面復帰／接続切替まで
+ * 同期されない（手動「今すぐ同期」を押すまで反映されない）。
+ */
+const SYNC_RETRY_DELAYS_MS = [15_000, 30_000, 60_000];
+let syncRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let syncRetryAttempt = 0;
+
+/** 自動再試行の予約を解除（同期成功時・no-op 時に呼ぶ）。 */
+function clearSyncRetry(): void {
+  syncRetryAttempt = 0;
+  if (syncRetryTimer) {
+    clearTimeout(syncRetryTimer);
+    syncRetryTimer = null;
+  }
+}
+
+/** 反映待ちタイムアウト後の自動再試行を予約する（上限到達で打ち切り、以後は通常トリガーに委ねる）。 */
+function scheduleSyncRetry(db: SQLiteDatabase): void {
+  if (syncRetryAttempt >= SYNC_RETRY_DELAYS_MS.length) {
+    syncRetryAttempt = 0; // 上限到達。次の前面復帰／接続復帰トリガーに委ねる
+    return;
+  }
+  const ms = SYNC_RETRY_DELAYS_MS[syncRetryAttempt];
+  syncRetryAttempt++;
+  if (syncRetryTimer) clearTimeout(syncRetryTimer);
+  // setTimeout はアプリが背面化すると iOS が JS を停止するため事実上「前面のときだけ」発火する。
+  // 背面化中の同期は背面トリガーが担うので、これで問題ない。
+  syncRetryTimer = setTimeout(() => {
+    syncRetryTimer = null;
+    triggerForegroundSync(db, { showOfflineNotice: false });
+  }, ms);
+}
+
+/** triggerForegroundSync が実行中かどうか。オフライン判定や再確認待ちの間に
+ *  AppState 'active' 復帰などで再入すると、各実行が並行して案内バナーを連続表示してしまう
+ *  （`syncNow` の status ガードは転送中しか効かず、判定フェーズは無防備だった）。
+ *  この間は後続呼び出しを丸ごと弾く。 */
+let foregroundSyncRunning = false;
+
+/** 直近にオフライン案内バナーを出した時刻。短時間に何度も出さないための間引き用。 */
+let lastOfflineNoticeAt = 0;
+/** オフライン案内バナーの最小再表示間隔（この間隔内では再表示しない）。 */
+const OFFLINE_NOTICE_MIN_INTERVAL_MS = 30_000;
+
+/**
+ * フォアグラウンド復帰／起動時の自動同期トリガー（同時実行ガード付きの公開エントリ）。
  * - iCloud 同期が無効、未 hydrate、同期中、スロットル期間内なら何もしない。
  * - 'auto' なのでリモートが新しければダウンロード、ローカルが新しければアップロードする。
- * - silent: true なのでオーバーレイは実際の転送中のみ表示される（リモート確認だけならチラつかない）。
- * - 自動同期の失敗はユーザー操作ではないので throw せず握りつぶす（store にエラーは反映済み）。
+ * - silent: true なので転送中はオーバーレイを出さない（ダウンロードの入れ替え時だけ一瞬ブロック）。
+ * - 自動同期の失敗はユーザー操作ではないので throw せず握りつぶす。設定画面以外でも気付けるよう、
+ *   タイムアウト以外のエラーは通知バナーで知らせる。タイムアウト（＝iCloud 反映待ち）は出さず、
+ *   代わりに少し後に自動再試行する（伝播が済めば自然に成功する）。
  */
-export async function triggerForegroundSync(db: SQLiteDatabase): Promise<void> {
+export async function triggerForegroundSync(
+  db: SQLiteDatabase,
+  opts?: { showOfflineNotice?: boolean },
+): Promise<void> {
+  // 実行中（再確認待ちや転送を含む）の再入は丸ごと弾く（バナー連続表示・重複同期を防ぐ）。
+  if (foregroundSyncRunning) return;
+  foregroundSyncRunning = true;
+  try {
+    await runForegroundSync(db, opts);
+  } finally {
+    foregroundSyncRunning = false;
+  }
+}
+
+async function runForegroundSync(
+  db: SQLiteDatabase,
+  opts?: { showOfflineNotice?: boolean },
+): Promise<void> {
   const s = useSyncStore.getState();
   if (!s.hydrated || !s.enabled || s.status === "syncing") return;
   if (
@@ -663,10 +793,63 @@ export async function triggerForegroundSync(db: SQLiteDatabase): Promise<void> {
     Date.now() - s.lastSyncedAt < FOREGROUND_SYNC_THROTTLE_MS
   )
     return;
+  // オフライン案内バナーを出すかどうか。起動／前面復帰のときは出す（true）が、
+  // 接続復帰リスナー経由のときは出さない（false）。WiFi 接続直後は到達性が未確定で
+  // 一瞬 offline と判定されることがあり、ここで出すと「接続したのにオフライン表示」になるため。
+  const showOffline = opts?.showOfflineNotice ?? true;
+  // オフライン時は自動同期しない（起動毎に「ダウンロード中…」で全操作をブロックしたまま
+  // タイムアウトする無駄を防ぐ）。
+  let net = await getNetworkSnapshot();
+  // インターフェース未接続のまま前面復帰した場合、「本当にオフライン」なのか
+  // 「WiFi 接続処理の最中（iPad はハンドシェイクに数秒かかる）」なのか、その瞬間だけでは
+  // 区別できない。すぐ案内を出すと、コントロールセンターで WiFi を ON にし、アイコンが
+  // 出る前に閉じて前面復帰したときに「オフラインです」と誤表示してしまう。少し待って
+  // 再確認することで、接続処理中だったケースを取り除く（接続が確定すれば下の online 分岐で
+  // 同期へ進み、復帰リスナーも同期を拾う）。
+  if (!net.online && showOffline && !net.connected) {
+    await delay(OFFLINE_NOTICE_RECHECK_MS);
+    net = await getNetworkSnapshot();
+  }
+  if (!net.online) {
+    // ここまで来てなお「ネットワーク自体が未接続(connected=false)」のときだけ案内する。
+    // 「接続済みだが到達性が未確定(connected=true, online=false)」は過渡状態なので出さない
+    // （到達性が確定した時点で復帰リスナーが同期する）。
+    // 未接続のときも、未同期のローカル変更がある（または一度も同期していない）ときだけ案内する。
+    if (
+      showOffline &&
+      !net.connected &&
+      Date.now() - lastOfflineNoticeAt > OFFLINE_NOTICE_MIN_INTERVAL_MS
+    ) {
+      try {
+        const local = await getLocalChangeInfo(db);
+        const pending =
+          s.lastSyncedVersion == null || local.version > s.lastSyncedVersion;
+        if (pending) {
+          lastOfflineNoticeAt = Date.now();
+          s.showNotice("info", "offlinePending");
+        }
+      } catch {
+        // 案内表示の判定に失敗しても同期スキップ自体は続行する
+      }
+    }
+    return;
+  }
   try {
     await syncNow(db, "auto", { silent: true });
-  } catch {
-    // 自動同期の失敗は無視
+    // 成功（または同期不要の no-op）→ 反映待ちの再試行予約があれば解除する。
+    clearSyncRetry();
+  } catch (e) {
+    // 自動同期の失敗はユーザー操作ではないので throw しない。
+    const code = toSyncErrorCode(e);
+    if (code === "timeout") {
+      // オンライン確認済みなのに転送が固まる＝iCloud の反映待ち（実体が未着）。
+      // 通信障害ではないのでバナーは出さず、少し後に自動再試行する（伝播完了を待つ）。
+      scheduleSyncRetry(db);
+    } else if (code !== "offline") {
+      // それ以外の実エラーは、設定画面を開いていなくても気付けるよう通知バナーで知らせる。
+      // offline は出さない：接続確定前の過渡状態で出ることがあり「接続したのにオフライン表示」を防ぐ。
+      useSyncStore.getState().showNotice("error", code);
+    }
   }
 }
 
@@ -680,6 +863,8 @@ export async function triggerBackgroundUpload(
 ): Promise<void> {
   const s = useSyncStore.getState();
   if (!s.hydrated || !s.enabled || s.status === "syncing") return;
+  // オフライン時はアップロードしようがないのでスキップ（バックグラウンド猶予も無駄にしない）。
+  if (!(await isOnline())) return;
   // iOS のバックグラウンド実行猶予（~30秒）を要求してから走らせる。これが無いと、
   // 大量データ（スナップショット作成＋iCloud 配置に時間がかかる）の場合に
   // OS がアプリを凍結してアップロードが一切ステージされない（次のフォアグラウンドまで反映されない）。

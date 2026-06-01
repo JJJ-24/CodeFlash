@@ -38,6 +38,7 @@ export default function SyncSettingsScreen() {
     status: syncStatus,
     direction: syncDirection,
     lastSyncedAt,
+    lastDataSyncedAt,
     errorCode: syncErrorCode,
     clearError: clearSyncError,
   } = useSyncStore();
@@ -169,11 +170,23 @@ export default function SyncSettingsScreen() {
     });
   }
 
+  function formatDateTime(ts: number): string {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+
+  // 「最終同期」＝実際にデータを転送した時刻（no-op 照合では動かない）。
   function formatLastSynced(): string {
-    if (!lastSyncedAt) return t('sync.lastSyncedNever');
-    const d = new Date(lastSyncedAt);
-    const datetime = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    return t('sync.lastSyncedAt', { datetime });
+    if (!lastDataSyncedAt) return t('sync.lastSyncedNever');
+    return t('sync.lastSyncedAt', { datetime: formatDateTime(lastDataSyncedAt) });
+  }
+
+  // 「最終接続」＝最後に iCloud と照合できた時刻。最終同期より新しいときだけ補足表示する
+  // （データ転送はなかったが、同期が生きていて最新であることを確認できた、の意）。
+  function formatLastConnected(): string | null {
+    if (!lastSyncedAt) return null;
+    if (lastDataSyncedAt && lastSyncedAt <= lastDataSyncedAt) return null;
+    return t('sync.lastConnectedAt', { datetime: formatDateTime(lastSyncedAt) });
   }
 
   function getSyncStatusText(): string {
@@ -258,10 +271,7 @@ export default function SyncSettingsScreen() {
 
         {syncEnabled && (
           <>
-            {/* タグライン（説明） */}
-            <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('sync.tagline')}
-            </Text>
+            {/* ⓘ タップ時のみ詳細説明を展開（タグラインは廃止し、タイトル＋ⓘ に集約） */}
             {showTagline && (
               <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -270,10 +280,17 @@ export default function SyncSettingsScreen() {
               </View>
             )}
 
-            {/* 最終同期 */}
+            {/* 最終同期（実際にデータが転送された時刻） */}
             <Text style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {formatLastSynced()}
             </Text>
+
+            {/* 最終接続（最後に iCloud と照合できた時刻。最終同期より新しいときだけ補足表示） */}
+            {formatLastConnected() && (
+              <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, marginTop: -2 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {formatLastConnected()}
+              </Text>
+            )}
 
             {/* エラー表示 */}
             {syncErrorCode && !syncing && (

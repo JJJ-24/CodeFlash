@@ -309,6 +309,22 @@ export const SYNC_SCHEMA_VERSION = 1;
 
 export type SyncAction = "upload" | "download" | "auto" | "background-upload";
 
+/**
+ * syncNow の実行結果。フォアグラウンド自動同期が「変更なし(noop)」だったかを呼び出し側が知り、
+ * 相手端末アップロード直後の iCloud 反映ラグ（新版がまだ見えない）に備えて追いチェック（settle）を
+ * 予約するために使う。
+ * - uploaded / downloaded: 実際に転送した
+ * - noop: 同期不要だった（リモートに新版が見当たらない＝ただし伝播ラグの可能性あり）
+ * - aborted: ダウンロード中にローカル編集があり中止（次回 LWW で解決）
+ * - skipped: 多重起動ガード等で実行自体しなかった
+ */
+export type SyncOutcome =
+  | "uploaded"
+  | "downloaded"
+  | "noop"
+  | "aborted"
+  | "skipped";
+
 /** フォアグラウンド復帰時の自動同期スロットル（直近同期からこの時間未満ならリモート確認をスキップ）。
  *  高速なアプリ切替で meta DL を連発しない最小限の間引き。手動「今すぐ同期」には影響しない。 */
 export const FOREGROUND_SYNC_THROTTLE_MS = 5_000;
@@ -541,11 +557,11 @@ export async function syncNow(
   db: SQLiteDatabase,
   action: SyncAction = "auto",
   opts?: { silent?: boolean },
-): Promise<void> {
+): Promise<SyncOutcome> {
   const sync = useSyncStore.getState();
 
-  if (sync.status === "syncing") return;
-  if (!sync.hydrated) return;
+  if (sync.status === "syncing") return "skipped";
+  if (!sync.hydrated) return "skipped";
 
   sync.clearError();
   // ユーザー操作の同期は決定フェーズから全操作ブロック。自動トリガーは転送中のみブロック。
@@ -610,7 +626,7 @@ export async function syncNow(
         sync.setLastSyncedVersion(localInfo.version);
       }
       sync.setStatus("idle");
-      return;
+      return "noop";
     }
 
     // 手動同期は転送中も全画面ブロック（blocking=true で既にオーバーレイ表示中）。方向もここで
@@ -627,6 +643,7 @@ export async function syncNow(
     let syncedVersion: number;
     let remoteUpdatedAt: number;
     let remoteId: string;
+    let outcome: SyncOutcome;
     if (direction === "upload") {
       // VACUUM INTO でトランザクション的に一貫した完全コピーを別ファイルに作成。
       // 直接 codeflash.db を上げると WAL の未統合分が抜け落ちる可能性がある。
@@ -658,6 +675,7 @@ export async function syncNow(
       // 自分が書き込んだリモート版を「追いついている版」として記録（時刻＋識別子）
       remoteUpdatedAt = meta.updatedAt;
       remoteId = remoteMetaId(meta);
+      outcome = "uploaded";
     } else {
       // getRemoteStatus が選んだ最新版ファイル名を取得（exists=true なら必ず付随する）。
       const dbFilename = remote.dbFilename;
@@ -673,7 +691,7 @@ export async function syncNow(
         const after = await getLocalChangeInfo(db);
         if (after.version !== localInfo.version) {
           sync.setStatus("idle");
-          return;
+          return "aborted";
         }
         // ここからローカルを書き換える＝この瞬間だけ短時間ブロックする。
         sync.setStatus("syncing", "download");
@@ -701,13 +719,17 @@ export async function syncNow(
       remoteId = remote.meta
         ? remoteMetaId(remote.meta)
         : `unknown:${remoteUpdatedAt}`;
+      outcome = "downloaded";
     }
 
     sync.setLastRemoteUpdatedAt(remoteUpdatedAt);
     sync.setLastRemoteId(remoteId);
     sync.setLastSyncedAt(Date.now());
+    // 実際にデータを転送したときだけ「最終同期」を更新する（no-op 照合では更新しない）。
+    sync.setLastDataSyncedAt(Date.now());
     sync.setLastSyncedVersion(syncedVersion);
     sync.setStatus("idle");
+    return outcome;
   } catch (e) {
     const code = toSyncErrorCode(e);
     // 自動同期(silent)のタイムアウトは、オンライン確認済みなのに転送が固まる＝iCloud の
@@ -776,6 +798,46 @@ function scheduleSyncRetry(db: SQLiteDatabase, lastCode: SyncErrorCode): void {
   // 背面化中の同期は背面トリガーが担うので、これで問題ない。
   syncRetryTimer = setTimeout(() => {
     syncRetryTimer = null;
+    triggerForegroundSync(db, { showOfflineNotice: false });
+  }, ms);
+}
+
+/**
+ * 「変更なし(noop)」で終わった自動同期のあとに、相手端末アップロードの iCloud 反映ラグに備えて
+ * 数回だけ再確認する「追いチェック(settle)」のスケジュール。
+ *
+ * 症状：A が更新→背面化でアップロード直後に B を前面復帰すると、A の新版がまだ B の iCloud に
+ * 伝播しておらず getRemoteStatus が見つけられない→ noop（最終同期時刻だけ更新・内容は未更新）。
+ * noop はエラーではないので従来は再試行されず、次に手動で背面→前面するまで取り込まれなかった。
+ * iCloud のクロスデバイス伝播自体はアプリから短縮できない（Apple 依存）ため、少し間を置いて
+ * 数回だけ再確認し、伝播し次第ダウンロードする。setTimeout は前面のときだけ発火するので、
+ * ユーザーがアプリを開いている間だけ静かにポーリングする（背面化で自動的に止まる）。
+ * 1回目は FOREGROUND_SYNC_THROTTLE_MS(5s) より後にする（noop で lastSyncedAt=now になるため）。
+ */
+const SYNC_SETTLE_DELAYS_MS = [8_000, 20_000, 45_000];
+let syncSettleTimer: ReturnType<typeof setTimeout> | null = null;
+let syncSettleAttempt = 0;
+
+/** 追いチェックの予約を解除（実際に同期できたとき＝upload/download 完了時に呼ぶ）。 */
+function clearSyncSettle(): void {
+  syncSettleAttempt = 0;
+  if (syncSettleTimer) {
+    clearTimeout(syncSettleTimer);
+    syncSettleTimer = null;
+  }
+}
+
+/** noop 後の追いチェックを予約する（上限到達で打ち切り、以後は通常トリガーに委ねる）。 */
+function scheduleSyncSettle(db: SQLiteDatabase): void {
+  if (syncSettleAttempt >= SYNC_SETTLE_DELAYS_MS.length) {
+    syncSettleAttempt = 0; // 上限到達。次の前面復帰／接続復帰トリガーで再び満額の追いチェックを行う
+    return;
+  }
+  const ms = SYNC_SETTLE_DELAYS_MS[syncSettleAttempt];
+  syncSettleAttempt++;
+  if (syncSettleTimer) clearTimeout(syncSettleTimer);
+  syncSettleTimer = setTimeout(() => {
+    syncSettleTimer = null;
     triggerForegroundSync(db, { showOfflineNotice: false });
   }, ms);
 }
@@ -867,9 +929,18 @@ async function runForegroundSync(
     return;
   }
   try {
-    await syncNow(db, "auto", { silent: true });
+    const outcome = await syncNow(db, "auto", { silent: true });
     // 成功（または同期不要の no-op）→ 反映待ちの再試行予約があれば解除する。
     clearSyncRetry();
+    if (outcome === "downloaded" || outcome === "uploaded") {
+      // 実際に同期できた → 追いチェックは不要。
+      clearSyncSettle();
+    } else if (outcome === "noop") {
+      // 変更が見当たらなかった。ただし相手端末のアップロード直後は iCloud の端末間伝播ラグで
+      // まだ新版が見えないことがある（最終同期時刻だけ更新され内容は据え置きの症状）。
+      // 少し間を置いて数回だけ再確認し、伝播し次第取り込む。
+      scheduleSyncSettle(db);
+    }
   } catch (e) {
     // 自動同期の失敗はユーザー操作ではないので throw しない。
     const code = toSyncErrorCode(e);

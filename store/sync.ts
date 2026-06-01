@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 const SYNC_ENABLED_KEY = '@codeflash_icloud_sync_enabled';
 const LAST_SYNCED_AT_KEY = '@codeflash_icloud_last_synced_at';
+const LAST_DATA_SYNCED_AT_KEY = '@codeflash_icloud_last_data_synced_at';
 const LAST_SYNCED_VERSION_KEY = '@codeflash_icloud_last_synced_version';
 const LAST_REMOTE_UPDATED_AT_KEY = '@codeflash_icloud_last_remote_updated_at';
 const LAST_REMOTE_ID_KEY = '@codeflash_icloud_last_remote_id';
@@ -45,8 +46,16 @@ interface SyncState {
   direction: SyncDirection | null;
   /** true のとき同期中はアプリ全体をオーバーレイでブロックする（ユーザー操作の同期のみ true。自動トリガーは false） */
   blocking: boolean;
-  /** 最後に同期処理を行った実時刻（表示「最終同期」用。変更検知には使わない）。 */
+  /**
+   * 最後に同期処理（リモートとの照合）を行った実時刻。表示「最終接続」用＋フォアグラウンド
+   * スロットルに使う。変更が無い no-op の照合でも更新される（＝「最後に iCloud を確認できた時刻」）。
+   */
   lastSyncedAt: number | null;
+  /**
+   * 最後に実際にデータを転送（アップロード/ダウンロード）した実時刻。表示「最終同期」用。
+   * no-op（変更なし照合）では更新しない＝「最後にデータが実際に同期された時刻」を表す。
+   */
+  lastDataSyncedAt: number | null;
   /** 最後に同期したときのローカル変更カウンタ（sync_state.localVersion）。ローカル変更検知の基準。 */
   lastSyncedVersion: number | null;
   /**
@@ -90,6 +99,7 @@ interface SyncState {
   setError: (code: SyncErrorCode) => void;
   clearError: () => void;
   setLastSyncedAt: (timestamp: number) => void;
+  setLastDataSyncedAt: (timestamp: number) => void;
   setLastSyncedVersion: (version: number) => void;
   setLastRemoteUpdatedAt: (timestamp: number) => void;
   setLastRemoteId: (id: string) => void;
@@ -108,6 +118,7 @@ export const useSyncStore = create<SyncState>((set) => ({
   direction: null,
   blocking: false,
   lastSyncedAt: null,
+  lastDataSyncedAt: null,
   lastSyncedVersion: null,
   lastRemoteUpdatedAt: null,
   lastRemoteId: null,
@@ -139,6 +150,10 @@ export const useSyncStore = create<SyncState>((set) => ({
     set({ lastSyncedAt: timestamp });
     AsyncStorage.setItem(LAST_SYNCED_AT_KEY, String(timestamp));
   },
+  setLastDataSyncedAt: (timestamp) => {
+    set({ lastDataSyncedAt: timestamp });
+    AsyncStorage.setItem(LAST_DATA_SYNCED_AT_KEY, String(timestamp));
+  },
   setLastSyncedVersion: (version) => {
     set({ lastSyncedVersion: version });
     AsyncStorage.setItem(LAST_SYNCED_VERSION_KEY, String(version));
@@ -160,9 +175,10 @@ export const useSyncStore = create<SyncState>((set) => ({
 }));
 
 (async () => {
-  const [enabledRaw, lastSyncedRaw, lastSyncedVersionRaw, lastRemoteUpdatedRaw, lastRemoteIdRaw, deviceIdRaw] = await Promise.all([
+  const [enabledRaw, lastSyncedRaw, lastDataSyncedRaw, lastSyncedVersionRaw, lastRemoteUpdatedRaw, lastRemoteIdRaw, deviceIdRaw] = await Promise.all([
     AsyncStorage.getItem(SYNC_ENABLED_KEY),
     AsyncStorage.getItem(LAST_SYNCED_AT_KEY),
+    AsyncStorage.getItem(LAST_DATA_SYNCED_AT_KEY),
     AsyncStorage.getItem(LAST_SYNCED_VERSION_KEY),
     AsyncStorage.getItem(LAST_REMOTE_UPDATED_AT_KEY),
     AsyncStorage.getItem(LAST_REMOTE_ID_KEY),
@@ -175,13 +191,24 @@ export const useSyncStore = create<SyncState>((set) => ({
     await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId);
   }
 
-  const lastSyncedAt = lastSyncedRaw ? Number(lastSyncedRaw) : null;
+  const lastSyncedAtRaw2 = lastSyncedRaw ? Number(lastSyncedRaw) : null;
+  const lastSyncedAt = Number.isFinite(lastSyncedAtRaw2) ? lastSyncedAtRaw2 : null;
+  let lastDataSyncedAt = lastDataSyncedRaw ? Number(lastDataSyncedRaw) : null;
+  if (!(lastDataSyncedAt != null && Number.isFinite(lastDataSyncedAt))) lastDataSyncedAt = null;
+  // 旧バージョンからの移行：lastDataSyncedAt は今回追加したフィールドで、過去に同期済みの端末でも
+  // 未保存(null)になっている。そのままだと「まだ同期されていません」と誤表示されるため、
+  // 過去に同期実績(lastSyncedAt あり)があれば、その時刻で一度だけ初期化して永続化する。
+  if (lastDataSyncedAt == null && lastSyncedAt != null) {
+    lastDataSyncedAt = lastSyncedAt;
+    AsyncStorage.setItem(LAST_DATA_SYNCED_AT_KEY, String(lastDataSyncedAt));
+  }
   const lastSyncedVersion = lastSyncedVersionRaw != null ? Number(lastSyncedVersionRaw) : null;
   const lastRemoteUpdatedAt = lastRemoteUpdatedRaw != null ? Number(lastRemoteUpdatedRaw) : null;
 
   useSyncStore.setState({
     enabled: enabledRaw === 'true',
-    lastSyncedAt: Number.isFinite(lastSyncedAt) ? lastSyncedAt : null,
+    lastSyncedAt,
+    lastDataSyncedAt,
     lastSyncedVersion: lastSyncedVersion != null && Number.isFinite(lastSyncedVersion) ? lastSyncedVersion : null,
     lastRemoteUpdatedAt: lastRemoteUpdatedAt != null && Number.isFinite(lastRemoteUpdatedAt) ? lastRemoteUpdatedAt : null,
     lastRemoteId: lastRemoteIdRaw ?? null,

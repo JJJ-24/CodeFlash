@@ -33,6 +33,7 @@ export const DECK_ICON_CATEGORIES: DeckIconCategory[] = [
       'logo-github',
       'cube',
       'construct',
+      'extension-puzzle',
     ],
   },
   {
@@ -45,6 +46,9 @@ export const DECK_ICON_CATEGORIES: DeckIconCategory[] = [
       'thermometer',
       'rocket',
       'telescope',
+      'earth',
+      'moon',
+      'flash',
     ],
   },
   {
@@ -76,6 +80,12 @@ export const DECK_ICON_CATEGORIES: DeckIconCategory[] = [
       'car',
       'home',
       'cash',
+      'fish',
+      'footsteps',
+      'game-controller',
+      'image',
+      'key',
+      'nutrition',
     ],
   },
 ];

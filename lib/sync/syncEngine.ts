@@ -683,6 +683,9 @@ export async function syncNow(
       // 接続を開いたまま ATTACH でデータを入れ替える（ツリー再マウントを伴わずクラッシュしない）
       await replaceLocalDataFromDownloadedDb(db, downloadedPath);
       await refreshGlobalCaches(db);
+      // ローカルデータが入れ替わったことを画面に通知（集計をローカル state に持つ学習タブ等が、
+      // フォーカス中でもこれを購読して再読込し、ダウンロード完了直後に内容を反映する）。
+      sync.bumpDataRevision();
       // 新しい DB が参照する画像を取得し、参照されなくなったローカル画像を掃除する。
       // どちらも best-effort（DB は入れ替え済み＝データは安全。画像不足は次回同期で回復）。
       try {

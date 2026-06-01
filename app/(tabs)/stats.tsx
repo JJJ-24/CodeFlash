@@ -39,6 +39,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { getCardPreview } from '@/lib/cardPreview';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import { useProStore } from '@/store/pro';
+import { useSyncStore } from '@/store/sync';
 import type { Block, Deck } from '@/types';
 
 const STATS_SHORTCUTS = [
@@ -729,6 +730,67 @@ export default function StatsScreen() {
     [decks]
   );
 
+  const loadStats = useCallback(async () => {
+    const heatmapStart = new Date();
+    heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
+    const heatmapStartStr = toLocalDateStr(heatmapStart);
+    const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
+    const deckIdFilter = useSettingsStore.getState().gradeRankingDeckId ?? undefined;
+
+    const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawMonthly, gradeTotalsData, gradeAvgTimesData] =
+      await Promise.all([
+        getTodayReviewedCount(db),
+        getTodayDueCount(db),
+        getStudyStreak(db),
+        getUpcomingSchedule(db),
+        getLearnedUnlearnedCount(db),
+        getDeckMasteryList(db),
+        getAllDecks(db),
+        getPast7DaysReviewedCount(db),
+        getPast7DaysStudyActivity(db),
+        getPast7DaysCreatedCount(db),
+        getTodayCreatedCount(db),
+        getDailyReviewCounts(db, heatmapStartStr),
+        getMonthlyReviewCounts(db),
+        getGradeLogTotals(db, since, deckIdFilter),
+        getGradeAvgResponseTimes(db, since, deckIdFilter),
+      ]);
+
+    // 今後7日分（今日が先頭）
+    const filledSchedule: ScheduleItem[] = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const dateStr = toLocalDateStr(d);
+      const found = rawSchedule.find((r) => r.date === dateStr);
+      return { date: dateStr, count: i === 0 ? due : (found?.count ?? 0) };
+    });
+
+    setStats({
+      todayReviewed: reviewed,
+      todayDue: due,
+      streak: s,
+      learned: counts.learned,
+      unlearned: counts.unlearned,
+      todayCreated: createdToday,
+      schedule: filledSchedule,
+      past7DaysReviewed: fillPast7Days(rawReviewed),
+      past7DaysActivity: fillPast7Days(rawActivity),
+      past7DaysCreated: fillPast7Days(rawCreated),
+      deckMastery: mastery,
+      decks: allDecks,
+      heatmapData: rawHeatmap,
+      gradeTotals: gradeTotalsData,
+      gradeAvgTimes: gradeAvgTimesData,
+      monthlyReviewed: fillPast12Months(rawMonthly),
+    });
+    if (selectedGradeBlockRef.current !== null) {
+      const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdFilter);
+      setGradeBlockCards(cards);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db]);
+
   useFocusEffect(
     useCallback(() => {
       onScreenFocus();
@@ -737,69 +799,17 @@ export default function StatsScreen() {
       };
       const initial = blockMap[initialFilterPreference];
       if (initial !== null) setSelectedBlock(initial);
-      async function load() {
-        const heatmapStart = new Date();
-        heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
-        const heatmapStartStr = toLocalDateStr(heatmapStart);
-        const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-        const deckIdFilter = useSettingsStore.getState().gradeRankingDeckId ?? undefined;
-
-        const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawMonthly, gradeTotalsData, gradeAvgTimesData] =
-          await Promise.all([
-            getTodayReviewedCount(db),
-            getTodayDueCount(db),
-            getStudyStreak(db),
-            getUpcomingSchedule(db),
-            getLearnedUnlearnedCount(db),
-            getDeckMasteryList(db),
-            getAllDecks(db),
-            getPast7DaysReviewedCount(db),
-            getPast7DaysStudyActivity(db),
-            getPast7DaysCreatedCount(db),
-            getTodayCreatedCount(db),
-            getDailyReviewCounts(db, heatmapStartStr),
-            getMonthlyReviewCounts(db),
-            getGradeLogTotals(db, since, deckIdFilter),
-            getGradeAvgResponseTimes(db, since, deckIdFilter),
-          ]);
-
-        // 今後7日分（今日が先頭）
-        const filledSchedule: ScheduleItem[] = Array.from({ length: 7 }, (_, i) => {
-          const d = new Date();
-          d.setDate(d.getDate() + i);
-          const dateStr = toLocalDateStr(d);
-          const found = rawSchedule.find((r) => r.date === dateStr);
-          return { date: dateStr, count: i === 0 ? due : (found?.count ?? 0) };
-        });
-
-        setStats({
-          todayReviewed: reviewed,
-          todayDue: due,
-          streak: s,
-          learned: counts.learned,
-          unlearned: counts.unlearned,
-          todayCreated: createdToday,
-          schedule: filledSchedule,
-          past7DaysReviewed: fillPast7Days(rawReviewed),
-          past7DaysActivity: fillPast7Days(rawActivity),
-          past7DaysCreated: fillPast7Days(rawCreated),
-          deckMastery: mastery,
-          decks: allDecks,
-          heatmapData: rawHeatmap,
-          gradeTotals: gradeTotalsData,
-          gradeAvgTimes: gradeAvgTimesData,
-          monthlyReviewed: fillPast12Months(rawMonthly),
-        });
-        if (selectedGradeBlockRef.current !== null) {
-          const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
-          const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdFilter);
-          setGradeBlockCards(cards);
-        }
-      }
-      load();
+      loadStats();
       return () => { onScreenBlur(); };
-    }, [db, initialFilterPreference, onScreenFocus, onScreenBlur])
+    }, [initialFilterPreference, onScreenFocus, onScreenBlur, loadStats])
   );
+
+  // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でも統計を再読込する。
+  const dataRevision = useSyncStore((s) => s.dataRevision);
+  useEffect(() => {
+    if (dataRevision === 0) return;
+    loadStats();
+  }, [dataRevision, loadStats]);
 
   const focusList = useMemo<FocusedItem[]>(() => {
     const list: FocusedItem[] = [

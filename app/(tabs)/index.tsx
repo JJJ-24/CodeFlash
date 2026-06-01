@@ -30,6 +30,7 @@ import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/de
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useDeckStore } from '@/store/decks';
+import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
 
@@ -145,6 +146,14 @@ export default function HomeScreen() {
   useEffect(() => {
     getAllDecks(db).then(setDecks);
   }, [db]);
+
+  // 同期（ダウンロード）でローカルデータが入れ替わったら、デッキ一覧を再読込する。
+  // refreshGlobalCaches でストアは更新されるが、念のためここでも DB から再取得して確実に反映する。
+  const dataRevision = useSyncStore((s) => s.dataRevision);
+  useEffect(() => {
+    if (dataRevision === 0) return;
+    getAllDecks(db).then(setDecks);
+  }, [dataRevision, db, setDecks]);
 
   useFocusEffect(
     useCallback(() => {

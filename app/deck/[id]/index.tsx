@@ -49,6 +49,7 @@ import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
+import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import type { CardSortOrder, DeckDetailFilter } from '@/store/settings';
@@ -151,6 +152,13 @@ export default function DeckDetailScreen() {
       new: new Set(unlearnedIds),
     });
   }, [db, id, setCards]);
+
+  // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でもカード一覧を再読込する。
+  const dataRevision = useSyncStore((s) => s.dataRevision);
+  useEffect(() => {
+    if (dataRevision === 0) return;
+    loadCards();
+  }, [dataRevision, loadCards]);
 
   useFocusEffect(
     useCallback(() => {

@@ -77,6 +77,13 @@ interface SyncState {
   /** 同じ内容の通知でもバナーを再点灯させるための連番（バナーはこの変化を見て表示する）。 */
   noticeId: number;
 
+  /**
+   * ダウンロード同期などでローカルデータが丸ごと入れ替わるたびに増える信号。
+   * 集計値をローカル state に保持する画面（学習タブなど）が、フォーカス中でも
+   * これを購読して再読込し、ダウンロード完了直後に内容を反映できるようにする。
+   */
+  dataRevision: number;
+
   setEnabled: (enabled: boolean) => void;
   setStatus: (status: SyncStatus, direction?: SyncDirection | null) => void;
   setBlocking: (blocking: boolean) => void;
@@ -87,6 +94,7 @@ interface SyncState {
   setLastRemoteUpdatedAt: (timestamp: number) => void;
   setLastRemoteId: (id: string) => void;
   showNotice: (kind: 'error' | 'info', code: SyncNoticeCode) => void;
+  bumpDataRevision: () => void;
 }
 
 function generateDeviceId(): string {
@@ -108,6 +116,7 @@ export const useSyncStore = create<SyncState>((set) => ({
   noticeKind: null,
   noticeCode: null,
   noticeId: 0,
+  dataRevision: 0,
 
   setEnabled: (enabled) => {
     set({ enabled });
@@ -144,6 +153,9 @@ export const useSyncStore = create<SyncState>((set) => ({
   },
   showNotice: (kind, code) => {
     set((s) => ({ noticeKind: kind, noticeCode: code, noticeId: s.noticeId + 1 }));
+  },
+  bumpDataRevision: () => {
+    set((s) => ({ dataRevision: s.dataRevision + 1 }));
   },
 }));
 

@@ -33,6 +33,7 @@ import {
 } from '@/lib/database/cards';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
+import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
@@ -132,6 +133,34 @@ export default function StudyScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilter]);
 
+  const loadData = useCallback(async () => {
+    const [
+      loadedDecks, deckCounts, loadedTags, tagCounts,
+      todayDeck, todayTag,
+      createdDeck, createdTag, totalTag,
+    ] = await Promise.all([
+      getAllDecks(db),
+      getDueCountPerDeck(db),
+      getAllTags(db),
+      getDueCountPerTag(db),
+      getTodayReviewedCountPerDeck(db),
+      getTodayReviewedCountPerTag(db),
+      getUnlearnedCountPerDeck(db),
+      getUnlearnedCountPerTag(db),
+      getTotalCardCountPerTag(db),
+    ]);
+    setDecks(loadedDecks);
+    setDueCounts(deckCounts);
+    setTags(loadedTags);
+    setTagDueCounts(tagCounts);
+    setTodayReviewedPerDeck(todayDeck);
+    setTodayReviewedPerTag(todayTag);
+    setTodayCreatedPerDeck(createdDeck);
+    setTodayCreatedPerTag(createdTag);
+    setTotalPerTag(totalTag);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db]);
+
   useFocusEffect(
     useCallback(() => {
       if (!fromSessionRef.current) {
@@ -143,37 +172,22 @@ export default function StudyScreen() {
       onScreenFocus();
       (async () => {
         if (!initialLoadDoneRef.current && !isFromSession) setLoading(true);
-        const [
-          loadedDecks, deckCounts, loadedTags, tagCounts,
-          todayDeck, todayTag,
-          createdDeck, createdTag, totalTag,
-        ] = await Promise.all([
-          getAllDecks(db),
-          getDueCountPerDeck(db),
-          getAllTags(db),
-          getDueCountPerTag(db),
-          getTodayReviewedCountPerDeck(db),
-          getTodayReviewedCountPerTag(db),
-          getUnlearnedCountPerDeck(db),
-          getUnlearnedCountPerTag(db),
-          getTotalCardCountPerTag(db),
-        ]);
-        setDecks(loadedDecks);
-        setDueCounts(deckCounts);
-        setTags(loadedTags);
-        setTagDueCounts(tagCounts);
-        setTodayReviewedPerDeck(todayDeck);
-        setTodayReviewedPerTag(todayTag);
-        setTodayCreatedPerDeck(createdDeck);
-        setTodayCreatedPerTag(createdTag);
-        setTotalPerTag(totalTag);
+        await loadData();
         initialLoadDoneRef.current = true;
         setLoading(false);
       })();
       return () => { onScreenBlur(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [db, initialFilterPreference])
+    }, [db, initialFilterPreference, loadData])
   );
+
+  // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でも集計を再読込する。
+  // 初回マウント時（dataRevision=0）は上の useFocusEffect の読込に任せてスキップする。
+  const dataRevision = useSyncStore((s) => s.dataRevision);
+  useEffect(() => {
+    if (dataRevision === 0) return;
+    loadData();
+  }, [dataRevision, loadData]);
 
   function makeDisplayInfo(n: number) {
     return { count: n, subText: t('study.noTarget'), subTextActive: n > 0, tappable: n > 0 };

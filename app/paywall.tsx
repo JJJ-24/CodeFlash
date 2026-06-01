@@ -28,6 +28,16 @@ type Feature = {
 
 const CURRENT_FEATURES: Feature[] = [
   {
+    icon: 'cloud-outline',
+    titleKey: 'pro.featureICloud',
+    descKey:  'pro.featureICloudDesc',
+  },
+  {
+    icon: 'color-palette-outline',
+    titleKey: 'pro.featureCustomization',
+    descKey:  'pro.featureCustomizationDesc',
+  },
+  {
     icon: 'bar-chart-outline',
     titleKey: 'pro.featureStats',
     descKey:  'pro.featureStatsDesc',
@@ -41,11 +51,6 @@ const CURRENT_FEATURES: Feature[] = [
 
 const UPCOMING_FEATURES: Feature[] = [
   {
-    icon: 'cloud-outline',
-    titleKey: 'pro.featureICloud',
-    descKey:  'pro.featureICloudDesc',
-  },
-  {
     icon: 'terminal-outline',
     titleKey: 'pro.featureSQL',
     descKey:  'pro.featureSQLDesc',
@@ -54,11 +59,6 @@ const UPCOMING_FEATURES: Feature[] = [
     icon: 'apps-outline',
     titleKey: 'pro.featureWidget',
     descKey:  'pro.featureWidgetDesc',
-  },
-  {
-    icon: 'color-palette-outline',
-    titleKey: 'pro.featureCustomization',
-    descKey:  'pro.featureCustomizationDesc',
   },
 ];
 

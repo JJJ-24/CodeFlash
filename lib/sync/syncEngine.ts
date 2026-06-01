@@ -633,8 +633,16 @@ export async function syncNow(
       await createDbSnapshot(db);
       // 参照画像を先に追加アップロード（meta より前）。失敗すれば throw して meta を書かない。
       await uploadReferencedImages(db);
+      // 版の時刻には「アップロードした時刻」ではなく「データを最後に変更した時刻」
+      // (sync_state.localChangedAt) を使う。こうすると LWW のタイブレーク
+      // （decideDirection の local.changedAt vs remote.meta.updatedAt）が
+      // 「学習した時刻どうしの比較」になり、オフライン同時編集→再接続時に
+      // 「最後に学習した端末が勝つ」（どちらが先に接続したかに依存しない）直感的な後勝ちになる。
+      // 旧来は Date.now()（アップロード時刻）だったため、先に接続した端末の方が必ず新しい時刻になり
+      // 「先接続勝ち」になっていた。一度も変更が無いまま強制アップロードする場合(changedAt=0)だけは
+      // 現在時刻で代替する（版として有効な時刻を持たせるため）。
       const meta: RemoteDbMeta = {
-        updatedAt: Date.now(),
+        updatedAt: localInfo.changedAt || Date.now(),
         deviceId: sync.deviceId,
         schemaVersion: SYNC_SCHEMA_VERSION,
       };

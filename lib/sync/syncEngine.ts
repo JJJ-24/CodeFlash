@@ -722,6 +722,18 @@ const SYNC_RETRY_DELAYS_MS = [15_000, 30_000, 60_000];
 let syncRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let syncRetryAttempt = 0;
 
+/**
+ * 自動同期で「すぐにエラー表示せず、まず再試行に回す」エラーコード。
+ * - timeout: iCloud の端末間反映待ち（実体がまだ降りてこない）。
+ * - unknown: 前面復帰直後にネットワーク／iCloud デーモンが未準備で、ダウンロード等が
+ *   即座にネイティブエラーで失敗する一過性のもの（コントロールセンターを開閉して
+ *   ネットワークを起こすと次の同期が成功する、という症状の正体）。
+ * いずれも少し待って再試行すれば自然に解消することが多いため、最初の失敗ではバナーを出さない。
+ * 容量不足・スキーマ不一致・iCloud 無効など解消の見込みが無い確定的エラーはここに含めない
+ * （それらは即バナーで知らせる）。
+ */
+const RETRYABLE_AUTO_CODES = new Set<SyncErrorCode>(["timeout", "unknown"]);
+
 /** 自動再試行の予約を解除（同期成功時・no-op 時に呼ぶ）。 */
 function clearSyncRetry(): void {
   syncRetryAttempt = 0;
@@ -731,10 +743,19 @@ function clearSyncRetry(): void {
   }
 }
 
-/** 反映待ちタイムアウト後の自動再試行を予約する（上限到達で打ち切り、以後は通常トリガーに委ねる）。 */
-function scheduleSyncRetry(db: SQLiteDatabase): void {
+/**
+ * 反映待ち／一過性エラー後の自動再試行を予約する。
+ * 再試行を尽くしても解消しなかった場合のみ、最後のエラーをバナーで知らせる
+ * （ただし timeout＝iCloud 反映待ちは障害ではないので、尽きても出さず次トリガーに委ねる）。
+ * これにより「前面復帰直後の一過性失敗」ではバナーを出さず、本当に直らないときだけ通知できる。
+ */
+function scheduleSyncRetry(db: SQLiteDatabase, lastCode: SyncErrorCode): void {
   if (syncRetryAttempt >= SYNC_RETRY_DELAYS_MS.length) {
-    syncRetryAttempt = 0; // 上限到達。次の前面復帰／接続復帰トリガーに委ねる
+    syncRetryAttempt = 0; // 上限到達
+    if (lastCode !== "timeout") {
+      // 再試行を尽くしても解消しない実エラー → ここで初めて通知する。
+      useSyncStore.getState().showNotice("error", lastCode);
+    }
     return;
   }
   const ms = SYNC_RETRY_DELAYS_MS[syncRetryAttempt];
@@ -841,13 +862,17 @@ async function runForegroundSync(
   } catch (e) {
     // 自動同期の失敗はユーザー操作ではないので throw しない。
     const code = toSyncErrorCode(e);
-    if (code === "timeout") {
-      // オンライン確認済みなのに転送が固まる＝iCloud の反映待ち（実体が未着）。
-      // 通信障害ではないのでバナーは出さず、少し後に自動再試行する（伝播完了を待つ）。
-      scheduleSyncRetry(db);
-    } else if (code !== "offline") {
-      // それ以外の実エラーは、設定画面を開いていなくても気付けるよう通知バナーで知らせる。
-      // offline は出さない：接続確定前の過渡状態で出ることがあり「接続したのにオフライン表示」を防ぐ。
+    if (code === "offline") {
+      // 接続確定前の過渡状態で出ることがある。バナーは出さず、接続復帰リスナー／次トリガーに委ねる
+      // （「接続したのにオフライン表示」を防ぐ）。
+    } else if (RETRYABLE_AUTO_CODES.has(code)) {
+      // iCloud の反映待ち（timeout）や、前面復帰直後にネットワーク／iCloud デーモンが未準備で
+      // 転送が即失敗する一過性エラー（unknown）。すぐにバナーを出さず少し後に自動再試行する。
+      // 再試行を尽くしても解消しないときだけ scheduleSyncRetry が初めてバナーを出す。
+      scheduleSyncRetry(db, code);
+    } else {
+      // 解消の見込みが無い確定的なエラー（容量不足・スキーマ不一致・iCloud 無効）は、
+      // 設定画面を開いていなくても気付けるよう即バナーで知らせる。
       useSyncStore.getState().showNotice("error", code);
     }
   }

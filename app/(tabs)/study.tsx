@@ -16,6 +16,7 @@ import {
 
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
+import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
@@ -65,6 +66,7 @@ export default function StudyScreen() {
   const { tags, setTags } = useTagStore();
   const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder, studyHideEmpty: hideEmpty, setStudyHideEmpty } = useSettingsStore();
 
+  const [infoModal, setInfoModal] = useState<{ title?: string; message: string } | null>(null);
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
   const [todayReviewedPerDeck, setTodayReviewedPerDeck] = useState<Record<string, number>>({});
@@ -384,9 +386,17 @@ export default function StudyScreen() {
         </View>
         <View style={styles.listTitleRow}>
           <View style={styles.listTitleBlock}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('study.listTitle')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('study.listTitle')}
+              </Text>
+              <Pressable
+                onPress={() => setInfoModal({ title: t('study.historyInfoTitle'), message: t('study.historyInfoMessage') })}
+                hitSlop={8}
+              >
+                <Ionicons name="information-circle-outline" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+              </Pressable>
+            </View>
             <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {filterDescMap[activeFilter]}
             </Text>
@@ -601,6 +611,13 @@ export default function StudyScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         shortcuts={STUDY_TAB_SHORTCUTS}
+      />
+
+      <InfoModal
+        visible={!!infoModal}
+        title={infoModal?.title}
+        message={infoModal?.message ?? ''}
+        onClose={() => setInfoModal(null)}
       />
     </View>
   );

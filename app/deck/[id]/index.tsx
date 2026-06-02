@@ -600,9 +600,23 @@ export default function DeckDetailScreen() {
 
         <Pressable style={styles.sectionTitleRow} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
           <View style={styles.sectionTitleLeft}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {selectionMode ? t('card.selectHint') : t('card.list')}
-            </Text>
+            {selectionMode ? (
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('card.selectHint')}
+              </Text>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('card.list')}
+                </Text>
+                <Pressable
+                  onPress={() => setInfoModal({ title: t('card.listInfoTitle'), message: `${t('study.historyInfoMessage')}\n\n${t('card.reorderHintMessage')}` })}
+                  hitSlop={8}
+                >
+                  <Ionicons name="information-circle-outline" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+                </Pressable>
+              </View>
+            )}
             {!selectionMode && (
               <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {filterDescMap[selectedFilter]}

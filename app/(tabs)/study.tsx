@@ -90,6 +90,15 @@ export default function StudyScreen() {
   const skipScrollOnNextFocusRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
   const prevActiveTabRef = useRef<Tab>('decks');
+
+  // フォーカスを完全に解除する。index だけでなく id ref も必ず消すこと。
+  // （id ref を残すと、タブ復帰時などに visibleDecks 再生成で「フォーカス維持」エフェクトが
+  //  再フォーカスしてしまうため。先頭デッキでこの不具合が起きていた）
+  const clearFocus = useCallback(() => {
+    setFocusedItemIndex(null);
+    focusedDeckIdRef.current = null;
+    focusedTagIdRef.current = null;
+  }, []);
   const deckFilterOffsets = useRef<Record<Filter, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const tagFilterOffsets = useRef<Record<Filter, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
@@ -365,7 +374,7 @@ export default function StudyScreen() {
           <ActivityIndicator color={theme.colors.primary} />
         </View>
       ) : (
-      <Pressable style={{ flex: 1 }} onPress={() => { setFocusedItemIndex(null); focusedDeckIdRef.current = null; focusedTagIdRef.current = null; }}>
+      <Pressable style={{ flex: 1 }} onPress={clearFocus}>
       {/* フィルターブロック */}
       <View style={styles.filterSection}>
         <View style={styles.summaryRow}>
@@ -483,7 +492,7 @@ export default function StudyScreen() {
             onScroll={(e) => { deckFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
             scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}
-            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedItemIndex(null)} />}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={clearFocus} />}
             renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getDeckDisplayInfo(item);
               const isFocused = focusedItemIndex === index;
@@ -553,7 +562,7 @@ export default function StudyScreen() {
             onScroll={(e) => { tagFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
             scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}
-            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedItemIndex(null)} />}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={clearFocus} />}
             renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getTagDisplayInfo(item);
               const isFocused = focusedItemIndex === index;

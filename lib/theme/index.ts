@@ -3,7 +3,7 @@ import { Platform, useColorScheme } from 'react-native';
 import { FONT_SCALE, useThemeStore } from '@/store/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
-import { CARD_THEMES, type CardThemePalette, type CardThemeName } from '@/lib/theme/cardThemes';
+import { CARD_THEMES, FREE_CARD_THEMES, type CardThemePalette, type CardThemeName } from '@/lib/theme/cardThemes';
 
 const isPad = (Platform as any).isPad;
 
@@ -166,8 +166,10 @@ export function useTheme(): AppTheme {
 
   const base = preference === 'light' ? lightTheme : preference === 'dark' ? darkTheme : (systemScheme === 'dark' ? darkTheme : lightTheme);
   const scale = FONT_SCALE[fontSizePreference];
-  // Pro 失効時は default にフォールバック（ユーザーの選好値は保持し、再 Pro 時に自動復元）
-  const effectiveCardTheme: CardThemeName = isPro ? cardThemePreference : 'default';
+  // Pro 失効時は無料配色（default / paper）以外を選んでいたら default にフォールバック
+  // （ユーザーの選好値は保持し、再 Pro 時に自動復元）。無料配色はそのまま有効。
+  const effectiveCardTheme: CardThemeName =
+    isPro || FREE_CARD_THEMES.includes(cardThemePreference) ? cardThemePreference : 'default';
   const cardPalette = CARD_THEMES[base.dark ? 'dark' : 'light'][effectiveCardTheme];
   // カードテーマ選択時、画面背景（カード間の隙間）をテーマ色でほんのり色付けする。
   // ヘッダー・タブバー・各カード面はすべて colors.surface を使うため無彩色のまま保たれ、

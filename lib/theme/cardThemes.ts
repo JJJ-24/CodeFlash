@@ -23,6 +23,9 @@ export const CARD_THEME_NAMES: readonly CardThemeName[] = [
   'default', 'paper', 'sky', 'rose', 'mint', 'lavender', 'graphite', 'sepia',
 ] as const;
 
+/** 無料版でも選べる配色（味見用）。これ以外は Pro 限定。 */
+export const FREE_CARD_THEMES: readonly CardThemeName[] = ['default', 'paper'] as const;
+
 export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThemePalette>> = {
   light: {
     // 明度 88〜92% / 彩度 15〜25%。テキスト #212121 との contrast 11〜15:1 で WCAG AAA を維持。

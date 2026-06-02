@@ -9,7 +9,7 @@ import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
-import { CARD_THEME_NAMES, CARD_THEMES, type CardThemeName } from '@/lib/theme/cardThemes';
+import { CARD_THEME_NAMES, CARD_THEMES, FREE_CARD_THEMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useSettingsStore, type InitialFilterPreference } from '@/store/settings';
 import { useThemeStore, type ColorSchemePreference, type FontSizePreference } from '@/store/theme';
 import { useProStore } from '@/store/pro';
@@ -27,8 +27,8 @@ export default function DisplaySettingsScreen() {
   const { isPro } = useProStore();
 
   function handleCardThemeSelect(name: CardThemeName) {
-    // 'default' は常に無料。それ以外は Pro 限定。
-    if (name !== 'default' && !isPro) {
+    // 無料配色（default / paper）は常に選択可。それ以外は Pro 限定でペイウォールへ誘導。
+    if (!FREE_CARD_THEMES.includes(name) && !isPro) {
       router.push('/paywall');
       return;
     }
@@ -103,7 +103,7 @@ export default function DisplaySettingsScreen() {
           {CARD_THEME_NAMES.map((name) => {
             const p = palette[name];
             const isSelected = cardThemePreference === name;
-            const isLocked = name !== 'default' && !isPro;
+            const isLocked = !FREE_CARD_THEMES.includes(name) && !isPro;
             return (
               <Pressable
                 key={name}

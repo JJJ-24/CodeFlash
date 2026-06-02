@@ -1,7 +1,7 @@
 # 014 クラウド同期
 
 **フェーズ:** v1.1
-**ステータス:** 未着手（方式仮決定：`@oleg_svetlichnyi/expo-icloud-storage` で SQLite ファイル同期）
+**ステータス:** 実装済み・実機運用中（`@oleg_svetlichnyi/expo-icloud-storage` で SQLite ファイル同期。競合は後勝ち＝LWW〈最終学習時刻基準〉、負けた側の救済はデッキ単位マージ復元＝チケット029）
 **依存:** 001, 002, 003, 004
 **被依存:** 016
 
@@ -145,21 +145,35 @@ CloudKit のレコード単位同期ではなく、**SQLite ファイルをま�
   - [x] `documentDirectory/images/` 配下のファイルを iCloud Drive に追従（リモート `Images/` フォルダへ add-only。ファイル名一意・内容不変なので上書きせず追加のみ）
   - [x] ローカルにない画像のダウンロード（DL 復元後、新 DB が参照する未取得画像を取得。best-effort）
   - [x] 不要画像のクリーンアップ（ローカルは `cleanupOrphanImages` で DL 後に掃除。リモートはアップロード時、meta コミット後に最新 DB が参照しない画像を `pruneRemoteImages` で削除）
-- [ ] 競合解決：last-write-wins
-  - [ ] DB に `lastSyncedAt`・`deviceUpdatedAt` メタデータ追加
-  - [ ] アップロード前にリモートの更新日時を確認し、ローカルが古ければマージ確認ダイアログ
-- [ ] 同期状態の管理：`store/sync.ts`（idle / syncing / error / lastSyncedAt）
+- [x] 競合解決：last-write-wins（後勝ち）
+  - [x] 変更追跡メタデータ（実装は `sync_state.localVersion`/`localChangedAt` トリガー＋リモート `meta`〈deviceId/updatedAt〉＋ `store/sync` の `lastSyncedAt`/`lastRemoteId`。当初案の `lastSyncedAt`/`deviceUpdatedAt` カラムとは別実装）
+  - [x] LWW のタイブレークは「最終学習（変更）時刻」基準にして接続順非依存の後勝ちに（`syncEngine.decideDirection`）
+  - ~~アップロード前にリモートの更新日時を確認し、ローカルが古ければマージ確認ダイアログ~~（不採用：確認ダイアログは出さず**自動で後勝ち**。負けた側の救済は**デッキ単位マージ復元＝チケット029**で対応）
+- [x] 同期状態の管理：`store/sync.ts`（idle / syncing / error / lastSyncedAt / lastDataSyncedAt / dataRevision 等）
 
 ### 同期トリガー
-- [ ] アプリ起動時の自動ダウンロード（リモート > ローカルなら反映）
-- [ ] バックグラウンド移行時の自動アップロード（AppState change で発火）
-- [ ] 設定画面の手動同期ボタン
-- [ ] 同期中の UI 表示（ヘッダーにスピナー等）
+- [x] アプリ起動／フォアグラウンド復帰時の自動同期（`triggerForegroundSync`。リモートが新しければ DL、ローカルが新しければ UP）
+- [x] バックグラウンド移行時の自動アップロード（`triggerBackgroundUpload`。`AppState` change で発火・背面実行猶予を取得）
+- [x] 接続復帰リスナー／noop 後の追いチェック（settle）／一過性失敗の自動リトライ（`scheduleSyncRetry`・`scheduleSyncSettle`）
+- [x] 設定画面の手動同期ボタン（「今すぐ同期」）
+- [x] 同期中の UI 表示（手動時は全画面ブロックのオーバーレイ＋設定画面のステータス。~~ヘッダーにスピナー~~ は不採用）
+- [x] DL 完了をフォーカス中の画面へ即反映（`useSyncStore.dataRevision`。学習/統計/ホーム/カード一覧）
+
+#### 将来の改善案（保留・未実装）
+- [ ]（任意）**引っ張って更新（pull-to-refresh）で手動同期**
+  - ホームの `DraggableFlatList` に `RefreshControl` を装着して、先頭で下方向プル → 同期実行。
+  - **実装方針（合意済み）**：
+    - `syncNow(db, 'auto', { silent: true })` を使う（非 silent の全画面ブロックオーバーレイと二重表示にしない。RefreshControl のスピナーを進捗にする）。
+    - 5秒スロットル（`FOREGROUND_SYNC_THROTTLE_MS`）を回避するため `triggerForegroundSync` ではなく `syncNow` を直接呼ぶ（明示操作が no-op で「壊れて見える」のを防ぐ）。
+    - **Pro かつ同期 ON のときだけ** `refreshControl` を装着（無料/OFF では引っ張っても何も起きない混乱を避ける）。
+    - オフライン/エラーはスピナーを止めるだけ（プル起点で赤エラーは出さず、既存の通知バナーに委ねる）。
+    - 置き場所はまずホームのみ。
+  - **保留理由**：前面復帰・接続復帰・settle 追いチェック等で**既に積極的に自動同期**しており、機能的な必要性が低い（設定の「今すぐ同期」も含め能動同期の出番が少ない）。馴染んだ操作感・安心感が欲しくなったら実装する。
 
 ### Pro ゲーティング（016 チケット連携）
-- [ ] 設定画面の「クラウド同期」項目を Pro 限定に
-- [ ] 無料版ユーザーがタップしたら paywall へ遷移
-- [ ] `useProStore` で gating
+- [x] 設定画面の「クラウド同期」項目を Pro 限定に
+- [x] 無料版ユーザーがタップしたら paywall へ遷移
+- [x] `useProStore` で gating
 
 ### 設定画面（`app/(tabs)/settings.tsx`）
 - [x] 同期 ON/OFF トグル（`store/sync.ts` に enabled・AsyncStorage 永続化）
@@ -180,10 +194,10 @@ CloudKit のレコード単位同期ではなく、**SQLite ファイルをま�
   - 同期中・最終同期・手動同期・エラーメッセージ（`syncTimeout`・`storageFull` 追加）・Pro 限定案内 等
 
 ### テスト
-- [ ] 2端末で同じ Apple ID でログインし、双方向同期の動作確認
-- [ ] 競合シナリオ（両端末オフラインで編集 → 同時オンライン復帰）の挙動確認
+- [x] 2端末で同じ Apple ID でログインし、双方向同期の動作確認（根本原因＝iCloud Drive デーモン wedged はサインアウト/インで復活）
+- [x] 競合シナリオ（両端末オフラインで編集 → 同時オンライン復帰）の挙動確認（後勝ち＝LWW で解決。失われた側はデッキ単位マージ復元〈029〉で救済可能）
 - [ ] 大量データ（1000カード以上 + 画像複数）でのパフォーマンス確認
-- [ ] iCloud OFF → ON 切替時の初回アップロード確認
+- [x] iCloud OFF → ON 切替時の初回アップロード確認
 
 ---
 

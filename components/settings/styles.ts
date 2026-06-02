@@ -7,7 +7,7 @@ import { SHADOW } from '@/lib/theme';
  * 旧 app/(tabs)/settings.tsx に直書きされていたものを切り出して再利用する。
  */
 export const settingsStyles = StyleSheet.create({
-  container: { padding: 16, gap: 12 },
+  container: { padding: 16, gap: 8 },
   card: {
     borderRadius: 12,
     paddingHorizontal: 16,

@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  listContent: { padding: 16, gap: 12, paddingBottom: 96 },
+  listContent: { padding: 16, gap: 8, paddingBottom: 96 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   card: {
     borderRadius: 12,

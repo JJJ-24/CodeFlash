@@ -525,7 +525,7 @@ export default function TagsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  list: { padding: 16, gap: 12, paddingBottom: 96 },
+  list: { padding: 16, gap: 8, paddingBottom: 96 },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   sectionTitleCol: { flexDirection: 'column', gap: 2, flex: 1 },
   sectionTitle: { fontWeight: '700' },

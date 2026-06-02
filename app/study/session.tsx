@@ -193,6 +193,41 @@ export default function StudySessionScreen() {
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<
     Record<string, Record<number, string>>
   >({});
+
+  // カード編集画面でカード内容が変更されて戻ってきたら、学習画面のコードブロックの
+  // 一時編集（editedCodeBlocks）を破棄して最新内容を即反映する。
+  // CodeRunnerView は `editedContent ?? block.content` を表示するため、一時編集が残っていると
+  // カード編集での変更が見えない。「同じカードで内容が変わったとき」だけ消すので、
+  // 何も変えずに戻った場合は学習画面で打ったコードを保持する。
+  const currentCardContentSig = useMemo(
+    () =>
+      currentCard
+        ? JSON.stringify([
+            currentCard.frontContent,
+            currentCard.backContent,
+            currentCard.memoContent,
+          ])
+        : null,
+    [currentCard],
+  );
+  const prevContentSigRef = useRef<{ id: string; sig: string } | null>(null);
+  useEffect(() => {
+    if (!currentCard || currentCardContentSig == null) return;
+    const prev = prevContentSigRef.current;
+    prevContentSigRef.current = { id: currentCard.id, sig: currentCardContentSig };
+    if (prev && prev.id === currentCard.id && prev.sig !== currentCardContentSig) {
+      const id = currentCard.id;
+      setEditedCodeBlocks((p) => {
+        if (p[id] == null && p[id + "_back"] == null && p[id + "_memo"] == null) return p;
+        const next = { ...p };
+        delete next[id];
+        delete next[id + "_back"];
+        delete next[id + "_memo"];
+        return next;
+      });
+    }
+  }, [currentCard, currentCardContentSig]);
+
   const codeEditingRef = useRef(false);
   // 別 BlocksView のコードブロックへ編集が移るとき、onEditBlur の keyboardRef.focus() を抑制する
   const switchingCodeBlockRef = useRef(false);

@@ -42,14 +42,28 @@ import { useProStore } from '@/store/pro';
 import { useSyncStore } from '@/store/sync';
 import type { Block, Deck } from '@/types';
 
-const STATS_SHORTCUTS = [
-  { key: '1–4',         descKey: 'shortcut.cycleChart' },
-  { key: 'J / K',       descKey: 'shortcut.focusNextPrev' },
-  { key: 'Space',       descKey: 'shortcut.openChart' },
-  { key: '6-9',         descKey: 'shortcut.switchGrade', pro: true },
-  { key: 'P',           descKey: 'shortcut.editFocusedItem', pro: true },
-  { key: 'A',           descKey: 'shortcut.toggleCardStats', pro: true },
-  { key: ', / .',       descKey: 'shortcut.tabNextPrev' },
+const STATS_SHORTCUT_SECTIONS = [
+  {
+    titleKey: 'shortcut.sectionCommon',
+    items: [
+      { key: '1–4',   descKey: 'shortcut.cycleChart' },
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+      { key: 'Space', descKey: 'shortcut.openChart' },
+      { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+    ],
+  },
+  {
+    titleKey: 'shortcut.sectionGradeRanking',
+    items: [
+      { key: '6-9',   descKey: 'shortcut.switchGrade', pro: true },
+      { key: 'D',     descKey: 'shortcut.selectDeck', pro: true },
+      { key: 'T',     descKey: 'shortcut.selectPeriod', pro: true },
+      { key: 'M',     descKey: 'shortcut.toggleCountTime', pro: true },
+      { key: 'Space', descKey: 'shortcut.startFocusedReview', pro: true },
+      { key: 'P',     descKey: 'shortcut.editFocusedItem', pro: true },
+      { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
+    ],
+  },
 ];
 
 const HEATMAP_WEEKS = 52; // 約1年分
@@ -991,6 +1005,13 @@ export default function StatsScreen() {
     }
   }, [db, gradeRankingByTime, setGradeRankingByTime]);
 
+  // 重点復習を開始（選択中グレードの TOP カードでセッション開始）。ボタンと Space キーで共用。
+  const startFocusedReview = useCallback(() => {
+    if (gradeBlockCards.length === 0) return;
+    const ids = gradeBlockCards.map((c) => c.cardId).join(',');
+    router.push({ pathname: '/study/session', params: { cardIds: ids, mode: 'focused' } });
+  }, [gradeBlockCards, router]);
+
   // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {
     setGradeRankingPeriod(newPeriod);
@@ -1075,6 +1096,9 @@ export default function StatsScreen() {
               openSheet('total');
             } else if (focusedItem?.kind === 'deck') {
               openSheet(focusedItem.idx);
+            } else if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) {
+              // グレード選択中（ランキングカードにフォーカス中 or フォーカスなし）→ 重点復習を開始
+              startFocusedReview();
             }
             return;
           }
@@ -1111,6 +1135,12 @@ export default function StatsScreen() {
               const card = gradeBlockCards[focusedItem.idx];
               if (card) setStatsCardId(card.cardId);
             }
+          } else if (k === 'd') {
+            if (isPro) setDeckPickerVisible(true);
+          } else if (k === 't') {
+            if (isPro) setPeriodPickerVisible(true);
+          } else if (k === 'm') {
+            if (isPro) handleToggleRankingByTime();
           }
         }}
         onSubmitEditing={() => {
@@ -1438,10 +1468,7 @@ export default function StatsScreen() {
                 {gradeBlockCards.length > 0 && (
                   <View style={{ marginBottom: 4 }}>
                     <Pressable
-                      onPress={() => {
-                        const ids = gradeBlockCards.map((c) => c.cardId).join(',');
-                        router.push({ pathname: '/study/session', params: { cardIds: ids, mode: 'focused' } });
-                      }}
+                      onPress={startFocusedReview}
                       style={({ pressed }) => [styles.focusedReviewBtn, { backgroundColor: FILTER_COLORS.due }, pressed && { opacity: 0.85 }]}
                     >
                       <Ionicons name="play" size={20} color="#FFF" />
@@ -1571,7 +1598,7 @@ export default function StatsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={STATS_SHORTCUTS}
+        sections={STATS_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <PeriodPickerSheet

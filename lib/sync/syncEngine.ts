@@ -708,7 +708,8 @@ export async function syncNow(
       // どちらも best-effort（DB は入れ替え済み＝データは安全。画像不足は次回同期で回復）。
       try {
         await downloadReferencedImages(db);
-        await cleanupOrphanImages(db);
+        // 保持中の自動バックアップが参照する画像は温存する（029 案B：マージ復元の素材を残す）。
+        await cleanupOrphanImages(db, (await listLocalBackups()).map((b) => b.path));
       } catch {
         // 画像処理の失敗で同期全体をエラーにしない
       }

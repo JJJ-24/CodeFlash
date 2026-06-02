@@ -361,7 +361,22 @@
     "restoreSelectMessage": "復元する時点を選んでください。現在のデータはこのバックアップで置き換えられます。",
     "restoreConfirmMessage": "{{datetime}} 時点のデータで現在のデータを置き換えます。続けますか？",
     "restoreConfirm": "復元する",
-    "restoreSuccess": "バックアップから復元しました"
+    "restoreSuccess": "バックアップから復元しました",
+    "mergeShort": "マージ復元（デッキ別）",
+    "mergeBackupCaption": "マージ元: {{datetime}}",
+    "mergeLoadError": "バックアップを読み込めませんでした。",
+    "mergeProcessing": "マージ中…",
+    "mergeTitle": "デッキをマージ復元",
+    "mergeInfo": "自動バックアップから特定のデッキだけを取り出し、現在のデータに統合します。学習や履歴はカードごとに新しい方を残し、既存データは削除しません。オフラインで別々の端末を学習して片方が同期で上書きされたときの復旧に使えます。",
+    "mergeSelectBackupMessage": "マージ元のバックアップを選んでください。",
+    "mergeSelectDeckMessage": "現在のデータに統合するデッキを選んでください。既存データは削除されません。",
+    "mergeEmpty": "このバックアップにデッキがありません。",
+    "mergeDeckCount": "{{count}} 枚",
+    "mergeLastReview": "最終学習 {{date}}",
+    "mergeNeverStudied": "未学習",
+    "mergeConfirmMessage": "「{{name}}」を現在のデータに統合します。既存データは削除されません。続けますか？",
+    "mergeConfirm": "マージする",
+    "mergeSuccess": "「{{name}}」をマージしました"
   },
   "pro": {
     "badge": "Pro",

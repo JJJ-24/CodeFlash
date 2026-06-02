@@ -13,7 +13,7 @@ import { cleanupOrphanImages } from '@/lib/image';
 import { cancelAllReminders, scheduleDailyReminder, updateBadgeCount } from '@/lib/notifications';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { syncNoticeText } from '@/lib/sync/errorText';
-import { triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
+import { listLocalBackups, triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useSyncStore } from '@/store/sync';
@@ -41,7 +41,10 @@ function RootStack() {
   const syncEnabled = useSyncStore((s) => s.enabled);
 
   useEffect(() => {
-    cleanupOrphanImages(db).catch(() => {});
+    // 保持中の自動バックアップが参照する画像は温存する（029 案B）。
+    listLocalBackups()
+      .then((backups) => cleanupOrphanImages(db, backups.map((b) => b.path)))
+      .catch(() => {});
     restoreProStatus().catch(() => {});
   }, []);
 
@@ -130,6 +133,7 @@ function RootStack() {
       <Stack.Screen name="settings/notifications" options={{ headerShown: false }} />
       <Stack.Screen name="settings/study" options={{ headerShown: false }} />
       <Stack.Screen name="settings/sync" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/sync-merge" options={{ headerShown: false }} />
       <Stack.Screen name="settings/data" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
     </Stack>

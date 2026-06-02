@@ -1,7 +1,7 @@
 # 029 デッキ単位のマージ復元（自動バックアップから）
 
 **フェーズ:** v1.5系（同期UX改善の延長）
-**ステータス:** 未着手
+**ステータス:** 実装済み（実機での動作確認待ち）
 **依存:** 014（iCloud同期 / 自動バックアップ）, 021（エクスポート/インポート）, 011（画像ブロック）
 **被依存:** なし
 
@@ -90,40 +90,42 @@ restore（バックアップの姿に戻す＝上書き）ではなく、**何�
 
 ### マージエンジン
 
-- [ ] `lib/sync/deckMerge.ts`（新規）
-  - [ ] `listDecksInBackup(backupPath)` — バックアップDBを開き（または ATTACH）デッキ一覧（id/name/cardCount/最終学習日）を返す
-  - [ ] `mergeDeckFromBackup(db, backupPath, deckId)` — 1デッキを行単位マージ
-    - [ ] ATTACH backup（`replaceLocalDataFromDownloadedDb` と同様に withTransactionAsync 内で実施、終了時 DETACH）
-    - [ ] decks：`INSERT ... ON CONFLICT(id) DO UPDATE ... WHERE excluded.updatedAt > decks.updatedAt`
-    - [ ] cards / card_contents：cards を updatedAt LWW で upsert、勝者の content を同期更新
-    - [ ] reviews：`ON CONFLICT(cardId) DO UPDATE ... WHERE excluded.lastReviewDate > reviews.lastReviewDate`
-    - [ ] review_logs / grade_logs：`INSERT OR IGNORE`
-    - [ ] tags / card_tags：`INSERT OR IGNORE`（対象デッキのカードに紐づくものだけ）
-    - [ ] 対象デッキの `cardCount` を再計算して更新
-  - [ ] マージ後に `refreshGlobalCaches(db)` 相当（decks/tags 再読込）
+- [x] `lib/sync/deckMerge.ts`（新規）
+  - [x] `listDecksInBackup(db, backupPath)` — バックアップDBを ATTACH しデッキ一覧（id/name/cardCount/最終学習日）を返す
+  - [x] `mergeDeckFromBackup(db, backupPath, deckId)` — 1デッキを行単位マージ
+    - [x] ATTACH backup（`replaceLocalDataFromDownloadedDb` と同様に withTransactionAsync 内で実施、終了時 DETACH）
+    - [x] decks：`INSERT ... ON CONFLICT(id) DO UPDATE ... WHERE excluded.updatedAt > decks.updatedAt`（共通カラムのみ）
+    - [x] cards / card_contents：cards を updatedAt LWW で upsert、勝者（backup.updatedAt >= main.updatedAt）の content を同期更新
+    - [x] reviews：`ON CONFLICT(cardId) DO UPDATE ... WHERE excluded.lastReviewDate > reviews.lastReviewDate`
+    - [x] review_logs / grade_logs：`INSERT OR IGNORE`
+    - [x] tags / card_tags：`INSERT OR IGNORE`（対象デッキのカードに紐づくものだけ）
+    - [x] 対象デッキの `cardCount` を再計算して更新
+  - [x] マージ後に decks/tags キャッシュを再読込（`useDeckStore`/`useTagStore`）
 
 ### 画像保護（案B）
 
-- [ ] `lib/image.ts` の掃除をバックアップ考慮に変更
-  - [ ] `getReferencedImageFilenames` を任意DB（ATTACH したバックアップ）に対しても集計できる形に
-  - [ ] `cleanupOrphanImages(db)` を「ライブ ∪ 保持中バックアップの参照画像」を残すよう変更
-    （保持中バックアップ一覧は `listLocalBackups()` から取得）
-- [ ] マージ実行後、復元デッキが参照する画像でライブに無いものはバックアップ側から確保
-  （案Bでは既にライブに残っている想定だが、欠落時のフォールバックとして best-effort コピー）
+- [x] `lib/image.ts` の掃除をバックアップ考慮に変更
+  - [x] `getReferencedImageFilenames(db, from)` を任意スキーマ（ATTACH したバックアップ）に対しても集計できる形に
+  - [x] `cleanupOrphanImages(db, backupPaths)` を「ライブ ∪ 保持中バックアップの参照画像」を残すよう変更
+    （呼び出し側 syncEngine/`_layout` が `listLocalBackups()` のパスを渡す）
+- [~] マージ実行後の画像フォールバックコピーは未実装（案Bでは保持中バックアップ参照画像をライブに温存するため、通常は不要。導入前に削除済みの画像のみ救済不可）
 
 ### UI
 
-- [ ] `app/settings/sync.tsx`（または復元用サブ画面）にデッキ選択マージ動線を追加
-  - [ ] バックアップ選択 → デッキ一覧表示（カード数・最終学習日）
-  - [ ] デッキ選択 → 確認モーダル（`ConfirmModal`）→ マージ実行
-  - [ ] 処理中インジケーター・完了/エラーのフィードバック（`InfoModal`）
-  - [ ] 完了後 `bumpDataRevision()`
+- [x] `app/settings/sync.tsx` の「データ復元」カードに「マージ復元（デッキ別）」行を追加
+  - [x] バックアップ選択（最大3件なので `ConfirmModal`）→ 選んだ世代の timestamp を専用画面へ渡す
+- [x] `app/settings/sync-merge.tsx`（新規・ドリルイン画面）でデッキ一覧をスクロール表示
+  - [x] 各デッキ行は「左にデッキ名・右に枚数／下に最終学習日」の2行レイアウト（デッキ多数でも収まり説明が切れない）
+  - [x] デッキ選択 → 確認モーダル（`ConfirmModal`）→ マージ実行（処理中インジケーター表示）
+  - [x] 完了/エラーのフィードバック（`InfoModal`、完了時は閉じると前画面へ戻る）
+  - [x] 完了後 `bumpDataRevision()` ＋ 同期有効時は `syncNow(auto)` で相手端末へ反映
+  - [x] `_layout.tsx` に `settings/sync-merge` を `headerShown:false` で登録
 
 ### i18n
 
-- [ ] `locales/ja.json` / `en.json` に翻訳キー追加（ja/en セットで）
-  - [ ] restore.mergeDeckTitle, mergeDeckInfo, mergeDeckConfirm, mergeDeckSuccess, mergeDeckEmpty 等
-  - [ ] デッキ一覧の「最終学習: {{date}}」「{{count}} 枚」など
+- [x] `locales/ja.json` / `en.json` に翻訳キー追加（ja/en セット）
+  - [x] sync.mergeShort/mergeTitle/mergeInfo/mergeSelectBackupMessage/mergeSelectDeckMessage/mergeEmpty/mergeConfirmMessage/mergeConfirm/mergeSuccess
+  - [x] デッキ一覧の `mergeLastReview`「最終学習 {{date}}」「`mergeDeckCount` {{count}} 枚」「`mergeNeverStudied` 未学習」
 
 ### 動作確認
 

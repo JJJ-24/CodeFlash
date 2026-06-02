@@ -361,7 +361,22 @@
     "restoreSelectMessage": "Choose a point to restore. Your current data will be replaced with this backup.",
     "restoreConfirmMessage": "Replace current data with the backup from {{datetime}}. Continue?",
     "restoreConfirm": "Restore",
-    "restoreSuccess": "Restored from backup"
+    "restoreSuccess": "Restored from backup",
+    "mergeShort": "Merge restore (by deck)",
+    "mergeBackupCaption": "From: {{datetime}}",
+    "mergeLoadError": "Could not load the backup.",
+    "mergeProcessing": "Merging…",
+    "mergeTitle": "Merge deck from backup",
+    "mergeInfo": "Pull a single deck from an automatic backup and merge it into your current data. Study progress and history are kept per card (newest wins) and nothing existing is deleted. Useful for recovering when two devices were studied offline and one got overwritten by sync.",
+    "mergeSelectBackupMessage": "Choose a backup to merge from.",
+    "mergeSelectDeckMessage": "Choose a deck to merge into your current data. Existing data will not be deleted.",
+    "mergeEmpty": "This backup contains no decks.",
+    "mergeDeckCount": "{{count}} cards",
+    "mergeLastReview": "Last studied {{date}}",
+    "mergeNeverStudied": "Not studied",
+    "mergeConfirmMessage": "Merge \"{{name}}\" into your current data. Existing data will not be deleted. Continue?",
+    "mergeConfirm": "Merge",
+    "mergeSuccess": "Merged \"{{name}}\""
   },
   "pro": {
     "badge": "Pro",

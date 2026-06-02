@@ -50,6 +50,7 @@ export default function SyncSettingsScreen() {
   const [showUploadInfo, setShowUploadInfo] = useState(false);
   const [showDownloadInfo, setShowDownloadInfo] = useState(false);
   const [showRestoreInfo, setShowRestoreInfo] = useState(false);
+  const [showMergeInfo, setShowMergeInfo] = useState(false);
 
   function describeSyncError(e: unknown): string {
     return syncErrorText(toSyncErrorCode(e), t);
@@ -167,6 +168,34 @@ export default function SyncSettingsScreen() {
           }
         },
       }],
+    });
+  }
+
+  // === デッキ単位マージ復元（029）===
+  // バックアップ選択（最大3件なのでアラートで収まる）→ 選んだ世代の timestamp を
+  // デッキ選択専用画面へ渡す（デッキが多いとアラートでは収まらないため別画面でスクロール表示）。
+  async function handleMergeStart() {
+    let backups: LocalBackup[];
+    try {
+      backups = await listLocalBackups();
+    } catch {
+      backups = [];
+    }
+    if (backups.length === 0) {
+      setModal({ kind: 'info', title: t('sync.mergeTitle'), message: t('sync.restoreNone') });
+      return;
+    }
+    setModal({
+      kind: 'confirm',
+      title: t('sync.mergeTitle'),
+      message: t('sync.mergeSelectBackupMessage'),
+      actions: backups.map((b) => ({
+        label: formatBackupTime(b.timestamp),
+        onPress: () => {
+          setModal(null);
+          router.push({ pathname: '/settings/sync-merge', params: { ts: String(b.timestamp) } });
+        },
+      })),
     });
   }
 
@@ -415,6 +444,36 @@ export default function SyncSettingsScreen() {
           <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('sync.restoreInfo')}
+            </Text>
+          </View>
+        )}
+
+        <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: 8 }} />
+
+        {/* デッキ単位マージ復元（029）: 全体置換ではなく1デッキだけ非破壊統合する */}
+        <Pressable
+          style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1, paddingVertical: 4 }]}
+          onPress={handleMergeStart}
+          disabled={syncing}
+        >
+          <Ionicons name="git-merge-outline" size={theme.fontSize.lg} color={theme.colors.text} />
+          <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('sync.mergeShort')}
+          </Text>
+          <Pressable onPress={() => setShowMergeInfo((v) => !v)} hitSlop={8}>
+            <Ionicons
+              name={showMergeInfo ? 'information-circle' : 'information-circle-outline'}
+              size={theme.fontSize.lg}
+              color={theme.colors.iconSubtle}
+            />
+          </Pressable>
+          <View style={{ flex: 1 }} />
+          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+        </Pressable>
+        {showMergeInfo && (
+          <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('sync.mergeInfo')}
             </Text>
           </View>
         )}

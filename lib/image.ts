@@ -77,10 +77,14 @@ export async function deleteImagesInBlocks(blocks: { type: string; uri?: string 
   );
 }
 
-/** DB 上の全カードから参照されている画像ファイル名（`local://images/` の後ろ）を収集する。 */
-export async function getReferencedImageFilenames(db: SQLiteDatabase): Promise<Set<string>> {
+/** DB 上の全カードから参照されている画像ファイル名（`local://images/` の後ろ）を収集する。
+ *  `from` に `'bkimg.card_contents'` 等を渡すと ATTACH したバックアップDBの参照も集計できる（029）。 */
+export async function getReferencedImageFilenames(
+  db: SQLiteDatabase,
+  from = 'card_contents',
+): Promise<Set<string>> {
   const rows = await db.getAllAsync<{ frontContent: string; backContent: string; memoContent: string }>(
-    'SELECT frontContent, backContent, memoContent FROM card_contents'
+    `SELECT frontContent, backContent, memoContent FROM ${from}`
   );
   const referencedFilenames = new Set<string>();
   for (const row of rows) {
@@ -98,17 +102,54 @@ export async function getReferencedImageFilenames(db: SQLiteDatabase): Promise<S
   return referencedFilenames;
 }
 
-/** DBに登録されていない孤立画像ファイルを検出して削除する */
-export async function cleanupOrphanImages(db: SQLiteDatabase): Promise<void> {
+/**
+ * 保持中の自動バックアップが参照する画像ファイル名を集計する（029 案B）。
+ * 各バックアップDBを ATTACH して card_contents を走査する。1世代の失敗で全体を止めない。
+ */
+async function getBackupReferencedImageFilenames(
+  db: SQLiteDatabase,
+  backupPaths: string[],
+): Promise<Set<string>> {
+  const all = new Set<string>();
+  for (const path of backupPaths) {
+    const escaped = path.replace(/^file:\/\//, '').replace(/'/g, "''");
+    try {
+      await db.execAsync(`ATTACH DATABASE '${escaped}' AS bkimg;`);
+      try {
+        const refs = await getReferencedImageFilenames(db, 'bkimg.card_contents');
+        refs.forEach((f) => all.add(f));
+      } finally {
+        await db.execAsync('DETACH DATABASE bkimg;');
+      }
+    } catch {
+      // 1世代の走査失敗（古いスキーマ・破損等）で掃除全体を止めない
+    }
+  }
+  return all;
+}
+
+/**
+ * DBに登録されていない孤立画像ファイルを検出して削除する。
+ * 029: `backupPaths` を渡すと「ライブDB ∪ 保持中バックアップが参照する画像」を温存し、
+ * デッキ単位マージ復元のために負けたデッキの画像を消さない（案B）。
+ */
+export async function cleanupOrphanImages(
+  db: SQLiteDatabase,
+  backupPaths: string[] = [],
+): Promise<void> {
   // images/ ディレクトリが存在しなければ何もしない
   const dirInfo = await FileSystem.getInfoAsync(IMAGE_DIR);
   if (!dirInfo.exists) return;
 
   const referencedFilenames = await getReferencedImageFilenames(db);
+  // 保持中バックアップが参照する画像も温存対象に加える（マージ復元の素材を残す）。
+  const backupReferenced = await getBackupReferencedImageFilenames(db, backupPaths);
 
-  // ディレクトリ内のファイルのうち参照されていないものを削除
+  // ディレクトリ内のファイルのうち、ライブ・バックアップどちらからも参照されていないものを削除
   const files = await FileSystem.readDirectoryAsync(IMAGE_DIR);
-  const orphans = files.filter((filename) => !referencedFilenames.has(filename));
+  const orphans = files.filter(
+    (filename) => !referencedFilenames.has(filename) && !backupReferenced.has(filename)
+  );
   await Promise.all(
     orphans.map((filename) => FileSystem.deleteAsync(IMAGE_DIR + filename, { idempotent: true }))
   );

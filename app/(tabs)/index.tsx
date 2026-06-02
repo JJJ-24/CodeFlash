@@ -87,7 +87,7 @@ function DeckCard({
     >
       {deck.iconName && (
         <View style={[styles.deckIcon, { backgroundColor: iconBg }]}>
-          <Ionicons name={deck.iconName as any} size={20} color={iconColor} />
+          <Ionicons name={deck.iconName as any} size={18} color={iconColor} />
         </View>
       )}
       <View style={styles.cardContent}>
@@ -465,12 +465,12 @@ const styles = StyleSheet.create({
   },
   cardContent: { flex: 1 },
   deckIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   deckName: { fontWeight: '700', marginBottom: 4 },
   deckDesc: { marginBottom: 4 },

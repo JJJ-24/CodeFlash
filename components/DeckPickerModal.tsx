@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { DeckIcon } from '@/components/DeckIcon';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { Deck } from '@/types';
 
@@ -108,6 +109,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
                   style={[styles.item, { borderBottomColor: theme.colors.border }]}
                   onPress={() => onSelect(item)}
                 >
+                  {item.iconName && <DeckIcon iconName={item.iconName} colorHex={item.colorHex} style={{ marginRight: 10 }} />}
                   <Text style={[styles.itemName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {item.name}
                   </Text>

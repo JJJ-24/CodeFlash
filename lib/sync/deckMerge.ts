@@ -32,6 +32,10 @@ export interface BackupDeckInfo {
   cardCount: number;
   /** このデッキで最後に学習した日時（ISO、未学習は null） */
   lastReviewDate: string | null;
+  /** デッキアイコン（028 以前の古いバックアップでは列が無く null） */
+  iconName: string | null;
+  /** デッキカラー（同上） */
+  colorHex: string | null;
 }
 
 /** PRAGMA table_info で指定スキーマ・テーブルのカラム名一覧を取得する。 */
@@ -120,13 +124,25 @@ export async function listDecksInBackup(
   const escaped = backupPath.replace(/^file:\/\//, "").replace(/'/g, "''");
   await db.execAsync(`ATTACH DATABASE '${escaped}' AS backupdb;`);
   try {
+    // iconName / colorHex は 028 で追加された列。古いバックアップには無いため、
+    // 列の有無を確認し、無ければ NULL を返して SQL エラーを避ける。
+    const deckCols = await tableColumns(db, "backupdb", "decks");
+    const iconSel = deckCols.includes("iconName") ? "d.iconName" : "NULL";
+    const colorSel = deckCols.includes("colorHex") ? "d.colorHex" : "NULL";
+    // デッキ選択画面（カード移動・TSV）と同じ「手動並べ替え順」(sortOrder) に揃える。
+    // 古いバックアップに sortOrder 列が無い場合は名前順にフォールバック。
+    const orderBy = deckCols.includes("sortOrder")
+      ? "d.sortOrder ASC"
+      : "d.name COLLATE NOCASE ASC";
     return await db.getAllAsync<BackupDeckInfo>(
       `SELECT d.id AS id, d.name AS name,
          (SELECT COUNT(*) FROM backupdb.cards c WHERE c.deckId = d.id) AS cardCount,
          (SELECT MAX(r.lastReviewDate) FROM backupdb.reviews r
-            JOIN backupdb.cards c2 ON c2.id = r.cardId WHERE c2.deckId = d.id) AS lastReviewDate
+            JOIN backupdb.cards c2 ON c2.id = r.cardId WHERE c2.deckId = d.id) AS lastReviewDate,
+         ${iconSel} AS iconName,
+         ${colorSel} AS colorHex
        FROM backupdb.decks d
-       ORDER BY d.name COLLATE NOCASE ASC;`,
+       ORDER BY ${orderBy};`,
     );
   } finally {
     await db.execAsync("DETACH DATABASE backupdb;");

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { DeckIcon } from '@/components/DeckIcon';
 import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
@@ -166,6 +167,7 @@ export default function SyncMergeScreen() {
               onPress={() => confirmMerge(deck)}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {deck.iconName && <DeckIcon iconName={deck.iconName} colorHex={deck.colorHex} />}
                 <Text style={{ flex: 1, fontWeight: '600', color: theme.colors.text, fontSize: theme.fontSize.md }} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {deck.name}
                 </Text>

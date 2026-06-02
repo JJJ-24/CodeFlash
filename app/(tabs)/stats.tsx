@@ -1344,9 +1344,12 @@ export default function StatsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.proSection')}
           </Text>
-          <View style={[styles.proBadge, { backgroundColor: theme.colors.primary }]}>
-            <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>Pro</Text>
-          </View>
+          {/* Pro バッジは未加入者への訴求用。加入後は出さない（配色・同期など他機能と統一） */}
+          {!isPro && (
+            <View style={[styles.proBadge, { backgroundColor: theme.colors.primary }]}>
+              <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>Pro</Text>
+            </View>
+          )}
         </View>
 
         {isPro ? (

@@ -194,6 +194,33 @@ export default function DataSettingsScreen() {
     { title: t('dataManagement.importTsv'), info: t('dataManagement.importTsvInfo'), onPress: handleTsvImport, showInfo: showTsvImportInfo, setShowInfo: setShowTsvImportInfo },
   ];
 
+  // バックアップ(export)＋復元(import)、TSVエクスポート＋インポートを、それぞれ1カードに2行でまとめる
+  const rowPairs = [[rows[0], rows[1]], [rows[2], rows[3]]];
+
+  const renderRow = (row: (typeof rows)[number]) => (
+    <View key={row.title}>
+      <Pressable style={styles.dataRow} onPress={row.onPress}>
+        <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{row.title}</Text>
+        <Pressable onPress={() => row.setShowInfo(!row.showInfo)} hitSlop={8}>
+          <Ionicons
+            name={row.showInfo ? 'information-circle' : 'information-circle-outline'}
+            size={theme.fontSize.lg}
+            color={theme.colors.iconSubtle}
+          />
+        </Pressable>
+        <View style={{ flex: 1 }} />
+        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+      </Pressable>
+      {row.showInfo && (
+        <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {row.info}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
   const overlay = (
     <>
       <DeckPickerModal
@@ -225,27 +252,11 @@ export default function DataSettingsScreen() {
           <ActivityIndicator color={theme.colors.primary} />
         </View>
       ) : (
-        rows.map((row) => (
-          <View key={row.title} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-            <Pressable style={styles.dataRow} onPress={row.onPress}>
-              <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{row.title}</Text>
-              <Pressable onPress={() => row.setShowInfo(!row.showInfo)} hitSlop={8}>
-                <Ionicons
-                  name={row.showInfo ? 'information-circle' : 'information-circle-outline'}
-                  size={theme.fontSize.lg}
-                  color={theme.colors.iconSubtle}
-                />
-              </Pressable>
-              <View style={{ flex: 1 }} />
-              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-            </Pressable>
-            {row.showInfo && (
-              <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {row.info}
-                </Text>
-              </View>
-            )}
+        rowPairs.map((pair, i) => (
+          <View key={i} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            {renderRow(pair[0])}
+            <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: 8 }} />
+            {renderRow(pair[1])}
           </View>
         ))
       )}

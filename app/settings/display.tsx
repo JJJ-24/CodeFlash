@@ -189,7 +189,6 @@ const cardThemeStyles = StyleSheet.create({
   swatchRow: {
     flexDirection: 'row',
     gap: 8,
-    paddingTop: 10,
     paddingHorizontal: 2,
     paddingBottom: 4,
   },

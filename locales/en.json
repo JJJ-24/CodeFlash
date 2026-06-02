@@ -246,8 +246,8 @@
     "fontSizeSmall": "Small",
     "fontSizeMedium": "Medium",
     "fontSizeLarge": "Large",
-    "cardTheme": "Color Theme",
-    "cardThemeName": {
+    "colorTheme": "Color Theme",
+    "colorThemeName": {
       "default": "Default",
       "paper": "Paper",
       "mint": "Mint",

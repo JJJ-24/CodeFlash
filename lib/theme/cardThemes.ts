@@ -20,7 +20,7 @@ export interface CardThemePalette {
 }
 
 export const CARD_THEME_NAMES: readonly CardThemeName[] = [
-  'default', 'paper', 'mint', 'graphite', 'lavender', 'sepia', 'sky', 'rose',
+  'default', 'paper', 'sky', 'rose', 'mint', 'lavender', 'graphite', 'sepia',
 ] as const;
 
 export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThemePalette>> = {

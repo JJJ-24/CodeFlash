@@ -83,7 +83,7 @@ export default function DisplaySettingsScreen() {
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t('settings.cardTheme')}
+            {t('settings.colorTheme')}
           </Text>
           {!isPro && (
             <View style={[cardThemeStyles.proBadge, { backgroundColor: theme.colors.primary }]}>
@@ -141,7 +141,7 @@ export default function DisplaySettingsScreen() {
                   maxFontSizeMultiplier={theme.fontSize.md / theme.fontSize.sm}
                   numberOfLines={1}
                 >
-                  {t(`settings.cardThemeName.${name}`)}
+                  {t(`settings.colorThemeName.${name}`)}
                 </Text>
               </Pressable>
             );

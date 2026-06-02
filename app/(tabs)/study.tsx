@@ -62,6 +62,9 @@ export default function StudyScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  // デッキアイコンを文字サイズ設定（fontScale）に連動させる（ホームと同じ算出）
+  const iconBoxSize = Math.round(32 * theme.fontScale);
+  const iconGlyphSize = Math.round(18 * theme.fontScale);
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
   const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder, studyHideEmpty: hideEmpty, setStudyHideEmpty } = useSettingsStore();
@@ -502,8 +505,8 @@ export default function StudyScreen() {
                   }}
                 >
                   {item.iconName && (
-                    <View style={[styles.deckIcon, { backgroundColor: (item.colorHex ?? theme.colors.primary) + '20' }]}>
-                      <Ionicons name={item.iconName as any} size={18} color={item.colorHex ?? theme.colors.primary} />
+                    <View style={[styles.deckIcon, { width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: (item.colorHex ?? theme.colors.primary) + '20' }]}>
+                      <Ionicons name={item.iconName as any} size={iconGlyphSize} color={item.colorHex ?? theme.colors.primary} />
                     </View>
                   )}
                   <View style={styles.deckInfo}>
@@ -659,7 +662,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    gap: 12,
+    gap: 10,
     borderRadius: 12,
     ...SHADOW.card,
   },
@@ -675,7 +678,7 @@ const styles = StyleSheet.create({
   },
   dueChipText: { fontWeight: '700', color: '#FFF' },
   tagColorDot: { width: 16, height: 16, borderRadius: 8 },
-  deckIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  deckIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   filterDesc: {},
   dueLabel: {},
 });

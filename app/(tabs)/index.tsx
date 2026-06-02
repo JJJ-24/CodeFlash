@@ -73,6 +73,9 @@ function DeckCard({
   const theme = useTheme();
   const iconColor = deck.colorHex ?? theme.colors.primary;
   const iconBg = deck.colorHex ? deck.colorHex + '20' : theme.colors.primaryLight;
+  // デッキアイコンを文字サイズ設定（fontScale）に連動させる
+  const iconBoxSize = Math.round(32 * theme.fontScale);
+  const iconGlyphSize = Math.round(18 * theme.fontScale);
 
   return (
     <TouchableOpacity
@@ -86,8 +89,8 @@ function DeckCard({
       activeOpacity={0.7}
     >
       {deck.iconName && (
-        <View style={[styles.deckIcon, { backgroundColor: iconBg }]}>
-          <Ionicons name={deck.iconName as any} size={18} color={iconColor} />
+        <View style={[styles.deckIcon, { width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: iconBg }]}>
+          <Ionicons name={deck.iconName as any} size={iconGlyphSize} color={iconColor} />
         </View>
       )}
       <View style={styles.cardContent}>
@@ -472,7 +475,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 10,
   },
-  deckName: { fontWeight: '700', marginBottom: 4 },
+  deckName: { fontWeight: '600', marginBottom: 4 },
   deckDesc: { marginBottom: 4 },
   cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12, alignItems: 'center' },
   iconBtn: { padding: 4 },

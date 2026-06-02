@@ -357,7 +357,7 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
           {deck.iconName && (
             <Ionicons
               name={deck.iconName as any}
-              size={16}
+              size={Math.round(16 * theme.fontScale)}
               color={deck.colorHex ?? theme.colors.primary}
             />
           )}

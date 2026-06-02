@@ -495,7 +495,7 @@ export default function TagsScreen() {
         onRequestClose={() => setShowColorPicker(false)}
       >
         <Pressable style={styles.colorPickerOverlay} onPress={() => setShowColorPicker(false)}>
-          <Pressable style={[styles.colorPickerSheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+          <Pressable style={[styles.colorPickerSheet, { backgroundColor: theme.colors.surface }, (Platform as any).isPad && styles.colorPickerSheetPad]} onPress={() => {}}>
             <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, marginBottom: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('tag.changeColor')}
             </Text>
@@ -598,6 +598,13 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 16,
     padding: 24,
+  },
+  // iPad は12色が横一列に収まるちょうどの幅にする
+  // （セル44×12 + ガタ10×11 + 余白24×2 = 686。狭いスプリットビューでは maxWidth で抑え、その時は折り返す）
+  colorPickerSheetPad: {
+    width: 686,
+    maxWidth: '100%',
+    alignSelf: 'center',
   },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   colorCell: {

@@ -23,6 +23,7 @@ import {
 } from "react-native";
 
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
@@ -88,6 +89,8 @@ interface Props {
   initialData?: Partial<BlockEditorData>;
   initialTab?: Tab;
   deckName?: string;
+  deckIconName?: string | null;
+  deckColorHex?: string | null;
   onSave: (data: BlockEditorData) => Promise<void>;
   onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
@@ -106,6 +109,8 @@ export function BlockEditor({
   initialData,
   initialTab,
   deckName,
+  deckIconName,
+  deckColorHex,
   onSave,
   onFrontEmptyChange,
   saving: _saving,
@@ -779,19 +784,22 @@ export function BlockEditor({
               >
                 {t("deck.name")}
               </Text>
-              <Text
-                style={[
-                  styles.deckName,
-                  {
-                    color: theme.colors.text,
-                    fontSize: theme.fontSize.lg,
-                    paddingLeft: 8,
-                  },
-                ]}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-              >
-                {deckName}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 8 }}>
+                {deckIconName && <DeckIcon iconName={deckIconName} colorHex={deckColorHex ?? null} />}
+                <Text
+                  style={[
+                    styles.deckName,
+                    {
+                      color: theme.colors.text,
+                      fontSize: theme.fontSize.lg,
+                      flexShrink: 1,
+                    },
+                  ]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {deckName}
+                </Text>
+              </View>
             </View>
           )}
         </>

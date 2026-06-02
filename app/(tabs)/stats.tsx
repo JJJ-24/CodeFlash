@@ -380,12 +380,16 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
 function DonutSheet({
   visible,
   title,
+  iconName,
+  colorHex,
   dist,
   onClose,
   theme,
 }: {
   visible: boolean;
   title: string;
+  iconName?: string | null;
+  colorHex?: string | null;
   dist: GradeDistribution | null;
   onClose: () => void;
   theme: AppTheme;
@@ -417,8 +421,11 @@ function DonutSheet({
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
-        <View style={[sheetStyles.header, { justifyContent: 'center' }]}>
-          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        <View style={[sheetStyles.header, { justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 48 }]}>
+          {iconName && (
+            <Ionicons name={iconName as any} size={Math.round(20 * theme.fontScale)} color={colorHex ?? theme.colors.primary} />
+          )}
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center', flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {title}
           </Text>
         </View>
@@ -538,6 +545,14 @@ function DeckPickerSheet({
                   pressed && !isSelected && { backgroundColor: theme.colors.buttonBorder },
                 ]}
               >
+                {deck.iconName && (
+                  <Ionicons
+                    name={deck.iconName as any}
+                    size={Math.round(18 * theme.fontScale)}
+                    color={isSelected ? theme.colors.primaryText : (deck.colorHex ?? theme.colors.primary)}
+                    style={{ marginRight: 10 }}
+                  />
+                )}
                 <Text style={{ color: isSelected ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: isSelected ? '600' : '400', flex: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {deck.name}
                 </Text>
@@ -724,6 +739,8 @@ export default function StatsScreen() {
   const [activeSheet, setActiveSheet] = useState<null | 'total' | number>(null);
   const [sheetDist, setSheetDist] = useState<GradeDistribution | null>(null);
   const [sheetTitle, setSheetTitle] = useState('');
+  // ドーナツシートのタイトル横に出すデッキアイコン（「すべてのデッキ」のときは null）
+  const [sheetIcon, setSheetIcon] = useState<{ iconName: string | null; colorHex: string | null } | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [selectedGradeBlock, setSelectedGradeBlock] = useState<0 | 1 | 2 | 3 | null>(null);
   const [gradeBlockCards, setGradeBlockCards] = useState<GradeCard[]>([]);
@@ -956,12 +973,15 @@ export default function StatsScreen() {
     setSheetDist(null);
     if (target === 'total') {
       setSheetTitle(t('stats.totalProgress'));
+      setSheetIcon(null);
       const dist = await getAllGradeDistribution(db);
       setSheetDist(dist);
     } else {
       const m = deckMastery[target];
       if (!m) return;
-      setSheetTitle(deckMap[m.deckId]?.name ?? '');
+      const d = deckMap[m.deckId];
+      setSheetTitle(d?.name ?? '');
+      setSheetIcon(d?.iconName ? { iconName: d.iconName, colorHex: d.colorHex } : null);
       const dist = await getDeckGradeDistribution(db, m.deckId);
       setSheetDist(dist);
     }
@@ -1528,9 +1548,17 @@ export default function StatsScreen() {
                           <Text style={[styles.weakCardPreview, { color: theme.colors.text, fontSize: theme.fontSize.sm }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                             {preview || '—'}
                           </Text>
-                          <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                            {card.deckName}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            {(() => {
+                              const cardDeck = decks.find((d) => d.id === card.deckId);
+                              return cardDeck?.iconName ? (
+                                <Ionicons name={cardDeck.iconName as any} size={Math.round(13 * theme.fontScale)} color={cardDeck.colorHex ?? theme.colors.textTertiary} />
+                              ) : null;
+                            })()}
+                            <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                              {card.deckName}
+                            </Text>
+                          </View>
                         </View>
                         <Pressable
                           onPress={() => {
@@ -1591,6 +1619,8 @@ export default function StatsScreen() {
       <DonutSheet
         visible={activeSheet !== null}
         title={sheetTitle}
+        iconName={sheetIcon?.iconName}
+        colorHex={sheetIcon?.colorHex}
         dist={sheetDist}
         onClose={closeSheet}
         theme={theme}

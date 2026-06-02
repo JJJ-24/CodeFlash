@@ -172,6 +172,8 @@ export default function EditCardScreen() {
           }}
           initialTab={tab === 'back' || tab === 'memo' ? tab : undefined}
           deckName={decks.find((d) => d.id === id)?.name}
+          deckIconName={decks.find((d) => d.id === id)?.iconName}
+          deckColorHex={decks.find((d) => d.id === id)?.colorHex}
           onSave={handleSave}
           onFrontEmptyChange={setFrontEmpty}
           saving={saving}

@@ -1281,6 +1281,13 @@ export default function StudySessionScreen() {
                 gap: 4,
               }}
             >
+              {sessionDeck?.iconName && (
+                <Ionicons
+                  name={sessionDeck.iconName as any}
+                  size={20}
+                  color={sessionDeck.colorHex ?? theme.colors.primary}
+                />
+              )}
               <Text
                 style={{ fontWeight: "600", fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
                 numberOfLines={1}

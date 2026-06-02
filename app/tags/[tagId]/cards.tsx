@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { DeckIcon } from '@/components/DeckIcon';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
@@ -312,6 +313,7 @@ export default function TagCardsScreen() {
                       router.push({ pathname: '/deck/[id]/card/new', params: { id: item.id, tagId } });
                     }}
                   >
+                    {item.iconName && <DeckIcon iconName={item.iconName} colorHex={item.colorHex} style={{ marginRight: 10 }} />}
                     <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {item.name}
                     </Text>

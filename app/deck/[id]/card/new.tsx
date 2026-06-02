@@ -28,6 +28,7 @@ export default function NewCardScreen() {
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { addCard } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
+  const currentDeck = decks.find((d) => d.id === deckId);
   const editorRef = useRef<BlockEditorRef>(null);
   const { bottom: bottomInset } = useSafeAreaInsets();
   const [saving, setSaving] = useState(false);
@@ -107,7 +108,7 @@ export default function NewCardScreen() {
         }}
       />
       <View style={styles.container}>
-        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={decks.find((d) => d.id === deckId)?.name} onCancel={handleClose} onModeChange={setEditorMode} />
+        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} onCancel={handleClose} onModeChange={setEditorMode} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Ionicons name="checkmark-sharp" size={26} color="#FFF" />

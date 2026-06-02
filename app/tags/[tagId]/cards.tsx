@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +27,7 @@ import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
 import { getCardPreview } from '@/lib/cardPreview';
+import { sortDecks } from '@/lib/sortDecks';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import { useDeckStore } from '@/store/decks';
@@ -53,7 +54,8 @@ export default function TagCardsScreen() {
   const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
-  const { keyboardShortcutsEnabled, cardSortOrder } = useSettingsStore();
+  const { keyboardShortcutsEnabled, cardSortOrder, deckSortOrder } = useSettingsStore();
+  const sortedPickerDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
   const { isPro } = useProStore();
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const { width: screenWidth } = useWindowDimensions();
@@ -303,7 +305,7 @@ export default function TagCardsScreen() {
               </Text>
             ) : (
               <FlatList
-                data={decks}
+                data={sortedPickerDecks}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <Pressable

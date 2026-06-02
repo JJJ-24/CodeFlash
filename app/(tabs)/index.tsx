@@ -27,6 +27,7 @@ import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
+import { sortDecks } from '@/lib/sortDecks';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useDeckStore } from '@/store/decks';
@@ -202,15 +203,7 @@ export default function HomeScreen() {
     setPendingDeleteDeck(null);
   }
 
-  const sortedDecks = useMemo(() => {
-    if (deckSortOrder === 'name') {
-      return [...decks].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-    }
-    if (deckSortOrder === 'cardCount') {
-      return [...decks].sort((a, b) => b.cardCount - a.cardCount);
-    }
-    return decks; // manual
-  }, [decks, deckSortOrder]);
+  const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
 
   function cycleSortOrder() {
     const idx = SORT_OPTIONS.findIndex((o) => o.key === deckSortOrder);

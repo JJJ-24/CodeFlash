@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { DeckIcon } from '@/components/DeckIcon';
+import { sortDecks } from '@/lib/sortDecks';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useSettingsStore } from '@/store/settings';
 import type { Deck } from '@/types';
 
 interface Props {
@@ -22,6 +24,8 @@ interface Props {
 export function DeckPickerModal({ visible, title, decks, onSelect, onClose, showCardCount = false, emptyMessage, onCreateDeck }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
+  const deckSortOrder = useSettingsStore((s) => s.deckSortOrder);
+  const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -101,7 +105,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
               {title}
             </Text>
             <FlatList
-              data={decks}
+              data={sortedDecks}
               keyExtractor={(item) => item.id}
               ListHeaderComponent={header}
               renderItem={({ item }) => (

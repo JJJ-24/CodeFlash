@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +14,9 @@ import { settingsStyles as styles } from '@/components/settings/styles';
 import { type BackupDeckInfo, listDecksInBackup, mergeDeckFromBackup } from '@/lib/sync/deckMerge';
 import { syncErrorText } from '@/lib/sync/errorText';
 import { listLocalBackups, syncNow, toSyncErrorCode } from '@/lib/sync/syncEngine';
+import { sortDecks } from '@/lib/sortDecks';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useSettingsStore } from '@/store/settings';
 import { useSyncStore } from '@/store/sync';
 
 type ModalConfig =
@@ -47,6 +49,9 @@ export default function SyncMergeScreen() {
 
   const [loading, setLoading] = useState(true);
   const [decks, setDecks] = useState<BackupDeckInfo[]>([]);
+  const deckSortOrder = useSettingsStore((s) => s.deckSortOrder);
+  // ホームのデッキ並び順を反映（manual はバックアップ内の自然順を維持）
+  const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
   const [backupTimestamp, setBackupTimestamp] = useState<number | null>(null);
   const [modal, setModal] = useState<ModalConfig | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -160,7 +165,7 @@ export default function SyncMergeScreen() {
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginBottom: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('sync.mergeSelectDeckMessage')}
           </Text>
-          {decks.map((deck) => (
+          {sortedDecks.map((deck) => (
             <Pressable
               key={deck.id}
               style={[styles.card, { backgroundColor: theme.colors.surface }]}

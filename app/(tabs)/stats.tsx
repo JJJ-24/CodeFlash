@@ -12,6 +12,7 @@ import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLI
 import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS } from '@/store/settings';
 import type { InitialFilterPreference, GradeRankingPeriod } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
+import { sortDecks } from '@/lib/sortDecks';
 import {
   getAllGradeDistribution,
   getDailyReviewCounts,
@@ -715,7 +716,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckId, setGradeRankingDeckId } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckId, setGradeRankingDeckId, deckSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -760,6 +761,15 @@ export default function StatsScreen() {
     () => Object.fromEntries(decks.map((d) => [d.id, d])),
     [decks]
   );
+
+  // ホームのデッキ並び順をデッキ選択シートに反映
+  const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
+
+  // デッキ別習熟度もホームのデッキ並び順に合わせる（手動順=decks の配列順）
+  const sortedDeckMastery = useMemo(() => {
+    const masteryByDeckId = Object.fromEntries(deckMastery.map((m) => [m.deckId, m]));
+    return sortedDecks.map((d) => masteryByDeckId[d.id]).filter((m): m is MasteryItem => m != null);
+  }, [deckMastery, sortedDecks]);
 
   const loadStats = useCallback(async () => {
     const heatmapStart = new Date();
@@ -845,13 +855,13 @@ export default function StatsScreen() {
   const focusList = useMemo<FocusedItem[]>(() => {
     const list: FocusedItem[] = [
       { kind: 'total' },
-      ...deckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })),
+      ...sortedDeckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })),
     ];
     if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) {
       gradeBlockCards.forEach((_, i) => list.push({ kind: 'card', idx: i }));
     }
     return list;
-  }, [deckMastery, isPro, selectedGradeBlock, gradeBlockCards]);
+  }, [sortedDeckMastery, isPro, selectedGradeBlock, gradeBlockCards]);
 
   function scrollToRankingTop() {
     const y = sectionOffsets.current.proSection + sectionOffsets.current.ranking;
@@ -1307,13 +1317,13 @@ export default function StatsScreen() {
       </View>
 
       {/* デッキ別習熟度 */}
-      {deckMastery.length > 0 && (
+      {sortedDeckMastery.length > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.deckMastery')}
           </Text>
           <View style={styles.deckMasteryList}>
-            {deckMastery.map((m, idx) => {
+            {sortedDeckMastery.map((m, idx) => {
               const deck = deckMap[m.deckId];
               if (!deck) return null;
               const isFocused = focusedItem?.kind === 'deck' && focusedItem.idx === idx;
@@ -1644,7 +1654,7 @@ export default function StatsScreen() {
       <DeckPickerSheet
         visible={deckPickerVisible}
         value={gradeRankingDeckId}
-        decks={decks}
+        decks={sortedDecks}
         onSelect={handleDeckChange}
         onClose={() => setDeckPickerVisible(false)}
         theme={theme}

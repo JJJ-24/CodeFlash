@@ -37,6 +37,7 @@ import { useTagStore } from '@/store/tags';
 import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
+import { sortDecks } from '@/lib/sortDecks';
 import { getAllTags } from '@/lib/database/tags';
 import type { Deck, Tag } from '@/types';
 
@@ -286,11 +287,7 @@ export default function StudyScreen() {
     }
   }
 
-  const sortedDecks = useMemo(() => {
-    if (deckSortOrder === 'name') return [...decks].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-    if (deckSortOrder === 'cardCount') return [...decks].sort((a, b) => b.cardCount - a.cardCount);
-    return decks;
-  }, [decks, deckSortOrder]);
+  const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
 
   const sortedTags = useMemo(() => {
     if (tagSortOrder === 'name') return [...tags].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));

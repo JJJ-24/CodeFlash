@@ -426,7 +426,6 @@ export default function SyncSettingsScreen() {
           onPress={handleRestore}
           disabled={syncing}
         >
-          <Ionicons name="time-outline" size={theme.fontSize.lg} color={theme.colors.text} />
           <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('sync.restoreShort')}
           </Text>
@@ -456,7 +455,6 @@ export default function SyncSettingsScreen() {
           onPress={handleMergeStart}
           disabled={syncing}
         >
-          <Ionicons name="git-merge-outline" size={theme.fontSize.lg} color={theme.colors.text} />
           <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('sync.mergeShort')}
           </Text>

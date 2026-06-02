@@ -19,21 +19,21 @@
 
 - [x] `react-native-purchases`（RevenueCat）の選定・インストール
 - [x] `lib/purchases.ts` — RevenueCat ラッパー（初期化・購入・リストア・ステータス取得）
-- [ ] App Store Connect でのアプリ内課金設定（非消耗型）
+- [x] App Store Connect でのアプリ内課金設定（非消耗型）
 - [ ] Google Play Console でのアプリ内課金設定
 - [x] 購入処理の実装（purchasePro）
 - [x] リストア購入の実装（restorePurchases）
-- [ ] レシート検証（RevenueCat 経由で自動処理）
-- [ ] lib/purchases.ts の API キーを本番キーに差し替え（APPLE_API_KEY / GOOGLE_API_KEY）
+- [x] レシート検証（RevenueCat 経由で自動処理）
+- [x] lib/purchases.ts の API キーを本番キーに差し替え（APPLE_API_KEY / GOOGLE_API_KEY）
 
 ### Pro 機能ゲーティング
 
 - [x] `useProStore` — Pro ステータス管理（Zustand + AsyncStorage）
-- [ ] 無料版制限の実装:
+- [x] 無料版制限の実装:
   - ~~[~] デッキ上限：制限なし（無料で無制限）~~
   - ~~[~] カード上限：制限なし（無料で無制限）~~
   - [ ] JS・TS・Python実行のみ（SQL・C++はPro）
-  - [ ] Cloud同期無効
+  - [x] Cloud同期無効
   - ~~[~] 全画面モード：制限なし（無料で使用可）~~
   - [ ] Web版無効
 

@@ -1414,7 +1414,7 @@ export default function StatsScreen() {
                 return (
                   <Pressable
                     key={grade}
-                    style={[styles.gradeBlock, { borderColor: color, minHeight: gradeBlockMinHeight, justifyContent: 'center' }, isSelected && { backgroundColor: color }]}
+                    style={[styles.gradeBlock, { borderColor: color, minHeight: gradeBlockMinHeight, justifyContent: 'center' }, isSelected ? { backgroundColor: color } : { backgroundColor: theme.colors.surface }]}
                     onPress={() => handleGradeBlockTap(grade)}
                   >
                     <Text style={[styles.gradeBlockCount, { color: isSelected ? '#fff' : color, fontSize: gradeCountFontSize }]} allowFontScaling={false} numberOfLines={1}>

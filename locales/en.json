@@ -253,7 +253,9 @@
       "mint": "Mint",
       "graphite": "Graphite",
       "lavender": "Lavender",
-      "sepia": "Sepia"
+      "sepia": "Sepia",
+      "sky": "Sky",
+      "rose": "Rose"
     },
     "keyboard": "Keyboard",
     "keyboardEnabled": "Enable Keyboard Shortcuts",

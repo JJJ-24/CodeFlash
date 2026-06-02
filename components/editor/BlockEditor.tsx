@@ -712,7 +712,7 @@ export function BlockEditor({
             </View>
           ) : (
             <Pressable
-              style={[styles.addBtn, { borderColor: theme.colors.iconSubtle }]}
+              style={[styles.addBtn, { borderColor: theme.colors.iconSubtle, backgroundColor: theme.colors.surface }]}
               onPress={() => {
                 // 編集中ブロックを解除し keyboardRef に戻してからメニューを開く
                 isTransitioningRef.current = true;

@@ -58,9 +58,12 @@ export interface AppTheme {
   fontSize: AppFontSize;
   /** 学習画面のカードテーマ（028-2）。学習画面以外では参照しない */
   cardTheme: CardThemePalette;
+  /** カードテーマで色付けする前の素の画面背景。カードテーマの色付けを無視したい
+   *  箇所（学習画面の背景＝カードを浮き立たせたい等）で使う。 */
+  baseBackground: string;
 }
 
-export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme'> = {
+export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 'baseBackground'> = {
   dark: false,
   colors: {
     background: '#F5F5F5',
@@ -83,7 +86,7 @@ export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme'> 
   },
 };
 
-export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme'> = {
+export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 'baseBackground'> = {
   dark: true,
   colors: {
     background: '#121212',
@@ -165,8 +168,18 @@ export function useTheme(): AppTheme {
   const scale = FONT_SCALE[fontSizePreference];
   // Pro 失効時は default にフォールバック（ユーザーの選好値は保持し、再 Pro 時に自動復元）
   const effectiveCardTheme: CardThemeName = isPro ? cardThemePreference : 'default';
+  const cardPalette = CARD_THEMES[base.dark ? 'dark' : 'light'][effectiveCardTheme];
+  // カードテーマ選択時、画面背景（カード間の隙間）をテーマ色でほんのり色付けする。
+  // ヘッダー・タブバー・各カード面はすべて colors.surface を使うため無彩色のまま保たれ、
+  // 「白いカード／カラーの隙間」になる。default のときは従来の無彩色背景を維持する
+  // （default の cardPalette.background は surface と同色のため、隙間が消えてしまうのを防ぐ）。
+  const colors =
+    effectiveCardTheme === 'default'
+      ? base.colors
+      : { ...base.colors, background: cardPalette.background };
   return {
     ...base,
+    colors,
     fontScale: scale,
     fontSize: {
       xs:  Math.round(BASE_FONT_SIZE.xs  * scale),
@@ -177,6 +190,7 @@ export function useTheme(): AppTheme {
       xxl:  Math.round(BASE_FONT_SIZE.xxl  * scale),
       xxxl: Math.round(BASE_FONT_SIZE.xxxl * scale),
     },
-    cardTheme: CARD_THEMES[base.dark ? 'dark' : 'light'][effectiveCardTheme],
+    cardTheme: cardPalette,
+    baseBackground: base.colors.background,
   };
 }

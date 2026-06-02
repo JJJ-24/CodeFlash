@@ -592,7 +592,7 @@ export default function StudySessionScreen() {
       <>
         <StatusBar hidden={statusBarHidden} />
         {iPhoneHeader}
-        <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.center, { backgroundColor: theme.baseBackground }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </>
@@ -707,7 +707,7 @@ export default function StudySessionScreen() {
           </View>
         ) : iPhoneHeader}
         <ScrollView
-          style={{ flex: 1, backgroundColor: theme.colors.background }}
+          style={{ flex: 1, backgroundColor: theme.baseBackground }}
           contentContainerStyle={styles.completeScreen}
           bounces={false}
         >
@@ -1318,7 +1318,7 @@ export default function StudySessionScreen() {
         </View>
       ) : iPhoneHeader}
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[styles.container, { backgroundColor: theme.baseBackground }]}
       >
         {/* プログレスバー */}
         <View

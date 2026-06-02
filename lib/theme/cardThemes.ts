@@ -6,7 +6,7 @@
 //   ダーク: background より 10〜15% 明るい同系色
 // これは現状の `theme.colors.surface` と `theme.colors.memoBackground` の関係を踏襲する。
 
-export type CardThemeName = 'default' | 'paper' | 'mint' | 'graphite' | 'lavender' | 'sepia';
+export type CardThemeName = 'default' | 'paper' | 'mint' | 'graphite' | 'lavender' | 'sepia' | 'sky' | 'rose';
 
 export interface CardThemePalette {
   /** 表面・裏面のカード本体背景 */
@@ -20,7 +20,7 @@ export interface CardThemePalette {
 }
 
 export const CARD_THEME_NAMES: readonly CardThemeName[] = [
-  'default', 'paper', 'mint', 'graphite', 'lavender', 'sepia',
+  'default', 'paper', 'mint', 'graphite', 'lavender', 'sepia', 'sky', 'rose',
 ] as const;
 
 export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThemePalette>> = {
@@ -34,6 +34,8 @@ export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThe
     graphite: { background: '#D2DAE5', memoBackground: '#BFC8D6', border: '#9DA8BC', codeBackground: '#1F2D5A' },
     lavender: { background: '#E5D8F0', memoBackground: '#D2C0E5', border: '#B498D2', codeBackground: '#4D1F75' },
     sepia:    { background: '#ECDCB0', memoBackground: '#DCC890', border: '#B89968', codeBackground: '#5A3315' },
+    sky:      { background: '#DCEAFB', memoBackground: '#C8DCF3', border: '#9CC2EC', codeBackground: '#103A6B' },
+    rose:     { background: '#F8DCE8', memoBackground: '#F0C6D8', border: '#E099B8', codeBackground: '#5A1033' },
   },
   dark: {
     // ダーク側も同じ方向性。本体背景より明らかに色味が立ち、コード領域が「深く色付いた箱」として見える。
@@ -43,6 +45,8 @@ export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThe
     graphite: { background: '#1E2638', memoBackground: '#2A344A', border: '#3F4D6A', codeBackground: '#162148' },
     lavender: { background: '#261E38', memoBackground: '#3A2E50', border: '#52426E', codeBackground: '#3A1A5A' },
     sepia:    { background: '#2E2418', memoBackground: '#423324', border: '#5A4632', codeBackground: '#42280A' },
+    sky:      { background: '#16263F', memoBackground: '#26395A', border: '#3A567E', codeBackground: '#123E72' },
+    rose:     { background: '#341F2A', memoBackground: '#4A2E3B', border: '#6E4255', codeBackground: '#5A1536' },
   },
 };
 

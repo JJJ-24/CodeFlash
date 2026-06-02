@@ -1,6 +1,8 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+
+const isPad = (Platform as any).isPad;
 
 interface Props {
   visible: boolean;
@@ -16,7 +18,7 @@ export function ConfirmDeleteModal({ visible, message, onConfirm, onClose }: Pro
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.dialog, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
+        <Pressable style={[styles.dialog, { backgroundColor: theme.colors.surface }, isPad && styles.dialogPad]} onPress={() => {}}>
           <Text style={[styles.message, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {message}
           </Text>
@@ -51,6 +53,8 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  // iPad は横幅を広げて ConfirmModal / InfoModal とサイズを揃える
+  dialogPad: { width: 440, maxWidth: '90%' },
   message: {
     lineHeight: 22,
     marginBottom: 16,

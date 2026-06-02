@@ -326,9 +326,9 @@ export default function DeckDetailScreen() {
     ? deckCards
     : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id));
   const displayedCards = cardSortOrder === 'newest'
-    ? [...filteredCards].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    ? [...filteredCards].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.sortOrder - a.sortOrder)
     : cardSortOrder === 'oldest'
-    ? [...filteredCards].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    ? [...filteredCards].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder)
     : filteredCards;
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };

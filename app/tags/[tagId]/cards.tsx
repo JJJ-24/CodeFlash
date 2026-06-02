@@ -96,8 +96,8 @@ export default function TagCardsScreen() {
     useCallback(() => {
       lastFocusTimeRef.current = Date.now();
       getCardsByTagId(db, tagId).then((raw) => {
-        if (cardSortOrder === 'newest') setCards([...raw].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-        else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
+        if (cardSortOrder === 'newest') setCards([...raw].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.sortOrder - a.sortOrder));
+        else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder));
         else setCards(raw);
       });
       onScreenFocus();

@@ -421,6 +421,9 @@ export default function SyncSettingsScreen() {
 
       {/* セクション2: データ復元カード（同期とは別概念のため別カード） */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 4 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {t('sync.restoreSectionTitle')}
+        </Text>
         <Pressable
           style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1, paddingVertical: 4 }]}
           onPress={handleRestore}

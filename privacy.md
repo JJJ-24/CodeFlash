@@ -5,7 +5,7 @@ title: Privacy Policy
 
 # プライバシーポリシー / Privacy Policy
 
-最終更新日 / Last updated: 2026-05-21
+最終更新日 / Last updated: 2026-06-05
 
 ## 日本語
 
@@ -15,11 +15,15 @@ CodeFlash はユーザーの個人情報を収集しません。
 
 ### データの保存
 
-アプリ内で作成したデッキ・カード・学習履歴などのデータは、すべてお使いのデバイス内にのみ保存されます。
+アプリ内で作成したデッキ・カード・学習履歴などのデータは、デフォルトではお使いのデバイス内にのみ保存されます。iCloud 同期機能を有効にした場合は、Apple の iCloud を通じてデータがクラウドに保存・同期されます。
+
+### iCloud 同期
+
+iCloud 同期機能を有効にすると、デッキ・カード・学習履歴などのデータが Apple の iCloud を通じて、同じ Apple ID でサインインしているデバイス間で同期されます。iCloud に保存されたデータには Apple のプライバシーポリシー（https://www.apple.com/jp/privacy/）が適用されます。iCloud 同期は、iOS の設定 → [お使いの Apple ID] → iCloud → CodeFlash からいつでもオフにできます。
 
 ### エクスポート・インポート機能
 
-データのエクスポート・インポートはデバイス内でのファイルのやり取りのみです。外部サーバーへの送信は行いません。
+データのエクスポート・インポート機能は、デバイス内でのファイルのやり取りのみで完結します。この機能による外部サーバーへの送信は行いません。
 
 ### アプリ内課金について
 
@@ -27,7 +31,7 @@ CodeFlash Pro のご購入には Apple の課金システムを使用してい�
 
 ### 第三者への提供
 
-ユーザーデータを第三者に提供・販売することはありません。
+ユーザーデータを第三者に提供・販売することはありません。ただし、iCloud 同期（Apple）および課金処理（RevenueCat）に関しては、本ポリシー内の各セクションに記載のとおりです。
 
 ### プライバシーポリシーの変更
 
@@ -49,11 +53,15 @@ CodeFlash does not collect any personal information.
 
 ### Data Storage
 
-All data including decks, cards, and study history are stored locally on your device only.
+All data including decks, cards, and study history are stored locally on your device by default. If you enable the iCloud sync feature, your data will be stored and synced via Apple's iCloud.
+
+### iCloud Sync
+
+When iCloud sync is enabled, your data including decks, cards, and study history is synced across your Apple devices signed in to the same Apple ID via Apple's iCloud. Data stored in iCloud is subject to Apple's privacy policy (https://www.apple.com/privacy/). You can disable iCloud sync at any time from iOS Settings → [Your Apple ID] → iCloud → CodeFlash.
 
 ### Export / Import
 
-The export and import feature only transfers files within your device. No data is sent to external servers.
+The export and import feature transfers files within your device only. No data is sent to external servers by this feature.
 
 ### In-App Purchases
 
@@ -61,7 +69,7 @@ CodeFlash Pro purchases are processed through Apple's payment system. We use Rev
 
 ### Third Parties
 
-We do not share or sell any user data to third parties.
+We do not share or sell any user data to third parties. However, please refer to the relevant sections in this policy regarding iCloud sync (Apple) and payment processing (RevenueCat).
 
 ### Changes to This Policy
 

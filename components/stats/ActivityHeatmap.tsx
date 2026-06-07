@@ -11,10 +11,12 @@ const CELL_GAP = 2;
 const CELL_STEP = CELL_SIZE + CELL_GAP;
 const DAY_LABEL_WIDTH = 20;
 
-function getCellColor(count: number, borderColor: string): string {
-  if (count === 0) return borderColor;
-  if (count <= 3) return '#A5D6A7';
-  if (count <= 9) return FILTER_COLORS.learned;
+function getCellColor(count: number, maxCount: number, borderColor: string): string {
+  if (count === 0 || maxCount === 0) return borderColor;
+  const ratio = count / maxCount;
+  if (ratio <= 0.25) return '#C8E6C9';
+  if (ratio <= 0.50) return '#A5D6A7';
+  if (ratio <= 0.75) return FILTER_COLORS.learned;
   return '#2E7D32';
 }
 
@@ -28,7 +30,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
   const { i18n } = useTranslation();
   const scrollRef = useRef<ScrollView>(null);
 
-  const { today, columns, monthLabels, dayLabels } = useMemo(() => {
+  const { today, columns, monthLabels, dayLabels, maxCount } = useMemo(() => {
     const countMap = new Map<string, number>(data.map((d) => [d.date, d.count]));
     const now = new Date();
     const todayDow = now.getDay();
@@ -54,11 +56,13 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
       cols.push(col);
     }
 
+    const max = Math.max(0, ...cols.flat().map((c) => c.count));
     const isJa = i18n.language.startsWith('ja');
     return {
       today: localDateStr(now),
       columns: cols,
       monthLabels: labels,
+      maxCount: max,
       dayLabels: isJa
         ? ['月', '火', '水', '木', '金', '土', '日']
         : ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
@@ -122,7 +126,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
                     style={[
                       styles.cell,
                       {
-                        backgroundColor: getCellColor(count, theme.colors.border),
+                        backgroundColor: getCellColor(count, maxCount, theme.colors.border),
                         width: CELL_SIZE,
                         height: CELL_SIZE,
                         marginBottom: CELL_GAP,

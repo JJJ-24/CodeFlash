@@ -792,6 +792,7 @@ export default function StatsScreen() {
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string } | null>(null);
   const [showDetailStatsInfo, setShowDetailStatsInfo] = useState(false);
+  const [sectionInfoModal, setSectionInfoModal] = useState<{ title: string; message: string } | null>(null);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -1334,9 +1335,14 @@ export default function StatsScreen() {
         style={styles.section}
         onLayout={(e) => { sectionOffsets.current.total = e.nativeEvent.layout.y; }}
       >
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {t('stats.totalProgress')}
-        </Text>
+        <View style={styles.proSectionTitle}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('stats.totalProgress')}
+          </Text>
+          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.totalProgress'), message: t('stats.totalProgressInfoMessage') })} hitSlop={8} accessibilityLabel={t('stats.totalProgressInfoLabel')}>
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+          </Pressable>
+        </View>
         <Pressable
           style={({ pressed }) => [
             styles.card,
@@ -1362,9 +1368,14 @@ export default function StatsScreen() {
       {/* デッキ別習熟度 */}
       {sortedDeckMastery.length > 0 && (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('stats.deckMastery')}
-          </Text>
+          <View style={styles.proSectionTitle}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('stats.deckMastery')}
+            </Text>
+            <Pressable onPress={() => setSectionInfoModal({ title: t('stats.deckMastery'), message: t('stats.deckMasteryInfoMessage') })} hitSlop={8} accessibilityLabel={t('stats.deckMasteryInfoLabel')}>
+              <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+            </Pressable>
+          </View>
           <View style={styles.deckMasteryList}>
             {sortedDeckMastery.map((m, idx) => {
               const deck = deckMap[m.deckId];
@@ -1394,7 +1405,7 @@ export default function StatsScreen() {
         onLayout={(e) => { sectionOffsets.current.proSection = e.nativeEvent.layout.y; }}
       >
         <View style={styles.proSectionTitle}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.proSection')}
           </Text>
           {/* Pro バッジは未加入者への訴求用。加入後は出さない（配色・同期など他機能と統一） */}
@@ -1725,6 +1736,12 @@ export default function StatsScreen() {
         message={t('stats.detailStatsInfoMessage')}
         onClose={() => setShowDetailStatsInfo(false)}
       />
+      <InfoModal
+        visible={sectionInfoModal !== null}
+        title={sectionInfoModal?.title ?? ''}
+        message={sectionInfoModal?.message ?? ''}
+        onClose={() => setSectionInfoModal(null)}
+      />
       <PeriodPickerSheet
         visible={periodPickerVisible}
         value={gradeRankingPeriod}
@@ -1827,7 +1844,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   focusedReviewBtnText: { fontWeight: '700', color: '#FFF' },
-  gradeBlockRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
+  gradeBlockRow: { flexDirection: 'row', gap: 6, marginBottom: 16 },
   gradeBlock: { flex: 1, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4 },
   gradeBlockCount: { fontWeight: '700' },
   gradeBlockLabel: { marginTop: 2, fontWeight: '600' },

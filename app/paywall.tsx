@@ -47,18 +47,10 @@ const CURRENT_FEATURES: Feature[] = [
     titleKey: 'pro.featureFSRS',
     descKey:  'pro.featureFSRSDesc',
   },
-];
-
-const UPCOMING_FEATURES: Feature[] = [
   {
     icon: 'terminal-outline',
     titleKey: 'pro.featureSQL',
     descKey:  'pro.featureSQLDesc',
-  },
-  {
-    icon: 'apps-outline',
-    titleKey: 'pro.featureWidget',
-    descKey:  'pro.featureWidgetDesc',
   },
 ];
 
@@ -150,24 +142,6 @@ export default function PaywallScreen() {
             <View key={f.titleKey} style={s.featureRow}>
               <View style={s.featureIcon}>
                 <Ionicons name={f.icon} size={22} color={theme.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.featureTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t(f.titleKey)}</Text>
-                <Text style={s.featureDesc} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{t(f.descKey)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* 今後追加予定 */}
-        <Text style={s.sectionTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {t('pro.sectionUpcoming')}
-        </Text>
-        <View style={s.featureList}>
-          {UPCOMING_FEATURES.map((f) => (
-            <View key={f.titleKey} style={s.featureRow}>
-              <View style={s.featureIcon}>
-                <Ionicons name={f.icon} size={22} color={theme.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.featureTitle} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t(f.titleKey)}</Text>

@@ -409,7 +409,7 @@
     "featureICloud": "iCloud Sync",
     "featureICloudDesc": "Sync decks, cards, study history, and images across iPhone and iPad on the same Apple ID, with automatic restore on a new device",
     "featureSQL": "SQL / C++ Execution",
-    "featureSQLDesc": "Run SQL and C++ code blocks (coming soon)",
+    "featureSQLDesc": "Run SQL and C++ code blocks inline",
     "featureWidget": "Home Widget",
     "featureWidgetDesc": "Show study stats and remaining cards on your home screen (coming soon)",
     "featureCustomization": "Color Themes",

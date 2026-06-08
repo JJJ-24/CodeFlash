@@ -409,7 +409,7 @@
     "featureICloud": "iCloud 同期",
     "featureICloudDesc": "同じ Apple ID の iPhone・iPad でデッキ・カード・学習履歴・画像を同期。機種変更時も自動で復元",
     "featureSQL": "SQL / C++ 実行",
-    "featureSQLDesc": "SQL・C++ のコードブロックを実行（予定）",
+    "featureSQLDesc": "SQL・C++ のコードブロックをその場で実行",
     "featureWidget": "ホームウィジェット",
     "featureWidgetDesc": "学習統計・本日の残カード数をホーム画面に表示（予定）",
     "featureCustomization": "配色",

@@ -295,7 +295,7 @@ function BarChart({
   );
 }
 
-const MONTH_BAR_COL_W = 44;
+const MONTH_BAR_COL_W = 52;
 const MONTH_LABELS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_GRADE_SEGMENTS: { key: keyof Omit<MonthlyGradeData, 'month'>; color: string }[] = [
   { key: 'again', color: GRADE_COLORS.again },
@@ -304,7 +304,15 @@ const MONTH_GRADE_SEGMENTS: { key: keyof Omit<MonthlyGradeData, 'month'>; color:
   { key: 'easy',  color: GRADE_COLORS.easy },
 ];
 
-function MonthBarChart({ data, theme }: { data: MonthlyGradeData[]; theme: AppTheme }) {
+function MonthBarChart({
+  data,
+  theme,
+  onSelectMonth,
+}: {
+  data: MonthlyGradeData[];
+  theme: AppTheme;
+  onSelectMonth?: (item: MonthlyGradeData, label: string) => void;
+}) {
   const { i18n } = useTranslation();
   const isJa = i18n.language.startsWith('ja');
   const scrollRef = useRef<ScrollView>(null);
@@ -313,20 +321,26 @@ function MonthBarChart({ data, theme }: { data: MonthlyGradeData[]; theme: AppTh
   const barCountH = Math.ceil(theme.fontSize.xs * 1.95);
   const barLabelH = Math.ceil(theme.fontSize.sm * 1.95);
   const chartH = BAR_MAX_HEIGHT + barCountH + barLabelH + 8;
+  const isPad = (Platform as any).isPad;
 
-  const totalMinWidth = data.length * MONTH_BAR_COL_W;
-  const fitsInContainer = containerWidth > 0 && containerWidth >= totalMinWidth;
-  const colW = fitsInContainer ? containerWidth / data.length : MONTH_BAR_COL_W;
-  const innerWidth = fitsInContainer ? containerWidth : totalMinWidth;
+  // iPad: 全12ヶ月が収まるなら均等拡大、収まらなければ固定幅でスクロール
+  // iPhone: コンテナ幅 ÷ 6 で直近6ヶ月が常に画面に収まる
+  const colW = isPad
+    ? (containerWidth > 0 && containerWidth >= data.length * MONTH_BAR_COL_W
+        ? containerWidth / data.length
+        : MONTH_BAR_COL_W)
+    : (containerWidth > 0 ? containerWidth / 6 : MONTH_BAR_COL_W);
+  const innerWidth = colW * data.length;
+  const scrollEnabled = containerWidth > 0 && innerWidth > containerWidth;
 
   return (
     <View onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
       <ScrollView
         ref={scrollRef}
         horizontal
-        scrollEnabled={!fitsInContainer}
+        scrollEnabled={scrollEnabled}
         showsHorizontalScrollIndicator={false}
-        onLayout={() => { if (!fitsInContainer) scrollRef.current?.scrollToEnd({ animated: false }); }}
+        onLayout={() => { if (scrollEnabled) scrollRef.current?.scrollToEnd({ animated: false }); }}
       >
         <View style={[styles.barChart, { height: chartH, width: innerWidth }]}>
           {data.map((item, i) => {
@@ -336,7 +350,12 @@ function MonthBarChart({ data, theme }: { data: MonthlyGradeData[]; theme: AppTh
             const label = isJa ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
             const isCurrentMonth = i === data.length - 1;
             return (
-              <View key={item.month} style={[styles.barCol, { width: colW }]}>
+              <Pressable
+                key={item.month}
+                style={({ pressed }) => [styles.barCol, { width: colW }, pressed && total > 0 && { opacity: 0.6 }]}
+                onPress={() => { if (total > 0) onSelectMonth?.(item, label); }}
+                disabled={!onSelectMonth || total === 0}
+              >
                 <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {total > 0 ? total : ''}
                 </Text>
@@ -353,7 +372,7 @@ function MonthBarChart({ data, theme }: { data: MonthlyGradeData[]; theme: AppTh
                 <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isCurrentMonth && { color: theme.colors.primary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {label}
                 </Text>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -765,6 +784,7 @@ export default function StatsScreen() {
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const [periodPickerVisible, setPeriodPickerVisible] = useState(false);
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
+  const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string } | null>(null);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -1385,7 +1405,16 @@ export default function StatsScreen() {
               {t('stats.monthlyActivity')}
             </Text>
             <View style={[styles.card, { backgroundColor: theme.colors.surface, marginBottom: 12 }]}>
-              <MonthBarChart data={monthlyReviewed} theme={theme} />
+              <MonthBarChart
+                data={monthlyReviewed}
+                theme={theme}
+                onSelectMonth={(item, label) => {
+                  setMonthlySheetData({
+                    title: label,
+                    dist: { again: item.again, hard: item.hard, normal: item.good, easy: item.easy, unlearned: 0 },
+                  });
+                }}
+              />
               {/* グレード凡例 */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', gap: (Platform as any).isPad ? 40 : 12, marginTop: (Platform as any).isPad ? 14 : 8 }}>
                 {MONTH_GRADE_SEGMENTS.map(({ key, color }) => (
@@ -1663,6 +1692,15 @@ export default function StatsScreen() {
         colorHex={sheetIcon?.colorHex}
         dist={sheetDist}
         onClose={closeSheet}
+        theme={theme}
+      />
+      <DonutSheet
+        visible={monthlySheetData !== null}
+        title={monthlySheetData?.title ?? ''}
+        iconName={null}
+        colorHex={null}
+        dist={monthlySheetData?.dist ?? null}
+        onClose={() => setMonthlySheetData(null)}
         theme={theme}
       />
       <ShortcutsModal

@@ -20,7 +20,7 @@ import {
   getDeckMasteryList,
   getGradeLogTotals,
   getLearnedUnlearnedCount,
-  getMonthlyReviewCounts,
+  getMonthlyReviewCountsByGrade,
   getPast7DaysReviewedCount,
   getPast7DaysStudyActivity,
   getStudyStreak,
@@ -102,6 +102,7 @@ function masteryColor(pct: number): string {
 }
 
 type ScheduleItem = { date: string; count: number };
+type MonthlyGradeData = { month: string; again: number; hard: number; good: number; easy: number };
 type MasteryItem = { deckId: string; avgEase: number | null; learnedCount: number; newCount: number };
 type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null };
 type GradeTotals = { again: number; hard: number; good: number; easy: number };
@@ -126,7 +127,7 @@ interface StatsData {
   heatmapData: { date: string; count: number }[];
   gradeTotals: GradeTotals;
   gradeAvgTimes: GradeAvgTimes;
-  monthlyReviewed: { month: string; count: number }[];
+  monthlyReviewed: MonthlyGradeData[];
 }
 
 const INITIAL_STATS: StatsData = {
@@ -145,7 +146,7 @@ const INITIAL_STATS: StatsData = {
   heatmapData: [],
   gradeTotals: { again: 0, hard: 0, good: 0, easy: 0 },
   gradeAvgTimes: { again: null, hard: null, good: null, easy: null },
-  monthlyReviewed: [],
+  monthlyReviewed: [] as MonthlyGradeData[],
 };
 
 // ──────────────────────────────────────────────
@@ -296,18 +297,23 @@ function BarChart({
 
 const MONTH_BAR_COL_W = 44;
 const MONTH_LABELS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_GRADE_SEGMENTS: { key: keyof Omit<MonthlyGradeData, 'month'>; color: string }[] = [
+  { key: 'again', color: GRADE_COLORS.again },
+  { key: 'hard',  color: GRADE_COLORS.hard },
+  { key: 'good',  color: GRADE_COLORS.good },
+  { key: 'easy',  color: GRADE_COLORS.easy },
+];
 
-function MonthBarChart({ data, theme }: { data: { month: string; count: number }[]; theme: AppTheme }) {
+function MonthBarChart({ data, theme }: { data: MonthlyGradeData[]; theme: AppTheme }) {
   const { i18n } = useTranslation();
   const isJa = i18n.language.startsWith('ja');
   const scrollRef = useRef<ScrollView>(null);
   const [containerWidth, setContainerWidth] = useState(0);
-  const maxCount = Math.max(...data.map((d) => d.count), 1);
+  const maxTotal = Math.max(...data.map((d) => d.again + d.hard + d.good + d.easy), 1);
   const barCountH = Math.ceil(theme.fontSize.xs * 1.95);
   const barLabelH = Math.ceil(theme.fontSize.sm * 1.95);
   const chartH = BAR_MAX_HEIGHT + barCountH + barLabelH + 8;
 
-  // コンテナ幅が列の最小合計より広い（iPad 等）ときは列幅を均等に拡げ、横スクロールを無効化
   const totalMinWidth = data.length * MONTH_BAR_COL_W;
   const fitsInContainer = containerWidth > 0 && containerWidth >= totalMinWidth;
   const colW = fitsInContainer ? containerWidth / data.length : MONTH_BAR_COL_W;
@@ -324,16 +330,26 @@ function MonthBarChart({ data, theme }: { data: { month: string; count: number }
       >
         <View style={[styles.barChart, { height: chartH, width: innerWidth }]}>
           {data.map((item, i) => {
-            const barH = Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, item.count > 0 ? 4 : 0);
+            const total = item.again + item.hard + item.good + item.easy;
+            const barH = Math.max((total / maxTotal) * BAR_MAX_HEIGHT, total > 0 ? 4 : 0);
             const monthNum = parseInt(item.month.split('-')[1]);
             const label = isJa ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
             const isCurrentMonth = i === data.length - 1;
             return (
               <View key={item.month} style={[styles.barCol, { width: colW }]}>
                 <Text style={[styles.barCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, height: barCountH }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {item.count > 0 ? item.count : ''}
+                  {total > 0 ? total : ''}
                 </Text>
-                <View style={[styles.bar, { height: barH, backgroundColor: theme.colors.primary, opacity: isCurrentMonth ? 1 : 0.35 }]} />
+                {/* 積み上げバー: again が上、easy が下 */}
+                <View style={{ height: barH, width: '60%', borderRadius: 4, overflow: 'hidden', opacity: isCurrentMonth ? 1 : 0.35 }}>
+                  {MONTH_GRADE_SEGMENTS.map(({ key, color }) => {
+                    const count = item[key];
+                    if (count === 0 || total === 0) return null;
+                    return (
+                      <View key={key} style={{ flex: count, backgroundColor: color }} />
+                    );
+                  })}
+                </View>
                 <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isCurrentMonth && { color: theme.colors.primary }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {label}
                 </Text>
@@ -674,15 +690,15 @@ function toLocalDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** 過去12ヶ月分を昇順で埋める（欠落月は count: 0） */
-function fillPast12Months(rows: { month: string; count: number }[]): { month: string; count: number }[] {
+/** 過去12ヶ月分をグレード別に昇順で埋める（欠落月は各 grade 0） */
+function fillPast12MonthsByGrade(rows: MonthlyGradeData[]): MonthlyGradeData[] {
   return Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
     d.setDate(1);
     d.setMonth(d.getMonth() - (11 - i));
     const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const found = rows.find((r) => r.month === monthStr);
-    return { month: monthStr, count: found?.count ?? 0 };
+    return found ?? { month: monthStr, again: 0, hard: 0, good: 0, easy: 0 };
   });
 }
 
@@ -792,7 +808,7 @@ export default function StatsScreen() {
         getPast7DaysCreatedCount(db),
         getTodayCreatedCount(db),
         getDailyReviewCounts(db, heatmapStartStr),
-        getMonthlyReviewCounts(db),
+        getMonthlyReviewCountsByGrade(db),
         getGradeLogTotals(db, since, deckIdFilter),
         getGradeAvgResponseTimes(db, since, deckIdFilter),
       ]);
@@ -822,7 +838,7 @@ export default function StatsScreen() {
       heatmapData: rawHeatmap,
       gradeTotals: gradeTotalsData,
       gradeAvgTimes: gradeAvgTimesData,
-      monthlyReviewed: fillPast12Months(rawMonthly),
+      monthlyReviewed: fillPast12MonthsByGrade(rawMonthly),
     });
     if (selectedGradeBlockRef.current !== null) {
       const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
@@ -1370,6 +1386,17 @@ export default function StatsScreen() {
             </Text>
             <View style={[styles.card, { backgroundColor: theme.colors.surface, marginBottom: 12 }]}>
               <MonthBarChart data={monthlyReviewed} theme={theme} />
+              {/* グレード凡例 */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: (Platform as any).isPad ? 40 : 12, marginTop: (Platform as any).isPad ? 14 : 8 }}>
+                {MONTH_GRADE_SEGMENTS.map(({ key, color }) => (
+                  <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: (Platform as any).isPad ? 6 : 4 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: color }} />
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t(`grade.${key}`)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
             {/* グレード別ランキング */}

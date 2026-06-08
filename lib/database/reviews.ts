@@ -471,6 +471,22 @@ export async function getMonthlyReviewCounts(
   );
 }
 
+export async function getMonthlyReviewCountsByGrade(
+  db: SQLiteDatabase
+): Promise<{ month: string; again: number; hard: number; good: number; easy: number }[]> {
+  return db.getAllAsync<{ month: string; again: number; hard: number; good: number; easy: number }>(
+    `SELECT
+       substr(date(reviewedAt, 'localtime'), 1, 7) as month,
+       SUM(CASE WHEN grade = 0 THEN 1 ELSE 0 END) as again,
+       SUM(CASE WHEN grade = 1 THEN 1 ELSE 0 END) as hard,
+       SUM(CASE WHEN grade = 2 THEN 1 ELSE 0 END) as good,
+       SUM(CASE WHEN grade = 3 THEN 1 ELSE 0 END) as easy
+     FROM grade_logs
+     GROUP BY month
+     ORDER BY month ASC`
+  );
+}
+
 export async function getGradeLogTotals(
   db: SQLiteDatabase,
   since?: string,

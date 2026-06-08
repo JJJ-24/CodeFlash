@@ -10,7 +10,7 @@ import { settingsStyles as styles } from '@/components/settings/styles';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { CARD_THEME_NAMES, CARD_THEMES, FREE_CARD_THEMES, type CardThemeName } from '@/lib/theme/cardThemes';
-import { useSettingsStore, type InitialFilterPreference } from '@/store/settings';
+import { useSettingsStore, type InitialFilterPreference, type LanguagePreference } from '@/store/settings';
 import { useThemeStore, type ColorSchemePreference, type FontSizePreference } from '@/store/theme';
 import { useProStore } from '@/store/pro';
 
@@ -23,6 +23,7 @@ export default function DisplaySettingsScreen() {
     initialFilterPreference, setInitialFilterPreference,
     keyboardShortcutsEnabled, setKeyboardShortcutsEnabled,
     cardThemePreference, setCardThemePreference,
+    languagePreference, setLanguagePreference,
   } = useSettingsStore();
   const { isPro } = useProStore();
 
@@ -78,6 +79,17 @@ export default function DisplaySettingsScreen() {
         ]}
         value={fontSizePreference}
         onChange={setFontSizePreference}
+      />
+
+      <SegmentedCard
+        label={t('settings.language')}
+        options={[
+          { value: 'ja' as LanguagePreference, label: t('settings.languageJa') },
+          { value: 'en' as LanguagePreference, label: t('settings.languageEn') },
+          { value: 'system' as LanguagePreference, label: t('settings.languageSystem') },
+        ]}
+        value={languagePreference}
+        onChange={setLanguagePreference}
       />
 
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

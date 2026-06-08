@@ -255,6 +255,10 @@
     "fontSizeSmall": "Small",
     "fontSizeMedium": "Medium",
     "fontSizeLarge": "Large",
+    "language": "Language",
+    "languageSystem": "System",
+    "languageJa": "日本語",
+    "languageEn": "English",
     "colorTheme": "Color Theme",
     "colorThemeName": {
       "default": "Default",

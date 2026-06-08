@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocales } from 'expo-localization';
 import { create } from 'zustand';
 
+import i18n from '@/lib/i18n';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 
 const STORAGE_KEY = '@codeflash_keyboard_shortcuts';
@@ -21,6 +23,17 @@ const GRADE_RANKING_BY_TIME_KEY = '@codeflash_grade_ranking_by_time';
 const GRADE_RANKING_PERIOD_KEY = '@codeflash_grade_ranking_period';
 const GRADE_RANKING_DECK_ID_KEY = '@codeflash_grade_ranking_deck_id';
 const CARD_THEME_KEY = '@codeflash_card_theme';
+const LANGUAGE_PREF_KEY = '@codeflash_language_pref';
+
+export type LanguagePreference = 'system' | 'ja' | 'en';
+
+function resolveLanguage(pref: LanguagePreference): string {
+  if (pref === 'system') {
+    const deviceLang = getLocales()[0]?.languageCode ?? 'ja';
+    return ['ja', 'en'].includes(deviceLang) ? deviceLang : 'en';
+  }
+  return pref;
+}
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
 export type CardSortOrder = 'manual' | 'newest' | 'oldest';
@@ -96,6 +109,8 @@ interface SettingsState {
   setGradeRankingDeckId: (v: string | null) => void;
   cardThemePreference: CardThemeName;
   setCardThemePreference: (v: CardThemeName) => void;
+  languagePreference: LanguagePreference;
+  setLanguagePreference: (v: LanguagePreference) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -188,10 +203,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ cardThemePreference: v });
     AsyncStorage.setItem(CARD_THEME_KEY, v);
   },
+  languagePreference: 'system',
+  setLanguagePreference: (v) => {
+    set({ languagePreference: v });
+    AsyncStorage.setItem(LANGUAGE_PREF_KEY, v);
+    i18n.changeLanguage(resolveLanguage(v));
+  },
 }));
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckId, cardTheme] = await Promise.all([
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckId, cardTheme, languagePref] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEY),
     AsyncStorage.getItem(FILTER_STORAGE_KEY),
     AsyncStorage.getItem(LANG_STORAGE_KEY),
@@ -210,13 +231,14 @@ export async function hydrateSettings(): Promise<void> {
     AsyncStorage.getItem(GRADE_RANKING_PERIOD_KEY),
     AsyncStorage.getItem(GRADE_RANKING_DECK_ID_KEY),
     AsyncStorage.getItem(CARD_THEME_KEY),
+    AsyncStorage.getItem(LANGUAGE_PREF_KEY),
   ]);
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
     'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField' |
     'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckId' |
-    'cardThemePreference'
+    'cardThemePreference' | 'languagePreference'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -242,6 +264,10 @@ export async function hydrateSettings(): Promise<void> {
   if (gradeRankingDeckId !== null) update.gradeRankingDeckId = gradeRankingDeckId;
   if (cardTheme !== null && (CARD_THEME_NAMES as readonly string[]).includes(cardTheme)) {
     update.cardThemePreference = cardTheme as CardThemeName;
+  }
+  if (languagePref !== null && ['system', 'ja', 'en'].includes(languagePref)) {
+    update.languagePreference = languagePref as LanguagePreference;
+    i18n.changeLanguage(resolveLanguage(languagePref as LanguagePreference));
   }
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 }

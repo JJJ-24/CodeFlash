@@ -255,6 +255,10 @@
     "fontSizeSmall": "小",
     "fontSizeMedium": "中",
     "fontSizeLarge": "大",
+    "language": "言語",
+    "languageSystem": "システム",
+    "languageJa": "日本語",
+    "languageEn": "English",
     "colorTheme": "配色",
     "colorThemeName": {
       "default": "デフォルト",

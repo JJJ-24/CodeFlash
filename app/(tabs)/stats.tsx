@@ -32,6 +32,7 @@ import {
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
+import { InfoModal } from '@/components/InfoModal';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
@@ -790,6 +791,7 @@ export default function StatsScreen() {
   const [periodPickerVisible, setPeriodPickerVisible] = useState(false);
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string } | null>(null);
+  const [showDetailStatsInfo, setShowDetailStatsInfo] = useState(false);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -1401,6 +1403,9 @@ export default function StatsScreen() {
               <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>Pro</Text>
             </View>
           )}
+          <Pressable onPress={() => setShowDetailStatsInfo(true)} hitSlop={8} accessibilityLabel={t('stats.detailStatsInfoLabel')}>
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+          </Pressable>
         </View>
 
         {isPro ? (
@@ -1714,6 +1719,12 @@ export default function StatsScreen() {
         sections={STATS_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
+      <InfoModal
+        visible={showDetailStatsInfo}
+        title={t('stats.detailStatsInfoTitle')}
+        message={t('stats.detailStatsInfoMessage')}
+        onClose={() => setShowDetailStatsInfo(false)}
+      />
       <PeriodPickerSheet
         visible={periodPickerVisible}
         value={gradeRankingPeriod}

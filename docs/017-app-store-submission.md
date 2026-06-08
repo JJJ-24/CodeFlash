@@ -44,7 +44,7 @@ App Store（iOS）および Google Play（Android）へのストア申請準備�
 
 ### 共通
 - [x] プライバシーポリシーページ作成（Web）
-- [ ] 利用規約ページ作成（Web）
+- [x] 利用規約ページ作成（Web）
 - [x] サポートページ / FAQ 作成
 - [ ] EAS Update の設定（OTA アップデート用）
 

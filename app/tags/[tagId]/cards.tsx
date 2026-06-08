@@ -1,13 +1,12 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -18,7 +17,7 @@ import {
 } from 'react-native';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
-import { DeckIcon } from '@/components/DeckIcon';
+import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
@@ -27,7 +26,6 @@ import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
 import { getCardPreview } from '@/lib/cardPreview';
-import { sortDecks } from '@/lib/sortDecks';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import { useDeckStore } from '@/store/decks';
@@ -54,8 +52,7 @@ export default function TagCardsScreen() {
   const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
-  const { keyboardShortcutsEnabled, cardSortOrder, deckSortOrder } = useSettingsStore();
-  const sortedPickerDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
+  const { keyboardShortcutsEnabled, cardSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const { width: screenWidth } = useWindowDimensions();
@@ -287,53 +284,15 @@ export default function TagCardsScreen() {
       </Pressable>
       </Pressable>
 
-      {/* デッキ選択モーダル */}
-      <Modal
+      <DeckPickerModal
         visible={showDeckPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDeckPicker(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowDeckPicker(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('card.newCardDeckTitle')}
-            </Text>
-            {decks.length === 0 ? (
-              <Text style={[styles.noDeckText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('study.noDecks')}
-              </Text>
-            ) : (
-              <FlatList
-                data={sortedPickerDecks}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={[styles.deckPickerItem, { borderBottomColor: theme.colors.border }]}
-                    onPress={() => {
-                      setShowDeckPicker(false);
-                      router.push({ pathname: '/deck/[id]/card/new', params: { id: item.id, tagId } });
-                    }}
-                  >
-                    {item.iconName && <DeckIcon iconName={item.iconName} colorHex={item.colorHex} style={{ marginRight: 10 }} />}
-                    <Text style={[styles.deckPickerName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                      {item.name}
-                    </Text>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 0 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('common.cardsCount', { count: item.cardCount })}
-                    </Text>
-                  </Pressable>
-                )}
-              />
-            )}
-            <Pressable style={[styles.modalCancel, { borderTopColor: theme.colors.border }]} onPress={() => setShowDeckPicker(false)}>
-              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('common.cancel')}
-              </Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title={t('card.newCardDeckTitle')}
+        decks={decks}
+        onSelect={(deck) => { setShowDeckPicker(false); router.push({ pathname: '/deck/[id]/card/new', params: { id: deck.id, tagId } }); }}
+        onClose={() => setShowDeckPicker(false)}
+        showCardCount
+        emptyMessage={t('study.noDecks')}
+      />
 
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <ShortcutsModal
@@ -389,32 +348,5 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 16,
-    maxHeight: '60%',
-  },
-  modalTitle: {
-    fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  deckPickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  deckPickerName: { fontWeight: '600', flex: 1, marginRight: 8 },
-  noDeckText: { paddingHorizontal: 20, paddingVertical: 16 },
-  modalCancel: { paddingVertical: 16, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth },
   emptyText: {},
 });

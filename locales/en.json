@@ -124,8 +124,13 @@
     "newCardDeckTitle": "Select Deck",
     "duplicate": "Duplicate",
     "duplicateSuccess": "Copied {{count}} card(s)",
+    "searchTitle": "Card Search",
     "searchPlaceholder": "Search cards...",
-    "searchNoResults": "No cards found"
+    "searchNoResults": "No cards found",
+    "filterByDeck": "Filter by Deck",
+    "filterByTag": "Filter by Tag",
+    "allDecks": "All Decks",
+    "allTags": "All Tags"
   },
   "tabs": {
     "home": "Home",

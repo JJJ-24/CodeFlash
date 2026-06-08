@@ -80,35 +80,57 @@ function kanaLikeClause(col: string, patterns: string[]): { clause: string; para
   };
 }
 
-export async function searchCards(db: SQLiteDatabase, query: string, field: SearchField = 'all'): Promise<Card[]> {
+export async function searchCards(
+  db: SQLiteDatabase,
+  query: string,
+  field: SearchField = 'all',
+  deckId?: string,
+  tagId?: string,
+): Promise<Card[]> {
   const patterns = kanaVariantPatterns(query);
   // CARD_SELECT に LEFT JOIN card_contents cc が含まれるため cc.* で参照可能
-  let whereClause: string;
-  let params: string[];
+  let fieldClause: string;
+  let fieldParams: string[];
   switch (field) {
     case 'front': {
       const c = kanaLikeClause('cc.frontContent', patterns);
-      whereClause = c.clause; params = c.params; break;
+      fieldClause = c.clause; fieldParams = c.params; break;
     }
     case 'back': {
       const c = kanaLikeClause('cc.backContent', patterns);
-      whereClause = c.clause; params = c.params; break;
+      fieldClause = c.clause; fieldParams = c.params; break;
     }
     case 'memo': {
       const c = kanaLikeClause('cc.memoContent', patterns);
-      whereClause = c.clause; params = c.params; break;
+      fieldClause = c.clause; fieldParams = c.params; break;
     }
     default: {
       const f = kanaLikeClause('cc.frontContent', patterns);
       const b = kanaLikeClause('cc.backContent', patterns);
       const m = kanaLikeClause('cc.memoContent', patterns);
-      whereClause = `${f.clause} OR ${b.clause} OR ${m.clause}`;
-      params = [...f.params, ...b.params, ...m.params];
+      fieldClause = `${f.clause} OR ${b.clause} OR ${m.clause}`;
+      fieldParams = [...f.params, ...b.params, ...m.params];
     }
   }
+
+  const extraConditions: string[] = [];
+  const extraParams: string[] = [];
+  if (deckId) {
+    extraConditions.push('c.deckId = ?');
+    extraParams.push(deckId);
+  }
+  if (tagId) {
+    extraConditions.push('c.id IN (SELECT cardId FROM card_tags WHERE tagId = ?)');
+    extraParams.push(tagId);
+  }
+
+  const whereClause = extraConditions.length > 0
+    ? `(${fieldClause}) AND ${extraConditions.join(' AND ')}`
+    : fieldClause;
+
   const rows = await db.getAllAsync<RawCard>(
     `${CARD_SELECT} WHERE ${whereClause} ORDER BY c.updatedAt DESC LIMIT 100`,
-    params
+    [...fieldParams, ...extraParams]
   );
   return rows.map(toCard);
 }

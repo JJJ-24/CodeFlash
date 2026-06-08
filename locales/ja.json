@@ -124,8 +124,13 @@
     "newCardDeckTitle": "作成先デッキを選択",
     "duplicate": "複製",
     "duplicateSuccess": "{{count}}枚コピーしました",
+    "searchTitle": "カード検索",
     "searchPlaceholder": "カードを検索...",
-    "searchNoResults": "一致するカードはありません"
+    "searchNoResults": "一致するカードはありません",
+    "filterByDeck": "デッキで絞り込む",
+    "filterByTag": "タグで絞り込む",
+    "allDecks": "すべてのデッキ",
+    "allTags": "すべてのタグ"
   },
   "tabs": {
     "home": "ホーム",

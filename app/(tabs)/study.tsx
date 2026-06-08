@@ -403,7 +403,7 @@ export default function StudyScreen() {
                 onPress={() => setInfoModal({ title: t('study.historyInfoTitle'), message: t('study.historyInfoMessage') })}
                 hitSlop={8}
               >
-                <Ionicons name="information-circle-outline" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
               </Pressable>
             </View>
             <Text style={[styles.filterDesc, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

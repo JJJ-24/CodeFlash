@@ -204,8 +204,8 @@ export default function DataSettingsScreen() {
         <Pressable onPress={() => row.setShowInfo(!row.showInfo)} hitSlop={8}>
           <Ionicons
             name={row.showInfo ? 'information-circle' : 'information-circle-outline'}
-            size={theme.fontSize.lg}
-            color={theme.colors.iconSubtle}
+            size={Math.max(theme.fontSize.lg, 20)}
+            color={theme.colors.textTertiary}
           />
         </Pressable>
         <View style={{ flex: 1 }} />

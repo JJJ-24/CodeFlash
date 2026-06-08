@@ -27,8 +27,8 @@ export function SegmentedCard<T extends string>({ label, options, value, onChang
           <Pressable onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
             <Ionicons
               name={showInfo ? 'information-circle' : 'information-circle-outline'}
-              size={theme.fontSize.lg}
-              color={theme.colors.iconSubtle}
+              size={Math.max(theme.fontSize.lg, 20)}
+              color={theme.colors.textTertiary}
             />
           </Pressable>
         )}

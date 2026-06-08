@@ -613,7 +613,7 @@ export default function DeckDetailScreen() {
                   onPress={() => setInfoModal({ title: t('card.listInfoTitle'), message: `${t('study.historyInfoMessage')}\n\n${t('card.reorderHintMessage')}` })}
                   hitSlop={8}
                 >
-                  <Ionicons name="information-circle-outline" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+                  <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
                 </Pressable>
               </View>
             )}

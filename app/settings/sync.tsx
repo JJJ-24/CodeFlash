@@ -277,8 +277,8 @@ export default function SyncSettingsScreen() {
             <Pressable onPress={() => setShowTagline((v) => !v)} hitSlop={8}>
               <Ionicons
                 name={showTagline ? 'information-circle' : 'information-circle-outline'}
-                size={theme.fontSize.lg}
-                color={theme.colors.iconSubtle}
+                size={Math.max(theme.fontSize.lg, 20)}
+                color={theme.colors.textTertiary}
               />
             </Pressable>
           </View>
@@ -375,8 +375,8 @@ export default function SyncSettingsScreen() {
                   <Pressable onPress={() => setShowUploadInfo((v) => !v)} hitSlop={8}>
                     <Ionicons
                       name={showUploadInfo ? 'information-circle' : 'information-circle-outline'}
-                      size={theme.fontSize.lg}
-                      color={theme.colors.iconSubtle}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
                     />
                   </Pressable>
                 </Pressable>
@@ -401,8 +401,8 @@ export default function SyncSettingsScreen() {
                   <Pressable onPress={() => setShowDownloadInfo((v) => !v)} hitSlop={8}>
                     <Ionicons
                       name={showDownloadInfo ? 'information-circle' : 'information-circle-outline'}
-                      size={theme.fontSize.lg}
-                      color={theme.colors.iconSubtle}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
                     />
                   </Pressable>
                 </Pressable>
@@ -435,8 +435,8 @@ export default function SyncSettingsScreen() {
           <Pressable onPress={() => setShowRestoreInfo((v) => !v)} hitSlop={8}>
             <Ionicons
               name={showRestoreInfo ? 'information-circle' : 'information-circle-outline'}
-              size={theme.fontSize.lg}
-              color={theme.colors.iconSubtle}
+              size={Math.max(theme.fontSize.lg, 20)}
+              color={theme.colors.textTertiary}
             />
           </Pressable>
           <View style={{ flex: 1 }} />
@@ -464,8 +464,8 @@ export default function SyncSettingsScreen() {
           <Pressable onPress={() => setShowMergeInfo((v) => !v)} hitSlop={8}>
             <Ionicons
               name={showMergeInfo ? 'information-circle' : 'information-circle-outline'}
-              size={theme.fontSize.lg}
-              color={theme.colors.iconSubtle}
+              size={Math.max(theme.fontSize.lg, 20)}
+              color={theme.colors.textTertiary}
             />
           </Pressable>
           <View style={{ flex: 1 }} />

@@ -104,8 +104,8 @@ export default function StudySettingsScreen() {
               </Text>
               <Ionicons
                 name={showRetentionInfo ? 'information-circle' : 'information-circle-outline'}
-                size={theme.fontSize.lg}
-                color={theme.colors.iconSubtle}
+                size={Math.max(theme.fontSize.lg, 20)}
+                color={theme.colors.textTertiary}
               />
             </Pressable>
             <Text style={[styles.fsrsRetentionValue, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

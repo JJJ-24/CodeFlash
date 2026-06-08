@@ -333,6 +333,12 @@ function MonthBarChart({
   const innerWidth = colW * data.length;
   const scrollEnabled = containerWidth > 0 && innerWidth > containerWidth;
 
+  useEffect(() => {
+    if (scrollEnabled) {
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
+    }
+  }, [scrollEnabled]);
+
   return (
     <View onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
       <ScrollView
@@ -340,7 +346,6 @@ function MonthBarChart({
         horizontal
         scrollEnabled={scrollEnabled}
         showsHorizontalScrollIndicator={false}
-        onLayout={() => { if (scrollEnabled) scrollRef.current?.scrollToEnd({ animated: false }); }}
       >
         <View style={[styles.barChart, { height: chartH, width: innerWidth }]}>
           {data.map((item, i) => {

@@ -12,15 +12,18 @@ import {
   View,
 } from "react-native";
 
+import { useTranslation } from "react-i18next";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
 import { ExecutionOutput } from "@/components/code/ExecutionOutput";
 import { SymbolPalette } from "@/components/code/SymbolPalette";
 import { SyntaxHighlightedCode } from "@/components/study/SyntaxHighlightedCode";
+import { InfoModal } from "@/components/InfoModal";
 import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useInsertPair } from "@/hooks/useInsertPair";
-import { LANG_LABELS } from "@/lib/code-execution/constants";
+import { LANG_LABELS, PRO_LANGUAGES } from "@/lib/code-execution/constants";
+import { useProStore } from "@/store/pro";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useTheme, MAX_FONT_MULTIPLIER } from "@/lib/theme";
 import type { CodeBlock } from "@/types";
@@ -64,6 +67,7 @@ export function CodeRunnerView({
   anotherBlockEditing,
   onForceKeyboardFocus,
 }: Props) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
   const {
@@ -78,6 +82,8 @@ export function CodeRunnerView({
   } = useCodeExecution(onRunStart);
   const [isEditing, setIsEditing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [proModalVisible, setProModalVisible] = useState(false);
+  const isPro = useProStore(s => s.isPro);
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
   const intentionalExitRef = useRef(false);
@@ -163,6 +169,10 @@ export function CodeRunnerView({
   // isEditingRef / anotherBlockEditingRef を使って stale closure を回避する。
   // 編集中の場合は編集終了 → 300ms 後に実行（keyboardRef の focus 復元を待つ）。
   const handleRun = useCallback(() => {
+    if (PRO_LANGUAGES.includes(block.language) && !isPro) {
+      setProModalVisible(true);
+      return;
+    }
     if (isRunning) return;
     suppress?.(); // カードフリップを抑制
     const wasThisEditing = isEditingRef.current;
@@ -187,6 +197,7 @@ export function CodeRunnerView({
     }
   }, [
     isRunning,
+    isPro,
     suppress,
     editable,
     editedContent,
@@ -404,6 +415,12 @@ export function CodeRunnerView({
           onMessage={handleMessage}
         />
       )}
+      <InfoModal
+        visible={proModalVisible}
+        title={t('code.proTitle')}
+        message={t('code.proMessage')}
+        onClose={() => setProModalVisible(false)}
+      />
     </View>
   );
 }

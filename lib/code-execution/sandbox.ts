@@ -6,6 +6,7 @@
  */
 export function buildSandboxHtml(code: string, language?: string): string {
   if (language === 'python') return buildPythonSandboxHtml(code);
+  if (language === 'sql') return buildSqlSandboxHtml(code);
   return buildJsSandboxHtml(code);
 }
 
@@ -156,6 +157,77 @@ function buildJsSandboxHtml(code: string): string {
       clearTimeout(_timer);
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.message, logs: _logs }));
     }
+  }
+})();
+<\/script></body></html>`;
+}
+
+const SQL_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/';
+
+/**
+ * sql.js (SQLite WASM) を CDN から動的ロードして SQL を実行する。
+ * - SELECT 結果はテーブルデータ（tables）として返す
+ * - INSERT/UPDATE/DELETE は変更行数をログに出力
+ * - 30 秒タイムアウト
+ */
+function buildSqlSandboxHtml(code: string): string {
+  const escaped = JSON.stringify(code);
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="${SQL_JS_CDN}sql-wasm.js"><\/script>
+</head>
+<body><script>
+(async function() {
+  var _logs = [];
+  var _tables = [];
+  var _done = false;
+
+  var _timer = setTimeout(function() {
+    if (_done) return;
+    _done = true;
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'timeout', logs: _logs, tables: _tables }));
+  }, 30000);
+
+  function finish(type, msg) {
+    if (_done) return;
+    _done = true;
+    clearTimeout(_timer);
+    var payload = { type: type, logs: _logs, tables: _tables };
+    if (msg) payload.message = msg;
+    window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+  }
+
+  try {
+    if (typeof initSqlJs === 'undefined') {
+      throw new Error('sql.js の読み込みに失敗しました（インターネット接続を確認してください）');
+    }
+
+    var SQL = await initSqlJs({
+      locateFile: function(filename) { return '${SQL_JS_CDN}' + filename; }
+    });
+
+    var db = new SQL.Database();
+    var userCode = ${escaped};
+
+    if (userCode.trim() !== '') {
+      var results = db.exec(userCode);
+
+      if (results.length > 0) {
+        for (var i = 0; i < results.length; i++) {
+          _tables.push({ columns: results[i].columns, rows: results[i].values });
+        }
+      } else {
+        var changes = db.getRowsModified();
+        _logs.push({ type: 'log', text: changes > 0 ? changes + ' row(s) affected' : 'OK' });
+      }
+    }
+
+    db.close();
+    finish('success');
+  } catch(e) {
+    finish('error', (e && e.message) ? e.message : String(e));
   }
 })();
 <\/script></body></html>`;

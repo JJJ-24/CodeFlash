@@ -204,7 +204,9 @@
     "timeoutMessage": "Execution was stopped after 5 seconds",
     "empty": "(no output)",
     "pyodideLoading": "Preparing Python (first run may take a while)",
-    "pyodideLoadError": "Failed to load Pyodide (check your internet connection)"
+    "pyodideLoadError": "Failed to load Pyodide (check your internet connection)",
+    "proTitle": "Pro Feature",
+    "proMessage": "SQL and C++ execution requires a Pro plan."
   },
   "common": {
     "save": "Save",

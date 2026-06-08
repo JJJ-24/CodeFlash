@@ -24,10 +24,12 @@ import { BlockItemHeader } from './BlockItemHeader';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
 import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
-import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES } from '@/lib/code-execution/constants';
+import { InfoModal } from '@/components/InfoModal';
+import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock } from '@/types';
 
@@ -57,6 +59,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [proModalVisible, setProModalVisible] = useState(false);
+  const isPro = useProStore(s => s.isPro);
   const { width } = useWindowDimensions();
   const { result, htmlSource, baseUrl, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
@@ -101,6 +105,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
   useEffect(() => {
     if ((runTrigger ?? 0) > 0 && block.executable) {
+      if (PRO_LANGUAGES.includes(block.language) && !isPro) {
+        setProModalVisible(true);
+        return;
+      }
       run(block.content, block.language);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,6 +187,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             <TouchableOpacity
               style={[styles.runBtn, { paddingHorizontal: Math.round(theme.fontSize.sm * 1.5) }, isRunning && styles.runBtnDisabled]}
               onPress={() => {
+                if (PRO_LANGUAGES.includes(block.language) && !isPro) {
+                  setProModalVisible(true);
+                  return;
+                }
                 if (focused) {
                   skipEditBlurRef.current = true;
                   codeInputRef.current?.blur();
@@ -312,6 +324,12 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       <Animated.View
         style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}
         pointerEvents="none"
+      />
+      <InfoModal
+        visible={proModalVisible}
+        title={t('code.proTitle')}
+        message={t('code.proMessage')}
+        onClose={() => setProModalVisible(false)}
       />
     </View>
   );

@@ -1,7 +1,7 @@
 # 018 コード実行（SQL / C++）
 
 **フェーズ:** 将来
-**ステータス:** 未着手
+**ステータス:** 完了
 **依存:** 009
 **被依存:** なし
 
@@ -16,21 +16,21 @@ SQL（sql.js WASM SQLite）および C/C++（WASM コンパイラ or 外部 API�
 ## Todo
 
 ### SQL 実行（sql.js）
-- [ ] `sql.js` の WebView 組み込み調査
-- [ ] SQL クエリ実行（SELECT / INSERT / UPDATE / DELETE）
+- [x] `sql.js` の WebView 組み込み調査
+- [x] SQL クエリ実行（SELECT / INSERT / UPDATE / DELETE）
 - [ ] テーブル定義の初期化オプション
-- [ ] クエリ結果のテーブル表示 UI
-- [ ] エラーハンドリング（構文エラー等）
+- [x] クエリ結果のテーブル表示 UI
+- [x] エラーハンドリング（構文エラー等）
 
 ### C / C++ 実行
-- [ ] 実行方式の選定検討:
+- [x] 実行方式の選定検討:
   - [ ] Option A: WebAssembly コンパイラ（Emscripten WASM）
-  - [ ] Option B: 外部サンドボックス API（Judge0 等）
-- [ ] 選定方式での実装
-- [ ] コンパイルエラー・ランタイムエラー表示
+  - [x] Option B: 外部サンドボックス API（Wandbox）
+- [x] 選定方式での実装（Wandbox API、GCC head、C++17）
+- [x] コンパイルエラー・ランタイムエラー表示
 
 ### UI 拡張
-- [ ] SQL 結果テーブル表示コンポーネント
+- [x] SQL 結果テーブル表示コンポーネント（ExecutionOutput.tsx 内 SqlTable）
 - [ ] C/C++ コンパイル中インジケーター
 
 ---

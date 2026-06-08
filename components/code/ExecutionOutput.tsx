@@ -1,20 +1,58 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
-import type { ExecResult } from '@/lib/code-execution/types';
+import type { ExecResult, SqlTableResult } from '@/lib/code-execution/types';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 function buildCopyText(result: ExecResult): string {
   const lines: string[] = [];
   if (result.errorMessage) lines.push(result.errorMessage);
+  result.tables?.forEach(t => {
+    lines.push(t.columns.join('\t'));
+    t.rows.forEach(row => lines.push(row.map(v => v === null ? 'NULL' : String(v)).join('\t')));
+  });
   result.logs.forEach(l => lines.push(l.text));
   return lines.join('\n');
+}
+
+function SqlTable({ table }: { table: SqlTableResult }) {
+  const theme = useTheme();
+  const minColWidth = Math.max(60, Math.floor(240 / Math.max(table.columns.length, 1)));
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableWrapper}>
+      <View>
+        <View style={styles.tableHeader}>
+          {table.columns.map((col, i) => (
+            <Text key={i} style={[styles.tableHeaderCell, { minWidth: minColWidth, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {col}
+            </Text>
+          ))}
+        </View>
+        {table.rows.length === 0 ? (
+          <Text style={[styles.tableEmpty, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>(0 rows)</Text>
+        ) : (
+          table.rows.map((row, ri) => (
+            <View key={ri} style={[styles.tableRow, ri % 2 === 1 && styles.tableRowAlt]}>
+              {row.map((cell, ci) => (
+                <Text key={ci} style={[styles.tableCell, { minWidth: minColWidth, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {cell === null ? 'NULL' : String(cell)}
+                </Text>
+              ))}
+            </View>
+          ))
+        )}
+        <Text style={[styles.tableRowCount, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {table.rows.length} row{table.rows.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+    </ScrollView>
+  );
 }
 
 interface Props {
@@ -78,7 +116,10 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
             {result.status === 'timeout' && (
               <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.timeoutMessage')}</Text>
             )}
-            {result.logs.length === 0 && result.status === 'success' && (
+            {result.tables?.map((table, ti) => (
+              <SqlTable key={ti} table={table} />
+            ))}
+            {result.logs.length === 0 && result.status === 'success' && !result.tables?.length && (
               <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.empty')}</Text>
             )}
             {result.logs.map((log, i) => (
@@ -191,5 +232,48 @@ const styles = StyleSheet.create({
   },
   hiddenWebView: {
     flex: 1,
+  },
+  tableWrapper: {
+    marginBottom: 6,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#1E2936',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2D3748',
+  },
+  tableHeaderCell: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    color: '#94A3B8',
+    fontWeight: '600',
+    fontFamily: 'monospace',
+  },
+  tableRow: {
+    flexDirection: 'row',
+  },
+  tableRowAlt: {
+    backgroundColor: '#0F1923',
+  },
+  tableCell: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    color: '#E5E7EB',
+    fontFamily: 'monospace',
+  },
+  tableEmpty: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    color: '#4B5563',
+    fontStyle: 'italic',
+    fontFamily: 'monospace',
+  },
+  tableRowCount: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    color: '#4B5563',
+    backgroundColor: '#1E2936',
   },
 });

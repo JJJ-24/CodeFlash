@@ -204,7 +204,9 @@
     "timeoutMessage": "実行が5秒を超えたため中断されました",
     "empty": "（出力なし）",
     "pyodideLoading": "Python を準備中（初回は時間がかかります）",
-    "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）"
+    "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）",
+    "proTitle": "Pro 機能",
+    "proMessage": "SQL・C++ の実行は Pro プランの機能です。"
   },
   "common": {
     "save": "保存",

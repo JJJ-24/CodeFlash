@@ -92,6 +92,18 @@ export default function DisplaySettingsScreen() {
         onChange={setLanguagePreference}
       />
 
+      <SegmentedCard
+        label={t('settings.initialFilter')}
+        info={t('settings.initialFilterInfo')}
+        options={[
+          { value: 'all' as InitialFilterPreference, label: t('common.all') },
+          { value: 'review' as InitialFilterPreference, label: t('common.due') },
+          { value: 'none' as InitialFilterPreference, label: t('settings.initialFilterNone') },
+        ]}
+        value={initialFilterPreference}
+        onChange={setInitialFilterPreference}
+      />
+
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -160,18 +172,6 @@ export default function DisplaySettingsScreen() {
           })}
         </ScrollView>
       </View>
-
-      <SegmentedCard
-        label={t('settings.initialFilter')}
-        info={t('settings.initialFilterInfo')}
-        options={[
-          { value: 'all' as InitialFilterPreference, label: t('common.all') },
-          { value: 'review' as InitialFilterPreference, label: t('common.due') },
-          { value: 'none' as InitialFilterPreference, label: t('settings.initialFilterNone') },
-        ]}
-        value={initialFilterPreference}
-        onChange={setInitialFilterPreference}
-      />
 
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>

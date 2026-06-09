@@ -494,20 +494,23 @@ const sheetStyles = StyleSheet.create({
   title: { fontWeight: '700' },
   closeBtn: { padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
+  doneBtn: { paddingVertical: 16, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth },
 });
 
 function DeckPickerSheet({
   visible,
-  value,
+  selectedIds,
   decks,
-  onSelect,
+  onToggle,
+  onClearAll,
   onClose,
   theme,
 }: {
   visible: boolean;
-  value: string | null;
+  selectedIds: string[];
   decks: Deck[];
-  onSelect: (v: string | null) => void;
+  onToggle: (id: string) => void;
+  onClearAll: () => void;
   onClose: () => void;
   theme: AppTheme;
 }) {
@@ -528,6 +531,7 @@ function DeckPickerSheet({
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
+  const allActive = selectedIds.length === 0;
 
   return (
     <View
@@ -549,7 +553,7 @@ function DeckPickerSheet({
         <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={sheetStyles.body}>
           {/* すべてのデッキ */}
           <Pressable
-            onPress={() => { onSelect(null); onClose(); }}
+            onPress={onClearAll}
             style={({ pressed }) => [
               {
                 paddingVertical: 14,
@@ -558,22 +562,21 @@ function DeckPickerSheet({
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                backgroundColor: value === null ? theme.colors.primaryLight : 'transparent',
+                backgroundColor: allActive ? theme.colors.primaryLight : 'transparent',
               },
-              pressed && value !== null && { backgroundColor: theme.colors.buttonBorder },
+              pressed && !allActive && { backgroundColor: theme.colors.buttonBorder },
             ]}
           >
-            <Text style={{ color: value === null ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: value === null ? '600' : '400' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            <Text style={{ color: allActive ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: allActive ? '600' : '400' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('stats.gradeRankingDeckAll')}
             </Text>
-            {value === null && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
           </Pressable>
           {decks.map((deck) => {
-            const isSelected = value === deck.id;
+            const isSelected = selectedIds.includes(deck.id);
             return (
               <Pressable
                 key={deck.id}
-                onPress={() => { onSelect(deck.id); onClose(); }}
+                onPress={() => onToggle(deck.id)}
                 style={({ pressed }) => [
                   {
                     paddingVertical: 14,
@@ -603,6 +606,14 @@ function DeckPickerSheet({
             );
           })}
         </ScrollView>
+        <Pressable
+          style={[sheetStyles.doneBtn, { borderTopColor: theme.colors.border }]}
+          onPress={onClose}
+        >
+          <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('common.done')}
+          </Text>
+        </Pressable>
       </Animated.View>
     </View>
   );
@@ -757,7 +768,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckId, setGradeRankingDeckId, deckSortOrder } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -820,7 +831,7 @@ export default function StatsScreen() {
     heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
     const heatmapStartStr = toLocalDateStr(heatmapStart);
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-    const deckIdFilter = useSettingsStore.getState().gradeRankingDeckId ?? undefined;
+    const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
 
     const [reviewed, due, s, rawSchedule, counts, mastery, allDecks, rawReviewed, rawActivity, rawCreated, createdToday, rawHeatmap, rawMonthly, gradeTotalsData, gradeAvgTimesData] =
       await Promise.all([
@@ -837,8 +848,8 @@ export default function StatsScreen() {
         getTodayCreatedCount(db),
         getDailyReviewCounts(db, heatmapStartStr),
         getMonthlyReviewCountsByGrade(db),
-        getGradeLogTotals(db, since, deckIdFilter),
-        getGradeAvgResponseTimes(db, since, deckIdFilter),
+        getGradeLogTotals(db, since, deckIdsFilter),
+        getGradeAvgResponseTimes(db, since, deckIdsFilter),
       ]);
 
     // 今後7日分（今日が先頭）
@@ -870,7 +881,7 @@ export default function StatsScreen() {
     });
     if (selectedGradeBlockRef.current !== null) {
       const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
-      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdFilter);
+      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter);
       setGradeBlockCards(cards);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1058,8 +1069,8 @@ export default function StatsScreen() {
     // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
     const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-    const deckIdFilter = useSettingsStore.getState().gradeRankingDeckId ?? undefined;
-    const cards = await getTopCardsByGrade(db, grade, 10, sortBy, since, deckIdFilter);
+    const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
+    const cards = await getTopCardsByGrade(db, grade, 10, sortBy, since, deckIdsFilter);
     setGradeBlockCards(cards);
     setGradeBlockLoading(false);
   }, [db, selectedGradeBlock]);
@@ -1072,8 +1083,8 @@ export default function StatsScreen() {
       setGradeBlockLoading(true);
       const sortBy = newValue ? 'time' : 'count';
       const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-      const deckIdFilter = useSettingsStore.getState().gradeRankingDeckId ?? undefined;
-      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdFilter);
+      const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
+      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter);
       setGradeBlockCards(cards);
       setGradeBlockLoading(false);
     }
@@ -1091,13 +1102,13 @@ export default function StatsScreen() {
     setGradeRankingPeriod(newPeriod);
     const since = periodToSince(newPeriod);
     const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
-    const deckIdFilter = useSettingsStore.getState().gradeRankingDeckId ?? undefined;
+    const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
-      getGradeLogTotals(db, since, deckIdFilter),
-      getGradeAvgResponseTimes(db, since, deckIdFilter),
+      getGradeLogTotals(db, since, deckIdsFilter),
+      getGradeAvgResponseTimes(db, since, deckIdsFilter),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdFilter)
+        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter)
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
@@ -1105,24 +1116,44 @@ export default function StatsScreen() {
     setGradeBlockLoading(false);
   }, [db, setGradeRankingPeriod]);
 
-  // デッキ絞り込み変更時：4ブロック集計と TOP10 を即時再取得
-  const handleDeckChange = useCallback(async (newDeckId: string | null) => {
-    setGradeRankingDeckId(newDeckId);
+  // デッキ絞り込みトグル：4ブロック集計と TOP10 を即時再取得
+  const handleDeckToggle = useCallback(async (deckId: string) => {
+    const current = useSettingsStore.getState().gradeRankingDeckIds;
+    const newIds = current.includes(deckId) ? current.filter((id) => id !== deckId) : [...current, deckId];
+    setGradeRankingDeckIds(newIds);
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
     const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
-    const deckIdFilter = newDeckId ?? undefined;
+    const deckIdsFilter = newIds.length > 0 ? newIds : undefined;
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
-      getGradeLogTotals(db, since, deckIdFilter),
-      getGradeAvgResponseTimes(db, since, deckIdFilter),
+      getGradeLogTotals(db, since, deckIdsFilter),
+      getGradeAvgResponseTimes(db, since, deckIdsFilter),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdFilter)
+        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter)
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
     if (cards !== null) setGradeBlockCards(cards);
     setGradeBlockLoading(false);
-  }, [db, setGradeRankingDeckId]);
+  }, [db, setGradeRankingDeckIds]);
+
+  // デッキ絞り込みクリア
+  const handleDeckClearAll = useCallback(async () => {
+    setGradeRankingDeckIds([]);
+    const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
+    const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+    setGradeBlockLoading(true);
+    const [totals, avgTimes, cards] = await Promise.all([
+      getGradeLogTotals(db, since, undefined),
+      getGradeAvgResponseTimes(db, since, undefined),
+      selectedGradeBlockRef.current !== null
+        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, undefined)
+        : Promise.resolve(null),
+    ]);
+    setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
+    if (cards !== null) setGradeBlockCards(cards);
+    setGradeBlockLoading(false);
+  }, [db, setGradeRankingDeckIds]);
 
   const hasData = learned > 0 || todayReviewed > 0;
   const total = learned + unlearned;
@@ -1461,14 +1492,14 @@ export default function StatsScreen() {
                   accessibilityLabel={t('stats.gradeRankingDeckOpen')}
                   style={[
                     styles.rankingToggleBtn,
-                    { borderColor: gradeRankingDeckId !== null ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
-                    gradeRankingDeckId !== null && { backgroundColor: theme.colors.primary },
+                    { borderColor: gradeRankingDeckIds.length > 0 ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    gradeRankingDeckIds.length > 0 && { backgroundColor: theme.colors.primary },
                   ]}
                 >
                   <Ionicons
                     name="albums-outline"
                     size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
-                    color={gradeRankingDeckId !== null ? theme.colors.primaryText : theme.colors.textSecondary}
+                    color={gradeRankingDeckIds.length > 0 ? theme.colors.primaryText : theme.colors.textSecondary}
                   />
                 </Pressable>
                 <Pressable
@@ -1503,22 +1534,23 @@ export default function StatsScreen() {
                 </Pressable>
               </View>
             </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, marginBottom: (gradeRankingPeriod === 'all' && gradeRankingDeckId === null) ? 8 : 6 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, marginBottom: (gradeRankingPeriod === 'all' && gradeRankingDeckIds.length === 0) ? 8 : 6 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
               {t(gradeRankingByTime ? 'stats.gradeRankingModeTime' : 'stats.gradeRankingModeCount')}
             </Text>
-            {(gradeRankingPeriod !== 'all' || gradeRankingDeckId !== null) && (
+            {(gradeRankingPeriod !== 'all' || gradeRankingDeckIds.length > 0) && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                {gradeRankingDeckId !== null && (
+                {gradeRankingDeckIds.map((deckId) => (
                   <Pressable
-                    onPress={() => handleDeckChange(null)}
+                    key={deckId}
+                    onPress={() => handleDeckToggle(deckId)}
                     style={[styles.filterChip, { backgroundColor: theme.colors.primary }]}
                   >
                     <Ionicons name="close" size={14} color={theme.colors.primaryText} />
                     <Text style={{ color: theme.colors.primaryText, fontSize: theme.fontSize.xs, fontWeight: '600' }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                      {decks.find((d) => d.id === gradeRankingDeckId)?.name ?? t('stats.gradeRankingDeckAll')}
+                      {decks.find((d) => d.id === deckId)?.name ?? t('stats.gradeRankingDeckAll')}
                     </Text>
                   </Pressable>
-                )}
+                ))}
                 {gradeRankingPeriod !== 'all' && (
                   <Pressable
                     onPress={() => handlePeriodChange('all')}
@@ -1751,9 +1783,10 @@ export default function StatsScreen() {
       />
       <DeckPickerSheet
         visible={deckPickerVisible}
-        value={gradeRankingDeckId}
+        selectedIds={gradeRankingDeckIds}
         decks={sortedDecks}
-        onSelect={handleDeckChange}
+        onToggle={handleDeckToggle}
+        onClearAll={handleDeckClearAll}
         onClose={() => setDeckPickerVisible(false)}
         theme={theme}
       />

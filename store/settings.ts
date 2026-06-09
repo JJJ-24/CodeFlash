@@ -21,7 +21,7 @@ const FSRS_RETENTION_KEY = '@codeflash_fsrs_retention';
 const STUDY_HIDE_EMPTY_KEY = '@codeflash_study_hide_empty';
 const GRADE_RANKING_BY_TIME_KEY = '@codeflash_grade_ranking_by_time';
 const GRADE_RANKING_PERIOD_KEY = '@codeflash_grade_ranking_period';
-const GRADE_RANKING_DECK_ID_KEY = '@codeflash_grade_ranking_deck_id';
+const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
 const CARD_THEME_KEY = '@codeflash_card_theme';
 const LANGUAGE_PREF_KEY = '@codeflash_language_pref';
 
@@ -105,8 +105,8 @@ interface SettingsState {
   setGradeRankingByTime: (v: boolean) => void;
   gradeRankingPeriod: GradeRankingPeriod;
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
-  gradeRankingDeckId: string | null;
-  setGradeRankingDeckId: (v: string | null) => void;
+  gradeRankingDeckIds: string[];
+  setGradeRankingDeckIds: (v: string[]) => void;
   cardThemePreference: CardThemeName;
   setCardThemePreference: (v: CardThemeName) => void;
   languagePreference: LanguagePreference;
@@ -192,11 +192,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ gradeRankingPeriod: v });
     AsyncStorage.setItem(GRADE_RANKING_PERIOD_KEY, v);
   },
-  gradeRankingDeckId: null,
-  setGradeRankingDeckId: (v) => {
-    set({ gradeRankingDeckId: v });
-    if (v === null) AsyncStorage.removeItem(GRADE_RANKING_DECK_ID_KEY);
-    else AsyncStorage.setItem(GRADE_RANKING_DECK_ID_KEY, v);
+  gradeRankingDeckIds: [],
+  setGradeRankingDeckIds: (v) => {
+    set({ gradeRankingDeckIds: v });
+    if (v.length === 0) AsyncStorage.removeItem(GRADE_RANKING_DECK_IDS_KEY);
+    else AsyncStorage.setItem(GRADE_RANKING_DECK_IDS_KEY, JSON.stringify(v));
   },
   cardThemePreference: 'default',
   setCardThemePreference: (v) => {
@@ -212,7 +212,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 }));
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckId, cardTheme, languagePref] = await Promise.all([
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckIds, cardTheme, languagePref] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEY),
     AsyncStorage.getItem(FILTER_STORAGE_KEY),
     AsyncStorage.getItem(LANG_STORAGE_KEY),
@@ -229,7 +229,7 @@ export async function hydrateSettings(): Promise<void> {
     AsyncStorage.getItem(STUDY_HIDE_EMPTY_KEY),
     AsyncStorage.getItem(GRADE_RANKING_BY_TIME_KEY),
     AsyncStorage.getItem(GRADE_RANKING_PERIOD_KEY),
-    AsyncStorage.getItem(GRADE_RANKING_DECK_ID_KEY),
+    AsyncStorage.getItem(GRADE_RANKING_DECK_IDS_KEY),
     AsyncStorage.getItem(CARD_THEME_KEY),
     AsyncStorage.getItem(LANGUAGE_PREF_KEY),
   ]);
@@ -237,7 +237,7 @@ export async function hydrateSettings(): Promise<void> {
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
     'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField' |
-    'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckId' |
+    'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckIds' |
     'cardThemePreference' | 'languagePreference'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
@@ -261,7 +261,12 @@ export async function hydrateSettings(): Promise<void> {
   if (gradeRankingPeriod !== null && (gradeRankingPeriod === 'all' || gradeRankingPeriod === '90d' || gradeRankingPeriod === '30d' || gradeRankingPeriod === '7d')) {
     update.gradeRankingPeriod = gradeRankingPeriod;
   }
-  if (gradeRankingDeckId !== null) update.gradeRankingDeckId = gradeRankingDeckId;
+  if (gradeRankingDeckIds !== null) {
+    try {
+      const parsed = JSON.parse(gradeRankingDeckIds);
+      if (Array.isArray(parsed)) update.gradeRankingDeckIds = parsed;
+    } catch { /* ignore */ }
+  }
   if (cardTheme !== null && (CARD_THEME_NAMES as readonly string[]).includes(cardTheme)) {
     update.cardThemePreference = cardTheme as CardThemeName;
   }

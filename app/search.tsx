@@ -62,23 +62,23 @@ function FilterPickerModal({ visible, title, allLabel, items, selectedId, onSele
               const active = isAll ? allActive : selectedId === item.id;
               return (
                 <Pressable
-                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primary : 'transparent' }]}
+                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent' }]}
                   onPress={() => { if (isAll) { onClear(); } else { onSelect(item.id); } onClose(); }}
                 >
                   {item.color ? (
-                    <View style={[pickerStyles.colorDot, { backgroundColor: active ? theme.colors.primaryText : item.color }]} />
+                    <View style={[pickerStyles.colorDot, { backgroundColor: active ? theme.colors.primary : item.color }]} />
                   ) : (
                     <View style={pickerStyles.colorDotPlaceholder} />
                   )}
                   <Text
-                    style={[pickerStyles.itemName, { color: active ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: active ? '600' : '400' }]}
+                    style={[pickerStyles.itemName, { color: active ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: active ? '600' : '400' }]}
                     numberOfLines={1}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {item.name}
                   </Text>
                   {active && (
-                    <Ionicons name="checkmark" size={20} color={theme.colors.primaryText} />
+                    <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
                   )}
                 </Pressable>
               );
@@ -173,24 +173,24 @@ function DeckFilterPickerModal({ visible, allLabel, decks, selectedId, onSelect,
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
             ListHeaderComponent={
               <Pressable
-                style={[pickerStyles.item, { backgroundColor: selectedId === null ? theme.colors.primary : 'transparent' }]}
+                style={[pickerStyles.item, { backgroundColor: selectedId === null ? theme.colors.primaryLight : 'transparent' }]}
                 onPress={() => { onClear(); onClose(); }}
               >
                 <View style={{ width: 10 }} />
                 <Text
-                  style={[pickerStyles.itemName, { color: selectedId === null ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: selectedId === null ? '600' : '400' }]}
+                  style={[pickerStyles.itemName, { color: selectedId === null ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: selectedId === null ? '600' : '400' }]}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                 >
                   {allLabel}
                 </Text>
-                {selectedId === null && <Ionicons name="checkmark" size={20} color={theme.colors.primaryText} />}
+                {selectedId === null && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
               </Pressable>
             }
             renderItem={({ item }) => {
               const active = selectedId === item.id;
               return (
                 <Pressable
-                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primary : 'transparent' }]}
+                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent' }]}
                   onPress={() => { onSelect(item.id); onClose(); }}
                 >
                   {item.iconName ? (
@@ -199,13 +199,13 @@ function DeckFilterPickerModal({ visible, allLabel, decks, selectedId, onSelect,
                     <View style={{ width: 10 }} />
                   )}
                   <Text
-                    style={[pickerStyles.itemName, { color: active ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: active ? '600' : '400' }]}
+                    style={[pickerStyles.itemName, { color: active ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: active ? '600' : '400' }]}
                     numberOfLines={1}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {item.name}
                   </Text>
-                  {active && <Ionicons name="checkmark" size={20} color={theme.colors.primaryText} />}
+                  {active && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
                 </Pressable>
               );
             }}

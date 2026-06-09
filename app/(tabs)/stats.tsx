@@ -538,8 +538,8 @@ function DeckPickerSheet({
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
-        <View style={[sheetStyles.header, { justifyContent: 'center' }]}>
-          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        <View style={sheetStyles.header}>
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.gradeRankingDeckTitle')}
           </Text>
         </View>
@@ -558,15 +558,15 @@ function DeckPickerSheet({
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                backgroundColor: value === null ? theme.colors.primary : 'transparent',
+                backgroundColor: value === null ? theme.colors.primaryLight : 'transparent',
               },
               pressed && value !== null && { backgroundColor: theme.colors.buttonBorder },
             ]}
           >
-            <Text style={{ color: value === null ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: value === null ? '600' : '400' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            <Text style={{ color: value === null ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: value === null ? '600' : '400' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('stats.gradeRankingDeckAll')}
             </Text>
-            {value === null && <Ionicons name="checkmark" size={20} color={theme.colors.primaryText} />}
+            {value === null && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
           </Pressable>
           {decks.map((deck) => {
             const isSelected = value === deck.id;
@@ -582,7 +582,7 @@ function DeckPickerSheet({
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    backgroundColor: isSelected ? theme.colors.primary : 'transparent',
+                    backgroundColor: isSelected ? theme.colors.primaryLight : 'transparent',
                   },
                   pressed && !isSelected && { backgroundColor: theme.colors.buttonBorder },
                 ]}
@@ -591,14 +591,14 @@ function DeckPickerSheet({
                   <Ionicons
                     name={deck.iconName as any}
                     size={Math.round(18 * theme.fontScale)}
-                    color={isSelected ? theme.colors.primaryText : (deck.colorHex ?? theme.colors.primary)}
+                    color={isSelected ? theme.colors.primary : (deck.colorHex ?? theme.colors.primary)}
                     style={{ marginRight: 10 }}
                   />
                 )}
-                <Text style={{ color: isSelected ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: isSelected ? '600' : '400', flex: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Text style={{ color: isSelected ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: isSelected ? '600' : '400', flex: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {deck.name}
                 </Text>
-                {isSelected && <Ionicons name="checkmark" size={20} color={theme.colors.primaryText} />}
+                {isSelected && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
               </Pressable>
             );
           })}
@@ -655,8 +655,8 @@ function PeriodPickerSheet({
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
-        <View style={[sheetStyles.header, { justifyContent: 'center' }]}>
-          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center' }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        <View style={sheetStyles.header}>
+          <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.gradeRankingPeriodTitle')}
           </Text>
         </View>
@@ -678,16 +678,16 @@ function PeriodPickerSheet({
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    backgroundColor: isSelected ? theme.colors.primary : 'transparent',
+                    backgroundColor: isSelected ? theme.colors.primaryLight : 'transparent',
                   },
                   pressed && !isSelected && { backgroundColor: theme.colors.buttonBorder },
                 ]}
               >
-                <Text style={{ color: isSelected ? theme.colors.primaryText : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: isSelected ? '600' : '400' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Text style={{ color: isSelected ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: isSelected ? '600' : '400' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t(opt.labelKey)}
                 </Text>
                 {isSelected && (
-                  <Ionicons name="checkmark" size={20} color={theme.colors.primaryText} />
+                  <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
                 )}
               </Pressable>
             );

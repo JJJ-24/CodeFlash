@@ -305,10 +305,24 @@
   },
   "notification": {
     "title": "Notifications",
-    "dailyReminder": "Daily Reminder",
+    "dailyReminder": "Notifications",
     "reminderTime": "Time",
     "permissionDenied": "Notifications Not Allowed",
-    "permissionDeniedMessage": "Please enable notifications in the Settings app"
+    "permissionDeniedMessage": "Please enable notifications in the Settings app",
+    "schedules": "Schedules",
+    "addSchedule": "Add Schedule",
+    "editSchedule": "Edit Schedule",
+    "noSchedules": "No schedules",
+    "maxSchedules": "You can add up to 5 schedules",
+    "label": "Label (optional)",
+    "labelPlaceholder": "e.g. Morning commute",
+    "weekdays": "Days",
+    "weekdayEvery": "Every day",
+    "weekdayWeekdays": "Weekdays (Mon–Fri)",
+    "weekdayWeekend": "Weekend (Sat & Sun)",
+    "weekdayShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+    "deleteSchedule": "Delete",
+    "deleteScheduleConfirm": "Delete this schedule?"
   },
   "dataManagement": {
     "title": "Data Management",

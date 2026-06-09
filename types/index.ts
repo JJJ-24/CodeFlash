@@ -75,3 +75,13 @@ export interface Review {
   fsrsLapses: number | null;
   fsrsScheduledDays: number | null;
 }
+
+export interface NotificationSchedule {
+  id: string;
+  hour: number;
+  minute: number;
+  /** 0=日, 1=月, 2=火, 3=水, 4=木, 5=金, 6=土。空配列 = 毎日 */
+  weekdays: number[];
+  label: string;
+  enabled: boolean;
+}

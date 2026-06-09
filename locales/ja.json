@@ -305,10 +305,24 @@
   },
   "notification": {
     "title": "通知",
-    "dailyReminder": "毎日のリマインダー",
+    "dailyReminder": "通知",
     "reminderTime": "時刻",
     "permissionDenied": "通知が許可されていません",
-    "permissionDeniedMessage": "設定アプリから通知を許可してください"
+    "permissionDeniedMessage": "設定アプリから通知を許可してください",
+    "schedules": "スケジュール",
+    "addSchedule": "スケジュールを追加",
+    "editSchedule": "スケジュールを編集",
+    "noSchedules": "スケジュールがありません",
+    "maxSchedules": "スケジュールは最大 5 件まで追加できます",
+    "label": "ラベル（任意）",
+    "labelPlaceholder": "例：朝の通学",
+    "weekdays": "曜日",
+    "weekdayEvery": "毎日",
+    "weekdayWeekdays": "平日（月〜金）",
+    "weekdayWeekend": "週末（土日）",
+    "weekdayShort": ["日", "月", "火", "水", "木", "金", "土"],
+    "deleteSchedule": "削除",
+    "deleteScheduleConfirm": "このスケジュールを削除しますか？"
   },
   "dataManagement": {
     "title": "データ管理",

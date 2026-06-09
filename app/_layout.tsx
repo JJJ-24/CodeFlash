@@ -10,7 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
-import { cancelAllReminders, scheduleDailyReminder, updateBadgeCount } from '@/lib/notifications';
+import { cancelAllScheduledNotifications, scheduleFromDb, updateBadgeCount } from '@/lib/notifications';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { syncNoticeText } from '@/lib/sync/errorText';
 import { listLocalBackups, triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
@@ -36,7 +36,7 @@ function RootStack() {
     },
   };
   const db = useSQLiteContext();
-  const { notificationEnabled, notificationHour, notificationMinute } = useSettingsStore();
+  const { notificationEnabled } = useSettingsStore();
   const syncHydrated = useSyncStore((s) => s.hydrated);
   const syncEnabled = useSyncStore((s) => s.enabled);
 
@@ -91,15 +91,15 @@ function RootStack() {
     const sub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         if (notificationEnabled) {
-          scheduleDailyReminder(notificationHour, notificationMinute).catch(() => {});
+          scheduleFromDb(db).catch(() => {});
         } else {
-          cancelAllReminders().catch(() => {});
+          cancelAllScheduledNotifications().catch(() => {});
         }
         updateBadgeCount(db).catch(() => {});
       }
     });
     return () => sub.remove();
-  }, [notificationEnabled, notificationHour, notificationMinute]);
+  }, [notificationEnabled]);
 
   return (
     <ThemeProvider value={navigationTheme}>

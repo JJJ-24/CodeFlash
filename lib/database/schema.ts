@@ -63,6 +63,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       reviewedDate TEXT NOT NULL,
       PRIMARY KEY (cardId, reviewedDate)
     );
+
+    CREATE TABLE IF NOT EXISTS notification_schedules (
+      id       TEXT PRIMARY KEY NOT NULL,
+      hour     INTEGER NOT NULL,
+      minute   INTEGER NOT NULL,
+      weekdays TEXT NOT NULL DEFAULT '[]',
+      label    TEXT NOT NULL DEFAULT '',
+      enabled  INTEGER NOT NULL DEFAULT 1
+    );
   `);
 
   // sortOrder カラムのマイグレーション（既存ユーザー・新規インストール両対応）

@@ -26,25 +26,25 @@ import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 import type { Card, Deck } from '@/types';
 
-// ---- FilterPickerModal ----
+// ---- MultiSelectPickerModal（汎用・タグ用） ----
 
 type PickerItem = { id: string; name: string; color?: string };
 
-interface FilterPickerModalProps {
+interface MultiSelectPickerProps {
   visible: boolean;
   title: string;
   allLabel: string;
   items: PickerItem[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onClear: () => void;
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onClearAll: () => void;
   onClose: () => void;
 }
 
-function FilterPickerModal({ visible, title, allLabel, items, selectedId, onSelect, onClear, onClose }: FilterPickerModalProps) {
+function MultiSelectPickerModal({ visible, title, allLabel, items, selectedIds, onToggle, onClearAll, onClose }: MultiSelectPickerProps) {
   const theme = useTheme();
   const { t } = useTranslation();
-  const allActive = selectedId === null;
+  const allActive = selectedIds.length === 0;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -59,11 +59,11 @@ function FilterPickerModal({ visible, title, allLabel, items, selectedId, onSele
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
             renderItem={({ item }) => {
               const isAll = item.id === '__all__';
-              const active = isAll ? allActive : selectedId === item.id;
+              const active = isAll ? allActive : selectedIds.includes(item.id);
               return (
                 <Pressable
                   style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent' }]}
-                  onPress={() => { if (isAll) { onClear(); } else { onSelect(item.id); } onClose(); }}
+                  onPress={() => { if (isAll) { onClearAll(); } else { onToggle(item.id); } }}
                 >
                   {item.color ? (
                     <View style={[pickerStyles.colorDot, { backgroundColor: active ? theme.colors.primary : item.color }]} />
@@ -77,7 +77,7 @@ function FilterPickerModal({ visible, title, allLabel, items, selectedId, onSele
                   >
                     {item.name}
                   </Text>
-                  {active && (
+                  {active && !isAll && (
                     <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
                   )}
                 </Pressable>
@@ -86,7 +86,7 @@ function FilterPickerModal({ visible, title, allLabel, items, selectedId, onSele
           />
           <Pressable style={[pickerStyles.cancel, { borderTopColor: theme.colors.border }]} onPress={onClose}>
             <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('common.cancel')}
+              {t('common.done')}
             </Text>
           </Pressable>
         </Pressable>
@@ -142,23 +142,24 @@ const pickerStyles = StyleSheet.create({
   },
 });
 
-// ---- DeckFilterPickerModal ----
+// ---- DeckMultiSelectPickerModal ----
 
-interface DeckFilterPickerModalProps {
+interface DeckMultiSelectPickerProps {
   visible: boolean;
   allLabel: string;
   decks: Deck[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onClear: () => void;
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onClearAll: () => void;
   onClose: () => void;
 }
 
-function DeckFilterPickerModal({ visible, allLabel, decks, selectedId, onSelect, onClear, onClose }: DeckFilterPickerModalProps) {
+function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onToggle, onClearAll, onClose }: DeckMultiSelectPickerProps) {
   const theme = useTheme();
   const { t } = useTranslation();
   const deckSortOrder = useSettingsStore((s) => s.deckSortOrder);
   const sorted = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
+  const allActive = selectedIds.length === 0;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -173,25 +174,24 @@ function DeckFilterPickerModal({ visible, allLabel, decks, selectedId, onSelect,
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
             ListHeaderComponent={
               <Pressable
-                style={[pickerStyles.item, { backgroundColor: selectedId === null ? theme.colors.primaryLight : 'transparent' }]}
-                onPress={() => { onClear(); onClose(); }}
+                style={[pickerStyles.item, { backgroundColor: allActive ? theme.colors.primaryLight : 'transparent' }]}
+                onPress={onClearAll}
               >
                 <View style={{ width: 10 }} />
                 <Text
-                  style={[pickerStyles.itemName, { color: selectedId === null ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: selectedId === null ? '600' : '400' }]}
+                  style={[pickerStyles.itemName, { color: allActive ? theme.colors.primary : theme.colors.text, fontSize: theme.fontSize.md, fontWeight: allActive ? '600' : '400' }]}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                 >
                   {allLabel}
                 </Text>
-                {selectedId === null && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
               </Pressable>
             }
             renderItem={({ item }) => {
-              const active = selectedId === item.id;
+              const active = selectedIds.includes(item.id);
               return (
                 <Pressable
                   style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent' }]}
-                  onPress={() => { onSelect(item.id); onClose(); }}
+                  onPress={() => onToggle(item.id)}
                 >
                   {item.iconName ? (
                     <DeckIcon iconName={item.iconName} colorHex={item.colorHex} style={{ marginRight: 0 }} />
@@ -212,7 +212,7 @@ function DeckFilterPickerModal({ visible, allLabel, decks, selectedId, onSelect,
           />
           <Pressable style={[pickerStyles.cancel, { borderTopColor: theme.colors.border }]} onPress={onClose}>
             <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('common.cancel')}
+              {t('common.done')}
             </Text>
           </Pressable>
         </Pressable>
@@ -240,10 +240,17 @@ export default function SearchScreen() {
   const [searched, setSearched] = useState(false);
   const [searchField, setSearchField] = useState<SearchField>(lastSearchField as SearchField);
 
-  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
-  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
+  const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [tagPickerVisible, setTagPickerVisible] = useState(false);
+
+  const toggleDeck = (id: string) => setSelectedDeckIds((prev) =>
+    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  );
+  const toggleTag = (id: string) => setSelectedTagIds((prev) =>
+    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  );
 
   const FIELD_OPTIONS: { value: SearchField; labelKey: string }[] = [
     { value: 'all',  labelKey: 'common.all' },
@@ -269,22 +276,20 @@ export default function SearchScreen() {
       db,
       query.trim(),
       searchField,
-      selectedDeckId ?? undefined,
-      selectedTagId ?? undefined,
+      selectedDeckIds.length > 0 ? selectedDeckIds : undefined,
+      selectedTagIds.length > 0 ? selectedTagIds : undefined,
     ).then((cards) => {
       setResults(cards);
       setSearched(true);
     });
-  }, [query, searchField, selectedDeckId, selectedTagId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, searchField, selectedDeckIds.join(','), selectedTagIds.join(',')]);
 
-  const deckMap = Object.fromEntries(decks.map((d) => [d.id, d.name]));
-  const selectedDeckName = selectedDeckId ? (deckMap[selectedDeckId] ?? '') : null;
-  const selectedTagName = selectedTagId ? (tags.find((t) => t.id === selectedTagId)?.name ?? '') : null;
-  const selectedTagColor = selectedTagId ? (tags.find((t) => t.id === selectedTagId)?.color) : undefined;
-
-  const hasFilter = selectedDeckId !== null || selectedTagId !== null;
-
+  const deckMap = useMemo(() => Object.fromEntries(decks.map((d) => [d.id, d])), [decks]);
+  const tagMap = useMemo(() => Object.fromEntries(tags.map((t) => [t.id, t])), [tags]);
   const tagPickerItems: PickerItem[] = tags.map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }));
+
+  const hasFilter = selectedDeckIds.length > 0 || selectedTagIds.length > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -327,30 +332,30 @@ export default function SearchScreen() {
           onPress={() => setDeckPickerVisible(true)}
           style={[
             styles.filterBtn,
-            { borderColor: selectedDeckId ? theme.colors.primary : theme.colors.buttonBorder },
+            { borderColor: selectedDeckIds.length > 0 ? theme.colors.primary : theme.colors.buttonBorder },
             { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
           ]}
           hitSlop={4}
         >
           <Ionicons
-            name={selectedDeckId ? 'albums' : 'albums-outline'}
+            name={selectedDeckIds.length > 0 ? 'albums' : 'albums-outline'}
             size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
-            color={selectedDeckId ? theme.colors.primary : theme.colors.textSecondary}
+            color={selectedDeckIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
         <Pressable
           onPress={() => setTagPickerVisible(true)}
           style={[
             styles.filterBtn,
-            { borderColor: selectedTagId ? theme.colors.primary : theme.colors.buttonBorder },
+            { borderColor: selectedTagIds.length > 0 ? theme.colors.primary : theme.colors.buttonBorder },
             { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
           ]}
           hitSlop={4}
         >
           <Ionicons
-            name={selectedTagId ? 'pricetag' : 'pricetag-outline'}
+            name={selectedTagIds.length > 0 ? 'pricetag' : 'pricetag-outline'}
             size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
-            color={selectedTagId ? theme.colors.primary : theme.colors.textSecondary}
+            color={selectedTagIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
       </View>
@@ -402,42 +407,52 @@ export default function SearchScreen() {
       {/* アクティブフィルターチップ */}
       {hasFilter && (
         <View style={styles.chipRow}>
-          {selectedDeckId && (
-            <Pressable
-              style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
-              onPress={() => setSelectedDeckId(null)}
-            >
-              <Ionicons name="albums-outline" size={13} color={theme.colors.primary} />
-              <Text
-                style={[styles.chipText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]}
-                numberOfLines={1}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          {selectedDeckIds.map((id) => {
+            const deck = deckMap[id];
+            if (!deck) return null;
+            return (
+              <Pressable
+                key={id}
+                style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}
+                onPress={() => toggleDeck(id)}
               >
-                {selectedDeckName}
-              </Text>
-              <Ionicons name="close" size={14} color={theme.colors.primary} />
-            </Pressable>
-          )}
-          {selectedTagId && (
-            <Pressable
-              style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: selectedTagColor ?? theme.colors.primary }]}
-              onPress={() => setSelectedTagId(null)}
-            >
-              {selectedTagColor ? (
-                <View style={[styles.tagDot, { backgroundColor: selectedTagColor }]} />
-              ) : (
-                <Ionicons name="pricetag-outline" size={13} color={theme.colors.primary} />
-              )}
-              <Text
-                style={[styles.chipText, { color: selectedTagColor ?? theme.colors.primary, fontSize: theme.fontSize.sm }]}
-                numberOfLines={1}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                <Ionicons name="albums-outline" size={13} color={theme.colors.primary} />
+                <Text
+                  style={[styles.chipText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {deck.name}
+                </Text>
+                <Ionicons name="close" size={14} color={theme.colors.primary} />
+              </Pressable>
+            );
+          })}
+          {selectedTagIds.map((id) => {
+            const tag = tagMap[id];
+            if (!tag) return null;
+            return (
+              <Pressable
+                key={id}
+                style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: tag.color ?? theme.colors.primary }]}
+                onPress={() => toggleTag(id)}
               >
-                {selectedTagName}
-              </Text>
-              <Ionicons name="close" size={14} color={selectedTagColor ?? theme.colors.primary} />
-            </Pressable>
-          )}
+                {tag.color ? (
+                  <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
+                ) : (
+                  <Ionicons name="pricetag-outline" size={13} color={theme.colors.primary} />
+                )}
+                <Text
+                  style={[styles.chipText, { color: tag.color ?? theme.colors.primary, fontSize: theme.fontSize.sm }]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {tag.name}
+                </Text>
+                <Ionicons name="close" size={14} color={tag.color ?? theme.colors.primary} />
+              </Pressable>
+            );
+          })}
         </View>
       )}
 
@@ -459,7 +474,7 @@ export default function SearchScreen() {
           )}
           renderItem={({ item }) => {
             const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
-            const deckName = deckMap[item.deckId] ?? '';
+            const deckName = deckMap[item.deckId]?.name ?? '';
             return (
               <Pressable
                 style={[styles.resultItem, { backgroundColor: theme.colors.surface }]}
@@ -498,25 +513,25 @@ export default function SearchScreen() {
       </Pressable>
 
       {/* デッキ絞り込みピッカー */}
-      <DeckFilterPickerModal
+      <DeckMultiSelectPickerModal
         visible={deckPickerVisible}
         allLabel={t('card.allDecks')}
         decks={decks}
-        selectedId={selectedDeckId}
-        onSelect={setSelectedDeckId}
-        onClear={() => setSelectedDeckId(null)}
+        selectedIds={selectedDeckIds}
+        onToggle={toggleDeck}
+        onClearAll={() => setSelectedDeckIds([])}
         onClose={() => setDeckPickerVisible(false)}
       />
 
       {/* タグ絞り込みピッカー */}
-      <FilterPickerModal
+      <MultiSelectPickerModal
         visible={tagPickerVisible}
         title={t('card.filterByTag')}
         allLabel={t('card.allTags')}
         items={tagPickerItems}
-        selectedId={selectedTagId}
-        onSelect={setSelectedTagId}
-        onClear={() => setSelectedTagId(null)}
+        selectedIds={selectedTagIds}
+        onToggle={toggleTag}
+        onClearAll={() => setSelectedTagIds([])}
         onClose={() => setTagPickerVisible(false)}
       />
     </View>

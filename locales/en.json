@@ -218,6 +218,7 @@
   "common": {
     "save": "Save",
     "cancel": "Cancel",
+    "done": "Done",
     "showMore": "Show more",
     "showLess": "Show less",
     "delete": "Delete",

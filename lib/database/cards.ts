@@ -84,8 +84,8 @@ export async function searchCards(
   db: SQLiteDatabase,
   query: string,
   field: SearchField = 'all',
-  deckId?: string,
-  tagId?: string,
+  deckIds?: string[],
+  tagIds?: string[],
 ): Promise<Card[]> {
   const patterns = kanaVariantPatterns(query);
   // CARD_SELECT に LEFT JOIN card_contents cc が含まれるため cc.* で参照可能
@@ -115,13 +115,13 @@ export async function searchCards(
 
   const extraConditions: string[] = [];
   const extraParams: string[] = [];
-  if (deckId) {
-    extraConditions.push('c.deckId = ?');
-    extraParams.push(deckId);
+  if (deckIds && deckIds.length > 0) {
+    extraConditions.push(`c.deckId IN (${deckIds.map(() => '?').join(',')})`);
+    extraParams.push(...deckIds);
   }
-  if (tagId) {
-    extraConditions.push('c.id IN (SELECT cardId FROM card_tags WHERE tagId = ?)');
-    extraParams.push(tagId);
+  if (tagIds && tagIds.length > 0) {
+    extraConditions.push(`c.id IN (SELECT cardId FROM card_tags WHERE tagId IN (${tagIds.map(() => '?').join(',')}))`);
+    extraParams.push(...tagIds);
   }
 
   const whereClause = extraConditions.length > 0

@@ -218,6 +218,7 @@
   "common": {
     "save": "保存",
     "cancel": "キャンセル",
+    "done": "完了",
     "showMore": "もっと見る",
     "showLess": "閉じる",
     "delete": "削除",

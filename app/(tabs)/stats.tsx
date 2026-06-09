@@ -82,10 +82,10 @@ function getStreakMedal(streak: number): MedalInfo {
   if (streak >= 500) return { name: 'diamond',  color: '#ff9ff9' };
   if (streak >= 365) return { name: 'diamond',  color: '#00BCD4' };
   if (streak >= 300) return { name: 'trophy',   color: '#FFD700' };
-  if (streak >= 200) return { name: 'trophy',   color: '#C0C0C0' };
+  if (streak >= 200) return { name: 'trophy',   color: '#d7d7d7' };
   if (streak >= 100) return { name: 'trophy',   color: '#CD7F32' };
   if (streak >= 30)  return { name: 'ribbon',   color: '#FFD700' };
-  if (streak >= 10)  return { name: 'ribbon',   color: '#C0C0C0' };
+  if (streak >= 10)  return { name: 'ribbon',   color: '#d7d7d7' };
   if (streak >= 3)   return { name: 'ribbon',   color: '#CD7F32' };
   return null;
 }

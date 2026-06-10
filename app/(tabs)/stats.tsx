@@ -1042,7 +1042,7 @@ export default function StatsScreen() {
       const dist = await getAllGradeDistribution(db);
       setSheetDist(dist);
     } else {
-      const m = deckMastery[target];
+      const m = sortedDeckMastery[target];
       if (!m) return;
       const d = deckMap[m.deckId];
       setSheetTitle(d?.name ?? '');
@@ -1050,7 +1050,7 @@ export default function StatsScreen() {
       const dist = await getDeckGradeDistribution(db, m.deckId);
       setSheetDist(dist);
     }
-  }, [db, deckMastery, deckMap, t]);
+  }, [db, sortedDeckMastery, deckMap, t]);
 
   const closeSheet = useCallback(() => setActiveSheet(null), []);
 

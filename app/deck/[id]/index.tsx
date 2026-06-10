@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
@@ -88,7 +88,13 @@ export default function DeckDetailScreen() {
   const listRef = useRef<FlatList<Card>>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
+  const selectionModeRef = useRef(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const selectedCardIdsRef = useRef<Set<string>>(new Set());
+  const cardSortOrderRef = useRef(cardSortOrder);
+  const selectedFilterRef = useRef(selectedFilter);
+  const imageBlockLabelRef = useRef('');
+  const confirmDeleteCardRef = useRef<(card: Card) => void>(() => {});
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [infoModal, setInfoModal] = useState<{ title?: string; message: string } | null>(null);
@@ -245,13 +251,6 @@ export default function DeckDetailScreen() {
     setShowDeckPicker(false);
   }
 
-  function navigateToCardEdit(cardId: string) {
-    router.push({
-      pathname: '/deck/[id]/card/[cardId]/edit',
-      params: { id, cardId },
-    });
-  }
-
   function handleDeleteSelected() {
     pendingDeleteActionRef.current = async () => {
       setIsProcessing(true);
@@ -319,17 +318,110 @@ export default function DeckDetailScreen() {
     }
   }
 
+  const navigateToCardEdit = useCallback((cardId: string) => {
+    router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id, cardId } });
+  }, [router, id]);
+
+  const renderItem = useCallback(({ item, drag }: RenderItemParams<Card>) => {
+    const preview = getCardPreview(item.frontContent, imageBlockLabelRef.current);
+    const isSelected = selectedCardIdsRef.current.has(item.id);
+    const isFocused = item.id === focusedCardIdRef.current;
+    const isSelMode = selectionModeRef.current;
+    function toggleSelect() {
+      setSelectedCardIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+        return next;
+      });
+    }
+    return (
+      <SwipeToDeleteRow
+        enabled={!isSelMode && !(selectedFilterRef.current === 'all' && cardSortOrderRef.current === 'manual')}
+        onDelete={() => confirmDeleteCardRef.current(item)}
+        containerStyle={styles.cardRowSpacing}
+      >
+        <Pressable
+          style={[
+            styles.cardItem,
+            { backgroundColor: theme.colors.surface },
+            isSelMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+            isSelMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
+            !isSelMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+          ]}
+          onPress={() => {
+            if (isSelMode) {
+              toggleSelect();
+            } else {
+              focusedCardIdRef.current = item.id;
+              setFocusedCardIdState(item.id);
+              navigateToCardEdit(item.id);
+            }
+          }}
+          onLongPress={() => {
+            if (isSelMode) return;
+            if (selectedFilterRef.current !== 'all') {
+              setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
+              return;
+            }
+            if (cardSortOrderRef.current !== 'manual') {
+              setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
+              return;
+            }
+            drag();
+          }}
+        >
+          {isSelMode && (
+            <Ionicons
+              name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
+            />
+          )}
+          <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {preview || t('card.noText')}
+          </Text>
+          {!isSelMode && (
+            <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+              {isPro && (
+                <Pressable onPress={() => { focusedCardIdRef.current = item.id; setFocusedCardIdState(item.id); setStatsCardId(item.id); }} hitSlop={8} style={{ padding: 4 }}>
+                  <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                </Pressable>
+              )}
+              <Pressable onPress={() => { focusedCardIdRef.current = item.id; setFocusedCardIdState(item.id); navigateToCardEdit(item.id); }} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+              </Pressable>
+            </View>
+          )}
+        </Pressable>
+      </SwipeToDeleteRow>
+    );
+  }, [theme, isPro, t, navigateToCardEdit]);
+
+  const deckCards = useMemo(() => cards.filter((c) => c.deckId === id), [cards, id]);
+  const filteredCards = useMemo(
+    () => selectedFilter === 'all'
+      ? deckCards
+      : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id)),
+    [deckCards, selectedFilter, filterCardIds],
+  );
+  const displayedCards = useMemo(
+    () => cardSortOrder === 'newest'
+      ? [...filteredCards].sort((a, b) => (b.createdAt > a.createdAt ? 1 : b.createdAt < a.createdAt ? -1 : 0) || b.sortOrder - a.sortOrder)
+      : cardSortOrder === 'oldest'
+      ? [...filteredCards].sort((a, b) => (a.createdAt > b.createdAt ? 1 : a.createdAt < b.createdAt ? -1 : 0) || a.sortOrder - b.sortOrder)
+      : filteredCards,
+    [filteredCards, cardSortOrder],
+  );
+
+  selectionModeRef.current = selectionMode;
+  selectedCardIdsRef.current = selectedCardIds;
+  cardSortOrderRef.current = cardSortOrder;
+  selectedFilterRef.current = selectedFilter;
+  imageBlockLabelRef.current = t('card.imageBlock');
+
   if (!deck) return null;
 
-  const deckCards = cards.filter((c) => c.deckId === id);
-  const filteredCards = selectedFilter === 'all'
-    ? deckCards
-    : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id));
-  const displayedCards = cardSortOrder === 'newest'
-    ? [...filteredCards].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.sortOrder - a.sortOrder)
-    : cardSortOrder === 'oldest'
-    ? [...filteredCards].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder)
-    : filteredCards;
+  confirmDeleteCardRef.current = confirmDeleteCard;
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
 
@@ -657,6 +749,7 @@ export default function DeckDetailScreen() {
           automaticallyAdjustContentInsets={false}
           automaticallyAdjustsScrollIndicatorInsets={false}
           scrollsToTop={false}
+          windowSize={3}
           onScrollOffsetChange={(offset) => {
             scrollOffsetRef.current = offset;
             if (
@@ -685,85 +778,8 @@ export default function DeckDetailScreen() {
             reorderCards(data);
             updateCardSortOrders(db, data.map((c) => c.id));
           }}
-          renderItem={({ item, drag, getIndex }: RenderItemParams<Card>) => {
-          const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
-          const isSelected = selectedCardIds.has(item.id);
-          const isFocused = focusedCardIndex !== null && getIndex() === focusedCardIndex;
-          function toggleSelect() {
-            setSelectedCardIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(item.id)) next.delete(item.id);
-              else next.add(item.id);
-              return next;
-            });
-          }
-          return (
-            <ScaleDecorator>
-              {/* 実際にドラッグ並び替えが効く状態（フィルター=すべて かつ ソート=手動）と
-                  選択モードのときだけスワイプ削除を無効化。手動ソートでもフィルターが
-                  「すべて」以外ならドラッグ不可なのでスワイプ削除を許可する。 */}
-              <SwipeToDeleteRow
-                enabled={!selectionMode && !(selectedFilter === 'all' && cardSortOrder === 'manual')}
-                onDelete={() => confirmDeleteCard(item)}
-                containerStyle={styles.cardRowSpacing}
-              >
-                <Pressable
-                  style={[
-                    styles.cardItem,
-                    { backgroundColor: theme.colors.surface },
-                    selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
-                    selectionMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
-                    !selectionMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
-                  ]}
-                  onPress={() => {
-                    if (selectionMode) {
-                      toggleSelect();
-                    } else {
-                      const idx = getIndex();
-                      if (idx !== undefined) setFocusedCardIndex(idx);
-                      navigateToCardEdit(item.id);
-                    }
-                  }}
-                  onLongPress={() => {
-                    if (selectionMode) return;
-                    if (selectedFilter !== 'all') {
-                      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
-                      return;
-                    }
-                    if (cardSortOrder !== 'manual') {
-                      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
-                      return;
-                    }
-                    drag();
-                  }}
-                >
-                  {selectionMode && (
-                    <Ionicons
-                      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={22}
-                      color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
-                    />
-                  )}
-                  <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                    {preview || t('card.noText')}
-                  </Text>
-                  {!selectionMode && (
-                    <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
-                      {isPro && (
-                        <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedCardIndex(idx); setStatsCardId(item.id); }} hitSlop={8} style={{ padding: 4 }}>
-                          <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                        </Pressable>
-                      )}
-                      <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedCardIndex(idx); navigateToCardEdit(item.id); }} hitSlop={8} style={{ padding: 4 }}>
-                        <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                      </Pressable>
-                    </View>
-                  )}
-                </Pressable>
-              </SwipeToDeleteRow>
-            </ScaleDecorator>
-          );
-        }}
+          renderItem={renderItem}
+          extraData={{ selectionMode, selectedCardIds, focusedCardId }}
         />
       </Pressable>
 

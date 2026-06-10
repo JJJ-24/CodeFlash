@@ -21,6 +21,7 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
+import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -97,6 +98,7 @@ export default function TagsScreen() {
     { key: 'cardCount', icon: 'layers-outline' },
   ];
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showTagListInfo, setShowTagListInfo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteTag, setPendingDeleteTag] = useState<TagWithCount | null>(null);
 
@@ -289,9 +291,20 @@ export default function TagsScreen() {
       <Pressable style={{ flex: 1 }} onPress={() => setFocusedTagIndex(null)}>
       <View style={[styles.sectionRow, { paddingHorizontal: 16, paddingTop: 16, backgroundColor: theme.colors.background }]}>
         <View style={styles.sectionTitleCol}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {selectionMode ? t('tag.selectHint') : t('tag.tagListTitle')}
-          </Text>
+          {selectionMode ? (
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('tag.selectHint')}
+            </Text>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('tag.tagListTitle')}
+              </Text>
+              <Pressable onPress={() => setShowTagListInfo(true)} hitSlop={8}>
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+              </Pressable>
+            </View>
+          )}
           {!selectionMode && (
             <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t(`home.sortDesc${tagSortOrder.charAt(0).toUpperCase()}${tagSortOrder.slice(1)}`)}
@@ -466,6 +479,12 @@ export default function TagsScreen() {
         </View>
       )}
 
+      <InfoModal
+        visible={showTagListInfo}
+        title={t('tag.tagListInfoTitle')}
+        message={t('tag.tagListInfoMessage')}
+        onClose={() => setShowTagListInfo(false)}
+      />
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}

@@ -7,7 +7,7 @@
     "sortDescName": "Sorted by deck name",
     "sortDescCardCount": "Most cards first",
     "deckListInfoTitle": "About Deck List",
-    "deckListInfoMessage": "Use the icons on the right to switch the sort order.\n≡ mode: long-press and drag to reorder.\nOrder also applies to the Study and Stats tabs.\nName / count order: swipe left to delete a deck."
+    "deckListInfoMessage": "Tap a deck to open its card list.\nUse the icons on the right to switch the sort order.\n≡ mode: long-press and drag to reorder.\nOrder also applies to the Study and Stats tabs.\nName / count order: swipe left to delete a deck."
   },
   "deck": {
     "new": "New Deck",
@@ -69,6 +69,10 @@
   },
   "tag": {
     "tagListTitle": "Tags",
+    "tagListInfoTitle": "About the Tag List",
+    "tagListInfoMessage": "Tap a tag to open its card list.\nUse the icons on the right to switch the sort order.\n≡ mode allows drag-and-drop reordering with a long press.\nThe sort order is also reflected in the Study tab.\nSwipe left to delete a tag in Name or Count order.",
+    "cardListInfoTitle": "About Tag Cards",
+    "cardListInfoMessage": "Tap a card to open the edit screen.\nSort order follows the card list sort setting.",
     "selectHint": "Tap tags to select",
     "title": "Tags",
     "new": "New Tag",
@@ -110,7 +114,7 @@
     "reorderDisabledMessage": "Show all cards and switch to Manual sort (≡ icon) to reorder",
     "reorderDisabledMessageSort": "Switch to Manual sort (≡ icon) to reorder cards",
     "listInfoTitle": "About the card list",
-    "listInfoMessage": "Tap the Study button to study the cards in the list.\nOnly due cards or cards already studied today are recorded in your history.\nSort options are only available when showing \"All\" — use the icons on the right.\n≡ mode: long-press and drag to reorder.",
+    "listInfoMessage": "Tap a card to open the edit screen.\nTap the Study button to study the cards in the list.\nOnly due cards or cards already studied today are recorded in your history.\nSort options are only available when showing \"All\" — use the icons on the right.\n≡ mode: long-press and drag to reorder.",
     "reorderHintMessage": "To reorder cards, set the filter to \"All\", choose Manual sort (≡ icon), then long-press a card and drag.",
     "sortDescNewest": "Newest first",
     "sortDescOldest": "Oldest first",

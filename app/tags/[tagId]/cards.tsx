@@ -18,6 +18,7 @@ import {
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
+import { InfoModal } from '@/components/InfoModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
@@ -62,6 +63,7 @@ export default function TagCardsScreen() {
   const tag = tags.find((t) => t.id === tagId) ?? null;
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showTagCardsInfo, setShowTagCardsInfo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
   const [pendingDeleteCard, setPendingDeleteCard] = useState<Card | null>(null);
@@ -222,9 +224,14 @@ export default function TagCardsScreen() {
           automaticallyAdjustsScrollIndicatorInsets={false}
           scrollsToTop={false}
           ListHeaderComponent={
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('card.list')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, marginHorizontal: 20 }}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0, marginHorizontal: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('card.list')}
+              </Text>
+              <Pressable onPress={() => setShowTagCardsInfo(true)} hitSlop={8}>
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+              </Pressable>
+            </View>
           }
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedCardIndex(null)} />}
           renderItem={({ item, index }) => {
@@ -295,6 +302,12 @@ export default function TagCardsScreen() {
       />
 
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
+      <InfoModal
+        visible={showTagCardsInfo}
+        title={t('tag.cardListInfoTitle')}
+        message={t('tag.cardListInfoMessage')}
+        onClose={() => setShowTagCardsInfo(false)}
+      />
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}

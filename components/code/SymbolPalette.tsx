@@ -11,6 +11,8 @@ export const SYMBOL_PAIRS = [
   { open: "'", close: "'", label: "' '" },
   { open: '`', close: '`', label: '` `' },
   { open: '<', close: '>', label: '< >' },
+  { open: ':', close: '', label: ':' },
+  { open: ';', close: '', label: ';' },
 ];
 
 interface Props {

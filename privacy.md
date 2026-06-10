@@ -5,7 +5,7 @@ title: Privacy Policy
 
 # プライバシーポリシー / Privacy Policy
 
-最終更新日 / Last updated: 2026-06-05
+最終更新日 / Last updated: 2026-06-10
 
 ## 日本語
 
@@ -25,13 +25,17 @@ iCloud 同期機能を有効にすると、デッキ・カード・学習履歴�
 
 データのエクスポート・インポート機能は、デバイス内でのファイルのやり取りのみで完結します。この機能による外部サーバーへの送信は行いません。
 
+### コード実行（C++）
+
+C++ コードブロックを実行した場合、入力されたソースコードが Wandbox API（https://wandbox.org/）に送信されます。送信されるのはコードブロックの内容のみです。氏名・メールアドレス等の個人情報は含まれません。C++ コードの実行を行わない場合、Wandbox への通信は発生しません。
+
 ### アプリ内課金について
 
 CodeFlash Pro のご購入には Apple の課金システムを使用しています。課金処理には RevenueCat（https://www.revenuecat.com）を利用しており、購入日・製品IDなどの購入情報が RevenueCat のサーバーに送信されます。個人を特定できる情報は含まれません。RevenueCat のプライバシーポリシーは https://www.revenuecat.com/privacy をご確認ください。
 
 ### 第三者への提供
 
-ユーザーデータを第三者に提供・販売することはありません。ただし、iCloud 同期（Apple）および課金処理（RevenueCat）に関しては、本ポリシー内の各セクションに記載のとおりです。
+ユーザーデータを第三者に提供・販売することはありません。ただし、iCloud 同期（Apple）、課金処理（RevenueCat）、C++ コード実行（Wandbox）に関しては、本ポリシー内の各セクションに記載のとおりです。
 
 ### プライバシーポリシーの変更
 
@@ -63,13 +67,17 @@ When iCloud sync is enabled, your data including decks, cards, and study history
 
 The export and import feature transfers files within your device only. No data is sent to external servers by this feature.
 
+### C++ Code Execution
+
+When you run a C++ code block, the source code you have entered is sent to the Wandbox API (https://wandbox.org/). Only the content of the code block is transmitted. No personally identifiable information such as your name or email address is included. If you do not run any C++ code, no data is sent to Wandbox.
+
 ### In-App Purchases
 
 CodeFlash Pro purchases are processed through Apple's payment system. We use RevenueCat (https://www.revenuecat.com) to manage purchases. Purchase information such as purchase date and product ID is sent to RevenueCat's servers. No personally identifiable information is included. Please refer to RevenueCat's privacy policy at https://www.revenuecat.com/privacy.
 
 ### Third Parties
 
-We do not share or sell any user data to third parties. However, please refer to the relevant sections in this policy regarding iCloud sync (Apple) and payment processing (RevenueCat).
+We do not share or sell any user data to third parties. However, please refer to the relevant sections in this policy regarding iCloud sync (Apple), payment processing (RevenueCat), and C++ code execution (Wandbox).
 
 ### Changes to This Policy
 

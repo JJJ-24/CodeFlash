@@ -5,7 +5,9 @@
     "emptySub": "Tap the + button\nto create your first deck",
     "sortDescManual": "Long-press to reorder",
     "sortDescName": "Sorted by deck name",
-    "sortDescCardCount": "Most cards first"
+    "sortDescCardCount": "Most cards first",
+    "deckListInfoTitle": "About Deck List",
+    "deckListInfoMessage": "Use the icons on the right to switch the sort order.\n≡ mode: long-press and drag to reorder.\nOrder also applies to the Study and Stats tabs.\nName / count order: swipe left to delete a deck."
   },
   "deck": {
     "new": "New Deck",
@@ -50,8 +52,8 @@
     "selectTag": "Tags",
     "noTags": "No tags",
     "listTitle": "Study List",
-    "historyInfoTitle": "About study history",
-    "historyInfoMessage": "Only cards that are due for review, or already studied today, are recorded in your study history. Studying other cards won't be saved to history.",
+    "historyInfoTitle": "About the Study List",
+    "historyInfoMessage": "Tap any deck or tag to start studying.\nOnly due cards or cards already studied today are recorded in your history.\nUse the icons on the right to hide decks/tags with no target cards or switch to shuffle mode.",
     "noTarget": "No cards to study",
     "links": "Links",
     "linksTitle": "Links",
@@ -108,6 +110,7 @@
     "reorderDisabledMessage": "Show all cards and switch to Manual sort (≡ icon) to reorder",
     "reorderDisabledMessageSort": "Switch to Manual sort (≡ icon) to reorder cards",
     "listInfoTitle": "About the card list",
+    "listInfoMessage": "Tap the Study button to study the cards in the list.\nOnly due cards or cards already studied today are recorded in your history.\nSort options are only available when showing \"All\" — use the icons on the right.\n≡ mode: long-press and drag to reorder.",
     "reorderHintMessage": "To reorder cards, set the filter to \"All\", choose Manual sort (≡ icon), then long-press a card and drag.",
     "sortDescNewest": "Newest first",
     "sortDescOldest": "Oldest first",

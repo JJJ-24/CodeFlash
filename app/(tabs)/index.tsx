@@ -21,6 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { InfoModal } from '@/components/InfoModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
@@ -139,6 +140,7 @@ export default function HomeScreen() {
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
   const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showDeckListInfo, setShowDeckListInfo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteDeck, setPendingDeleteDeck] = useState<Deck | null>(null);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
@@ -230,9 +232,14 @@ export default function HomeScreen() {
       </View>
       <View style={styles.sectionRow}>
         <View style={styles.sectionTitleCol}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('home.title')}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('home.title')}
+            </Text>
+            <Pressable onPress={() => setShowDeckListInfo(true)} hitSlop={8}>
+              <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+            </Pressable>
+          </View>
           <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t(`home.sortDesc${deckSortOrder.charAt(0).toUpperCase()}${deckSortOrder.slice(1)}`)}
           </Text>
@@ -406,6 +413,12 @@ export default function HomeScreen() {
           <Ionicons name="add" size={30} color="#FFF" />
         </TouchableOpacity>
       </Pressable>
+      <InfoModal
+        visible={showDeckListInfo}
+        title={t('home.deckListInfoTitle')}
+        message={t('home.deckListInfoMessage')}
+        onClose={() => setShowDeckListInfo(false)}
+      />
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}

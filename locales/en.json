@@ -155,6 +155,8 @@
     "past7DaysActivity": "Last 7 Days Activity",
     "past7DaysCreated": "Last 7 Days New Created",
     "activityHeatmap": "Activity",
+    "activityHeatmapInfoLabel": "About activity history",
+    "activityHeatmapInfoMessage": "This shows how many cards you studied each day as a grass-style graph. Days you studied turn green, and the more you studied relative to your busiest day in the period, the darker the green (5 levels). Days with no activity stay gray. Scroll horizontally to see past records.",
     "totalProgress": "Overall Progress",
     "totalProgressInfoLabel": "About overall progress",
     "totalProgressInfoMessage": "This shows the learned rate across all decks. Tap to see a donut chart breakdown. The number in the center shows the percentage of cards you have studied.",

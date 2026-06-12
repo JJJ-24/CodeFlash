@@ -1353,9 +1353,14 @@ export default function StatsScreen() {
 
       {/* 学習履歴（草グラフ） */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {t('stats.activityHeatmap')}
-        </Text>
+        <View style={styles.proSectionTitle}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('stats.activityHeatmap')}
+          </Text>
+          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.activityHeatmap'), message: t('stats.activityHeatmapInfoMessage') })} hitSlop={8} accessibilityLabel={t('stats.activityHeatmapInfoLabel')}>
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+          </Pressable>
+        </View>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <ActivityHeatmap data={heatmapData} />
         </View>

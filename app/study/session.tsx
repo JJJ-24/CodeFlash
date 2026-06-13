@@ -630,8 +630,10 @@ export default function StudySessionScreen() {
     const gradeLabelFontSize = gradeMaxLabelLen >= 3 ? theme.fontSize.xs : theme.fontSize.sm;
     const reviewRate =
       totalCards > 0 ? Math.round((reviewed / totalCards) * 100) : 0;
+    // 正答率はカード統計（grade >= 2 = good/easy のみ正答）と定義を揃える。
+    // again（再考）に加えて hard（苦手）も誤答扱い。
     const correctRate =
-      reviewed > 0 ? Math.round(((hard + good + easy) / reviewed) * 100) : 0;
+      reviewed > 0 ? Math.round(((good + easy) / reviewed) * 100) : 0;
     const nextReviewDiffDays = result.earliestNextReview
       ? (() => {
           const today = new Date();

@@ -144,6 +144,56 @@ export async function pickTsvFile(): Promise<string | null> {
   return result.assets[0].uri;
 }
 
+/**
+ * インポートするTSVの取り込み方法を判定する。
+ * - id列がない / id列はあるがDBに実在するidが1件もない → 'standard'（通常のデッキ選択フロー）
+ * - 実在idが単一デッキに属する → 'overwrite'（そのデッキへ自動上書き）
+ * - 実在idが複数デッキにまたがる → 'multiDeck'（デッキ選択へ誘導）
+ */
+export type TsvImportInspection =
+  | { kind: 'standard' }
+  | { kind: 'overwrite'; deckId: string; deckName: string }
+  | { kind: 'multiDeck' };
+
+export async function inspectTsvImport(db: SQLiteDatabase, fileUri: string): Promise<TsvImportInspection> {
+  const raw = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' });
+  const rows = parseTsvRows(raw);
+  if (rows.length === 0) return { kind: 'standard' };
+
+  // ヘッダー1列目が id でなければ id 列なし扱い
+  if ((rows[0][0]?.toLowerCase() ?? '') !== 'id') return { kind: 'standard' };
+
+  // データ行から非空のidを収集
+  const ids = new Set<string>();
+  for (let i = 1; i < rows.length; i++) {
+    const id = rows[i][0]?.trim();
+    if (id) ids.add(id);
+  }
+  if (ids.size === 0) return { kind: 'standard' };
+
+  // DBに実在するidの所属デッキを取得
+  const idList = Array.from(ids);
+  const deckMap = new Map<string, string>(); // deckId -> deckName
+  for (let i = 0; i < idList.length; i += BULK_CHUNK) {
+    const chunk = idList.slice(i, i + BULK_CHUNK);
+    const placeholders = chunk.map(() => '?').join(',');
+    const found = await db.getAllAsync<{ deckId: string; name: string }>(
+      `SELECT DISTINCT c.deckId AS deckId, d.name AS name
+       FROM cards c JOIN decks d ON c.deckId = d.id
+       WHERE c.id IN (${placeholders})`,
+      chunk
+    );
+    for (const f of found) deckMap.set(f.deckId, f.name);
+  }
+
+  if (deckMap.size === 0) return { kind: 'standard' };
+  if (deckMap.size === 1) {
+    const [deckId, deckName] = Array.from(deckMap.entries())[0];
+    return { kind: 'overwrite', deckId, deckName };
+  }
+  return { kind: 'multiDeck' };
+}
+
 // バルクインポート用の中間データ型
 type ParsedCard = {
   id: string;

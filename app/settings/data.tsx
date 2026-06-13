@@ -15,7 +15,7 @@ import { createDeck, getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
 import { estimateExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
-import { exportDeckToTsv, importTsv, pickTsvFile } from '@/lib/tsv';
+import { exportDeckToTsv, importTsv, inspectTsvImport, pickTsvFile } from '@/lib/tsv';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
@@ -88,23 +88,83 @@ export default function DataSettingsScreen() {
     });
   }
 
-  async function handleTsvImport() {
-    const uri = await pickTsvFile();
-    if (!uri) return;
-    pendingTsvUriRef.current = uri;
+  // 通常のデッキ選択フローへ進む（注意アラート → デッキ選択）
+  function startTsvImportWithDeckPicker(message: string) {
     setModal({
       kind: 'confirm',
       title: t('dataManagement.tsvImportNoteTitle'),
-      message: t('dataManagement.tsvImportNoteMessage'),
+      message,
       actions: [{ label: t('dataManagement.exportContinue'), onPress: () => { setModal(null); setTsvAction('import'); setTsvDeckPickerVisible(true); } }],
     });
   }
 
-  async function handleTsvDeckSelected(deck: Deck) {
+  async function handleTsvImport() {
+    const uri = await pickTsvFile();
+    if (!uri) return;
+    pendingTsvUriRef.current = uri;
+
+    let inspection: Awaited<ReturnType<typeof inspectTsvImport>>;
+    try {
+      inspection = await inspectTsvImport(db, uri);
+    } catch {
+      inspection = { kind: 'standard' };
+    }
+
+    if (inspection.kind === 'overwrite') {
+      const { deckId, deckName } = inspection;
+      setModal({
+        kind: 'confirm',
+        title: t('dataManagement.tsvImportNoteTitle'),
+        message: t('dataManagement.tsvImportChoiceMessage'),
+        actions: [
+          {
+            label: t('dataManagement.tsvImportOverwriteExisting'),
+            onPress: () => setModal({
+              kind: 'confirm',
+              title: t('dataManagement.tsvImportOverwriteConfirmTitle'),
+              message: t('dataManagement.tsvImportOverwriteConfirmMessage', { deck: deckName }),
+              actions: [{ label: t('dataManagement.tsvImportOverwriteConfirmAction'), onPress: () => { setModal(null); runTsvImport(deckId); } }],
+            }),
+          },
+          { label: t('dataManagement.tsvImportToOtherDeck'), onPress: () => { setModal(null); setTsvAction('import'); setTsvDeckPickerVisible(true); } },
+        ],
+      });
+    } else if (inspection.kind === 'multiDeck') {
+      startTsvImportWithDeckPicker(t('dataManagement.tsvImportMultiDeckMessage'));
+    } else {
+      startTsvImportWithDeckPicker(t('dataManagement.tsvImportNoteMessage'));
+    }
+  }
+
+  async function runTsvImport(deckId: string) {
     if (tsvProcessingRef.current) return;
     tsvProcessingRef.current = true;
+    const uri = pendingTsvUriRef.current;
+    if (!uri) {
+      tsvProcessingRef.current = false;
+      return;
+    }
+    try {
+      setLoading(true);
+      const { created, updated } = await importTsv(db, uri, deckId);
+      const [updatedDecks, updatedTags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
+      setDecks(updatedDecks);
+      setTags(updatedTags);
+      setModal({ kind: 'info', message: t('dataManagement.tsvImportSuccess', { created, updated }) });
+    } catch {
+      setModal({ kind: 'info', message: t('dataManagement.tsvImportError') });
+    } finally {
+      setLoading(false);
+      pendingTsvUriRef.current = null;
+      tsvProcessingRef.current = false;
+    }
+  }
+
+  async function handleTsvDeckSelected(deck: Deck) {
     setTsvDeckPickerVisible(false);
     if (tsvAction === 'export') {
+      if (tsvProcessingRef.current) return;
+      tsvProcessingRef.current = true;
       try {
         setLoading(true);
         await exportDeckToTsv(db, deck.id, deck.name);
@@ -115,27 +175,7 @@ export default function DataSettingsScreen() {
         tsvProcessingRef.current = false;
       }
     } else if (tsvAction === 'import') {
-      const uri = pendingTsvUriRef.current;
-      if (!uri) {
-        tsvProcessingRef.current = false;
-        return;
-      }
-      try {
-        setLoading(true);
-        const { created, updated } = await importTsv(db, uri, deck.id);
-        const [updatedDecks, updatedTags] = await Promise.all([getAllDecks(db), getAllTags(db)]);
-        setDecks(updatedDecks);
-        setTags(updatedTags);
-        setModal({ kind: 'info', message: t('dataManagement.tsvImportSuccess', { created, updated }) });
-      } catch {
-        setModal({ kind: 'info', message: t('dataManagement.tsvImportError') });
-      } finally {
-        setLoading(false);
-        pendingTsvUriRef.current = null;
-        tsvProcessingRef.current = false;
-      }
-    } else {
-      tsvProcessingRef.current = false;
+      await runTsvImport(deck.id);
     }
   }
 

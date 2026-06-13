@@ -16,15 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
-
-const PRESET_COLORS = [
-  '#E53935', '#fd9023', '#F6BF26', '#33B679',
-  '#0B8043', '#039BE5', '#0e4cdd', '#7986CB',
-  '#8E24AA', '#828080', '#795548', '#F48FB1',
-];
 
 export default function EditTagScreen() {
   const { tagId } = useLocalSearchParams<{ tagId: string }>();

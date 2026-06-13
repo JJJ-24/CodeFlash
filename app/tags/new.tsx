@@ -14,16 +14,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { createTag } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
-
-const PRESET_COLORS = [
-  '#E53935', '#fd9023', '#F6BF26', '#33B679',
-  '#0B8043', '#039BE5', '#0e4cdd', '#7986CB',
-  '#8E24AA', '#828080', '#795548', '#F48FB1',
-];
 
 export default function NewTagScreen() {
   const db = useSQLiteContext();
@@ -34,7 +28,7 @@ export default function NewTagScreen() {
   const { bottom: bottomInset } = useSafeAreaInsets();
 
   const [name, setName] = useState('');
-  const [color, setColor] = useState(PRESET_COLORS[0]);
+  const [color, setColor] = useState<string>(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 

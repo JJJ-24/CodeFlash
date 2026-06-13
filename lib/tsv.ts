@@ -6,13 +6,8 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { getCardsByDeckId, updateCard } from '@/lib/database/cards';
 import { generateId } from '@/lib/database/utils';
 import { createTag, getTagRowsByDeckId } from '@/lib/database/tags';
+import { TAG_PRESET_COLORS } from '@/lib/theme';
 import type { Block, TextBlock } from '@/types';
-
-const PRESET_COLORS = [
-  '#E53935', '#F4511E', '#F6BF26', '#33B679',
-  '#0B8043', '#039BE5', '#3F51B5', '#7986CB',
-  '#8E24AA', '#616161', '#795548', '#D81B60',
-];
 
 function escape(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\t/g, '\\t').replace(/\n/g, '\\n');
@@ -94,7 +89,7 @@ function parseTagNames(raw: string): string[] {
 
 function assignTagColor(name: string): string {
   const sum = Array.from(name).reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return PRESET_COLORS[sum % PRESET_COLORS.length];
+  return TAG_PRESET_COLORS[sum % TAG_PRESET_COLORS.length];
 }
 
 async function resolveOrCreateTag(

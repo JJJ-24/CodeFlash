@@ -114,12 +114,16 @@ export const FILTER_COLORS = {
   due: '#F57C00',
 } as const;
 
-// デッキのカラーテーマ（028-1）。tags の PRESET_COLORS と同じパレットを採用。
-export const DECK_PRESET_COLORS = [
+// タグ・デッキ共通のカラーパレット（唯一の定義元）。
+// タグ作成/編集画面・TSVインポート時のタグ色割り当て・デッキカラーがすべてこれを参照する。
+export const TAG_PRESET_COLORS = [
   '#E53935', '#fd9023', '#F6BF26', '#33B679',
   '#0B8043', '#039BE5', '#0e4cdd', '#7986CB',
   '#8E24AA', '#828080', '#795548', '#F48FB1',
 ] as const;
+
+// デッキのカラーテーマ（028-1）。タグと同じパレットを採用。
+export const DECK_PRESET_COLORS = TAG_PRESET_COLORS;
 
 export const GRADE_COLORS = {
   again: '#E53935',

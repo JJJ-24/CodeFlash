@@ -25,17 +25,11 @@ import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
-
-const PRESET_COLORS = [
-  '#E53935', '#fd9023', '#F6BF26', '#33B679',
-  '#0B8043', '#039BE5', '#0e4cdd', '#7986CB',
-  '#8E24AA', '#828080', '#795548', '#F48FB1',
-];
 
 const TAG_SHORTCUTS = [
   { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
@@ -76,7 +70,7 @@ export default function TagsScreen() {
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [pickedColor, setPickedColor] = useState(PRESET_COLORS[0]);
+  const [pickedColor, setPickedColor] = useState<string>(PRESET_COLORS[0]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const sortedTags = useMemo(() => {

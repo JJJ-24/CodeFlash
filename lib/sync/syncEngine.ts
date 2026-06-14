@@ -424,6 +424,18 @@ async function getLocalChangeInfo(
   };
 }
 
+/**
+ * ローカルにユーザーデータ（デッキ or カード）が1件でもあるか。
+ * 再インストール直後など「ローカルが空」の端末が、iCloud の反映ラグでリモートも空に見えたときに
+ * 空データをアップロードしてリモート（＝他端末の正しいデータ）を破壊するのを防ぐためのガードに使う。
+ */
+async function hasLocalUserData(db: SQLiteDatabase): Promise<boolean> {
+  const row = await db.getFirstAsync<{ n: number }>(
+    "SELECT (SELECT COUNT(*) FROM decks) + (SELECT COUNT(*) FROM cards) AS n",
+  );
+  return (row?.n ?? 0) > 0;
+}
+
 export class SyncTimeoutError extends Error {
   constructor() {
     super("Sync timed out");
@@ -630,6 +642,22 @@ export async function syncNow(
       return "noop";
     }
 
+    // 【空データ上書き防止ガード】
+    // 自動／バックグラウンドのアップロードでは、ローカルが空（デッキもカードも無い）のときは上げない。
+    // 再インストール直後の端末はローカルが空＝neverSynced で、iCloud の反映ラグでリモートも空に
+    // 見えると decideDirection が "upload" を返す。そのまま空をアップすると掃除で他端末の正しい
+    // データまで消してしまう（実際に発生）。空アップロードは「壊す」ことはあっても「役立つ」ことが
+    // 無いので、自動経路では一切行わない（リモートが降りてくるのを待つ／次回再試行する）。
+    // 明示的な強制アップロード（action==='upload'）はユーザー意思なので対象外。
+    if (
+      direction === "upload" &&
+      action !== "upload" &&
+      !(await hasLocalUserData(db))
+    ) {
+      sync.setStatus("idle");
+      return "skipped";
+    }
+
     // 手動同期は転送中も全画面ブロック（blocking=true で既にオーバーレイ表示中）。方向もここで
     // セットしてオーバーレイのテキストを「アップロード中／ダウンロード中」にする。
     // 自動同期(silent)は転送中はブロックしない（direction を立てない＝オーバーレイを出さない）。
@@ -658,17 +686,23 @@ export async function syncNow(
       // 「最後に学習した端末が勝つ」（どちらが先に接続したかに依存しない）直感的な後勝ちになる。
       //
       // ただし端末時計の誤設定に備えて、版の時刻を次式で正規化する：
-      //   updatedAt = max( min(changedAt, now), base + 1 )
+      //   updatedAt = max( min(changedAt, now), min(base, now) + 1 )
       // - 未来クロック: min(changedAt, now) で現在時刻にクランプ。時計を正しく戻した後に
       //   アップロードすれば、過去の書き込みに残った未来値が現在時刻へ矯正されて伝播する。
       // - 過去クロック: max(..., base+1) で「直前に取り込んだリモート版より必ず1つ新しい」値に
       //   底上げする。これで過去日付で学習しても自分の更新が LWW で勝ち、巻き戻らない。
       //   (base = lastRemoteUpdatedAt = この端末が最後に追いついたリモート版の時刻)
+      // - base 自体が未来に汚染されている場合（過去の未来クロックで上げた版に追いついた等）に
+      //   そのまま base+1 すると未来版を再生産してしまうため、base も now でクランプする。
+      //   これにより、時計を正した後の（強制）アップロードは必ず now 以下の正常な時刻になる。
       // changedAt=0（変更が無いまま強制アップロード）のときは now を基準にする。
       const nowMs = Date.now();
       const base = sync.lastRemoteUpdatedAt ?? 0;
       const rawChangedAt = localInfo.changedAt || nowMs;
-      const effectiveUpdatedAt = Math.max(Math.min(rawChangedAt, nowMs), base + 1);
+      const effectiveUpdatedAt = Math.max(
+        Math.min(rawChangedAt, nowMs),
+        Math.min(base, nowMs) + 1,
+      );
       const meta: RemoteDbMeta = {
         updatedAt: effectiveUpdatedAt,
         deviceId: sync.deviceId,

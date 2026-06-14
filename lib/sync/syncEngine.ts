@@ -18,6 +18,7 @@ import { useSyncStore, type SyncErrorCode } from "@/store/sync";
 import { useTagStore } from "@/store/tags";
 
 import {
+  deleteRemoteDb,
   deleteRemoteImageFile,
   downloadDb,
   downloadImageFile,
@@ -651,19 +652,34 @@ export async function syncNow(
       // 参照画像を先に追加アップロード（meta より前）。失敗すれば throw して meta を書かない。
       await uploadReferencedImages(db);
       // 版の時刻には「アップロードした時刻」ではなく「データを最後に変更した時刻」
-      // (sync_state.localChangedAt) を使う。こうすると LWW のタイブレーク
+      // (sync_state.localChangedAt) を基準に使う。こうすると LWW のタイブレーク
       // （decideDirection の local.changedAt vs remote.meta.updatedAt）が
       // 「学習した時刻どうしの比較」になり、オフライン同時編集→再接続時に
       // 「最後に学習した端末が勝つ」（どちらが先に接続したかに依存しない）直感的な後勝ちになる。
-      // 旧来は Date.now()（アップロード時刻）だったため、先に接続した端末の方が必ず新しい時刻になり
-      // 「先接続勝ち」になっていた。一度も変更が無いまま強制アップロードする場合(changedAt=0)だけは
-      // 現在時刻で代替する（版として有効な時刻を持たせるため）。
+      //
+      // ただし端末時計の誤設定に備えて、版の時刻を次式で正規化する：
+      //   updatedAt = max( min(changedAt, now), base + 1 )
+      // - 未来クロック: min(changedAt, now) で現在時刻にクランプ。時計を正しく戻した後に
+      //   アップロードすれば、過去の書き込みに残った未来値が現在時刻へ矯正されて伝播する。
+      // - 過去クロック: max(..., base+1) で「直前に取り込んだリモート版より必ず1つ新しい」値に
+      //   底上げする。これで過去日付で学習しても自分の更新が LWW で勝ち、巻き戻らない。
+      //   (base = lastRemoteUpdatedAt = この端末が最後に追いついたリモート版の時刻)
+      // changedAt=0（変更が無いまま強制アップロード）のときは now を基準にする。
+      const nowMs = Date.now();
+      const base = sync.lastRemoteUpdatedAt ?? 0;
+      const rawChangedAt = localInfo.changedAt || nowMs;
+      const effectiveUpdatedAt = Math.max(Math.min(rawChangedAt, nowMs), base + 1);
       const meta: RemoteDbMeta = {
-        updatedAt: localInfo.changedAt || Date.now(),
+        updatedAt: effectiveUpdatedAt,
         deviceId: sync.deviceId,
         schemaVersion: SYNC_SCHEMA_VERSION,
       };
-      await withTimeout(uploadDb(meta), transferTimeout);
+      // 強制アップロード（action==='upload'）は「ローカルを唯一の正とする」宣言なので、
+      // 自分以外の全リモート版を一掃する（未来日付で勝ち続ける版があっても確実に解消できる）。
+      await withTimeout(
+        uploadDb(meta, { wipeOthers: action === "upload" }),
+        transferTimeout,
+      );
       // meta コミット後、最新 DB が参照しなくなったリモート画像を掃除（best-effort）。
       try {
         await pruneRemoteImages(db);
@@ -743,6 +759,53 @@ export async function syncNow(
       sync.setError(code);
     }
     throw e;
+  }
+}
+
+/**
+ * 手動同期（ユーザー操作）で「少し待てば直る一過性エラー」が起きたときに自動で数回だけ再試行する。
+ * 前面復帰／同期トグル直後は iCloud デーモンが未準備で転送が即失敗（unknown）したり、
+ * 反映待ちでタイムアウト（timeout）することがある。手動操作はこれまで1回失敗で諦めていたため、
+ * 「同期オン直後に強制アップロードを押すと失敗」する症状が出ていた。短い間隔で待って再試行する。
+ * 確定的エラー（容量不足・スキーマ不一致・iCloud 無効・オフライン）は即座に投げて再試行しない。
+ */
+const MANUAL_RETRY_CODES = new Set<SyncErrorCode>(["unknown", "timeout"]);
+const MANUAL_RETRY_DELAYS_MS = [1_200, 3_000];
+
+export async function syncNowManual(
+  db: SQLiteDatabase,
+  action: SyncAction = "auto",
+): Promise<SyncOutcome> {
+  const maxAttempts = MANUAL_RETRY_DELAYS_MS.length + 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await syncNow(db, action);
+    } catch (e) {
+      const code = toSyncErrorCode(e);
+      const isLastAttempt = attempt === maxAttempts - 1;
+      if (isLastAttempt || !MANUAL_RETRY_CODES.has(code)) throw e;
+      await delay(MANUAL_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  // ループは必ず return か throw で抜けるが、型を満たすためのフォールバック。
+  throw new SyncTimeoutError();
+}
+
+/**
+ * リモートのバックアップを完全に削除し、この端末を「未同期」状態に戻す。
+ * 時計の誤設定などでリモートが壊れた版に固着した場合の最終手段。
+ * 削除後に同期が有効なら syncNow('upload') で現在のローカルを唯一の正として再 publish する
+ * （リモートが空＝未同期状態のため、強制アップロードで確実に作り直せる）。
+ */
+export async function resetRemote(db: SQLiteDatabase): Promise<void> {
+  if (!(await isICloudAvailable())) throw new ICloudUnavailableError();
+  if (!(await isOnline())) throw new OfflineError();
+  await deleteRemoteDb();
+  // 進捗ウォーターマークを消去（次回同期でローカルを再 publish させる）。
+  useSyncStore.getState().resetSyncState();
+  // 同期が有効なら、今のローカルでリモートを作り直す。
+  if (useSyncStore.getState().enabled) {
+    await syncNowManual(db, "upload");
   }
 }
 

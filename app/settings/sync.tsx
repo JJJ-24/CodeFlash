@@ -14,8 +14,9 @@ import { syncErrorText } from '@/lib/sync/errorText';
 import {
   type LocalBackup,
   listLocalBackups,
+  resetRemote,
   restoreFromLocalBackup,
-  syncNow,
+  syncNowManual,
   toSyncErrorCode,
 } from '@/lib/sync/syncEngine';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -49,6 +50,7 @@ export default function SyncSettingsScreen() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showUploadInfo, setShowUploadInfo] = useState(false);
   const [showDownloadInfo, setShowDownloadInfo] = useState(false);
+  const [showResetInfo, setShowResetInfo] = useState(false);
   const [showRestoreInfo, setShowRestoreInfo] = useState(false);
   const [showMergeInfo, setShowMergeInfo] = useState(false);
 
@@ -61,7 +63,7 @@ export default function SyncSettingsScreen() {
     if (value) {
       setSyncEnabled(true);
       try {
-        await syncNow(db, 'auto');
+        await syncNowManual(db, 'auto');
       } catch (e) {
         setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
       }
@@ -73,7 +75,7 @@ export default function SyncSettingsScreen() {
   async function handleManualSync() {
     if (syncStatus === 'syncing') return;
     try {
-      await syncNow(db, 'auto');
+      await syncNowManual(db, 'auto');
     } catch (e) {
       setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
     }
@@ -90,7 +92,7 @@ export default function SyncSettingsScreen() {
         onPress: async () => {
           setModal(null);
           try {
-            await syncNow(db, 'upload');
+            await syncNowManual(db, 'upload');
           } catch (e) {
             setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
           }
@@ -110,7 +112,30 @@ export default function SyncSettingsScreen() {
         onPress: async () => {
           setModal(null);
           try {
-            await syncNow(db, 'download');
+            await syncNowManual(db, 'download');
+          } catch (e) {
+            setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
+          }
+        },
+      }],
+    });
+  }
+
+  // リモートをリセット: iCloud のバックアップを完全に削除し、現在のローカルで作り直す。
+  // 時計の誤設定などでリモートが壊れた版に固着した場合の最終手段。
+  function handleResetRemote() {
+    setModal({
+      kind: 'confirm',
+      title: t('sync.resetRemote'),
+      message: t('sync.resetRemoteConfirm'),
+      actions: [{
+        label: t('sync.resetRemote'),
+        destructive: true,
+        onPress: async () => {
+          setModal(null);
+          try {
+            await resetRemote(db);
+            setModal({ kind: 'info', title: t('sync.resetRemote'), message: t('sync.resetRemoteSuccess') });
           } catch (e) {
             setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
           }
@@ -160,7 +185,7 @@ export default function SyncSettingsScreen() {
           try {
             await restoreFromLocalBackup(db, backup.path);
             if (syncEnabled) {
-              try { await syncNow(db, 'auto'); } catch { /* 反映失敗は致命的でない。次回同期で再試行 */ }
+              try { await syncNowManual(db, 'auto'); } catch { /* 反映失敗は致命的でない。次回同期で再試行 */ }
             }
             setModal({ kind: 'info', title: t('sync.restoreTitle'), message: t('sync.restoreSuccess') });
           } catch (e) {
@@ -410,6 +435,32 @@ export default function SyncSettingsScreen() {
                   <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {t('sync.forceDownloadInfo')}
+                    </Text>
+                  </View>
+                )}
+
+                {/* リモートをリセット（最終手段） */}
+                <Pressable
+                  style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1 }]}
+                  onPress={handleResetRemote}
+                  disabled={syncing}
+                >
+                  <Ionicons name="refresh-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
+                  <Text style={[styles.syncAdvancedItemText, { color: theme.colors.danger, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.resetRemote')}
+                  </Text>
+                  <Pressable onPress={() => setShowResetInfo((v) => !v)} hitSlop={8}>
+                    <Ionicons
+                      name={showResetInfo ? 'information-circle' : 'information-circle-outline'}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
+                    />
+                  </Pressable>
+                </Pressable>
+                {showResetInfo && (
+                  <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('sync.resetRemoteInfo')}
                     </Text>
                   </View>
                 )}

@@ -105,6 +105,12 @@ interface SyncState {
   setLastRemoteId: (id: string) => void;
   showNotice: (kind: 'error' | 'info', code: SyncNoticeCode) => void;
   bumpDataRevision: () => void;
+  /**
+   * 同期の進捗ウォーターマーク（最終同期・追いついているリモート版など）をすべて消去し、
+   * この端末を「一度も同期していない」状態に戻す。リモートをリセットした直後に呼ぶと、
+   * 次回同期で（リモートが空のため）ローカルが再 publish される。enabled / deviceId は保持する。
+   */
+  resetSyncState: () => void;
 }
 
 function generateDeviceId(): string {
@@ -171,6 +177,23 @@ export const useSyncStore = create<SyncState>((set) => ({
   },
   bumpDataRevision: () => {
     set((s) => ({ dataRevision: s.dataRevision + 1 }));
+  },
+  resetSyncState: () => {
+    set({
+      lastSyncedAt: null,
+      lastDataSyncedAt: null,
+      lastSyncedVersion: null,
+      lastRemoteUpdatedAt: null,
+      lastRemoteId: null,
+      errorCode: null,
+    });
+    AsyncStorage.multiRemove([
+      LAST_SYNCED_AT_KEY,
+      LAST_DATA_SYNCED_AT_KEY,
+      LAST_SYNCED_VERSION_KEY,
+      LAST_REMOTE_UPDATED_AT_KEY,
+      LAST_REMOTE_ID_KEY,
+    ]);
   },
 }));
 

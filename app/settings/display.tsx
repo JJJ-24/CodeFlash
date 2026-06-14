@@ -82,17 +82,6 @@ export default function DisplaySettingsScreen() {
       />
 
       <SegmentedCard
-        label={t('settings.language')}
-        options={[
-          { value: 'ja' as LanguagePreference, label: t('settings.languageJa') },
-          { value: 'en' as LanguagePreference, label: t('settings.languageEn') },
-          { value: 'system' as LanguagePreference, label: t('settings.languageSystem') },
-        ]}
-        value={languagePreference}
-        onChange={setLanguagePreference}
-      />
-
-      <SegmentedCard
         label={t('settings.initialFilter')}
         info={t('settings.initialFilterInfo')}
         options={[
@@ -102,6 +91,17 @@ export default function DisplaySettingsScreen() {
         ]}
         value={initialFilterPreference}
         onChange={setInitialFilterPreference}
+      />
+
+      <SegmentedCard
+        label={t('settings.language')}
+        options={[
+          { value: 'ja' as LanguagePreference, label: t('settings.languageJa') },
+          { value: 'en' as LanguagePreference, label: t('settings.languageEn') },
+          { value: 'system' as LanguagePreference, label: t('settings.languageSystem') },
+        ]}
+        value={languagePreference}
+        onChange={setLanguagePreference}
       />
 
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

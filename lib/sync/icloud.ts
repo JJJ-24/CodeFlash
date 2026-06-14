@@ -70,6 +70,20 @@ function parseRemoteDbName(filename: string): RemoteDbMeta | null {
 // 追加のみ（add-only）で同期する。
 const REMOTE_IMAGES_DIR = 'Images';
 
+/**
+ * 「現在時刻より極端に未来」の版を、時計の誤設定による異常値とみなして無視/掃除する際の許容幅。
+ * 「時刻を自動設定」の端末同士の正常な時計ズレは秒単位なので、6時間あれば正常な並行更新を
+ * 誤って弾くことはない。一方で「日付を1日先にして学習」のような誤設定はこの幅を超えるため検出できる。
+ * これにより、端末日付を未来にして作られた版が「最新」として勝ち続ける事故を防ぐ
+ * （時計を正しく戻せば、この未来版は選択対象から自動的に外れる＝自己修復）。
+ */
+const FUTURE_SKEW_TOLERANCE_MS = 6 * 60 * 60 * 1000;
+
+/** 版の updatedAt が「現在より極端に未来」かどうか（時計誤設定の産物とみなす閾値）。 */
+function isImplausiblyFuture(updatedAt: number, now: number = Date.now()): boolean {
+  return updatedAt > now + FUTURE_SKEW_TOLERANCE_MS;
+}
+
 const LOCAL_DB_PATH = `${FileSystem.documentDirectory}SQLite/codeflash.db`;
 const LOCAL_DB_PATH_PLAIN = LOCAL_DB_PATH.replace(/^file:\/\//, '');
 const LOCAL_SNAPSHOT_PATH = `${FileSystem.documentDirectory}SQLite/codeflash.sync-snapshot.db`;
@@ -132,10 +146,14 @@ export async function getRemoteStatus(): Promise<RemoteStatus> {
     return { exists: false, meta: null, dbFilename: null };
   }
 
+  const now = Date.now();
   let best: { filename: string; meta: RemoteDbMeta } | null = null;
   for (const name of names) {
     const meta = parseRemoteDbName(name);
     if (!meta || !Number.isFinite(meta.updatedAt)) continue;
+    // 端末時計を未来に設定して作られた異常な版は「最新」として採用しない。
+    // 時計を正しく戻せば、この未来版はここで無視され、正常な版（または無し）に収束する。
+    if (isImplausiblyFuture(meta.updatedAt, now)) continue;
     if (!best || meta.updatedAt > best.meta.updatedAt) {
       best = { filename: name, meta };
     }
@@ -171,12 +189,42 @@ async function pruneOldDbFiles(keepUpdatedAt: number): Promise<void> {
   } catch {
     return;
   }
+  const now = Date.now();
   for (const p of paths) {
     const name = normalizeRemoteFilename(p);
     const meta = parseRemoteDbName(name);
     // 一意名でない残骸（旧 codeflash.db / codeflash.meta.json / codeflash 2.db / meta.json 等）は掃除対象。
-    // 一意名の版は updatedAt が自分より新しい/同じものだけ残す。
-    if (meta && meta.updatedAt >= keepUpdatedAt) continue;
+    if (meta) {
+      // 「現在より極端に未来」の版は時計誤設定の産物とみなし、たとえ自分より新しくても掃除する
+      // （これを残すと getRemoteStatus では無視されても iCloud 容量を専有し続けるため）。
+      // ただし今アップロードした自分の版（updatedAt === keepUpdatedAt）は決して消さない。
+      const farFuture = isImplausiblyFuture(meta.updatedAt, now) && meta.updatedAt !== keepUpdatedAt;
+      // 一意名の版は updatedAt が自分より新しい/同じものだけ残す（並行アップロードの相手版を守る）。
+      if (meta.updatedAt >= keepUpdatedAt && !farFuture) continue;
+    }
+    try {
+      await unlinkAsync(p);
+    } catch {
+      // 無視（best-effort）
+    }
+  }
+}
+
+/**
+ * 今アップロードした自分の版（keepFilename）以外の全 DB 版を削除する（強制アップロード用）。
+ * 「ローカルを唯一の正とする」宣言なので、相手版・未来版・残骸を問わず一掃する。
+ * 通常の自動アップロードでは使わない（pruneOldDbFiles で並行更新の相手版を守る）。
+ */
+async function deleteOtherRemoteDbFiles(keepFilename: string): Promise<void> {
+  if (!defaultICloudContainerPath) return;
+  let paths: string[] = [];
+  try {
+    paths = await readDirAsync(REMOTE_DIR, { isFullPath: true });
+  } catch {
+    return;
+  }
+  for (const p of paths) {
+    if (normalizeRemoteFilename(p) === keepFilename) continue;
     try {
       await unlinkAsync(p);
     } catch {
@@ -195,7 +243,10 @@ async function pruneOldDbFiles(keepUpdatedAt: number): Promise<void> {
  * 配置完了したファイルそのものが「コミット標識」（別 meta.json を持たない）。
  * アップロード成功後に古い版を掃除する（meta コミット後に呼ぶ pruneRemoteImages と同じ思想）。
  */
-export async function uploadDb(meta: RemoteDbMeta): Promise<void> {
+export async function uploadDb(
+  meta: RemoteDbMeta,
+  opts?: { wipeOthers?: boolean }
+): Promise<void> {
   if (!defaultICloudContainerPath) {
     throw new Error('iCloud is not available');
   }
@@ -204,14 +255,22 @@ export async function uploadDb(meta: RemoteDbMeta): Promise<void> {
     throw new Error('Snapshot file not found. Call VACUUM INTO before uploadDb.');
   }
   await ensureRemoteDirectory();
+  const filename = buildRemoteDbName(meta);
   try {
-    await uploadFileStaged(`${REMOTE_DIR}/${buildRemoteDbName(meta)}`, LOCAL_SNAPSHOT_PATH);
+    await uploadFileStaged(`${REMOTE_DIR}/${filename}`, LOCAL_SNAPSHOT_PATH);
   } finally {
     await cleanupSnapshot();
   }
-  // 配置成功後に古い版・残骸を掃除（best-effort。自分以上の新しい並行版は残す）。
+  // 配置成功後の掃除（best-effort）。
+  // - wipeOthers（強制アップロード）: 自分以外の全版を一掃し、ローカルを唯一の正にする。
+  //   これにより未来日付で勝ち続けるリモート版があっても確実に上書き・解消できる。
+  // - 通常（自動）: 自分より古い版＋極端な未来の残骸だけ消し、並行アップロードの相手版は守る。
   try {
-    await pruneOldDbFiles(meta.updatedAt);
+    if (opts?.wipeOthers) {
+      await deleteOtherRemoteDbFiles(filename);
+    } else {
+      await pruneOldDbFiles(meta.updatedAt);
+    }
   } catch {
     // 掃除失敗で同期本体は止めない
   }

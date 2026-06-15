@@ -157,6 +157,7 @@ export function CodeRunnerView({
       suppress?.(); // Done タップ時にフリップを抑制
       handleEditEnd();
     } else {
+      suppress?.(); // 編集開始タップがカードフリップに伝播しないよう抑制
       isEditingRef.current = true;
       onEditRequest?.();
       setIsEditing(true);
@@ -164,6 +165,13 @@ export function CodeRunnerView({
       onEditFocus?.();
     }
   }, [isEditing, handleEditEnd, clear, onEditFocus, onEditRequest, suppress]);
+
+  // コード本体タップ - 編集画面と同じく、タップで入力モードへ入る。
+  // 表示中（!isEditing）のみ呼ばれるが、念のためガードする。
+  const handleCodeAreaTap = useCallback(() => {
+    if (isEditingRef.current) return;
+    handleEditToggle();
+  }, [handleEditToggle]);
 
   // 実行 - ▶実行ボタン・r キー用
   // isEditingRef / anotherBlockEditingRef を使って stale closure を回避する。
@@ -255,6 +263,17 @@ export function CodeRunnerView({
         .maxDistance(10)
         .onEnd(() => runOnJS(handleCodeCopy)()),
     [handleCodeCopy],
+  );
+
+  // コード本体（表示中）タップで編集へ。editable のときだけ有効化し、
+  // それ以外はタップを親の FlipCard へ通してカードを裏返せるようにする。
+  const codeAreaGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .maxDistance(10)
+        .enabled(!!editable)
+        .onEnd(() => runOnJS(handleCodeAreaTap)()),
+    [editable, handleCodeAreaTap],
   );
 
   return (
@@ -381,12 +400,14 @@ export function CodeRunnerView({
             }}
           />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <SyntaxHighlightedCode
-              code={editedContent ?? block.content}
-              language={block.language}
-            />
-          </ScrollView>
+          <GestureDetector gesture={codeAreaGesture}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <SyntaxHighlightedCode
+                code={editedContent ?? block.content}
+                language={block.language}
+              />
+            </ScrollView>
+          </GestureDetector>
         )}
         <GestureDetector gesture={copyGesture}>
           <View style={styles.codeCopyBtn}>

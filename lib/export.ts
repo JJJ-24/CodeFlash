@@ -86,7 +86,7 @@ export async function estimateImageExportSize(db: SQLiteDatabase): Promise<numbe
 export async function exportDatabase(db: SQLiteDatabase, includeImages = false): Promise<void> {
   const decks = await db.getAllAsync<Record<string, unknown>>('SELECT * FROM decks ORDER BY sortOrder ASC');
   const cards = await db.getAllAsync<Record<string, unknown>>(
-    `SELECT c.id, c.deckId, c.sortOrder, c.createdAt, c.updatedAt,
+    `SELECT c.id, c.deckId, c.sortOrder, c.archived, c.createdAt, c.updatedAt,
             COALESCE(cc.frontContent, '[]') AS frontContent,
             COALESCE(cc.backContent,  '[]') AS backContent,
             COALESCE(cc.memoContent,  '[]') AS memoContent

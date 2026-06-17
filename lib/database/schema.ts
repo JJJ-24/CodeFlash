@@ -160,6 +160,18 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN colorHex TEXT;`);
   }
 
+  // === 032: アーカイブ機能（decks/cards に archived カラム）===
+  // 既存ユーザー・新規インストール両対応。card_contents 分離マイグレーションで
+  // cards が再作成される可能性があるため、ここで table_info を取り直して判定する。
+  const deckColsArchive = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!deckColsArchive.some((c) => c.name === 'archived')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;`);
+  }
+  const cardColsArchive = await db.getAllAsync<{ name: string }>('PRAGMA table_info(cards)');
+  if (!cardColsArchive.some((c) => c.name === 'archived')) {
+    await db.execAsync(`ALTER TABLE cards ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

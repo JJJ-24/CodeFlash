@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { deleteImagesInBlocks } from '@/lib/image';
 import type { Block, Card } from '@/types';
-import { generateId, localDateStr, todayLocalRange } from './utils';
+import { activeCardCond, generateId, localDateStr, todayLocalRange } from './utils';
 import { addTagToCard, getTagsByCardId } from './tags';
 
 type RawCard = {
@@ -14,11 +14,12 @@ type RawCard = {
   frontContent: string;
   backContent: string;
   memoContent: string;
+  archived: number;
 };
 
 // cards + card_contents を JOIN して取得する共通 SELECT 句
 const CARD_SELECT = `
-  SELECT c.id, c.deckId, c.sortOrder, c.createdAt, c.updatedAt,
+  SELECT c.id, c.deckId, c.sortOrder, c.createdAt, c.updatedAt, c.archived,
          COALESCE(cc.frontContent, '[]') AS frontContent,
          COALESCE(cc.backContent,  '[]') AS backContent,
          COALESCE(cc.memoContent,  '[]') AS memoContent
@@ -44,6 +45,7 @@ function toCard(raw: RawCard): Card {
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     sortOrder: raw.sortOrder,
+    archived: !!raw.archived,
   };
 }
 
@@ -194,7 +196,31 @@ export async function createCard(
     'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
     [data.deckId, now, data.deckId]
   );
-  return { id, sortOrder, createdAt: now, updatedAt: now, ...data };
+  return { id, sortOrder, createdAt: now, updatedAt: now, archived: false, ...data };
+}
+
+/** カードのアーカイブ状態を更新する */
+export async function setCardArchived(db: SQLiteDatabase, id: string, archived: boolean): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync('UPDATE cards SET archived = ?, updatedAt = ? WHERE id = ?', [archived ? 1 : 0, now, id]);
+}
+
+/** 複数カードのアーカイブ状態を一括更新する（選択モードからの一括操作用） */
+export async function setCardsArchived(db: SQLiteDatabase, cardIds: string[], archived: boolean): Promise<void> {
+  if (cardIds.length === 0) return;
+  const CHUNK = 500;
+  const now = new Date().toISOString();
+  const value = archived ? 1 : 0;
+  await db.withTransactionAsync(async () => {
+    for (let i = 0; i < cardIds.length; i += CHUNK) {
+      const chunk = cardIds.slice(i, i + CHUNK);
+      const placeholders = chunk.map(() => '?').join(',');
+      await db.runAsync(
+        `UPDATE cards SET archived = ?, updatedAt = ? WHERE id IN (${placeholders})`,
+        [value, now, ...chunk]
+      );
+    }
+  });
 }
 
 export async function updateCard(
@@ -227,7 +253,7 @@ export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: strin
 export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> {
   const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM cards WHERE createdAt >= ? AND createdAt < ?`,
+    `SELECT COUNT(*) as count FROM cards WHERE createdAt >= ? AND createdAt < ? AND ${activeCardCond('')}`,
     [start, end]
   );
   return row?.count ?? 0;
@@ -237,7 +263,7 @@ export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> 
 export async function getTodayCreatedCountPerDeck(db: SQLiteDatabase): Promise<Record<string, number>> {
   const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ deckId: string; count: number }>(
-    `SELECT deckId, COUNT(*) as count FROM cards WHERE createdAt >= ? AND createdAt < ? GROUP BY deckId`,
+    `SELECT deckId, COUNT(*) as count FROM cards WHERE createdAt >= ? AND createdAt < ? AND ${activeCardCond('')} GROUP BY deckId`,
     [start, end]
   );
   return Object.fromEntries(rows.map(r => [r.deckId, r.count]));
@@ -250,7 +276,7 @@ export async function getTodayCreatedCountPerTag(db: SQLiteDatabase): Promise<Re
     `SELECT ct.tagId, COUNT(*) as count
      FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE c.createdAt >= ? AND c.createdAt < ?
+     WHERE c.createdAt >= ? AND c.createdAt < ? AND ${activeCardCond('c')}
      GROUP BY ct.tagId`,
     [start, end]
   );
@@ -261,7 +287,7 @@ export async function getTodayCreatedCountPerTag(db: SQLiteDatabase): Promise<Re
 export async function getTodayCreatedCountByDeck(db: SQLiteDatabase, deckId: string): Promise<number> {
   const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ?`,
+    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ? AND ${activeCardCond('')}`,
     [deckId, start, end]
   );
   return row?.count ?? 0;
@@ -271,7 +297,7 @@ export async function getTodayCreatedCountByDeck(db: SQLiteDatabase, deckId: str
 export async function getTodayCreatedCardIdsByDeckId(db: SQLiteDatabase, deckId: string): Promise<string[]> {
   const { start, end } = todayLocalRange();
   const rows = await db.getAllAsync<{ id: string }>(
-    `SELECT id FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ? ORDER BY sortOrder ASC`,
+    `SELECT id FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ? AND ${activeCardCond('')} ORDER BY sortOrder ASC`,
     [deckId, start, end]
   );
   return rows.map(r => r.id);
@@ -283,7 +309,7 @@ export async function getTodayCreatedCardIdsByTagId(db: SQLiteDatabase, tagId: s
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT c.id FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE ct.tagId = ? AND c.createdAt >= ? AND c.createdAt < ?
+     WHERE ct.tagId = ? AND c.createdAt >= ? AND c.createdAt < ? AND ${activeCardCond('c')}
      ORDER BY c.sortOrder ASC`,
     [tagId, start, end]
   );
@@ -294,7 +320,7 @@ export async function getTodayCreatedCardIdsByTagId(db: SQLiteDatabase, tagId: s
 export async function getUnlearnedCountPerDeck(db: SQLiteDatabase): Promise<Record<string, number>> {
   const rows = await db.getAllAsync<{ deckId: string; count: number }>(
     `SELECT c.deckId, COUNT(*) as count FROM cards c
-     WHERE c.id NOT IN (SELECT cardId FROM reviews)
+     WHERE c.id NOT IN (SELECT cardId FROM reviews) AND ${activeCardCond('c')}
      GROUP BY c.deckId`
   );
   return Object.fromEntries(rows.map(r => [r.deckId, r.count]));
@@ -306,7 +332,7 @@ export async function getUnlearnedCountPerTag(db: SQLiteDatabase): Promise<Recor
     `SELECT ct.tagId, COUNT(*) as count
      FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE c.id NOT IN (SELECT cardId FROM reviews)
+     WHERE c.id NOT IN (SELECT cardId FROM reviews) AND ${activeCardCond('c')}
      GROUP BY ct.tagId`
   );
   return Object.fromEntries(rows.map(r => [r.tagId, r.count]));
@@ -315,7 +341,7 @@ export async function getUnlearnedCountPerTag(db: SQLiteDatabase): Promise<Recor
 /** 未学習カード数（デッキ単体） */
 export async function getUnlearnedCountByDeck(db: SQLiteDatabase, deckId: string): Promise<number> {
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND id NOT IN (SELECT cardId FROM reviews)`,
+    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND id NOT IN (SELECT cardId FROM reviews) AND ${activeCardCond('')}`,
     [deckId]
   );
   return row?.count ?? 0;
@@ -324,7 +350,7 @@ export async function getUnlearnedCountByDeck(db: SQLiteDatabase, deckId: string
 /** 未学習カードID一覧（デッキ単体） */
 export async function getUnlearnedCardIdsByDeckId(db: SQLiteDatabase, deckId: string): Promise<string[]> {
   const rows = await db.getAllAsync<{ id: string }>(
-    `SELECT id FROM cards WHERE deckId = ? AND id NOT IN (SELECT cardId FROM reviews) ORDER BY sortOrder ASC`,
+    `SELECT id FROM cards WHERE deckId = ? AND id NOT IN (SELECT cardId FROM reviews) AND ${activeCardCond('')} ORDER BY sortOrder ASC`,
     [deckId]
   );
   return rows.map(r => r.id);
@@ -335,7 +361,7 @@ export async function getUnlearnedCardIdsByTagId(db: SQLiteDatabase, tagId: stri
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT c.id FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE ct.tagId = ? AND c.id NOT IN (SELECT cardId FROM reviews)
+     WHERE ct.tagId = ? AND c.id NOT IN (SELECT cardId FROM reviews) AND ${activeCardCond('c')}
      ORDER BY c.sortOrder ASC`,
     [tagId]
   );

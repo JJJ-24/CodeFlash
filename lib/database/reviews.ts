@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Review } from '@/types';
-import { localDateStr, todayISO, todayLocalRange } from './utils';
+import { activeCardCond, localDateStr, todayISO, todayLocalRange } from './utils';
 
 /** タグIDをキー、due 枚数を値とするマップを一括取得 */
 export async function getDueCountPerTag(
@@ -13,7 +13,7 @@ export async function getDueCountPerTag(
      FROM card_tags ct
      JOIN cards c ON ct.cardId = c.id
      LEFT JOIN reviews r ON r.cardId = c.id
-     WHERE r.cardId IS NULL OR r.nextReviewDate < ?
+     WHERE (r.cardId IS NULL OR r.nextReviewDate < ?) AND ${activeCardCond('c')}
      GROUP BY ct.tagId`,
     [end]
   );
@@ -29,7 +29,7 @@ export async function getTodayReviewedCountPerDeck(
     `SELECT c.deckId, COUNT(*) as count
      FROM reviews r
      JOIN cards c ON r.cardId = c.id
-     WHERE r.lastReviewDate >= ? AND r.lastReviewDate < ?
+     WHERE r.lastReviewDate >= ? AND r.lastReviewDate < ? AND ${activeCardCond('c')}
      GROUP BY c.deckId`,
     [start, end]
   );
@@ -46,7 +46,7 @@ export async function getTodayReviewedCountPerTag(
      FROM reviews r
      JOIN cards c ON r.cardId = c.id
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE r.lastReviewDate >= ? AND r.lastReviewDate < ?
+     WHERE r.lastReviewDate >= ? AND r.lastReviewDate < ? AND ${activeCardCond('c')}
      GROUP BY ct.tagId`,
     [start, end]
   );
@@ -62,7 +62,7 @@ export async function getDueCountPerDeck(
     `SELECT c.deckId, COUNT(*) as count
      FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE (r.cardId IS NULL OR r.nextReviewDate < ?)
+     WHERE (r.cardId IS NULL OR r.nextReviewDate < ?) AND ${activeCardCond('c')}
      GROUP BY c.deckId`,
     [end]
   );
@@ -76,6 +76,8 @@ export async function getTotalCardCountPerTag(
   const rows = await db.getAllAsync<{ tagId: string; count: number }>(
     `SELECT ct.tagId, COUNT(*) as count
      FROM card_tags ct
+     JOIN cards c ON ct.cardId = c.id
+     WHERE ${activeCardCond('c')}
      GROUP BY ct.tagId`
   );
   return Object.fromEntries(rows.map((r) => [r.tagId, r.count]));
@@ -91,7 +93,7 @@ export async function getDueCountByDeck(
     `SELECT COUNT(*) as count
      FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE c.deckId = ? AND (r.cardId IS NULL OR r.nextReviewDate < ?)`,
+     WHERE c.deckId = ? AND (r.cardId IS NULL OR r.nextReviewDate < ?) AND ${activeCardCond('c')}`,
     [deckId, end]
   );
   return row?.count ?? 0;
@@ -107,7 +109,7 @@ export async function getTodayReviewedCountByDeck(
     `SELECT COUNT(*) as count
      FROM reviews r
      JOIN cards c ON r.cardId = c.id
-     WHERE c.deckId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ?`,
+     WHERE c.deckId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ? AND ${activeCardCond('c')}`,
     [deckId, start, end]
   );
   return row?.count ?? 0;
@@ -173,7 +175,7 @@ export async function getAllCardIdsByDeckId(
   deckId: string
 ): Promise<string[]> {
   const rows = await db.getAllAsync<{ id: string }>(
-    `SELECT c.id FROM cards c WHERE c.deckId = ? ORDER BY c.sortOrder ASC`,
+    `SELECT c.id FROM cards c WHERE c.deckId = ? AND ${activeCardCond('c')} ORDER BY c.sortOrder ASC`,
     [deckId]
   );
   return rows.map((r) => r.id);
@@ -188,7 +190,7 @@ export async function getTodayReviewedCardIdsByDeckId(
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT c.id FROM cards c
      JOIN reviews r ON c.id = r.cardId
-     WHERE c.deckId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ?
+     WHERE c.deckId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ? AND ${activeCardCond('c')}
      ORDER BY c.sortOrder ASC`,
     [deckId, start, end]
   );
@@ -208,7 +210,7 @@ export async function getDueCardIdsByDeckId(
     `SELECT c.id FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
      WHERE c.deckId = ?
-       AND (r.cardId IS NULL OR r.nextReviewDate < ?)
+       AND (r.cardId IS NULL OR r.nextReviewDate < ?) AND ${activeCardCond('c')}
      ORDER BY c.sortOrder ASC`,
     [deckId, end]
   );
@@ -228,7 +230,7 @@ export async function getDueCardIdsByTagId(
      JOIN card_tags ct ON c.id = ct.cardId
      LEFT JOIN reviews r ON c.id = r.cardId
      WHERE ct.tagId = ?
-       AND (r.cardId IS NULL OR r.nextReviewDate < ?)
+       AND (r.cardId IS NULL OR r.nextReviewDate < ?) AND ${activeCardCond('c')}
      ORDER BY c.sortOrder ASC`,
     [tagId, end]
   );
@@ -243,7 +245,7 @@ export async function getAllCardIdsByTagId(
   const rows = await db.getAllAsync<{ id: string }>(
     `SELECT c.id FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
-     WHERE ct.tagId = ?
+     WHERE ct.tagId = ? AND ${activeCardCond('c')}
      ORDER BY c.sortOrder ASC`,
     [tagId]
   );
@@ -260,7 +262,7 @@ export async function getTodayReviewedCardIdsByTagId(
     `SELECT c.id FROM cards c
      JOIN card_tags ct ON c.id = ct.cardId
      JOIN reviews r ON c.id = r.cardId
-     WHERE ct.tagId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ?
+     WHERE ct.tagId = ? AND r.lastReviewDate >= ? AND r.lastReviewDate < ? AND ${activeCardCond('c')}
      ORDER BY c.sortOrder ASC`,
     [tagId, start, end]
   );
@@ -271,7 +273,10 @@ export async function getTodayReviewedCardIdsByTagId(
 export async function getTodayReviewedCount(db: SQLiteDatabase): Promise<number> {
   const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM reviews WHERE lastReviewDate >= ? AND lastReviewDate < ?`,
+    `SELECT COUNT(*) as count
+     FROM reviews r
+     JOIN cards c ON r.cardId = c.id
+     WHERE r.lastReviewDate >= ? AND r.lastReviewDate < ? AND ${activeCardCond('c')}`,
     [start, end]
   );
   return row?.count ?? 0;
@@ -287,9 +292,10 @@ export async function getUpcomingSchedule(
   const endISO = end.toISOString().slice(0, 10);
 
   const rows = await db.getAllAsync<{ date: string; count: number }>(
-    `SELECT substr(nextReviewDate, 1, 10) as date, COUNT(*) as count
-     FROM reviews
-     WHERE substr(nextReviewDate, 1, 10) BETWEEN ? AND ?
+    `SELECT substr(r.nextReviewDate, 1, 10) as date, COUNT(*) as count
+     FROM reviews r
+     JOIN cards c ON r.cardId = c.id
+     WHERE substr(r.nextReviewDate, 1, 10) BETWEEN ? AND ? AND ${activeCardCond('c')}
      GROUP BY date
      ORDER BY date ASC`,
     [today, endISO]
@@ -303,7 +309,7 @@ export async function getTodayDueCount(db: SQLiteDatabase): Promise<number> {
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT COUNT(*) as count FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE r.cardId IS NULL OR r.nextReviewDate < ?`,
+     WHERE (r.cardId IS NULL OR r.nextReviewDate < ?) AND ${activeCardCond('c')}`,
     [end]
   );
   return row?.count ?? 0;
@@ -314,10 +320,10 @@ export async function getLearnedUnlearnedCount(
   db: SQLiteDatabase
 ): Promise<{ learned: number; unlearned: number }> {
   const learnedRow = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM reviews`
+    `SELECT COUNT(*) as count FROM reviews r JOIN cards c ON r.cardId = c.id WHERE ${activeCardCond('c')}`
   );
   const unlearnedRow = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM cards WHERE id NOT IN (SELECT cardId FROM reviews)`
+    `SELECT COUNT(*) as count FROM cards WHERE id NOT IN (SELECT cardId FROM reviews) AND ${activeCardCond('')}`
   );
   return {
     learned: learnedRow?.count ?? 0,
@@ -341,6 +347,7 @@ export async function getAllGradeDistribution(
        COUNT(*) as count
      FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
+     WHERE ${activeCardCond('c')}
      GROUP BY category`
   );
   const result = { again: 0, hard: 0, normal: 0, easy: 0, unlearned: 0 };
@@ -367,7 +374,7 @@ export async function getDeckGradeDistribution(
        COUNT(*) as count
      FROM cards c
      LEFT JOIN reviews r ON c.id = r.cardId
-     WHERE c.deckId = ?
+     WHERE c.deckId = ? AND ${activeCardCond('c')}
      GROUP BY category`,
     [deckId]
   );
@@ -390,6 +397,7 @@ export async function getDeckMasteryList(
      FROM cards c
      LEFT JOIN reviews r ON r.cardId = c.id
      JOIN decks d ON c.deckId = d.id
+     WHERE c.archived = 0 AND d.archived = 0
      GROUP BY c.deckId
      ORDER BY d.sortOrder ASC`
   );
@@ -452,7 +460,7 @@ export async function getWeakCards(
      JOIN card_contents cc ON c.id = cc.cardId
      JOIN decks d ON c.deckId = d.id
      JOIN reviews r ON c.id = r.cardId
-     WHERE r.fsrsLapses > 0
+     WHERE r.fsrsLapses > 0 AND c.archived = 0 AND d.archived = 0
      ORDER BY r.fsrsLapses DESC, r.easeFactor ASC
      LIMIT ?`,
     [limit]

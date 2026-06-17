@@ -287,7 +287,8 @@ export default function StudyScreen() {
     }
   }
 
-  const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
+  // アーカイブ済みデッキは学習対象から除外する
+  const sortedDecks = useMemo(() => sortDecks(decks.filter((d) => !d.archived), deckSortOrder), [decks, deckSortOrder]);
 
   const sortedTags = useMemo(() => {
     if (tagSortOrder === 'name') return [...tags].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
@@ -340,7 +341,7 @@ export default function StudyScreen() {
   }, [visibleTags]);
 
   const totalAll = activeTab === 'decks'
-    ? decks.reduce((s, d) => s + d.cardCount, 0)
+    ? decks.filter((d) => !d.archived).reduce((s, d) => s + d.cardCount, 0)
     : sumValues(totalPerTag);
   const totalLearned = activeTab === 'decks' ? sumValues(todayReviewedPerDeck) : sumValues(todayReviewedPerTag);
   const totalReview = activeTab === 'decks' ? sumValues(dueCounts) : sumValues(tagDueCounts);

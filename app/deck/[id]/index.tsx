@@ -29,6 +29,7 @@ import {
   getUnlearnedCardIdsByDeckId,
   getUnlearnedCountByDeck,
   moveCardsToDeck,
+  setCardsArchived,
   updateCardSortOrders,
 } from '@/lib/database/cards';
 import {
@@ -94,6 +95,7 @@ export default function DeckDetailScreen() {
   const cardSortOrderRef = useRef(cardSortOrder);
   const selectedFilterRef = useRef(selectedFilter);
   const imageBlockLabelRef = useRef('');
+  const deckArchivedRef = useRef(false);
   const confirmDeleteCardRef = useRef<(card: Card) => void>(() => {});
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
@@ -126,6 +128,7 @@ export default function DeckDetailScreen() {
     { key: 'M',     descKey: 'shortcut.moveSelected' },
     { key: 'D',     descKey: 'shortcut.deleteSelected' },
     { key: 'C',     descKey: 'shortcut.duplicateSelected' },
+    { key: 'E',     descKey: 'shortcut.archiveSelected' },
     { key: 'S',     descKey: 'shortcut.exitSelect' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
@@ -293,6 +296,22 @@ export default function DeckDetailScreen() {
     }
   }
 
+  async function handleArchiveSelected() {
+    if (selectedCardIds.size === 0 || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const ids = Array.from(selectedCardIds);
+      // 選択がすべてアーカイブ済みなら解除、それ以外はアーカイブ
+      const selCards = deckCards.filter((c) => selectedCardIds.has(c.id));
+      const next = !(selCards.length > 0 && selCards.every((c) => c.archived));
+      await setCardsArchived(db, ids, next);
+      exitSelectionMode();
+      await loadCards();
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   function handleMoveToDeck(targetDeck: Deck) {
     setShowDeckPicker(false);
     setPendingMoveDeck(targetDeck);
@@ -324,6 +343,7 @@ export default function DeckDetailScreen() {
 
   const renderItem = useCallback(({ item, drag }: RenderItemParams<Card>) => {
     const preview = getCardPreview(item.frontContent, imageBlockLabelRef.current);
+    const effectiveArchived = item.archived || deckArchivedRef.current;
     const isSelected = selectedCardIdsRef.current.has(item.id);
     const isFocused = item.id === focusedCardIdRef.current;
     const isSelMode = selectionModeRef.current;
@@ -344,6 +364,7 @@ export default function DeckDetailScreen() {
           style={[
             styles.cardItem,
             { backgroundColor: theme.colors.surface },
+            effectiveArchived && { opacity: 0.55 },
             isSelMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
             isSelMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
             !isSelMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
@@ -380,6 +401,9 @@ export default function DeckDetailScreen() {
           <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {preview || t('card.noText')}
           </Text>
+          {effectiveArchived && (
+            <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+          )}
           {!isSelMode && (
             <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
               {isPro && (
@@ -418,10 +442,15 @@ export default function DeckDetailScreen() {
   cardSortOrderRef.current = cardSortOrder;
   selectedFilterRef.current = selectedFilter;
   imageBlockLabelRef.current = t('card.imageBlock');
+  // デッキ自体がアーカイブ済みなら配下カードも実質的に学習対象外なのでグレー表示する
+  deckArchivedRef.current = !!deck?.archived;
 
   if (!deck) return null;
 
   confirmDeleteCardRef.current = confirmDeleteCard;
+
+  const selectedCardsList = deckCards.filter((c) => selectedCardIds.has(c.id));
+  const allSelectedArchived = selectedCardsList.length > 0 && selectedCardsList.every((c) => c.archived);
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
 
@@ -540,6 +569,7 @@ export default function DeckDetailScreen() {
             else if (k === 'm') { if (selectedCardIds.size > 0 && !isProcessing) setShowDeckPicker(true); }
             else if (k === 'd') { if (selectedCardIds.size > 0 && !isProcessing) handleDeleteSelected(); }
             else if (k === 'c') { if (selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); }
+            else if (k === 'e') { if (selectedCardIds.size > 0 && !isProcessing) handleArchiveSelected(); }
             else if (k === 's') { exitSelectionMode(); }
             return;
           }
@@ -810,6 +840,14 @@ export default function DeckDetailScreen() {
               disabled={selectedCardIds.size === 0 || isProcessing}
             >
               <Ionicons name="trash-outline" size={22} color="#FFF" />
+            </Pressable>
+            <Pressable
+              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={handleArchiveSelected}
+              disabled={selectedCardIds.size === 0 || isProcessing}
+              accessibilityLabel={allSelectedArchived ? t('common.unarchive') : t('common.archive')}
+            >
+              <Ionicons name={allSelectedArchived ? 'archive' : 'archive-outline'} size={22} color="#FFF" />
             </Pressable>
             <Pressable
               style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}

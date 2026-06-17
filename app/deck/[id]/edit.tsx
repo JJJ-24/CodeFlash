@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS } from '@/lib/theme';
 import type { DeckIconName } from '@/lib/deckIcons';
-import { deleteDeck, updateDeck } from '@/lib/database/decks';
+import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
 
 export default function EditDeckScreen() {
@@ -39,6 +40,7 @@ export default function EditDeckScreen() {
   const [description, setDescription] = useState(deck?.description ?? '');
   const [iconName, setIconName] = useState<DeckIconName | null>((deck?.iconName as DeckIconName | null) ?? null);
   const [colorHex, setColorHex] = useState<string | null>(deck?.colorHex ?? null);
+  const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -51,7 +53,10 @@ export default function EditDeckScreen() {
     setSaving(true);
     try {
       await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex });
-      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex });
+      if (archived !== deck.archived) {
+        await setDeckArchived(db, id, archived);
+      }
+      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -75,7 +80,8 @@ export default function EditDeckScreen() {
   const isDirty = name.trim() !== deck.name
     || description.trim() !== (deck.description ?? '')
     || iconName !== (deck.iconName ?? null)
-    || colorHex !== (deck.colorHex ?? null);
+    || colorHex !== (deck.colorHex ?? null)
+    || archived !== deck.archived;
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }
@@ -206,6 +212,25 @@ export default function EditDeckScreen() {
               )}
             </View>
           </View>
+
+          <View style={styles.field}>
+            <View style={[styles.archiveRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('deck.archive')}
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('deck.archiveHint')}
+                </Text>
+              </View>
+              <Switch
+                value={archived}
+                onValueChange={setArchived}
+                trackColor={{ true: theme.colors.primary }}
+                thumbColor="#FFF"
+              />
+            </View>
+          </View>
         </ScrollView>
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
@@ -307,6 +332,15 @@ const styles = StyleSheet.create({
   },
   previewName: { fontWeight: '600' },
   previewDesc: {},
+  archiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
   langRow: { flexDirection: 'row', gap: 10 },
   langBtn: {
     flex: 1,

@@ -15,6 +15,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -102,6 +103,9 @@ interface Props {
   onDeleteCard?: () => void;
   /** モード（edit / sort / preview）が変わったときに通知する */
   onModeChange?: (mode: EditorMode) => void;
+  /** カードのアーカイブ状態。onArchivedChange を渡したときだけ末尾にトグルを表示する（編集時のみ） */
+  archived?: boolean;
+  onArchivedChange?: (v: boolean) => void;
   ref?: Ref<BlockEditorRef>;
 }
 
@@ -118,6 +122,8 @@ export function BlockEditor({
   onCancel,
   onDeleteCard,
   onModeChange,
+  archived,
+  onArchivedChange,
   ref,
 }: Props) {
   const { t } = useTranslation();
@@ -802,6 +808,32 @@ export function BlockEditor({
               </View>
             </View>
           )}
+
+          {/* アーカイブトグル（編集時のみ）。タグ・デッキと並ぶカード単位のメタ情報 */}
+          {onArchivedChange && (
+            <View style={[styles.archiveRow, { borderColor: theme.colors.inputBorder, backgroundColor: theme.colors.surface }]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text
+                  style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t("deck.archive")}
+                </Text>
+                <Text
+                  style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t("deck.archiveHint")}
+                </Text>
+              </View>
+              <Switch
+                value={!!archived}
+                onValueChange={onArchivedChange}
+                trackColor={{ true: theme.colors.primary }}
+                thumbColor="#FFF"
+              />
+            </View>
+          )}
         </>
       )}
 
@@ -1195,6 +1227,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  archiveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   deckName: { fontWeight: "600" },
   validationError: { textAlign: "center" },

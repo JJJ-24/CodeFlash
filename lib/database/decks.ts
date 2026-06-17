@@ -3,12 +3,27 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Deck } from '@/types';
 import { generateId } from './utils';
 
+// SQLite は archived を 0/1 の数値で返すため boolean へ正規化する
+type RawDeck = Omit<Deck, 'archived'> & { archived: number };
+
+function toDeck(raw: RawDeck): Deck {
+  return { ...raw, archived: !!raw.archived };
+}
+
 export async function getAllDecks(db: SQLiteDatabase): Promise<Deck[]> {
-  return db.getAllAsync<Deck>('SELECT * FROM decks ORDER BY sortOrder ASC');
+  const rows = await db.getAllAsync<RawDeck>('SELECT * FROM decks ORDER BY sortOrder ASC');
+  return rows.map(toDeck);
 }
 
 export async function getDeckById(db: SQLiteDatabase, id: string): Promise<Deck | null> {
-  return db.getFirstAsync<Deck>('SELECT * FROM decks WHERE id = ?', [id]);
+  const row = await db.getFirstAsync<RawDeck>('SELECT * FROM decks WHERE id = ?', [id]);
+  return row ? toDeck(row) : null;
+}
+
+/** デッキのアーカイブ状態を更新する */
+export async function setDeckArchived(db: SQLiteDatabase, id: string, archived: boolean): Promise<void> {
+  const now = new Date().toISOString();
+  await db.runAsync('UPDATE decks SET archived = ?, updatedAt = ? WHERE id = ?', [archived ? 1 : 0, now, id]);
 }
 
 export async function createDeck(
@@ -34,6 +49,7 @@ export async function createDeck(
     updatedAt: now,
     iconName,
     colorHex,
+    archived: false,
     name: data.name,
     description: data.description,
     language: data.language,

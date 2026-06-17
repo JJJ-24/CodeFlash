@@ -13,7 +13,7 @@ import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { deleteCard, getCardById, updateCard } from '@/lib/database/cards';
+import { deleteCard, getCardById, setCardArchived, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
 import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
@@ -43,6 +43,7 @@ export default function EditCardScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>('edit');
+  const [archived, setArchived] = useState(false);
   const initialSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function EditCardScreen() {
       setCard(loaded);
       const tagIdList = tags.map((t) => t.id);
       setInitialTagIds(tagIdList);
+      if (loaded) setArchived(loaded.archived);
       if (loaded) {
         initialSnapshotRef.current = JSON.stringify({
           frontBlocks: loaded.frontContent,
@@ -83,11 +85,15 @@ export default function EditCardScreen() {
         ...toRemove.map((tagId) => removeTagFromCard(db, cardId, tagId)),
       ]);
 
+      if (archived !== card.archived) {
+        await setCardArchived(db, cardId, archived);
+      }
       updateStore({
         ...card,
         frontContent: data.frontBlocks,
         backContent: data.backBlocks,
         memoContent: data.memoBlocks,
+        archived,
       });
       router.back();
     } finally {
@@ -98,7 +104,8 @@ export default function EditCardScreen() {
   function handleClose() {
     const current = editorRef.current?.getData();
     const snapshot = initialSnapshotRef.current;
-    if (!current || !snapshot || JSON.stringify(current) === snapshot) {
+    const archivedChanged = !!card && archived !== card.archived;
+    if (!archivedChanged && (!current || !snapshot || JSON.stringify(current) === snapshot)) {
       editorRef.current?.prepareForNavigation();
       router.back();
       return;
@@ -180,6 +187,8 @@ export default function EditCardScreen() {
           onCancel={handleClose}
           onDeleteCard={confirmDelete}
           onModeChange={setEditorMode}
+          archived={archived}
+          onArchivedChange={setArchived}
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>

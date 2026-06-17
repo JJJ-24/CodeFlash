@@ -7,7 +7,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  PixelRatio,
   Platform,
   Pressable,
   StyleSheet,
@@ -53,10 +52,11 @@ function truncate(str: string, max = 20): string {
 }
 
 function computeHeaderHeights(topInset: number, frame: { width: number; height: number }) {
+  // React Navigation のヘッダーと同じ算出：total（ステータスバー込み）から
+  // ステータスバー（insets.top）を引いた残りがコンテンツ行の高さ。
+  // 下端基準でこの高さの行を置き、中身を中央寄せするとタブヘッダーのタイトル/アイコン位置と一致する。
   const total = getDefaultHeaderHeight(frame, false, topInset);
-  const hasDynamicIsland = Platform.OS === 'ios' && topInset > 50;
-  const statusBarHeight = hasDynamicIsland ? topInset - (5 + 1 / PixelRatio.get()) : topInset;
-  return { total, content: total - statusBarHeight };
+  return { total, content: total - topInset };
 }
 
 function DeckCard({
@@ -84,6 +84,7 @@ function DeckCard({
       style={[
         styles.card,
         { backgroundColor: theme.colors.surface },
+        deck.archived && { opacity: 0.55 },
         isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
       ]}
       onPress={onPress}
@@ -106,6 +107,9 @@ function DeckCard({
         ) : null}
       </View>
       <View style={styles.cardActions}>
+        {deck.archived && (
+          <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} style={{ marginRight: 4 }} />
+        )}
         <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E', marginRight: 8 }]}>
           <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{deck.cardCount}</Text>
         </View>
@@ -134,11 +138,14 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, setDecks, removeDeck, reorderDecks } = useDeckStore();
-  const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled } = useSettingsStore();
+  const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
   const { width } = useWindowDimensions();
-  const blockWidth = (width - 32) / 4.1;
+  // 学習/統計タブの1ブロック実幅に一致させる（コンテナ余白16・行 marginHorizontal:-2・各ブロック margin:2・gap:4 の4列構成）
+  const blockWidth = (width - 56) / 4;
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
-  const [selectedFilter, setSelectedFilter] = useState<'all'>('all');
+  // ホームのデッキ絞り込み（active=有効デッキのみ / all=アーカイブ含む全デッキ）。最後の選択を永続化。
+  const selectedFilter = lastHomeFilter;
+  const setSelectedFilter = setLastHomeFilter;
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeckListInfo, setShowDeckListInfo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -191,7 +198,9 @@ export default function HomeScreen() {
 
   const insets = useSafeAreaInsets();
   const frame = useSafeAreaFrame();
-  const headerRef = useRef(computeHeaderHeights(insets.top, frame));
+  // safe area / frame に追従させる（useRef でマウント時固定すると初期 inset 未解決の値を掴み、
+  // タブヘッダーと高さがズレる原因になる）
+  const headerHeights = useMemo(() => computeHeaderHeights(insets.top, frame), [insets.top, frame]);
 
   async function handleDelete(id: string) {
     await deleteDeck(db, id);
@@ -206,6 +215,11 @@ export default function HomeScreen() {
   }
 
   const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
+  const activeDeckCount = useMemo(() => decks.filter((d) => !d.archived).length, [decks]);
+  const displayedDecks = useMemo(
+    () => (selectedFilter === 'active' ? sortedDecks.filter((d) => !d.archived) : sortedDecks),
+    [sortedDecks, selectedFilter]
+  );
 
   function cycleSortOrder() {
     const idx = SORT_OPTIONS.findIndex((o) => o.key === deckSortOrder);
@@ -213,11 +227,12 @@ export default function HomeScreen() {
     setDeckSortOrder(next.key);
   }
 
-  const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, listRef, moveFocus: moveDeckFocus } = useListNavigation(sortedDecks, (deck) => deck.id);
+  const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, listRef, moveFocus: moveDeckFocus } = useListNavigation(displayedDecks, (deck) => deck.id);
 
   const StatsHeader = (
     <View style={styles.statsHeader}>
       <View style={styles.statsRow}>
+        {/* すべて（左端・青数字、他画面と統一） */}
         <Pressable
           style={[
             styles.statItem,
@@ -228,6 +243,18 @@ export default function HomeScreen() {
         >
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(decks.length).length) }]}>{decks.length}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
+        </Pressable>
+        {/* 有効（既定選択・グレー数字。どちらを開いているかは青の選択枠で示す） */}
+        <Pressable
+          style={[
+            styles.statItem,
+            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+            selectedFilter === 'active' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
+          ]}
+          onPress={() => setSelectedFilter('active')}
+        >
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.textSecondary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeDeckCount).length) }]}>{activeDeckCount}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.active')}</Text>
         </Pressable>
       </View>
       <View style={styles.sectionRow}>
@@ -280,12 +307,12 @@ export default function HomeScreen() {
     } else if (k === 'k') {
       moveDeckFocus('prev');
     } else if (k === 'p') {
-      if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-        router.push({ pathname: '/deck/[id]/edit', params: { id: sortedDecks[focusedDeckIndex].id } });
+      if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+        router.push({ pathname: '/deck/[id]/edit', params: { id: displayedDecks[focusedDeckIndex].id } });
       }
     } else if (k === 'd') {
-      if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-        setPendingDeleteDeck(sortedDecks[focusedDeckIndex]);
+      if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+        setPendingDeleteDeck(displayedDecks[focusedDeckIndex]);
         setShowDeleteModal(true);
       }
     } else if (k === 'n') {
@@ -299,14 +326,14 @@ export default function HomeScreen() {
     } else if (key === ',') {
       router.navigate('/(tabs)/settings');
     }
-  }, [keyboardShortcutsEnabled, cycleSortOrder, moveDeckFocus, focusedDeckIndex, sortedDecks, router, t, handleDelete]);
+  }, [keyboardShortcutsEnabled, cycleSortOrder, moveDeckFocus, focusedDeckIndex, displayedDecks, router, t, handleDelete]);
 
   const handleSubmitEditing = useCallback(() => {
     if (!keyboardShortcutsEnabled) return;
-    if (focusedDeckIndex !== null && sortedDecks[focusedDeckIndex]) {
-      router.push({ pathname: '/deck/[id]', params: { id: sortedDecks[focusedDeckIndex].id } });
+    if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+      router.push({ pathname: '/deck/[id]', params: { id: displayedDecks[focusedDeckIndex].id } });
     }
-  }, [keyboardShortcutsEnabled, focusedDeckIndex, sortedDecks, router]);
+  }, [keyboardShortcutsEnabled, focusedDeckIndex, displayedDecks, router]);
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -316,19 +343,20 @@ export default function HomeScreen() {
         onSubmitEditing={handleSubmitEditing}
         onBlur={onInputBlur}
       />
-      <View style={{ height: headerRef.current.total, backgroundColor: theme.colors.surface }}>
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerRef.current.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
           <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
             <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
           </Pressable>
-          <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', pointerEvents: 'none' }}>
+          <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
             <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('tabs.home')}
             </Text>
           </View>
           <View style={{ flex: 1 }} />
           {keyboardShortcutsEnabled && (
-            <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingHorizontal: 8 }}>
+            // iPad はタブヘッダー（ナビゲーションヘッダー）の右余白が広く、ホームだけ右寄りに見えるため少し左へ寄せる
+            <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }}>
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             </Pressable>
           )}
@@ -343,10 +371,14 @@ export default function HomeScreen() {
           <View style={styles.emptyContainer}>
             <EmptyState icon="layers-outline" title={t('home.empty')} subtitle={t('home.emptySub')} />
           </View>
+        ) : displayedDecks.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <EmptyState icon="archive-outline" title={t('home.noActiveDecks')} subtitle={t('home.noActiveDecksSub')} />
+          </View>
         ) : (
           <DraggableFlatList
             ref={listRef}
-            data={sortedDecks}
+            data={displayedDecks}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             contentInsetAdjustmentBehavior="never"
@@ -366,8 +398,14 @@ export default function HomeScreen() {
             onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
             onDragEnd={({ data }) => {
               if (deckSortOrder !== 'manual') return;
-              reorderDecks(data);
-              updateDeckSortOrders(db, data.map((d) => d.id));
+              // 「有効」表示中はアーカイブ済みデッキが data に含まれない。
+              // 非表示デッキは元の位置に固定したまま、表示中デッキの並びだけを並べ替え結果で埋める
+              // （末尾送りを防ぎ、「すべて」に戻したときアーカイブデッキの位置が動かないようにする）。
+              const visibleIds = new Set(data.map((d) => d.id));
+              let vi = 0;
+              const full = sortedDecks.map((d) => (visibleIds.has(d.id) ? data[vi++] : d));
+              reorderDecks(full);
+              updateDeckSortOrders(db, full.map((d) => d.id));
             }}
             ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedDeckIndex(null)} />}
             renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
@@ -438,7 +476,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   fixedHeader: { paddingHorizontal: 16, paddingTop: 16 },
   statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
-  statsRow: { flexDirection: 'row', marginHorizontal: -2 },
+  statsRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },
   statItem: {
     borderRadius: 12,
     padding: 16,

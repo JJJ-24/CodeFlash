@@ -3,6 +3,8 @@
     "title": "Decks",
     "empty": "No decks yet",
     "emptySub": "Tap the + button\nto create your first deck",
+    "noActiveDecks": "No active decks",
+    "noActiveDecksSub": "Use \"All\" to show\narchived decks",
     "sortDescManual": "Long-press to reorder",
     "sortDescName": "Sorted by deck name",
     "sortDescCardCount": "Most cards first",
@@ -37,7 +39,9 @@
       "language": "Language",
       "life": "Life & Other"
     },
-    "color": "Color"
+    "color": "Color",
+    "archive": "Archive",
+    "archiveHint": "Excludes from study, stats, and notifications (not deleted)"
   },
   "study": {
     "title": "Study",
@@ -239,6 +243,10 @@
     "sec": "s",
     "learned": "Done",
     "due": "Due",
+    "active": "Active",
+    "archived": "Archived",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
     "new": "New",
     "front": "Front",
     "back": "Back",
@@ -488,6 +496,7 @@
     "moveSelected": "Move selected cards",
     "deleteSelected": "Delete selected cards",
     "duplicateSelected": "Duplicate selected cards",
+    "archiveSelected": "Toggle archive selected",
     "exitSelect": "Exit selection mode",
     "normalMode": "Normal Mode",
     "selectMode": "Selection Mode",

@@ -29,6 +29,19 @@ export function todayLocalRange(): { start: string; end: string } {
   return { start: from.toISOString(), end: to.toISOString() };
 }
 
+/**
+ * アクティブ（非アーカイブ）カードの SQL 条件式を返す。
+ * カード自身が非アーカイブ かつ 所属デッキが非アーカイブ のものだけが「学習対象」。
+ * 「将来指標」（due・新規・未学習・習熟度・学習キュー）のクエリで使う。
+ * 過去実績（review_logs / grade_logs ベースのヒートマップ・ストリーク・正答率）には使わない。
+ *
+ * @param alias カードテーブルのエイリアス（例 'c'）。エイリアス無しのときは '' を渡す。
+ */
+export function activeCardCond(alias = 'c'): string {
+  const p = alias ? `${alias}.` : '';
+  return `${p}archived = 0 AND ${p}deckId IN (SELECT id FROM decks WHERE archived = 0)`;
+}
+
 /** Date オブジェクトをローカル日付の YYYY-MM-DD 文字列に変換する */
 export function localDateStr(d: Date): string {
   const y = d.getFullYear();

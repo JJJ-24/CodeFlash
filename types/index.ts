@@ -33,6 +33,8 @@ export interface Deck {
   sortOrder: number;
   iconName: string | null;
   colorHex: string | null;
+  /** アーカイブ済み（学習サイクル・将来指標から除外）。配下カードも含めて除外される */
+  archived: boolean;
 }
 
 export interface Card {
@@ -44,6 +46,8 @@ export interface Card {
   createdAt: string;
   updatedAt: string;
   sortOrder: number;
+  /** アーカイブ済み（学習サイクル・将来指標から除外） */
+  archived: boolean;
 }
 
 export interface Tag {

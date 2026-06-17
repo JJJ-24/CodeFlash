@@ -405,6 +405,7 @@ export function CodeRunnerView({
               <SyntaxHighlightedCode
                 code={editedContent ?? block.content}
                 language={block.language}
+                wrap={false}
               />
             </ScrollView>
           </GestureDetector>

@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+// 編集画面ではドラッグ可能リスト（RNGH 配下）の中に置かれるため、RNGH の ScrollView を使わないと
+// 横スクロールのジェスチャーが外側に奪われてテーブルを横スクロールできない。
+import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
@@ -25,27 +27,34 @@ function SqlTable({ table }: { table: SqlTableResult }) {
   const theme = useTheme();
   const minColWidth = Math.max(60, Math.floor(240 / Math.max(table.columns.length, 1)));
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableWrapper}>
+    <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" style={styles.tableWrapper}>
       <View>
-        <View style={styles.tableHeader}>
-          {table.columns.map((col, i) => (
-            <Text key={i} style={[styles.tableHeaderCell, { minWidth: minColWidth, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {col}
-            </Text>
-          ))}
-        </View>
-        {table.rows.length === 0 ? (
-          <Text style={[styles.tableEmpty, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>(0 rows)</Text>
-        ) : (
-          table.rows.map((row, ri) => (
-            <View key={ri} style={[styles.tableRow, ri % 2 === 1 && styles.tableRowAlt]}>
-              {row.map((cell, ci) => (
-                <Text key={ci} style={[styles.tableCell, { minWidth: minColWidth, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {cell === null ? 'NULL' : String(cell)}
+        {/* 列ごとにセルを縦積みすることで、各列の全セル幅が「その列の最大幅」に揃い行間の凸凹を防ぐ */}
+        <View style={styles.tableGrid}>
+          {table.columns.map((col, ci) => (
+            <View key={ci} style={{ minWidth: minColWidth }}>
+              <Text
+                style={[styles.tableHeaderCell, { fontSize: theme.fontSize.sm }]}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {col}
+              </Text>
+              {table.rows.map((row, ri) => (
+                <Text
+                  key={ri}
+                  style={[styles.tableCell, ri % 2 === 1 && styles.tableRowAlt, { fontSize: theme.fontSize.sm }]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {row[ci] === null ? 'NULL' : String(row[ci])}
                 </Text>
               ))}
             </View>
-          ))
+          ))}
+        </View>
+        {table.rows.length === 0 && (
+          <Text style={[styles.tableEmpty, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>(0 rows)</Text>
         )}
         <Text style={[styles.tableRowCount, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
           {table.rows.length} row{table.rows.length !== 1 ? 's' : ''}
@@ -110,32 +119,40 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
             </GestureDetector>
           </View>
           <View style={styles.outputContent}>
-            {result.status === 'error' && result.errorMessage && (
-              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{result.errorMessage}</Text>
-            )}
-            {result.status === 'timeout' && (
-              <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.timeoutMessage')}</Text>
-            )}
+            {(result.status === 'error' && result.errorMessage) || result.status === 'timeout' ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+                <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {result.status === 'timeout' ? t('code.timeoutMessage') : result.errorMessage}
+                </Text>
+              </ScrollView>
+            ) : null}
             {result.tables?.map((table, ti) => (
               <SqlTable key={ti} table={table} />
             ))}
             {result.logs.length === 0 && result.status === 'success' && !result.tables?.length && (
               <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.empty')}</Text>
             )}
-            {result.logs.map((log, i) => (
-              <Text
-                key={i}
-                style={[
-                  styles.logLine,
-                  { fontSize: theme.fontSize.md },
-                  log.type === 'error' && styles.logError,
-                  log.type === 'warn'  && styles.logWarn,
-                ]}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-              >
-                {log.text}
-              </Text>
-            ))}
+            {result.logs.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+                {/* 各行を折り返さず縦積みし、最長行に合わせて横スクロールできるようにする */}
+                <View>
+                  {result.logs.map((log, i) => (
+                    <Text
+                      key={i}
+                      style={[
+                        styles.logLine,
+                        { fontSize: theme.fontSize.md },
+                        log.type === 'error' && styles.logError,
+                        log.type === 'warn'  && styles.logWarn,
+                      ]}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                    >
+                      {log.text}
+                    </Text>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
             <GestureDetector gesture={copyGesture}>
               <View style={styles.copyBtn}>
                 <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
@@ -238,11 +255,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
   },
-  tableHeader: {
+  tableGrid: {
     flexDirection: 'row',
-    backgroundColor: '#1E2936',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2D3748',
   },
   tableHeaderCell: {
     paddingHorizontal: 8,
@@ -250,9 +264,9 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontWeight: '600',
     fontFamily: 'monospace',
-  },
-  tableRow: {
-    flexDirection: 'row',
+    backgroundColor: '#1E2936',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2D3748',
   },
   tableRowAlt: {
     backgroundColor: '#0F1923',

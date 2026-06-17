@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 
 import { useTranslation } from 'react-i18next';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
 import { BlockItemHeader } from './BlockItemHeader';
@@ -219,9 +219,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         <>
           <View style={styles.codeArea}>
             {isPreview ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <SyntaxHighlightedCode code={block.content} language={block.language} />
-              </ScrollView>
+              <GHScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <SyntaxHighlightedCode code={block.content} language={block.language} wrap={false} />
+              </GHScrollView>
             ) : focused ? (
               <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ width: width - 32 }}>
                 <TextInput

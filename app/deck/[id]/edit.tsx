@@ -6,6 +6,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { IconPickerModal } from '@/components/IconPickerModal';
 import { useTranslation } from 'react-i18next';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -90,6 +91,25 @@ export default function EditDeckScreen() {
 
   const previewIconColor = colorHex ?? theme.colors.primary;
   const previewIconBg = colorHex ? colorHex + '20' : theme.colors.primaryLight;
+
+  const colorSwatch = (c: string) => (
+    <Pressable
+      key={c}
+      onPress={() => setColorHex(c)}
+      style={[styles.colorCell, { backgroundColor: c }, colorHex === c && styles.colorCellSelected]}
+    >
+      {colorHex === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
+    </Pressable>
+  );
+  const clearSwatch = (
+    <Pressable
+      key="__clear__"
+      onPress={() => setColorHex(null)}
+      style={[styles.colorCell, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === null && { borderColor: theme.colors.primary, borderWidth: 2 }]}
+    >
+      <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
+    </Pressable>
+  );
 
   return (
     <>
@@ -176,23 +196,19 @@ export default function EditDeckScreen() {
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.color')}
             </Text>
-            <View style={styles.colorGrid}>
-              <Pressable
-                onPress={() => setColorHex(null)}
-                style={[styles.colorCell, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === null && { borderColor: theme.colors.primary, borderWidth: 2 }]}
-              >
-                <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
-              </Pressable>
-              {DECK_PRESET_COLORS.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => setColorHex(c)}
-                  style={[styles.colorCell, { backgroundColor: c }, colorHex === c && styles.colorCellSelected]}
-                >
-                  {colorHex === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
-                </Pressable>
-              ))}
-            </View>
+            {(Platform as any).isPad ? (
+              // iPad: 横一連に全色 + 末尾に ✕
+              <View style={styles.colorGrid}>
+                {DECK_PRESET_COLORS.map(colorSwatch)}
+                {clearSwatch}
+              </View>
+            ) : (
+              // iPhone: 1行目=赤始まり6色 / 2行目=濃い青始まり6色 + 末尾に ✕（ピンクの右隣）
+              <View style={{ gap: 10 }}>
+                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(0, 6).map(colorSwatch)}</View>
+                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(6).map(colorSwatch)}{clearSwatch}</View>
+              </View>
+            )}
           </View>
 
           <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>

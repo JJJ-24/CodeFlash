@@ -38,12 +38,12 @@ app/                     # Expo Router ルート（ファイル = 画面）
 
 lib/
 ├── database/            # SQLite CRUD 関数（entity ごとにファイル分離）
-│   ├── schema.ts        # テーブル定義 + migrateDbIfNeeded()
-│   ├── utils.ts         # generateId()・todayISO()・todayLocalRange()・localDateStr() の共通ユーティリティ
-│   ├── decks.ts         # Deck CRUD
-│   ├── cards.ts         # Card CRUD（JSON シリアライズ含む）
+│   ├── schema.ts        # テーブル定義 + migrateDbIfNeeded()（ALTER による差分マイグレーション + iCloud同期トリガー）
+│   ├── utils.ts         # generateId()・todayISO()・todayLocalRange()・localDateStr()・activeCardCond()（非アーカイブ条件）
+│   ├── decks.ts         # Deck CRUD + setDeckArchived()
+│   ├── cards.ts         # Card CRUD（本文は card_contents テーブルへ分離）+ setCardArchived/setCardsArchived・各種カウント/キュー取得（activeCardCond でアーカイブ除外）
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
-│   └── reviews.ts       # レビューデータ操作（FSRS スケジューリング結果の永続化）
+│   └── reviews.ts       # レビューデータ操作（FSRS永続化）+ 統計集計（due/習熟度/ランキング/ヒートマップ）
 ├── code-execution/      # コード実行サンドボックス
 │   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成
 │   ├── constants.ts     # LANGUAGES・LANG_LABELS
@@ -71,8 +71,10 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 ├── cards.ts             # useCardStore
 ├── tags.ts              # useTagStore
 ├── reviews.ts           # useReviewStore（学習セッション状態）
-├── theme.ts             # useThemeStore（preference: 'light'|'dark'|'system'、AsyncStorage永続化）
-└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastSelectedCodeLanguage・deckSortOrder・tagSortOrder・cardSortOrder・shuffleEnabled・lastSearchField・通知設定、AsyncStorage永続化）
+├── theme.ts             # useThemeStore（themePreference・fontSizePreference、AsyncStorage永続化）
+├── sync.ts              # useSyncStore（iCloud同期状態・dataRevision）
+├── pro.ts               # useProStore（買い切り課金の Pro フラグ）
+└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastHomeFilter・lastSelectedCodeLanguage・deck/tag/cardSortOrder・shuffleEnabled・lastSearchField・fsrsDesiredRetention・studyHideEmpty・gradeRanking系・cardThemePreference・languagePreference・通知設定、AsyncStorage永続化）
 
 components/
 ├── code/
@@ -86,6 +88,9 @@ components/
 ├── ConfirmModal.tsx        # 汎用確認モーダル（複数アクション対応）
 ├── InfoModal.tsx           # 情報表示モーダル（OK のみ）
 ├── DeckPickerModal.tsx     # デッキ選択モーダル（タグカード一覧・カード移動で共用）
+├── DeckIcon.tsx            # デッキの色付きアイコン（iconName + colorHex、未設定は primary）
+├── IconPickerModal.tsx     # デッキアイコン選択モーダル
+├── SwipeToDeleteRow.tsx    # 左スワイプで [アーカイブ/解除][削除] を出す共通ラッパー（onArchive は任意）
 ├── EmptyState.tsx          # 空状態表示（アイコン＋タイトル＋サブタイトル）
 └── HiddenKeyboardInput.tsx # Bluetooth キーボード入力用 hidden TextInput（ascii-capable 固定）
 
@@ -102,7 +107,7 @@ hooks/
 types/index.ts           # 全ドメイン型（唯一の定義元）
 locales/ja.json          # 日本語翻訳
 locales/en.json          # 英語翻訳
-docs/000〜023-*.md       # 機能チケット（実装計画・Todoチェックリスト）
+docs/000〜032-*.md       # 機能チケット（実装計画・Todoチェックリスト）
 ```
 
 ### データフロー
@@ -111,7 +116,7 @@ docs/000〜023-*.md       # 機能チケット（実装計画・Todoチェック
 
 ### DB 初期化
 
-`app/_layout.tsx` の `<SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>` がアプリ起動時に `lib/database/schema.ts` の `migrateDbIfNeeded()` を実行し5テーブルを作成する。子画面では `useSQLiteContext()` でDBインスタンスを取得する。
+`app/_layout.tsx` の `<SQLiteProvider databaseName="codeflash.db" onInit={migrateDbIfNeeded}>` がアプリ起動時に `lib/database/schema.ts` の `migrateDbIfNeeded()` を実行する。テーブルは `decks`・`cards`・`card_contents`（カード本文を分離）・`tags`・`card_tags`・`reviews`・`review_logs`・`grade_logs`・`notification_schedules`・`sync_state`（iCloud同期用）。既存DBには `PRAGMA table_info` で存在確認しつつ `ALTER TABLE` で列を追加するマイグレーション方式（`sortOrder`・FSRS列・`lastGrade`・`iconName`/`colorHex`・`archived` など）。`sync_state` はユーザーデータ変更をトリガーで捕捉し `localVersion` を進める。子画面では `useSQLiteContext()` でDBインスタンスを取得する。
 
 ### ナビゲーション構造
 
@@ -158,7 +163,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 ### 型定義
 
-`types/index.ts` がドメイン型の唯一の定義元。ブロックは `TextBlock | CodeBlock | ImageBlock` のユニオン型で、カードの `frontContent / backContent / memoContent` は SQLite に JSON文字列として保存される。
+`types/index.ts` がドメイン型の唯一の定義元。ブロックは `TextBlock | CodeBlock | ImageBlock` のユニオン型で、カードの `frontContent / backContent / memoContent` は `card_contents` テーブルに JSON文字列として保存される（`cards` テーブルはメタ情報のみ）。`Deck` / `Card` には `archived: boolean` がある（SQLite は 0/1 を返すため `getAllDecks`/`toCard` で boolean に正規化する）。
 
 ### コード実行アーキテクチャ
 
@@ -169,11 +174,12 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 #### DB・データ操作
 
 - **`lib/database/utils.ts`**: `generateId()`・`todayISO()`・`todayLocalRange()`・`localDateStr(d: Date)` をエクスポート。DB ファイルだけでなく UI コンポーネントからも import して使用する。日付範囲クエリ（当日作成・当日学習済み判定など）は `todayLocalRange()` が返す `{ start, end }` を使う（`toISOString()` は UTC を返すためローカル日付がずれる）。
-- **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` では `card_tags` / `reviews` / `review_logs` を明示的に先に削除する
+- **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` / `deleteDeck` では関連行（`card_contents` / `card_tags` / `reviews` / `review_logs` / `grade_logs`）を明示的に先に削除する
+- **アーカイブ（学習対象からの除外）**: `decks` / `cards` の `archived` 列。`lib/database/utils.ts` の `activeCardCond(alias)`（カード自身が非アーカイブ **かつ** 所属デッキが非アーカイブ）を「将来指標」系クエリ（due・新規・未学習・習熟度・当日対象・学習キュー・バッジ）に適用して除外する。`review_logs`/`grade_logs` ベースの過去実績（ヒートマップ・ストリーク・正答率）には**適用しない**（消さない）。一覧の生取得（`getCardsByDeckId`/`searchCards` 等）も除外しない（UI 側でグレー表示）。詳細は `docs/032`。
 - **グレード対応**: `grade 0` = もう一度(again), `1` = うろ覚え(hard), `2` = わかった(good), `3` = バッチリ(easy)。型は `lib/sm2.ts` の `Grade = 0 | 1 | 2 | 3`。実際の次回復習日計算は `lib/fsrs.ts` の `calculateNextReviewFSRS()` が `ts-fsrs` ライブラリを使って行う（SM-2 ではなく FSRS アルゴリズム）。
 - **`getDeckMasteryList` の戻り値**: `avgEase: number | null`（未学習デッキは NULL）・`learnedCount: number`・`newCount: number`（未学習枚数）を返す。`LEFT JOIN` で未学習デッキも含む。`masteryPercent()` は `avgEase == null` のとき 0 を返す。統計画面の `MasteryItem` 型も `avgEase: number | null` で定義。
 - **「新規」フィルターの意味**: 学習タブ・カード一覧・統計タブの「新規」ブロックは「今日作成したカード数」を表す。学習してもカウントは減らず、翌日に 0 にリセットされる。実際のクエリは `getTodayCreatedCardIdsByDeckId` を使う。
-- **エクスポート/インポート**: `lib/export.ts` と `lib/import.ts` が JSON 形式、`lib/tsv.ts` が TSV 形式を担当。`review_logs` テーブルも含めて全テーブルをエクスポートする。インポートは `merge`（`INSERT OR IGNORE`）と `replace`（全削除後に挿入）の2モード。
+- **エクスポート/インポート**: `lib/export.ts` と `lib/import.ts` が JSON 形式、`lib/tsv.ts` が TSV 形式（Anki互換・表/裏テキストのみ）を担当。JSON は全テーブル（`review_logs`・`grade_logs` 含む）＋ AsyncStorage 設定 ＋（任意で）画像 base64 をエクスポートし、`archived` も保持する。インポートは `merge`（`INSERT OR IGNORE`）と `replace`（全削除後に挿入）の2モード。TSV は `archived` を含まない。
 - **カード全文検索**: `app/search.tsx` はホーム画面ヘッダーの検索アイコンから遷移。`searchCards(db, query, field)` が指定フィールド（`SearchField = 'all' | 'front' | 'back' | 'memo'`）を LIKE 検索（JSON文字列のまま LIKE 可能）し `ORDER BY updatedAt DESC LIMIT 100`。選択中フィールドは `useSettingsStore` の `lastSearchField` に AsyncStorage 永続化。クエリ変更ごとにリアルタイム検索。結果タップで `/deck/[id]/card/[cardId]/edit` へ遷移。
 - **カード複製**: `lib/database/cards.ts` の `duplicateCard(db, cardId)` が元カードの内容・タグを複製して新カードを作成。カード一覧の選択モードバーの複製ボタン（`copy-outline`）から呼び出す。
 
@@ -197,7 +203,8 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **初期フィルター「保持」の挙動**: 学習・統計タブはタブがアンマウントされないため React state が残る。カード一覧（stack screen）は `lastDeckDetailFilter`（AsyncStorage 永続化）で最後のフィルターを復元する。
 - **`BlockEditor` の初期タブ**: `initialTab?: 'front' | 'back' | 'memo'` prop で開くタブを制御できる。学習セッションの編集ボタンは `?tab=back` クエリパラメータを付与して裏面タブを初期表示する（`deck/[id]/card/[cardId]/edit.tsx` が受け取り）。
 - **学習セッションのヘッダータイトル**: デッキ学習時はデッキ名、タグ学習時はタグ名を表示する。カスタムヘッダー内の Text に直接セットする（`sessionTitle` 変数）。
-- **ホーム画面のフィルターブロック**: `app/(tabs)/index.tsx` の `selectedFilter` は将来のブロック追加（タグ別フィルタ等）を想定した拡張ポイント。現状は `'all'` のみ。型は `useState<'all'>` のユニオン型を拡張して対応する。
+- **ホーム画面のフィルターブロック**: `app/(tabs)/index.tsx` は「すべて（all・全デッキ／青数字）」「有効（active・非アーカイブのみ／グレー数字）」の2ブロック。選択は `useSettingsStore.lastHomeFilter`（既定 `'active'`）に永続化（直近モード固定）。「すべて」ではアーカイブ済みデッキをグレー表示。手動ドラッグ並べ替えは非表示デッキを元位置に固定したまま表示中だけを並べ替える。
+- **ホームのカスタムヘッダー高さ**: `computeHeaderHeights` は `getDefaultHeaderHeight` の `total` と `content = total - insets.top` を返し、`useMemo` で inset/frame に追従させる（`useRef` 固定だと初期 inset 未解決の値を掴み、タブヘッダーとタイトル/アイコン位置がズレる）。
 
 #### Bluetooth キーボード
 
@@ -207,13 +214,13 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 **キー設計の方針**: J/Kでフォーカス移動後の「決定」操作は `Return`（`onSubmitEditing`）に統一。ただし学習開始（大きなアクション）は `Space`（`onKeyPress`）、学習セッション内の表裏反転も `Space` のまま。選択モードの選択/解除も `Space` のまま。`Return` は iOS の `onKeyPress` では検知できないため `onSubmitEditing` で拾う。タブ間切替は `,`（前タブ）/ `.`（次タブ）で統一。
 
-- **ホームキー（デッキ一覧）**: J/K = フォーカス移動、Return = フォーカスデッキを開く、P = デッキ編集、D = デッキ削除、N = 新規デッキ、Q = ソート切替、F = 検索、T = タグ管理、`,`/`.` = タブ切替
-- **学習タブキー**: 1–4 = フィルター切替、J/K = フォーカス移動、Return = フォーカス項目で学習開始、S = シャッフル切替、H = 対象カードなし行の表示/非表示トグル、Q = デッキ/タグタブ切替、`,`/`.` = タブ切替
+- **ホームキー（デッキ一覧）**: J/K = フォーカス移動、Return = フォーカスデッキを開く、P = デッキ編集、D = デッキ削除、N = 新規デッキ、M = ソート切替、F = 検索、T = タグ管理、`,`/`.` = タブ切替
+- **学習タブキー**: 1–4 = フィルター切替、J/K = フォーカス移動、Return = フォーカス項目で学習開始、S = シャッフル切替、H = 対象カードなし行の表示/非表示トグル、M = デッキ/タグタブ切替、`,`/`.` = タブ切替
 - **統計タブキー**: 1–4 = ブロック選択、J/K = フォーカス移動、Return = フォーカスデッキのグラフ開閉（シート表示中は Return で閉じる）、`,`/`.` = タブ切替
 - **設定タブキー**: `,`/`.` = タブ切替
 - **学習画面キー**: `,`/`.` = 次/前カード、Space = 表裏反転、1–4 = グレード、J/K = コードブロック次/前フォーカス、E / Return = フォーカス中のコードブロックを編集、M = メモ開閉、F = 全画面、P = カード編集、L = リンク一覧、Q = セッション終了（残カードをスキップして集計画面へ、確認ダイアログあり）
-- **カード一覧キー（通常モード）**: Space = 学習開始、Return / P = フォーカスカード編集、1–4 = フィルター切替、J/K = カードフォーカス次/前、Q = ソート切替（「すべて」のみ）、N = 新規カード、S = 選択モード開始、D = フォーカス中のカードを削除、B = 戻る
-- **カード一覧キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、D = 削除、C = 複製、S = 選択モード終了
+- **カード一覧キー（通常モード）**: Space = 学習開始、Return / P = フォーカスカード編集、1–4 = フィルター切替、J/K = カードフォーカス次/前、M = ソート切替（「すべて」のみ）、N = 新規カード、S = 選択モード開始、D = フォーカス中のカードを削除、B = 戻る
+- **カード一覧キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、D = 削除、C = 複製、E = アーカイブ切替、S = 選択モード終了
 - **タグ管理キー（通常モード）**: J/K = フォーカス移動、Return = フォーカスタグのカード一覧を開く、P = タグ編集、D = タグ削除、N = 新規タグ、S = 選択モード開始、M = ソート切替、B = 戻る
 - **タグ管理キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択/全解除、C = 色変更（選択タグ）、D = 削除（選択タグ）、S = 選択モード解除
 - **タグカード一覧キー**: J/K = フォーカス移動、Return / P = フォーカスカード編集、D = カード削除、N = 新規カード（デッキ選択）、B = 戻る
@@ -236,6 +243,8 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **シャッフル学習**: `store/settings.ts` の `shuffleEnabled`（AsyncStorage永続化）で管理。学習タブ「学習一覧」行の右端にトグルボタン（ソートボタンと同形状）。ON 時は `useStudySession.loadSession` に `shuffle: true` を渡し、カード配列を Fisher-Yates でシャッフルする。セッション遷移時は `params: { shuffle: '1' | '0' }` で受け渡し。
 - **通知リマインダー**: `lib/notifications.ts` の `scheduleDailyReminder(hour, minute)` が identifier `'daily-reminder'` 固定で毎日繰り返し通知をスケジュール（再呼び出し前に既存通知をキャンセル）。設定画面でオン/オフと時刻を管理。`useSettingsStore` に `notificationEnabled`・`notificationHour`・`notificationMinute` を AsyncStorage 永続化で保存。
 - **アイコンバッジ**: `lib/notifications.ts` の `updateBadgeCount(db)` が `getTodayDueCount()` で全デッキ横断の due 枚数を取得し `setBadgeCountAsync()` でバッジに反映。`app/_layout.tsx` のフォアグラウンド復帰時と学習セッション完了時に呼ばれる。
+- **iCloud 同期**: DB ファイル全体を iCloud Drive 経由で同期する。`sync_state` テーブルのトリガーがローカル変更で `localVersion`/`localChangedAt` を進め、LWW（Last-Write-Wins）でリモートと比較する。`store/sync.ts` の `dataRevision` が更新されると各画面が DB を再読込する。`archived` も DB 列なので追加対応なく同期される。端末時計のズレ対策は `docs/icloud-sync-overview.md` 参照。
+- **デッキの色付きアイコン**: `decks.iconName`（Ionicons 名）・`colorHex`。表示は `components/DeckIcon.tsx` か `colorHex ?? theme.colors.primary`（背景は `colorHex + '20'`）。プリセット色は `DECK_PRESET_COLORS`（= `TAG_PRESET_COLORS`、`lib/theme`）。
 
 ### ジェスチャー実装パターン
 
@@ -258,17 +267,21 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 ### 実装チケット
 
-`docs/` 配下に機能チケット（000〜027）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある。
+`docs/` 配下に機能チケット（000〜032）がある。各チケットにはフェーズ・依存関係・Todoチェックリストが記載されており、実装完了時に `- [ ]` → `- [x]` に更新する。`docs/000-ticket-overview.md` に全体の依存関係図がある（028 以降は overview 未反映のチケットもある）。
 
-完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2/FSRS・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・ヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示・枠なし横幅フル表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）・シャッフル学習（学習タブのトグルボタン、Fisher-Yates）・統計画面改善（全体学習率セクション・デッキ別習熟度に新規枚数追加・草グラフ右端余白）・学習タブをカードスタイルに変更・学習タブの行アイコンを `play` に変更・TSV エクスポート/インポート・FSRS アルゴリズム移行・カスタムヘッダー統一（push 遷移全画面）・学習セッション終了ボタン（ヘッダー右端 + Q キー）を追加実装。さらに、タグ管理選択モード（一括削除・一括色変更・キーボードショートカット対応）・カード一覧/タグ管理の選択モード UX 統一（モード別ショートカット表示・ヘッダータイトル切替・フォーカス挙動修正）・ホーム画面カスタムヘッダー高さを `getDefaultHeaderHeight` で正確に算出（iPad 50px・Dynamic Island 補正）・Development Build 環境整備（`expo-dev-client` 導入）を実施。
+完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2/FSRS・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・ヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示・枠なし横幅フル表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）・シャッフル学習（学習タブのトグルボタン、Fisher-Yates）・統計画面改善（全体学習率セクション・デッキ別習熟度に新規枚数追加・草グラフ右端余白）・学習タブをカードスタイルに変更・学習タブの行アイコンを `play` に変更・TSV エクスポート/インポート・FSRS アルゴリズム移行・カスタムヘッダー統一（push 遷移全画面）・学習セッション終了ボタン（ヘッダー右端 + Q キー）を追加実装。さらに、タグ管理選択モード（一括削除・一括色変更・キーボードショートカット対応）・カード一覧/タグ管理の選択モード UX 統一（モード別ショートカット表示・ヘッダータイトル切替・フォーカス挙動修正）・ホーム画面カスタムヘッダー高さを `getDefaultHeaderHeight` で算出・Development Build 環境整備（`expo-dev-client` 導入）を実施。
 
-未着手: 014（iCloud同期）・015（Web版）・016（買い切り課金）・017（App Store申請）・018（SQL/C++実行）・019（マーケットプレイス）・020（AI生成）・024（詳細な学習統計）・025（FSRSカスタマイズ）・026（デッキ共有リンク）・027（ウィジェット）
+さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018 のうち SQL 実行（`buildSqlSandboxHtml`）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整。
+
+未着手（または部分実装）: 015（Web版）・016（買い切り課金、`useProStore` で Pro ゲートのみ存在）・017（App Store申請）・018 の C++ 実行・019（マーケットプレイス）・020（AI生成）・026（デッキ共有リンク）・027（ウィジェット）・029（デッキ統合/復元）・031（高度な通知、`notification_schedules` テーブルは存在）
 
 ### UI パターン（実装済み画面の慣習）
 
 - **統計ブロック**: 数字（`theme.fontSize.xxl`・色付き）→ラベル（`theme.fontSize.xs`・`textSecondary`）の縦並び。`theme.colors.surface` 背景・角丸・影付き。`deck/[id]/index.tsx` の `statItem` スタイルが基準。
 - **バッジ色**: 「復習」（due）= 青（`#1976D2`）、それ以外のフィルター = グレー（ライト: `#8B949E`、ダーク: `#4B5563`）。`theme.dark` で分岐する。
 - **セクションタイトル**: `theme.fontSize.lg, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。
-- **コードブロック（学習画面）**: `components/study/SyntaxHighlightedCode.tsx` は `theme.fontSize.md` を使用。フォントサイズ設定に連動する。
+- **コードブロック（学習画面）**: `components/study/SyntaxHighlightedCode.tsx` は `theme.fontSize.md` を使用。フォントサイズ設定に連動する。`wrap?: boolean`（既定 true）で折り返し制御。横スクロールさせる箇所（学習画面・編集プレビュー）は `wrap={false}` ＋ 横 `ScrollView` で表示する。
+- **コード横スクロール**: コード表示・実行結果（`components/code/ExecutionOutput.tsx`）はいずれも横スクロール対応。SQL 結果テーブルは「列ごと縦積み」で列幅を揃え、ログ/エラーも折り返さず横 ScrollView に入れる。スクロールバーは `indicatorStyle="white"`。編集画面のドラッグ可能リスト内では `react-native-gesture-handler` の `ScrollView` を使う（標準 ScrollView だと横スクロールがジェスチャーに奪われる）。
+- **アーカイブの見た目**: アーカイブ済み（デッキ・カード）は一覧で `opacity: 0.55` ＋ `archive` アイコンでグレー表示。カードは「カード自身 or 所属デッキがアーカイブ」を実効アーカイブとして判定する。
 - **locales の改行**: ラベルに改行が必要な場合は `"カード\n総数"` のように `\n` を埋め込む（`Text` コンポーネントがそのまま改行として解釈する）。
 - **ドーナツグラフ**: 定数・パス計算は `lib/donut.ts` からインポート。ドーナツの「穴」部分の fill は描画先の背景色（`theme.colors.surface` など）に合わせる。

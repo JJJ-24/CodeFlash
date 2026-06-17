@@ -26,7 +26,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
-import { deleteDeck, getAllDecks, updateDeckSortOrders } from '@/lib/database/decks';
+import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -137,7 +137,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const { decks, setDecks, removeDeck, reorderDecks } = useDeckStore();
+  const { decks, setDecks, removeDeck, reorderDecks, updateDeck } = useDeckStore();
   const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
   const { width } = useWindowDimensions();
   // 学習/統計タブの1ブロック実幅に一致させる（コンテナ余白16・行 marginHorizontal:-2・各ブロック margin:2・gap:4 の4列構成）
@@ -205,6 +205,12 @@ export default function HomeScreen() {
   async function handleDelete(id: string) {
     await deleteDeck(db, id);
     removeDeck(id);
+  }
+
+  async function toggleDeckArchive(deck: Deck) {
+    const next = !deck.archived;
+    await setDeckArchived(db, deck.id, next);
+    updateDeck({ ...deck, archived: next });
   }
 
   async function handleDeleteConfirm() {
@@ -414,6 +420,8 @@ export default function HomeScreen() {
                 <SwipeToDeleteRow
                   enabled={deckSortOrder !== 'manual'}
                   onDelete={() => { setPendingDeleteDeck(item); setShowDeleteModal(true); }}
+                  onArchive={() => toggleDeckArchive(item)}
+                  archived={item.archived}
                 >
                   <DeckCard
                     deck={item}

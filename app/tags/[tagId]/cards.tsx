@@ -25,7 +25,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { deleteCard, getCardsByTagId } from '@/lib/database/cards';
+import { deleteCard, getCardsByTagId, setCardArchived } from '@/lib/database/cards';
 import { getCardPreview } from '@/lib/cardPreview';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
@@ -84,6 +84,12 @@ export default function TagCardsScreen() {
     await deleteCard(db, pendingDeleteCard.id, pendingDeleteCard.deckId);
     setCards((prev) => prev.filter((c) => c.id !== pendingDeleteCard.id));
     setPendingDeleteCard(null);
+  }
+
+  async function archiveCard(card: Card) {
+    const next = !card.archived;
+    await setCardArchived(db, card.id, next);
+    setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, archived: next } : c)));
   }
 
   function navigateToEdit(card: Card) {
@@ -237,12 +243,20 @@ export default function TagCardsScreen() {
           renderItem={({ item, index }) => {
             const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
             const isFocused = focusedCardIndex === index;
+            const deck = decks.find((d) => d.id === item.deckId);
+            const effectiveArchived = item.archived || !!deck?.archived;
             return (
-              <SwipeToDeleteRow onDelete={() => confirmDeleteCard(item)} containerStyle={styles.cardRowSpacing}>
+              <SwipeToDeleteRow
+                onDelete={() => confirmDeleteCard(item)}
+                onArchive={() => archiveCard(item)}
+                archived={item.archived}
+                containerStyle={styles.cardRowSpacing}
+              >
                 <Pressable
                   style={[
                     styles.cardItem,
                     { backgroundColor: theme.colors.surface },
+                    effectiveArchived && { opacity: 0.55 },
                     isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                   ]}
                   onPress={() => {
@@ -257,6 +271,9 @@ export default function TagCardsScreen() {
                   >
                     {preview || t('card.noText')}
                   </Text>
+                  {effectiveArchived && (
+                    <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+                  )}
                   <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
                     {isPro && (
                       <Pressable onPress={() => { setFocusedCardIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={styles.iconBtn}>

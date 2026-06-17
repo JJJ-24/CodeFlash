@@ -29,6 +29,7 @@ import {
   getUnlearnedCardIdsByDeckId,
   getUnlearnedCountByDeck,
   moveCardsToDeck,
+  setCardArchived,
   setCardsArchived,
   updateCardSortOrders,
 } from '@/lib/database/cards';
@@ -97,6 +98,7 @@ export default function DeckDetailScreen() {
   const imageBlockLabelRef = useRef('');
   const deckArchivedRef = useRef(false);
   const confirmDeleteCardRef = useRef<(card: Card) => void>(() => {});
+  const archiveCardRef = useRef<(card: Card) => void>(() => {});
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [infoModal, setInfoModal] = useState<{ title?: string; message: string } | null>(null);
@@ -247,6 +249,11 @@ export default function DeckDetailScreen() {
     setShowDeleteModal(true);
   }
 
+  async function archiveCard(card: Card) {
+    await setCardArchived(db, card.id, !card.archived);
+    await loadCards();
+  }
+
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedCardIds(new Set());
@@ -358,6 +365,8 @@ export default function DeckDetailScreen() {
       <SwipeToDeleteRow
         enabled={!isSelMode && !(selectedFilterRef.current === 'all' && cardSortOrderRef.current === 'manual')}
         onDelete={() => confirmDeleteCardRef.current(item)}
+        onArchive={() => archiveCardRef.current(item)}
+        archived={item.archived}
         containerStyle={styles.cardRowSpacing}
       >
         <Pressable
@@ -448,6 +457,7 @@ export default function DeckDetailScreen() {
   if (!deck) return null;
 
   confirmDeleteCardRef.current = confirmDeleteCard;
+  archiveCardRef.current = archiveCard;
 
   const selectedCardsList = deckCards.filter((c) => selectedCardIds.has(c.id));
   const allSelectedArchived = selectedCardsList.length > 0 && selectedCardsList.every((c) => c.archived);

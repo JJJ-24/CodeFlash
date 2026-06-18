@@ -626,6 +626,14 @@ export async function syncNow(
       sync.lastRemoteUpdatedAt,
       sync.lastRemoteId,
     );
+    // 前回ダウンロード（リモートを受け入れた時点）以降に、この端末で編集・学習して
+    // localVersion が進んでいるか。これが true のまま再びダウンロードが走ると、自端末の作業が
+    // 別端末の版で上書きされる＝競合。アップロードでも進む lastSyncedVersion ではなく、
+    // ダウンロードでのみ進む lastDownloadedVersion を基準にするのが要点
+    // （「アップロード後に別端末版で上書きされた」ケースを取りこぼさないため）。
+    const localChangedSinceDownload =
+      sync.lastDownloadedVersion != null &&
+      localInfo.version > sync.lastDownloadedVersion;
 
     if (direction === null) {
       // 同期する必要なし（リモートの最新版に追いついており、ローカルにも変更が無い）。
@@ -637,6 +645,11 @@ export async function syncNow(
         sync.setLastRemoteId(remoteMetaId(remote.meta));
         sync.setLastSyncedAt(Date.now());
         sync.setLastSyncedVersion(localInfo.version);
+        // ダウンロード基準が未設定の端末でも次回以降の競合検知が働くよう、
+        // リモートに追いついている（no-op）この時点を基準として初期化する。
+        if (sync.lastDownloadedVersion == null) {
+          sync.setLastDownloadedVersion(localInfo.version);
+        }
       }
       sync.setStatus("idle");
       return "noop";
@@ -726,6 +739,11 @@ export async function syncNow(
       remoteUpdatedAt = meta.updatedAt;
       remoteId = remoteMetaId(meta);
       outcome = "uploaded";
+      // 一度もダウンロード基準が無い端末（アップロードのみ運用）でも競合検知が働くよう、
+      // 初回だけ現在の同期版を基準として初期化する（以後はダウンロード時のみ更新）。
+      if (sync.lastDownloadedVersion == null) {
+        sync.setLastDownloadedVersion(syncedVersion);
+      }
     } else {
       // getRemoteStatus が選んだ最新版ファイル名を取得（exists=true なら必ず付随する）。
       const dbFilename = remote.dbFilename;
@@ -771,6 +789,15 @@ export async function syncNow(
         ? remoteMetaId(remote.meta)
         : `unknown:${remoteUpdatedAt}`;
       outcome = "downloaded";
+      // 自動同期で、前回ダウンロード以降にこの端末で編集・学習した状態（＝競合）のまま
+      // 別端末の新しいデータで上書きされたときだけ、置き換わったことと「データ復元」で戻せる
+      // ことを案内する。手動の強制ダウンロード（action==='download'）はユーザー自身の意思なので
+      // 出さない。復元素材は直前の backupLocalDbBeforeReplace で必ず作成済み。
+      if (action === "auto" && localChangedSinceDownload) {
+        useSyncStore.getState().showConflictModal();
+      }
+      // リモートを受け入れた基準点を更新（次回の競合判定の起点）。アップロードでは進めない。
+      sync.setLastDownloadedVersion(syncedVersion);
     }
 
     sync.setLastRemoteUpdatedAt(remoteUpdatedAt);

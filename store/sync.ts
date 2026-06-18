@@ -5,6 +5,7 @@ const SYNC_ENABLED_KEY = '@codeflash_icloud_sync_enabled';
 const LAST_SYNCED_AT_KEY = '@codeflash_icloud_last_synced_at';
 const LAST_DATA_SYNCED_AT_KEY = '@codeflash_icloud_last_data_synced_at';
 const LAST_SYNCED_VERSION_KEY = '@codeflash_icloud_last_synced_version';
+const LAST_DOWNLOADED_VERSION_KEY = '@codeflash_icloud_last_downloaded_version';
 const LAST_REMOTE_UPDATED_AT_KEY = '@codeflash_icloud_last_remote_updated_at';
 const LAST_REMOTE_ID_KEY = '@codeflash_icloud_last_remote_id';
 const DEVICE_ID_KEY = '@codeflash_device_id';
@@ -59,6 +60,13 @@ interface SyncState {
   /** 最後に同期したときのローカル変更カウンタ（sync_state.localVersion）。ローカル変更検知の基準。 */
   lastSyncedVersion: number | null;
   /**
+   * 最後に「リモートを受け入れた（ダウンロード）」ときのローカル版。アップロードでは進めない。
+   * これ以降にこの端末で編集・学習して localVersion が進んだ状態で再びダウンロードが走ると、
+   * 自端末の作業が別端末の版で上書きされる＝競合の合図になる（競合モーダルの判定に使う）。
+   * アップロードでも進む lastSyncedVersion では「アップロード後に上書きされた」ケースを取りこぼすため別に持つ。
+   */
+  lastDownloadedVersion: number | null;
+  /**
    * 現在「追いついている」リモート版の meta.updatedAt。リモート変更検知（remoteChanged）の基準。
    * 実時刻ではなくリモート版の時刻を使うことで、まだ伝播していない相手の更新
    * （updatedAt が実時刻 now より前）を取りこぼさない & 端末間の時計ズレにも強い。
@@ -85,6 +93,12 @@ interface SyncState {
   noticeCode: SyncNoticeCode | null;
   /** 同じ内容の通知でもバナーを再点灯させるための連番（バナーはこの変化を見て表示する）。 */
   noticeId: number;
+  /**
+   * 競合でこの端末のデータが別端末の版に置き換わったことを知らせるモーダルの表示トリガー（連番）。
+   * バナーと違い重要かつ稀なイベントなので、ユーザーが読み終えて自分で閉じるモーダルで提示する
+   * （全画面の単一モーダルを app/_layout が購読して表示）。
+   */
+  conflictModalId: number;
 
   /**
    * ダウンロード同期などでローカルデータが丸ごと入れ替わるたびに増える信号。
@@ -101,9 +115,11 @@ interface SyncState {
   setLastSyncedAt: (timestamp: number) => void;
   setLastDataSyncedAt: (timestamp: number) => void;
   setLastSyncedVersion: (version: number) => void;
+  setLastDownloadedVersion: (version: number) => void;
   setLastRemoteUpdatedAt: (timestamp: number) => void;
   setLastRemoteId: (id: string) => void;
   showNotice: (kind: 'error' | 'info', code: SyncNoticeCode) => void;
+  showConflictModal: () => void;
   bumpDataRevision: () => void;
   /**
    * 同期の進捗ウォーターマーク（最終同期・追いついているリモート版など）をすべて消去し、
@@ -126,6 +142,7 @@ export const useSyncStore = create<SyncState>((set) => ({
   lastSyncedAt: null,
   lastDataSyncedAt: null,
   lastSyncedVersion: null,
+  lastDownloadedVersion: null,
   lastRemoteUpdatedAt: null,
   lastRemoteId: null,
   errorCode: null,
@@ -133,6 +150,7 @@ export const useSyncStore = create<SyncState>((set) => ({
   noticeKind: null,
   noticeCode: null,
   noticeId: 0,
+  conflictModalId: 0,
   dataRevision: 0,
 
   setEnabled: (enabled) => {
@@ -164,6 +182,10 @@ export const useSyncStore = create<SyncState>((set) => ({
     set({ lastSyncedVersion: version });
     AsyncStorage.setItem(LAST_SYNCED_VERSION_KEY, String(version));
   },
+  setLastDownloadedVersion: (version) => {
+    set({ lastDownloadedVersion: version });
+    AsyncStorage.setItem(LAST_DOWNLOADED_VERSION_KEY, String(version));
+  },
   setLastRemoteUpdatedAt: (timestamp) => {
     set({ lastRemoteUpdatedAt: timestamp });
     AsyncStorage.setItem(LAST_REMOTE_UPDATED_AT_KEY, String(timestamp));
@@ -175,6 +197,9 @@ export const useSyncStore = create<SyncState>((set) => ({
   showNotice: (kind, code) => {
     set((s) => ({ noticeKind: kind, noticeCode: code, noticeId: s.noticeId + 1 }));
   },
+  showConflictModal: () => {
+    set((s) => ({ conflictModalId: s.conflictModalId + 1 }));
+  },
   bumpDataRevision: () => {
     set((s) => ({ dataRevision: s.dataRevision + 1 }));
   },
@@ -183,6 +208,7 @@ export const useSyncStore = create<SyncState>((set) => ({
       lastSyncedAt: null,
       lastDataSyncedAt: null,
       lastSyncedVersion: null,
+      lastDownloadedVersion: null,
       lastRemoteUpdatedAt: null,
       lastRemoteId: null,
       errorCode: null,
@@ -191,6 +217,7 @@ export const useSyncStore = create<SyncState>((set) => ({
       LAST_SYNCED_AT_KEY,
       LAST_DATA_SYNCED_AT_KEY,
       LAST_SYNCED_VERSION_KEY,
+      LAST_DOWNLOADED_VERSION_KEY,
       LAST_REMOTE_UPDATED_AT_KEY,
       LAST_REMOTE_ID_KEY,
     ]);
@@ -198,11 +225,12 @@ export const useSyncStore = create<SyncState>((set) => ({
 }));
 
 (async () => {
-  const [enabledRaw, lastSyncedRaw, lastDataSyncedRaw, lastSyncedVersionRaw, lastRemoteUpdatedRaw, lastRemoteIdRaw, deviceIdRaw] = await Promise.all([
+  const [enabledRaw, lastSyncedRaw, lastDataSyncedRaw, lastSyncedVersionRaw, lastDownloadedVersionRaw, lastRemoteUpdatedRaw, lastRemoteIdRaw, deviceIdRaw] = await Promise.all([
     AsyncStorage.getItem(SYNC_ENABLED_KEY),
     AsyncStorage.getItem(LAST_SYNCED_AT_KEY),
     AsyncStorage.getItem(LAST_DATA_SYNCED_AT_KEY),
     AsyncStorage.getItem(LAST_SYNCED_VERSION_KEY),
+    AsyncStorage.getItem(LAST_DOWNLOADED_VERSION_KEY),
     AsyncStorage.getItem(LAST_REMOTE_UPDATED_AT_KEY),
     AsyncStorage.getItem(LAST_REMOTE_ID_KEY),
     AsyncStorage.getItem(DEVICE_ID_KEY),
@@ -225,14 +253,26 @@ export const useSyncStore = create<SyncState>((set) => ({
     lastDataSyncedAt = lastSyncedAt;
     AsyncStorage.setItem(LAST_DATA_SYNCED_AT_KEY, String(lastDataSyncedAt));
   }
-  const lastSyncedVersion = lastSyncedVersionRaw != null ? Number(lastSyncedVersionRaw) : null;
+  const lastSyncedVersionRaw2 = lastSyncedVersionRaw != null ? Number(lastSyncedVersionRaw) : null;
+  const lastSyncedVersion = lastSyncedVersionRaw2 != null && Number.isFinite(lastSyncedVersionRaw2) ? lastSyncedVersionRaw2 : null;
   const lastRemoteUpdatedAt = lastRemoteUpdatedRaw != null ? Number(lastRemoteUpdatedRaw) : null;
+
+  let lastDownloadedVersion = lastDownloadedVersionRaw != null ? Number(lastDownloadedVersionRaw) : null;
+  if (!(lastDownloadedVersion != null && Number.isFinite(lastDownloadedVersion))) lastDownloadedVersion = null;
+  // 旧バージョンからの移行：lastDownloadedVersion は今回追加したフィールド。過去に同期済みの端末では
+  // 未保存(null)のため、最後の同期版(lastSyncedVersion)を「直近に揃った基準」として一度だけ初期化する。
+  // これにより、更新後の最初の競合ダウンロードからバナーが出る（ウォームアップ同期を待たずに済む）。
+  if (lastDownloadedVersion == null && lastSyncedVersion != null) {
+    lastDownloadedVersion = lastSyncedVersion;
+    AsyncStorage.setItem(LAST_DOWNLOADED_VERSION_KEY, String(lastDownloadedVersion));
+  }
 
   useSyncStore.setState({
     enabled: enabledRaw === 'true',
     lastSyncedAt,
     lastDataSyncedAt,
-    lastSyncedVersion: lastSyncedVersion != null && Number.isFinite(lastSyncedVersion) ? lastSyncedVersion : null,
+    lastSyncedVersion,
+    lastDownloadedVersion,
     lastRemoteUpdatedAt: lastRemoteUpdatedAt != null && Number.isFinite(lastRemoteUpdatedAt) ? lastRemoteUpdatedAt : null,
     lastRemoteId: lastRemoteIdRaw ?? null,
     deviceId,

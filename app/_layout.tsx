@@ -1,13 +1,14 @@
 import '@/lib/i18n';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Network from 'expo-network';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Animated, AppState, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { cancelAllScheduledNotifications, scheduleFromDb, updateBadgeCount } from '@/lib/notifications';
@@ -201,6 +202,41 @@ function SyncNoticeBanner({ isDark }: { isDark: boolean }) {
   );
 }
 
+/**
+ * 競合でこの端末のデータが別端末の版に置き換わったことを知らせるモーダル。
+ * 重要かつ稀なイベントなので、自動で消えるバナーではなく、ユーザーが読み終えて自分で
+ * 閉じるモーダルで提示する。store の conflictModalId（自動同期の download 経路だけが進める）を購読し、
+ * 変化した瞬間に表示する。「データ復元へ」で同期設定画面（データ復元セクション）へ誘導する。
+ */
+function ConflictRestoreModal() {
+  const { t } = useTranslation();
+  const conflictModalId = useSyncStore((s) => s.conflictModalId);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (conflictModalId === 0) return; // 初期状態（まだ一度も発火していない）
+    setVisible(true);
+  }, [conflictModalId]);
+
+  return (
+    <ConfirmModal
+      visible={visible}
+      title={t('sync.conflictTitle')}
+      message={t('sync.conflictOverwritten')}
+      actions={[
+        {
+          label: t('sync.conflictRestoreAction'),
+          onPress: () => {
+            setVisible(false);
+            router.push('/settings/sync');
+          },
+        },
+      ]}
+      onClose={() => setVisible(false)}
+    />
+  );
+}
+
 export default function RootLayout() {
   const hydrated = useThemeStore((s) => s.hydrated);
   const preference = useThemeStore((s) => s.preference);
@@ -254,6 +290,7 @@ export default function RootLayout() {
         )}
       </View>
       <SyncNoticeBanner isDark={isDark} />
+      <ConflictRestoreModal />
     </GestureHandlerRootView>
   );
 }

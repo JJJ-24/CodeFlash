@@ -93,6 +93,10 @@ export default function DeckDetailScreen() {
   const selectionModeRef = useRef(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const selectedCardIdsRef = useRef<Set<string>>(new Set());
+  // 直近に複製で作成したカード ID。該当行に一時的な「NEW」バッジを出して
+  // 元カードと見分けやすくする。画面に再フォーカスしたタイミングでクリアする。
+  const [recentlyDuplicatedIds, setRecentlyDuplicatedIds] = useState<Set<string>>(new Set());
+  const recentlyDuplicatedIdsRef = useRef<Set<string>>(new Set());
   const cardSortOrderRef = useRef(cardSortOrder);
   const selectedFilterRef = useRef(selectedFilter);
   const imageBlockLabelRef = useRef('');
@@ -181,6 +185,8 @@ export default function DeckDetailScreen() {
       const targetOffset = savedScrollOffsetRef.current;
       restorationEndTimeRef.current = Date.now() + 800;
       setDescExpanded(false);
+      // 別画面から戻ってきたら「NEW」バッジは消す（複製直後の一時表示のみ）。
+      setRecentlyDuplicatedIds((prev) => (prev.size === 0 ? prev : new Set()));
       let cancelled = false;
       loadCards().then(() => {
         if (cancelled) return;
@@ -289,13 +295,18 @@ export default function DeckDetailScreen() {
     setIsProcessing(true);
     try {
       const ids = Array.from(selectedCardIds);
+      const newIds: string[] = [];
       for (const cardId of ids) {
-        await duplicateCard(db, cardId);
+        const dup = await duplicateCard(db, cardId);
+        newIds.push(dup.id);
       }
       if (deck) {
         updateDeck({ ...deck, cardCount: deck.cardCount + ids.length });
       }
       exitSelectionMode();
+      // 複製したカードに一時的な「NEW」バッジを出す（再フォーカスでクリア）。
+      // 同じ画面にいる間に複数回コピーした分は積み増して、すべて NEW のままにする。
+      setRecentlyDuplicatedIds((prev) => new Set([...prev, ...newIds]));
       await loadCards();
       setInfoModal({ title: t('card.duplicate'), message: t('card.duplicateSuccess', { count: ids.length }) });
     } finally {
@@ -354,6 +365,7 @@ export default function DeckDetailScreen() {
     const isSelected = selectedCardIdsRef.current.has(item.id);
     const isFocused = item.id === focusedCardIdRef.current;
     const isSelMode = selectionModeRef.current;
+    const isNew = recentlyDuplicatedIdsRef.current.has(item.id);
     function toggleSelect() {
       setSelectedCardIds((prev) => {
         const next = new Set(prev);
@@ -410,6 +422,11 @@ export default function DeckDetailScreen() {
           <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {preview || t('card.noText')}
           </Text>
+          {isNew && (
+            <View style={[styles.newBadge, { backgroundColor: theme.colors.primary }]}>
+              <Text allowFontScaling={false} style={[styles.newBadgeText, { color: theme.colors.primaryText, fontSize: theme.fontSize.xs }]}>NEW</Text>
+            </View>
+          )}
           {effectiveArchived && (
             <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
           )}
@@ -448,6 +465,7 @@ export default function DeckDetailScreen() {
 
   selectionModeRef.current = selectionMode;
   selectedCardIdsRef.current = selectedCardIds;
+  recentlyDuplicatedIdsRef.current = recentlyDuplicatedIds;
   cardSortOrderRef.current = cardSortOrder;
   selectedFilterRef.current = selectedFilter;
   imageBlockLabelRef.current = t('card.imageBlock');
@@ -991,6 +1009,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardPreview: { flex: 1 },
+  newBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  newBadgeText: { fontWeight: '700' },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   fab: {
     position: 'absolute',

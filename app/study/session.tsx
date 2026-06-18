@@ -1507,25 +1507,53 @@ export default function StudySessionScreen() {
         {/* ヒント or 自己評価ボタン */}
         <View style={styles.bottom}>
           {!isFlipped ? (
-            <Pressable
-              style={[
-                styles.flipHint,
-                { backgroundColor: theme.colors.surface },
-              ]}
-              onPress={() => setIsFlipped(true)}
-            >
-              <Ionicons
-                name="sync-outline"
-                size={18}
-                color={theme.colors.textTertiary}
-              />
-              <Text
-                style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.md }}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            <View style={styles.frontNavRow}>
+              {/* 左: 前カードへ。先頭カードではセッションを抜けて戻る（配色を変えて区別） */}
+              <Pressable
+                style={[styles.navFab, { backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
+                onPress={currentIndex === 0 ? safeBack : goBack}
+                hitSlop={8}
               >
-                {t("study.tapToFlip")}
-              </Text>
-            </Pressable>
+                <Ionicons
+                  name="chevron-back"
+                  size={24}
+                  color={currentIndex === 0 ? theme.colors.primary : theme.colors.textTertiary}
+                />
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.flipHint,
+                  { flex: 1, backgroundColor: theme.cardTheme.background },
+                ]}
+                onPress={() => setIsFlipped(true)}
+              >
+                <Ionicons
+                  name="sync-outline"
+                  size={18}
+                  color={theme.colors.textTertiary}
+                />
+                <Text
+                  style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.md }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t("study.tapToFlip")}
+                </Text>
+              </Pressable>
+
+              {/* 右: 次カードへ。最後のカードでは完了画面へ（配色を変えて区別） */}
+              <Pressable
+                style={[styles.navFab, { backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
+                onPress={goNext}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={currentIndex >= result.totalCards - 1 ? theme.colors.primary : theme.colors.textTertiary}
+                />
+              </Pressable>
+            </View>
           ) : (
             gradeRow
           )}
@@ -1623,6 +1651,26 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 16,
     borderRadius: 12,
+  },
+  // 表面のみ表示する前後送りボタンの行（ヒントを左右の丸ボタンで挟む）
+  frontNavRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  // カード一覧などの丸 FAB と同形状（56 丸）。配色だけ控えめにする
+  navFab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   gradeRow: { flexDirection: "row", gap: 8 },
   gradeBtn: {

@@ -61,9 +61,12 @@ export interface AppTheme {
   /** カードテーマで色付けする前の素の画面背景。カードテーマの色付けを無視したい
    *  箇所（学習画面の背景＝カードを浮き立たせたい等）で使う。 */
   baseBackground: string;
+  /** カードテーマの色付けを無視した素のカード面色（無彩色）。ダーク＋非デフォルトテーマでは
+   *  colors.surface を濃い黒に振り替えるため、学習画面など現状維持したい箇所はこちらを使う。 */
+  baseSurface: string;
 }
 
-export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 'baseBackground'> = {
+export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 'baseBackground' | 'baseSurface'> = {
   dark: false,
   colors: {
     background: '#F5F5F5',
@@ -86,7 +89,7 @@ export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' |
   },
 };
 
-export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 'baseBackground'> = {
+export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 'baseBackground' | 'baseSurface'> = {
   dark: true,
   colors: {
     background: '#121212',
@@ -182,7 +185,12 @@ export function useTheme(): AppTheme {
   const colors =
     effectiveCardTheme === 'default'
       ? base.colors
-      : { ...base.colors, background: cardPalette.background };
+      : base.dark
+        // ダーク＋非デフォルト：隙間（background）をテーマ色にし、カード面（surface）は
+        // 素の濃い黒（デフォルトの background）に振り替えて、テーマ色の隙間にカードを沈ませる。
+        ? { ...base.colors, background: cardPalette.background, surface: base.colors.background }
+        // ライト：従来どおり隙間だけテーマ色付け（カードは白のまま）
+        : { ...base.colors, background: cardPalette.background };
   return {
     ...base,
     colors,
@@ -198,5 +206,6 @@ export function useTheme(): AppTheme {
     },
     cardTheme: cardPalette,
     baseBackground: base.colors.background,
+    baseSurface: base.colors.surface,
   };
 }

@@ -57,7 +57,7 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: theme.colors.surface, maxHeight }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.baseSurface, maxHeight }]}>
           <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('settings.keyboardShortcuts')}
           </Text>

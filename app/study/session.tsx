@@ -522,7 +522,7 @@ export default function StudySessionScreen() {
 
   // iPhone 用インラインカスタムヘッダー（headerShown:false のため全状態で共通利用）
   const iPhoneHeader = !(Platform as any).isPad ? (
-    <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+    <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.baseSurface }}>
       <View style={{
         position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
         flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
@@ -693,7 +693,7 @@ export default function StudySessionScreen() {
           <View
             style={{
               height: initialTopInsetRef.current + 44,
-              backgroundColor: theme.colors.surface,
+              backgroundColor: theme.baseSurface,
               justifyContent: "flex-end",
               alignItems: "center",
               paddingBottom: 10,
@@ -726,7 +726,7 @@ export default function StudySessionScreen() {
             <View
               style={[
                 styles.summarySection,
-                { backgroundColor: theme.colors.surface },
+                { backgroundColor: theme.baseSurface },
               ]}
             >
               {/* 評価済み ◯/◯ 枚 */}
@@ -756,7 +756,7 @@ export default function StudySessionScreen() {
                     cx={DONUT_CX}
                     cy={DONUT_CY}
                     r={DONUT_INNER_R}
-                    fill={theme.colors.surface}
+                    fill={theme.baseSurface}
                   />
                   <SvgText
                     x={DONUT_CX}
@@ -988,7 +988,7 @@ export default function StudySessionScreen() {
           key={grade}
           style={[
             styles.gradeBtn,
-            { borderColor: color, backgroundColor: theme.colors.surface },
+            { borderColor: color, backgroundColor: theme.baseSurface },
             grading && styles.gradeBtnDisabled,
           ]}
           onPress={() => handleGradeWithSlide(grade)}
@@ -1285,7 +1285,7 @@ export default function StudySessionScreen() {
         <View
           style={{
             height: initialTopInsetRef.current + 44,
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.baseSurface,
           }}
         >
           <View

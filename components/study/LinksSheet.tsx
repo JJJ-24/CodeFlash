@@ -40,7 +40,7 @@ export function LinksSheet({ visible, onClose, links }: Props) {
       <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
       </Animated.View>
-      <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.colors.surface }]}>
+      <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.baseSurface }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('study.linksTitle')}

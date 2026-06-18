@@ -790,10 +790,17 @@ export async function syncNow(
         : `unknown:${remoteUpdatedAt}`;
       outcome = "downloaded";
       // 自動同期で、前回ダウンロード以降にこの端末で編集・学習した状態（＝競合）のまま
-      // 別端末の新しいデータで上書きされたときだけ、置き換わったことと「データ復元」で戻せる
-      // ことを案内する。手動の強制ダウンロード（action==='download'）はユーザー自身の意思なので
-      // 出さない。復元素材は直前の backupLocalDbBeforeReplace で必ず作成済み。
-      if (action === "auto" && localChangedSinceDownload) {
+      // 「別端末の」新しいデータで上書きされたときだけ、置き換わったことと「データ復元」で
+      // 戻せることを案内する。手動の強制ダウンロード（action==='download'）はユーザー自身の
+      // 意思なので出さない。復元素材は直前の backupLocalDbBeforeReplace で必ず作成済み。
+      //
+      // 取り込んだ版が「自端末（同じ deviceId）」製の場合は、自分のデータが iCloud を経由して
+      // 戻ってきただけ（中断したアップロードの再取得・ピンポン等）で、別端末に奪われた上書きでは
+      // ないので案内しない。これがないと、編集→アップロードのみを続けた端末（lastDownloadedVersion が
+      // 据え置き）が自分のデータをダウンロードした瞬間に誤って競合モーダルを出してしまう。
+      const downloadedFromOtherDevice =
+        remote.meta != null && remote.meta.deviceId !== sync.deviceId;
+      if (action === "auto" && localChangedSinceDownload && downloadedFromOtherDevice) {
         useSyncStore.getState().showConflictModal();
       }
       // リモートを受け入れた基準点を更新（次回の競合判定の起点）。アップロードでは進めない。

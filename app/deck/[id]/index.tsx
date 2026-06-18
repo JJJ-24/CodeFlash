@@ -874,11 +874,11 @@ export default function DeckDetailScreen() {
               <Ionicons name={isProcessing ? 'hourglass-outline' : 'copy-outline'} size={22} color="#FFF" />
             </Pressable>
             <Pressable
-              style={[styles.iconBtn, { backgroundColor: '#C62828' }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
-              onPress={handleDeleteSelected}
+              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={() => { if (!isProcessing) setShowDeckPicker(true); }}
               disabled={selectedCardIds.size === 0 || isProcessing}
             >
-              <Ionicons name="trash-outline" size={22} color="#FFF" />
+              <Ionicons name="arrow-forward-circle-outline" size={22} color="#FFF" />
             </Pressable>
             <Pressable
               style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
@@ -889,11 +889,11 @@ export default function DeckDetailScreen() {
               <Ionicons name={allSelectedArchived ? 'archive' : 'archive-outline'} size={22} color="#FFF" />
             </Pressable>
             <Pressable
-              style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
-              onPress={() => { if (!isProcessing) setShowDeckPicker(true); }}
+              style={[styles.iconBtn, { backgroundColor: '#C62828' }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={handleDeleteSelected}
               disabled={selectedCardIds.size === 0 || isProcessing}
             >
-              <Ionicons name="arrow-forward-circle-outline" size={22} color="#FFF" />
+              <Ionicons name="trash-outline" size={22} color="#FFF" />
             </Pressable>
           </View>
         </View>

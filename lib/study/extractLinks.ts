@@ -5,9 +5,13 @@ export type LinkItem = { text: string; url: string };
 export function extractLinks(blocks: Block[]): LinkItem[] {
   const links: LinkItem[] = [];
   const seen = new Set<string>();
+  // 生URL の終端に含めない文字。空白・閉じ括弧に加え、HTML（<a href="...">…</a>）や
+  // 引用符・コードで URL の直後に来る " ' < > ] } ` も除外する。
+  // これがないと https://apple.com">リンク</a> のように後続まで URL に取り込んでしまう。
+  const urlTail = '[^\\s)"\'<>\\]}`]+';
   // markdown リンク [text](url) を先にマッチさせることで、括弧内の URL が生URLとして重複抽出されるのを防ぐ
-  const combinedRe = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|https?:\/\/[^\s)]+/g;
-  const urlRe = /https?:\/\/[^\s)]+/g;
+  const combinedRe = new RegExp(`\\[([^\\]]+)\\]\\((https?:\\/\\/[^)\\s]+)\\)|https?:\\/\\/${urlTail}`, 'g');
+  const urlRe = new RegExp(`https?:\\/\\/${urlTail}`, 'g');
   for (const block of blocks) {
     if (block.type === 'text') {
       const content = (block as TextBlock).content;

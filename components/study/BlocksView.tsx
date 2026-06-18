@@ -3,22 +3,6 @@ import { Dimensions, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text,
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
-function LinkPressable({ href, suppress, children }: { href: string; suppress: () => void; children: React.ReactNode }) {
-  const [highlighted, setHighlighted] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const DELAY = 400;
-  return (
-    <Pressable
-      onPressIn={() => { timerRef.current = setTimeout(() => setHighlighted(true), DELAY); }}
-      onPressOut={() => { if (timerRef.current) clearTimeout(timerRef.current); setHighlighted(false); }}
-      onLongPress={() => { suppress(); Linking.openURL(href); }}
-      delayLongPress={DELAY}
-      style={highlighted ? { backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 3 } : undefined}
-    >
-      <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{children}</Text>
-    </Pressable>
-  );
-}
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +14,9 @@ import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
 
-const markdownItLinkify = MarkdownIt({ linkify: true });
+// 生URL も自動リンク化する。リンクは linkRule でインラインの Text として描画するため
+// （Pressable を使わない）、本文と同じフォントサイズで流れて表示がズレない。
+const mdInstance = MarkdownIt({ linkify: true });
 
 function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -228,11 +214,18 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   }), [theme]);
 
   const linkRule = useMemo(() => ({
+    // リンクはインラインの Text として描画する（Pressable=View だとテキストの流れを崩して
+    // 表示がズレるため）。本文と同じフォントサイズで青字下線にし、長押しで開く。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     link: (node: any, children: any) => (
-      <LinkPressable key={node.key} href={node.attributes.href} suppress={suppress}>
+      <Text
+        key={node.key}
+        style={{ color: '#3B82F6', textDecorationLine: 'underline', fontSize: theme.fontSize.lg }}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+        onLongPress={() => { suppress(); Linking.openURL(node.attributes.href); }}
+      >
         {children}
-      </LinkPressable>
+      </Text>
     ),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     image: (node: any) => (
@@ -244,7 +237,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         accessibilityLabel={node.attributes.alt}
       />
     ),
-  }), [suppress]);
+  }), [suppress, theme.fontSize.lg]);
 
   if (blocks.length === 0) {
     return <Text style={[styles.empty, { color: theme.colors.iconSubtle, fontSize: theme.fontSize.sm }]}>{t('card.noContent')}</Text>;
@@ -266,7 +259,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
           const textContent = (block as TextBlock).content;
           return (
             <View key={i} style={styles.textBlock}>
-              <Markdown markdownit={markdownItLinkify} style={markdownStyles} onLinkPress={() => false} rules={linkRule}>{textContent}</Markdown>
+              <Markdown markdownit={mdInstance} style={markdownStyles} onLinkPress={() => false} rules={linkRule}>{textContent}</Markdown>
               {textContent.trim() ? <TextBlockCopyBtn content={textContent} suppress={suppress} /> : null}
             </View>
           );

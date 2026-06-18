@@ -160,7 +160,7 @@
     "past7DaysCreated": "過去7日間の新規作成",
     "activityHeatmap": "学習履歴",
     "activityHeatmapInfoLabel": "学習履歴の説明",
-    "activityHeatmapInfoMessage": "学習したカード数を草グラフで表示しています。\n量が多い日ほど濃い緑（5段階）で表示されます。\n横にスクロールすると過去の記録を確認できます。",
+    "activityHeatmapInfoMessage": "学習したカード数を草グラフで表示しています。\n枚数が多い日ほど濃い緑（5段階）で表示されます。\n横にスクロールすると過去の記録を確認できます。",
     "totalProgress": "全体学習率",
     "totalProgressInfoLabel": "全体学習率の説明",
     "totalProgressInfoMessage": "全デッキの学習率です。\nカードをタップするとドーナツグラフで詳細を確認できます。中央の数字は、学習済みのカード割合（%）を表しています。",

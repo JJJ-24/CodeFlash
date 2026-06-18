@@ -1127,7 +1127,9 @@ export default function StudySessionScreen() {
                     <ScrollView
                       ref={frontScrollRef}
                       style={{ flex: 1 }}
-                      contentContainerStyle={[styles.fullscreenContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
+                      // 表面は下部左右隅のフローティングボタンが常に出るので、最下部の文字が
+                      // 隠れないよう（ボタン高さ＋余白＋safe area 分）下に多めにスクロールできるようにする。
+                      contentContainerStyle={[styles.fullscreenContent, { paddingBottom: insets.bottom + 88 }, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
@@ -1213,6 +1215,34 @@ export default function StudySessionScreen() {
           </GestureDetector>
 
           {isFlipped && <View style={styles.bottom}>{gradeRow}</View>}
+
+          {/* 表面のみ：下部左右隅にフローティングの前後送りボタン（通常モードと同形状・配色） */}
+          {!isFlipped && (
+            <>
+              <Pressable
+                style={[styles.navFab, styles.navFabFloating, { left: 20, bottom: insets.bottom + 16, backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
+                onPress={currentIndex === 0 ? safeBack : goBack}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={24}
+                  color={currentIndex === 0 ? theme.colors.primary : theme.colors.textTertiary}
+                />
+              </Pressable>
+              <Pressable
+                style={[styles.navFab, styles.navFabFloating, { right: 20, bottom: insets.bottom + 16, backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
+                onPress={goNext}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={currentIndex >= result.totalCards - 1 ? theme.colors.primary : theme.colors.textTertiary}
+                />
+              </Pressable>
+            </>
+          )}
         </View>
 
         <LinksSheet
@@ -1671,6 +1701,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  // 全画面モードの表面で下部左右隅に重ねるフローティング配置
+  navFabFloating: {
+    position: "absolute",
   },
   gradeRow: { flexDirection: "row", gap: 8 },
   gradeBtn: {

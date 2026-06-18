@@ -259,7 +259,7 @@ export default function HomeScreen() {
           ]}
           onPress={() => setSelectedFilter('active')}
         >
-          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.textSecondary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeDeckCount).length) }]}>{activeDeckCount}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeDeckCount).length) }]}>{activeDeckCount}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.active')}</Text>
         </Pressable>
       </View>

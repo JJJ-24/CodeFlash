@@ -47,7 +47,10 @@ export default function SyncSettingsScreen() {
 
   // ⓘタップでインライン展開する説明トグル
   const [showTagline, setShowTagline] = useState(false);
+  const [showRestore, setShowRestore] = useState(false);
+  const [showRestoreSectionInfo, setShowRestoreSectionInfo] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvancedInfo, setShowAdvancedInfo] = useState(false);
   const [showUploadInfo, setShowUploadInfo] = useState(false);
   const [showDownloadInfo, setShowDownloadInfo] = useState(false);
   const [showResetInfo, setShowResetInfo] = useState(false);
@@ -158,12 +161,12 @@ export default function SyncSettingsScreen() {
       backups = [];
     }
     if (backups.length === 0) {
-      setModal({ kind: 'info', title: t('sync.restoreTitle'), message: t('sync.restoreNone') });
+      setModal({ kind: 'info', title: t('sync.restoreShort'), message: t('sync.restoreNone') });
       return;
     }
     setModal({
       kind: 'confirm',
-      title: t('sync.restoreTitle'),
+      title: t('sync.restoreShort'),
       message: t('sync.restoreSelectMessage'),
       actions: backups.map((b) => ({
         label: formatBackupTime(b.timestamp),
@@ -175,7 +178,7 @@ export default function SyncSettingsScreen() {
   function confirmRestore(backup: LocalBackup) {
     setModal({
       kind: 'confirm',
-      title: t('sync.restoreTitle'),
+      title: t('sync.restoreShort'),
       message: t('sync.restoreConfirmMessage', { datetime: formatBackupTime(backup.timestamp) }),
       actions: [{
         label: t('sync.restoreConfirm'),
@@ -187,7 +190,7 @@ export default function SyncSettingsScreen() {
             if (syncEnabled) {
               try { await syncNowManual(db, 'auto'); } catch { /* 反映失敗は致命的でない。次回同期で再試行 */ }
             }
-            setModal({ kind: 'info', title: t('sync.restoreTitle'), message: t('sync.restoreSuccess') });
+            setModal({ kind: 'info', title: t('sync.restoreShort'), message: t('sync.restoreSuccess') });
           } catch (e) {
             setModal({ kind: 'info', title: t('sync.syncError'), message: describeSyncError(e) });
           }
@@ -369,7 +372,91 @@ export default function SyncSettingsScreen() {
               </Text>
             </Pressable>
 
-            {/* 詳細操作の折りたたみヘッダー */}
+            {/* データ復元の折りたたみヘッダー（復旧順: 今すぐ同期 → データ復元 → 詳細操作） */}
+            <Pressable
+              style={styles.syncAdvancedHeader}
+              onPress={() => setShowRestore((v) => !v)}
+              hitSlop={4}
+            >
+              <Ionicons
+                name={showRestore ? 'chevron-down' : 'chevron-forward'}
+                size={theme.fontSize.md}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={[styles.syncAdvancedHeaderText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('sync.restoreSectionTitle')}
+              </Text>
+              <Pressable onPress={() => setShowRestoreSectionInfo((v) => !v)} hitSlop={8}>
+                <Ionicons
+                  name={showRestoreSectionInfo ? 'information-circle' : 'information-circle-outline'}
+                  size={Math.max(theme.fontSize.lg, 20)}
+                  color={theme.colors.textTertiary}
+                />
+              </Pressable>
+            </Pressable>
+            {showRestoreSectionInfo && (
+              <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('sync.restoreSectionInfo')}
+                </Text>
+              </View>
+            )}
+
+            {showRestore && (
+              <>
+                {/* すべて置き換え */}
+                <Pressable
+                  style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1 }]}
+                  onPress={handleRestore}
+                  disabled={syncing}
+                >
+                  <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.restoreShort')}
+                  </Text>
+                  <Pressable onPress={() => setShowRestoreInfo((v) => !v)} hitSlop={8}>
+                    <Ionicons
+                      name={showRestoreInfo ? 'information-circle' : 'information-circle-outline'}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
+                    />
+                  </Pressable>
+                </Pressable>
+                {showRestoreInfo && (
+                  <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('sync.restoreInfo')}
+                    </Text>
+                  </View>
+                )}
+
+                {/* デッキ別追加・上書き */}
+                <Pressable
+                  style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1 }]}
+                  onPress={handleMergeStart}
+                  disabled={syncing}
+                >
+                  <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.mergeShort')}
+                  </Text>
+                  <Pressable onPress={() => setShowMergeInfo((v) => !v)} hitSlop={8}>
+                    <Ionicons
+                      name={showMergeInfo ? 'information-circle' : 'information-circle-outline'}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
+                    />
+                  </Pressable>
+                </Pressable>
+                {showMergeInfo && (
+                  <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('sync.mergeInfo')}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+
+            {/* 詳細操作の折りたたみヘッダー（最終手段） */}
             <Pressable
               style={styles.syncAdvancedHeader}
               onPress={() => setShowAdvanced((v) => !v)}
@@ -383,7 +470,21 @@ export default function SyncSettingsScreen() {
               <Text style={[styles.syncAdvancedHeaderText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('sync.advancedSection')}
               </Text>
+              <Pressable onPress={() => setShowAdvancedInfo((v) => !v)} hitSlop={8}>
+                <Ionicons
+                  name={showAdvancedInfo ? 'information-circle' : 'information-circle-outline'}
+                  size={Math.max(theme.fontSize.lg, 20)}
+                  color={theme.colors.textTertiary}
+                />
+              </Pressable>
             </Pressable>
+            {showAdvancedInfo && (
+              <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('sync.advancedSectionInfo')}
+                </Text>
+              </View>
+            )}
 
             {showAdvanced && (
               <>
@@ -393,7 +494,6 @@ export default function SyncSettingsScreen() {
                   onPress={handleForceUpload}
                   disabled={syncing}
                 >
-                  <Ionicons name="cloud-upload-outline" size={theme.fontSize.lg} color={theme.colors.text} />
                   <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('sync.forceUpload')}
                   </Text>
@@ -419,7 +519,6 @@ export default function SyncSettingsScreen() {
                   onPress={handleForceDownload}
                   disabled={syncing}
                 >
-                  <Ionicons name="cloud-download-outline" size={theme.fontSize.lg} color={theme.colors.text} />
                   <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('sync.forceDownload')}
                   </Text>
@@ -445,7 +544,6 @@ export default function SyncSettingsScreen() {
                   onPress={handleResetRemote}
                   disabled={syncing}
                 >
-                  <Ionicons name="refresh-outline" size={theme.fontSize.lg} color={theme.colors.danger} />
                   <Text style={[styles.syncAdvancedItemText, { color: theme.colors.danger, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('sync.resetRemote')}
                   </Text>
@@ -467,67 +565,6 @@ export default function SyncSettingsScreen() {
               </>
             )}
           </>
-        )}
-      </View>
-
-      {/* セクション2: データ復元カード（同期とは別概念のため別カード） */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 4 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-          {t('sync.restoreSectionTitle')}
-        </Text>
-        <Pressable
-          style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1, paddingVertical: 4 }]}
-          onPress={handleRestore}
-          disabled={syncing}
-        >
-          <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t('sync.restoreShort')}
-          </Text>
-          <Pressable onPress={() => setShowRestoreInfo((v) => !v)} hitSlop={8}>
-            <Ionicons
-              name={showRestoreInfo ? 'information-circle' : 'information-circle-outline'}
-              size={Math.max(theme.fontSize.lg, 20)}
-              color={theme.colors.textTertiary}
-            />
-          </Pressable>
-          <View style={{ flex: 1 }} />
-          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-        </Pressable>
-        {showRestoreInfo && (
-          <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('sync.restoreInfo')}
-            </Text>
-          </View>
-        )}
-
-        <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: 8 }} />
-
-        {/* デッキ単位マージ復元（029）: 全体置換ではなく1デッキだけ非破壊統合する */}
-        <Pressable
-          style={[styles.syncAdvancedItem, { opacity: syncing ? 0.4 : 1, paddingVertical: 4 }]}
-          onPress={handleMergeStart}
-          disabled={syncing}
-        >
-          <Text style={[styles.syncAdvancedItemText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t('sync.mergeShort')}
-          </Text>
-          <Pressable onPress={() => setShowMergeInfo((v) => !v)} hitSlop={8}>
-            <Ionicons
-              name={showMergeInfo ? 'information-circle' : 'information-circle-outline'}
-              size={Math.max(theme.fontSize.lg, 20)}
-              color={theme.colors.textTertiary}
-            />
-          </Pressable>
-          <View style={{ flex: 1 }} />
-          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-        </Pressable>
-        {showMergeInfo && (
-          <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('sync.mergeInfo')}
-            </Text>
-          </View>
         )}
       </View>
     </SettingsDetail>

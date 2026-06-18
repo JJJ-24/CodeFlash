@@ -126,7 +126,7 @@ export const settingsStyles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
   },
-  syncAdvancedHeaderText: { fontWeight: '600', flex: 1 },
+  syncAdvancedHeaderText: { fontWeight: '600', flexShrink: 1 },
   // 詳細操作の各行（アイコン左）
   syncAdvancedItem: {
     flexDirection: 'row',
@@ -134,7 +134,7 @@ export const settingsStyles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
   },
-  syncAdvancedItemText: { flexShrink: 1 },
+  syncAdvancedItemText: { flexShrink: 1, fontWeight: '600' },
 
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

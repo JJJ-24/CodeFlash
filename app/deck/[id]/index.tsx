@@ -52,7 +52,7 @@ import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSyncStore } from '@/store/sync';
-import { useSettingsStore, SESSION_FILTER_MAP, preferenceToFilter } from '@/store/settings';
+import { useSettingsStore, preferenceToFilter } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import type { CardSortOrder, DeckDetailFilter } from '@/store/settings';
 import { getCardPreview } from '@/lib/cardPreview';
@@ -462,6 +462,18 @@ export default function DeckDetailScreen() {
   const selectedCardsList = deckCards.filter((c) => selectedCardIds.has(c.id));
   const allSelectedArchived = selectedCardsList.length > 0 && selectedCardsList.every((c) => c.archived);
 
+  // 学習開始：画面に見えている並び順（フィルタ済み・ソート済み）そのままで学習する。
+  // セッション側で並びを再計算すると createdAt 同値の tie-break 差で見た目とズレるため、
+  // 表示中のカード ID 列を明示的に渡して順序を厳守させる。アーカイブ済み（カード自身 or
+  // デッキ）は学習対象外なので除外する。
+  const startVisibleStudy = () => {
+    const cardIds = displayedCards
+      .filter((c) => !c.archived && !deck.archived)
+      .map((c) => c.id);
+    if (cardIds.length === 0) return;
+    router.push({ pathname: '/study/session', params: { deckId: id, cardIds: cardIds.join(',') } });
+  };
+
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
 
   const focusedCardIndex = focusedCardId != null
@@ -584,8 +596,7 @@ export default function DeckDetailScreen() {
             return;
           }
           if (key === ' ') {
-            if (displayedCards.length === 0) return;
-            router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } });
+            startVisibleStudy();
           } else if (FILTER_KEY_MAP[key]) {
             const f = FILTER_KEY_MAP[key];
             setSelectedFilter(f);
@@ -724,7 +735,7 @@ export default function DeckDetailScreen() {
           style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, (selectionMode || displayedCards.length === 0) && { opacity: 0.5 }]}
           activeOpacity={0.8}
           disabled={selectionMode || displayedCards.length === 0}
-          onPress={() => { router.push({ pathname: '/study/session', params: { deckId: id, filter: SESSION_FILTER_MAP[selectedFilter] } }); }}
+          onPress={startVisibleStudy}
         >
           <Ionicons name="play" size={20} color="#FFF" />
           <Text style={[styles.studyBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.study')}</Text>

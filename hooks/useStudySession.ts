@@ -85,9 +85,15 @@ export function useStudySession() {
             [cards[i], cards[j]] = [cards[j], cards[i]];
           }
         } else {
+          // カード一覧（deck/[id]/index.tsx の displayedCards）と完全に同じ比較子を使う。
+          // createdAt 同値時の tie-break（sortOrder）まで一致させないと、一括複製などで
+          // createdAt が同一ミリ秒に揃ったカード群の並びが一覧と逆になりズレる。
           const cardSort = useSettingsStore.getState().cardSortOrder;
-          if (cardSort === 'newest') cards.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-          else if (cardSort === 'oldest') cards.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+          if (cardSort === 'newest') {
+            cards.sort((a, b) => (b.createdAt > a.createdAt ? 1 : b.createdAt < a.createdAt ? -1 : 0) || b.sortOrder - a.sortOrder);
+          } else if (cardSort === 'oldest') {
+            cards.sort((a, b) => (a.createdAt > b.createdAt ? 1 : a.createdAt < b.createdAt ? -1 : 0) || a.sortOrder - b.sortOrder);
+          }
         }
 
         gradedCardsRef.current = new Map();

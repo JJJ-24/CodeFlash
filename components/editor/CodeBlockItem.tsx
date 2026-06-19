@@ -71,6 +71,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const codeInputRef = useRef<TextInput>(null);
   const initSqlInputRef = useRef<TextInput>(null);
   const [initSqlFocused, setInitSqlFocused] = useState(false);
+  // 言語選択モーダルを開いたとき、選択中の言語までスクロールするための ref
+  const langScrollRef = useRef<ScrollView>(null);
+  const selectedLangYRef = useRef(0);
   const { insertPair, selection, handleSelectionChange, setSelectionToPos } = useInsertPair(
     block.content,
     (text) => onChange({ content: text }),
@@ -111,6 +114,15 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   useEffect(() => {
     if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); }
   }, [blurTrigger]);
+
+  // 言語選択モーダルを開いたら選択中の言語が見える位置までスクロールする
+  useEffect(() => {
+    if (!langModalVisible) return;
+    const id = setTimeout(() => {
+      langScrollRef.current?.scrollTo({ y: Math.max(0, selectedLangYRef.current - 40), animated: false });
+    }, 30);
+    return () => clearTimeout(id);
+  }, [langModalVisible]);
 
   useEffect(() => {
     if ((runTrigger ?? 0) > 0 && block.executable) {
@@ -347,10 +359,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
           <View style={[styles.langModal, { backgroundColor: theme.colors.surface, width: Math.max(220, width * 0.5) }]}>
             <Text style={[styles.langModalTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('editor.selectLanguage')}</Text>
-            <ScrollView>
+            <ScrollView ref={langScrollRef}>
               {LANGUAGES.map((lang) => (
                 <TouchableOpacity
                   key={lang}
+                  onLayout={block.language === lang ? (e) => { selectedLangYRef.current = e.nativeEvent.layout.y; } : undefined}
                   style={[styles.langOption, block.language === lang && { backgroundColor: theme.colors.primaryLight }]}
                   onPress={() => {
                     if (!EXECUTABLE_LANGUAGES.includes(lang)) reset();

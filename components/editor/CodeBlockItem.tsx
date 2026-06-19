@@ -69,6 +69,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
   const codeInputRef = useRef<TextInput>(null);
+  const initSqlInputRef = useRef<TextInput>(null);
+  const [initSqlFocused, setInitSqlFocused] = useState(false);
   const { insertPair, selection, handleSelectionChange, setSelectionToPos } = useInsertPair(
     block.content,
     (text) => onChange({ content: text }),
@@ -107,7 +109,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   }, [editTrigger]);
 
   useEffect(() => {
-    if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); }
+    if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); }
   }, [blurTrigger]);
 
   useEffect(() => {
@@ -161,7 +163,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         isEmpty={isEmpty}
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
-        onHeaderPress={focused ? () => { codeInputRef.current?.blur(); } : undefined}
+        onHeaderPress={(focused || initSqlFocused) ? () => { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); } : undefined}
         hideDelete={isPreview}
         style={{ backgroundColor: isRunning ? '#1E5024' : focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
@@ -309,9 +311,12 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       {t('editor.sqlInitHint')}
                     </Text>
                     <TextInput
+                      ref={initSqlInputRef}
                       style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
                       value={block.sqlInit ?? ''}
                       onChangeText={(v) => onChange({ sqlInit: v })}
+                      onFocus={() => { setInitSqlFocused(true); onFocusInput?.(); }}
+                      onBlur={() => { setInitSqlFocused(false); onEditBlur?.(); }}
                       multiline
                       placeholder={t('editor.sqlInitPlaceholder')}
                       placeholderTextColor="#6B7280"

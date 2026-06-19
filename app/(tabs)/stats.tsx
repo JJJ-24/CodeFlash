@@ -76,12 +76,25 @@ const BAR_MAX_HEIGHT = 60;
 const EASE_MIN = 1.3;
 const EASE_MAX = 3.0;
 
-type MedalInfo = { name: 'trophy' | 'ribbon' | 'diamond'; color: string } | null;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type MedalInfo = { name: IoniconName ; color: string } | null;
 function getStreakMedal(streak: number): MedalInfo {
+  // サプライズアイコン（特定レンジの数日間だけ表示し、常設バッジを上書きする）
+  if (streak >= 50  && streak <= 52)  return { name: 'bug',       color: '#94e438' };
+  if (streak >= 150 && streak <= 152) return { name: 'walk',      color: '#ffffff' };
+  if (streak >= 250 && streak <= 252) return { name: 'fish',      color: '#4ac5fd' };
+  if (streak >= 350 && streak <= 352) return { name: 'bicycle',   color: '#f88e42' };
+  if (streak >= 400 && streak <= 402) return { name: 'boat',      color: '#98fff5' };
+  if (streak >= 450 && streak <= 452) return { name: 'car-sport', color: '#f72e2e' };
+  if (streak >= 600 && streak <= 602) return { name: 'train',     color: '#f5cba7' };
+  if (streak === 777)                 return { name: 'flower',    color: '#fc94b7' };
+  if (streak >= 800 && streak <= 802) return { name: 'airplane',  color: '#3beb90' };
+  if (streak >= 900 && streak <= 902) return { name: 'rocket',    color: '#ea42fc' };
+  // 常設バッジ
   if (streak >= 1000) return { name: 'diamond',  color: '#000000' };
   if (streak >= 730) return { name: 'diamond',  color: '#FFD700' };
   if (streak >= 500) return { name: 'diamond',  color: '#ff9ff9' };
-  if (streak >= 365) return { name: 'diamond',  color: '#00BCD4' };
+  if (streak >= 365) return { name: 'diamond',  color: '#77eeff' };
   if (streak >= 300) return { name: 'trophy',   color: '#FFD700' };
   if (streak >= 200) return { name: 'trophy',   color: '#d7d7d7' };
   if (streak >= 100) return { name: 'trophy',   color: '#CD7F32' };

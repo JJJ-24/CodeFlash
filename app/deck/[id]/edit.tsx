@@ -7,6 +7,7 @@ import { IconPickerModal } from '@/components/IconPickerModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
 import { useTranslation } from 'react-i18next';
 import {
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -102,7 +103,7 @@ export default function EditDeckScreen() {
   const colorSwatch = (c: string) => (
     <Pressable
       key={c}
-      onPress={() => setColorHex(c)}
+      onPress={() => { Keyboard.dismiss(); setColorHex(c); }}
       style={[styles.colorCell, { backgroundColor: c }, colorHex === c && styles.colorCellSelected]}
     >
       {colorHex === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
@@ -111,7 +112,7 @@ export default function EditDeckScreen() {
   const clearSwatch = (
     <Pressable
       key="__clear__"
-      onPress={() => setColorHex(null)}
+      onPress={() => { Keyboard.dismiss(); setColorHex(null); }}
       style={[styles.colorCell, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === null && { borderColor: theme.colors.primary, borderWidth: 2 }]}
     >
       <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
@@ -183,7 +184,7 @@ export default function EditDeckScreen() {
             </Text>
             <Pressable
               style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-              onPress={() => setShowIconPicker(true)}
+              onPress={() => { Keyboard.dismiss(); setShowIconPicker(true); }}
             >
               <View style={[styles.iconCircle, { backgroundColor: previewIconBg }]}>
                 <Ionicons
@@ -225,7 +226,7 @@ export default function EditDeckScreen() {
               </Text>
               <Pressable
                 style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-                onPress={() => setShowSqlInitModal(true)}
+                onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
               >
                 <View style={[styles.iconCircle, { backgroundColor: sqlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
                   <Ionicons name="server-outline" size={20} color={sqlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
@@ -268,7 +269,7 @@ export default function EditDeckScreen() {
               </View>
               <Switch
                 value={archived}
-                onValueChange={setArchived}
+                onValueChange={(v) => { Keyboard.dismiss(); setArchived(v); }}
                 trackColor={{ true: theme.colors.primary }}
                 thumbColor="#FFF"
               />

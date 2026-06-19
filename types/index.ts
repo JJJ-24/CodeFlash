@@ -10,6 +10,8 @@ export interface CodeBlock {
   language: string;
   content: string;
   executable: boolean;
+  /** SQL ブロック固有の初期化SQL（このブロックの実行前にデッキ共通の後に流す）。SQL 言語時のみ意味を持つ */
+  sqlInit?: string;
 }
 
 export interface ImageBlock {
@@ -33,6 +35,8 @@ export interface Deck {
   sortOrder: number;
   iconName: string | null;
   colorHex: string | null;
+  /** デッキ共通の SQL 初期化（SQL ブロック実行時に毎回最初に流すスキーマ＋初期データ）。未設定は null */
+  sqlInit: string | null;
   /** アーカイブ済み（学習サイクル・将来指標から除外）。配下カードも含めて除外される */
   archived: boolean;
 }

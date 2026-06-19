@@ -47,6 +47,8 @@ interface Props {
   anotherBlockEditing?: boolean;
   /** 実行ボタン経由での編集終了時にキーボードフォーカスを強制復元するコールバック */
   onForceKeyboardFocus?: () => void;
+  /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
+  deckSqlInit?: string | null;
 }
 
 export function CodeRunnerView({
@@ -66,6 +68,7 @@ export function CodeRunnerView({
   onRunStart,
   anotherBlockEditing,
   onForceKeyboardFocus,
+  deckSqlInit,
 }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -197,11 +200,12 @@ export function CodeRunnerView({
     onSelectRequest?.();
     const content =
       editable && editedContent !== undefined ? editedContent : block.content;
+    const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
     if (wasThisEditing || anotherWasEditing) {
       // keyboard TextInput の focus 復元を待ってから WebView をマウントする
-      setTimeout(() => run(content, block.language), 300);
+      setTimeout(() => run(content, block.language, sqlInits), 300);
     } else {
-      run(content, block.language);
+      run(content, block.language, sqlInits);
     }
   }, [
     isRunning,
@@ -211,6 +215,8 @@ export function CodeRunnerView({
     editedContent,
     block.content,
     block.language,
+    block.sqlInit,
+    deckSqlInit,
     run,
     onEditBlur,
     onForceKeyboardFocus,

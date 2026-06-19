@@ -162,6 +162,10 @@ export default function StudySessionScreen() {
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
   const sessionDeck = deckId ? decks.find((d) => d.id === deckId) : null;
+  // 現在のカードが属するデッキの SQL 共通初期化（タグ学習ではカードごとにデッキが異なりうる）
+  const currentDeckSqlInit = currentCard
+    ? (decks.find((d) => d.id === currentCard.deckId)?.sqlInit ?? null)
+    : null;
   const sessionTitle = isFocusedReview
     ? t("study.focusedReviewTitle")
     : deckId
@@ -975,6 +979,7 @@ export default function StudySessionScreen() {
             exitAllEditTrigger={memoExitAllEditTrigger}
             scrollRef={backScrollRef}
             scrollBaseYRef={memoScrollBaseYRef}
+            deckSqlInit={currentDeckSqlInit}
           />
         </View>
       )}
@@ -1157,6 +1162,7 @@ export default function StudySessionScreen() {
                         }
                         onCodeRunStart={handleCodeRunComplete}
                         scrollRef={frontScrollRef}
+                        deckSqlInit={currentDeckSqlInit}
                       />
                     </ScrollView>
                   }
@@ -1205,6 +1211,7 @@ export default function StudySessionScreen() {
                         onCodeRunStart={handleCodeRunComplete}
                         exitAllEditTrigger={backExitAllEditTrigger}
                         scrollRef={backScrollRef}
+                        deckSqlInit={currentDeckSqlInit}
                       />
                       {memoBlock}
                     </ScrollView>
@@ -1442,6 +1449,7 @@ export default function StudySessionScreen() {
                       }
                       onCodeRunStart={handleCodeRunComplete}
                       scrollRef={frontScrollRef}
+                      deckSqlInit={currentDeckSqlInit}
                     />
                   </ScrollView>
                 }
@@ -1490,6 +1498,7 @@ export default function StudySessionScreen() {
                       onCodeRunStart={handleCodeRunComplete}
                       exitAllEditTrigger={backExitAllEditTrigger}
                       scrollRef={backScrollRef}
+                      deckSqlInit={currentDeckSqlInit}
                     />
                     {memoBlock}
                   </ScrollView>

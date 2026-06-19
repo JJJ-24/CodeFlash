@@ -29,7 +29,7 @@ export async function setDeckArchived(db: SQLiteDatabase, id: string, archived: 
 export async function createDeck(
   db: SQLiteDatabase,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit'>>
 ): Promise<Deck> {
   const now = new Date().toISOString();
   const id = generateId();
@@ -37,9 +37,10 @@ export async function createDeck(
   const sortOrder = (row?.maxOrder ?? 0) + 1;
   const iconName = data.iconName ?? null;
   const colorHex = data.colorHex ?? null;
+  const sqlInit = data.sqlInit ?? null;
   await db.runAsync(
-    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)',
-    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, now, now]
+    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)',
+    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, now, now]
   );
   return {
     id,
@@ -49,6 +50,7 @@ export async function createDeck(
     updatedAt: now,
     iconName,
     colorHex,
+    sqlInit,
     archived: false,
     name: data.name,
     description: data.description,
@@ -60,12 +62,12 @@ export async function updateDeck(
   db: SQLiteDatabase,
   id: string,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit'>>
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.runAsync(
-    'UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, updatedAt = ? WHERE id = ?',
-    [data.name, data.description, data.language, data.iconName ?? null, data.colorHex ?? null, now, id]
+    'UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, updatedAt = ? WHERE id = ?',
+    [data.name, data.description, data.language, data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, now, id]
   );
 }
 

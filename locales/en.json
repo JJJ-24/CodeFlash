@@ -41,7 +41,12 @@
     },
     "color": "Color",
     "archive": "Archive",
-    "archiveHint": "Excludes from study, stats, and notifications (not deleted)"
+    "archiveHint": "Excludes from study, stats, and notifications (not deleted)",
+    "sqlInitLabel": "Shared SQL setup",
+    "sqlInitHint": "Schema and seed data (CREATE TABLE / INSERT, etc.) run before every SQL card in this deck. Rebuilt fresh on each query run.",
+    "sqlInitPlaceholder": "CREATE TABLE users (id INTEGER, name TEXT);\nINSERT INTO users VALUES (1, 'Alice'), (2, 'Bob');",
+    "sqlInitSet": "Configured",
+    "sqlInitNone": "Not set (optional)"
   },
   "study": {
     "title": "Study",
@@ -263,6 +268,10 @@
     "emptyCodeBlock": "(empty code block)",
     "textBlockPlaceholder": "Enter text\n(Markdown supported)",
     "codePlaceholder": "Enter code",
+    "sqlInitLabel": "Setup SQL (optional)",
+    "sqlInitHint": "Extra schema/seed data run before this block's query. Stacked after the deck's shared setup SQL.",
+    "sqlInitPlaceholder": "CREATE TABLE orders (id INTEGER, userId INTEGER);",
+    "sqlInitEmpty": "(none)",
     "imageNoSelection": "(no image selected)",
     "textBlock": "Text",
     "codeBlock": "Code",

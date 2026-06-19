@@ -41,7 +41,12 @@
     },
     "color": "カラー",
     "archive": "アーカイブ",
-    "archiveHint": "学習対象・統計・通知から除外します（削除はされません）"
+    "archiveHint": "学習対象・統計・通知から除外します（削除はされません）",
+    "sqlInitLabel": "SQL共通初期化",
+    "sqlInitHint": "このデッキの SQL カードを実行する前に毎回流すスキーマ・初期データ（CREATE TABLE / INSERT など）。各カードのクエリ実行のたびに作り直されます。",
+    "sqlInitPlaceholder": "CREATE TABLE users (id INTEGER, name TEXT);\nINSERT INTO users VALUES (1, 'Alice'), (2, 'Bob');",
+    "sqlInitSet": "設定済み",
+    "sqlInitNone": "未設定（任意）"
   },
   "study": {
     "title": "学習",
@@ -263,6 +268,10 @@
     "emptyCodeBlock": "（空のコードブロック）",
     "textBlockPlaceholder": "テキストを入力\n（マークダウン記法対応）",
     "codePlaceholder": "コードを入力",
+    "sqlInitLabel": "初期化SQL（任意）",
+    "sqlInitHint": "このブロックのクエリ実行前に流す追加のスキーマ・初期データ。デッキ共通の初期化SQLの後に積まれます。",
+    "sqlInitPlaceholder": "CREATE TABLE orders (id INTEGER, userId INTEGER);",
+    "sqlInitEmpty": "（未設定）",
     "imageNoSelection": "（画像未選択）",
     "textBlock": "テキスト",
     "codeBlock": "コード",

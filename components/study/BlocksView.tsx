@@ -50,9 +50,11 @@ interface Props {
   onCodeRunStart?: () => void;
   scrollRef?: RefObject<ScrollView | null>;
   scrollBaseYRef?: RefObject<number>;
+  /** デッキ共通の SQL 初期化（SQL コードブロック実行時に本体の前に流す） */
+  deckSqlInit?: string | null;
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlInit }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -284,6 +286,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 onSelectRequest={() => onSelectCodeBlock?.(codeBlockIndexMap[i])}
                 onRunRequest={() => handleRunRequest(i)}
                 onForceKeyboardFocus={onForceKeyboardFocus}
+                deckSqlInit={deckSqlInit}
                 exitEditTrigger={exitEditTriggers[i]}
                 runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}
                 editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}

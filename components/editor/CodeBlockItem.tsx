@@ -52,9 +52,11 @@ interface Props {
   runTrigger?: number;
   onAutoFocused?: () => void;
   blurTrigger?: number;
+  /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
+  deckSqlInit?: string | null;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -74,9 +76,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   );
 
   const skipEditBlurRef = useRef(false);
+  // SQL ブロック固有の初期化SQL欄の開閉（内容があれば初期展開）
+  const [showInitSql, setShowInitSql] = useState(!!block.sqlInit);
 
   const contentRef = useRef(block.content);
   contentRef.current = block.content;
+
+  // SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外は undefined
+  const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
 
   const enterEditMode = useCallback(() => {
     setFocused(true);
@@ -109,7 +116,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         setProModalVisible(true);
         return;
       }
-      run(block.content, block.language);
+      run(block.content, block.language, sqlInits);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runTrigger]);
@@ -197,7 +204,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   setFocused(false);
                 }
                 onRunButtonPress?.();
-                run(block.content, block.language);
+                run(block.content, block.language, sqlInits);
               }}
               disabled={isRunning}
             >
@@ -274,6 +281,51 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             onInsertPair={insertPair}
             theme={theme}
           />
+
+          {/* SQL ブロック固有の初期化SQL（クエリ本体の前にデッキ共通の後で流す）。SQL は Pro 機能のため非Proでは非表示 */}
+          {block.language === 'sql' && isPro && (
+            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
+              <Pressable style={styles.initSqlHeader} onPress={() => setShowInitSql((v) => !v)} hitSlop={6}>
+                <Ionicons name={showInitSql ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />
+                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('editor.sqlInitLabel')}
+                </Text>
+                {!!block.sqlInit && !showInitSql && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
+              </Pressable>
+              {showInitSql && (
+                isPreview ? (
+                  block.sqlInit ? (
+                    <GHScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <SyntaxHighlightedCode code={block.sqlInit} language="sql" wrap={false} />
+                    </GHScrollView>
+                  ) : (
+                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('editor.sqlInitEmpty')}
+                    </Text>
+                  )
+                ) : (
+                  <>
+                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('editor.sqlInitHint')}
+                    </Text>
+                    <TextInput
+                      style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
+                      value={block.sqlInit ?? ''}
+                      onChangeText={(v) => onChange({ sqlInit: v })}
+                      multiline
+                      placeholder={t('editor.sqlInitPlaceholder')}
+                      placeholderTextColor="#6B7280"
+                      textAlignVertical="top"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                    />
+                  </>
+                )
+              )}
+            </View>
+          )}
 
           <ExecutionOutput
             result={result}
@@ -378,6 +430,33 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     minHeight: 100,
     minWidth: '100%',
     lineHeight: 22,
+  },
+  initSqlSection: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  initSqlHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+  },
+  initSqlDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: 2,
+  },
+  initSqlInput: {
+    fontFamily: 'monospace',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minHeight: 70,
+    lineHeight: 20,
   },
   overlay: {
     flex: 1,

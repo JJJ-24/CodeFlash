@@ -56,7 +56,7 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
 
     await bulkInsert(
       db,
-      'INSERT OR REPLACE INTO decks (id,name,description,language,cardCount,sortOrder,iconName,colorHex,archived,createdAt,updatedAt) VALUES',
+      'INSERT OR REPLACE INTO decks (id,name,description,language,cardCount,sortOrder,iconName,colorHex,sqlInit,archived,createdAt,updatedAt) VALUES',
       data.decks.map((d) => [
         d.id as string,
         d.name as string,
@@ -66,6 +66,7 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
         (d.sortOrder as number) ?? 0,
         (d.iconName as string | null) ?? null,
         (d.colorHex as string | null) ?? null,
+        (d.sqlInit as string | null) ?? null,
         d.archived ? 1 : 0,
         d.createdAt as string,
         d.updatedAt as string,

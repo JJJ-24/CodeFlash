@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { IconPickerModal } from '@/components/IconPickerModal';
+import { SqlInitModal } from '@/components/SqlInitModal';
 import { useTranslation } from 'react-i18next';
 import {
   Platform,
@@ -25,6 +26,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS } from '@/lib/theme';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
+import { useProStore } from '@/store/pro';
 
 export default function EditDeckScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,6 +36,7 @@ export default function EditDeckScreen() {
   const theme = useTheme();
   const { bottom: bottomInset } = useSafeAreaInsets();
   const { decks, updateDeck: updateStore, removeDeck } = useDeckStore();
+  const isPro = useProStore((s) => s.isPro);
 
   const deck = decks.find((d) => d.id === id);
 
@@ -41,6 +44,8 @@ export default function EditDeckScreen() {
   const [description, setDescription] = useState(deck?.description ?? '');
   const [iconName, setIconName] = useState<DeckIconName | null>((deck?.iconName as DeckIconName | null) ?? null);
   const [colorHex, setColorHex] = useState<string | null>(deck?.colorHex ?? null);
+  const [sqlInit, setSqlInit] = useState(deck?.sqlInit ?? '');
+  const [showSqlInitModal, setShowSqlInitModal] = useState(false);
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
@@ -53,11 +58,12 @@ export default function EditDeckScreen() {
     if (!trimmed || !deck) return;
     setSaving(true);
     try {
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex });
+      const normalizedSqlInit = sqlInit.trim() || null;
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
-      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, archived });
+      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -82,6 +88,7 @@ export default function EditDeckScreen() {
     || description.trim() !== (deck.description ?? '')
     || iconName !== (deck.iconName ?? null)
     || colorHex !== (deck.colorHex ?? null)
+    || (sqlInit.trim() || null) !== (deck.sqlInit ?? null)
     || archived !== deck.archived;
 
   function handleClose() {
@@ -211,6 +218,26 @@ export default function EditDeckScreen() {
             )}
           </View>
 
+          {isPro && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.sqlInitLabel')}
+              </Text>
+              <Pressable
+                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
+                onPress={() => setShowSqlInitModal(true)}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: sqlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name="server-outline" size={20} color={sqlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                </View>
+                <Text style={{ color: sqlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {sqlInit.trim() ? t('deck.sqlInitSet') : t('deck.sqlInitNone')}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+
           <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
             {iconName && (
               <View style={[styles.previewIcon, { backgroundColor: previewIconBg }]}>
@@ -263,6 +290,12 @@ export default function EditDeckScreen() {
         highlightColor={colorHex ?? theme.colors.primary}
         onSelect={setIconName}
         onClose={() => setShowIconPicker(false)}
+      />
+      <SqlInitModal
+        visible={showSqlInitModal}
+        value={sqlInit}
+        onChangeText={setSqlInit}
+        onClose={() => setShowSqlInitModal(false)}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

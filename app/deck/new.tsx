@@ -18,9 +18,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS } from '@/lib/theme';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { IconPickerModal } from '@/components/IconPickerModal';
+import { SqlInitModal } from '@/components/SqlInitModal';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { createDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
+import { useProStore } from '@/store/pro';
 
 export default function NewDeckScreen() {
   const db = useSQLiteContext();
@@ -28,12 +30,15 @@ export default function NewDeckScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { addDeck } = useDeckStore();
+  const isPro = useProStore((s) => s.isPro);
   const { bottom: bottomInset } = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [iconName, setIconName] = useState<DeckIconName | null>(null);
   const [colorHex, setColorHex] = useState<string | null>(null);
+  const [sqlInit, setSqlInit] = useState('');
+  const [showSqlInitModal, setShowSqlInitModal] = useState(false);
   const language = 'ja';
   const [saving, setSaving] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -49,6 +54,7 @@ export default function NewDeckScreen() {
         language,
         iconName,
         colorHex,
+        sqlInit: sqlInit.trim() || null,
       });
       addDeck(deck);
       router.back();
@@ -58,7 +64,7 @@ export default function NewDeckScreen() {
   }
 
   const canSave = !!name.trim() && !saving;
-  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== null;
+  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== null || sqlInit.trim() !== '';
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
@@ -174,6 +180,26 @@ export default function NewDeckScreen() {
             </View>
           </View>
 
+          {isPro && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.sqlInitLabel')}
+              </Text>
+              <Pressable
+                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
+                onPress={() => setShowSqlInitModal(true)}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: sqlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name="server-outline" size={20} color={sqlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                </View>
+                <Text style={{ color: sqlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {sqlInit.trim() ? t('deck.sqlInitSet') : t('deck.sqlInitNone')}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+
           <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
             {iconName && (
               <View style={[styles.previewIcon, { backgroundColor: previewIconBg }]}>
@@ -208,6 +234,12 @@ export default function NewDeckScreen() {
         highlightColor={colorHex ?? theme.colors.primary}
         onSelect={setIconName}
         onClose={() => setShowIconPicker(false)}
+      />
+      <SqlInitModal
+        visible={showSqlInitModal}
+        value={sqlInit}
+        onChangeText={setSqlInit}
+        onClose={() => setShowSqlInitModal(false)}
       />
       <ConfirmModal
         visible={showDiscardModal}

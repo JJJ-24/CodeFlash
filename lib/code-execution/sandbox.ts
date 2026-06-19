@@ -3,10 +3,11 @@
  *
  * @param code     実行するコード（トランスパイル済み）
  * @param language 言語名
+ * @param sqlInits SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有の順）。空要素は呼び出し側で除外済みを想定
  */
-export function buildSandboxHtml(code: string, language?: string): string {
+export function buildSandboxHtml(code: string, language?: string, sqlInits?: string[]): string {
   if (language === 'python') return buildPythonSandboxHtml(code);
-  if (language === 'sql') return buildSqlSandboxHtml(code);
+  if (language === 'sql') return buildSqlSandboxHtml(code, sqlInits);
   return buildJsSandboxHtml(code);
 }
 
@@ -169,9 +170,12 @@ const SQL_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/';
  * - SELECT 結果はテーブルデータ（tables）として返す
  * - INSERT/UPDATE/DELETE は変更行数をログに出力
  * - 30 秒タイムアウト
+ * - sqlInits（デッキ共通 → ブロック固有）をクエリ本体の前に黙って実行する（加算型）。
+ *   初期化SQLでの例外は「初期化SQLでエラー:」接頭辞付きで返す。
  */
-function buildSqlSandboxHtml(code: string): string {
+function buildSqlSandboxHtml(code: string, sqlInits?: string[]): string {
   const escaped = JSON.stringify(code);
+  const escapedInits = JSON.stringify((sqlInits ?? []).filter((s) => s && s.trim() !== ''));
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -210,6 +214,17 @@ function buildSqlSandboxHtml(code: string): string {
 
     var db = new SQL.Database();
     var userCode = ${escaped};
+    var initSqls = ${escapedInits};
+
+    // 初期化SQL（デッキ共通 → ブロック固有）を本体の前に黙って実行する（加算型）。
+    // 結果は表示せず、例外時のみ区別できるよう接頭辞を付けて投げ直す。
+    try {
+      for (var n = 0; n < initSqls.length; n++) {
+        db.run(initSqls[n]);
+      }
+    } catch (initErr) {
+      throw new Error('初期化SQLでエラー: ' + ((initErr && initErr.message) ? initErr.message : String(initErr)));
+    }
 
     if (userCode.trim() !== '') {
       var results = db.exec(userCode);

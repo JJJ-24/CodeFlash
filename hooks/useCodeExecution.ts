@@ -94,7 +94,10 @@ export function useCodeExecution(onResult?: () => void) {
     }
   }
 
-  function run(content: string, language: string) {
+  /**
+   * @param sqlInits SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外では無視される
+   */
+  function run(content: string, language: string, sqlInits?: string[]) {
     setStatus('running');
     setResult(null);
 
@@ -121,7 +124,7 @@ export function useCodeExecution(onResult?: () => void) {
       language === 'python' ? 'https://cdn.jsdelivr.net' :
       language === 'sql' ? 'https://cdnjs.cloudflare.com' : undefined
     );
-    setHtmlSource(buildSandboxHtml(code, language));
+    setHtmlSource(buildSandboxHtml(code, language, sqlInits));
   }
 
   function clear() {

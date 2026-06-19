@@ -172,6 +172,14 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE cards ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;`);
   }
 
+  // === 018: SQL 共通初期化（decks に sqlInit カラム）===
+  // SQL ブロック実行時にデッキ全カードで共有する初期化SQL（スキーマ＋初期データ）。
+  // 既存デッキは NULL のまま（初期化なし）で動作する。
+  const deckColsSqlInit = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!deckColsSqlInit.some((c) => c.name === 'sqlInit')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN sqlInit TEXT;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

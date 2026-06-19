@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -134,6 +135,17 @@ export function BlockEditor({
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
+  // キーボード（iOSの文字入力パレット含む）が出ている間、最下部のアーカイブ欄まで
+  // スクロールできるようキーボード高さ分の余白をスクロール内容の末尾に確保する。
+  // モーダル表示では KeyboardAvoidingView が高さを過小評価するため明示的に補う。
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvt, (e) => setKeyboardPadding(e.endCoordinates?.height ?? 0));
+    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardPadding(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
   const scrollViewHeightRef = useRef(windowHeight);
   const scrollPosRef = useRef<Record<Tab, number>>({
     front: 0,
@@ -1002,7 +1014,7 @@ export function BlockEditor({
       <ScrollView
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: keyboardPadding }}
         onLayout={(e) => {
           scrollViewHeightRef.current = e.nativeEvent.layout.height;
         }}

@@ -25,6 +25,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
@@ -73,8 +74,7 @@ function DeckCard({
   isFocused?: boolean;
 }) {
   const theme = useTheme();
-  const iconColor = deck.colorHex ?? theme.colors.primary;
-  const iconBg = deck.colorHex ? deck.colorHex + '20' : theme.colors.primaryLight;
+  const { color: iconColor, bg: iconBg } = resolveDeckIconColors(deck.colorHex, theme);
   // デッキアイコンを文字サイズ設定（fontScale）に連動させる
   const iconBoxSize = Math.round(32 * theme.fontScale);
   const iconGlyphSize = Math.round(18 * theme.fontScale);

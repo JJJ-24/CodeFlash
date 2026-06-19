@@ -8,6 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
+import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS } from '@/store/settings';
 import type { InitialFilterPreference, GradeRankingPeriod } from '@/store/settings';
@@ -400,7 +401,7 @@ function DeckMasteryRow({ deck, mastery, theme, onPress }: { deck: Deck; mastery
             <Ionicons
               name={deck.iconName as any}
               size={Math.round(16 * theme.fontScale)}
-              color={deck.colorHex ?? theme.colors.primary}
+              color={resolveDeckIconColors(deck.colorHex, theme).color}
             />
           )}
           <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -465,7 +466,7 @@ function DonutSheet({
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={[sheetStyles.header, { justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 48 }]}>
           {iconName && (
-            <Ionicons name={iconName as any} size={Math.round(20 * theme.fontScale)} color={colorHex ?? theme.colors.primary} />
+            <Ionicons name={iconName as any} size={Math.round(20 * theme.fontScale)} color={resolveDeckIconColors(colorHex ?? null, theme).color} />
           )}
           <Text style={[sheetStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, textAlign: 'center', flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {title}
@@ -594,7 +595,7 @@ function DeckPickerSheet({
                   <Ionicons
                     name={deck.iconName as any}
                     size={Math.round(18 * theme.fontScale)}
-                    color={isSelected ? theme.colors.primary : (deck.colorHex ?? theme.colors.primary)}
+                    color={isSelected ? theme.colors.primary : resolveDeckIconColors(deck.colorHex, theme).color}
                     style={{ marginRight: 10 }}
                   />
                 )}
@@ -1679,7 +1680,7 @@ export default function StatsScreen() {
                             {(() => {
                               const cardDeck = decks.find((d) => d.id === card.deckId);
                               return cardDeck?.iconName ? (
-                                <Ionicons name={cardDeck.iconName as any} size={Math.round(13 * theme.fontScale)} color={cardDeck.colorHex ?? theme.colors.textTertiary} />
+                                <Ionicons name={cardDeck.iconName as any} size={Math.round(13 * theme.fontScale)} color={cardDeck.colorHex === DECK_THEME_COLOR ? theme.colors.primary : (cardDeck.colorHex ?? theme.colors.textTertiary)} />
                               ) : null;
                             })()}
                             <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>

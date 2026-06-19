@@ -57,3 +57,8 @@ export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThe
 export function getCardThemeSwatch(name: CardThemeName, dark: boolean): string {
   return CARD_THEMES[dark ? 'dark' : 'light'][name].background;
 }
+
+/** テーマの濃い代表色（コード背景）。アイコン色など濃色が必要な箇所で使う */
+export function getCardThemeAccentColor(name: CardThemeName, dark: boolean): string {
+  return CARD_THEMES[dark ? 'dark' : 'light'][name].codeBackground;
+}

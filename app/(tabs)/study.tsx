@@ -20,6 +20,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
+import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import {
   getDueCountPerDeck,
@@ -494,6 +495,7 @@ export default function StudyScreen() {
             renderItem={({ item, index }) => {
               const { count, subText, subTextActive, tappable } = getDeckDisplayInfo(item);
               const isFocused = focusedItemIndex === index;
+              const deckIcon = resolveDeckIconColors(item.colorHex, theme);
               return (
                 <Pressable
                   style={[
@@ -512,8 +514,8 @@ export default function StudyScreen() {
                   }}
                 >
                   {item.iconName && (
-                    <View style={[styles.deckIcon, { width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: (item.colorHex ?? theme.colors.primary) + '20' }]}>
-                      <Ionicons name={item.iconName as any} size={iconGlyphSize} color={item.colorHex ?? theme.colors.primary} />
+                    <View style={[styles.deckIcon, { width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: deckIcon.bg }]}>
+                      <Ionicons name={item.iconName as any} size={iconGlyphSize} color={deckIcon.color} />
                     </View>
                   )}
                   <View style={styles.deckInfo}>

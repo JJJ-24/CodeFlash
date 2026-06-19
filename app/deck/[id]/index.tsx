@@ -19,6 +19,7 @@ import {
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import {
@@ -677,7 +678,7 @@ export default function DeckDetailScreen() {
               <Ionicons
                 name={deck.iconName as any}
                 size={20}
-                color={deck.colorHex ?? theme.colors.primary}
+                color={resolveDeckIconColors(deck.colorHex, theme).color}
               />
             )}
             <Text

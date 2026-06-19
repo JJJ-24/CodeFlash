@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { View, type ViewStyle } from 'react-native';
 
+import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme } from '@/lib/theme';
 
 /**
@@ -20,8 +21,7 @@ export function DeckIcon({
   const theme = useTheme();
   const box = Math.round(32 * theme.fontScale);
   const glyph = Math.round(18 * theme.fontScale);
-  const color = colorHex ?? theme.colors.primary;
-  const bg = colorHex ? colorHex + '20' : theme.colors.primaryLight;
+  const { color, bg } = resolveDeckIconColors(colorHex, theme);
   return (
     <View
       style={[

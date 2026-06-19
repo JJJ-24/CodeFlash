@@ -51,6 +51,7 @@ import { updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
 import type { Block } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
+import { resolveDeckIconColors } from "@/lib/deckIconColors";
 import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits } from "@/lib/theme";
 import { useDeckStore } from "@/store/decks";
 import { useSettingsStore } from "@/store/settings";
@@ -543,7 +544,7 @@ export default function StudySessionScreen() {
             <Ionicons
               name={sessionDeck.iconName as any}
               size={20}
-              color={sessionDeck.colorHex ?? theme.colors.primary}
+              color={resolveDeckIconColors(sessionDeck.colorHex, theme).color}
             />
           )}
           <Text
@@ -1324,7 +1325,7 @@ export default function StudySessionScreen() {
                 <Ionicons
                   name={sessionDeck.iconName as any}
                   size={20}
-                  color={sessionDeck.colorHex ?? theme.colors.primary}
+                  color={resolveDeckIconColors(sessionDeck.colorHex, theme).color}
                 />
               )}
               <Text

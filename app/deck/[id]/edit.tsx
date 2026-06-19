@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS } from '@/lib/theme';
+import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDeckStore } from '@/store/decks';
@@ -97,8 +98,7 @@ export default function EditDeckScreen() {
     setShowDiscardModal(true);
   }
 
-  const previewIconColor = colorHex ?? theme.colors.primary;
-  const previewIconBg = colorHex ? colorHex + '20' : theme.colors.primaryLight;
+  const { color: previewIconColor, bg: previewIconBg } = resolveDeckIconColors(colorHex, theme);
 
   const colorSwatch = (c: string) => (
     <Pressable
@@ -107,6 +107,17 @@ export default function EditDeckScreen() {
       style={[styles.colorCell, { backgroundColor: c }, colorHex === c && styles.colorCellSelected]}
     >
       {colorHex === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
+    </Pressable>
+  );
+  // 設定の「配色」に追従する2トーン（アイコン=primary／丸背景=カードテーマ色）を1色として追加する
+  const themeSwatchColors = resolveDeckIconColors(DECK_THEME_COLOR, theme);
+  const themeSwatch = (
+    <Pressable
+      key="__theme__"
+      onPress={() => { Keyboard.dismiss(); setColorHex(DECK_THEME_COLOR); }}
+      style={[styles.colorCell, { backgroundColor: themeSwatchColors.bg, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === DECK_THEME_COLOR && styles.colorCellSelected]}
+    >
+      <Ionicons name={colorHex === DECK_THEME_COLOR ? 'checkmark-sharp' : 'sync'} size={colorHex === DECK_THEME_COLOR ? 18 : 22} color={theme.colors.primary} />
     </Pressable>
   );
   const clearSwatch = (
@@ -212,16 +223,17 @@ export default function EditDeckScreen() {
               {t('deck.color')}
             </Text>
             {(Platform as any).isPad ? (
-              // iPad: 横一連に全色 + 末尾に ✕
+              // iPad: 横一連に全色 + テーマカラー + 末尾に ✕
               <View style={styles.colorGrid}>
                 {DECK_PRESET_COLORS.map(colorSwatch)}
+                {themeSwatch}
                 {clearSwatch}
               </View>
             ) : (
-              // iPhone: 1行目=赤始まり6色 / 2行目=濃い青始まり6色 + 末尾に ✕（ピンクの右隣）
+              // iPhone: 1行目=7色 / 2行目=残り5色 + テーマカラー + 末尾に ✕
               <View style={{ gap: 10 }}>
-                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(0, 6).map(colorSwatch)}</View>
-                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(6).map(colorSwatch)}{clearSwatch}</View>
+                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(0, 7).map(colorSwatch)}</View>
+                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(7).map(colorSwatch)}{themeSwatch}{clearSwatch}</View>
               </View>
             )}
           </View>
@@ -277,7 +289,7 @@ export default function EditDeckScreen() {
       <IconPickerModal
         visible={showIconPicker}
         selected={iconName}
-        highlightColor={colorHex ?? theme.colors.primary}
+        highlightColor={previewIconColor}
         onSelect={setIconName}
         onClose={() => setShowIconPicker(false)}
       />

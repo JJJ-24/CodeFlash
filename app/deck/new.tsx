@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS } from '@/lib/theme';
+import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { IconPickerModal } from '@/components/IconPickerModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
@@ -73,8 +75,37 @@ export default function NewDeckScreen() {
     setShowDiscardModal(true);
   }
 
-  const previewIconColor = colorHex ?? theme.colors.primary;
-  const previewIconBg = colorHex ? colorHex + '20' : theme.colors.primaryLight;
+  const { color: previewIconColor, bg: previewIconBg } = resolveDeckIconColors(colorHex, theme);
+
+  const colorSwatch = (c: string) => (
+    <Pressable
+      key={c}
+      onPress={() => { Keyboard.dismiss(); setColorHex(c); }}
+      style={[styles.colorCell, { backgroundColor: c }, colorHex === c && styles.colorCellSelected]}
+    >
+      {colorHex === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
+    </Pressable>
+  );
+  // 設定の「配色」に追従する2トーン（アイコン=primary／丸背景=カードテーマ色）を1色として追加する
+  const themeSwatchColors = resolveDeckIconColors(DECK_THEME_COLOR, theme);
+  const themeSwatch = (
+    <Pressable
+      key="__theme__"
+      onPress={() => { Keyboard.dismiss(); setColorHex(DECK_THEME_COLOR); }}
+      style={[styles.colorCell, { backgroundColor: themeSwatchColors.bg, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === DECK_THEME_COLOR && styles.colorCellSelected]}
+    >
+      <Ionicons name={colorHex === DECK_THEME_COLOR ? 'checkmark-sharp' : 'sync'} size={colorHex === DECK_THEME_COLOR ? 18 : 22} color={theme.colors.primary} />
+    </Pressable>
+  );
+  const clearSwatch = (
+    <Pressable
+      key="__clear__"
+      onPress={() => { Keyboard.dismiss(); setColorHex(null); }}
+      style={[styles.colorCell, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === null && { borderColor: theme.colors.primary, borderWidth: 2 }]}
+    >
+      <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
+    </Pressable>
+  );
 
   return (
     <>
@@ -169,23 +200,20 @@ export default function NewDeckScreen() {
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.color')}
             </Text>
-            <View style={styles.colorGrid}>
-              <Pressable
-                onPress={() => { Keyboard.dismiss(); setColorHex(null); }}
-                style={[styles.colorCell, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === null && { borderColor: theme.colors.primary, borderWidth: 2 }]}
-              >
-                <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
-              </Pressable>
-              {DECK_PRESET_COLORS.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => { Keyboard.dismiss(); setColorHex(c); }}
-                  style={[styles.colorCell, { backgroundColor: c }, colorHex === c && styles.colorCellSelected]}
-                >
-                  {colorHex === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
-                </Pressable>
-              ))}
-            </View>
+            {(Platform as any).isPad ? (
+              // iPad: 横一連に全色 + テーマカラー + 末尾に ✕
+              <View style={styles.colorGrid}>
+                {DECK_PRESET_COLORS.map(colorSwatch)}
+                {themeSwatch}
+                {clearSwatch}
+              </View>
+            ) : (
+              // iPhone: 1行目=7色 / 2行目=残り5色 + テーマカラー + 末尾に ✕
+              <View style={{ gap: 10 }}>
+                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(0, 7).map(colorSwatch)}</View>
+                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(7).map(colorSwatch)}{themeSwatch}{clearSwatch}</View>
+              </View>
+            )}
           </View>
 
           {isPro && (
@@ -222,7 +250,7 @@ export default function NewDeckScreen() {
       <IconPickerModal
         visible={showIconPicker}
         selected={iconName}
-        highlightColor={colorHex ?? theme.colors.primary}
+        highlightColor={previewIconColor}
         onSelect={setIconName}
         onClose={() => setShowIconPicker(false)}
       />

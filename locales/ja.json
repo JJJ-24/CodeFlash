@@ -91,6 +91,7 @@
     "name": "タグ名",
     "namePlaceholder": "例: 最重要（50文字まで）",
     "color": "カラー",
+    "previewLabel": "表示イメージ",
     "empty": "タグがまだありません",
     "emptySub": "+ ボタンから\nタグを作成しよう",
     "duplicateName": "同じ名前のタグがすでに存在します",

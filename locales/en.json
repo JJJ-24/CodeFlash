@@ -91,6 +91,7 @@
     "name": "Tag Name",
     "namePlaceholder": "e.g. Essential (max 50 chars)",
     "color": "Color",
+    "previewLabel": "Preview",
     "empty": "No tags yet",
     "emptySub": "Tap the + button\nto create your first tag",
     "duplicateName": "A tag with that name already exists",

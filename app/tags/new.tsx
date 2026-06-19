@@ -116,11 +116,16 @@ export default function NewTagScreen() {
             </View>
           </View>
 
-          <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.previewDot, { backgroundColor: color }]} />
-            <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {name || t('tag.namePlaceholder')}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('tag.previewLabel')}
             </Text>
+            <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
+              <View style={[styles.previewDot, { backgroundColor: color }]} />
+              <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {name || t('tag.namePlaceholder')}
+              </Text>
+            </View>
           </View>
         </ScrollView>
 

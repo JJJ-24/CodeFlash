@@ -28,7 +28,7 @@
     "noCards": "カードがまだありません",
     "noCardsSub": "+ ボタンから\nカードを作成しよう",
     "noCardsInFilter": "該当するカードはありません",
-    "icon": "アイコン",
+    "icon": "アイコン（表示イメージ）",
     "iconNone": "アイコンなし",
     "iconPickerTitle": "アイコンを選択",
     "iconCategory": {

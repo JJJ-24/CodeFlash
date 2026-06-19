@@ -193,9 +193,16 @@ export default function EditDeckScreen() {
                   color={iconName ? previewIconColor : theme.colors.textSecondary}
                 />
               </View>
-              <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {iconName ?? t('deck.iconNone')}
-              </Text>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ color: name ? theme.colors.text : theme.colors.textTertiary, fontSize: theme.fontSize.md, fontWeight: '600' }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {name || t('deck.namePlaceholder')}
+                </Text>
+                {!!description && (
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {description}
+                  </Text>
+                )}
+              </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
             </Pressable>
           </View>
@@ -238,24 +245,6 @@ export default function EditDeckScreen() {
               </Pressable>
             </View>
           )}
-
-          <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
-            {iconName && (
-              <View style={[styles.previewIcon, { backgroundColor: previewIconBg }]}>
-                <Ionicons name={iconName as any} size={20} color={previewIconColor} />
-              </View>
-            )}
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {name || t('deck.namePlaceholder')}
-              </Text>
-              {!!description && (
-                <Text style={[styles.previewDesc, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {description}
-                </Text>
-              )}
-            </View>
-          </View>
 
           <View style={styles.field}>
             <View style={[styles.archiveRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
@@ -366,22 +355,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFF',
   },
-  preview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 10,
-    padding: 14,
-  },
-  previewIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewName: { fontWeight: '600' },
-  previewDesc: {},
   archiveRow: {
     flexDirection: 'row',
     alignItems: 'center',

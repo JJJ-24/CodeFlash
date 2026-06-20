@@ -714,7 +714,7 @@ export default function StudySessionScreen() {
           </View>
         ) : iPhoneHeader}
         <ScrollView
-          style={{ flex: 1, backgroundColor: theme.baseBackground }}
+          style={{ flex: 1, backgroundColor: theme.cardTheme.background }}
           contentContainerStyle={styles.completeScreen}
           bounces={false}
         >

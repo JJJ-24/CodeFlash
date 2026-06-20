@@ -1115,6 +1115,19 @@ export default function StudySessionScreen() {
             </Pressable>
           </View>
 
+          {/* 進捗バー（ヘッダーとカードの境界線を兼ねる極細バー） */}
+          <View
+            style={[
+              styles.fullscreenProgressBar,
+              { backgroundColor: theme.cardTheme.border },
+            ]}
+          >
+            <View
+              style={{ flex: progressRatio, backgroundColor: theme.colors.primary }}
+            />
+            <View style={{ flex: 1 - progressRatio }} />
+          </View>
+
           {/* コンテンツエリア */}
           <GestureDetector gesture={swipe.panGesture}>
             <Animated.View style={[{ flex: 1 }, swipe.cardAnimStyle]}>
@@ -1125,6 +1138,7 @@ export default function StudySessionScreen() {
                   onFlip={handleFlip}
                   cardStyle={{
                     borderRadius: 0,
+                    borderWidth: 0,
                     shadowOpacity: 0,
                     elevation: 0,
                   }}
@@ -1801,6 +1815,10 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     paddingHorizontal: 12,
     paddingBottom: 4,
+  },
+  fullscreenProgressBar: {
+    height: 2,
+    flexDirection: "row",
   },
   fullscreenContent: {
     flexGrow: 1,

@@ -33,7 +33,9 @@
 - フォントサイズの個別調整（既存の `fontSizePreference` で十分）
 - デッキ別フォント（複雑度の割に訴求が弱い）
 - ユーザー任意フォントの読み込み（管理コストが高い）
-- コードブロックのフォント変更（モノスペース固定）
+- コードブロックのフォント変更 → 本 MVP（本文・UIの日本語フォント）からは除外するが、
+  **別案として下記「追加案：コードブロック専用フォント変更」に切り出して検討**する
+  （等幅フォント同士の選択であり、本文フォントとは要件・リスクが大きく異なるため）
 
 ---
 
@@ -186,6 +188,70 @@
 - ペイウォール起動 → 購入完了 → Pro 反映 → フォント切替 の流れで一瞬チラつき得る
 - 解決策: ペイウォール画面自体は固定で `system` フォントで描画（チラつきを発生させない）
 - 購入完了後の設定画面に戻った瞬間に新フォントが反映される
+
+---
+
+## 追加案：コードブロック専用フォント変更（本文フォントとは別軸）
+
+本 MVP（本文・UI の日本語フォント変更）とは**別軸**で、「コードブロックの等幅フォントを
+選べる」案。本アプリはコード学習が主目的のため、開発者層には**本文フォントより訴求が強い**
+可能性がある。本文フォント変更とは要件・リスクが大きく異なるので、**独立して（先行して）
+実装できる**よう切り出して記載する。
+
+### 本文フォント変更（MVP）との違い
+
+| | 本文・UI フォント（MVP） | コードフォント（本追加案） |
+|---|---|---|
+| 対象文字 | 日本語含む全テキスト | コード（基本 ASCII） |
+| 必要フォント | 日本語対応（CJK グリフ必須） | 等幅・ASCII 中心でよい |
+| バンドルサイズ | 大（2 weight で 5〜10MB 級） | 小（1 フォント ~100〜300KB、2〜3種で ~1MB） |
+| Bold の落とし穴 | 日本語 Bold ファイル別途必須 | 等幅フォントは Regular/Bold が素直 |
+| 訴求 | 「自分のアプリ感」 | **「コードがかっこよく表示される」＝学習体験そのもの** |
+| リスク | レイアウト崩れ・日本語描画 | 低（等幅同士なので桁揃えは保たれる） |
+
+### スコープ（案）
+
+- グローバル設定 `codeFontFamilyPreference`（例：`'system' | 'jetbrains' | 'fira'`）
+  - `'system'` = 現状の `fontFamily: 'monospace'`（iOS=Menlo / Android=Roboto Mono）
+  - `'jetbrains'` = JetBrains Mono（SIL OFL）
+  - `'fira'` = Fira Code（SIL OFL、**リガチャ**対応 → `=>` `===` `!=` 等が合字表示）
+- バンドルは ASCII 中心の等幅フォントなので **subset 不要・容量小**（日本語は同梱しない）
+- **日本語**：コード内の日本語コメント等は同梱フォントにグリフが無いためシステムへ
+  フォールバック（コードは基本 ASCII なので実害は小さい）
+- リガチャは ON/OFF の好みが分かれるため、Fira Code は「リガチャあり版」として明示する
+  （`fontVariant`/`fontFeatureSettings` での制御可否は実装時に要確認）
+
+### 適用箇所（現状 `fontFamily: 'monospace'` を `theme.codeFontFamily` に置換）
+
+- `components/study/SyntaxHighlightedCode.tsx`（学習画面のコード表示）
+- `components/study/BlocksView.tsx`
+- `components/study/CodeRunnerView.tsx`
+- `components/editor/CodeBlockItem.tsx`（編集中のコード入力）
+- `components/editor/TextBlockItem.tsx`（コード扱いの箇所）
+- `components/code/ExecutionOutput.tsx`（実行結果・ログ）
+- `components/code/SymbolPalette.tsx`
+- `components/SqlInitModal.tsx`
+- → `lib/theme/index.ts` の `useTheme()` に `codeFontFamily: string`（`'system'` は `'monospace'`）を追加し、
+  上記を一括置換する。本文フォント（MVP）とは独立した設定値・適用経路にする
+
+### Todo（案）
+
+- [ ] フォント選定・ライセンス確認（JetBrains Mono / Fira Code = SIL OFL）
+- [ ] `expo-font` でバンドル（`assets/fonts/` に Regular/Bold）
+- [ ] `store/settings.ts` に `codeFontFamilyPreference`（既定 `'system'`）＋永続化キー `@codeflash_code_font`
+- [ ] `useTheme()` に `codeFontFamily` を追加し、適用箇所を一括置換
+- [ ] 設定画面（`app/settings/display.tsx`）に「コードフォント」セクション
+  - [ ] 各選択肢にコードのサンプル（例：`const sum = (a, b) => a + b; // 合計`）を表示してリガチャ/桁揃えを実感
+- [ ] リガチャ表示の確認（Fira Code）
+- [ ] Pro ガードの要否を判断（配色テーマ＝Pro と揃えるなら Pro 寄り）
+- [ ] iCloud 同期からは除外（端末ごとの好み、MVP と同方針）
+- [ ] アプリ DL サイズへの影響を実測（本文フォントより小さいはず）
+
+### 進め方の提案
+
+- **本文フォント（MVP）よりリスク・容量が小さく、訴求はアプリの方向性に合致**するため、
+  コードフォント変更を**先に（例：v1.8.0）単独で出す**のも有力。
+- 本文フォント（日本語・大容量）はユーザー反応を見てから慎重に、という MVP 方針を維持できる。
 
 ---
 

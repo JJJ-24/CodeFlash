@@ -58,6 +58,11 @@ import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
 
 const SCROLL_STEP = 200;
+// 画面下の前後ボタンの長押しオートリピート（キーボード長押しに相当）。
+// 押下から HOLD_INITIAL_DELAY_MS 後に連続送り開始、以後 HOLD_REPEAT_MS 間隔で送る。
+// HOLD_REPEAT_MS は useSwipeGesture の RAPID_WINDOW_MS（200ms）未満にして「連打＝スナップ」に乗せる。
+const HOLD_INITIAL_DELAY_MS = 350;
+const HOLD_REPEAT_MS = 120;
 
 const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 0, labelKey: "grade.again", color: GRADE_COLORS.again },
@@ -277,6 +282,39 @@ export default function StudySessionScreen() {
       cbs.reset();
     },
   });
+
+  // 画面下ボタンの長押しオートリピート。setInterval は固定クロージャになるため、
+  // 常に最新の navigateWithSlide / currentIndex を ref 経由で参照する（毎レンダー更新）。
+  const holdTimersRef = useRef<{ delay?: ReturnType<typeof setTimeout>; interval?: ReturnType<typeof setInterval> }>({});
+  const pressNavigatedRef = useRef(false);
+  const curIdxRef = useRef(currentIndex);
+  curIdxRef.current = currentIndex;
+  const navigateRef = useRef(swipe.navigateWithSlide);
+  navigateRef.current = swipe.navigateWithSlide;
+
+  const stopHold = useCallback(() => {
+    const t = holdTimersRef.current;
+    if (t.delay) clearTimeout(t.delay);
+    if (t.interval) clearInterval(t.interval);
+    holdTimersRef.current = {};
+  }, []);
+
+  const startHold = useCallback((direction: "next" | "prev") => {
+    stopHold();
+    pressNavigatedRef.current = true;
+    navigateRef.current(direction); // 押した瞬間に1枚（単発＝スライド）
+    holdTimersRef.current.delay = setTimeout(() => {
+      holdTimersRef.current.interval = setInterval(() => {
+        navigateRef.current(direction); // 連続送り（RAPID_WINDOW 内＝スナップでパラパラ）
+      }, HOLD_REPEAT_MS);
+    }, HOLD_INITIAL_DELAY_MS);
+  }, [stopHold]);
+
+  // セッション完了時・アンマウント時にリピートを必ず止める（指を離せず button がアンマウントされても安全）
+  useEffect(() => {
+    if (completed) stopHold();
+    return stopHold;
+  }, [completed, stopHold]);
 
   const handleFlip = useCallback(() => setIsFlipped((v) => !v), []);
   const handleToggleMemo = useCallback(() => setShowMemo((v) => !v), []);
@@ -1243,7 +1281,12 @@ export default function StudySessionScreen() {
             <>
               <Pressable
                 style={[styles.navFab, styles.navFabFloating, { left: 20, bottom: insets.bottom + 16, backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
-                onPress={currentIndex === 0 ? safeBack : goBack}
+                onPressIn={() => {
+                  pressNavigatedRef.current = false;
+                  if (curIdxRef.current > 0) startHold("prev");
+                }}
+                onPressOut={stopHold}
+                onPress={() => { if (curIdxRef.current === 0 && !pressNavigatedRef.current) safeBack(); }}
                 hitSlop={8}
               >
                 <Ionicons
@@ -1254,7 +1297,8 @@ export default function StudySessionScreen() {
               </Pressable>
               <Pressable
                 style={[styles.navFab, styles.navFabFloating, { right: 20, bottom: insets.bottom + 16, backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
-                onPress={goNext}
+                onPressIn={() => startHold("next")}
+                onPressOut={stopHold}
                 hitSlop={8}
               >
                 <Ionicons
@@ -1565,7 +1609,12 @@ export default function StudySessionScreen() {
               {/* 左: 前カードへ。先頭カードではセッションを抜けて戻る（配色を変えて区別） */}
               <Pressable
                 style={[styles.navFab, { backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
-                onPress={currentIndex === 0 ? safeBack : goBack}
+                onPressIn={() => {
+                  pressNavigatedRef.current = false;
+                  if (curIdxRef.current > 0) startHold("prev");
+                }}
+                onPressOut={stopHold}
+                onPress={() => { if (curIdxRef.current === 0 && !pressNavigatedRef.current) safeBack(); }}
                 hitSlop={8}
               >
                 <Ionicons
@@ -1598,7 +1647,8 @@ export default function StudySessionScreen() {
               {/* 右: 次カードへ。最後のカードでは完了画面へ（配色を変えて区別） */}
               <Pressable
                 style={[styles.navFab, { backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
-                onPress={goNext}
+                onPressIn={() => startHold("next")}
+                onPressOut={stopHold}
                 hitSlop={8}
               >
                 <Ionicons

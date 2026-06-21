@@ -19,6 +19,7 @@ import {
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { InfoModal } from '@/components/InfoModal';
+import { InfoContent } from '@/components/InfoContent';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
@@ -234,7 +235,7 @@ export default function TagCardsScreen() {
               <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0, marginHorizontal: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('card.list')}
               </Text>
-              <Pressable onPress={() => setShowTagCardsInfo(true)} hitSlop={8}>
+              <Pressable onPress={() => setShowTagCardsInfo(true)} hitSlop={8} accessibilityLabel={t('tag.cardListInfoLabel')}>
                 <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
               </Pressable>
             </View>
@@ -322,7 +323,7 @@ export default function TagCardsScreen() {
       <InfoModal
         visible={showTagCardsInfo}
         title={t('tag.cardListInfoTitle')}
-        message={t('tag.cardListInfoMessage')}
+        message={<InfoContent text={t('tag.cardListInfoMessage')} />}
         onClose={() => setShowTagCardsInfo(false)}
       />
       <ShortcutsModal

@@ -17,6 +17,7 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { InfoModal } from '@/components/InfoModal';
+import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
@@ -71,7 +72,7 @@ export default function StudyScreen() {
   const { tags, setTags } = useTagStore();
   const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder, studyHideEmpty: hideEmpty, setStudyHideEmpty } = useSettingsStore();
 
-  const [infoModal, setInfoModal] = useState<{ title?: string; message: string } | null>(null);
+  const [infoModal, setInfoModal] = useState<{ title?: string; message: React.ReactNode } | null>(null);
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
   const [todayReviewedPerDeck, setTodayReviewedPerDeck] = useState<Record<string, number>>({});
@@ -402,8 +403,9 @@ export default function StudyScreen() {
                 {t('study.listTitle')}
               </Text>
               <Pressable
-                onPress={() => setInfoModal({ title: t('study.historyInfoTitle'), message: t('study.historyInfoMessage') })}
+                onPress={() => setInfoModal({ title: t('study.historyInfoTitle'), message: <InfoContent text={t('study.historyInfoMessage')} /> })}
                 hitSlop={8}
+                accessibilityLabel={t('study.historyInfoLabel')}
               >
                 <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
               </Pressable>

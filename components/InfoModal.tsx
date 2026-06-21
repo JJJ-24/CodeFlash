@@ -6,7 +6,7 @@ const isPad = (Platform as any).isPad;
 interface Props {
   visible: boolean;
   title?: string;
-  message: string;
+  message: React.ReactNode;
   onClose: () => void;
   okLabel?: string;
 }
@@ -25,12 +25,16 @@ export function InfoModal({ visible, title, message, onClose, okLabel = 'OK' }: 
               {title}
             </Text>
           )}
-          <Text
-            style={[styles.message, { color: title ? theme.colors.textSecondary : theme.colors.text, fontSize: theme.fontSize.md }]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-          >
-            {message}
-          </Text>
+          {typeof message === 'string' ? (
+            <Text
+              style={[styles.message, { color: title ? theme.colors.textSecondary : theme.colors.text, fontSize: theme.fontSize.md }]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
+              {message}
+            </Text>
+          ) : (
+            <View style={styles.messageNode}>{message}</View>
+          )}
           <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
           <Pressable style={styles.okBtn} onPress={onClose}>
             <Text
@@ -56,6 +60,7 @@ const styles = StyleSheet.create({
   dialogPad: { width: 440, maxWidth: '90%' },
   title: { fontWeight: '700', marginBottom: 8 },
   message: { lineHeight: 22, marginBottom: 16 },
+  messageNode: { marginBottom: 16 },
   separator: { height: StyleSheet.hairlineWidth, marginHorizontal: -24 },
   okBtn: { paddingVertical: 14, alignItems: 'center' },
   okBtnText: { fontWeight: '600' },

@@ -44,6 +44,7 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { InfoModal } from '@/components/InfoModal';
+import { InfoContent } from '@/components/InfoContent';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -106,7 +107,7 @@ export default function DeckDetailScreen() {
   const archiveCardRef = useRef<(card: Card) => void>(() => {});
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
-  const [infoModal, setInfoModal] = useState<{ title?: string; message: string } | null>(null);
+  const [infoModal, setInfoModal] = useState<{ title?: string; message: React.ReactNode } | null>(null);
   const [pendingMoveDeck, setPendingMoveDeck] = useState<Deck | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -772,8 +773,9 @@ export default function DeckDetailScreen() {
                   {t('card.list')}
                 </Text>
                 <Pressable
-                  onPress={() => setInfoModal({ title: t('card.listInfoTitle'), message: t('card.listInfoMessage') })}
+                  onPress={() => setInfoModal({ title: t('card.listInfoTitle'), message: <InfoContent text={t('card.listInfoMessage')} /> })}
                   hitSlop={8}
+                  accessibilityLabel={t('card.listInfoLabel')}
                 >
                   <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
                 </Pressable>

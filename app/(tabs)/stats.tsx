@@ -34,6 +34,7 @@ import {
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { InfoModal } from '@/components/InfoModal';
+import { InfoContent } from '@/components/InfoContent';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
@@ -817,7 +818,7 @@ export default function StatsScreen() {
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string } | null>(null);
   const [showDetailStatsInfo, setShowDetailStatsInfo] = useState(false);
-  const [sectionInfoModal, setSectionInfoModal] = useState<{ title: string; message: string } | null>(null);
+  const [sectionInfoModal, setSectionInfoModal] = useState<{ title: string; message: React.ReactNode } | null>(null);
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -1371,7 +1372,7 @@ export default function StatsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.activityHeatmap')}
           </Text>
-          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.activityHeatmap'), message: t('stats.activityHeatmapInfoMessage') })} hitSlop={8} accessibilityLabel={t('stats.activityHeatmapInfoLabel')}>
+          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.activityHeatmap'), message: <InfoContent text={t('stats.activityHeatmapInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.activityHeatmapInfoLabel')}>
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
           </Pressable>
         </View>
@@ -1389,7 +1390,7 @@ export default function StatsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.totalProgress')}
           </Text>
-          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.totalProgress'), message: t('stats.totalProgressInfoMessage') })} hitSlop={8} accessibilityLabel={t('stats.totalProgressInfoLabel')}>
+          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.totalProgress'), message: <InfoContent text={t('stats.totalProgressInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.totalProgressInfoLabel')}>
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
           </Pressable>
         </View>
@@ -1422,7 +1423,7 @@ export default function StatsScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('stats.deckMastery')}
             </Text>
-            <Pressable onPress={() => setSectionInfoModal({ title: t('stats.deckMastery'), message: t('stats.deckMasteryInfoMessage') })} hitSlop={8} accessibilityLabel={t('stats.deckMasteryInfoLabel')}>
+            <Pressable onPress={() => setSectionInfoModal({ title: t('stats.deckMastery'), message: <InfoContent text={t('stats.deckMasteryInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.deckMasteryInfoLabel')}>
               <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
             </Pressable>
           </View>
@@ -1784,7 +1785,7 @@ export default function StatsScreen() {
       <InfoModal
         visible={showDetailStatsInfo}
         title={t('stats.detailStatsInfoTitle')}
-        message={t('stats.detailStatsInfoMessage')}
+        message={<InfoContent text={t('stats.detailStatsInfoMessage')} />}
         onClose={() => setShowDetailStatsInfo(false)}
       />
       <InfoModal

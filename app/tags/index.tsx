@@ -22,6 +22,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { InfoModal } from '@/components/InfoModal';
+import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -294,7 +295,7 @@ export default function TagsScreen() {
               <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('tag.tagListTitle')}
               </Text>
-              <Pressable onPress={() => setShowTagListInfo(true)} hitSlop={8}>
+              <Pressable onPress={() => setShowTagListInfo(true)} hitSlop={8} accessibilityLabel={t('tag.tagListInfoLabel')}>
                 <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
               </Pressable>
             </View>
@@ -476,7 +477,7 @@ export default function TagsScreen() {
       <InfoModal
         visible={showTagListInfo}
         title={t('tag.tagListInfoTitle')}
-        message={t('tag.tagListInfoMessage')}
+        message={<InfoContent text={t('tag.tagListInfoMessage')} />}
         onClose={() => setShowTagListInfo(false)}
       />
       <ShortcutsModal

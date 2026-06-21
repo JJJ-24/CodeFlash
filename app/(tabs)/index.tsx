@@ -21,6 +21,7 @@ import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
+import { InfoContent } from '@/components/InfoContent';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
@@ -269,7 +270,7 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('home.title')}
             </Text>
-            <Pressable onPress={() => setShowDeckListInfo(true)} hitSlop={8}>
+            <Pressable onPress={() => setShowDeckListInfo(true)} hitSlop={8} accessibilityLabel={t('home.deckListInfoLabel')}>
               <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
             </Pressable>
           </View>
@@ -462,7 +463,7 @@ export default function HomeScreen() {
       <InfoModal
         visible={showDeckListInfo}
         title={t('home.deckListInfoTitle')}
-        message={t('home.deckListInfoMessage')}
+        message={<InfoContent text={t('home.deckListInfoMessage')} />}
         onClose={() => setShowDeckListInfo(false)}
       />
       <ShortcutsModal

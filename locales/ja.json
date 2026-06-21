@@ -233,6 +233,7 @@
     "error": "✕ エラー",
     "timeout": "⏱ タイムアウト（5秒）",
     "timeoutMessage": "実行が5秒を超えたため中断されました",
+    "serverBusy": "C++実行サーバが混雑しています。少し待ってから再実行してください（コードに問題はありません）",
     "empty": "（出力なし）",
     "pyodideLoading": "Python を準備中（初回は時間がかかります）",
     "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）",

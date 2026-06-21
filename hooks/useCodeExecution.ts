@@ -3,10 +3,52 @@ import { useEffect, useRef, useState } from 'react';
 
 import { buildSandboxHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, ExecStatus, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
+import i18n from '@/lib/i18n';
 
 export type { ExecResult, ExecStatus, LogEntry, SqlTableResult };
 
 const WANDBOX_URL = 'https://wandbox.org/api/compile.json';
+
+type WandboxData = {
+  status?: string;
+  compiler_error?: string;
+  program_output?: string;
+  program_error?: string;
+};
+
+// Wandbox（公開無料インスタンス）の一時的なサーバ側障害のシグネチャ。
+// 例: "OCI runtime error: crun: clone: Resource temporarily unavailable"（混雑でプロセス生成に失敗）。
+// これらはユーザーのコードの問題ではなく、再試行で復旧することが多い。
+const WANDBOX_TRANSIENT_PATTERN =
+  /resource temporarily unavailable|oci runtime|crun:|cannot allocate memory|too many open files|exec format error/i;
+
+/** Wandbox の応答が「コードの誤り」ではなく一時的なサーバ障害かどうかを判定する。 */
+function isWandboxTransient(data: WandboxData): boolean {
+  // 本物のコンパイルエラーは（混雑ではなく）ユーザーのコードの問題なので除外する。
+  if (data.compiler_error?.includes('error:')) return false;
+  const text = `${data.program_error ?? ''}\n${data.compiler_error ?? ''}`;
+  return WANDBOX_TRANSIENT_PATTERN.test(text);
+}
+
+// 自動リトライの待機（初回失敗後 → 800ms、次 → 1600ms）。
+const WANDBOX_RETRY_BACKOFFS = [800, 1600];
+
+/** abort で即座にキャンセルできる待機。abort 時は name='AbortError' の Error で reject する。 */
+function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(resolve, ms);
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(id);
+        const err = new Error('Aborted');
+        err.name = 'AbortError';
+        reject(err);
+      },
+      { once: true },
+    );
+  });
+}
 
 /**
  * コード実行の状態管理と実行ロジックを提供するフック。
@@ -30,56 +72,80 @@ export function useCodeExecution(onResult?: () => void) {
   async function runCppViaWandbox(code: string) {
     const controller = new AbortController();
     cppAbortRef.current = controller;
+    // 全リトライ込みの全体タイムアウト（30秒）。これを超えたら timeout 扱いで打ち切る。
     const timer = setTimeout(() => controller.abort(), 30000);
 
+    // 初回 + リトライ。混雑（一時障害）やネットワーク失敗のときだけ再試行する。
+    const maxAttempts = WANDBOX_RETRY_BACKOFFS.length + 1;
     try {
-      const resp = await fetch(WANDBOX_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, compiler: 'gcc-13.2.0', 'compiler-option-raw': '-std=c++17\n-Wall' }),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      cppAbortRef.current = null;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        let data: WandboxData;
+        try {
+          const resp = await fetch(WANDBOX_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, compiler: 'gcc-13.2.0', 'compiler-option-raw': '-std=c++17\n-Wall' }),
+            signal: controller.signal,
+          });
+          if (!resp.ok) throw new Error(`Wandbox API error: ${resp.status}`);
+          data = (await resp.json()) as WandboxData;
+        } catch (e: unknown) {
+          // タイムアウト/キャンセルは即終了。ネットワーク失敗はリトライ対象。
+          if (e instanceof Error && e.name === 'AbortError') throw e;
+          if (attempt <= WANDBOX_RETRY_BACKOFFS.length) {
+            await abortableDelay(WANDBOX_RETRY_BACKOFFS[attempt - 1], controller.signal);
+            continue;
+          }
+          throw e;
+        }
 
-      if (!resp.ok) throw new Error(`Wandbox API error: ${resp.status}`);
+        // サーバ側の一時障害（混雑）はバックオフを挟んで再試行する。
+        if (isWandboxTransient(data) && attempt <= WANDBOX_RETRY_BACKOFFS.length) {
+          await abortableDelay(WANDBOX_RETRY_BACKOFFS[attempt - 1], controller.signal);
+          continue;
+        }
 
-      const data = await resp.json() as {
-        status?: string;
-        compiler_error?: string;
-        program_output?: string;
-        program_error?: string;
-      };
+        clearTimeout(timer);
+        cppAbortRef.current = null;
 
-      const logs: LogEntry[] = [];
-      if (data.compiler_error) {
-        data.compiler_error.split('\n').forEach(line => {
-          if (!line.trim()) return;
-          logs.push({ type: line.includes('error:') ? 'error' : 'warn', text: line });
+        // リトライしても混雑が解消しなかった場合は、コードの実行時エラーと区別して案内する。
+        if (isWandboxTransient(data)) {
+          setStatus('error');
+          setResult({ status: 'error', logs: [], errorMessage: i18n.t('code.serverBusy') });
+          return;
+        }
+
+        const logs: LogEntry[] = [];
+        if (data.compiler_error) {
+          data.compiler_error.split('\n').forEach(line => {
+            if (!line.trim()) return;
+            logs.push({ type: line.includes('error:') ? 'error' : 'warn', text: line });
+          });
+        }
+        if (data.program_output) {
+          data.program_output.split('\n').forEach(line => {
+            if (line !== '') logs.push({ type: 'log', text: line });
+          });
+        }
+        if (data.program_error) {
+          data.program_error.split('\n').forEach(line => {
+            if (line.trim()) logs.push({ type: 'error', text: line });
+          });
+        }
+
+        const hasCompileError = !!data.compiler_error?.includes('error:');
+        const hasRuntimeError = !hasCompileError && data.status !== '0';
+        const newStatus: ExecStatus = hasCompileError || hasRuntimeError ? 'error' : 'success';
+        setStatus(newStatus);
+        setResult({
+          status: newStatus,
+          logs,
+          errorMessage: hasCompileError ? 'Compile error'
+            : hasRuntimeError ? `Runtime error (exit code: ${data.status})`
+            : undefined,
         });
+        return;
       }
-      if (data.program_output) {
-        data.program_output.split('\n').forEach(line => {
-          if (line !== '') logs.push({ type: 'log', text: line });
-        });
-      }
-      if (data.program_error) {
-        data.program_error.split('\n').forEach(line => {
-          if (line.trim()) logs.push({ type: 'error', text: line });
-        });
-      }
-
-      const hasCompileError = !!data.compiler_error?.includes('error:');
-      const hasRuntimeError = !hasCompileError && data.status !== '0';
-      const newStatus: ExecStatus = hasCompileError || hasRuntimeError ? 'error' : 'success';
-      setStatus(newStatus);
-      setResult({
-        status: newStatus,
-        logs,
-        errorMessage: hasCompileError ? 'Compile error'
-          : hasRuntimeError ? `Runtime error (exit code: ${data.status})`
-          : undefined,
-      });
     } catch (e: unknown) {
       clearTimeout(timer);
       cppAbortRef.current = null;

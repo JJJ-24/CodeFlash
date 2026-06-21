@@ -19,6 +19,7 @@ import { searchCards } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
 import { getCardPreview } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
+import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { DeckIcon } from '@/components/DeckIcon';
 import { useDeckStore } from '@/store/decks';
@@ -234,6 +235,7 @@ export default function SearchScreen() {
   const { tags } = useTagStore();
   const { lastSearchField, setLastSearchField } = useSettingsStore();
   const inputRef = useRef<TextInput>(null);
+  useDismissKeyboardOnLeave();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Card[]>([]);

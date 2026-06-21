@@ -16,6 +16,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteCard, getCardById, setCardArchived, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
+import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -33,6 +34,7 @@ export default function EditCardScreen() {
   const { decks, updateDeck } = useDeckStore();
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
+  useDismissKeyboardOnLeave();
 
   const editorRef = useRef<BlockEditorRef>(null);
   const [card, setCard] = useState<Card | null>(null);

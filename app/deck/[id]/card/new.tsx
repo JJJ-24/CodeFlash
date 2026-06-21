@@ -11,6 +11,7 @@ import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { createCard } from '@/lib/database/cards';
 import { addTagToCard } from '@/lib/database/tags';
@@ -26,6 +27,7 @@ export default function NewCardScreen() {
   const theme = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const { keyboardShortcutsEnabled } = useSettingsStore();
+  useDismissKeyboardOnLeave();
   const { addCard } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
   const currentDeck = decks.find((d) => d.id === deckId);

@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -29,6 +31,14 @@ interface Props {
 export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
+
+  // シートを閉じる際にキーボードを確実に閉じる。autoFocus の入力欄を開いたまま
+  // 背景タップ・完了ボタン・親 unmount で閉じると、キーボード非表示通知が届かず
+  // グローバル状態が固着して他画面が無限スクロールになるのを防ぐ。
+  useEffect(() => {
+    if (!visible) Keyboard.dismiss();
+  }, [visible]);
+  useEffect(() => () => Keyboard.dismiss(), []);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>

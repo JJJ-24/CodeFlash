@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { DeckIcon } from '@/components/DeckIcon';
@@ -35,8 +35,15 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
       setCreating(false);
       setNewName('');
       setSubmitting(false);
+      // シートを閉じる際にキーボードを確実に閉じる。autoFocus の入力欄を開いたまま
+      // 背景タップ・デッキ選択・親 unmount で閉じると、キーボード非表示通知が届かず
+      // グローバル状態が固着して他画面が無限スクロールになるのを防ぐ。
+      Keyboard.dismiss();
     }
   }, [visible]);
+
+  // unmount 時もキーボードを閉じる（visible=true のまま親ごと外れる経路の保険）。
+  useEffect(() => () => Keyboard.dismiss(), []);
 
   async function handleCreate() {
     const trimmed = newName.trim();

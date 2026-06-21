@@ -24,6 +24,7 @@ import { IconPickerModal } from '@/components/IconPickerModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { createDeck } from '@/lib/database/decks';
+import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
 
@@ -35,6 +36,7 @@ export default function NewDeckScreen() {
   const { addDeck } = useDeckStore();
   const isPro = useProStore((s) => s.isPro);
   const { bottom: bottomInset } = useSafeAreaInsets();
+  useDismissKeyboardOnLeave();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

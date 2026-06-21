@@ -18,6 +18,7 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useTheme, MAX_FONT_MULTIPLIER, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { deleteTag, updateTag } from '@/lib/database/tags';
+import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useTagStore } from '@/store/tags';
 
 export default function EditTagScreen() {
@@ -28,6 +29,7 @@ export default function EditTagScreen() {
   const theme = useTheme();
   const { tags, updateTag: updateStore, removeTag } = useTagStore();
   const { bottom: bottomInset } = useSafeAreaInsets();
+  useDismissKeyboardOnLeave();
 
   const existingTag = tags.find((t) => t.id === tagId);
 

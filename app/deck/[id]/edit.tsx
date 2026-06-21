@@ -27,6 +27,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS } from '@/lib/theme';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
+import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
 
@@ -39,6 +40,7 @@ export default function EditDeckScreen() {
   const { bottom: bottomInset } = useSafeAreaInsets();
   const { decks, updateDeck: updateStore, removeDeck } = useDeckStore();
   const isPro = useProStore((s) => s.isPro);
+  useDismissKeyboardOnLeave();
 
   const deck = decks.find((d) => d.id === id);
 

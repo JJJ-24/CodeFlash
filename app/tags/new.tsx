@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, MAX_FONT_MULTIPLIER, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { createTag } from '@/lib/database/tags';
+import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useTagStore } from '@/store/tags';
 
 export default function NewTagScreen() {
@@ -26,6 +27,7 @@ export default function NewTagScreen() {
   const theme = useTheme();
   const { tags, addTag } = useTagStore();
   const { bottom: bottomInset } = useSafeAreaInsets();
+  useDismissKeyboardOnLeave();
 
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>(PRESET_COLORS[0]);

@@ -69,6 +69,11 @@ export default function DeckDetailScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  // useTheme() は毎レンダー新しいオブジェクトを返すため、renderItem の deps に直接入れると
+  // 毎レンダー renderItem が作り直され全セルが再描画される（並べ替えドロップ時のちらつき要因）。
+  // ref 経由で参照し、テーマ変更時は extraData で再描画を促す。
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
   const { width: screenWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
@@ -368,6 +373,7 @@ export default function DeckDetailScreen() {
   }, [router, id]);
 
   const renderItem = useCallback(({ item, drag }: RenderItemParams<Card>) => {
+    const theme = themeRef.current;
     const preview = getCardPreview(item.frontContent, imageBlockLabelRef.current);
     const effectiveArchived = item.archived || deckArchivedRef.current;
     const isSelected = selectedCardIdsRef.current.has(item.id);
@@ -453,7 +459,15 @@ export default function DeckDetailScreen() {
         </Pressable>
       </SwipeToDeleteRow>
     );
-  }, [theme, isPro, t, navigateToCardEdit]);
+  }, [isPro, t, navigateToCardEdit]);
+
+  // FlatList の再描画トリガー。毎レンダー新オブジェクトだと並べ替えのたびに全セルが
+  // 再描画されちらつくため、選択状態・フォーカス・テーマが変わったときだけ identity を変える。
+  // theme はオブジェクトで毎回 identity が変わるため、テーマ変化を表すプリミティブを deps にする。
+  const listExtraData = useMemo(
+    () => ({ selectionMode, selectedCardIds, focusedCardId, dark: theme.dark, fontScale: theme.fontScale, bg: theme.colors.background }),
+    [selectionMode, selectedCardIds, focusedCardId, theme.dark, theme.fontScale, theme.colors.background],
+  );
 
   const deckCards = useMemo(() => cards.filter((c) => c.deckId === id), [cards, id]);
   const filteredCards = useMemo(
@@ -869,7 +883,7 @@ export default function DeckDetailScreen() {
             updateCardSortOrders(db, data.map((c) => c.id));
           }}
           renderItem={renderItem}
-          extraData={{ selectionMode, selectedCardIds, focusedCardId }}
+          extraData={listExtraData}
         />
       </Pressable>
 

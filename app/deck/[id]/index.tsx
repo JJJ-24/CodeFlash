@@ -777,7 +777,7 @@ export default function DeckDetailScreen() {
                   {t('card.list')}
                 </Text>
                 <Pressable
-                  onPress={() => setInfoModal({ title: t('card.listInfoTitle'), message: <InfoContent text={t('card.listInfoMessage')} /> })}
+                  onPress={() => setInfoModal({ title: t('card.list'), message: <InfoContent text={t('card.listInfoMessage')} /> })}
                   hitSlop={8}
                   accessibilityLabel={t('card.listInfoLabel')}
                 >

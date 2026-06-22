@@ -403,7 +403,7 @@ export default function StudyScreen() {
                 {t('study.listTitle')}
               </Text>
               <Pressable
-                onPress={() => setInfoModal({ title: t('study.historyInfoTitle'), message: <InfoContent text={t('study.historyInfoMessage')} /> })}
+                onPress={() => setInfoModal({ title: t('study.listTitle'), message: <InfoContent text={t('study.historyInfoMessage')} /> })}
                 hitSlop={8}
                 accessibilityLabel={t('study.historyInfoLabel')}
               >

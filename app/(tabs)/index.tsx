@@ -465,7 +465,7 @@ export default function HomeScreen() {
       </Pressable>
       <InfoModal
         visible={showDeckListInfo}
-        title={t('home.deckListInfoTitle')}
+        title={t('home.title')}
         message={<InfoContent text={t('home.deckListInfoMessage')} />}
         onClose={() => setShowDeckListInfo(false)}
       />

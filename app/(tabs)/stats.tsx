@@ -1784,7 +1784,7 @@ export default function StatsScreen() {
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <InfoModal
         visible={showDetailStatsInfo}
-        title={t('stats.detailStatsInfoTitle')}
+        title={t('stats.proSection')}
         message={<InfoContent text={t('stats.detailStatsInfoMessage')} />}
         onClose={() => setShowDetailStatsInfo(false)}
       />

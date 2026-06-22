@@ -485,7 +485,7 @@ export default function TagsScreen() {
 
       <InfoModal
         visible={showTagListInfo}
-        title={t('tag.tagListInfoTitle')}
+        title={t('tag.tagListTitle')}
         message={<InfoContent text={t('tag.tagListInfoMessage')} />}
         onClose={() => setShowTagListInfo(false)}
       />

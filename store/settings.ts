@@ -25,6 +25,7 @@ const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
 const CARD_THEME_KEY = '@codeflash_card_theme';
 const LANGUAGE_PREF_KEY = '@codeflash_language_pref';
 const HOME_FILTER_KEY = '@codeflash_last_home_filter';
+const TAG_CARD_FILTER_KEY = '@codeflash_last_tag_card_filter';
 
 /** ホーム画面のデッキ絞り込み。active=有効デッキのみ / all=アーカイブ含む全デッキ */
 export type HomeFilter = 'active' | 'all';
@@ -117,6 +118,8 @@ interface SettingsState {
   setLanguagePreference: (v: LanguagePreference) => void;
   lastHomeFilter: HomeFilter;
   setLastHomeFilter: (v: HomeFilter) => void;
+  lastTagCardFilter: HomeFilter;
+  setLastTagCardFilter: (v: HomeFilter) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -220,10 +223,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({ lastHomeFilter: v });
     AsyncStorage.setItem(HOME_FILTER_KEY, v);
   },
+  lastTagCardFilter: 'active',
+  setLastTagCardFilter: (v) => {
+    set({ lastTagCardFilter: v });
+    AsyncStorage.setItem(TAG_CARD_FILTER_KEY, v);
+  },
 }));
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckIds, cardTheme, languagePref, homeFilter] = await Promise.all([
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckIds, cardTheme, languagePref, homeFilter, tagCardFilter] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEY),
     AsyncStorage.getItem(FILTER_STORAGE_KEY),
     AsyncStorage.getItem(LANG_STORAGE_KEY),
@@ -244,13 +252,14 @@ export async function hydrateSettings(): Promise<void> {
     AsyncStorage.getItem(CARD_THEME_KEY),
     AsyncStorage.getItem(LANGUAGE_PREF_KEY),
     AsyncStorage.getItem(HOME_FILTER_KEY),
+    AsyncStorage.getItem(TAG_CARD_FILTER_KEY),
   ]);
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
     'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'shuffleEnabled' | 'lastSearchField' |
     'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckIds' |
-    'cardThemePreference' | 'languagePreference' | 'lastHomeFilter'
+    'cardThemePreference' | 'languagePreference' | 'lastHomeFilter' | 'lastTagCardFilter'
   >> = {};
   if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
   if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
@@ -287,6 +296,7 @@ export async function hydrateSettings(): Promise<void> {
     i18n.changeLanguage(resolveLanguage(languagePref as LanguagePreference));
   }
   if (homeFilter === 'active' || homeFilter === 'all') update.lastHomeFilter = homeFilter;
+  if (tagCardFilter === 'active' || tagCardFilter === 'all') update.lastTagCardFilter = tagCardFilter;
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 }
 

@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -54,7 +54,7 @@ export default function TagCardsScreen() {
   const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
-  const { keyboardShortcutsEnabled, cardSortOrder } = useSettingsStore();
+  const { keyboardShortcutsEnabled, cardSortOrder, lastTagCardFilter, setLastTagCardFilter } = useSettingsStore();
   const { isPro } = useProStore();
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const { width: screenWidth } = useWindowDimensions();
@@ -68,7 +68,22 @@ export default function TagCardsScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
   const [pendingDeleteCard, setPendingDeleteCard] = useState<Card | null>(null);
-  const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, listRef, moveFocus } = useListNavigation(cards);
+
+  // 実効アーカイブ（カード自身 or 所属デッキがアーカイブ）。「有効」フィルターで除外する。
+  const isEffectivelyArchived = useCallback(
+    (c: Card) => c.archived || !!decks.find((d) => d.id === c.deckId)?.archived,
+    [decks],
+  );
+  const activeCardCount = useMemo(() => cards.filter((c) => !isEffectivelyArchived(c)).length, [cards, isEffectivelyArchived]);
+  const displayedCards = useMemo(
+    () => (lastTagCardFilter === 'active' ? cards.filter((c) => !isEffectivelyArchived(c)) : cards),
+    [cards, lastTagCardFilter, isEffectivelyArchived],
+  );
+  // ホームのフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
+  const blockWidth = (screenWidth - 56) / 4;
+  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+
+  const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, listRef, moveFocus } = useListNavigation(displayedCards, (c) => c.id);
 
   function confirmDeleteCard(card: Card) {
     const rawPreview = getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ');
@@ -182,12 +197,12 @@ export default function TagCardsScreen() {
           if (k === 'j') { moveFocus('next'); }
           else if (k === 'k') { moveFocus('prev'); }
           else if (k === 'p') {
-            if (focusedCardIndex !== null && cards[focusedCardIndex]) {
-              navigateToEdit(cards[focusedCardIndex]);
+            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+              navigateToEdit(displayedCards[focusedCardIndex]);
             }
           } else if (k === 'd') {
-            if (focusedCardIndex !== null && cards[focusedCardIndex]) {
-              confirmDeleteCard(cards[focusedCardIndex]);
+            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+              confirmDeleteCard(displayedCards[focusedCardIndex]);
             }
           } else if (k === 'n') {
             setShowDeckPicker(true);
@@ -197,16 +212,16 @@ export default function TagCardsScreen() {
             if (!isPro) return;
             if (statsCardId) {
               setStatsCardId(null);
-            } else if (focusedCardIndex !== null && cards[focusedCardIndex]) {
-              setStatsCardId(cards[focusedCardIndex].id);
+            } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+              setStatsCardId(displayedCards[focusedCardIndex].id);
             }
           }
         }}
         onSubmitEditing={() => {
           if (!keyboardShortcutsEnabled) return;
           if (statsCardId !== null) return;
-          if (focusedCardIndex !== null && cards[focusedCardIndex]) {
-            navigateToEdit(cards[focusedCardIndex]);
+          if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+            navigateToEdit(displayedCards[focusedCardIndex]);
           }
         }}
         onBlur={onInputBlur}
@@ -221,9 +236,43 @@ export default function TagCardsScreen() {
           </Text>
         </View>
       ) : (
+      <>
+        {/* フィルター：すべて（全件・青数字）／有効（アーカイブ除外・グレー数字） */}
+        <View style={styles.filterRow}>
+          <Pressable
+            style={[
+              styles.statItem,
+              { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+              lastTagCardFilter === 'all' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
+            ]}
+            onPress={() => setLastTagCardFilter('all')}
+          >
+            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(cards.length).length) }]}>{cards.length}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.statItem,
+              { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+              lastTagCardFilter === 'active' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
+            ]}
+            onPress={() => setLastTagCardFilter('active')}
+          >
+            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeCardCount).length) }]}>{activeCardCount}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.active')}</Text>
+          </Pressable>
+        </View>
+        {displayedCards.length === 0 ? (
+        <View style={styles.empty}>
+          <Ionicons name="archive-outline" size={64} color={theme.colors.iconSubtle} />
+          <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('card.noActiveCards')}
+          </Text>
+        </View>
+      ) : (
         <FlatList
           ref={listRef}
-          data={cards}
+          data={displayedCards}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           contentInsetAdjustmentBehavior="never"
@@ -233,7 +282,7 @@ export default function TagCardsScreen() {
           ListHeaderComponent={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, marginHorizontal: 20 }}>
               <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0, marginHorizontal: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('card.list')}
+                {t('tag.cardListTitle')}
               </Text>
               <Pressable onPress={() => setShowTagCardsInfo(true)} hitSlop={8} accessibilityLabel={t('tag.cardListInfoLabel')}>
                 <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
@@ -290,6 +339,8 @@ export default function TagCardsScreen() {
             );
           }}
         />
+        )}
+      </>
       )}
 
       {/* FAB: 戻る */}
@@ -322,7 +373,7 @@ export default function TagCardsScreen() {
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <InfoModal
         visible={showTagCardsInfo}
-        title={t('tag.cardListInfoTitle')}
+        title={t('tag.cardListTitle')}
         message={<InfoContent text={t('tag.cardListInfoMessage')} />}
         onClose={() => setShowTagCardsInfo(false)}
       />
@@ -360,6 +411,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: { fontWeight: '700', marginBottom: 12, marginHorizontal: 20 },
+  filterRow: { flexDirection: 'row', gap: 4, marginHorizontal: 18, paddingTop: 16, paddingBottom: 4 },
+  statItem: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 2,
+    ...SHADOW.card,
+  },
+  statValue: { fontWeight: '700' },
+  statLabel: { marginTop: 2, textAlign: 'center', fontWeight: '600' },
   cardPreview: { flex: 1 },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   iconBtn: { padding: 4 },

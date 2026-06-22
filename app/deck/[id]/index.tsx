@@ -16,7 +16,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
@@ -388,6 +388,7 @@ export default function DeckDetailScreen() {
       });
     }
     return (
+      <ScaleDecorator>
       <SwipeToDeleteRow
         enabled={!isSelMode && !(selectedFilterRef.current === 'all' && cardSortOrderRef.current === 'manual')}
         onDelete={() => confirmDeleteCardRef.current(item)}
@@ -458,6 +459,7 @@ export default function DeckDetailScreen() {
           )}
         </Pressable>
       </SwipeToDeleteRow>
+      </ScaleDecorator>
     );
   }, [isPro, t, navigateToCardEdit]);
 

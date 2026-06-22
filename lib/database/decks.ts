@@ -72,11 +72,14 @@ export async function updateDeck(
 }
 
 export async function updateDeckSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    for (let i = 0; i < orderedIds.length; i++) {
-      await db.runAsync('UPDATE decks SET sortOrder = ? WHERE id = ?', [i, orderedIds[i]]);
-    }
-  });
+  if (orderedIds.length === 0) return;
+  // 単一 execAsync で BEGIN..COMMIT をまとめる（withTransactionAsync の await 間に
+  // 他クエリが割り込むとトランザクションが入れ子になり落ちるため）。
+  const sql =
+    'BEGIN;\n' +
+    orderedIds.map((id, i) => `UPDATE decks SET sortOrder = ${i} WHERE id = '${id.replace(/'/g, "''")}';`).join('\n') +
+    '\nCOMMIT;';
+  await db.execAsync(sql);
 }
 
 export async function deleteDeck(db: SQLiteDatabase, id: string): Promise<void> {

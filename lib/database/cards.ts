@@ -242,11 +242,15 @@ export async function updateCard(
 }
 
 export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    for (let i = 0; i < orderedIds.length; i++) {
-      await db.runAsync('UPDATE cards SET sortOrder = ? WHERE id = ?', [i, orderedIds[i]]);
-    }
-  });
+  if (orderedIds.length === 0) return;
+  // 単一 execAsync で BEGIN..COMMIT をまとめて実行する。withTransactionAsync は
+  // await 間に他クエリ（連続ドラッグの次の並べ替え等）が割り込み、トランザクションが
+  // 入れ子になって "cannot start a transaction within a transaction" で落ちるため。
+  const sql =
+    'BEGIN;\n' +
+    orderedIds.map((id, i) => `UPDATE cards SET sortOrder = ${i} WHERE id = '${id.replace(/'/g, "''")}';`).join('\n') +
+    '\nCOMMIT;';
+  await db.execAsync(sql);
 }
 
 /** 今日作成したカード数（全デッキ合計） */

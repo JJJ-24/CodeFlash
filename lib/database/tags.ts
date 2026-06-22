@@ -102,6 +102,20 @@ export async function removeTagFromCard(
   await db.runAsync('DELETE FROM card_tags WHERE cardId = ? AND tagId = ?', [cardId, tagId]);
 }
 
+/** 複数カードから同じタグを一括で外す */
+export async function removeTagFromCards(
+  db: SQLiteDatabase,
+  tagId: string,
+  cardIds: string[]
+): Promise<void> {
+  if (cardIds.length === 0) return;
+  const placeholders = cardIds.map(() => '?').join(',');
+  await db.runAsync(
+    `DELETE FROM card_tags WHERE tagId = ? AND cardId IN (${placeholders})`,
+    [tagId, ...cardIds]
+  );
+}
+
 /** デッキ内全カードのタグ行を一括取得（エクスポート用） */
 export async function getTagRowsByDeckId(
   db: SQLiteDatabase,

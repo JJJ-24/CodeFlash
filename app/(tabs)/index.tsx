@@ -38,6 +38,7 @@ import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
 
 const HOME_SHORTCUTS = [
+  { key: '1 / 2',   descKey: 'shortcut.switchFilterAllActive' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'Return', descKey: 'shortcut.openFocused' },
   { key: 'P',     descKey: 'shortcut.editFocused' },
@@ -307,7 +308,11 @@ export default function HomeScreen() {
   const handleKeyPress = useCallback(({ nativeEvent: { key } }: { nativeEvent: { key: string } }) => {
     if (!keyboardShortcutsEnabled) return;
     const k = key.toLowerCase();
-    if (k === 'm') {
+    if (k === '1') {
+      setSelectedFilter('all');
+    } else if (k === '2') {
+      setSelectedFilter('active');
+    } else if (k === 'm') {
       cycleSortOrder();
     } else if (k === 'j') {
       moveDeckFocus('next');
@@ -333,7 +338,7 @@ export default function HomeScreen() {
     } else if (key === ',') {
       router.navigate('/(tabs)/settings');
     }
-  }, [keyboardShortcutsEnabled, cycleSortOrder, moveDeckFocus, focusedDeckIndex, displayedDecks, router, t, handleDelete]);
+  }, [keyboardShortcutsEnabled, cycleSortOrder, moveDeckFocus, focusedDeckIndex, displayedDecks, router, t, handleDelete, setSelectedFilter]);
 
   const handleSubmitEditing = useCallback(() => {
     if (!keyboardShortcutsEnabled) return;

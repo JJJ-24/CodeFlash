@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
@@ -26,7 +27,8 @@ import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { deleteCard, getCardsByTagId, setCardArchived } from '@/lib/database/cards';
+import { deleteCard, getCardsByTagId, setCardArchived, setCardsArchived } from '@/lib/database/cards';
+import { removeTagFromCards } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
@@ -35,12 +37,23 @@ import { useTagStore } from '@/store/tags';
 import type { Card } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
+  { key: '1 / 2',   descKey: 'shortcut.switchFilterAllActive' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'P',       descKey: 'shortcut.editFocusedItem' },
   { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
   { key: 'D',     descKey: 'shortcut.deleteFocused' },
   { key: 'N',     descKey: 'shortcut.new' },
+  { key: 'S',     descKey: 'shortcut.toggleSelect' },
   { key: 'B',     descKey: 'shortcut.back' },
+];
+
+const TAG_CARDS_SELECTION_SHORTCUTS = [
+  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+  { key: 'Space', descKey: 'shortcut.toggleCheck' },
+  { key: 'A',     descKey: 'shortcut.selectAll' },
+  { key: 'T',     descKey: 'shortcut.removeTagSelected' },
+  { key: 'E',     descKey: 'shortcut.archiveSelected' },
+  { key: 'S',     descKey: 'shortcut.exitSelect' },
 ];
 
 export default function TagCardsScreen() {
@@ -68,6 +81,10 @@ export default function TagCardsScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
   const [pendingDeleteCard, setPendingDeleteCard] = useState<Card | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showRemoveTagModal, setShowRemoveTagModal] = useState(false);
 
   // 実効アーカイブ（カード自身 or 所属デッキがアーカイブ）。「有効」フィルターで除外する。
   const isEffectivelyArchived = useCallback(
@@ -115,6 +132,66 @@ export default function TagCardsScreen() {
     });
   }
 
+  function enterSelectionMode() {
+    setSelectionMode(true);
+    setSelectedCardIds(new Set());
+    setFocusedCardIndex(null);
+  }
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedCardIds(new Set());
+    setFocusedCardIndex(null);
+  }
+  function toggleSelect(id: string) {
+    setSelectedCardIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleSelectAll() {
+    if (selectedCardIds.size === displayedCards.length) setSelectedCardIds(new Set());
+    else setSelectedCardIds(new Set(displayedCards.map((c) => c.id)));
+  }
+
+  const selectedCardsList = displayedCards.filter((c) => selectedCardIds.has(c.id));
+  const allSelectedArchived = selectedCardsList.length > 0 && selectedCardsList.every((c) => c.archived);
+
+  function handleRemoveTagSelected() {
+    if (selectedCardIds.size === 0 || isProcessing) return;
+    setShowRemoveTagModal(true);
+  }
+  async function doRemoveTag() {
+    setShowRemoveTagModal(false);
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const ids = Array.from(selectedCardIds);
+      await removeTagFromCards(db, tagId, ids);
+      // タグを外したカードはこの一覧の対象外になるので除去する
+      const idsSet = new Set(ids);
+      setCards((prev) => prev.filter((c) => !idsSet.has(c.id)));
+      exitSelectionMode();
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+  async function handleArchiveSelected() {
+    if (selectedCardIds.size === 0 || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const ids = Array.from(selectedCardIds);
+      // 選択がすべてアーカイブ済みなら解除、それ以外はアーカイブ
+      const next = !allSelectedArchived;
+      await setCardsArchived(db, ids, next);
+      const idsSet = new Set(ids);
+      setCards((prev) => prev.map((c) => (idsSet.has(c.id) ? { ...c, archived: next } : c)));
+      exitSelectionMode();
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   useFocusEffect(
     useCallback(() => {
       lastFocusTimeRef.current = Date.now();
@@ -157,7 +234,7 @@ export default function TagCardsScreen() {
               numberOfLines={1}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
-              {tag?.name ?? ''}
+              {selectionMode ? t('shortcut.selectMode') : (tag?.name ?? '')}
             </Text>
             {keyboardShortcutsEnabled && (
               <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
@@ -171,7 +248,18 @@ export default function TagCardsScreen() {
             <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           </Pressable>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 36 }} />
+          {cards.length > 0 ? (
+            <Pressable
+              onPress={selectionMode ? exitSelectionMode : enterSelectionMode}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
+              accessibilityLabel={t('card.select')}
+            >
+              <Ionicons name={selectionMode ? 'close' : 'albums-outline'} size={26} color={theme.colors.primary} />
+            </Pressable>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
         </View>
       </View>
 
@@ -194,7 +282,23 @@ export default function TagCardsScreen() {
             return;
           }
           const k = key.toLowerCase();
-          if (k === 'j') { moveFocus('next'); }
+          if (selectionMode) {
+            if (k === 'j') { moveFocus('next'); }
+            else if (k === 'k') { moveFocus('prev'); }
+            else if (key === ' ') {
+              if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+                toggleSelect(displayedCards[focusedCardIndex].id);
+              }
+            }
+            else if (k === 'a') { toggleSelectAll(); }
+            else if (k === 't') { handleRemoveTagSelected(); }
+            else if (k === 'e') { handleArchiveSelected(); }
+            else if (k === 's') { exitSelectionMode(); }
+            return;
+          }
+          if (k === '1') { setLastTagCardFilter('all'); }
+          else if (k === '2') { setLastTagCardFilter('active'); }
+          else if (k === 'j') { moveFocus('next'); }
           else if (k === 'k') { moveFocus('prev'); }
           else if (k === 'p') {
             if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
@@ -206,6 +310,8 @@ export default function TagCardsScreen() {
             }
           } else if (k === 'n') {
             setShowDeckPicker(true);
+          } else if (k === 's') {
+            if (cards.length > 0) enterSelectionMode();
           } else if (k === 'b') {
             router.back();
           } else if (k === 'a') {
@@ -220,6 +326,7 @@ export default function TagCardsScreen() {
         onSubmitEditing={() => {
           if (!keyboardShortcutsEnabled) return;
           if (statsCardId !== null) return;
+          if (selectionMode) return;
           if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
             navigateToEdit(displayedCards[focusedCardIndex]);
           }
@@ -244,8 +351,9 @@ export default function TagCardsScreen() {
               styles.statItem,
               { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
               lastTagCardFilter === 'all' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
+              selectionMode && { opacity: 0.5 },
             ]}
-            onPress={() => setLastTagCardFilter('all')}
+            onPress={() => { if (!selectionMode) setLastTagCardFilter('all'); }}
           >
             <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(cards.length).length) }]}>{cards.length}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
@@ -255,8 +363,9 @@ export default function TagCardsScreen() {
               styles.statItem,
               { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
               lastTagCardFilter === 'active' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
+              selectionMode && { opacity: 0.5 },
             ]}
-            onPress={() => setLastTagCardFilter('active')}
+            onPress={() => { if (!selectionMode) setLastTagCardFilter('active'); }}
           >
             <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeCardCount).length) }]}>{activeCardCount}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.active')}</Text>
@@ -293,10 +402,12 @@ export default function TagCardsScreen() {
           renderItem={({ item, index }) => {
             const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
             const isFocused = focusedCardIndex === index;
+            const isSelected = selectedCardIds.has(item.id);
             const deck = decks.find((d) => d.id === item.deckId);
             const effectiveArchived = item.archived || !!deck?.archived;
             return (
               <SwipeToDeleteRow
+                enabled={!selectionMode}
                 onDelete={() => confirmDeleteCard(item)}
                 onArchive={() => archiveCard(item)}
                 archived={item.archived}
@@ -307,13 +418,27 @@ export default function TagCardsScreen() {
                     styles.cardItem,
                     { backgroundColor: theme.colors.surface },
                     effectiveArchived && { opacity: 0.55 },
-                    isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+                    selectionMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+                    selectionMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
+                    !selectionMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                   ]}
                   onPress={() => {
-                    setFocusedCardIndex(index);
-                    navigateToEdit(item);
+                    if (selectionMode) {
+                      setFocusedCardIndex(index);
+                      toggleSelect(item.id);
+                    } else {
+                      setFocusedCardIndex(index);
+                      navigateToEdit(item);
+                    }
                   }}
                 >
+                  {selectionMode && (
+                    <Ionicons
+                      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
+                    />
+                  )}
                   <Text
                     style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]}
                     numberOfLines={2}
@@ -324,16 +449,18 @@ export default function TagCardsScreen() {
                   {effectiveArchived && (
                     <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
                   )}
-                  <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
-                    {isPro && (
-                      <Pressable onPress={() => { setFocusedCardIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={styles.iconBtn}>
-                        <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                  {!selectionMode && (
+                    <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+                      {isPro && (
+                        <Pressable onPress={() => { setFocusedCardIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={styles.iconBtn}>
+                          <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                        </Pressable>
+                      )}
+                      <Pressable onPress={() => { setFocusedCardIndex(index); navigateToEdit(item); }} hitSlop={8} style={styles.iconBtn}>
+                        <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                       </Pressable>
-                    )}
-                    <Pressable onPress={() => { setFocusedCardIndex(index); navigateToEdit(item); }} hitSlop={8} style={styles.iconBtn}>
-                      <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                    </Pressable>
-                  </View>
+                    </View>
+                  )}
                 </Pressable>
               </SwipeToDeleteRow>
             );
@@ -343,22 +470,59 @@ export default function TagCardsScreen() {
       </>
       )}
 
-      {/* FAB: 戻る */}
-      <Pressable
-        style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]}
-        onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
-      >
-        <Ionicons name="chevron-back" size={28} color="#FFF" />
+      {!selectionMode && (
+        <>
+          {/* FAB: 戻る */}
+          <Pressable
+            style={[styles.fab, { left: 20, backgroundColor: theme.colors.primary }]}
+            onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+          >
+            <Ionicons name="chevron-back" size={28} color="#FFF" />
+          </Pressable>
+
+          {/* FAB: 新規カード作成 */}
+          <Pressable
+            style={[styles.fab, { right: 20, backgroundColor: theme.colors.primary }]}
+            onPress={() => setShowDeckPicker(true)}
+          >
+            <Ionicons name="add" size={28} color="#FFF" />
+          </Pressable>
+        </>
+      )}
       </Pressable>
 
-      {/* FAB: 新規カード作成 */}
-      <Pressable
-        style={[styles.fab, { right: 20, backgroundColor: theme.colors.primary }]}
-        onPress={() => setShowDeckPicker(true)}
-      >
-        <Ionicons name="add" size={28} color="#FFF" />
-      </Pressable>
-      </Pressable>
+      {selectionMode && (
+        <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+          <Pressable onPress={toggleSelectAll} style={[styles.selIconBtn, { backgroundColor: theme.colors.primary }]} accessibilityLabel={t('card.selectAll')}>
+            <Ionicons
+              name={displayedCards.length > 0 && selectedCardIds.size === displayedCards.length ? 'checkmark-circle' : 'checkmark-circle-outline'}
+              size={22}
+              color="#FFF"
+            />
+          </Pressable>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('card.selectedCount', { count: selectedCardIds.size })}
+          </Text>
+          <View style={styles.selectionActions}>
+            <Pressable
+              style={[styles.selIconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={handleRemoveTagSelected}
+              disabled={selectedCardIds.size === 0 || isProcessing}
+              accessibilityLabel={t('tag.removeFromCards')}
+            >
+              <Ionicons name="pricetag-outline" size={22} color="#FFF" />
+            </Pressable>
+            <Pressable
+              style={[styles.selIconBtn, { backgroundColor: theme.colors.primary }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              onPress={handleArchiveSelected}
+              disabled={selectedCardIds.size === 0 || isProcessing}
+              accessibilityLabel={allSelectedArchived ? t('common.unarchive') : t('common.archive')}
+            >
+              <Ionicons name={allSelectedArchived ? 'archive' : 'archive-outline'} size={22} color="#FFF" />
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       <DeckPickerModal
         visible={showDeckPicker}
@@ -380,13 +544,23 @@ export default function TagCardsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={TAG_CARDS_SHORTCUTS}
+        sections={selectionMode
+          ? [{ title: t('shortcut.selectMode'), items: TAG_CARDS_SELECTION_SHORTCUTS }]
+          : [{ title: t('shortcut.normalMode'), items: TAG_CARDS_SHORTCUTS }]}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}
         message={deleteModalMessage}
         onConfirm={handleDeleteConfirm}
         onClose={() => { setShowDeleteModal(false); setPendingDeleteCard(null); }}
+      />
+      <ConfirmModal
+        visible={showRemoveTagModal}
+        message={t('tag.removeFromCardsConfirm', { count: selectedCardIds.size, name: tag?.name ?? '' })}
+        actions={[
+          { label: t('tag.removeFromCardsAction'), onPress: doRemoveTag },
+        ]}
+        onClose={() => setShowRemoveTagModal(false)}
       />
     </View>
   );
@@ -425,6 +599,17 @@ const styles = StyleSheet.create({
   cardPreview: { flex: 1 },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   iconBtn: { padding: 4 },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 36,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  selectionActions: { flexDirection: 'row', gap: 8 },
+  selIconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   fab: {
     position: 'absolute',

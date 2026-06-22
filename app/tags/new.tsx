@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme, MAX_FONT_MULTIPLIER, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
 import { TagColorPicker } from '@/components/TagColorPicker';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -32,7 +32,7 @@ export default function NewTagScreen() {
   useDismissKeyboardOnLeave();
 
   const [name, setName] = useState('');
-  const [color, setColor] = useState<string>(PRESET_COLORS[0]);
+  const [color, setColor] = useState<string>(PRIMARY_COLOR);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 

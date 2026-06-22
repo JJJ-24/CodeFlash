@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-import { useTheme, TAG_PRESET_COLORS } from '@/lib/theme';
+import { useTheme, TAG_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { TAG_THEME_COLOR, TAG_MONO_COLOR, contrastText } from '@/lib/tagColors';
 
 interface Props {
@@ -11,8 +11,8 @@ interface Props {
 
 /**
  * タグの色ピッカー（作成・編集で共用）。デッキのカラーピッカーと同じ寸法・レイアウト：
- * - セル 36px、iPad は1行 / iPhone は2行（7色 / 残り5色＋追従＋白黒）
- * - 追従スウォッチ（sync）＝カードテーマの代表色に連動、白黒スウォッチ（contrast）＝ライト黒/ダーク白
+ * - セル 34px、iPad は1行 / iPhone は2行（上段8色 / 下段7色）
+ * - 先頭はプライマリー青（既定色）、追従スウォッチ（sync）＝画面背景色に連動、白黒（contrast）＝ライト黒/ダーク白
  */
 export function TagColorPicker({ color, onChange }: Props) {
   const theme = useTheme();
@@ -28,7 +28,7 @@ export function TagColorPicker({ color, onChange }: Props) {
     </TouchableOpacity>
   );
 
-  // テーマ追従（設定の配色色に連動）
+  // テーマ追従（画面背景色に連動）
   const themeSwatch = (
     <TouchableOpacity
       key="__theme__"
@@ -53,22 +53,24 @@ export function TagColorPicker({ color, onChange }: Props) {
   if ((Platform as any).isPad) {
     return (
       <View style={styles.colorGrid}>
-        {TAG_PRESET_COLORS.map(colorSwatch)}
+        {[PRIMARY_COLOR, ...TAG_PRESET_COLORS].map(colorSwatch)}
         {themeSwatch}
         {monoSwatch}
       </View>
     );
   }
   return (
-    <View style={{ gap: 10 }}>
-      <View style={styles.colorGrid}>{TAG_PRESET_COLORS.slice(0, 7).map(colorSwatch)}</View>
+    <View style={{ gap: 8 }}>
+      {/* 上段8色：青＋プリセット先頭7 */}
+      <View style={styles.colorGrid}>{[PRIMARY_COLOR, ...TAG_PRESET_COLORS.slice(0, 7)].map(colorSwatch)}</View>
+      {/* 下段7色：残りプリセット5＋追従＋白黒 */}
       <View style={styles.colorGrid}>{TAG_PRESET_COLORS.slice(7).map(colorSwatch)}{themeSwatch}{monoSwatch}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  colorCell: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  colorCell: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   colorCellSelected: { borderWidth: 2, borderColor: '#FFF' },
 });

@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
@@ -225,16 +225,16 @@ export default function EditDeckScreen() {
               {t('deck.color')}
             </Text>
             {(Platform as any).isPad ? (
-              // iPad: 横一連に全色 + テーマカラー + 末尾に ✕
+              // iPad: 横一連に 青+全色 + テーマカラー + 白黒
               <View style={styles.colorGrid}>
-                {DECK_PRESET_COLORS.map(colorSwatch)}
+                {[PRIMARY_COLOR, ...DECK_PRESET_COLORS].map(colorSwatch)}
                 {themeSwatch}
                 {clearSwatch}
               </View>
             ) : (
-              // iPhone: 1行目=7色 / 2行目=残り5色 + テーマカラー + 末尾に ✕
-              <View style={{ gap: 10 }}>
-                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(0, 7).map(colorSwatch)}</View>
+              // iPhone: 上段8色（青+先頭7） / 下段7色（残り5 + テーマカラー + 白黒）
+              <View style={{ gap: 8 }}>
+                <View style={styles.colorGrid}>{[PRIMARY_COLOR, ...DECK_PRESET_COLORS.slice(0, 7)].map(colorSwatch)}</View>
                 <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(7).map(colorSwatch)}{themeSwatch}{clearSwatch}</View>
               </View>
             )}
@@ -356,12 +356,12 @@ const styles = StyleSheet.create({
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   colorCell: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },

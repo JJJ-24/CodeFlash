@@ -128,6 +128,10 @@ export const TAG_PRESET_COLORS = [
 // デッキのカラーテーマ（028-1）。タグと同じパレットを採用。
 export const DECK_PRESET_COLORS = TAG_PRESET_COLORS;
 
+// アプリのプライマリーカラー。デッキ・タグの色ピッカー先頭＆新規作成時の既定色。
+// light/dark とも同値（lightTheme/darkTheme の primary と一致）。
+export const PRIMARY_COLOR = '#1976D2';
+
 export const GRADE_COLORS = {
   again: '#E53935',
   hard:  '#FB8C00',

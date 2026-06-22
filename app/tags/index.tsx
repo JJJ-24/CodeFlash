@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -26,7 +27,7 @@ import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
@@ -59,6 +60,10 @@ export default function TagsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
+  const { width: screenWidth } = useWindowDimensions();
+  // ホーム/タグカード一覧のフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
+  const blockWidth = (screenWidth - 56) / 4;
+  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
   const lastFocusTimeRef = useRef(0);
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
@@ -284,6 +289,14 @@ export default function TagsScreen() {
       />
 
       <Pressable style={{ flex: 1 }} onPress={() => setFocusedTagIndex(null)}>
+      {/* 総数ブロック（他画面のフィルターブロックと統一）。タグにアーカイブ概念は
+          無いため「すべて」のみの非操作の数値表示にする。 */}
+      <View style={styles.filterRow}>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, margin: 0, borderWidth: 2, borderColor: theme.colors.primary }]}>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(tags.length).length) }]}>{tags.length}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
+        </View>
+      </View>
       <View style={[styles.sectionRow, { paddingHorizontal: 16, paddingTop: 16, backgroundColor: theme.colors.background }]}>
         <View style={styles.sectionTitleCol}>
           {selectionMode ? (
@@ -550,6 +563,17 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   list: { padding: 16, gap: 8, paddingBottom: 96 },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  filterRow: { flexDirection: 'row', paddingHorizontal: 14, paddingTop: 16, paddingBottom: 4 },
+  statItem: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 2,
+    ...SHADOW.card,
+  },
+  statValue: { fontWeight: '700' },
+  statLabel: { marginTop: 2, textAlign: 'center', fontWeight: '600' },
   sectionTitleCol: { flexDirection: 'column', gap: 2, flex: 1 },
   sectionTitle: { fontWeight: '700' },
   sortButtons: { flexDirection: 'row', gap: 6 },

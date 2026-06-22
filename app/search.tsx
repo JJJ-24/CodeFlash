@@ -21,6 +21,7 @@ import { getCardPreview } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { resolveTagColor } from '@/lib/tagColors';
 import { DeckIcon } from '@/components/DeckIcon';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
@@ -289,7 +290,7 @@ export default function SearchScreen() {
 
   const deckMap = useMemo(() => Object.fromEntries(decks.map((d) => [d.id, d])), [decks]);
   const tagMap = useMemo(() => Object.fromEntries(tags.map((t) => [t.id, t])), [tags]);
-  const tagPickerItems: PickerItem[] = tags.map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }));
+  const tagPickerItems: PickerItem[] = tags.map((tag) => ({ id: tag.id, name: tag.name, color: resolveTagColor(tag.color, theme) }));
 
   const hasFilter = selectedDeckIds.length > 0 || selectedTagIds.length > 0;
 
@@ -436,16 +437,16 @@ export default function SearchScreen() {
             return (
               <Pressable
                 key={id}
-                style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: tag.color ?? theme.colors.primary }]}
+                style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: resolveTagColor(tag.color, theme) }]}
                 onPress={() => toggleTag(id)}
               >
                 {tag.color ? (
-                  <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
+                  <View style={[styles.tagDot, { backgroundColor: resolveTagColor(tag.color, theme) }]} />
                 ) : (
                   <Ionicons name="pricetag-outline" size={13} color={theme.colors.primary} />
                 )}
                 <Text
-                  style={[styles.chipText, { color: tag.color ?? theme.colors.primary, fontSize: theme.fontSize.sm }]}
+                  style={[styles.chipText, { color: resolveTagColor(tag.color, theme), fontSize: theme.fontSize.sm }]}
                   numberOfLines={1}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                 >

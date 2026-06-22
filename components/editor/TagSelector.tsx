@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { resolveTagColor, contrastText } from '@/lib/tagColors';
 import { getAllTags } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 
@@ -54,19 +55,20 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
     <View style={styles.list}>
       {tags.map((tag) => {
         const selected = selectedTagIds.includes(tag.id);
+        const tagColor = resolveTagColor(tag.color, theme);
         return (
           <Pressable
             key={tag.id}
             style={[
               styles.chip,
               selected
-                ? { backgroundColor: tag.color }
-                : { backgroundColor: theme.colors.background, borderColor: tag.color, borderWidth: 1.5, opacity: 0.45 },
+                ? { backgroundColor: tagColor }
+                : { backgroundColor: theme.colors.background, borderColor: tagColor, borderWidth: 1.5, opacity: 0.45 },
             ]}
             onPress={() => toggle(tag.id)}
           >
-            {!selected && <View style={[styles.dot, { backgroundColor: tag.color }]} />}
-            <Text style={[styles.chipText, { color: selected ? '#FFF' : theme.colors.text, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {!selected && <View style={[styles.dot, { backgroundColor: tagColor }]} />}
+            <Text style={[styles.chipText, { color: selected ? contrastText(tagColor) : theme.colors.text, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {truncateTag(tag.name)}
             </Text>
           </Pressable>

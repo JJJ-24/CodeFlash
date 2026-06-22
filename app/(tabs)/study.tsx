@@ -23,6 +23,7 @@ import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
+import { resolveTagColor } from '@/lib/tagColors';
 import {
   getDueCountPerDeck,
   getDueCountPerTag,
@@ -585,7 +586,7 @@ export default function StudyScreen() {
                     router.push({ pathname: '/study/session', params: { tagId: item.id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
                   }}
                 >
-                  <View style={[styles.tagColorDot, { backgroundColor: item.color }]} />
+                  <View style={[styles.tagColorDot, { backgroundColor: resolveTagColor(item.color, theme) }]} />
                   <View style={styles.deckInfo}>
                     <Text numberOfLines={1} style={[styles.deckName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                     {!subTextActive && (

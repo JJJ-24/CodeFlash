@@ -28,6 +28,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { resolveTagColor } from '@/lib/tagColors';
 import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import { useTagStore } from '@/store/tags';
@@ -419,7 +420,7 @@ export default function TagsScreen() {
                         color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
                       />
                     )}
-                    <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                    <View style={[styles.colorDot, { backgroundColor: resolveTagColor(item.color, theme) }]} />
                     <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                     <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>

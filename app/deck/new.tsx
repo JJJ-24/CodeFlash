@@ -105,7 +105,7 @@ export default function NewDeckScreen() {
       onPress={() => { Keyboard.dismiss(); setColorHex(null); }}
       style={[styles.colorCell, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, borderWidth: 1 }, colorHex === null && { borderColor: theme.colors.primary, borderWidth: 2 }]}
     >
-      <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
+      <Ionicons name={colorHex === null ? 'checkmark-sharp' : 'contrast'} size={colorHex === null ? 18 : 24} color={theme.colors.text} />
     </Pressable>
   );
 

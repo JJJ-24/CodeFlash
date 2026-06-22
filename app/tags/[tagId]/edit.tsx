@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useTheme, MAX_FONT_MULTIPLIER, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { resolveTagColor } from '@/lib/tagColors';
+import { TagColorPicker } from '@/components/TagColorPicker';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useTagStore } from '@/store/tags';
@@ -129,17 +131,7 @@ export default function EditTagScreen() {
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.color')}
             </Text>
-            <View style={styles.colorGrid}>
-              {PRESET_COLORS.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[styles.colorCell, { backgroundColor: c }, color === c && styles.colorCellSelected]}
-                  onPress={() => setColor(c)}
-                >
-                  {color === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TagColorPicker color={color} onChange={setColor} />
           </View>
 
           <View style={styles.field}>
@@ -147,7 +139,7 @@ export default function EditTagScreen() {
               {t('tag.previewLabel')}
             </Text>
             <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
-              <View style={[styles.previewDot, { backgroundColor: color }]} />
+              <View style={[styles.previewDot, { backgroundColor: resolveTagColor(color, theme) }]} />
               <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {name || t('tag.namePlaceholder')}
               </Text>

@@ -43,6 +43,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { getCardPreview } from '@/lib/cardPreview';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import { useProStore } from '@/store/pro';
+import { useReviewStore } from '@/store/reviews';
 import { useSyncStore } from '@/store/sync';
 import type { Block, Deck } from '@/types';
 
@@ -785,6 +786,7 @@ export default function StatsScreen() {
   const theme = useTheme();
   const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
+  const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<{
@@ -1108,9 +1110,10 @@ export default function StatsScreen() {
   // 重点復習を開始（選択中グレードの TOP カードでセッション開始）。ボタンと Space キーで共用。
   const startFocusedReview = useCallback(() => {
     if (gradeBlockCards.length === 0) return;
-    const ids = gradeBlockCards.map((c) => c.cardId).join(',');
-    router.push({ pathname: '/study/session', params: { cardIds: ids, mode: 'focused' } });
-  }, [gradeBlockCards, router]);
+    // 順序指定の cardIds はストア経由で渡す（URLパラメータに載せない）。
+    setStudyCardIds(gradeBlockCards.map((c) => c.cardId));
+    router.push({ pathname: '/study/session', params: { mode: 'focused', order: '1' } });
+  }, [gradeBlockCards, router, setStudyCardIds]);
 
   // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {

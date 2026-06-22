@@ -53,6 +53,7 @@ import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
+import { useReviewStore } from '@/store/reviews';
 import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, preferenceToFilter } from '@/store/settings';
 import { useProStore } from '@/store/pro';
@@ -73,6 +74,7 @@ export default function DeckDetailScreen() {
   const initialTopInsetRef = useRef(insets.top);
   const { decks, updateDeck, addDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards } = useCardStore();
+  const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
@@ -495,7 +497,10 @@ export default function DeckDetailScreen() {
       .filter((c) => !c.archived && !deck.archived)
       .map((c) => c.id);
     if (cardIds.length === 0) return;
-    router.push({ pathname: '/study/session', params: { deckId: id, cardIds: cardIds.join(',') } });
+    // 巨大IDをURLパラメータに載せると（数万枚デッキで）ルート状態のシリアライズに
+    // 数秒かかるため、ストア経由で渡し params は order フラグだけにする。
+    setStudyCardIds(cardIds);
+    router.push({ pathname: '/study/session', params: { deckId: id, order: '1' } });
   };
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };

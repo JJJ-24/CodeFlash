@@ -54,6 +54,7 @@ import { extractLinks } from "@/lib/study/extractLinks";
 import { resolveDeckIconColors } from "@/lib/deckIconColors";
 import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits } from "@/lib/theme";
 import { useDeckStore } from "@/store/decks";
+import { useReviewStore } from "@/store/reviews";
 import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
 
@@ -88,15 +89,16 @@ const SESSION_SHORTCUTS = [
 ];
 
 export default function StudySessionScreen() {
-  const { deckId, tagId, filter, shuffle, cardIds: cardIdsParam, mode } = useLocalSearchParams<{
+  const { deckId, tagId, filter, shuffle, order, mode } = useLocalSearchParams<{
     deckId?: string;
     tagId?: string;
     filter?: "all" | "today" | "due" | "unlearned";
     shuffle?: string;
-    cardIds?: string;
+    order?: string;
     mode?: string;
   }>();
-  const cardIdsList = cardIdsParam ? cardIdsParam.split(',').filter(Boolean) : undefined;
+  // order='1' のとき、順序を厳守する cardIds はストア経由で受け取る（巨大IDをURLに載せない）。
+  const cardIdsList = order === '1' ? (useReviewStore.getState().studyCardIds ?? undefined) : undefined;
   const isFocusedReview = mode === 'focused';
   const router = useRouter();
   const navigation = useNavigation();
@@ -408,9 +410,9 @@ export default function StudySessionScreen() {
 
   useEffect(() => {
     loadSession({ deckId, tagId, cardIds: cardIdsList, filter, shuffle: shuffle === "1" });
-    // cardIdsList は param 由来の派生値のため deps には cardIdsParam を入れる
+    // cardIdsList はストア由来の派生値のため deps には order を入れる
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckId, tagId, cardIdsParam, filter, shuffle]);
+  }, [deckId, tagId, order, filter, shuffle]);
 
   useEffect(() => {
     if (completed) {

@@ -818,8 +818,15 @@ export default function DeckDetailScreen() {
       <Pressable style={{ flex: 1 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
         <DraggableFlatList
           ref={listRef as any}
+          // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
+          // コンテンツ全体高さになり、下方向 autoscroll の移動先 min(.., scrollViewSize-containerSize)
+          // が 0 に潰れて下方向にスクロールできない（上方向は containerSize 非依存なので動く）。
+          containerStyle={{ flex: 1 }}
           data={displayedCards}
           keyExtractor={(item) => item.id}
+          // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false
+          // にしているため既定値だと一気にスクロールしてしまう）。要調整の数値。
+          autoscrollSpeed={5}
           keyboardShouldPersistTaps="handled"
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}

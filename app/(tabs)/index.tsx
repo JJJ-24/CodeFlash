@@ -387,6 +387,9 @@ export default function HomeScreen() {
             ref={listRef}
             data={displayedDecks}
             keyExtractor={(item) => item.id}
+            // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false
+            // にしているため既定値だと一気にスクロールしてしまう）。要調整の数値。
+            autoscrollSpeed={4}
             contentContainerStyle={styles.listContent}
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}

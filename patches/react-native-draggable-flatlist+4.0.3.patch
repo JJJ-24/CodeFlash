@@ -89,3 +89,19 @@ index 49bee06..42c30f2 100644
    const flatlistRefInternal = useRef<FlatList<T>>(null);
    const flatlistRef = flatListRefProp || flatlistRefInternal;
    const scrollViewRef = useRef<Animated.ScrollView>(null);
+diff --git a/node_modules/react-native-draggable-flatlist/src/hooks/useAutoScroll.tsx b/node_modules/react-native-draggable-flatlist/src/hooks/useAutoScroll.tsx
+index d3add83..4130b03 100644
+--- a/node_modules/react-native-draggable-flatlist/src/hooks/useAutoScroll.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/hooks/useAutoScroll.tsx
+@@ -90,7 +90,10 @@ export function useAutoScroll() {
+ 
+   function scrollToInternal(offset: number) {
+     if (flatlistRef && "current" in flatlistRef) {
+-      flatlistRef.current?.scrollToOffset({ offset, animated: true });
++      // patched: autoscroll を animated:false にして毎フレームの連続スクロールにする
++      // （animated:true はフレームごとにアニメが競合し掴みセルが上下に振動する）。
++      // 速くなりすぎるため、利用側で autoscrollSpeed を小さく設定して制御する。
++      flatlistRef.current?.scrollToOffset({ offset, animated: false });
+     }
+   }
+ 

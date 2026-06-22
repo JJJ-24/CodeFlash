@@ -336,6 +336,15 @@ export default function TagsScreen() {
         <DraggableFlatList
           ref={listRef as any}
           style={{ backgroundColor: theme.colors.background }}
+          // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いとコンテナが
+          // コンテンツ高さになり、下方向ドラッグ時の autoscroll（containerSize 基準）が
+          // 発火しない。※ style ではなく containerStyle に付けること（style は内側の
+          // FlatList に渡り、高さ未定義の外側コンテナ内で flex:1 が 0 高さに潰れて
+          // リストが描画されなくなる）。
+          containerStyle={{ flex: 1 }}
+          // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false
+          // にしているため既定値だと一気にスクロールしてしまう）。要調整の数値。
+          autoscrollSpeed={5}
           data={sortedTags}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, selectionMode && { paddingBottom: 160 }]}

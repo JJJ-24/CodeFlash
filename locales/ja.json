@@ -149,6 +149,8 @@
     "searchTitle": "カード検索",
     "searchPlaceholder": "カードを検索...",
     "searchNoResults": "一致するカードはありません",
+    "searchResultCount": "{{count}}件",
+    "searchResultCountMax": "{{count}}件以上",
     "searchInfoLabel": "検索の説明",
     "searchInfoMessage": "■ 検索\n複数のキーワードはスペースで区切ると、すべてを含むカードを検索します（AND検索）。\n\n■ 絞り込み\n  {{albums}} デッキで絞り込む\n  {{pricetag}} タグで絞り込む\n※ どちらも複数選択でき、検索結果をさらに限定します。",
     "filterByDeck": "デッキで絞り込む",

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { searchCards } from '@/lib/database/cards';
+import { searchCards, SEARCH_RESULT_LIMIT } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
 import { getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
@@ -501,6 +501,18 @@ export default function SearchScreen() {
         </View>
       )}
 
+      {/* 件数（スクロールしても常に見えるようリスト外に固定表示） */}
+      {searched && results.length > 0 && (
+        <Text
+          style={[styles.resultCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+        >
+          {results.length >= SEARCH_RESULT_LIMIT
+            ? t('card.searchResultCountMax', { count: SEARCH_RESULT_LIMIT })
+            : t('card.searchResultCount', { count: results.length })}
+        </Text>
+      )}
+
       {/* 結果 */}
       {searched && results.length === 0 ? (
         <View style={styles.empty}>
@@ -510,6 +522,7 @@ export default function SearchScreen() {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={results}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
@@ -704,6 +717,7 @@ const styles = StyleSheet.create({
     ...SHADOW.subtle,
   },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  resultCount: { marginHorizontal: 16, marginTop: 8, marginBottom: 8 },
   resultText: { flex: 1, gap: 2 },
   preview: { fontWeight: '500' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },

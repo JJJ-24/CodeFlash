@@ -62,6 +62,9 @@ export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promis
 
 export type SearchField = 'all' | 'front' | 'back' | 'memo';
 
+// 検索結果の取得上限。これに達したら UI では「N件以上」と表示する。
+export const SEARCH_RESULT_LIMIT = 100;
+
 function hiraganaToKatakana(str: string): string {
   return str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 }
@@ -132,7 +135,7 @@ export async function searchCards(
     : fieldClause;
 
   const rows = await db.getAllAsync<RawCard>(
-    `${CARD_SELECT} WHERE ${whereClause} ORDER BY c.updatedAt DESC LIMIT 100`,
+    `${CARD_SELECT} WHERE ${whereClause} ORDER BY c.updatedAt DESC LIMIT ${SEARCH_RESULT_LIMIT}`,
     [...fieldParams, ...extraParams]
   );
   return rows.map(toCard);

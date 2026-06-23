@@ -122,10 +122,6 @@ export default function DeckDetailScreen() {
   const pendingDeleteActionRef = useRef<(() => Promise<void>) | null>(null);
   const focusedCardIdRef = useRef<string | null>(null);
   const [focusedCardId, setFocusedCardIdState] = useState<string | null>(null);
-  // 通常時は windowSize を絞ってメモリを節約するが、ドラッグ中だけ既定値に戻す。
-  // windowSize={3} のままだと掴んだセルが描画ウィンドウ外に出た瞬間に仮想化で
-  // アンマウントされ、ドラッグ中のカードが透明になる不具合があるため。
-  const [isDraggingCard, setIsDraggingCard] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
@@ -434,7 +430,9 @@ export default function DeckDetailScreen() {
               color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
             />
           )}
-          <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg, lineHeight: Math.ceil(theme.fontSize.lg * 1.5) }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {/* lineHeight を明示すると小フォント時に行ボックスが不足して2行目がクリップされる
+              （フォント本来の行高さに満たない）ため、lineHeight は指定せずフォントのメトリクスに任せる。 */}
+          <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {preview || t('card.noText')}
           </Text>
           {isNew && (
@@ -853,7 +851,9 @@ export default function DeckDetailScreen() {
           automaticallyAdjustContentInsets={false}
           automaticallyAdjustsScrollIndicatorInsets={false}
           scrollsToTop={false}
-          windowSize={isDraggingCard ? 21 : 3}
+          // 通常スクロール・ドラッグ autoscroll の両方で、速いスクロール時にセルが
+          // 描画から外れて透明（空白）になるのを防ぐため常に広めに描画ウィンドウを取る。
+          windowSize={21}
           onScrollOffsetChange={(offset) => {
             scrollOffsetRef.current = offset;
             if (
@@ -876,9 +876,7 @@ export default function DeckDetailScreen() {
           }
           contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
           onScrollToIndexFailed={() => {}}
-          onDragBegin={() => setIsDraggingCard(true)}
           onDragEnd={({ data }) => {
-            setIsDraggingCard(false);
             if (selectionMode) return;
             if (selectedFilter !== 'all' || cardSortOrder !== 'manual') return;
             reorderCards(data);

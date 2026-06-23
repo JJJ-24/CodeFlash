@@ -390,6 +390,10 @@ export default function HomeScreen() {
         ) : (
           <DraggableFlatList
             ref={listRef}
+            // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
+            // コンテンツ全体高さになり、ドラッグ中の端でのオートスクロールが正しく働かない
+            // （カード一覧と同じ対策）。
+            containerStyle={{ flex: 1 }}
             data={displayedDecks}
             keyExtractor={(item) => item.id}
             // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false

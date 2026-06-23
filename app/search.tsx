@@ -17,15 +17,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { searchCards } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
+import { getAllDecks } from '@/lib/database/decks';
+import { getAllTags } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
 import { DeckIcon } from '@/components/DeckIcon';
+import { InfoModal } from '@/components/InfoModal';
+import { InfoContent } from '@/components/InfoContent';
+import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
+import { useProStore } from '@/store/pro';
+import { useSearchSessionStore } from '@/store/search';
 import type { Card, Deck } from '@/types';
 
 // ---- MultiSelectPickerModal（汎用・タグ用） ----
@@ -232,21 +239,26 @@ export default function SearchScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
-  const { decks } = useDeckStore();
-  const { tags } = useTagStore();
+  const { decks, setDecks } = useDeckStore();
+  const { tags, setTags } = useTagStore();
   const { lastSearchField, setLastSearchField } = useSettingsStore();
+  const { isPro } = useProStore();
   const inputRef = useRef<TextInput>(null);
   useDismissKeyboardOnLeave();
 
-  const [query, setQuery] = useState('');
+  // セッション保持した直前の検索を初期値として復元する（再起動では消える）。
+  const savedSearch = useSearchSessionStore.getState();
+  const [query, setQuery] = useState(savedSearch.query);
   const [results, setResults] = useState<Card[]>([]);
   const [searched, setSearched] = useState(false);
   const [searchField, setSearchField] = useState<SearchField>(lastSearchField as SearchField);
 
-  const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>([]);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(savedSearch.deckIds);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(savedSearch.tagIds);
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [tagPickerVisible, setTagPickerVisible] = useState(false);
+  const [showSearchInfo, setShowSearchInfo] = useState(false);
+  const [statsCardId, setStatsCardId] = useState<string | null>(null);
 
   const toggleDeck = (id: string) => setSelectedDeckIds((prev) =>
     prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -262,12 +274,27 @@ export default function SearchScreen() {
     { value: 'memo',  labelKey: 'common.memo' },
   ];
 
+  // リロード直後などストアが空の状態で開かれてもデッキ/タグ絞り込みを使えるよう、
+  // マウント時に DB から最新のデッキ・タグを読み込んでストアへ反映する。
   useEffect(() => {
+    getAllDecks(db).then(setDecks);
+    getAllTags(db).then(setTags);
+  }, [db, setDecks, setTags]);
+
+  useEffect(() => {
+    // 復元した検索があるときは結果を見せたいので自動フォーカス（＝キーボード表示）しない。
+    if (query.trim().length > 0) return;
     const timer = setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 入力内容をセッションへ保存し、再オープン時に復元できるようにする。
+  useEffect(() => {
+    useSearchSessionStore.getState().setSearch({ query, deckIds: selectedDeckIds, tagIds: selectedTagIds });
+  }, [query, selectedDeckIds, selectedTagIds]);
 
   useEffect(() => {
     if (query.trim().length === 0) {
@@ -325,12 +352,17 @@ export default function SearchScreen() {
 
       {/* タイトル行: 「カード検索」＋フィルターアイコン */}
       <View style={styles.titleRow}>
-        <Text
-          style={[styles.titleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}
-          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-        >
-          {t('card.searchTitle')}
-        </Text>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text
+            style={[styles.titleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          >
+            {t('card.searchTitle')}
+          </Text>
+          <Pressable onPress={() => setShowSearchInfo(true)} hitSlop={8} accessibilityLabel={t('card.searchInfoLabel')}>
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+          </Pressable>
+        </View>
         <Pressable
           onPress={() => setDeckPickerVisible(true)}
           style={[
@@ -375,11 +407,21 @@ export default function SearchScreen() {
           value={query}
           onChangeText={setQuery}
           returnKeyType="search"
-          clearButtonMode="while-editing"
+          clearButtonMode="never"
           autoCorrect={false}
           autoCapitalize="none"
           keyboardAppearance={theme.dark ? 'dark' : 'light'}
         />
+        {query.length > 0 && (
+          <Pressable
+            onPress={() => { setQuery(''); inputRef.current?.focus(); }}
+            hitSlop={8}
+            style={{ paddingLeft: 4 }}
+            accessibilityLabel={t('common.clear')}
+          >
+            <Ionicons name="close-circle" size={theme.fontSize.xxl} color={theme.colors.textTertiary} />
+          </Pressable>
+        )}
       </View>
 
       {/* 検索対象フィールド */}
@@ -472,9 +514,6 @@ export default function SearchScreen() {
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-          )}
           renderItem={({ item }) => {
             const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
             const deckName = deckMap[item.deckId]?.name ?? '';
@@ -490,7 +529,7 @@ export default function SearchScreen() {
               >
                 <View style={styles.resultText}>
                   <Text
-                    style={[styles.preview, { color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: Math.ceil(theme.fontSize.md * 1.5) }]}
+                    style={[styles.preview, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
                     numberOfLines={2}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                   >
@@ -503,7 +542,20 @@ export default function SearchScreen() {
                     {deckName}
                   </Text>
                 </View>
-                <Ionicons name="pencil-sharp" size={18} color={theme.colors.primary} />
+                <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+                  {isPro && (
+                    <Pressable onPress={() => setStatsCardId(item.id)} hitSlop={8} style={{ padding: 4 }}>
+                      <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                    </Pressable>
+                  )}
+                  <Pressable
+                    onPress={() => router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: item.deckId, cardId: item.id } })}
+                    hitSlop={8}
+                    style={{ padding: 4 }}
+                  >
+                    <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                  </Pressable>
+                </View>
               </Pressable>
             );
           }}
@@ -537,6 +589,15 @@ export default function SearchScreen() {
         onClearAll={() => setSelectedTagIds([])}
         onClose={() => setTagPickerVisible(false)}
       />
+
+      <InfoModal
+        visible={showSearchInfo}
+        title={t('card.searchTitle')}
+        message={<InfoContent text={t('card.searchInfoMessage')} />}
+        onClose={() => setShowSearchInfo(false)}
+      />
+
+      <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
     </View>
   );
 }
@@ -567,7 +628,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   titleText: {
-    flex: 1,
     fontWeight: '700',
   },
   filterBtn: {
@@ -630,15 +690,20 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     flexShrink: 0,
   },
-  list: { paddingBottom: 32 },
-  separator: { height: StyleSheet.hairlineWidth },
+  list: { paddingTop: 8, paddingBottom: 32 },
+  // デッキ一覧・カード一覧と統一したカードスタイル（surface 背景・角丸・影・行間マージン）
   resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    ...SHADOW.subtle,
   },
+  cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   resultText: { flex: 1, gap: 2 },
   preview: { fontWeight: '500' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },

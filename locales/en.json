@@ -149,6 +149,8 @@
     "searchTitle": "Card Search",
     "searchPlaceholder": "Search cards...",
     "searchNoResults": "No cards found",
+    "searchInfoLabel": "About search",
+    "searchInfoMessage": "■ Search\nSeparate multiple keywords with spaces to find cards containing all of them (AND search).\n\n■ Filter\n  {{albums}} Filter by deck\n  {{pricetag}} Filter by tag\n※ Each supports multiple selections and further narrows the results.",
     "filterByDeck": "Filter by Deck",
     "filterByTag": "Filter by Tag",
     "allDecks": "All Decks",
@@ -242,6 +244,7 @@
   "common": {
     "save": "Save",
     "cancel": "Cancel",
+    "clear": "Clear",
     "done": "Done",
     "showMore": "Show more",
     "showLess": "Show less",

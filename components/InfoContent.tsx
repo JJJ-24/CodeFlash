@@ -13,6 +13,8 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   funnel: 'funnel-outline',
   shuffle: 'shuffle-outline',
   albums: 'albums-outline',
+  pricetag: 'pricetag-outline',
+  search: 'search-outline',
   calendar: 'calendar-outline',
   timer: 'timer-outline',
 };

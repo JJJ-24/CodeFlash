@@ -82,6 +82,24 @@ function kanaLikeClause(col: string, patterns: string[]): { clause: string; para
   };
 }
 
+// 1キーワード分の検索条件を作る（ひらがな/カタカナ差を吸収）。
+// field が 'all' のときは front/back/memo のいずれかに含まれれば一致。
+// CARD_SELECT に LEFT JOIN card_contents cc が含まれるため cc.* で参照可能。
+function buildFieldClause(field: SearchField, term: string): { clause: string; params: string[] } {
+  const patterns = kanaVariantPatterns(term);
+  switch (field) {
+    case 'front': return kanaLikeClause('cc.frontContent', patterns);
+    case 'back': return kanaLikeClause('cc.backContent', patterns);
+    case 'memo': return kanaLikeClause('cc.memoContent', patterns);
+    default: {
+      const f = kanaLikeClause('cc.frontContent', patterns);
+      const b = kanaLikeClause('cc.backContent', patterns);
+      const m = kanaLikeClause('cc.memoContent', patterns);
+      return { clause: `(${f.clause} OR ${b.clause} OR ${m.clause})`, params: [...f.params, ...b.params, ...m.params] };
+    }
+  }
+}
+
 export async function searchCards(
   db: SQLiteDatabase,
   query: string,
@@ -89,31 +107,14 @@ export async function searchCards(
   deckIds?: string[],
   tagIds?: string[],
 ): Promise<Card[]> {
-  const patterns = kanaVariantPatterns(query);
-  // CARD_SELECT に LEFT JOIN card_contents cc が含まれるため cc.* で参照可能
-  let fieldClause: string;
-  let fieldParams: string[];
-  switch (field) {
-    case 'front': {
-      const c = kanaLikeClause('cc.frontContent', patterns);
-      fieldClause = c.clause; fieldParams = c.params; break;
-    }
-    case 'back': {
-      const c = kanaLikeClause('cc.backContent', patterns);
-      fieldClause = c.clause; fieldParams = c.params; break;
-    }
-    case 'memo': {
-      const c = kanaLikeClause('cc.memoContent', patterns);
-      fieldClause = c.clause; fieldParams = c.params; break;
-    }
-    default: {
-      const f = kanaLikeClause('cc.frontContent', patterns);
-      const b = kanaLikeClause('cc.backContent', patterns);
-      const m = kanaLikeClause('cc.memoContent', patterns);
-      fieldClause = `${f.clause} OR ${b.clause} OR ${m.clause}`;
-      fieldParams = [...f.params, ...b.params, ...m.params];
-    }
-  }
+  // クエリを空白（半角/全角スペース）で区切って複数キーワードの AND 検索にする。
+  // 各キーワードが（選択フィールド内に）すべて含まれるカードだけがヒットする。
+  // カンマはコード中に頻出するため区切りにしない（カンマを含む文字列をそのまま検索できるように）。
+  const terms = query.split(/\s+/).map((t) => t.trim()).filter((t) => t !== '');
+  const searchTerms = terms.length > 0 ? terms : [query];
+  const termClauses = searchTerms.map((term) => buildFieldClause(field, term));
+  const fieldClause = termClauses.map((c) => c.clause).join(' AND ');
+  const fieldParams = termClauses.flatMap((c) => c.params);
 
   const extraConditions: string[] = [];
   const extraParams: string[] = [];

@@ -475,6 +475,7 @@
     "mergeEmpty": "このバックアップにデッキがありません。",
     "mergeDeckCount": "{{count}} 枚",
     "mergeLastReview": "最終学習 {{date}}",
+    "mergeLastUpdated": "最終編集 {{date}}",
     "mergeNeverStudied": "未学習",
     "mergeConfirmMessage": "「{{name}}」を現在のデータに追加・上書きします。既存データは削除されません。\n続けますか？",
     "mergeConfirm": "追加・上書き",

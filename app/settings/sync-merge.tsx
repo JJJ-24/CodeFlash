@@ -28,10 +28,11 @@ function formatDateTime(ts: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-function formatReviewDate(iso: string): string {
+/** ISO 文字列（UTC）をローカルの「YYYY-MM-DD HH:MM」に整形する。 */
+function formatReviewDateTime(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return formatDateTime(d.getTime());
 }
 
 /**
@@ -182,9 +183,14 @@ export default function SyncMergeScreen() {
               </View>
               <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {deck.lastReviewDate
-                  ? t('sync.mergeLastReview', { date: formatReviewDate(deck.lastReviewDate) })
+                  ? t('sync.mergeLastReview', { date: formatReviewDateTime(deck.lastReviewDate) })
                   : t('sync.mergeNeverStudied')}
               </Text>
+              {deck.lastUpdatedAt && (
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 2 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('sync.mergeLastUpdated', { date: formatReviewDateTime(deck.lastUpdatedAt) })}
+                </Text>
+              )}
             </Pressable>
           ))}
         </>

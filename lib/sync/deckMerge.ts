@@ -32,6 +32,8 @@ export interface BackupDeckInfo {
   cardCount: number;
   /** このデッキで最後に学習した日時（ISO、未学習は null） */
   lastReviewDate: string | null;
+  /** このデッキの最終更新日時（ISO）。デッキ自身・配下カードの編集のうち最も新しい時刻（学習は除く）。 */
+  lastUpdatedAt: string | null;
   /** デッキアイコン（028 以前の古いバックアップでは列が無く null） */
   iconName: string | null;
   /** デッキカラー（同上） */
@@ -139,6 +141,14 @@ export async function listDecksInBackup(
          (SELECT COUNT(*) FROM backupdb.cards c WHERE c.deckId = d.id) AS cardCount,
          (SELECT MAX(r.lastReviewDate) FROM backupdb.reviews r
             JOIN backupdb.cards c2 ON c2.id = r.cardId WHERE c2.deckId = d.id) AS lastReviewDate,
+         -- 最終更新: デッキ自身・配下カードの編集のうち最も新しい更新時刻（学習は含めない。
+         -- それは「最終学習」で別表示するため）。ISO TEXT は辞書順=時系列。MAX(...) は引数に
+         -- NULL があると NULL を返すため、カードが無いケースを COALESCE('') で吸収する
+         -- （d.updatedAt は常に非 NULL）。
+         MAX(
+           d.updatedAt,
+           COALESCE((SELECT MAX(c3.updatedAt) FROM backupdb.cards c3 WHERE c3.deckId = d.id), '')
+         ) AS lastUpdatedAt,
          ${iconSel} AS iconName,
          ${colorSel} AS colorHex
        FROM backupdb.decks d

@@ -475,6 +475,7 @@
     "mergeEmpty": "This backup contains no decks.",
     "mergeDeckCount": "{{count}} cards",
     "mergeLastReview": "Last studied {{date}}",
+    "mergeLastUpdated": "Last edited {{date}}",
     "mergeNeverStudied": "Not studied",
     "mergeConfirmMessage": "Merge \"{{name}}\" into your current data. Existing data will not be deleted. Continue?",
     "mergeConfirm": "Merge",

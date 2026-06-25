@@ -296,7 +296,10 @@
       "italic": "斜体",
       "code": "インラインコード",
       "strikethrough": "取り消し線",
-      "highlight": "ハイライト"
+      "highlight": "ハイライト",
+      "heading": "見出し",
+      "bulletList": "箇条書き",
+      "quote": "引用"
     }
   },
   "settings": {

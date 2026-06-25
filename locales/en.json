@@ -296,7 +296,10 @@
       "italic": "Italic",
       "code": "Inline code",
       "strikethrough": "Strikethrough",
-      "highlight": "Highlight"
+      "highlight": "Highlight",
+      "heading": "Heading",
+      "bulletList": "Bullet list",
+      "quote": "Quote"
     }
   },
   "settings": {

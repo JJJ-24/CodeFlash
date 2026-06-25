@@ -15,7 +15,7 @@ import { MD_TOOLBAR_ID } from './MarkdownToolbar';
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化
 const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark);
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
-import { wrapSelection, type Sel } from '@/lib/editor/applyMarkdown';
+import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
 
 interface Props {
@@ -41,9 +41,9 @@ interface Props {
   /** マウント時の autoFocus が実行されたとき BlockEditor に通知するコールバック */
   onAutoFocused?: () => void;
   /** フォーカス時、共有ツールバーへ「このブロックに記法を適用する関数」を登録する */
-  onActivateToolbar?: (apply: (left: string, right: string) => void) => void;
+  onActivateToolbar?: (apply: (action: MdAction) => void) => void;
   /** ブラー時、共有ツールバーから登録を解除する（同じ関数のときのみ解除） */
-  onDeactivateToolbar?: (apply: (left: string, right: string) => void) => void;
+  onDeactivateToolbar?: (apply: (action: MdAction) => void) => void;
 }
 
 export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, blurTrigger, onEditBlur, onAutoFocused, onActivateToolbar, onDeactivateToolbar }: Props) {
@@ -69,20 +69,23 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     setPendingSelection((prev) => (prev ? undefined : prev));
   }, []);
 
-  const handleWrap = useCallback((left: string, right: string) => {
-    const result = wrapSelection(block.content, selectionRef.current, left, right);
+  // 最新の content/onChange を ref 経由で参照する。これにより登録する関数の identity を
+  // 安定化し、毎レンダーで登録/解除が churn して InputAccessoryView がちらつくのを防ぐ。
+  const applyImplRef = useRef<(action: MdAction) => void>(() => {});
+  applyImplRef.current = (action: MdAction) => {
+    const result = applyAction(block.content, selectionRef.current, action);
     onChange(result.text);
     selectionRef.current = result.selection;
     setPendingSelection(result.selection);
-  }, [block.content, onChange]);
+  };
+  const stableApply = useRef((action: MdAction) => applyImplRef.current(action)).current;
 
-  // フォーカス中は共有ツールバーへ自分の適用関数を登録（content 変化で最新へ差し替え）。
-  // ブラー・アンマウント時は登録解除。InputAccessoryView 自体は BlockEditor に1つ常設。
+  // フォーカスの変化時のみ、共有ツールバーへ自分の適用関数を登録/解除する。
   useEffect(() => {
     if (!focused) return;
-    onActivateToolbar?.(handleWrap);
-    return () => onDeactivateToolbar?.(handleWrap);
-  }, [focused, handleWrap, onActivateToolbar, onDeactivateToolbar]);
+    onActivateToolbar?.(stableApply);
+    return () => onDeactivateToolbar?.(stableApply);
+  }, [focused, stableApply, onActivateToolbar, onDeactivateToolbar]);
 
   const enterEditMode = useCallback(() => {
     setFocused(true);

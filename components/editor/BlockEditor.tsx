@@ -29,6 +29,7 @@ import {
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
+import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
@@ -161,24 +162,31 @@ export function BlockEditor({
   // 共有マークダウンツールバー（InputAccessoryView）から、現在フォーカス中の
   // テキストブロックへ記法を適用するための登録口。フォーカス中ブロックが自分の
   // apply 関数を登録し、ツールバーのボタンはそれを呼ぶ。
-  const activeWrapRef = useRef<((left: string, right: string) => void) | null>(null);
-  // テキストブロックがフォーカス中のときだけ InputAccessoryView をマウントする。
-  // 常設すると、学習画面から引き継がれたキーボードセッションにツールバーが
-  // 張り付いて誤表示されるため（iOS の InputAccessoryView の癖）。
-  const [toolbarVisible, setToolbarVisible] = useState(false);
-  const activateToolbar = useCallback((apply: (left: string, right: string) => void) => {
+  const activeWrapRef = useRef<((action: MdAction) => void) | null>(null);
+  // InputAccessoryView のマウント戦略:
+  // - iOS は「キーボード出現と同時にマウントされた accessory」しかリンクしない。先に常設すると
+  //   後からのフォーカスにリンクされず、編集画面でツールバーが出ない（新規作成は autoFocus で
+  //   キーボード出現と同時にマウントされるため出る）。→ 初回フォーカスでマウントする必要がある。
+  // - 一方、ブラーのたびにアンマウントすると、タッチを横取りする残留ビューが生じ下部ボタンが
+  //   反応しなくなる。→ 一度マウントしたらアンマウントしない。
+  // 結論: 初回フォーカスでマウント（toolbarMounted を立てる）→ 以後アンマウントせず、表示/非表示は
+  //   opacity で切り替える（toolbarActive）。
+  const [toolbarMounted, setToolbarMounted] = useState(false);
+  const [toolbarActive, setToolbarActive] = useState(false);
+  const activateToolbar = useCallback((apply: (action: MdAction) => void) => {
     activeWrapRef.current = apply;
-    setToolbarVisible(true);
+    setToolbarMounted(true);
+    setToolbarActive(true);
   }, []);
-  const deactivateToolbar = useCallback((apply: (left: string, right: string) => void) => {
+  const deactivateToolbar = useCallback((apply: (action: MdAction) => void) => {
     // 別ブロックが既に登録を引き継いでいる場合は消さない（フォーカス移動時の競合対策）
     if (activeWrapRef.current === apply) {
       activeWrapRef.current = null;
-      setToolbarVisible(false);
+      setToolbarActive(false); // マウントは維持。表示だけ消す。
     }
   }, []);
-  const handleToolbarAction = useCallback((left: string, right: string) => {
-    activeWrapRef.current?.(left, right);
+  const handleToolbarAction = useCallback((action: MdAction) => {
+    activeWrapRef.current?.(action);
   }, []);
   const focusedBlockIndexRef = useRef<number | null>(null);
   const isTransitioningRef = useRef(false);
@@ -924,12 +932,16 @@ export function BlockEditor({
           startEditFocusedBlock();
         }}
       />
-      {/* 共有マークダウン装飾ツールバー（キーボード上端）。テキストブロックの
-          フォーカス中のみマウントし、activeWrapRef 経由で記法を適用する。
-          常設すると他画面のキーボードセッションに張り付いて誤表示されるためゲートする。 */}
-      {Platform.OS === "ios" && toolbarVisible && (
+      {/* 共有マークダウン装飾ツールバー（キーボード上端）。
+          - 初回フォーカスでマウント（toolbarMounted）→ iOS がキーボードにリンクし表示される。
+            常設すると後からのフォーカスにリンクされず表示されないため、フォーカス時マウントが必須。
+          - 一度マウントしたらアンマウントしない（残留ビューによる下部ボタン不調を防ぐ）。
+          - 表示/非表示は opacity と pointerEvents（toolbarActive）で切り替え、非表示時はタップ透過。 */}
+      {Platform.OS === "ios" && toolbarMounted && (
         <InputAccessoryView nativeID={MD_TOOLBAR_ID}>
-          <MarkdownToolbar onAction={handleToolbarAction} />
+          <View style={{ opacity: toolbarActive ? 1 : 0 }} pointerEvents={toolbarActive ? "auto" : "none"}>
+            <MarkdownToolbar onAction={handleToolbarAction} />
+          </View>
         </InputAccessoryView>
       )}
       {/* タブバー */}

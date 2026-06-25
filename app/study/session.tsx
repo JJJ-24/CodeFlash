@@ -1,5 +1,5 @@
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import {
   Stack,
   useFocusEffect,
@@ -186,6 +186,18 @@ export default function StudySessionScreen() {
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
+
+  // カード編集モーダルへ遷移する前に、hidden input の自動再フォーカス（onBlur の 50ms タイマー）を
+  // 抑制し、残留 first-responder がモーダルの初回タップ（保存/削除ボタン）を奪うのを防ぐ。
+  // useFocusEffect の cleanup（onScreenBlur）任せだと 50ms タイマーとの競合で取りこぼすため明示的に止める。
+  const openCardEdit = useCallback(() => {
+    if (!currentCard) return;
+    isScreenFocusedRef.current = false;
+    keyboardRef.current?.blur();
+    Keyboard.dismiss();
+    router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? 'memo' : isFlipped ? 'back' : 'front'}`);
+  }, [currentCard, showMemo, isFlipped, isScreenFocusedRef, keyboardRef, router]);
+
   const [grading, setGrading] = useState(false);
   const [prevGrade, setPrevGrade] = useState<Grade | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -284,6 +296,12 @@ export default function StudySessionScreen() {
       cbs.reset();
     },
   });
+
+  // フルスクリーンモーダル（カード編集など）表示中は、この画面の全画面スワイプ用 PanGesture が
+  // 背面に残ったまま新アーキ + RNGH のヒットテストでモーダル下部ボタンのタップを横取りし、
+  // 保存/削除が初回タップで反応しなくなる。画面がフォーカスを失っている間は無効化して透過させる。
+  const isScreenFocused = useIsFocused();
+  swipe.panGesture.enabled(isScreenFocused);
 
   // 画面下ボタンの長押しオートリピート。setInterval は固定クロージャになるため、
   // 常に最新の navigateWithSlide / currentIndex を ref 経由で参照する（毎レンダー更新）。
@@ -516,12 +534,7 @@ export default function StudySessionScreen() {
     } else if (key.toLowerCase() === "l") {
       if (cardLinks.length > 0) { Keyboard.dismiss(); setShowLinksModal((v) => !v); }
     } else if (key.toLowerCase() === "p") {
-      if (currentCard) {
-        const tab = showMemo ? "memo" : isFlipped ? "back" : "front";
-        router.push(
-          `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${tab}`,
-        );
-      }
+      openCardEdit();
     } else if (isFlipped && !grading) {
       if (key === "1") handleGradeWithSlide(0);
       else if (key === "2") handleGradeWithSlide(1);
@@ -613,7 +626,7 @@ export default function StudySessionScreen() {
         {!completed && currentCard && (
           <>
             <Pressable
-              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? "memo" : isFlipped ? "back" : "front"}`)}
+              onPress={openCardEdit}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
               hitSlop={4}
             >
@@ -1131,11 +1144,7 @@ export default function StudySessionScreen() {
             <View style={{ flex: 1 }} />
             <Pressable
               style={styles.fullscreenEditBtn}
-              onPress={() =>
-                router.push(
-                  `/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? "memo" : isFlipped ? "back" : "front"}`,
-                )
-              }
+              onPress={openCardEdit}
             >
               <Ionicons
                 name="pencil-sharp"
@@ -1408,7 +1417,7 @@ export default function StudySessionScreen() {
             </Pressable>
             <View style={{ flex: 1 }} />
             <Pressable
-              onPress={() => router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? "memo" : isFlipped ? "back" : "front"}`)}
+              onPress={openCardEdit}
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
               hitSlop={4}
             >

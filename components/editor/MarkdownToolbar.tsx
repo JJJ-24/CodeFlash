@@ -29,7 +29,7 @@ export const TOOLBAR_BUTTONS: readonly ToolbarButton[] = [
   { key: 'code', icon: 'code', action: { kind: 'wrap', left: '`', right: '`' }, labelKey: 'editor.toolbar.code' },
   { key: 'strikethrough', icon: 'format-strikethrough', action: { kind: 'wrap', left: '~~', right: '~~' }, labelKey: 'editor.toolbar.strikethrough' },
   { key: 'highlight', icon: 'border-color', action: { kind: 'wrap', left: '==', right: '==' }, labelKey: 'editor.toolbar.highlight' },
-  { key: 'heading', icon: 'title', action: { kind: 'prefix', prefix: '# ' }, labelKey: 'editor.toolbar.heading', groupStart: true },
+  { key: 'heading', icon: 'title', action: { kind: 'heading' }, labelKey: 'editor.toolbar.heading', groupStart: true },
   { key: 'bullet', icon: 'format-list-bulleted', action: { kind: 'prefix', prefix: '- ' }, labelKey: 'editor.toolbar.bulletList' },
   { key: 'quote', icon: 'format-quote', action: { kind: 'prefix', prefix: '> ' }, labelKey: 'editor.toolbar.quote' },
 ] as const;

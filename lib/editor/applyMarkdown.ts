@@ -1,4 +1,4 @@
-// 033 Phase 2: テキストブロックの選択範囲にマークダウン記法を挿入するユーティリティ。
+// 033 Phase 2/4: テキストブロックの選択範囲にマークダウン記法を挿入/解除するユーティリティ。
 // ツールバーボタン・キーボードショートカットの両方から呼ばれる純粋関数。
 
 export interface Sel {
@@ -7,46 +7,66 @@ export interface Sel {
 }
 
 export interface ApplyResult {
-  /** 記法挿入後の本文全体 */
+  /** 記法適用後の本文全体 */
   text: string;
-  /** 挿入後に設定すべき選択範囲（カーソル位置）。記法の内側を指す。 */
+  /** 適用後に設定すべき選択範囲（カーソル位置）。 */
   selection: Sel;
 }
 
 /**
- * 囲みタイプの記法（`**…**` / `*…*` / `` `…` `` / `~~…~~` / `==…==`）を適用する。
- * - 選択あり: 選択文字を `left…right` で囲み、囲んだ中身を選択状態のまま維持する。
- * - 選択なし: カーソル位置に `left``right` を挿入し、カーソルを両者の間（内側）に置く。
+ * 囲みタイプ（`**…**` / `*…*` / `` `…` `` / `~~…~~` / `==…==`）をトグルする。
+ * - 選択あり: 選択の外側 or 内側がちょうど `left`/`right` で囲まれていれば**解除**、なければ付与。
+ * - 選択なし: カーソルが空ペア（`left``right` の間）にあれば解除、なければ挿入してカーソルを内側へ。
+ *   → 空状態で2度押すと「1回目付与・2回目解除」になる。
  *
- * 純粋関数。選択の start/end が逆順でも正規化する。
+ * 純粋関数。start/end の逆順・範囲外も正規化する。
  */
-export function wrapSelection(text: string, sel: Sel, left: string, right: string): ApplyResult {
+export function toggleWrap(text: string, sel: Sel, left: string, right: string): ApplyResult {
   const start = Math.max(0, Math.min(sel.start, sel.end));
   const end = Math.min(text.length, Math.max(sel.start, sel.end));
-  const before = text.slice(0, start);
   const selected = text.slice(start, end);
-  const after = text.slice(end);
-  const newText = before + left + selected + right + after;
 
-  if (selected.length === 0) {
-    // 未選択: カーソルを left と right の間に置く
-    const caret = start + left.length;
+  if (start !== end) {
+    // (a) マーカーが選択の外側にちょうどある → 解除
+    const before = text.slice(Math.max(0, start - left.length), start);
+    const after = text.slice(end, end + right.length);
+    if (start - left.length >= 0 && before === left && after === right) {
+      const newText = text.slice(0, start - left.length) + selected + text.slice(end + right.length);
+      const ns = start - left.length;
+      return { text: newText, selection: { start: ns, end: ns + selected.length } };
+    }
+    // (b) マーカーが選択の内側に含まれている → 解除
+    if (selected.length >= left.length + right.length && selected.startsWith(left) && selected.endsWith(right)) {
+      const inner = selected.slice(left.length, selected.length - right.length);
+      const newText = text.slice(0, start) + inner + text.slice(end);
+      return { text: newText, selection: { start, end: start + inner.length } };
+    }
+    // それ以外 → 付与（中身を選択したまま維持）
+    const newText = text.slice(0, start) + left + selected + right + text.slice(end);
+    const ns = start + left.length;
+    return { text: newText, selection: { start: ns, end: ns + selected.length } };
+  }
+
+  // 無選択: カーソルが空ペアの内側なら解除、それ以外は挿入
+  const c = start;
+  const beforeC = text.slice(Math.max(0, c - left.length), c);
+  const afterC = text.slice(c, c + right.length);
+  if (c - left.length >= 0 && beforeC === left && afterC === right) {
+    const newText = text.slice(0, c - left.length) + text.slice(c + right.length);
+    const caret = c - left.length;
     return { text: newText, selection: { start: caret, end: caret } };
   }
-  // 選択あり: 囲んだ中身を選択したまま維持（記法の内側）
-  const selStart = start + left.length;
-  const selEnd = selStart + selected.length;
-  return { text: newText, selection: { start: selStart, end: selEnd } };
+  const newText = text.slice(0, c) + left + right + text.slice(c);
+  const caret = c + left.length;
+  return { text: newText, selection: { start: caret, end: caret } };
 }
 
 /**
- * 行頭タイプの記法（見出し `# ` / 箇条書き `- ` / 引用 `> `）をトグルする。
+ * 行頭タイプの記法（箇条書き `- ` / 引用 `> `）をトグルする。
  * - 選択あり: 選択がまたぐ全行を対象。全行が既に prefix 付きなら一括除去、そうでなければ付与。
- *   適用後は対象行全体を選択状態にする（連続トグル可）。
  * - 選択なし: カーソル行のみ対象。カーソルは prefix 分だけ左右にずらして維持。
  *
- * 純粋関数。空行は判定対象から除外しつつ、付与時は空行にも prefix を付ける
- * （空行でボタンを押したら見出し等を開始できるように）。
+ * 空行は判定対象から除外しつつ、付与時は空行にも prefix を付ける（空行で開始できるように）。
  */
 export function togglePrefixLines(text: string, sel: Sel, prefix: string): ApplyResult {
   const start = Math.max(0, Math.min(sel.start, sel.end));
@@ -67,10 +87,8 @@ export function togglePrefixLines(text: string, sel: Sel, prefix: string): Apply
   const newText = text.slice(0, lineStart) + newSegment + text.slice(lineEnd);
 
   if (start !== end) {
-    // 選択あり: 対象行全体を選択
     return { text: newText, selection: { start: lineStart, end: lineStart + newSegment.length } };
   }
-  // 選択なし: カーソルを prefix 分だけずらして維持
   const wasPrefixed = lines[0].startsWith(prefix);
   let caret: number;
   if (allPrefixed) {
@@ -81,14 +99,51 @@ export function togglePrefixLines(text: string, sel: Sel, prefix: string): Apply
   return { text: newText, selection: { start: caret, end: caret } };
 }
 
+/**
+ * 見出しレベルを循環させる（なし → # → ## → ### → なし）。
+ * 対象行の見出しレベルを最初の行で判定し、全対象行を次のレベルに揃える。
+ */
+export function cycleHeadingLines(text: string, sel: Sel, maxLevel = 3): ApplyResult {
+  const start = Math.max(0, Math.min(sel.start, sel.end));
+  const end = Math.min(text.length, Math.max(sel.start, sel.end));
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  let lineEnd = text.indexOf('\n', end);
+  if (lineEnd === -1) lineEnd = text.length;
+
+  const segment = text.slice(lineStart, lineEnd);
+  const lines = segment.split('\n');
+  const headingRe = /^(#{1,6}) /;
+  const firstMatch = lines[0].match(headingRe);
+  const current = firstMatch ? firstMatch[1].length : 0;
+  const next = current >= maxLevel ? 0 : current + 1;
+  const prefix = next > 0 ? '#'.repeat(next) + ' ' : '';
+
+  const newLines = lines.map((l) => prefix + l.replace(headingRe, ''));
+  const newSegment = newLines.join('\n');
+  const newText = text.slice(0, lineStart) + newSegment + text.slice(lineEnd);
+
+  if (start !== end) {
+    return { text: newText, selection: { start: lineStart, end: lineStart + newSegment.length } };
+  }
+  const oldPrefixLen = current > 0 ? current + 1 : 0; // '#'*current + ' '
+  const caret = Math.max(lineStart, start + (prefix.length - oldPrefixLen));
+  return { text: newText, selection: { start: caret, end: caret } };
+}
+
 /** ツールバーボタンが表す記法アクション。 */
 export type MdAction =
   | { kind: 'wrap'; left: string; right: string }
-  | { kind: 'prefix'; prefix: string };
+  | { kind: 'prefix'; prefix: string }
+  | { kind: 'heading' };
 
-/** アクション種別に応じて wrapSelection / togglePrefixLines を振り分ける。 */
+/** アクション種別に応じて適用関数を振り分ける。 */
 export function applyAction(text: string, sel: Sel, action: MdAction): ApplyResult {
-  return action.kind === 'wrap'
-    ? wrapSelection(text, sel, action.left, action.right)
-    : togglePrefixLines(text, sel, action.prefix);
+  switch (action.kind) {
+    case 'wrap':
+      return toggleWrap(text, sel, action.left, action.right);
+    case 'prefix':
+      return togglePrefixLines(text, sel, action.prefix);
+    case 'heading':
+      return cycleHeadingLines(text, sel);
+  }
 }

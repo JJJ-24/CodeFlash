@@ -165,12 +165,12 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       // 学習画面（BlocksView）と同じスタイル
       return {
         body: { fontSize: theme.fontSize.lg, color: theme.colors.text, lineHeight: theme.fontSize.lg * 1.5 },
-        heading1: { fontSize: theme.fontSize.xxl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
-        heading2: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 6 },
-        heading3: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
-        heading4: { fontSize: theme.fontSize.md, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
-        heading5: { fontSize: theme.fontSize.sm, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
-        heading6: { fontSize: theme.fontSize.xs, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+        heading1: { fontSize: theme.fontSize.xxxl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
+        heading2: { fontSize: theme.fontSize.xxl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 6 },
+        heading3: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+        heading4: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+        heading5: { fontSize: theme.fontSize.md, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+        heading6: { fontSize: theme.fontSize.sm, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
         strong: { fontWeight: 'bold' as const },
         em: { fontStyle: 'italic' as const },
         code_inline: {

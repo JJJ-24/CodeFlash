@@ -13,7 +13,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -194,7 +193,7 @@ export default function TagsScreen() {
   );
 
   return (
-    <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
       <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
@@ -556,7 +555,7 @@ export default function TagsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 

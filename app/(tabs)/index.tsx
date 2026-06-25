@@ -16,7 +16,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -348,7 +347,7 @@ export default function HomeScreen() {
   }, [keyboardShortcutsEnabled, focusedDeckIndex, displayedDecks, router]);
 
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <HiddenKeyboardInput
         ref={keyboardRef}
         onKeyPress={handleKeyPress}
@@ -489,7 +488,7 @@ export default function HomeScreen() {
         onConfirm={handleDeleteConfirm}
         onClose={() => { setShowDeleteModal(false); setPendingDeleteDeck(null); }}
       />
-    </GestureHandlerRootView>
+    </View>
   );
 }
 

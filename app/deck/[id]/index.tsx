@@ -17,7 +17,6 @@ import {
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
@@ -605,7 +604,7 @@ export default function DeckDetailScreen() {
   ) : null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <HiddenKeyboardInput
         ref={keyboardRef}
         onKeyPress={({ nativeEvent: { key } }) => {
@@ -991,7 +990,7 @@ export default function DeckDetailScreen() {
         actions={[{ label: t('common.ok'), onPress: doMove }]}
         onClose={() => setPendingMoveDeck(null)}
       />
-    </GestureHandlerRootView>
+    </View>
   );
 }
 

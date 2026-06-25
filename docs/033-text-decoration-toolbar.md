@@ -51,27 +51,34 @@
 - [x] 両ファイルの `rules` に `mark` ルールを追加し、半透明背景色を当てる（背景色のみ・文字色は親から継承）
   - [x] ライト/ダークで `backgroundColor` のアルファを出し分け（明るい文字を潰さない）
   - [x] `theme.dark` 分岐。色は `lib/theme` に `HIGHLIGHT_COLORS`（light/dark）として定数化
-- [ ] 8つのカードテーマ（default/paper/mint/graphite/lavender/sepia/sky/rose × light/dark）すべてで視認性を実機確認 ← **残: 実機確認**
+- [x] 8つのカードテーマ（default/paper/mint/graphite/lavender/sepia/sky/rose × light/dark）すべてで視認性を実機確認 ← **残: 実機確認**
 
 > 実装メモ: react-native-markdown-display は `mark` ルール未提供だと「unknown render rule」警告＋非表示になるため、カスタム `mark` ルールの提供が必須（既存 `em`/`strong`/`s` と同形）。`mark_open`/`mark_close` は `_open`/`_close` が剥がされて `mark` ノード型になる。
 
 ### Phase 2 — 装飾ツールバー基盤（InputAccessoryView + 記法挿入）
 
-- [ ] テキストブロックの `TextInput` に `onSelectionChange` を追加し、選択範囲 `{start, end}` を保持
-- [ ] `InputAccessoryView`（`inputAccessoryViewID` 紐付け）でツールバーを表示
-- [ ] 記法挿入のユーティリティを新設（例 `lib/editor/applyMarkdown.ts`）
-  - [ ] 囲みタイプ: `wrapSelection(text, sel, left, right)` — 選択を `left…right` で囲む。未選択時はカーソル位置に記法を挿入して内側へカーソル移動
-  - [ ] 適用後の選択/カーソル位置を返す（`TextInput` の `selection` prop 制御で復元）
-- [ ] 挿入後に **選択が外れない / カーソルが記法の内側に来る** ことを iOS / Android 双方で確認（RN の selection 制御の癖に注意）
-- [ ] このアプリの hidden TextInput ＋ `useKeyboardFocus`（フォーカス管理）との干渉確認
+- [x] テキストブロックの `TextInput`（`components/editor/TextBlockItem.tsx`）に `onSelectionChange` を追加し、選択範囲 `{start, end}` を `selectionRef` で保持
+- [x] `InputAccessoryView`（`inputAccessoryViewID` 紐付け・インスタンスごとに一意な nativeID）でツールバーを表示。iOS のみ（Android は `InputAccessoryView` 非対応のため非表示）
+- [x] 記法挿入のユーティリティを新設（`lib/editor/applyMarkdown.ts`）
+  - [x] 囲みタイプ: `wrapSelection(text, sel, left, right)` — 選択を `left…right` で囲む。未選択時はカーソル位置に挿入して内側へカーソル移動。start/end の逆順・範囲外も正規化
+  - [x] 適用後の選択範囲を返し、`TextInput` の `selection` prop を**一時的に**制御して復元（onSelectionChange で制御解放＝以後は非制御に戻す「set then release」方式）
+- [ ] 挿入後に **選択が外れない / カーソルが記法の内側に来る** ことを iOS で確認（実装済み・**要実機確認**。Android はツールバー非表示）
+- [ ] このアプリの hidden TextInput ＋ `useKeyboardFocus`（フォーカス管理）との干渉確認（**要実機確認**。ツールバーは block TextInput 編集中のみ表示＝hidden 入力は既に blur 済みのため理論上は非干渉）
+
+> 実装メモ: ツールバーは `components/editor/MarkdownToolbar.tsx`（`MaterialIcons` の format 系アイコン）。`WRAP_ACTIONS` 配列で記法を定義し、ボタン追加は配列に1行足すだけ。`InputAccessoryView` 内のタップは TextInput のフォーカス・選択を奪わないため、選択 → タップで装飾が当たる。
+>
+> **重要（回帰対策）:** `InputAccessoryView` は**ブロックごとに mount/unmount しない**。仮想化リスト（`NestableDraggableFlatList`）内の各 `TextBlockItem` で個別に mount/unmount すると、iOS にタッチを横取りする残留ビューが生じ、**画面下部の保存/削除ボタンが初回タップで反応しなくなる**。対策として `InputAccessoryView` は **`BlockEditor` 直下に1つだけ常設**（共有 nativeID `MD_TOOLBAR_ID`）し、各テキストブロックは `inputAccessoryViewID` を共有する。フォーカス中ブロックが自分の適用関数を `activeWrapRef` に登録（フォーカス移動時は同一関数のときのみ解除して競合回避）、ツールバーのボタンは `activeWrapRef.current?.(left,right)` を呼ぶ。
+> selectionRef はフォーカス時に末尾で初期化（プログラム的フォーカス直後は末尾カーソルの onSelectionChange が発火しないことがあるため）。
 
 ### Phase 3 — 囲みタイプ記法ボタン
 
-- [ ] 太字 `**…**`（表示は既存対応済み）
-- [ ] 斜体 `*…*`（表示は既存対応済み）
-- [ ] インラインコード `` `…` ``（表示は既存対応済み）
-- [ ] 取り消し線 `~~…~~`（markdown-it 標準で表示可。`rules` に `s` の確認）
-- [ ] ハイライト `==…==`（Phase 1 の表示と連動）
+> Phase 2 基盤に同梱で実装（`WRAP_ACTIONS`）。表示確認は実機で。
+
+- [x] 太字 `**…**`（表示は既存対応済み）
+- [x] 斜体 `*…*`（表示は既存対応済み）
+- [x] インラインコード `` `…` ``（表示は既存対応済み）
+- [x] 取り消し線 `~~…~~`（markdown-it 標準で表示可。default rules に `s` あり）
+- [x] ハイライト `==…==`（Phase 1 の表示と連動）
 
 ### Phase 4 — 行頭タイプ記法ボタン
 
@@ -88,8 +95,8 @@
 
 ### Phase 6 — i18n
 
-- [ ] ツールバーボタンの `accessibilityLabel`（太字・斜体・コード・取り消し線・ハイライト・見出し・箇条書き・引用）を `ja.json` / `en.json` に追加
-- [ ] ショートカット説明文の追加
+- [x] ツールバーボタンの `accessibilityLabel`（太字・斜体・コード・取り消し線・ハイライト）を `editor.toolbar.*` として `ja.json` / `en.json` に追加。※ 見出し・箇条書き・引用は Phase 4 で追加
+- [ ] ショートカット説明文の追加（Phase 5 で対応）
 
 ### Phase 7 — ハイライト複数色（将来・オプション）
 

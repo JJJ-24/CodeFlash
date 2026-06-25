@@ -290,7 +290,14 @@
     "preview": "Preview",
     "selectLanguage": "Select Language",
     "previewModeLabel": "Preview Mode",
-    "sortModeLabel": "Sort Mode"
+    "sortModeLabel": "Sort Mode",
+    "toolbar": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "code": "Inline code",
+      "strikethrough": "Strikethrough",
+      "highlight": "Highlight"
+    }
   },
   "settings": {
     "display": "Display",

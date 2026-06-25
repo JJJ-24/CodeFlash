@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -10,6 +11,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -32,6 +34,7 @@ import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
 import { ImageBlockItem } from "./ImageBlockItem";
+import { MarkdownToolbar, MD_TOOLBAR_ID } from "./MarkdownToolbar";
 import { TagSelector } from "./TagSelector";
 import { TextBlockItem } from "./TextBlockItem";
 
@@ -154,6 +157,29 @@ export function BlockEditor({
   });
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
   const keyboardRef = useRef<TextInput>(null);
+
+  // 共有マークダウンツールバー（InputAccessoryView）から、現在フォーカス中の
+  // テキストブロックへ記法を適用するための登録口。フォーカス中ブロックが自分の
+  // apply 関数を登録し、ツールバーのボタンはそれを呼ぶ。
+  const activeWrapRef = useRef<((left: string, right: string) => void) | null>(null);
+  // テキストブロックがフォーカス中のときだけ InputAccessoryView をマウントする。
+  // 常設すると、学習画面から引き継がれたキーボードセッションにツールバーが
+  // 張り付いて誤表示されるため（iOS の InputAccessoryView の癖）。
+  const [toolbarVisible, setToolbarVisible] = useState(false);
+  const activateToolbar = useCallback((apply: (left: string, right: string) => void) => {
+    activeWrapRef.current = apply;
+    setToolbarVisible(true);
+  }, []);
+  const deactivateToolbar = useCallback((apply: (left: string, right: string) => void) => {
+    // 別ブロックが既に登録を引き継いでいる場合は消さない（フォーカス移動時の競合対策）
+    if (activeWrapRef.current === apply) {
+      activeWrapRef.current = null;
+      setToolbarVisible(false);
+    }
+  }, []);
+  const handleToolbarAction = useCallback((left: string, right: string) => {
+    activeWrapRef.current?.(left, right);
+  }, []);
   const focusedBlockIndexRef = useRef<number | null>(null);
   const isTransitioningRef = useRef(false);
   const isTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -898,6 +924,14 @@ export function BlockEditor({
           startEditFocusedBlock();
         }}
       />
+      {/* 共有マークダウン装飾ツールバー（キーボード上端）。テキストブロックの
+          フォーカス中のみマウントし、activeWrapRef 経由で記法を適用する。
+          常設すると他画面のキーボードセッションに張り付いて誤表示されるためゲートする。 */}
+      {Platform.OS === "ios" && toolbarVisible && (
+        <InputAccessoryView nativeID={MD_TOOLBAR_ID}>
+          <MarkdownToolbar onAction={handleToolbarAction} />
+        </InputAccessoryView>
+      )}
       {/* タブバー */}
       <View
         style={[
@@ -1075,6 +1109,8 @@ export function BlockEditor({
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
+                  onActivateToolbar={activateToolbar}
+                  onDeactivateToolbar={deactivateToolbar}
                 />
               )}
               {block.type === "code" && (

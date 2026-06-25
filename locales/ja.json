@@ -290,7 +290,14 @@
     "preview": "プレビュー",
     "selectLanguage": "言語を選択",
     "previewModeLabel": "プレビューモード",
-    "sortModeLabel": "並べ替えモード"
+    "sortModeLabel": "並べ替えモード",
+    "toolbar": {
+      "bold": "太字",
+      "italic": "斜体",
+      "code": "インラインコード",
+      "strikethrough": "取り消し線",
+      "highlight": "ハイライト"
+    }
   },
   "settings": {
     "display": "表示",

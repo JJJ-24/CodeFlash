@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Animated, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -10,10 +10,12 @@ import { Ionicons } from '@expo/vector-icons';
 import markdownItMark from 'markdown-it-mark';
 
 import { BlockItemHeader } from './BlockItemHeader';
+import { MD_TOOLBAR_ID } from './MarkdownToolbar';
 
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化
 const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark);
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
+import { wrapSelection, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
 
 interface Props {
@@ -38,9 +40,13 @@ interface Props {
   onEditBlur?: () => void;
   /** マウント時の autoFocus が実行されたとき BlockEditor に通知するコールバック */
   onAutoFocused?: () => void;
+  /** フォーカス時、共有ツールバーへ「このブロックに記法を適用する関数」を登録する */
+  onActivateToolbar?: (apply: (left: string, right: string) => void) => void;
+  /** ブラー時、共有ツールバーから登録を解除する（同じ関数のときのみ解除） */
+  onDeactivateToolbar?: (apply: (left: string, right: string) => void) => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, blurTrigger, onEditBlur, onAutoFocused }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, blurTrigger, onEditBlur, onAutoFocused, onActivateToolbar, onDeactivateToolbar }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -52,6 +58,31 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     setTimeout(() => setCopied(false), 1000);
   }
   const inputRef = useRef<TextInput>(null);
+
+  // 装飾ツールバー用: 選択範囲を ref で追跡し、記法適用後はカーソルを内側へ移す。
+  const selectionRef = useRef<Sel>({ start: 0, end: 0 });
+  const [pendingSelection, setPendingSelection] = useState<Sel | undefined>(undefined);
+
+  const handleSelectionChange = useCallback((e: { nativeEvent: { selection: Sel } }) => {
+    selectionRef.current = e.nativeEvent.selection;
+    // プログラムでカーソルを移した直後の onSelectionChange で制御を解放（以後は非制御に戻す）
+    setPendingSelection((prev) => (prev ? undefined : prev));
+  }, []);
+
+  const handleWrap = useCallback((left: string, right: string) => {
+    const result = wrapSelection(block.content, selectionRef.current, left, right);
+    onChange(result.text);
+    selectionRef.current = result.selection;
+    setPendingSelection(result.selection);
+  }, [block.content, onChange]);
+
+  // フォーカス中は共有ツールバーへ自分の適用関数を登録（content 変化で最新へ差し替え）。
+  // ブラー・アンマウント時は登録解除。InputAccessoryView 自体は BlockEditor に1つ常設。
+  useEffect(() => {
+    if (!focused) return;
+    onActivateToolbar?.(handleWrap);
+    return () => onDeactivateToolbar?.(handleWrap);
+  }, [focused, handleWrap, onActivateToolbar, onDeactivateToolbar]);
 
   const enterEditMode = useCallback(() => {
     setFocused(true);
@@ -262,11 +293,21 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
                 style={[styles.input, { color: theme.colors.text, fontSize: theme.fontSize.md, width: width - 32 }]}
                 value={block.content}
                 onChangeText={onChange}
+                selection={pendingSelection}
+                onSelectionChange={handleSelectionChange}
+                inputAccessoryViewID={Platform.OS === 'ios' ? MD_TOOLBAR_ID : undefined}
                 multiline
                 scrollEnabled={false}
                 placeholder={t('editor.textBlockPlaceholder')}
                 placeholderTextColor={theme.colors.textTertiary}
-                onFocus={() => { setFocused(true); onFocusInput?.(); }}
+                onFocus={() => {
+                  setFocused(true);
+                  onFocusInput?.();
+                  // プログラム的フォーカス時 iOS はカーソルを末尾に置くが、その位置の
+                  // onSelectionChange が発火しないことがあるため selectionRef を末尾で初期化。
+                  const len = block.content.length;
+                  selectionRef.current = { start: len, end: len };
+                }}
                 onBlur={() => { setFocused(false); onEditBlur?.(); }}
                 textAlignVertical="top"
                 autoCorrect={false}

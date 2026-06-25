@@ -7,10 +7,13 @@ import { runOnJS } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
+import markdownItMark from 'markdown-it-mark';
+
 import { BlockItemHeader } from './BlockItemHeader';
 
-const markdownItLinkify = MarkdownIt({ linkify: true });
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+// linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化
+const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark);
+import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
 import type { TextBlock } from '@/types';
 
 interface Props {
@@ -186,6 +189,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, isPreview]);
 
+  const highlightBg = HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'];
   const linkRule = useMemo(() => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     link: (node: any, children: any) => (
@@ -197,7 +201,12 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{children}</Text>
       </Pressable>
     ),
-  }), []);
+    // ハイライト（==文字==）。背景色のみ指定し文字色は親から継承させる。
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mark: (node: any, children: any) => (
+      <Text key={node.key} style={{ backgroundColor: highlightBg }}>{children}</Text>
+    ),
+  }), [highlightBg]);
 
   return (
     <View style={[

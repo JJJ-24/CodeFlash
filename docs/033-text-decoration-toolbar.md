@@ -45,13 +45,15 @@
 
 ### Phase 1 — ハイライト表示基盤（1色・半透明）
 
-- [ ] `markdown-it-mark` を導入（`package.json`）。`==文字==` → `mark` トークン化
-- [ ] `components/editor/TextBlockItem.tsx` の `markdownItLinkify` インスタンスに `.use(markdownItMark)` を適用
-- [ ] `components/study/BlocksView.tsx` 側の markdown-it インスタンスにも同様に適用（**編集プレビューと学習画面で表示を揃える**）
-- [ ] 両ファイルの `rules` に `mark` ルールを追加し、半透明背景色を当てる
-  - [ ] ライト/ダークで `backgroundColor` のアルファを出し分け（明るい文字を潰さない）
-  - [ ] `theme` 連動（`theme.dark` 分岐）。色は定数として `lib/theme` 付近に切り出す案も検討
-- [ ] 8つのカードテーマ（default/paper/mint/graphite/lavender/sepia/sky/rose × light/dark）すべてで視認性を実機確認
+- [x] `markdown-it-mark` を導入（`package.json` ^4.0.0）。`==文字==` → `<mark>` トークン化。型定義なしのため `types/markdown-it-mark.d.ts` に最小宣言を追加
+- [x] `components/editor/TextBlockItem.tsx` の `markdownItLinkify` インスタンスに `.use(markdownItMark)` を適用
+- [x] `components/study/BlocksView.tsx` 側の markdown-it インスタンス（`mdInstance`）にも同様に適用（**編集プレビューと学習画面で表示を揃える**）
+- [x] 両ファイルの `rules` に `mark` ルールを追加し、半透明背景色を当てる（背景色のみ・文字色は親から継承）
+  - [x] ライト/ダークで `backgroundColor` のアルファを出し分け（明るい文字を潰さない）
+  - [x] `theme.dark` 分岐。色は `lib/theme` に `HIGHLIGHT_COLORS`（light/dark）として定数化
+- [ ] 8つのカードテーマ（default/paper/mint/graphite/lavender/sepia/sky/rose × light/dark）すべてで視認性を実機確認 ← **残: 実機確認**
+
+> 実装メモ: react-native-markdown-display は `mark` ルール未提供だと「unknown render rule」警告＋非表示になるため、カスタム `mark` ルールの提供が必須（既存 `em`/`strong`/`s` と同形）。`mark_open`/`mark_close` は `_open`/`_close` が剥がされて `mark` ノード型になる。
 
 ### Phase 2 — 装飾ツールバー基盤（InputAccessoryView + 記法挿入）
 

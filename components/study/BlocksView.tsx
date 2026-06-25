@@ -4,19 +4,21 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
+import markdownItMark from 'markdown-it-mark';
 import { useTranslation } from 'react-i18next';
 
 import { Image } from 'expo-image';
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { resolveImageUri } from '@/lib/image';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
 
 // 生URL も自動リンク化する。リンクは linkRule でインラインの Text として描画するため
 // （Pressable を使わない）、本文と同じフォントサイズで流れて表示がズレない。
-const mdInstance = MarkdownIt({ linkify: true });
+// markdownItMark: ==文字== をハイライト（<mark>）化（編集プレビューと表示を揃える）。
+const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark);
 
 function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -239,7 +241,12 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         accessibilityLabel={node.attributes.alt}
       />
     ),
-  }), [suppress, theme.fontSize.lg]);
+    // ハイライト（==文字==）。背景色のみ指定し文字色は親から継承させる。
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mark: (node: any, children: any) => (
+      <Text key={node.key} style={{ backgroundColor: HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'] }}>{children}</Text>
+    ),
+  }), [suppress, theme.fontSize.lg, theme.dark]);
 
   if (blocks.length === 0) {
     return <Text style={[styles.empty, { color: theme.colors.iconSubtle, fontSize: theme.fontSize.sm }]}>{t('card.noContent')}</Text>;

@@ -1,16 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { settingsStyles as styles } from '@/components/settings/styles';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
-import { useSettingsStore } from '@/store/settings';
 
 interface NavItem {
   key: string;
@@ -25,17 +23,12 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { isPro } = useProStore();
-  const { keyboardShortcutsEnabled } = useSettingsStore();
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
-
-  useFocusEffect(
-    useCallback(() => {
-      // ショートカット無効時は隠し TextInput をフォーカスしない（フォーカスされた入力欄が
-      // 残るとタブ/各所のタップが first responder 解除に食われる。ショートカット OFF を真に無効化）。
-      if (keyboardShortcutsEnabled) onScreenFocus();
-      return () => { onScreenBlur(); };
-    }, [keyboardShortcutsEnabled, onScreenFocus, onScreenBlur]),
-  );
+  // 034: タブ切替（,/.）をネイティブキーコマンドで受ける（隠し TextInput を撤去）。
+  // フックが「画面フォーカス中 かつ keyboardShortcutsEnabled」を内部で gate する。
+  useKeyCommands([
+    { input: '.', handler: () => router.navigate('/(tabs)') },
+    { input: ',', handler: () => router.navigate('/(tabs)/stats') },
+  ]);
 
   const navItems: NavItem[] = [
     { key: 'display', label: t('settings.display'), icon: 'color-palette-outline', onPress: () => router.push('/settings/display') },
@@ -105,24 +98,6 @@ export default function SettingsScreen() {
           </Pressable>
         ))}
       </ScrollView>
-
-      <TextInput
-        ref={keyboardRef}
-        style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
-        onKeyPress={({ nativeEvent: { key } }) => {
-          if (!keyboardShortcutsEnabled) return;
-          if (key === '.') { router.navigate('/(tabs)'); }
-          else if (key === ',') { router.navigate('/(tabs)/stats'); }
-        }}
-        onBlur={onInputBlur}
-      />
     </View>
   );
 }

@@ -417,6 +417,9 @@ export function BlockEditor({
       clearTimeout(isTransitionTimerRef.current);
     const idx = currentBlocksRef.current.findIndex((b) => b._key === blockKey);
     setFocusedBlockIndex(idx !== -1 ? idx : null);
+    // ショートカット無効時は隠し TextInput にフォーカスを戻さない。戻すと「常にフォーカスされた
+    // 入力欄」が残り、下部ボタンの初回タップが first responder 解除に食われて反応しなくなる。
+    if (!keyboardShortcutsEnabled) return;
     isTransitionTimerRef.current = setTimeout(() => {
       keyboardRef.current?.focus();
     }, 200);
@@ -427,6 +430,8 @@ export function BlockEditor({
     if (isTransitioningRef.current || isNavigatingRef.current) return;
     if (isTransitionTimerRef.current)
       clearTimeout(isTransitionTimerRef.current);
+    // ショートカット無効時は隠し TextInput へ戻さない（上記と同じ理由。下部ボタンのタップ食われ防止）。
+    if (!keyboardShortcutsEnabled) return;
     isTransitionTimerRef.current = setTimeout(() => {
       keyboardRef.current?.focus();
     }, 200);
@@ -781,7 +786,9 @@ export function BlockEditor({
                   clearTimeout(isTransitionTimerRef.current);
                   isTransitionTimerRef.current = null;
                 }
-                keyboardRef.current?.focus();
+                // ショートカット有効時のみ隠し入力へ。無効時はキーボードを閉じるだけ
+                // （フォーカスされた隠し入力が残らないようにし、下部ボタンのタップ食われを防ぐ）。
+                if (keyboardShortcutsEnabled) keyboardRef.current?.focus(); else Keyboard.dismiss();
                 setTimeout(() => {
                   isTransitioningRef.current = false;
                 }, 100);
@@ -976,7 +983,7 @@ export function BlockEditor({
                   editingBlockKeyRef.current = null;
                   isTransitioningRef.current = false;
                   isTransitionTimerRef.current = null;
-                  keyboardRef.current?.focus();
+                  if (keyboardShortcutsEnabled) keyboardRef.current?.focus(); else Keyboard.dismiss();
                 }, 200);
                 setAddMenuVisible(false);
                 setEditTriggerMap({});
@@ -1039,7 +1046,7 @@ export function BlockEditor({
                       editingBlockKeyRef.current = null;
                       isTransitioningRef.current = false;
                       isTransitionTimerRef.current = null;
-                      keyboardRef.current?.focus();
+                      if (keyboardShortcutsEnabled) keyboardRef.current?.focus(); else Keyboard.dismiss();
                     }, 200);
                     setBlurTriggerMap({});
                   }

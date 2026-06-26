@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
@@ -204,14 +205,14 @@ export default function DeckDetailScreen() {
       });
       // 前の画面でソフトキーボードが残留していた場合に確実に閉じる
       Keyboard.dismiss();
-      onScreenFocus();
+      if (keyboardShortcutsEnabled) onScreenFocus();
       return () => {
         cancelled = true;
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
         onScreenBlur();
       };
-    }, [loadCards])
+    }, [loadCards, keyboardShortcutsEnabled])
   );
 
   useEffect(() => {
@@ -374,6 +375,9 @@ export default function DeckDetailScreen() {
     const isSelected = selectedCardIdsRef.current.has(item.id);
     const isFocused = item.id === focusedCardIdRef.current;
     const isSelMode = selectionModeRef.current;
+    // 手動ソート時は DraggableFlatList 内なので ScaleDecorator で包む（フィルタ中もドラッグは
+    // onDragEnd 側で無効化される）。新しい/古い順は素の FlatList で描画するため包まない（context 不在）。
+    const inDraggable = cardSortOrderRef.current === 'manual';
     const isNew = recentlyDuplicatedIdsRef.current.has(item.id);
     function toggleSelect() {
       setSelectedCardIds((prev) => {
@@ -382,8 +386,7 @@ export default function DeckDetailScreen() {
         return next;
       });
     }
-    return (
-      <ScaleDecorator>
+    const row = (
       <SwipeToDeleteRow
         enabled={!isSelMode && !(selectedFilterRef.current === 'all' && cardSortOrderRef.current === 'manual')}
         onDelete={() => confirmDeleteCardRef.current(item)}
@@ -456,8 +459,8 @@ export default function DeckDetailScreen() {
           )}
         </Pressable>
       </SwipeToDeleteRow>
-      </ScaleDecorator>
     );
+    return inDraggable ? <ScaleDecorator>{row}</ScaleDecorator> : row;
   }, [isPro, t, navigateToCardEdit]);
 
   // FlatList の再描画トリガー。毎レンダー新オブジェクトだと並べ替えのたびに全セルが
@@ -604,7 +607,7 @@ export default function DeckDetailScreen() {
   ) : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <HiddenKeyboardInput
         ref={keyboardRef}
         onKeyPress={({ nativeEvent: { key } }) => {
@@ -834,56 +837,101 @@ export default function DeckDetailScreen() {
       </View>
 
       <Pressable style={{ flex: 1 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
-        <DraggableFlatList
-          ref={listRef as any}
-          // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
-          // コンテンツ全体高さになり、下方向 autoscroll の移動先 min(.., scrollViewSize-containerSize)
-          // が 0 に潰れて下方向にスクロールできない（上方向は containerSize 非依存なので動く）。
-          containerStyle={{ flex: 1 }}
-          data={displayedCards}
-          keyExtractor={(item) => item.id}
-          // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false
-          // にしているため既定値だと一気にスクロールしてしまう）。要調整の数値。
-          autoscrollSpeed={10}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="never"
-          automaticallyAdjustContentInsets={false}
-          automaticallyAdjustsScrollIndicatorInsets={false}
-          scrollsToTop={false}
-          // 通常スクロール・ドラッグ autoscroll の両方で、速いスクロール時にセルが
-          // 描画から外れて透明（空白）になるのを防ぐため常に広めに描画ウィンドウを取る。
-          windowSize={21}
-          onScrollOffsetChange={(offset) => {
-            scrollOffsetRef.current = offset;
-            if (
-              Date.now() < restorationEndTimeRef.current &&
-              savedScrollOffsetRef.current > 50 &&
-              offset < savedScrollOffsetRef.current - 30
-            ) {
-              listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+        {/* 手動ソートのときだけ DraggableFlatList を使う。新しい/古い順は素の FlatList にすることで、
+            並びが大きく変わる切替（特に新しい順への逆転）で DraggableFlatList の全セル再測定コストを
+            避け、切替を高速化する。ドラッグ並べ替えが要るのは手動のみ。フィルタ切替では list 種別が
+            変わらない（＝再マウントしない）よう、判定はソートのみに依存させる。 */}
+        {cardSortOrder === 'manual' ? (
+          <DraggableFlatList
+            ref={listRef as any}
+            // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
+            // コンテンツ全体高さになり、下方向 autoscroll の移動先 min(.., scrollViewSize-containerSize)
+            // が 0 に潰れて下方向にスクロールできない（上方向は containerSize 非依存なので動く）。
+            containerStyle={{ flex: 1 }}
+            data={displayedCards}
+            keyExtractor={(item) => item.id}
+            // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false
+            // にしているため既定値だと一気にスクロールしてしまう）。要調整の数値。
+            autoscrollSpeed={10}
+            keyboardShouldPersistTaps="handled"
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            scrollsToTop={false}
+            // ドラッグ autoscroll でセルが空白になりやすいので広めに描画する。
+            windowSize={21}
+            onScrollOffsetChange={(offset) => {
+              scrollOffsetRef.current = offset;
+              if (
+                Date.now() < restorationEndTimeRef.current &&
+                savedScrollOffsetRef.current > 50 &&
+                offset < savedScrollOffsetRef.current - 30
+              ) {
+                listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+              }
+            }}
+            onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
+            ListHeaderComponent={ListHeader}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }} />}
+            ListEmptyComponent={
+              <EmptyState
+                icon="card-outline"
+                title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
+                subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
+              />
             }
-          }}
-          onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }} />}
-          ListEmptyComponent={
-            <EmptyState
-              icon="card-outline"
-              title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
-              subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
-            />
-          }
-          contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
-          onScrollToIndexFailed={() => {}}
-          onDragEnd={({ data }) => {
-            if (selectionMode) return;
-            if (selectedFilter !== 'all' || cardSortOrder !== 'manual') return;
-            reorderCards(data);
-            updateCardSortOrders(db, data.map((c) => c.id));
-          }}
-          renderItem={renderItem}
-          extraData={listExtraData}
-        />
+            contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
+            onScrollToIndexFailed={() => {}}
+            onDragEnd={({ data }) => {
+              if (selectionMode) return;
+              if (selectedFilter !== 'all' || cardSortOrder !== 'manual') return;
+              reorderCards(data);
+              updateCardSortOrders(db, data.map((c) => c.id));
+            }}
+            renderItem={renderItem}
+            extraData={listExtraData}
+          />
+        ) : (
+          <FlatList
+            ref={listRef}
+            style={{ flex: 1 }}
+            data={displayedCards}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            scrollsToTop={false}
+            // ドラッグしないので保持セルを減らし、並びが変わる切替を軽くする。
+            windowSize={9}
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              const offset = e.nativeEvent.contentOffset.y;
+              scrollOffsetRef.current = offset;
+              if (
+                Date.now() < restorationEndTimeRef.current &&
+                savedScrollOffsetRef.current > 50 &&
+                offset < savedScrollOffsetRef.current - 30
+              ) {
+                listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+              }
+            }}
+            onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
+            ListHeaderComponent={ListHeader}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }} />}
+            ListEmptyComponent={
+              <EmptyState
+                icon="card-outline"
+                title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
+                subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
+              />
+            }
+            contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
+            onScrollToIndexFailed={() => {}}
+            renderItem={({ item }) => renderItem({ item, drag: () => {} } as RenderItemParams<Card>)}
+            extraData={listExtraData}
+          />
+        )}
       </Pressable>
 
       {selectionMode ? (
@@ -990,7 +1038,7 @@ export default function DeckDetailScreen() {
         actions={[{ label: t('common.ok'), onPress: doMove }]}
         onClose={() => setPendingMoveDeck(null)}
       />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 

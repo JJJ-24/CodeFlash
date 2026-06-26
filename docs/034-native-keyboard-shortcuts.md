@@ -70,11 +70,11 @@
 
 ### Phase 0 — PoC・ライブラリ確定（最重要・先にやる）
 
-- [ ] Development Build に `react-native-key-command`（または自前 Expo Module）を組み込む
-- [ ] 新アーキで動くこと、**単一キー（修飾なし）コマンドが発火**することを実機確認
-- [ ] **実 `TextInput` フォーカス中は入力欄が文字を消費し、key command が発火しない**こと（住み分け）を確認 ← 設計の肝
-- [ ] iPad の `Tab`（UIFocusSystem）と矢印キーの挙動を確認（Tab は取れない可能性。可否をメモ）
-- [ ] ライブラリ採用 or 自前実装を確定し、ここに追記
+- [x] Development Build に `react-native-key-command` を組み込む（v1.0.15）
+- [x] 新アーキで動くこと、**単一キー（修飾なし）コマンドが発火**することを確認（iPhone 16e シミュレータ）
+- [x] **実 `TextInput` フォーカス中は入力欄が文字を消費し、key command が発火しない**こと（住み分け）を確認 ← 設計の肝クリア
+- [x] 矢印キーの挙動を確認（発火OK）。**iPad の `Tab`（UIFocusSystem）は未検証** → Phase 2 の iPad 検証で確認
+- [x] **ライブラリ採用で確定**（`react-native-key-command`）
 
 #### Phase 0 机上調査（2026-06-26）
 
@@ -95,12 +95,33 @@
 2. interop で不可なら **自前 Expo Module** に切替（responder 制御を実装）。
 - いずれも**実機（物理/Bluetooth キーボード）でのビルド・検証が必須**で、ここは要・実機作業。下記 PoC スクリーンで Phase 0 のチェック項目を一括検証する。
 
+#### Phase 0 実機検証結果（2026-06-26・採用確定）
+
+iPhone 16e シミュレータ（new arch・Hardware Keyboard 接続）で PoC 検証。**react-native-key-command を採用**。
+
+- **[E] ビルド:** `expo run:ios` 成功（new arch interop で問題なし）。
+- **[A] 単一キー:** フォーカス無しで `j`/`k` 発火 ✓
+- **[B] 住み分け:** 入力欄フォーカス中の `j` は**文字挿入されショートカット非発火** ✓（責任者チェーンで自然成立＝隠し入力が不要な決定的証拠）
+- **[C] 修飾コンボ:** 入力欄フォーカス中でも **`Cmd+B` が発火・文字は入らない** ✓（033 Phase 5 の前提を満たす）
+- **[D] Esc/矢印:** すべて発火 ✓
+- **未検証:** iPad の `Tab`（UIFocusSystem に取られる可能性）→ Phase 2 の iPad 検証で確認。
+
+**実装上の確定事項（Phase 1 へ引き継ぐ）:**
+- iOS セットアップ: ブリッジヘッダに `#import <react-native-key-command/HardwareShortcuts.h>`、`AppDelegate.swift`(`ExpoAppDelegate`) に `keyCommands` override と `@objc handleKeyCommand(_:)` を追加。
+- **`HardwareShortcuts.sharedInstance().keyCommands()` は Obj-C メソッドなので Swift では `()` 必須**（無いと常に nil で全く効かない。ハマりポイント）。
+- **イベント payload の `input` は登録時の数値定数ではなく iOS 特殊文字列で返る**（Esc=`uikeyinputescape`、矢印=`uikeyinputuparrow`/`...down/left/right`）。本実装のディスパッチはこの文字列でマッチさせる。
+- 現状の AppDelegate/ブリッジヘッダ直接編集は `expo prebuild --clean` で消えるため、**Phase 1 で config plugin 化**して恒久化する。
+- PoC 用の一時物（`app/keycmd-poc.tsx`・設定画面の一時ボタン）は Phase 1 着手時に削除する。
+
 ### Phase 1 — 共通レイヤ `useKeyCommands`
 
-- [ ] キーマップ（`{ key, modifiers?, handler }[]`）を受け取り、画面 focus 中だけ登録/解除するフックを作る
-- [ ] `keyboardShortcutsEnabled` が false のときは登録しない
-- [ ] `useFocusEffect` 連動（現 `onScreenFocus/Blur` の責務を移植）
-- [ ] 既存の `Grade`/フィルタ等の enum やキー定義（`lib/cardEditorShortcuts.ts` 等）と整合
+- [x] キーマップ（`{ input, modifierFlags?, handler }[]`）を受け取り、画面 focus 中だけ登録/解除するフックを作る（`lib/useKeyCommands.ts`。`hooks/` は権限外のため lib に配置）
+- [x] `keyboardShortcutsEnabled` が false のときは登録しない（フック内で gate）
+- [x] `useFocusEffect` 連動（現 `onScreenFocus/Blur` の責務を移植）
+- [x] 突き合わせは payload.input を小文字正規化（特殊キーの定数と payload 文字列の揺らぎを吸収）。型は `types/react-native-key-command.d.ts`
+- [x] **パイロット移行: 設定タブ**（`,`/`.` タブ切替を `useKeyCommands` 化、隠し TextInput 撤去）。実機検証で「ON でも設定メニューが1タップ・タブ切替動作」を確認＝**ON時のタップ食われ解消を実証**
+- [x] **config plugin で AppDelegate 注入を恒久化**（`plugins/withKeyCommands.js`・`app.json` に登録）。`expo prebuild --clean` で再生成しても keyCommands override とブリッジヘッダ import が自動で入ることを実機確認済み
+- [ ] 既存の `Grade`/フィルタ等の enum やキー定義（`lib/cardEditorShortcuts.ts` 等）と整合（各画面移行時）
 
 ### Phase 2 — 画面ごとに段階移行（1画面ずつ・隠し入力と二重化しない）
 

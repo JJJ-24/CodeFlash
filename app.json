@@ -75,7 +75,8 @@
           "containerIdentifier": "iCloud.$(CFBundleIdentifier)",
           "containerName": "$(PRODUCT_NAME)"
         }
-      ]
+      ],
+      "./plugins/withKeyCommands"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -200,9 +200,9 @@ export default function TagCardsScreen() {
         else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder));
         else setCards(raw);
       });
-      onScreenFocus();
+      if (keyboardShortcutsEnabled) onScreenFocus();
       return () => { onScreenBlur(); };
-    }, [db, tagId, cardSortOrder, onScreenFocus, onScreenBlur])
+    }, [db, tagId, cardSortOrder, onScreenFocus, onScreenBlur, keyboardShortcutsEnabled])
   );
 
   useEffect(() => {

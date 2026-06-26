@@ -906,7 +906,7 @@ export default function StatsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      onScreenFocus();
+      if (keyboardShortcutsEnabled) onScreenFocus();
       const blockMap: Record<InitialFilterPreference, BlockKey | null> = {
         all: 'streak', learned: 'learned', review: 'due', new: 'new', none: null,
       };
@@ -914,7 +914,7 @@ export default function StatsScreen() {
       if (initial !== null) setSelectedBlock(initial);
       loadStats();
       return () => { onScreenBlur(); };
-    }, [initialFilterPreference, onScreenFocus, onScreenBlur, loadStats])
+    }, [initialFilterPreference, onScreenFocus, onScreenBlur, loadStats, keyboardShortcutsEnabled])
   );
 
   // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でも統計を再読込する。

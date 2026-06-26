@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -182,18 +183,18 @@ export default function TagsScreen() {
           if (!cancelled) (listRef.current as any)?.scrollToOffset({ offset: targetOffset, animated: false });
         }, 50);
       });
-      onScreenFocus();
+      if (keyboardShortcutsEnabled) onScreenFocus();
       return () => {
         cancelled = true;
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
         onScreenBlur();
       };
-    }, [db, onScreenFocus, onScreenBlur])
+    }, [db, onScreenFocus, onScreenBlur, keyboardShortcutsEnabled])
   );
 
   return (
-    <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+    <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
       <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
@@ -555,7 +556,7 @@ export default function TagsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 

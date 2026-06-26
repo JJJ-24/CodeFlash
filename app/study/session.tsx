@@ -206,12 +206,17 @@ export default function StudySessionScreen() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [kbHeight, setKbHeight] = useState(0);
 
-  // キーボード表示時に paddingBottom を追加してスクロール余白を確保する
+  // キーボード表示時に paddingBottom を追加してスクロール余白を確保する。
+  // Keyboard リスナーはグローバルなので、編集モーダル等でキーボードが出ると裏に居る
+  // この画面の kbHeight まで増えてしまい、戻った瞬間に内容が上にズレて見える。
+  // この画面がフォーカス中のときだけ kbHeight を増やす（hide は常に 0 で安全側）。
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardWillShow', (e) => setKbHeight(e.endCoordinates.height));
+    const show = Keyboard.addListener('keyboardWillShow', (e) => {
+      if (isScreenFocusedRef.current) setKbHeight(e.endCoordinates.height);
+    });
     const hide = Keyboard.addListener('keyboardWillHide', () => setKbHeight(0));
     return () => { show.remove(); hide.remove(); };
-  }, []);
+  }, [isScreenFocusedRef]);
 
   // cardId -> blockIndex -> 編集済みコード
   const [editedCodeBlocks, setEditedCodeBlocks] = useState<

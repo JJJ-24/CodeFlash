@@ -30,9 +30,11 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      onScreenFocus();
+      // ショートカット無効時は隠し TextInput をフォーカスしない（フォーカスされた入力欄が
+      // 残るとタブ/各所のタップが first responder 解除に食われる。ショートカット OFF を真に無効化）。
+      if (keyboardShortcutsEnabled) onScreenFocus();
       return () => { onScreenBlur(); };
-    }, [onScreenFocus, onScreenBlur]),
+    }, [keyboardShortcutsEnabled, onScreenFocus, onScreenBlur]),
   );
 
   const navItems: NavItem[] = [

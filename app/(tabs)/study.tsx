@@ -187,7 +187,7 @@ export default function StudyScreen() {
       }
       const isFromSession = fromSessionRef.current;
       fromSessionRef.current = false;
-      onScreenFocus();
+      if (keyboardShortcutsEnabled) onScreenFocus();
       (async () => {
         if (!initialLoadDoneRef.current && !isFromSession) setLoading(true);
         await loadData();
@@ -196,7 +196,7 @@ export default function StudyScreen() {
       })();
       return () => { onScreenBlur(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [db, initialFilterPreference, loadData])
+    }, [db, initialFilterPreference, loadData, keyboardShortcutsEnabled])
   );
 
   // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でも集計を再読込する。

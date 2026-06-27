@@ -7,6 +7,10 @@ declare module 'react-native-key-command' {
     keyInputDownArrow: string;
     keyInputLeftArrow: string;
     keyInputRightArrow: string;
+    keyInputPageUp: string;
+    keyInputPageDown: string;
+    keyInputHome: string;
+    keyInputEnd: string;
     keyModifierCommand: number;
     keyModifierShift: number;
     keyModifierControl: number;

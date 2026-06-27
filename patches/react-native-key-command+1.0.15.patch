@@ -1,0 +1,15 @@
+diff --git a/node_modules/react-native-key-command/ios/KeyCommand.h b/node_modules/react-native-key-command/ios/KeyCommand.h
+index 150be7b..712272d 100644
+--- a/node_modules/react-native-key-command/ios/KeyCommand.h
++++ b/node_modules/react-native-key-command/ios/KeyCommand.h
+@@ -25,6 +25,10 @@ NSDictionary *ModifierFlagsConstants = @{
+   @"keyInputRightArrow": UIKeyInputRightArrow,
+   @"keyInputEscape": UIKeyInputEscape,
+   @"keyInputEnter": @"\r",
++  @"keyInputPageUp": UIKeyInputPageUp,
++  @"keyInputPageDown": UIKeyInputPageDown,
++  @"keyInputHome": UIKeyInputHome,
++  @"keyInputEnd": UIKeyInputEnd,
+ };
+ 
+ @interface KeyCommand : RCTEventEmitter <RCTBridgeModule>

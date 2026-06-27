@@ -542,6 +542,7 @@
     "focusNextPrev": "フォーカス移動\n（次/前）",
     "nextPrev": "前へ/次へ（評価なし）",
     "scrollUpDown": "上/下 スクロール",
+    "scrollTopBottom": "最上部/最下部へ",
     "toggleShuffle": "シャッフル切替",
     "toggleHideEmpty": "対象なし 表示/非表示",
     "switchDeckTab": "デッキ/タグ 切替",

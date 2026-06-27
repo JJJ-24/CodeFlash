@@ -42,6 +42,23 @@ export const deleteKeySpecs = (handler: () => void): KeyCommandSpec[] => [
 ];
 
 /**
+ * PageUp / PageDown キー（フルサイズ外付けキーボードのみ。iPad/Mac ノートには無い）。
+ * iOS 公式の UIKeyInputPageUp / UIKeyInputPageDown 定数を使う（patches/ でライブラリの
+ * ネイティブ定数に追加済み）。直接の文字推測（U+F72C/F72D 等）では発火しなかったため、
+ * 矢印キーと同じく「本物の定数」を渡す方式に統一。定数未取得時のみ旧推測値へフォールバック（非空を保証）。
+ */
+export const KEY_PAGE_UP = (KeyCommand.constants?.keyInputPageUp as string) || '\uF72C';
+export const KEY_PAGE_DOWN = (KeyCommand.constants?.keyInputPageDown as string) || '\uF72D';
+
+/**
+ * Home / End キー（フルサイズ外付けキーボードのみ）。最上部 / 最下部へ一気にスクロールする用途。
+ * iOS 公式の UIKeyInputHome / UIKeyInputEnd 定数を使う（patches/ でネイティブ定数に追加済み）。
+ * 定数未取得時のみ旧来の NSEvent 値（Home=U+F729 / End=U+F72B）へフォールバック（非空を保証）。
+ */
+export const KEY_HOME = (KeyCommand.constants?.keyInputHome as string) || '\uF729';
+export const KEY_END = (KeyCommand.constants?.keyInputEnd as string) || '\uF72B';
+
+/**
  * 034: ハードウェアキーボードのショートカットを、隠し TextInput を使わず
  * ネイティブ UIKeyCommand（react-native-key-command）で受ける共通フック。
  *

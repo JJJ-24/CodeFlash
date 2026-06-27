@@ -34,7 +34,7 @@ import { FlipCard, type FlipCardRef } from "@/components/study/FlipCard";
 import { LinksSheet } from "@/components/study/LinksSheet";
 import { ShortcutsModal } from "@/components/study/ShortcutsModal";
 import { useCodeBlockSelection } from "@/hooks/useCodeBlockSelection";
-import { useKeyCommands } from "@/lib/useKeyCommands";
+import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { useStudySession } from "@/hooks/useStudySession";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import {
@@ -81,7 +81,8 @@ const SESSION_SHORTCUTS = [
   { key: "J / K", descKey: "shortcut.focusNextPrev" },
   { key: "R", descKey: "shortcut.runFocused" },
   { key: "E", descKey: "shortcut.editFocusedItem" },
-  { key: "U / D", descKey: "shortcut.scrollUpDown" },
+  { key: "U / D・PgUp / PgDn", descKey: "shortcut.scrollUpDown" },
+  { key: "Home / End", descKey: "shortcut.scrollTopBottom" },
   { key: "B", descKey: "shortcut.back" },
   { key: "L", descKey: "shortcut.links" },
   { key: "P", descKey: "shortcut.pencil" },
@@ -514,6 +515,12 @@ export default function StudySessionScreen() {
       const ref = isFlipped ? backScrollRef : frontScrollRef;
       const y = isFlipped ? backScrollYRef.current : frontScrollYRef.current;
       ref.current?.scrollTo({ y: y + SCROLL_STEP, animated: true });
+    } else if (key === "home") {
+      const ref = isFlipped ? backScrollRef : frontScrollRef;
+      ref.current?.scrollTo({ y: 0, animated: true });
+    } else if (key === "end") {
+      const ref = isFlipped ? backScrollRef : frontScrollRef;
+      ref.current?.scrollToEnd({ animated: true });
     } else if (key.toLowerCase() === "q") {
       handleFinishSession();
     } else if (key.toLowerCase() === "b") {
@@ -583,6 +590,12 @@ export default function StudySessionScreen() {
     { input: "e", handler: () => handleKeyPress("e") },
     { input: "u", handler: () => handleKeyPress("u") },
     { input: "d", handler: () => handleKeyPress("d") },
+    // フルキーボードの PageUp/PageDown も画面スクロールに割り当て（U/D と同じ）。
+    { input: KEY_PAGE_UP, handler: () => handleKeyPress("u") },
+    { input: KEY_PAGE_DOWN, handler: () => handleKeyPress("d") },
+    // Home/End で最上部・最下部へ一気にスクロール。
+    { input: KEY_HOME, handler: () => handleKeyPress("home") },
+    { input: KEY_END, handler: () => handleKeyPress("end") },
     { input: "q", handler: () => handleKeyPress("q") },
     { input: "b", handler: () => handleKeyPress("b") },
     { input: "l", handler: () => handleKeyPress("l") },

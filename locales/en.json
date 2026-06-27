@@ -542,6 +542,7 @@
     "focusNextPrev": "Move focus\n(Next/Prev)",
     "nextPrev": "Previous /\nNext (no grade)",
     "scrollUpDown": "Scroll Up / Down",
+    "scrollTopBottom": "Scroll to Top / Bottom",
     "toggleShuffle": "Toggle shuffle",
     "toggleHideEmpty": "Hide / Show empty items",
     "switchDeckTab": "Switch Decks / Tags",

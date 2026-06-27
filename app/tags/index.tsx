@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,11 +22,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
-import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -71,7 +71,6 @@ export default function TagsScreen() {
   const restorationEndTimeRef = useRef(0);
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled, tagSortOrder, setTagSortOrder } = useSettingsStore();
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
@@ -183,15 +182,72 @@ export default function TagsScreen() {
           if (!cancelled) (listRef.current as any)?.scrollToOffset({ offset: targetOffset, animated: false });
         }, 50);
       });
-      if (keyboardShortcutsEnabled) onScreenFocus();
       return () => {
         cancelled = true;
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
-        onScreenBlur();
       };
-    }, [db, onScreenFocus, onScreenBlur, keyboardShortcutsEnabled])
+    }, [db])
   );
+
+  // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。J/K は両モード共通、その他は
+  // 選択/通常モードで分岐（旧 onKeyPress/onSubmitEditing と同じ割り当て）。
+  useKeyCommands([
+    { input: 'j', handler: () => moveFocus('next') },
+    { input: 'k', handler: () => moveFocus('prev') },
+    {
+      input: ' ',
+      handler: () => {
+        if (selectionMode && focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+          toggleSelectTag(sortedTags[focusedTagIndex].id);
+        }
+      },
+    },
+    { input: 'a', handler: () => { if (selectionMode) toggleSelectAll(); } },
+    {
+      input: 'c',
+      handler: () => {
+        if (selectionMode && selectedTagIds.size > 0) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); }
+      },
+    },
+    {
+      input: 'd',
+      handler: () => {
+        if (selectionMode) {
+          if (selectedTagIds.size > 0) setShowBulkDeleteModal(true);
+        } else if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+          confirmDelete(sortedTags[focusedTagIndex]);
+        }
+      },
+    },
+    { input: 's', handler: () => { if (selectionMode) exitSelectionMode(); else enterSelectionMode(); } },
+    {
+      input: 'p',
+      handler: () => {
+        if (!selectionMode && focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+          router.push(`/tags/${sortedTags[focusedTagIndex].id}/edit`);
+        }
+      },
+    },
+    { input: 'n', handler: () => { if (!selectionMode) router.push('/tags/new'); } },
+    {
+      input: 'm',
+      handler: () => {
+        if (selectionMode) return;
+        const idx = SORT_OPTIONS.findIndex((o) => o.key === tagSortOrder);
+        setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
+      },
+    },
+    { input: 'b', handler: () => { if (!selectionMode) router.back(); } },
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (!selectionMode && focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+          router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: sortedTags[focusedTagIndex].id } });
+        }
+      },
+    },
+  ]);
 
   return (
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
@@ -238,56 +294,6 @@ export default function TagsScreen() {
           </Pressable>
         </View>
       </View>
-
-      <HiddenKeyboardInput
-        ref={keyboardRef}
-        onKeyPress={({ nativeEvent: { key } }) => {
-          if (!keyboardShortcutsEnabled) return;
-          const k = key.toLowerCase();
-          if (selectionMode) {
-            if (k === 'j') { moveFocus('next'); }
-            else if (k === 'k') { moveFocus('prev'); }
-            else if (k === ' ') {
-              if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
-                toggleSelectTag(sortedTags[focusedTagIndex].id);
-              }
-            } else if (k === 'a') { toggleSelectAll(); }
-            else if (k === 'c') {
-              if (selectedTagIds.size > 0) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); }
-            } else if (k === 'd') {
-              if (selectedTagIds.size > 0) setShowBulkDeleteModal(true);
-            } else if (k === 's') { exitSelectionMode(); }
-          } else {
-            if (k === 'j') { moveFocus('next'); }
-            else if (k === 'k') { moveFocus('prev'); }
-            else if (k === 'p') {
-              if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
-                router.push(`/tags/${sortedTags[focusedTagIndex].id}/edit`);
-              }
-            } else if (k === 'd') {
-              if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
-                confirmDelete(sortedTags[focusedTagIndex]);
-              }
-            } else if (k === 'n') {
-              router.push('/tags/new');
-            } else if (k === 'm') {
-              const idx = SORT_OPTIONS.findIndex(o => o.key === tagSortOrder);
-              setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
-            } else if (k === 's') {
-              enterSelectionMode();
-            } else if (k === 'b') {
-              router.back();
-            }
-          }
-        }}
-        onSubmitEditing={() => {
-          if (!keyboardShortcutsEnabled || selectionMode) return;
-          if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
-            router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: sortedTags[focusedTagIndex].id } });
-          }
-        }}
-        onBlur={onInputBlur}
-      />
 
       <Pressable style={{ flex: 1 }} onPress={() => setFocusedTagIndex(null)}>
       {/* 総数ブロック（他画面のフィルターブロックと統一）。タグにアーカイブ概念は

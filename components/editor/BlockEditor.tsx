@@ -20,16 +20,18 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
 
+import { constants as KeyCommand } from "react-native-key-command";
+
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
+import { useKeyCommands } from "@/lib/useKeyCommands";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
@@ -157,7 +159,6 @@ export function BlockEditor({
     memo: 0,
   });
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
-  const keyboardRef = useRef<TextInput>(null);
 
   // 共有マークダウンツールバー（InputAccessoryView）から、現在フォーカス中の
   // テキストブロックへ記法を適用するための登録口。フォーカス中ブロックが自分の
@@ -189,10 +190,6 @@ export function BlockEditor({
     activeWrapRef.current?.(action);
   }, []);
   const focusedBlockIndexRef = useRef<number | null>(null);
-  const isTransitioningRef = useRef(false);
-  const isTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
   const activeTabRef = useRef<Tab>("front");
   const editorModeRef = useRef<EditorMode>("edit");
   const isSortModeRef = useRef(false);
@@ -201,7 +198,6 @@ export function BlockEditor({
   const addMenuVisibleRef = useRef(false);
   const addMenuFocusIndexRef = useRef(0);
   const editingBlockKeyRef = useRef<string | null>(null);
-  const isNavigatingRef = useRef(false);
   const addAreaYRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
@@ -389,52 +385,26 @@ export function BlockEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusedBlockIndex]);
 
-  // 編集画面マウント時に hidden TextInput をフォーカス
-  useEffect(() => {
-    if (!isNewCard && keyboardShortcutsEnabled) {
-      setTimeout(() => keyboardRef.current?.focus(), 150);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ブロックの TextInput がフォーカスされたとき呼ぶ（タップ・Return/E キー共通）。
-  // handleBlockEditBlur が仕掛けた「hidden TextInput へ戻す」タイマーをキャンセルし、
-  // J/K キーボードフォーカス（focusedBlockIndex）もクリアする。
+  // J/K キーボードフォーカス（focusedBlockIndex）をクリアする。
   // editingBlockKeyRef に現在編集中のブロックキーを記録し、
   // keyboardWillShow 時のスクロールに使用する。
   function handleBlockTapFocus(blockKey: string) {
     editingBlockKeyRef.current = blockKey;
-    if (isTransitionTimerRef.current) {
-      clearTimeout(isTransitionTimerRef.current);
-      isTransitionTimerRef.current = null;
-    }
     setFocusedBlockIndex(null);
   }
 
   function handleCodeBlockRunButtonPress(blockKey: string) {
     editingBlockKeyRef.current = null;
-    if (isTransitionTimerRef.current)
-      clearTimeout(isTransitionTimerRef.current);
     const idx = currentBlocksRef.current.findIndex((b) => b._key === blockKey);
     setFocusedBlockIndex(idx !== -1 ? idx : null);
-    // ショートカット無効時は隠し TextInput にフォーカスを戻さない。戻すと「常にフォーカスされた
-    // 入力欄」が残り、下部ボタンの初回タップが first responder 解除に食われて反応しなくなる。
-    if (!keyboardShortcutsEnabled) return;
-    isTransitionTimerRef.current = setTimeout(() => {
-      keyboardRef.current?.focus();
-    }, 200);
+    // 034: ネイティブキーコマンドは画面フォーカス中ずっと有効なので、編集終了後に隠し
+    // 入力へフォーカスを戻す必要はない（実入力が外れた時点でショートカットが効く＝住み分け）。
   }
 
   function handleBlockEditBlur() {
     editingBlockKeyRef.current = null;
-    if (isTransitioningRef.current || isNavigatingRef.current) return;
-    if (isTransitionTimerRef.current)
-      clearTimeout(isTransitionTimerRef.current);
-    // ショートカット無効時は隠し TextInput へ戻さない（上記と同じ理由。下部ボタンのタップ食われ防止）。
-    if (!keyboardShortcutsEnabled) return;
-    isTransitionTimerRef.current = setTimeout(() => {
-      keyboardRef.current?.focus();
-    }, 200);
+    // 034: 再フォーカス不要（住み分けは責任者チェーンで自動成立）。
   }
 
   function startEditFocusedBlock() {
@@ -442,11 +412,7 @@ export function BlockEditor({
     const blocks = currentBlocksRef.current;
     if (idx === null || !blocks[idx]) return;
     const key = blocks[idx]._key;
-    isTransitioningRef.current = true;
     setEditTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
-    setTimeout(() => {
-      isTransitioningRef.current = false;
-    }, 300);
     // ブロック末尾（カーソル位置）が画面最下部に来るようスクロール
     const scrollToBlockEnd = () => {
       const pos = blockPositions.current[key];
@@ -592,11 +558,6 @@ export function BlockEditor({
         onDeleteCard?.();
       }
     } else if (k === "x") {
-      isNavigatingRef.current = true;
-      if (isTransitionTimerRef.current) {
-        clearTimeout(isTransitionTimerRef.current);
-        isTransitionTimerRef.current = null;
-      }
       onCancel?.();
     } else if (k === "s") {
       handleSave();
@@ -609,11 +570,6 @@ export function BlockEditor({
 
   async function handleSave() {
     if (isFrontEmpty) return;
-    isNavigatingRef.current = true;
-    if (isTransitionTimerRef.current) {
-      clearTimeout(isTransitionTimerRef.current);
-      isTransitionTimerRef.current = null;
-    }
     await onSave({
       frontBlocks: fromEditBlocks(frontBlocks),
       backBlocks: fromEditBlocks(backBlocks),
@@ -626,13 +582,9 @@ export function BlockEditor({
     ref,
     () => ({
       save: handleSave,
-      prepareForNavigation: () => {
-        isNavigatingRef.current = true;
-        if (isTransitionTimerRef.current) {
-          clearTimeout(isTransitionTimerRef.current);
-          isTransitionTimerRef.current = null;
-        }
-      },
+      // 034: 旧来は遷移前に hidden input への再フォーカスタイマーを止めていたが、
+      // ネイティブキーコマンド化で不要になったため no-op。
+      prepareForNavigation: () => {},
       getData: () => ({
         frontBlocks: fromEditBlocks(frontBlocks),
         backBlocks: fromEditBlocks(backBlocks),
@@ -779,19 +731,10 @@ export function BlockEditor({
             <Pressable
               style={[styles.addBtn, { borderColor: theme.colors.iconSubtle, backgroundColor: theme.colors.surface }]}
               onPress={() => {
-                // 編集中ブロックを解除し keyboardRef に戻してからメニューを開く
-                isTransitioningRef.current = true;
+                // 編集中ブロックを解除しキーボードを閉じてからメニューを開く。
+                // 034: ネイティブキーコマンドなので隠し入力への再フォーカスは不要。
                 editingBlockKeyRef.current = null;
-                if (isTransitionTimerRef.current) {
-                  clearTimeout(isTransitionTimerRef.current);
-                  isTransitionTimerRef.current = null;
-                }
-                // ショートカット有効時のみ隠し入力へ。無効時はキーボードを閉じるだけ
-                // （フォーカスされた隠し入力が残らないようにし、下部ボタンのタップ食われを防ぐ）。
-                if (keyboardShortcutsEnabled) keyboardRef.current?.focus(); else Keyboard.dismiss();
-                setTimeout(() => {
-                  isTransitioningRef.current = false;
-                }, 100);
+                Keyboard.dismiss();
                 setAddMenuFocusIndex(0);
                 setAddMenuVisible(true);
               }}
@@ -908,37 +851,42 @@ export function BlockEditor({
     </>
   );
 
+  // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。既存の handleKeyPress(key)
+  // ディスパッチをそのまま流用し、各キーから呼ぶ。ブロックの実 TextInput がフォーカス中は
+  // OS がキーを入力欄へ渡すため、ショートカットは自然と発火しない（住み分け＝本チケットの肝）。
+  // Return: 追加メニュー表示中は項目決定、それ以外はフォーカス中ブロックの編集開始（旧 onSubmitEditing）。
+  useKeyCommands([
+    { input: "j", handler: () => handleKeyPress("j") },
+    { input: "k", handler: () => handleKeyPress("k") },
+    { input: "m", handler: () => handleKeyPress("m") },
+    { input: "a", handler: () => handleKeyPress("a") },
+    { input: "r", handler: () => handleKeyPress("r") },
+    { input: "d", handler: () => handleKeyPress("d") },
+    { input: "x", handler: () => handleKeyPress("x") },
+    { input: "s", handler: () => handleKeyPress("s") },
+    { input: "e", handler: () => handleKeyPress("e") },
+    { input: "t", handler: () => handleKeyPress("t") },
+    { input: "u", handler: () => handleKeyPress("u") },
+    { input: ",", handler: () => handleKeyPress(",") },
+    { input: ".", handler: () => handleKeyPress(".") },
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (!keyboardShortcutsEnabled) return;
+        if (addMenuVisibleRef.current) {
+          selectAddMenuItem(addMenuFocusIndexRef.current);
+          return;
+        }
+        startEditFocusedBlock();
+      },
+    },
+  ]);
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <TextInput
-        ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
-        onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
-        onSubmitEditing={() => {
-          if (!keyboardShortcutsEnabled) return;
-          if (addMenuVisibleRef.current) {
-            const menuIdx = addMenuFocusIndexRef.current;
-            selectAddMenuItem(menuIdx);
-            // キャンセル選択時はブロックが新規フォーカスを取得しないため、
-            // hidden TextInput を明示的に再フォーカスする
-            if (menuIdx === 3) {
-              setTimeout(() => keyboardRef.current?.focus(), 100);
-            }
-            return;
-          }
-          startEditFocusedBlock();
-        }}
-      />
       {/* 共有マークダウン装飾ツールバー（キーボード上端）。
           - 初回フォーカスでマウント（toolbarMounted）→ iOS がキーボードにリンクし表示される。
             常設すると後からのフォーカスにリンクされず表示されないため、フォーカス時マウントが必須。
@@ -975,16 +923,10 @@ export function BlockEditor({
                 activeTab === tab.key && styles.tabActive,
               ]}
               onPress={() => {
-                // アンマウント時に onBlur が確実に発火しないため、タブ切替時は明示的に再フォーカスする
-                isTransitioningRef.current = true;
-                if (isTransitionTimerRef.current)
-                  clearTimeout(isTransitionTimerRef.current);
-                isTransitionTimerRef.current = setTimeout(() => {
-                  editingBlockKeyRef.current = null;
-                  isTransitioningRef.current = false;
-                  isTransitionTimerRef.current = null;
-                  if (keyboardShortcutsEnabled) keyboardRef.current?.focus(); else Keyboard.dismiss();
-                }, 200);
+                // 034: タブ切替時は編集中ブロックを解除しキーボードを閉じる。
+                // ネイティブキーコマンドは画面フォーカス中ずっと有効なので再フォーカス不要。
+                editingBlockKeyRef.current = null;
+                Keyboard.dismiss();
                 setAddMenuVisible(false);
                 setEditTriggerMap({});
                 setRunTriggerMap({});
@@ -1039,15 +981,10 @@ export function BlockEditor({
                   active && { backgroundColor: theme.colors.primary },
                 ]}
                 onPress={() => {
+                  // 034: モード切替時に編集中ブロックがあれば解除しキーボードを閉じる（再フォーカス不要）。
                   if (editingBlockKeyRef.current) {
-                    isTransitioningRef.current = true;
-                    if (isTransitionTimerRef.current) clearTimeout(isTransitionTimerRef.current);
-                    isTransitionTimerRef.current = setTimeout(() => {
-                      editingBlockKeyRef.current = null;
-                      isTransitioningRef.current = false;
-                      isTransitionTimerRef.current = null;
-                      if (keyboardShortcutsEnabled) keyboardRef.current?.focus(); else Keyboard.dismiss();
-                    }, 200);
+                    editingBlockKeyRef.current = null;
+                    Keyboard.dismiss();
                     setBlurTriggerMap({});
                   }
                   setEditorMode(mode);
@@ -1211,12 +1148,6 @@ export function BlockEditor({
 }
 
 const styles = StyleSheet.create({
-  hiddenKeyboardInput: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    opacity: 0,
-  },
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,

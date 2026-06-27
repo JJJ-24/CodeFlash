@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -24,13 +25,12 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
-import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
-import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useDeckStore } from '@/store/decks';
 import { useSyncStore } from '@/store/sync';
@@ -152,7 +152,6 @@ export default function HomeScreen() {
   const [showDeckListInfo, setShowDeckListInfo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteDeck, setPendingDeleteDeck] = useState<Deck | null>(null);
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
   const restorationEndTimeRef = useRef(0);
@@ -185,7 +184,6 @@ export default function HomeScreen() {
       const tid1 = setTimeout(() => {
         listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
       }, 50);
-      if (keyboardShortcutsEnabled) onScreenFocus();
       return () => {
         isFocusedRef.current = false;
         clearTimeout(sbTid1);
@@ -193,9 +191,9 @@ export default function HomeScreen() {
         clearTimeout(tid1);
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
-        onScreenBlur();
       };
-    }, [onScreenFocus, onScreenBlur, keyboardShortcutsEnabled])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
   );
 
   const insets = useSafeAreaInsets();
@@ -305,56 +303,49 @@ export default function HomeScreen() {
     </View>
   );
 
-  const handleKeyPress = useCallback(({ nativeEvent: { key } }: { nativeEvent: { key: string } }) => {
-    if (!keyboardShortcutsEnabled) return;
-    const k = key.toLowerCase();
-    if (k === '1') {
-      setSelectedFilter('all');
-    } else if (k === '2') {
-      setSelectedFilter('active');
-    } else if (k === 'm') {
-      cycleSortOrder();
-    } else if (k === 'j') {
-      moveDeckFocus('next');
-    } else if (k === 'k') {
-      moveDeckFocus('prev');
-    } else if (k === 'p') {
-      if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
-        router.push({ pathname: '/deck/[id]/edit', params: { id: displayedDecks[focusedDeckIndex].id } });
-      }
-    } else if (k === 'd') {
-      if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
-        setPendingDeleteDeck(displayedDecks[focusedDeckIndex]);
-        setShowDeleteModal(true);
-      }
-    } else if (k === 'n') {
-      router.push({ pathname: '/deck/new' });
-    } else if (k === 'f') {
-      router.push('/search');
-    } else if (k === 't') {
-      router.push('/tags');
-    } else if (key === '.') {
-      router.navigate('/(tabs)/study');
-    } else if (key === ',') {
-      router.navigate('/(tabs)/settings');
-    }
-  }, [keyboardShortcutsEnabled, cycleSortOrder, moveDeckFocus, focusedDeckIndex, displayedDecks, router, t, handleDelete, setSelectedFilter]);
-
-  const handleSubmitEditing = useCallback(() => {
-    if (!keyboardShortcutsEnabled) return;
-    if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
-      router.push({ pathname: '/deck/[id]', params: { id: displayedDecks[focusedDeckIndex].id } });
-    }
-  }, [keyboardShortcutsEnabled, focusedDeckIndex, displayedDecks, router]);
+  // 034: 隠し TextInput + onKeyPress/onSubmitEditing をネイティブキーコマンドへ置換。
+  // フックが「画面フォーカス中 かつ keyboardShortcutsEnabled」を内部で gate する。
+  // Return は keyInputEnter（iOS では '\r'）で受ける（旧 onSubmitEditing の代替）。
+  useKeyCommands([
+    { input: '1', handler: () => setSelectedFilter('all') },
+    { input: '2', handler: () => setSelectedFilter('active') },
+    { input: 'm', handler: () => cycleSortOrder() },
+    { input: 'j', handler: () => moveDeckFocus('next') },
+    { input: 'k', handler: () => moveDeckFocus('prev') },
+    {
+      input: 'p',
+      handler: () => {
+        if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+          router.push({ pathname: '/deck/[id]/edit', params: { id: displayedDecks[focusedDeckIndex].id } });
+        }
+      },
+    },
+    {
+      input: 'd',
+      handler: () => {
+        if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+          setPendingDeleteDeck(displayedDecks[focusedDeckIndex]);
+          setShowDeleteModal(true);
+        }
+      },
+    },
+    { input: 'n', handler: () => router.push({ pathname: '/deck/new' }) },
+    { input: 'f', handler: () => router.push('/search') },
+    { input: 't', handler: () => router.push('/tags') },
+    { input: '.', handler: () => router.navigate('/(tabs)/study') },
+    { input: ',', handler: () => router.navigate('/(tabs)/settings') },
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+          router.push({ pathname: '/deck/[id]', params: { id: displayedDecks[focusedDeckIndex].id } });
+        }
+      },
+    },
+  ]);
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <HiddenKeyboardInput
-        ref={keyboardRef}
-        onKeyPress={handleKeyPress}
-        onSubmitEditing={handleSubmitEditing}
-        onBlur={onInputBlur}
-      />
       <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
           <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>

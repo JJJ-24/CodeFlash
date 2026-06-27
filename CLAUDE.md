@@ -62,6 +62,7 @@ lib/
 ├── donut.ts             # ドーナツグラフの定数（DONUT_SIZE 等）とパス計算（donutArcPath）
 ├── cardPreview.ts       # getCardPreview()：ブロック配列からプレビューテキストを生成
 ├── cardEditorShortcuts.ts  # CARD_EDITOR_SHORTCUTS_EDIT / _SORT の定義（ShortcutsModal 用）
+├── useKeyCommands.ts    # ネイティブ UIKeyCommand（react-native-key-command）でハードキーを受ける共通フック（隠しTextInput不使用・034）
 ├── study/
 │   └── extractLinks.ts  # カードブロックからリンクを抽出（学習画面 L キー = リンク一覧用）
 └── ...
@@ -91,8 +92,7 @@ components/
 ├── DeckIcon.tsx            # デッキの色付きアイコン（iconName + colorHex、未設定は primary）
 ├── IconPickerModal.tsx     # デッキアイコン選択モーダル
 ├── SwipeToDeleteRow.tsx    # 左スワイプで [アーカイブ/解除][削除] を出す共通ラッパー（onArchive は任意）
-├── EmptyState.tsx          # 空状態表示（アイコン＋タイトル＋サブタイトル）
-└── HiddenKeyboardInput.tsx # Bluetooth キーボード入力用 hidden TextInput（ascii-capable 固定）
+└── EmptyState.tsx          # 空状態表示（アイコン＋タイトル＋サブタイトル）
 
 hooks/
 ├── useStudySession.ts        # 学習セッション管理（キュー管理・FSRS連携・finishSession）
@@ -100,7 +100,6 @@ hooks/
 ├── useCodeBlockSelection.ts  # コードブロックフォーカス選択状態管理
 ├── useSwipeGesture.ts        # 学習セッションのスワイプジェスチャー管理
 ├── useListNavigation.ts      # リスト J/K フォーカスのヌルサイクル（ID ベース追跡で並び替え後も正しい位置を保持）
-├── useKeyboardFocus.ts       # hidden TextInput のフォーカス管理（onScreenFocus/onScreenBlur/onInputBlur）
 ├── useShortcutsHeader.tsx    # ショートカットモーダルのヘッダータイトル UI を生成するフック
 └── useInsertPair.ts          # ブラケット・クォートの自動閉じ挿入
 
@@ -206,13 +205,19 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **ホーム画面のフィルターブロック**: `app/(tabs)/index.tsx` は「すべて（all・全デッキ／青数字）」「有効（active・非アーカイブのみ／グレー数字）」の2ブロック。選択は `useSettingsStore.lastHomeFilter`（既定 `'active'`）に永続化（直近モード固定）。「すべて」ではアーカイブ済みデッキをグレー表示。手動ドラッグ並べ替えは非表示デッキを元位置に固定したまま表示中だけを並べ替える。
 - **ホームのカスタムヘッダー高さ**: `computeHeaderHeights` は `getDefaultHeaderHeight` の `total` と `content = total - insets.top` を返し、`useMemo` で inset/frame に追従させる（`useRef` 固定だと初期 inset 未解決の値を掴み、タブヘッダーとタイトル/アイコン位置がズレる）。
 
-#### Bluetooth キーボード
+#### Bluetooth キーボード（ネイティブ UIKeyCommand 方式 / 034）
 
-学習セッション（`app/study/session.tsx`）とカード一覧（`app/deck/[id]/index.tsx`）は見えない `TextInput`（`keyboardType="ascii-capable"`、`showSoftInputOnFocus={false}`）を置き `onKeyPress` でキー入力を受け取る。`keyboardType="default"` では iOS の日本語 IME がスペースキーを横取りするため必ず `ascii-capable` を使う。矢印キーは iOS の `onKeyPress` では検知できないため未対応。`Tab` キーは iPadOS がシステムフォーカス移動（UIFocusSystem）に使用するため `onKeyPress` で検知不可。
+ハードウェアキーボードのショートカット（J/K 等）は **ネイティブの `UIKeyCommand`**（OSS `react-native-key-command`）で受ける。各画面は共通フック **`lib/useKeyCommands.ts`** に `{ input, modifierFlags?, handler }[]` を渡すだけ。フックが「画面フォーカス中（`useFocusEffect`）**かつ** `keyboardShortcutsEnabled`」のときだけ登録/解除する（OFF＝一切介入しない）。**かつて各画面に置いていた「常時フォーカスの隠し `TextInput`＋`onKeyPress`」は全廃した**（その常時フォーカス入力欄が本アプリで繰り返したタッチ食われ・復帰フリーズの構造的原因だったため）。
 
-共通の hidden TextInput は `components/HiddenKeyboardInput.tsx` に切り出されている。フォーカス管理は `hooks/useKeyboardFocus.ts`（`onScreenFocus`/`onScreenBlur`/`onInputBlur`）、リストのヌルサイクルは `hooks/useListNavigation.ts` が担当。
+- **住み分けは責任者チェーンで自動成立**：テキストブロックや検索欄など**実 `TextInput` がフォーカス中はその入力欄がキーを消費**し、key command は発火しない。フォーカスが無いとき（J/K モード等）だけ VC の key command が発火する。→ 再フォーカス用の脆いワークアラウンド（`onBlur` 200ms 再フォーカス・`isTransitioning` 抑制等）は**不要になり削除済み**。
+- **`Return`** は `KeyCommand.constants.keyInputEnter`（iOS では `'\r'`）で受ける。登録値とイベント payload の両方に同じ定数を使えば `useKeyCommands` 内の同値マッチで動く（旧 `onSubmitEditing` の代替）。型は `types/react-native-key-command.d.ts`。
+- **早期 return がある画面**（カード一覧 `deck/[id]`・学習セッション・エディタ）は、フック規約上 `useKeyCommands` を early return より前で呼ぶ。ハンドラが後方定義の値を参照するのはクロージャなので可（実行＝キー押下時には初期化済み・tsc も通る）。
+- **状態依存ガードはハンドラ内で再現**：旧 `onKeyPress` の「CardStats 表示中は A のみ」「DeckPicker 表示中は全無効」「選択/通常モード分岐」などは、各キーのハンドラ冒頭で `if (...) return` として表現する（フックはキー集合を focus 単位でしか変えられないため）。
+- **ネイティブ組込**：`plugins/withKeyCommands.js`（config plugin）が prebuild 時に Swift `AppDelegate` へ keyCommands override＋ブリッジヘッダ import を注入する（`ios/` は gitignore のため必須）。ネイティブ依存追加後はシミュレータ／実機それぞれで1回再ビルドが必要、以後の JS 変更はリロードのみ。
+- **未対応/未検証**：矢印キー・ESC は将来対応（key command としては受けられる）。`Tab` は iPadOS が UIFocusSystem に使うため不可の可能性（未検証）。Android は当面 iOS 専用（`KeyEvent` 対応は未定）。
+- `CodeRunnerView` の `onKeyPress`（Tab 検知）は**実コード入力欄**なので存続＝正しい（隠し入力ではない）。リストの J/K ヌルサイクルは引き続き `hooks/useListNavigation.ts` が担当。
 
-**キー設計の方針**: J/Kでフォーカス移動後の「決定」操作は `Return`（`onSubmitEditing`）に統一。ただし学習開始（大きなアクション）は `Space`（`onKeyPress`）、学習セッション内の表裏反転も `Space` のまま。選択モードの選択/解除も `Space` のまま。`Return` は iOS の `onKeyPress` では検知できないため `onSubmitEditing` で拾う。タブ間切替は `,`（前タブ）/ `.`（次タブ）で統一。
+**キー設計の方針**: J/Kでフォーカス移動後の「決定」操作は `Return`（`keyInputEnter`）に統一。ただし学習開始（大きなアクション）は `Space`、学習セッション内の表裏反転も `Space` のまま。選択モードの選択/解除も `Space` のまま。タブ間切替は `,`（前タブ）/ `.`（次タブ）で統一。
 
 - **ホームキー（デッキ一覧）**: J/K = フォーカス移動、Return = フォーカスデッキを開く、P = デッキ編集、D = デッキ削除、N = 新規デッキ、M = ソート切替、F = 検索、T = タグ管理、`,`/`.` = タブ切替
 - **学習タブキー**: 1–4 = フィルター切替、J/K = フォーカス移動、Return = フォーカス項目で学習開始、S = シャッフル切替、H = 対象カードなし行の表示/非表示トグル、M = デッキ/タグタブ切替、`,`/`.` = タブ切替
@@ -227,7 +232,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **タグカード一覧キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択、T = タグを外す、E = アーカイブ切替、S = 選択モード終了
 - **カード編集・新規作成キー（編集モード）**: J/K = フォーカス移動（ヌルサイクル）、Return / E = フォーカスブロックを編集開始（TextInput にカーソル移動）、D = フォーカスブロックを削除（フォーカスなし時は編集画面のみカード削除）、Q = モード切替（編集→並べ替え→プレビュー→編集）、`,`/`.` = タブ切替（表面/裏面/メモ）、A = ブロック追加メニュー開閉、R = フォーカスコードブロック実行（executable のみ）、T = タグ選択エリアへスクロール、S = 保存/作成、X = キャンセル（未保存確認あり）
 - **カード編集・新規作成キー（並び替えモード）**: J/K = フォーカス移動、U = フォーカスブロックを上に移動、D = フォーカスブロックを下に移動、Q = モード切替（並べ替え→プレビュー→編集→並べ替え）
-- **カード編集キーのフォーカス管理**: 非入力モード → hidden TextInput がフォーカスを保持し onKeyPress でキーを受け取る。ブロック TextInput がフォーカスを得るとすべてのショートカットが無効化される（hidden TextInput がフォーカスを失う）。ブロック TextInput の onBlur 発火時 → 200ms 後に hidden TextInput を re-focus（isTransitioningRef が true の場合はスキップ）。
+- **カード編集キーのフォーカス管理**: ネイティブ UIKeyCommand 方式（隠し TextInput なし）。非入力モード（どのブロック入力欄もフォーカスしていない状態）では key command が発火し、ブロックの実 TextInput がフォーカスを得るとそのブロックがキーを消費してショートカットは自然と無効化される（住み分け）。タブ/モード切替・追加メニュー開時は編集中ブロックを解除して `Keyboard.dismiss()` するだけでよい（再フォーカス不要）。Return（`keyInputEnter`）は追加メニュー表示中なら項目決定、それ以外はフォーカス中ブロックの編集開始。
 - **J/Kキーのコードブロックサイクル（学習画面）**: J = 次へ / K = 前へ。表面表示中は表面のコードブロックのみサイクル。裏面表示中は裏面＋メモのコードブロックを**通しで**サイクルする（裏面ブロック0→1→…→メモブロック0→1→…→裏面ブロック0）。サイクルの両端で `null`（フォーカスなし）を経由する**ヌルサイクル**方式。メモブロックに到達するとメモを自動展開する。combined index は `selectedCodeBlockSide`（`'back'` か `'memo'`）と `selectedCodeBlockIdx` の組み合わせで管理する。
 - **J/Kキーのカードフォーカス（カード一覧）**: `hooks/useListNavigation.ts` のヌルサイクル方式。`focusedIndex` が `null` → 0 → 1 → … → last → `null` と循環（K は逆順）。`keyExtractor` を渡すと ID ベース追跡になり、並び替え後も正しいカードにフォーカスを維持する。フォーカス中のカードは `borderColor` で強調（通常モード: `theme.colors.primary`〈青〉、選択モードカーソル: `#F57C00`〈オレンジ〉、選択モード選択済み: `theme.colors.primary`〈青〉）。
 
@@ -272,7 +277,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2/FSRS・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・ヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示・枠なし横幅フル表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）・シャッフル学習（学習タブのトグルボタン、Fisher-Yates）・統計画面改善（全体学習率セクション・デッキ別習熟度に新規枚数追加・草グラフ右端余白）・学習タブをカードスタイルに変更・学習タブの行アイコンを `play` に変更・TSV エクスポート/インポート・FSRS アルゴリズム移行・カスタムヘッダー統一（push 遷移全画面）・学習セッション終了ボタン（ヘッダー右端 + Q キー）を追加実装。さらに、タグ管理選択モード（一括削除・一括色変更・キーボードショートカット対応）・カード一覧/タグ管理の選択モード UX 統一（モード別ショートカット表示・ヘッダータイトル切替・フォーカス挙動修正）・ホーム画面カスタムヘッダー高さを `getDefaultHeaderHeight` で算出・Development Build 環境整備（`expo-dev-client` 導入）を実施。
 
-さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018 のうち SQL 実行（`buildSqlSandboxHtml`）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整。
+さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018 のうち SQL 実行（`buildSqlSandboxHtml`）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整・**034（キーボードショートカットのネイティブ化＝`UIKeyCommand`/`react-native-key-command`）の Phase 0〜3：全画面で隠し TextInput を撤去し `lib/useKeyCommands.ts` へ移行、`HiddenKeyboardInput`/`useKeyboardFocus` を削除。これによりショートカット ON 時のタップ食われ・復帰フリーズが構造的に解消**。
 
 未着手（または部分実装）: 015（Web版）・016（買い切り課金、`useProStore` で Pro ゲートのみ存在）・017（App Store申請）・018 の C++ 実行・019（マーケットプレイス）・020（AI生成）・026（デッキ共有リンク）・027（ウィジェット）・029（デッキ統合/復元）・031（高度な通知、`notification_schedules` テーブルは存在）
 

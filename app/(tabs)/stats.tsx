@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
@@ -35,10 +36,9 @@ import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
-import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { EmptyState } from '@/components/EmptyState';
 import { getCardPreview } from '@/lib/cardPreview';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
@@ -787,7 +787,6 @@ export default function StatsScreen() {
   const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<{
     total: number;
@@ -906,15 +905,13 @@ export default function StatsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (keyboardShortcutsEnabled) onScreenFocus();
       const blockMap: Record<InitialFilterPreference, BlockKey | null> = {
         all: 'streak', learned: 'learned', review: 'due', new: 'new', none: null,
       };
       const initial = blockMap[initialFilterPreference];
       if (initial !== null) setSelectedBlock(initial);
       loadStats();
-      return () => { onScreenBlur(); };
-    }, [initialFilterPreference, onScreenFocus, onScreenBlur, loadStats, keyboardShortcutsEnabled])
+    }, [initialFilterPreference, loadStats])
   );
 
   // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でも統計を再読込する。
@@ -1042,14 +1039,6 @@ export default function StatsScreen() {
     }
   }, [gradeBlockLoading, gradeBlockCards, selectedGradeBlock]);
 
-  // CardStatsSheet 閉じた直後に hidden TextInput を再フォーカス（deck/[id]/index.tsx と同じパターン）
-  useEffect(() => {
-    if (statsCardId === null && keyboardShortcutsEnabled) {
-      const timer = setTimeout(() => keyboardRef.current?.focus(), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [statsCardId, keyboardShortcutsEnabled, keyboardRef]);
-
   const openSheet = useCallback(async (target: 'total' | number) => {
     setActiveSheet(target);
     setSheetDist(null);
@@ -1114,6 +1103,86 @@ export default function StatsScreen() {
     setStudyCardIds(gradeBlockCards.map((c) => c.cardId));
     router.push({ pathname: '/study/session', params: { mode: 'focused', order: '1' } });
   }, [gradeBlockCards, router, setStudyCardIds]);
+
+  // 034: 隠し TextInput を撤去しネイティブキーコマンドへ置換。
+  // CardStatsSheet 表示中（statsCardId）は A のみ、ドーナツシート表示中（activeSheet）は
+  // タブ切替/Space/Return のみ通す元の条件分岐を各ハンドラ内で再現する。
+  useKeyCommands([
+    { input: '.', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
+    { input: ',', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
+    {
+      input: ' ',
+      handler: () => {
+        if (statsCardId !== null) return;
+        if (activeSheet !== null) { closeSheet(); }
+        else if (focusedItem?.kind === 'total') { openSheet('total'); }
+        else if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); }
+        else if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) { startFocusedReview(); }
+      },
+    },
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (statsCardId !== null) return;
+        if (activeSheet !== null) { closeSheet(); return; }
+        if (focusedItem?.kind === 'card') {
+          const card = gradeBlockCards[focusedItem.idx];
+          if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+          return;
+        }
+        if (focusedItem?.kind === 'total') { openSheet('total'); return; }
+        if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); return; }
+      },
+    },
+    { input: '1', handler: () => { if (statsCardId !== null || activeSheet !== null) return; setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: '2', handler: () => { if (statsCardId !== null || activeSheet !== null) return; setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: '3', handler: () => { if (statsCardId !== null || activeSheet !== null) return; setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: '4', handler: () => { if (statsCardId !== null || activeSheet !== null) return; setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: '6', handler: () => { if (statsCardId !== null || activeSheet !== null) return; handleGradeKey(0); } },
+    { input: '7', handler: () => { if (statsCardId !== null || activeSheet !== null) return; handleGradeKey(1); } },
+    { input: '8', handler: () => { if (statsCardId !== null || activeSheet !== null) return; handleGradeKey(2); } },
+    { input: '9', handler: () => { if (statsCardId !== null || activeSheet !== null) return; handleGradeKey(3); } },
+    {
+      input: '0',
+      handler: () => {
+        if (statsCardId !== null || activeSheet !== null) return;
+        // 隠しコマンド：グレード選択を解除（ランキング非表示に戻す）
+        if (isPro && selectedGradeBlock !== null) {
+          handleGradeBlockTap(selectedGradeBlock);
+          setFocusedItem(null);
+          pendingFocusRankingRef.current = false;
+        }
+      },
+    },
+    { input: 'j', handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('next'); } },
+    { input: 'k', handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
+    {
+      input: 'p',
+      handler: () => {
+        if (statsCardId !== null || activeSheet !== null) return;
+        if (focusedItem?.kind === 'card') {
+          const card = gradeBlockCards[focusedItem.idx];
+          if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+        }
+      },
+    },
+    {
+      input: 'a',
+      handler: () => {
+        // CardStatsSheet 表示中は A で閉じる（Escape は iOS が横取りするため）
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (activeSheet !== null) return;
+        if (!isPro) return;
+        if (focusedItem?.kind === 'card') {
+          const card = gradeBlockCards[focusedItem.idx];
+          if (card) setStatsCardId(card.cardId);
+        }
+      },
+    },
+    { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setDeckPickerVisible(true); } },
+    { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setPeriodPickerVisible(true); } },
+    { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) handleToggleRankingByTime(); } },
+  ]);
 
   // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {
@@ -1203,83 +1272,6 @@ export default function StatsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <HiddenKeyboardInput
-        ref={keyboardRef}
-        onKeyPress={({ nativeEvent: { key } }) => {
-          if (!keyboardShortcutsEnabled) return;
-          // CardStatsSheet 表示中は A のみ通す（Escape は iOS が横取りするため未対応）
-          if (statsCardId !== null) {
-            if (key.toLowerCase() === 'a') setStatsCardId(null);
-            return;
-          }
-          if (key === ' ') {
-            if (activeSheet !== null) {
-              closeSheet();
-            } else if (focusedItem?.kind === 'total') {
-              openSheet('total');
-            } else if (focusedItem?.kind === 'deck') {
-              openSheet(focusedItem.idx);
-            } else if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) {
-              // グレード選択中（ランキングカードにフォーカス中 or フォーカスなし）→ 重点復習を開始
-              startFocusedReview();
-            }
-            return;
-          }
-          const k = key.toLowerCase();
-          if (key === '.') { router.navigate('/(tabs)/settings'); return; }
-          if (key === ',') { router.navigate('/(tabs)/study'); return; }
-          if (activeSheet !== null) { return; }
-          if (key === '1') { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
-          else if (key === '2') { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
-          else if (key === '3') { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
-          else if (key === '4') { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }
-          else if (key === '6') { handleGradeKey(0); }
-          else if (key === '7') { handleGradeKey(1); }
-          else if (key === '8') { handleGradeKey(2); }
-          else if (key === '9') { handleGradeKey(3); }
-          else if (key === '0') {
-            // 隠しコマンド：グレード選択を解除（ランキング非表示に戻す）
-            if (isPro && selectedGradeBlock !== null) {
-              handleGradeBlockTap(selectedGradeBlock);
-              setFocusedItem(null);
-              pendingFocusRankingRef.current = false;
-            }
-          }
-          else if (k === 'j') { moveFocus('next'); }
-          else if (k === 'k') { moveFocus('prev'); }
-          else if (k === 'p') {
-            if (focusedItem?.kind === 'card') {
-              const card = gradeBlockCards[focusedItem.idx];
-              if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
-            }
-          } else if (k === 'a') {
-            if (!isPro) return;
-            if (focusedItem?.kind === 'card') {
-              const card = gradeBlockCards[focusedItem.idx];
-              if (card) setStatsCardId(card.cardId);
-            }
-          } else if (k === 'd') {
-            if (isPro) setDeckPickerVisible(true);
-          } else if (k === 't') {
-            if (isPro) setPeriodPickerVisible(true);
-          } else if (k === 'm') {
-            if (isPro) handleToggleRankingByTime();
-          }
-        }}
-        onSubmitEditing={() => {
-          if (!keyboardShortcutsEnabled) return;
-          if (statsCardId !== null) return;
-          if (activeSheet !== null) { closeSheet(); return; }
-          if (focusedItem?.kind === 'card') {
-            const card = gradeBlockCards[focusedItem.idx];
-            if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
-            return;
-          }
-          if (focusedItem?.kind === 'total') { openSheet('total'); return; }
-          if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); return; }
-        }}
-        onBlur={onInputBlur}
-      />
       {(() => {
         const statNums = [streak, todayReviewed, todayDue, todayCreated];
         const maxDigits = Math.max(...statNums.map(n => String(n).length));

@@ -1,6 +1,7 @@
 // react-native-key-command は型定義を同梱しないため最小限の宣言を置く（034）。
 declare module 'react-native-key-command' {
   export const constants: {
+    keyInputEnter: string;
     keyInputEscape: string;
     keyInputUpArrow: string;
     keyInputDownArrow: string;

@@ -18,12 +18,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
+import { constants as KeyCommand } from "react-native-key-command";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
@@ -34,7 +34,7 @@ import { FlipCard, type FlipCardRef } from "@/components/study/FlipCard";
 import { LinksSheet } from "@/components/study/LinksSheet";
 import { ShortcutsModal } from "@/components/study/ShortcutsModal";
 import { useCodeBlockSelection } from "@/hooks/useCodeBlockSelection";
-import { useKeyboardFocus } from "@/hooks/useKeyboardFocus";
+import { useKeyCommands } from "@/lib/useKeyCommands";
 import { useStudySession } from "@/hooks/useStudySession";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import {
@@ -126,8 +126,9 @@ export default function StudySessionScreen() {
     finishSession,
   } = useStudySession();
 
-  // モーダル遷移中は onBlur による自動再フォーカスを抑制するためのフラグ
-  const { keyboardRef, isScreenFocusedRef, onScreenBlur } = useKeyboardFocus();
+  // 034: この画面がフォアグラウンドか（モーダルが上に乗っていないか）を表す ref。
+  // 旧 useKeyboardFocus が提供していたものを自前で持つ（kbHeight・ステータスバー制御で使用）。
+  const isScreenFocusedRef = useRef(true);
   // 初回フォーカス（画面遷移）かどうかを追跡するフラグ
   const isFirstFocusRef = useRef(true);
   const statusBarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,16 +144,12 @@ export default function StudySessionScreen() {
         // サブ画面（カード編集等）から戻った際は即座に再非表示
         setStatusBarHidden(true);
       }
-      // モーダルから戻った際にキーボードショートカットを復元
-      setTimeout(() => {
-        if (!codeEditingRef.current) keyboardRef.current?.focus();
-      }, 100);
       return () => {
         if (statusBarTimerRef.current) {
           clearTimeout(statusBarTimerRef.current);
           statusBarTimerRef.current = null;
         }
-        onScreenBlur();
+        isScreenFocusedRef.current = false;
         setStatusBarHidden(false);
         // コンポーネントのアンマウントとバッチ処理されて StatusBar 再レンダリングが
         // 走らない場合があるため、命令型 API で確実に復元する
@@ -161,7 +158,6 @@ export default function StudySessionScreen() {
     }, [refreshCurrentCard]),
   );
 
-  const [keyboardInputKey, setKeyboardInputKey] = useState(0);
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
   // iPad: ステータスバーを隠す際にヘッダー高さが変わらないよう、初回 top inset を固定値として保持
@@ -187,16 +183,14 @@ export default function StudySessionScreen() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
 
-  // カード編集モーダルへ遷移する前に、hidden input の自動再フォーカス（onBlur の 50ms タイマー）を
-  // 抑制し、残留 first-responder がモーダルの初回タップ（保存/削除ボタン）を奪うのを防ぐ。
-  // useFocusEffect の cleanup（onScreenBlur）任せだと 50ms タイマーとの競合で取りこぼすため明示的に止める。
+  // カード編集モーダルへ遷移する前に、この画面を非フォアグラウンド扱いにし、ソフトキーボードを閉じる。
+  // （isScreenFocusedRef は kbHeight 計算やステータスバー制御の早期化に使う）
   const openCardEdit = useCallback(() => {
     if (!currentCard) return;
     isScreenFocusedRef.current = false;
-    keyboardRef.current?.blur();
     Keyboard.dismiss();
     router.push(`/deck/${currentCard.deckId}/card/${currentCard.id}/edit?tab=${showMemo ? 'memo' : isFlipped ? 'back' : 'front'}`);
-  }, [currentCard, showMemo, isFlipped, isScreenFocusedRef, keyboardRef, router]);
+  }, [currentCard, showMemo, isFlipped, router]);
 
   const [grading, setGrading] = useState(false);
   const [prevGrade, setPrevGrade] = useState<Grade | null>(null);
@@ -258,7 +252,7 @@ export default function StudySessionScreen() {
   }, [currentCard, currentCardContentSig]);
 
   const codeEditingRef = useRef(false);
-  // 別 BlocksView のコードブロックへ編集が移るとき、onEditBlur の keyboardRef.focus() を抑制する
+  // 別 BlocksView のコードブロックへ編集が移るとき、onEditBlur 側の Keyboard.dismiss() を抑制する
   const switchingCodeBlockRef = useRef(false);
   // 裏面↔メモ間でコード実行・選択が切り替わったとき、相手側の編集を終了させるトリガー
   const [backExitAllEditTrigger, setBackExitAllEditTrigger] = useState(0);
@@ -285,9 +279,6 @@ export default function StudySessionScreen() {
   const memoSectionYRef = useRef(0);
   const memoContentOffsetRef = useRef(0);
   const memoScrollBaseYRef = useRef(0);
-  const completeRef = useRef<TextInput>(null);
-  const completeReadyRef = useRef(false);
-
   const cbs = useCodeBlockSelection();
 
   const swipe = useSwipeGesture({
@@ -357,27 +348,17 @@ export default function StudySessionScreen() {
   }, []);
   const handleCodeEditBlur = useCallback(() => {
     codeEditingRef.current = false;
+    // 034: ネイティブキーコマンドは画面フォーカス中ずっと有効なので、編集終了後に
+    // 隠し input を再フォーカスする必要はない。ソフトキーボードだけ確実に閉じる。
     if (!switchingCodeBlockRef.current && isScreenFocusedRef.current) {
-      // keyboardRef TextInput を強制リマウントして autoFocus でフォーカスを確実に取得する。
-      // focus() の直接呼び出しは WebView 初期化との競合で失敗する場合があるため、
-      // autoFocus（フルスクリーン切替と同じ仕組み）を使う。
-      // Keyboard.dismiss() でソフトキーボードを明示的に閉じてからリマウントする。
-      // isScreenFocusedRef が false（カード編集画面等へ遷移済み）の場合はスキップし、
-      // 遷移先の hidden TextInput のフォーカスを奪わないようにする。
       Keyboard.dismiss();
-      setKeyboardInputKey((k) => k + 1);
     }
   }, []);
-  // 実行ボタン経由での編集終了時に呼ぶ。switchingCodeBlockRef に関わらず
-  // keyboard TextInput を強制リマウントしてショートカットキーを確実に復元する。
-  // （編集 → 実行の場合、handleEditRequest が makeSelectHandler 経由で
-  //   switchingCodeBlockRef=true をセットするため、handleCodeEditBlur のガードが
-  //   300ms 以内に実行すると setKeyboardInputKey をスキップしてしまう。）
+  // 実行ボタン経由での編集終了時に呼ぶ。
   const handleForceKeyboardFocus = useCallback(() => {
     codeEditingRef.current = false;
     if (isScreenFocusedRef.current) {
       Keyboard.dismiss();
-      setKeyboardInputKey((k) => k + 1);
     }
   }, []);
   const handleCodeRunComplete = useCallback(() => {
@@ -446,13 +427,6 @@ export default function StudySessionScreen() {
   useEffect(() => {
     if (completed) {
       setEditedCodeBlocks({});
-      completeReadyRef.current = false;
-      setTimeout(() => {
-        completeRef.current?.focus();
-        setTimeout(() => {
-          completeReadyRef.current = true;
-        }, 200);
-      }, 100);
     }
   }, [completed]);
 
@@ -495,6 +469,9 @@ export default function StudySessionScreen() {
 
   function handleKeyPress(key: string) {
     if (!keyboardShortcutsEnabled) return;
+    // 学習中（カード表示中）以外ではショートカットを無効化する。
+    // ネイティブキーコマンドは完了画面/ロード中でも登録されたままのため明示的に弾く。
+    if (completed || !currentCard) return;
 
     if (key === " ") {
       cbs.setRunTrigger(0);
@@ -557,7 +534,6 @@ export default function StudySessionScreen() {
     setGrading(true);
     await submitGrade(grade);
     setGrading(false);
-    keyboardRef.current?.focus();
   }
 
   function handleGradeWithSlide(grade: Grade) {
@@ -582,6 +558,41 @@ export default function StudySessionScreen() {
       [key]: { ...(prev[key] ?? {}), [blockIndex]: text },
     }));
   }
+
+  // 034: 隠し TextInput（3つ）を撤去しネイティブキーコマンドへ。
+  // 既存の handleKeyPress(key) ディスパッチはそのまま流用し、各キーから呼び出す。
+  // コードブロックの実 TextInput がフォーカス中は OS がキーを入力欄へ渡すため、
+  // ショートカットは自然と発火しない（住み分け）。
+  // Return: 完了画面では戻る、それ以外は選択中コードブロックを編集開始（旧 onSubmitEditing）。
+  useKeyCommands([
+    { input: " ", handler: () => handleKeyPress(" ") },
+    { input: "j", handler: () => handleKeyPress("j") },
+    { input: "k", handler: () => handleKeyPress("k") },
+    { input: "r", handler: () => handleKeyPress("r") },
+    { input: ".", handler: () => handleKeyPress(".") },
+    { input: ",", handler: () => handleKeyPress(",") },
+    { input: "m", handler: () => handleKeyPress("m") },
+    { input: "f", handler: () => handleKeyPress("f") },
+    { input: "e", handler: () => handleKeyPress("e") },
+    { input: "u", handler: () => handleKeyPress("u") },
+    { input: "d", handler: () => handleKeyPress("d") },
+    { input: "q", handler: () => handleKeyPress("q") },
+    { input: "b", handler: () => handleKeyPress("b") },
+    { input: "l", handler: () => handleKeyPress("l") },
+    { input: "p", handler: () => handleKeyPress("p") },
+    { input: "1", handler: () => handleKeyPress("1") },
+    { input: "2", handler: () => handleKeyPress("2") },
+    { input: "3", handler: () => handleKeyPress("3") },
+    { input: "4", handler: () => handleKeyPress("4") },
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (completed) { safeBack(); return; }
+        if (!currentCard) return;
+        if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
+      },
+    },
+  ]);
 
   // iPhone 用インラインカスタムヘッダー（headerShown:false のため全状態で共通利用）
   const iPhoneHeader = !(Platform as any).isPad ? (
@@ -731,27 +742,6 @@ export default function StudySessionScreen() {
       <>
         <StatusBar hidden={statusBarHidden} />
         <Stack.Screen options={{ headerShown: false }} />
-        <TextInput
-          ref={completeRef}
-          style={styles.hiddenKeyboardInput}
-          autoFocus
-          caretHidden
-          keyboardType="ascii-capable"
-          showSoftInputOnFocus={false}
-          disableKeyboardShortcuts={true}
-          onKeyPress={({ nativeEvent: { key } }) => {
-            if (key === "Enter") {
-              completeReadyRef.current = false;
-              safeBack();
-            }
-          }}
-          onBlur={() => {
-            if (completeReadyRef.current) {
-              completeReadyRef.current = false;
-              safeBack();
-            }
-          }}
-        />
         {(Platform as any).isPad ? (
           <View
             style={{
@@ -1087,29 +1077,6 @@ export default function StudySessionScreen() {
             headerShown: false,
           }}
         />
-        <TextInput
-          key={keyboardInputKey}
-          ref={keyboardRef}
-          style={styles.hiddenKeyboardInput}
-          autoFocus
-          caretHidden
-          keyboardType="ascii-capable"
-          showSoftInputOnFocus={false}
-          disableKeyboardShortcuts={true}
-          autoCorrect={false}
-          autoCapitalize="none"
-          spellCheck={false}
-          onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
-          onSubmitEditing={() => {
-            if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
-          }}
-          onBlur={() => {
-            setTimeout(() => {
-              if (!codeEditingRef.current && isScreenFocusedRef.current)
-                keyboardRef.current?.focus();
-            }, 50);
-          }}
-        />
         <View
           style={[styles.container, { backgroundColor: theme.cardTheme.background }]}
         >
@@ -1122,9 +1089,6 @@ export default function StudySessionScreen() {
                 setIsFullscreen(false);
                 cbs.setEditTrigger(0);
                 cbs.setRunTrigger(0);
-                setTimeout(() => {
-                  keyboardRef.current?.focus();
-                }, 100);
               }}
             >
               <Ionicons
@@ -1340,29 +1304,6 @@ export default function StudySessionScreen() {
     <>
       <StatusBar hidden={statusBarHidden} />
       <Stack.Screen options={{ headerShown: false }} />
-      <TextInput
-        key={keyboardInputKey}
-        ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        autoFocus
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
-        disableKeyboardShortcuts={true}
-        onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key)}
-        onSubmitEditing={() => {
-          if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
-        }}
-        onBlur={() => {
-          setTimeout(() => {
-            if (!codeEditingRef.current && isScreenFocusedRef.current)
-              keyboardRef.current?.focus();
-          }, 50);
-        }}
-      />
       {(Platform as any).isPad ? (
         <View
           style={{
@@ -1592,9 +1533,6 @@ export default function StudySessionScreen() {
               setIsFullscreen(true);
               cbs.setEditTrigger(0);
               cbs.setRunTrigger(0);
-              setTimeout(() => {
-                keyboardRef.current?.focus();
-              }, 100);
             }}
           >
             <Ionicons
@@ -1706,12 +1644,6 @@ export default function StudySessionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hiddenKeyboardInput: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    opacity: 0,
-  },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   progressBar: {
     height: 4,

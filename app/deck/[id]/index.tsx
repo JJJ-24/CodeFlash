@@ -18,10 +18,10 @@ import {
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { constants as KeyCommand } from 'react-native-key-command';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
-import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import {
   deleteCard,
   deleteCardsBulk,
@@ -49,7 +49,7 @@ import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
-import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -95,7 +95,6 @@ export default function DeckDetailScreen() {
   const restorationEndTimeRef = useRef(0);
   const filterOffsetsRef = useRef<Record<FilterKey, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const prevFilterRef = useRef<FilterKey>(selectedFilter);
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur, isScreenFocusedRef } = useKeyboardFocus();
   const listRef = useRef<FlatList<Card>>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
@@ -205,34 +204,13 @@ export default function DeckDetailScreen() {
       });
       // 前の画面でソフトキーボードが残留していた場合に確実に閉じる
       Keyboard.dismiss();
-      if (keyboardShortcutsEnabled) onScreenFocus();
       return () => {
         cancelled = true;
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;
-        onScreenBlur();
       };
-    }, [loadCards, keyboardShortcutsEnabled])
+    }, [loadCards])
   );
-
-  useEffect(() => {
-    if (statsCardId === null && keyboardShortcutsEnabled) {
-      const timer = setTimeout(() => keyboardRef.current?.focus(), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [statsCardId, keyboardShortcutsEnabled, keyboardRef]);
-
-  // DeckPickerModal の TextInput にフォーカスを渡すため hidden TextInput の自動再フォーカスを抑止する
-  useEffect(() => {
-    if (showDeckPicker) {
-      isScreenFocusedRef.current = false;
-      keyboardRef.current?.blur();
-    } else if (keyboardShortcutsEnabled) {
-      isScreenFocusedRef.current = true;
-      const timer = setTimeout(() => keyboardRef.current?.focus(), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [showDeckPicker, keyboardShortcutsEnabled, keyboardRef, isScreenFocusedRef]);
 
   useEffect(() => {
     filterOffsetsRef.current[prevFilterRef.current] = scrollOffsetRef.current;
@@ -496,6 +474,108 @@ export default function DeckDetailScreen() {
   // デッキ自体がアーカイブ済みなら配下カードも実質的に学習対象外なのでグレー表示する
   deckArchivedRef.current = !!deck?.archived;
 
+  // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。フック規約上 early return より前で呼ぶ
+  // 必要があるため、ハンドラが参照する後方定義（startVisibleStudy・focusedCardIndex 等）は
+  // クロージャ経由で参照する（実行時＝キー押下時には初期化済み）。
+  // ガード: DeckPicker 表示中は全キー無効（旧実装は hidden input を blur して同等を実現）。
+  //         CardStats 表示中は A のみ（閉じる）。それ以外は選択/通常モードで分岐。
+  useKeyCommands([
+    {
+      input: ' ',
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null) return;
+        if (selectionMode) {
+          if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+            const cardId = displayedCards[focusedCardIndex].id;
+            setSelectedCardIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(cardId)) next.delete(cardId); else next.add(cardId);
+              return next;
+            });
+          }
+        } else {
+          startVisibleStudy();
+        }
+      },
+    },
+    { input: 'j', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('next'); } },
+    { input: 'k', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('prev'); } },
+    {
+      input: 'a',
+      handler: () => {
+        if (showDeckPicker) return;
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (selectionMode) { toggleSelectAll(); return; }
+        if (!isPro) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+          setStatsCardId(displayedCards[focusedCardIndex].id);
+        }
+      },
+    },
+    {
+      input: 'm',
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null) return;
+        if (selectionMode) {
+          if (selectedCardIds.size > 0 && !isProcessing) setShowDeckPicker(true);
+        } else if (selectedFilter === 'all') {
+          const orders: CardSortOrder[] = ['manual', 'newest', 'oldest'];
+          setCardSortOrder(orders[(orders.indexOf(cardSortOrder) + 1) % 3]);
+        }
+      },
+    },
+    {
+      input: 'd',
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null) return;
+        if (selectionMode) {
+          if (selectedCardIds.size > 0 && !isProcessing) handleDeleteSelected();
+        } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+          confirmDeleteCard(displayedCards[focusedCardIndex]);
+        }
+      },
+    },
+    {
+      input: 's',
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null) return;
+        if (selectionMode) {
+          exitSelectionMode();
+        } else {
+          setSelectionMode((v) => !v);
+          setSelectedCardIds(new Set());
+          setFocusedCardIndex(null);
+        }
+      },
+    },
+    { input: 'c', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); } },
+    { input: 'e', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleArchiveSelected(); } },
+    {
+      input: 'p',
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null || selectionMode) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+          navigateToCardEdit(displayedCards[focusedCardIndex].id);
+        }
+      },
+    },
+    { input: 'b', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; router.back(); } },
+    { input: 'n', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; router.push({ pathname: '/deck/[id]/card/new', params: { id } }); } },
+    { input: '1', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; const f = FILTER_KEY_MAP['1']; setSelectedFilter(f); if (initialFilterPreference === 'none') setLastDeckDetailFilter(f); } },
+    { input: '2', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; const f = FILTER_KEY_MAP['2']; setSelectedFilter(f); if (initialFilterPreference === 'none') setLastDeckDetailFilter(f); } },
+    { input: '3', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; const f = FILTER_KEY_MAP['3']; setSelectedFilter(f); if (initialFilterPreference === 'none') setLastDeckDetailFilter(f); } },
+    { input: '4', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; const f = FILTER_KEY_MAP['4']; setSelectedFilter(f); if (initialFilterPreference === 'none') setLastDeckDetailFilter(f); } },
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null || selectionMode) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+          navigateToCardEdit(displayedCards[focusedCardIndex].id);
+        }
+      },
+    },
+  ]);
+
   if (!deck) return null;
 
   confirmDeleteCardRef.current = confirmDeleteCard;
@@ -608,82 +688,6 @@ export default function DeckDetailScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <HiddenKeyboardInput
-        ref={keyboardRef}
-        onKeyPress={({ nativeEvent: { key } }) => {
-          if (!keyboardShortcutsEnabled) return;
-          if (statsCardId !== null) {
-            if (key.toLowerCase() === 'a') {
-              setStatsCardId(null);
-            }
-            return;
-          }
-          const k = key.toLowerCase();
-          if (selectionMode) {
-            if (k === 'j') { moveFocus('next'); }
-            else if (k === 'k') { moveFocus('prev'); }
-            else if (key === ' ') {
-              if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-                const cardId = displayedCards[focusedCardIndex].id;
-                setSelectedCardIds((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(cardId)) next.delete(cardId); else next.add(cardId);
-                  return next;
-                });
-              }
-            }
-            else if (k === 'a') { toggleSelectAll(); }
-            else if (k === 'm') { if (selectedCardIds.size > 0 && !isProcessing) setShowDeckPicker(true); }
-            else if (k === 'd') { if (selectedCardIds.size > 0 && !isProcessing) handleDeleteSelected(); }
-            else if (k === 'c') { if (selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); }
-            else if (k === 'e') { if (selectedCardIds.size > 0 && !isProcessing) handleArchiveSelected(); }
-            else if (k === 's') { exitSelectionMode(); }
-            return;
-          }
-          if (key === ' ') {
-            startVisibleStudy();
-          } else if (FILTER_KEY_MAP[key]) {
-            const f = FILTER_KEY_MAP[key];
-            setSelectedFilter(f);
-            if (initialFilterPreference === 'none') setLastDeckDetailFilter(f);
-          } else if (k === 'j') { moveFocus('next'); }
-          else if (k === 'k') { moveFocus('prev'); }
-          else if (k === 'p') {
-            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              navigateToCardEdit(displayedCards[focusedCardIndex].id);
-            }
-          } else if (k === 'b') { router.back(); }
-          else if (k === 'd') {
-            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              confirmDeleteCard(displayedCards[focusedCardIndex]);
-            }
-          } else if (k === 'n') {
-            router.push({ pathname: '/deck/[id]/card/new', params: { id } });
-          } else if (k === 'm' && selectedFilter === 'all') {
-            const orders: CardSortOrder[] = ['manual', 'newest', 'oldest'];
-            setCardSortOrder(orders[(orders.indexOf(cardSortOrder) + 1) % 3]);
-          } else if (k === 's') {
-            setSelectionMode((v) => !v);
-            setSelectedCardIds(new Set());
-            setFocusedCardIndex(null);
-          } else if (k === 'a') {
-            if (!isPro) return;
-            if (statsCardId) {
-              setStatsCardId(null);
-            } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              setStatsCardId(displayedCards[focusedCardIndex].id);
-            }
-          }
-        }}
-        onSubmitEditing={() => {
-          if (!keyboardShortcutsEnabled) return;
-          if (statsCardId !== null) return;
-          if (!selectionMode && focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-            navigateToCardEdit(displayedCards[focusedCardIndex].id);
-          }
-        }}
-        onBlur={onInputBlur}
-      />
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* インラインカスタムヘッダー */}

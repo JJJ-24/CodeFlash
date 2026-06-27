@@ -13,14 +13,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 
 import { EmptyState } from '@/components/EmptyState';
-import { HiddenKeyboardInput } from '@/components/HiddenKeyboardInput';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -105,7 +105,6 @@ export default function StudyScreen() {
   }, []);
   const deckFilterOffsets = useRef<Record<Filter, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const tagFilterOffsets = useRef<Record<Filter, number>>({ all: 0, learned: 0, review: 0, new: 0 });
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
   const deckListRef = useRef<FlatList<any>>(null);
   const tagListRef = useRef<FlatList<any>>(null);
 
@@ -187,16 +186,14 @@ export default function StudyScreen() {
       }
       const isFromSession = fromSessionRef.current;
       fromSessionRef.current = false;
-      if (keyboardShortcutsEnabled) onScreenFocus();
       (async () => {
         if (!initialLoadDoneRef.current && !isFromSession) setLoading(true);
         await loadData();
         initialLoadDoneRef.current = true;
         setLoading(false);
       })();
-      return () => { onScreenBlur(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [db, initialFilterPreference, loadData, keyboardShortcutsEnabled])
+    }, [db, initialFilterPreference, loadData])
   );
 
   // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でも集計を再読込する。
@@ -231,49 +228,24 @@ export default function StudyScreen() {
     return makeDisplayInfo(counts[activeFilter]);
   }
 
-  function handleKeyPress({ nativeEvent: { key } }: { nativeEvent: { key: string } }) {
-    if (!keyboardShortcutsEnabled) return;
-    if (key === '1') { setActiveFilter('all'); }
-    else if (key === '2') { setActiveFilter('learned'); }
-    else if (key === '3') { setActiveFilter('review'); }
-    else if (key === '4') { setActiveFilter('new'); }
-    else if (key === 's' || key === 'S') { setShuffleEnabled(!shuffleEnabled); }
-    else if (key === 'h' || key === 'H') {
-      setStudyHideEmpty(!hideEmpty);
-      setFocusedItemIndex(null);
-      focusedDeckIdRef.current = null;
-      focusedTagIdRef.current = null;
-    }
-    else if (key === ' ') { startStudyFocused(); }
-    else if (key === 'm' || key === 'M') {
-      setActiveTab(prev => prev === 'decks' ? 'tags' : 'decks');
-    }
-    else if (key === 'j' || key === 'J') {
-      const items = activeTab === 'decks' ? visibleDecks : visibleTags;
-      setFocusedItemIndex(prev => {
-        const next = prev === null ? (items.length > 0 ? 0 : null) : prev >= items.length - 1 ? null : prev + 1;
-        const item = next != null ? items[next] : null;
-        if (activeTab === 'decks') focusedDeckIdRef.current = item ? (item as Deck).id : null;
-        else focusedTagIdRef.current = item ? (item as Tag).id : null;
-        return next;
-      });
-    }
-    else if (key === 'k' || key === 'K') {
-      const items = activeTab === 'decks' ? visibleDecks : visibleTags;
-      setFocusedItemIndex(prev => {
-        const next = prev === null ? (items.length > 0 ? items.length - 1 : null) : prev <= 0 ? null : prev - 1;
-        const item = next != null ? items[next] : null;
-        if (activeTab === 'decks') focusedDeckIdRef.current = item ? (item as Deck).id : null;
-        else focusedTagIdRef.current = item ? (item as Tag).id : null;
-        return next;
-      });
-    }
-    else if (key === '.') { router.navigate('/(tabs)/stats'); }
-    else if (key === ',') { router.navigate('/(tabs)'); }
+  // J/K のヌルサイクル（先頭→…→末尾→null→…）。activeTab に応じて対象リストを切替。
+  function moveStudyFocus(dir: 'next' | 'prev') {
+    const items = activeTab === 'decks' ? visibleDecks : visibleTags;
+    setFocusedItemIndex(prev => {
+      let next: number | null;
+      if (dir === 'next') {
+        next = prev === null ? (items.length > 0 ? 0 : null) : prev >= items.length - 1 ? null : prev + 1;
+      } else {
+        next = prev === null ? (items.length > 0 ? items.length - 1 : null) : prev <= 0 ? null : prev - 1;
+      }
+      const item = next != null ? items[next] : null;
+      if (activeTab === 'decks') focusedDeckIdRef.current = item ? (item as Deck).id : null;
+      else focusedTagIdRef.current = item ? (item as Tag).id : null;
+      return next;
+    });
   }
 
   function startStudyFocused() {
-    if (!keyboardShortcutsEnabled) return;
     if (focusedItemIndex === null) return;
     const items = activeTab === 'decks' ? visibleDecks : visibleTags;
     const item = items[focusedItemIndex];
@@ -289,6 +261,23 @@ export default function StudyScreen() {
       router.push({ pathname: '/study/session', params: { tagId: (item as Tag).id, filter: SESSION_FILTER_MAP[activeFilter], shuffle: shuffleEnabled ? '1' : '0' } });
     }
   }
+
+  // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。Space/Return とも学習開始。
+  useKeyCommands([
+    { input: '1', handler: () => setActiveFilter('all') },
+    { input: '2', handler: () => setActiveFilter('learned') },
+    { input: '3', handler: () => setActiveFilter('review') },
+    { input: '4', handler: () => setActiveFilter('new') },
+    { input: 's', handler: () => setShuffleEnabled(!shuffleEnabled) },
+    { input: 'h', handler: () => { setStudyHideEmpty(!hideEmpty); clearFocus(); } },
+    { input: ' ', handler: () => startStudyFocused() },
+    { input: 'm', handler: () => setActiveTab(prev => (prev === 'decks' ? 'tags' : 'decks')) },
+    { input: 'j', handler: () => moveStudyFocus('next') },
+    { input: 'k', handler: () => moveStudyFocus('prev') },
+    { input: '.', handler: () => router.navigate('/(tabs)/stats') },
+    { input: ',', handler: () => router.navigate('/(tabs)') },
+    { input: KeyCommand.keyInputEnter, handler: () => startStudyFocused() },
+  ]);
 
   // アーカイブ済みデッキは学習対象から除外する
   const sortedDecks = useMemo(() => sortDecks(decks.filter((d) => !d.archived), deckSortOrder), [decks, deckSortOrder]);
@@ -614,13 +603,6 @@ export default function StudyScreen() {
 
       </Pressable>
       )}
-
-      <HiddenKeyboardInput
-        ref={keyboardRef}
-        onKeyPress={handleKeyPress}
-        onSubmitEditing={startStudyFocused}
-        onBlur={onInputBlur}
-      />
 
       <ShortcutsModal
         visible={showShortcutsModal}

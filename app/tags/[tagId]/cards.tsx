@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -11,10 +11,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -25,7 +25,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useKeyboardFocus } from '@/hooks/useKeyboardFocus';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId, setCardArchived, setCardsArchived } from '@/lib/database/cards';
 import { removeTagFromCards } from '@/lib/database/tags';
@@ -71,7 +71,6 @@ export default function TagCardsScreen() {
   const { isPro } = useProStore();
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const { width: screenWidth } = useWindowDimensions();
-  const { keyboardRef, onScreenFocus, onScreenBlur, onInputBlur } = useKeyboardFocus();
 
   const [cards, setCards] = useState<Card[]>([]);
   const tag = tags.find((t) => t.id === tagId) ?? null;
@@ -200,17 +199,63 @@ export default function TagCardsScreen() {
         else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder));
         else setCards(raw);
       });
-      if (keyboardShortcutsEnabled) onScreenFocus();
-      return () => { onScreenBlur(); };
-    }, [db, tagId, cardSortOrder, onScreenFocus, onScreenBlur, keyboardShortcutsEnabled])
+    }, [db, tagId, cardSortOrder])
   );
 
-  useEffect(() => {
-    if (statsCardId === null && keyboardShortcutsEnabled) {
-      const timer = setTimeout(() => keyboardRef.current?.focus(), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [statsCardId, keyboardShortcutsEnabled, keyboardRef]);
+  // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。CardStats 表示中（statsCardId）は
+  // A のみ通す。それ以外は選択/通常モードで分岐（旧 onKeyPress/onSubmitEditing と同じ割り当て）。
+  useKeyCommands([
+    { input: 'j', handler: () => { if (statsCardId !== null) return; moveFocus('next'); } },
+    { input: 'k', handler: () => { if (statsCardId !== null) return; moveFocus('prev'); } },
+    {
+      input: ' ',
+      handler: () => {
+        if (statsCardId !== null) return;
+        if (selectionMode && focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+          toggleSelect(displayedCards[focusedCardIndex].id);
+        }
+      },
+    },
+    {
+      input: 'a',
+      handler: () => {
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (selectionMode) { toggleSelectAll(); return; }
+        if (!isPro) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+          setStatsCardId(displayedCards[focusedCardIndex].id);
+        }
+      },
+    },
+    { input: 't', handler: () => { if (statsCardId !== null) return; if (selectionMode) handleRemoveTagSelected(); } },
+    { input: 'e', handler: () => { if (statsCardId !== null) return; if (selectionMode) handleArchiveSelected(); } },
+    { input: 's', handler: () => { if (statsCardId !== null) return; if (selectionMode) exitSelectionMode(); else if (cards.length > 0) enterSelectionMode(); } },
+    { input: '1', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('all'); } },
+    { input: '2', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('active'); } },
+    {
+      input: 'p',
+      handler: () => {
+        if (statsCardId !== null || selectionMode) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) navigateToEdit(displayedCards[focusedCardIndex]);
+      },
+    },
+    {
+      input: 'd',
+      handler: () => {
+        if (statsCardId !== null || selectionMode) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) confirmDeleteCard(displayedCards[focusedCardIndex]);
+      },
+    },
+    { input: 'n', handler: () => { if (statsCardId !== null || selectionMode) return; setShowDeckPicker(true); } },
+    { input: 'b', handler: () => { if (statsCardId !== null || selectionMode) return; router.back(); } },
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (statsCardId !== null || selectionMode) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) navigateToEdit(displayedCards[focusedCardIndex]);
+      },
+    },
+  ]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -262,77 +307,6 @@ export default function TagCardsScreen() {
           )}
         </View>
       </View>
-
-      <TextInput
-        ref={keyboardRef}
-        style={styles.hiddenKeyboardInput}
-        caretHidden
-        keyboardType="ascii-capable"
-        showSoftInputOnFocus={false}
-        disableKeyboardShortcuts={true}
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
-        onKeyPress={({ nativeEvent: { key } }) => {
-          if (!keyboardShortcutsEnabled) return;
-          if (statsCardId !== null) {
-            if (key.toLowerCase() === 'a') {
-              setStatsCardId(null);
-            }
-            return;
-          }
-          const k = key.toLowerCase();
-          if (selectionMode) {
-            if (k === 'j') { moveFocus('next'); }
-            else if (k === 'k') { moveFocus('prev'); }
-            else if (key === ' ') {
-              if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-                toggleSelect(displayedCards[focusedCardIndex].id);
-              }
-            }
-            else if (k === 'a') { toggleSelectAll(); }
-            else if (k === 't') { handleRemoveTagSelected(); }
-            else if (k === 'e') { handleArchiveSelected(); }
-            else if (k === 's') { exitSelectionMode(); }
-            return;
-          }
-          if (k === '1') { setLastTagCardFilter('all'); }
-          else if (k === '2') { setLastTagCardFilter('active'); }
-          else if (k === 'j') { moveFocus('next'); }
-          else if (k === 'k') { moveFocus('prev'); }
-          else if (k === 'p') {
-            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              navigateToEdit(displayedCards[focusedCardIndex]);
-            }
-          } else if (k === 'd') {
-            if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              confirmDeleteCard(displayedCards[focusedCardIndex]);
-            }
-          } else if (k === 'n') {
-            setShowDeckPicker(true);
-          } else if (k === 's') {
-            if (cards.length > 0) enterSelectionMode();
-          } else if (k === 'b') {
-            router.back();
-          } else if (k === 'a') {
-            if (!isPro) return;
-            if (statsCardId) {
-              setStatsCardId(null);
-            } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-              setStatsCardId(displayedCards[focusedCardIndex].id);
-            }
-          }
-        }}
-        onSubmitEditing={() => {
-          if (!keyboardShortcutsEnabled) return;
-          if (statsCardId !== null) return;
-          if (selectionMode) return;
-          if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-            navigateToEdit(displayedCards[focusedCardIndex]);
-          }
-        }}
-        onBlur={onInputBlur}
-      />
 
       <Pressable style={{ flex: 1 }} onPress={() => setFocusedCardIndex(null)}>
       {cards.length === 0 ? (
@@ -568,7 +542,6 @@ export default function TagCardsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hiddenKeyboardInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
   list: { paddingTop: 16, paddingBottom: 96 },
   cardItem: {
     borderRadius: 10,

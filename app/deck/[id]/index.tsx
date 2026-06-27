@@ -134,6 +134,8 @@ export default function DeckDetailScreen() {
     { key: 'M',         descKey: 'shortcut.cycleCardSort' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
     { key: 'B',         descKey: 'shortcut.back' },
+    { key: '↑ / ↓',     descKey: 'shortcut.arrows' },
+    { key: 'ESC',       descKey: 'shortcut.esc' },
   ];
   const DECK_SHORTCUTS_SELECT = [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
@@ -144,6 +146,8 @@ export default function DeckDetailScreen() {
     { key: 'C',     descKey: 'shortcut.duplicateSelected' },
     { key: 'E',     descKey: 'shortcut.archiveSelected' },
     { key: 'S',     descKey: 'shortcut.exitSelect' },
+    { key: '↑ / ↓', descKey: 'shortcut.arrows' },
+    { key: 'ESC',   descKey: 'shortcut.esc' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
@@ -572,6 +576,23 @@ export default function DeckDetailScreen() {
         if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
           navigateToCardEdit(displayedCards[focusedCardIndex].id);
         }
+      },
+    },
+    // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
+    { input: KeyCommand.keyInputUpArrow, handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('prev'); } },
+    { input: KeyCommand.keyInputDownArrow, handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('next'); } },
+    // ESC: オーバーレイ → 選択モード解除 → 戻る（階層ディスマス）
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (showDeckPicker) { setShowDeckPicker(false); return; }
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (showDeleteModal) { setShowDeleteModal(false); return; }
+        if (pendingMoveDeck) { setPendingMoveDeck(null); return; }
+        if (infoModal) { setInfoModal(null); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (selectionMode) { exitSelectionMode(); return; }
+        router.back();
       },
     },
   ]);

@@ -48,6 +48,8 @@ const HOME_SHORTCUTS = [
   { key: 'F',     descKey: 'shortcut.search' },
   { key: 'T',     descKey: 'shortcut.tags' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+  { key: '↑↓←→', descKey: 'shortcut.arrows' },
+  { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 
 function truncate(str: string, max = 20): string {
@@ -340,6 +342,21 @@ export default function HomeScreen() {
         if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
           router.push({ pathname: '/deck/[id]', params: { id: displayedDecks[focusedDeckIndex].id } });
         }
+      },
+    },
+    // 矢印キー: 上下=K/J、左右=,/.
+    { input: KeyCommand.keyInputUpArrow, handler: () => moveDeckFocus('prev') },
+    { input: KeyCommand.keyInputDownArrow, handler: () => moveDeckFocus('next') },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)/settings') },
+    { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)/study') },
+    // ESC: 開いているオーバーレイを閉じる → フォーカス解除（ホームはタブなので戻るは無し）
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (showDeckListInfo) { setShowDeckListInfo(false); return; }
+        if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteDeck(null); return; }
+        if (focusedDeckIndex !== null) setFocusedDeckIndex(null);
       },
     },
   ]);

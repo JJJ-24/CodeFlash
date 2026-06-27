@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { constants as KeyCommand } from 'react-native-key-command';
+
 import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { settingsStyles as styles } from '@/components/settings/styles';
@@ -28,6 +30,9 @@ export default function SettingsScreen() {
   useKeyCommands([
     { input: '.', handler: () => router.navigate('/(tabs)') },
     { input: ',', handler: () => router.navigate('/(tabs)/stats') },
+    // 矢印キー: 左右=,/.（設定タブはリストが無いので上下は割り当てない）
+    { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)') },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)/stats') },
   ]);
 
   const navItems: NavItem[] = [

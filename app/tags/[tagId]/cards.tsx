@@ -45,6 +45,8 @@ const TAG_CARDS_SHORTCUTS = [
   { key: 'N',     descKey: 'shortcut.new' },
   { key: 'S',     descKey: 'shortcut.toggleSelect' },
   { key: 'B',     descKey: 'shortcut.back' },
+  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
+  { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
 const TAG_CARDS_SELECTION_SHORTCUTS = [
@@ -54,6 +56,8 @@ const TAG_CARDS_SELECTION_SHORTCUTS = [
   { key: 'T',     descKey: 'shortcut.removeTagSelected' },
   { key: 'E',     descKey: 'shortcut.archiveSelected' },
   { key: 'S',     descKey: 'shortcut.exitSelect' },
+  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
+  { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
 export default function TagCardsScreen() {
@@ -253,6 +257,23 @@ export default function TagCardsScreen() {
       handler: () => {
         if (statsCardId !== null || selectionMode) return;
         if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) navigateToEdit(displayedCards[focusedCardIndex]);
+      },
+    },
+    // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
+    { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null) return; moveFocus('prev'); } },
+    { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null) return; moveFocus('next'); } },
+    // ESC: オーバーレイ → 選択モード解除 → 戻る
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (showDeckPicker) { setShowDeckPicker(false); return; }
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteCard(null); return; }
+        if (showRemoveTagModal) { setShowRemoveTagModal(false); return; }
+        if (showTagCardsInfo) { setShowTagCardsInfo(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (selectionMode) { exitSelectionMode(); return; }
+        router.back();
       },
     },
   ]);

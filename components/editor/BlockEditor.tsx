@@ -880,6 +880,30 @@ export function BlockEditor({
         startEditFocusedBlock();
       },
     },
+    // 矢印キー: 上下=K/J（ブロック移動）、左右=,/.（タブ切替）。handleKeyPress 経由。
+    // ※ ブロック編集中は実 TextInput が上下左右をカーソル移動に消費するので発火しない（住み分け）。
+    { input: KeyCommand.keyInputUpArrow, handler: () => handleKeyPress("k") },
+    { input: KeyCommand.keyInputDownArrow, handler: () => handleKeyPress("j") },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
+    { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
+    // ESC: 追加メニュー閉じ → 編集中ブロックを抜ける（非入力モードへ）→ 削除確認閉じ → キャンセル。
+    // ※ ESC は TextInput にフォーカスがあっても発火するため、編集中なら先にブロックを抜ける。
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (!keyboardShortcutsEnabled) return;
+        if (addMenuVisible) { setAddMenuVisible(false); return; }
+        if (editingBlockKeyRef.current) {
+          const key = editingBlockKeyRef.current;
+          setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
+          editingBlockKeyRef.current = null;
+          Keyboard.dismiss();
+          return;
+        }
+        if (pendingDeleteBlock) { setPendingDeleteBlock(null); return; }
+        onCancel?.();
+      },
+    },
   ]);
 
   return (

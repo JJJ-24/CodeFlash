@@ -86,6 +86,8 @@ const SESSION_SHORTCUTS = [
   { key: "L", descKey: "shortcut.links" },
   { key: "P", descKey: "shortcut.pencil" },
   { key: "Q", descKey: "shortcut.finishSession" },
+  { key: "↑↓←→", descKey: "shortcut.arrows" },
+  { key: "ESC", descKey: "shortcut.esc" },
 ];
 
 export default function StudySessionScreen() {
@@ -590,6 +592,32 @@ export default function StudySessionScreen() {
         if (completed) { safeBack(); return; }
         if (!currentCard) return;
         if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
+      },
+    },
+    // 矢印キー: 上下=K/J（コードブロック巡回）、左右=,/.（前後カード）。handleKeyPress 経由でガード共通化。
+    { input: KeyCommand.keyInputUpArrow, handler: () => handleKeyPress("k") },
+    { input: KeyCommand.keyInputDownArrow, handler: () => handleKeyPress("j") },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
+    { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
+    // ESC: 完了画面=戻る / モーダル=閉じる / 全画面=解除 / それ以外=戻る（階層ディスマス）
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (completed) { safeBack(); return; }
+        // コードブロック編集中は編集解除を最優先（実入力欄を blur すると onEditBlur が走る）。
+        // ※ ESC は TextInput にフォーカスがあっても発火するため、ここで拾わないと戻るに落ちてしまう。
+        if (codeEditingRef.current) { Keyboard.dismiss(); return; }
+        if (showLinksModal) { setShowLinksModal(false); return; }
+        if (showFinishModal) { setShowFinishModal(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (isFullscreen) {
+          codeEditingRef.current = false;
+          setIsFullscreen(false);
+          cbs.setEditTrigger(0);
+          cbs.setRunTrigger(0);
+          return;
+        }
+        safeBack();
       },
     },
   ]);

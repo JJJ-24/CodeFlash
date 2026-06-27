@@ -59,6 +59,8 @@ const STUDY_TAB_SHORTCUTS = [
   { key: 'H',     descKey: 'shortcut.toggleHideEmpty' },
   { key: 'M',     descKey: 'shortcut.switchDeckTab' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+  { key: '↑↓←→', descKey: 'shortcut.arrows' },
+  { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 
 export default function StudyScreen() {
@@ -277,6 +279,20 @@ export default function StudyScreen() {
     { input: '.', handler: () => router.navigate('/(tabs)/stats') },
     { input: ',', handler: () => router.navigate('/(tabs)') },
     { input: KeyCommand.keyInputEnter, handler: () => startStudyFocused() },
+    // 矢印キー: 上下=K/J、左右=,/.
+    { input: KeyCommand.keyInputUpArrow, handler: () => moveStudyFocus('prev') },
+    { input: KeyCommand.keyInputDownArrow, handler: () => moveStudyFocus('next') },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)') },
+    { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)/stats') },
+    // ESC: オーバーレイを閉じる → フォーカス解除（タブなので戻るは無し）
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (infoModal) { setInfoModal(null); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (focusedItemIndex !== null) clearFocus();
+      },
+    },
   ]);
 
   // アーカイブ済みデッキは学習対象から除外する

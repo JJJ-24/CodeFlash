@@ -512,6 +512,8 @@
     "iapNotice": "Payment will be charged to your Apple account. Purchases do not auto-renew."
   },
   "shortcut": {
+    "arrows": "Arrow keys also navigate",
+    "esc": "Close / back",
     "flip": "Flip card",
     "grade": "Grade\n(Again/Hard/Good/Easy)",
     "memo": "Toggle memo",

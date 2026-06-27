@@ -121,34 +121,35 @@ iPhone 16e シミュレータ（new arch・Hardware Keyboard 接続）で PoC �
 - [x] 突き合わせは payload.input を小文字正規化（特殊キーの定数と payload 文字列の揺らぎを吸収）。型は `types/react-native-key-command.d.ts`
 - [x] **パイロット移行: 設定タブ**（`,`/`.` タブ切替を `useKeyCommands` 化、隠し TextInput 撤去）。実機検証で「ON でも設定メニューが1タップ・タブ切替動作」を確認＝**ON時のタップ食われ解消を実証**
 - [x] **config plugin で AppDelegate 注入を恒久化**（`plugins/withKeyCommands.js`・`app.json` に登録）。`expo prebuild --clean` で再生成しても keyCommands override とブリッジヘッダ import が自動で入ることを実機確認済み
-- [ ] 既存の `Grade`/フィルタ等の enum やキー定義（`lib/cardEditorShortcuts.ts` 等）と整合（各画面移行時）
+- [x] 既存の `Grade`/フィルタ等の enum やキー定義（`lib/cardEditorShortcuts.ts` 等）と整合（各画面移行時）
 
-### Phase 2 — 画面ごとに段階移行（1画面ずつ・隠し入力と二重化しない）
+### Phase 2 — 画面ごとに段階移行（1画面ずつ・隠し入力と二重化しない）✅ 完了（2026-06-27）
 
-各画面で「`onKeyPress` のロジックを `useKeyCommands` のハンドラへ移設 → 隠し入力と関連ワークアラウンドを撤去 → 実機回帰」を1セットで進める。
+各画面で「`onKeyPress` のロジックを `useKeyCommands` のハンドラへ移設 → 隠し入力と関連ワークアラウンドを撤去 → 実機回帰」を1セットで進めた。各画面 ON で「タップ1回・サクサク」を実機確認。
 
-- [ ] 設定タブ（最小・検証用に最初）
-- [ ] ホーム（デッキ一覧：J/K ヌルサイクル・並べ替えとの両立確認）
-- [ ] 学習タブ / 統計タブ
-- [ ] カード一覧（選択モード含む・SwipeToDelete との両立）
-- [ ] タグ管理 / タグ別カード一覧
-- [ ] 学習セッション（Space 反転・1–4 グレード・J/K コードブロック・全画面）
-- [ ] カードエディタ（非入力モード J/K と実入力の住み分け＝ Phase 0 の肝を本番適用）
-- [ ] 検索
+- [x] 設定タブ（最小・検証用に最初）
+- [x] ホーム（デッキ一覧：J/K ヌルサイクル・並べ替えとの両立確認）
+- [x] 学習タブ / 統計タブ
+- [x] カード一覧（選択モード含む・SwipeToDelete との両立）
+- [x] タグ管理 / タグ別カード一覧
+- [x] 学習セッション（Space 反転・1–4 グレード・J/K コードブロック・全画面）
+- [x] カードエディタ（非入力モード J/K と実入力の住み分け＝ Phase 0 の肝を本番適用）
+- [x] 検索（**元々ショートカット未実装＝対象外**。検索欄の TextInput のみ）
 
-### Phase 3 — 撤去と新機能
+### Phase 3 — 撤去と新機能 ✅ 完了（2026-06-27）
 
-- [ ] `HiddenKeyboardInput` 撤去、`useKeyboardFocus` の再フォーカス系コード削除
-- [ ] `onScreenFocus` の flag gate など暫定対策を削除（不要になる）
-- [ ] **矢印キー**対応（J/K と併用 or 置換は要 UX 判断）、**ESC** でモーダル/選択モード解除
-- [ ] `Return` を Enter コマンドへ統一（`onSubmitEditing` 依存を解消）
+- [x] `HiddenKeyboardInput` 撤去、`useKeyboardFocus` の再フォーカス系コード削除（両ファイルとも削除）
+- [x] `onScreenFocus` の flag gate など暫定対策を削除（各画面移行時に撤去。BlockEditor の死んだ ref 群も撤去）
+- [x] **矢印キー**対応（**上下=K/J、左右=,/.** で実装＝既存キーと併用）、**ESC** で階層ディスマス（オーバーレイ/シート/選択モード/全画面を閉じる→ push 画面は戻る・エディタはキャンセル）
+- [x] `Return` を Enter コマンド（`keyInputEnter`）へ統一（`onSubmitEditing` 依存を解消）
 
 ### Phase 4 — 仕上げ
 
-- [ ] CLAUDE.md のキーボード節を更新（「隠し TextInput」前提の記述を全面改訂）
-- [ ] ショートカット一覧（`ShortcutsModal`）に矢印/ESC を反映
-- [ ] 回帰チェックリスト（下記）を実機で一通り確認
+- [x] CLAUDE.md のキーボード節を更新（「隠し TextInput」前提の記述を全面改訂・ネイティブ方式へ）
+- [x] ショートカット一覧（`ShortcutsModal`）に矢印/ESC を反映
+- [ ] 回帰チェックリスト（下記）を実機で一通り確認（移行ごとに ON 検証済み。矢印/ESC の通し確認は継続中）
 - [ ] Android のキー対応方針を決定（当面 iOS 専用 or `KeyEvent` 対応）
+- [ ] **iPad の `Tab`（UIFocusSystem）挙動は未検証**のまま（割り当ては避けている）
 
 ---
 

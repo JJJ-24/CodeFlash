@@ -10,12 +10,16 @@ export const CARD_EDITOR_SHORTCUTS_EDIT = [
   { key: 'M',          descKey: 'shortcut.cycleMode' },
   { key: 'S',          descKey: 'shortcut.save' },
   { key: 'X',          descKey: 'shortcut.close' },
+  { key: '↑↓←→',       descKey: 'shortcut.arrows' },
+  { key: 'ESC',        descKey: 'shortcut.esc' },
 ];
 
 export const CARD_EDITOR_SHORTCUTS_SORT = [
   { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
   { key: 'U / D', descKey: 'shortcut.moveFocused' },
   { key: 'M',     descKey: 'shortcut.cycleMode' },
+  { key: '↑↓←→',  descKey: 'shortcut.arrows' },
+  { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
 export const CARD_EDITOR_SHORTCUTS_PREVIEW = [
@@ -23,4 +27,5 @@ export const CARD_EDITOR_SHORTCUTS_PREVIEW = [
   { key: 'M',      descKey: 'shortcut.cycleMode' },
   { key: 'S',      descKey: 'shortcut.save' },
   { key: 'X',      descKey: 'shortcut.close' },
+  { key: 'ESC',    descKey: 'shortcut.esc' },
 ];

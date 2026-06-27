@@ -43,6 +43,8 @@ const TAG_SHORTCUTS = [
   { key: 'S',      descKey: 'shortcut.toggleSelect' },
   { key: 'M',      descKey: 'shortcut.cycleSort' },
   { key: 'B',      descKey: 'shortcut.back' },
+  { key: '↑ / ↓',  descKey: 'shortcut.arrows' },
+  { key: 'ESC',    descKey: 'shortcut.esc' },
 ];
 
 const TAG_SELECTION_SHORTCUTS = [
@@ -52,6 +54,8 @@ const TAG_SELECTION_SHORTCUTS = [
   { key: 'C',     descKey: 'shortcut.changeColorSelected' },
   { key: 'D',     descKey: 'shortcut.deleteSelectedTags' },
   { key: 'S',     descKey: 'shortcut.exitSelect' },
+  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
+  { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
 export default function TagsScreen() {
@@ -245,6 +249,22 @@ export default function TagsScreen() {
         if (!selectionMode && focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
           router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: sortedTags[focusedTagIndex].id } });
         }
+      },
+    },
+    // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
+    { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus('prev') },
+    { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus('next') },
+    // ESC: オーバーレイ → 選択モード解除 → 戻る
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (showColorPicker) { setShowColorPicker(false); return; }
+        if (showBulkDeleteModal) { setShowBulkDeleteModal(false); return; }
+        if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteTag(null); return; }
+        if (showTagListInfo) { setShowTagListInfo(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (selectionMode) { exitSelectionMode(); return; }
+        router.back();
       },
     },
   ]);

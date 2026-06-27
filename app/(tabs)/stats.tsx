@@ -55,6 +55,8 @@ const STATS_SHORTCUT_SECTIONS = [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: 'Space', descKey: 'shortcut.openChart' },
       { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+      { key: '↑↓←→', descKey: 'shortcut.arrows' },
+      { key: 'ESC',  descKey: 'shortcut.esc' },
     ],
   },
   {
@@ -1182,6 +1184,26 @@ export default function StatsScreen() {
     { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setPeriodPickerVisible(true); } },
     { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) handleToggleRankingByTime(); } },
+    // 矢印キー: 上下=K/J、左右=,/.（j/k・,/. と同じガードを適用）
+    { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
+    { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('next'); } },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
+    { input: KeyCommand.keyInputRightArrow, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
+    // ESC: 開いているオーバーレイ/シートを上から順に閉じる → フォーカス解除（タブなので戻るは無し）
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (activeSheet !== null) { closeSheet(); return; }
+        if (deckPickerVisible) { setDeckPickerVisible(false); return; }
+        if (periodPickerVisible) { setPeriodPickerVisible(false); return; }
+        if (monthlySheetData) { setMonthlySheetData(null); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (showDetailStatsInfo) { setShowDetailStatsInfo(false); return; }
+        if (sectionInfoModal) { setSectionInfoModal(null); return; }
+        if (focusedItem !== null) setFocusedItem(null);
+      },
+    },
   ]);
 
   // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得

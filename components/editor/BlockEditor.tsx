@@ -200,6 +200,11 @@ export function BlockEditor({
   const editingBlockKeyRef = useRef<string | null>(null);
   const addAreaYRef = useRef(0);
 
+  // 編集中ブロックのキーを記録（keyboardWillShow 時のスクロール・ESC での編集解除に使用）。
+  const setEditingBlockKey = (key: string | null) => {
+    editingBlockKeyRef.current = key;
+  };
+
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [editorMode, setEditorMode] = useState<EditorMode>("edit");
   const isPreview = editorMode === "preview";
@@ -390,12 +395,12 @@ export function BlockEditor({
   // editingBlockKeyRef に現在編集中のブロックキーを記録し、
   // keyboardWillShow 時のスクロールに使用する。
   function handleBlockTapFocus(blockKey: string) {
-    editingBlockKeyRef.current = blockKey;
+    setEditingBlockKey(blockKey);
     setFocusedBlockIndex(null);
   }
 
   function handleCodeBlockRunButtonPress(blockKey: string) {
-    editingBlockKeyRef.current = null;
+    setEditingBlockKey(null);
     const idx = currentBlocksRef.current.findIndex((b) => b._key === blockKey);
     setFocusedBlockIndex(idx !== -1 ? idx : null);
     // 034: ネイティブキーコマンドは画面フォーカス中ずっと有効なので、編集終了後に隠し
@@ -403,7 +408,7 @@ export function BlockEditor({
   }
 
   function handleBlockEditBlur() {
-    editingBlockKeyRef.current = null;
+    setEditingBlockKey(null);
     // 034: 再フォーカス不要（住み分けは責任者チェーンで自動成立）。
   }
 
@@ -733,7 +738,7 @@ export function BlockEditor({
               onPress={() => {
                 // 編集中ブロックを解除しキーボードを閉じてからメニューを開く。
                 // 034: ネイティブキーコマンドなので隠し入力への再フォーカスは不要。
-                editingBlockKeyRef.current = null;
+                setEditingBlockKey(null);
                 Keyboard.dismiss();
                 setAddMenuFocusIndex(0);
                 setAddMenuVisible(true);
@@ -851,10 +856,12 @@ export function BlockEditor({
     </>
   );
 
-  // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。既存の handleKeyPress(key)
-  // ディスパッチをそのまま流用し、各キーから呼ぶ。ブロックの実 TextInput がフォーカス中は
-  // OS がキーを入力欄へ渡すため、ショートカットは自然と発火しない（住み分け＝本チケットの肝）。
-  // Return: 追加メニュー表示中は項目決定、それ以外はフォーカス中ブロックの編集開始（旧 onSubmitEditing）。
+  // 034: 既存の handleKeyPress(key) ディスパッチをそのまま流用し、各キーから呼ぶ。
+  // ★矢印・Tab はこの画面では登録しない。理由: iPad は keyCommands をキャッシュするため、
+  //   一度でも矢印/Tab を優先付きで登録すると、編集中もそのキャッシュが“ただの矢印/Tab”を奪い続け、
+  //   入力欄にカーソル移動/インデントが届かなくなる（登録解除してもキャッシュは消えない）。
+  //   そこで「最初から登録しない」ことで、編集中は矢印=カーソル移動・Tab=インデントが常に効く。
+  //   ナビは J/K（ブロック移動）・,/.（表/裏/メモ切替）で行う。
   useKeyCommands([
     { input: "j", handler: () => handleKeyPress("j") },
     { input: "k", handler: () => handleKeyPress("k") },
@@ -880,14 +887,19 @@ export function BlockEditor({
         startEditFocusedBlock();
       },
     },
-    // 矢印キー: 上下=K/J（ブロック移動）、左右=,/.（タブ切替）。handleKeyPress 経由。
-    // ※ ブロック編集中は実 TextInput が上下左右をカーソル移動に消費するので発火しない（住み分け）。
-    { input: KeyCommand.keyInputUpArrow, handler: () => handleKeyPress("k") },
-    { input: KeyCommand.keyInputDownArrow, handler: () => handleKeyPress("j") },
-    { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
-    { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
-    // ESC: 追加メニュー閉じ → 編集中ブロックを抜ける（非入力モードへ）→ 削除確認閉じ → キャンセル。
-    // ※ ESC は TextInput にフォーカスがあっても発火するため、編集中なら先にブロックを抜ける。
+    // 矢印は iPhone のみ登録（上下=K/J ブロック移動、左右=,/. タブ切替）。iPhone はフォーカスエンジンが
+    // 無く、登録しても編集中は入力欄が矢印を消費する（カーソル移動）。iPad は登録しない＝編集中カーソル優先。
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputUpArrow, handler: () => handleKeyPress("k") },
+      { input: KeyCommand.keyInputDownArrow, handler: () => handleKeyPress("j") },
+      { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
+      { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
+    ]) as { input: string; handler: () => void }[]),
+  ]);
+
+  // ESC は編集中も含めて常時有効（編集中ブロックを抜ける／削除確認を閉じる／キャンセル）。
+  // ESC は優先フラグもフォーカスエンジン競合も無いので、編集中に1つだけ登録しても不安定化しない。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
@@ -896,7 +908,7 @@ export function BlockEditor({
         if (editingBlockKeyRef.current) {
           const key = editingBlockKeyRef.current;
           setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
-          editingBlockKeyRef.current = null;
+          setEditingBlockKey(null);
           Keyboard.dismiss();
           return;
         }
@@ -916,7 +928,10 @@ export function BlockEditor({
             常設すると後からのフォーカスにリンクされず表示されないため、フォーカス時マウントが必須。
           - 一度マウントしたらアンマウントしない（残留ビューによる下部ボタン不調を防ぐ）。
           - 表示/非表示は opacity と pointerEvents（toolbarActive）で切り替え、非表示時はタップ透過。 */}
-      {Platform.OS === "ios" && toolbarMounted && (
+      {/* 034: iPad ではこの装飾ツールバー（InputAccessoryView）単体がテキストブロック編集時に
+          フリーズ→クラッシュさせる（キーボードショートカットとは無関係の独立バグ・実機確認済み）。
+          当面 iPad では出さない。iPad 対応は別途要調査（TODO）。 */}
+      {Platform.OS === "ios" && !(Platform as any).isPad && toolbarMounted && (
         <InputAccessoryView nativeID={MD_TOOLBAR_ID}>
           <View style={{ opacity: toolbarActive ? 1 : 0 }} pointerEvents={toolbarActive ? "auto" : "none"}>
             <MarkdownToolbar onAction={handleToolbarAction} />
@@ -949,7 +964,7 @@ export function BlockEditor({
               onPress={() => {
                 // 034: タブ切替時は編集中ブロックを解除しキーボードを閉じる。
                 // ネイティブキーコマンドは画面フォーカス中ずっと有効なので再フォーカス不要。
-                editingBlockKeyRef.current = null;
+                setEditingBlockKey(null);
                 Keyboard.dismiss();
                 setAddMenuVisible(false);
                 setEditTriggerMap({});
@@ -1007,7 +1022,7 @@ export function BlockEditor({
                 onPress={() => {
                   // 034: モード切替時に編集中ブロックがあれば解除しキーボードを閉じる（再フォーカス不要）。
                   if (editingBlockKeyRef.current) {
-                    editingBlockKeyRef.current = null;
+                    setEditingBlockKey(null);
                     Keyboard.dismiss();
                     setBlurTriggerMap({});
                   }

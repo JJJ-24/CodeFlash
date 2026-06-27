@@ -254,6 +254,9 @@ export default function StudySessionScreen() {
   }, [currentCard, currentCardContentSig]);
 
   const codeEditingRef = useRef(false);
+  const setCodeEditing = (v: boolean) => {
+    codeEditingRef.current = v;
+  };
   // 別 BlocksView のコードブロックへ編集が移るとき、onEditBlur 側の Keyboard.dismiss() を抑制する
   const switchingCodeBlockRef = useRef(false);
   // 裏面↔メモ間でコード実行・選択が切り替わったとき、相手側の編集を終了させるトリガー
@@ -339,17 +342,17 @@ export default function StudySessionScreen() {
 
   // BlocksView 共通ハンドラ
   const handleCodeEditFocus = useCallback(() => {
-    codeEditingRef.current = true;
+    setCodeEditing(true);
   }, []);
   // メモ欄専用: 編集開始時にキーボード表示後、裏面 ScrollView を末尾へスクロール
   const handleMemoCodeEditFocus = useCallback(() => {
-    codeEditingRef.current = true;
+    setCodeEditing(true);
     setTimeout(() => {
       backScrollRef.current?.scrollToEnd({ animated: true });
     }, 350);
   }, []);
   const handleCodeEditBlur = useCallback(() => {
-    codeEditingRef.current = false;
+    setCodeEditing(false);
     // 034: ネイティブキーコマンドは画面フォーカス中ずっと有効なので、編集終了後に
     // 隠し input を再フォーカスする必要はない。ソフトキーボードだけ確実に閉じる。
     if (!switchingCodeBlockRef.current && isScreenFocusedRef.current) {
@@ -358,7 +361,7 @@ export default function StudySessionScreen() {
   }, []);
   // 実行ボタン経由での編集終了時に呼ぶ。
   const handleForceKeyboardFocus = useCallback(() => {
-    codeEditingRef.current = false;
+    setCodeEditing(false);
     if (isScreenFocusedRef.current) {
       Keyboard.dismiss();
     }
@@ -563,8 +566,10 @@ export default function StudySessionScreen() {
 
   // 034: 隠し TextInput（3つ）を撤去しネイティブキーコマンドへ。
   // 既存の handleKeyPress(key) ディスパッチはそのまま流用し、各キーから呼び出す。
-  // コードブロックの実 TextInput がフォーカス中は OS がキーを入力欄へ渡すため、
-  // ショートカットは自然と発火しない（住み分け）。
+  // ★矢印・Tab はこの画面では登録しない。理由: iPad は keyCommands をキャッシュするため、矢印を
+  //   優先付きで登録すると編集中もキャッシュが“ただの矢印”を奪い続け、入力欄にカーソル移動が届かない。
+  //   「最初から登録しない」ことで、コードブロック編集中は矢印=カーソル移動が常に効く。
+  //   ナビは J/K（コードブロック巡回）・,/.（前後カード）で行う。
   // Return: 完了画面では戻る、それ以外は選択中コードブロックを編集開始（旧 onSubmitEditing）。
   useKeyCommands([
     { input: " ", handler: () => handleKeyPress(" ") },
@@ -594,24 +599,29 @@ export default function StudySessionScreen() {
         if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
       },
     },
-    // 矢印キー: 上下=K/J（コードブロック巡回）、左右=,/.（前後カード）。handleKeyPress 経由でガード共通化。
-    { input: KeyCommand.keyInputUpArrow, handler: () => handleKeyPress("k") },
-    { input: KeyCommand.keyInputDownArrow, handler: () => handleKeyPress("j") },
-    { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
-    { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
-    // ESC: 完了画面=戻る / モーダル=閉じる / 全画面=解除 / それ以外=戻る（階層ディスマス）
+    // 矢印は iPhone のみ登録（上下=K/J コードブロック巡回、左右=,/. 前後カード）。iPad は登録しない＝
+    // コードブロック編集中のカーソル移動を優先（iPhone はフォーカスエンジンが無く両立する）。
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputUpArrow, handler: () => handleKeyPress("k") },
+      { input: KeyCommand.keyInputDownArrow, handler: () => handleKeyPress("j") },
+      { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
+      { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
+    ]) as { input: string; handler: () => void }[]),
+  ]);
+
+  // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (completed) { safeBack(); return; }
         // コードブロック編集中は編集解除を最優先（実入力欄を blur すると onEditBlur が走る）。
-        // ※ ESC は TextInput にフォーカスがあっても発火するため、ここで拾わないと戻るに落ちてしまう。
         if (codeEditingRef.current) { Keyboard.dismiss(); return; }
         if (showLinksModal) { setShowLinksModal(false); return; }
         if (showFinishModal) { setShowFinishModal(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (isFullscreen) {
-          codeEditingRef.current = false;
+          setCodeEditing(false);
           setIsFullscreen(false);
           cbs.setEditTrigger(0);
           cbs.setRunTrigger(0);
@@ -1113,7 +1123,7 @@ export default function StudySessionScreen() {
             <Pressable
               style={styles.fullscreenExitBtn}
               onPress={() => {
-                codeEditingRef.current = false;
+                setCodeEditing(false);
                 setIsFullscreen(false);
                 cbs.setEditTrigger(0);
                 cbs.setRunTrigger(0);
@@ -1557,7 +1567,7 @@ export default function StudySessionScreen() {
           <Pressable
             style={styles.fullscreenBtn}
             onPress={() => {
-              codeEditingRef.current = false;
+              setCodeEditing(false);
               setIsFullscreen(true);
               cbs.setEditTrigger(0);
               cbs.setRunTrigger(0);

@@ -284,6 +284,9 @@ export default function StudyScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => moveStudyFocus('next') },
     { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)') },
     { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)/stats') },
+    // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
+    { input: '\t', handler: () => router.navigate('/(tabs)/stats') },
+    { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)') },
     // ESC: オーバーレイを閉じる → フォーカス解除（タブなので戻るは無し）
     {
       input: KeyCommand.keyInputEscape,

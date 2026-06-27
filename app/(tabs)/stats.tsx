@@ -1189,6 +1189,9 @@ export default function StatsScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('next'); } },
     { input: KeyCommand.keyInputLeftArrow, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
     { input: KeyCommand.keyInputRightArrow, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
+    // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
+    { input: '\t', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
+    { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
     // ESC: 開いているオーバーレイ/シートを上から順に閉じる → フォーカス解除（タブなので戻るは無し）
     {
       input: KeyCommand.keyInputEscape,

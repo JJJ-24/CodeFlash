@@ -24,6 +24,10 @@ const norm = (x: unknown) => String(x).toLowerCase();
  * - 画面フォーカス中 **かつ** `keyboardShortcutsEnabled` のときだけ登録（focus 連動・無効時は何もしない）。
  * - 実 TextInput フォーカス中は OS がキーを入力欄へ渡すため、ショートカットは自然と発火しない（住み分け）。
  * - 引数 specs は毎レンダー変わってよい（ref 経由で最新を参照。登録/解除は focus/blur 単位）。
+ *
+ * 注意（iPad）: iPad は keyCommands をキャッシュするため、矢印/Tab を「優先付きで一度登録 → 後で
+ * 動的に登録解除」しても、編集中にキャッシュが矢印/Tab を奪い続けカーソル移動/インデントが効かない。
+ * そのため**編集が起きる画面（カードエディタ・学習画面）では矢印/Tab を最初から登録しない**運用にする。
  */
 export function useKeyCommands(specs: KeyCommandSpec[]) {
   const enabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);

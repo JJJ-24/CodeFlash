@@ -349,6 +349,9 @@ export default function HomeScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => moveDeckFocus('next') },
     { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)/settings') },
     { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)/study') },
+    // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）。iPad の UIFocusSystem に取られないか実機確認用。
+    { input: '\t', handler: () => router.navigate('/(tabs)/study') },
+    { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/settings') },
     // ESC: 開いているオーバーレイを閉じる → フォーカス解除（ホームはタブなので戻るは無し）
     {
       input: KeyCommand.keyInputEscape,

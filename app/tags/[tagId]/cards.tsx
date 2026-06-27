@@ -25,7 +25,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId, setCardArchived, setCardsArchived } from '@/lib/database/cards';
 import { removeTagFromCards } from '@/lib/database/tags';
@@ -41,7 +41,7 @@ const TAG_CARDS_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'P',       descKey: 'shortcut.editFocusedItem' },
   { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
-  { key: 'D',     descKey: 'shortcut.deleteFocused' },
+  { key: 'Delete', descKey: 'shortcut.deleteFocused' },
   { key: 'N',     descKey: 'shortcut.new' },
   { key: 'S',     descKey: 'shortcut.toggleSelect' },
   { key: 'B',     descKey: 'shortcut.back' },
@@ -243,13 +243,10 @@ export default function TagCardsScreen() {
         if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) navigateToEdit(displayedCards[focusedCardIndex]);
       },
     },
-    {
-      input: 'd',
-      handler: () => {
-        if (statsCardId !== null || selectionMode) return;
-        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) confirmDeleteCard(displayedCards[focusedCardIndex]);
-      },
-    },
+    ...deleteKeySpecs(() => {
+      if (statsCardId !== null || selectionMode) return;
+      if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) confirmDeleteCard(displayedCards[focusedCardIndex]);
+    }),
     { input: 'n', handler: () => { if (statsCardId !== null || selectionMode) return; setShowDeckPicker(true); } },
     { input: 'b', handler: () => { if (statsCardId !== null || selectionMode) return; router.back(); } },
     {

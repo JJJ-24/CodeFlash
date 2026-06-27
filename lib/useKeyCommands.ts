@@ -18,6 +18,30 @@ export type KeyCommandSpec = {
 const norm = (x: unknown) => String(x).toLowerCase();
 
 /**
+ * Backspace キー。iOS の UIKeyCommand では Mac/iPad キーボードの「delete」キー
+ * （＝唯一の削除キー）は入力文字 '\b'（U+0008）として届く。矢印/Tab と違い
+ * フォーカスエンジンに予約されていないため、優先フラグなしで安全に登録できる。
+ */
+export const KEY_DELETE = '\b';
+
+/**
+ * 前方削除（forward delete）キー＝フルサイズ外付けキーボードにある独立した「Delete」キー。
+ * iPad/Mac ノートにはこのキーが無く、唯一の削除キーは Backspace。
+ * UIKeyCommand に渡すべき入力文字が環境により異なる（DEL=U+007F か NSDeleteFunctionKey=U+F728）
+ * ため両候補を登録して取りこぼさない。誤入力は入力欄非フォーカス時のみ発火するため無害。
+ */
+export const KEY_DELETE_FORWARD_CANDIDATES = ['\u007F', '\uF728'];
+
+/**
+ * 削除ハンドラを Backspace と前方 Delete（候補すべて）へ割り当てる spec を返す。
+ * どのキーボードでも削除できるよう、削除系ショートカットはこれを spread して使う。
+ */
+export const deleteKeySpecs = (handler: () => void): KeyCommandSpec[] => [
+  { input: KEY_DELETE, handler },
+  ...KEY_DELETE_FORWARD_CANDIDATES.map((input) => ({ input, handler })),
+];
+
+/**
  * 034: ハードウェアキーボードのショートカットを、隠し TextInput を使わず
  * ネイティブ UIKeyCommand（react-native-key-command）で受ける共通フック。
  *

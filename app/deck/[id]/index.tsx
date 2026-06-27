@@ -49,7 +49,7 @@ import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -129,7 +129,7 @@ export default function DeckDetailScreen() {
     { key: 'J / K',     descKey: 'shortcut.focusNextPrev' },
     { key: 'P',         descKey: 'shortcut.editFocusedItem' },
     { key: 'A',         descKey: 'shortcut.toggleCardStats', pro: true },
-    { key: 'D',         descKey: 'shortcut.deleteFocused' },
+    { key: 'Delete',    descKey: 'shortcut.deleteFocused' },
     { key: 'N',         descKey: 'shortcut.new' },
     { key: 'M',         descKey: 'shortcut.cycleCardSort' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
@@ -142,7 +142,7 @@ export default function DeckDetailScreen() {
     { key: 'Space', descKey: 'shortcut.toggleCheck' },
     { key: 'A',     descKey: 'shortcut.selectAll' },
     { key: 'M',     descKey: 'shortcut.moveSelected' },
-    { key: 'D',     descKey: 'shortcut.deleteSelected' },
+    { key: 'Delete', descKey: 'shortcut.deleteSelected' },
     { key: 'C',     descKey: 'shortcut.duplicateSelected' },
     { key: 'E',     descKey: 'shortcut.archiveSelected' },
     { key: 'S',     descKey: 'shortcut.exitSelect' },
@@ -528,17 +528,14 @@ export default function DeckDetailScreen() {
         }
       },
     },
-    {
-      input: 'd',
-      handler: () => {
-        if (showDeckPicker || statsCardId !== null) return;
-        if (selectionMode) {
-          if (selectedCardIds.size > 0 && !isProcessing) handleDeleteSelected();
-        } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-          confirmDeleteCard(displayedCards[focusedCardIndex]);
-        }
-      },
-    },
+    ...deleteKeySpecs(() => {
+      if (showDeckPicker || statsCardId !== null) return;
+      if (selectionMode) {
+        if (selectedCardIds.size > 0 && !isProcessing) handleDeleteSelected();
+      } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+        confirmDeleteCard(displayedCards[focusedCardIndex]);
+      }
+    }),
     {
       input: 's',
       handler: () => {

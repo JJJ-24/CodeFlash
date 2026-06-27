@@ -27,7 +27,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
@@ -42,7 +42,7 @@ const HOME_SHORTCUTS = [
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'Return', descKey: 'shortcut.openFocused' },
   { key: 'P',     descKey: 'shortcut.editFocused' },
-  { key: 'D',     descKey: 'shortcut.deleteFocused' },
+  { key: 'Delete', descKey: 'shortcut.deleteFocused' },
   { key: 'N',     descKey: 'shortcut.new' },
   { key: 'M',     descKey: 'shortcut.cycleSort' },
   { key: 'F',     descKey: 'shortcut.search' },
@@ -322,15 +322,12 @@ export default function HomeScreen() {
         }
       },
     },
-    {
-      input: 'd',
-      handler: () => {
-        if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
-          setPendingDeleteDeck(displayedDecks[focusedDeckIndex]);
-          setShowDeleteModal(true);
-        }
-      },
-    },
+    ...deleteKeySpecs(() => {
+      if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+        setPendingDeleteDeck(displayedDecks[focusedDeckIndex]);
+        setShowDeleteModal(true);
+      }
+    }),
     { input: 'n', handler: () => router.push({ pathname: '/deck/new' }) },
     { input: 'f', handler: () => router.push('/search') },
     { input: 't', handler: () => router.push('/tags') },

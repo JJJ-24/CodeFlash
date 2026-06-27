@@ -25,7 +25,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -38,7 +38,7 @@ const TAG_SHORTCUTS = [
   { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
   { key: 'Return', descKey: 'shortcut.openFocused' },
   { key: 'P',      descKey: 'shortcut.editFocused' },
-  { key: 'D',      descKey: 'shortcut.deleteFocused' },
+  { key: 'Delete', descKey: 'shortcut.deleteFocused' },
   { key: 'N',      descKey: 'shortcut.new' },
   { key: 'S',      descKey: 'shortcut.toggleSelect' },
   { key: 'M',      descKey: 'shortcut.cycleSort' },
@@ -52,7 +52,7 @@ const TAG_SELECTION_SHORTCUTS = [
   { key: 'Space', descKey: 'shortcut.toggleCheck' },
   { key: 'A',     descKey: 'shortcut.selectAll' },
   { key: 'C',     descKey: 'shortcut.changeColorSelected' },
-  { key: 'D',     descKey: 'shortcut.deleteSelectedTags' },
+  { key: 'Delete', descKey: 'shortcut.deleteSelectedTags' },
   { key: 'S',     descKey: 'shortcut.exitSelect' },
   { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
@@ -214,16 +214,13 @@ export default function TagsScreen() {
         if (selectionMode && selectedTagIds.size > 0) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); }
       },
     },
-    {
-      input: 'd',
-      handler: () => {
-        if (selectionMode) {
-          if (selectedTagIds.size > 0) setShowBulkDeleteModal(true);
-        } else if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
-          confirmDelete(sortedTags[focusedTagIndex]);
-        }
-      },
-    },
+    ...deleteKeySpecs(() => {
+      if (selectionMode) {
+        if (selectedTagIds.size > 0) setShowBulkDeleteModal(true);
+      } else if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
+        confirmDelete(sortedTags[focusedTagIndex]);
+      }
+    }),
     { input: 's', handler: () => { if (selectionMode) exitSelectionMode(); else enterSelectionMode(); } },
     {
       input: 'p',

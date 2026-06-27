@@ -3,7 +3,7 @@ export const CARD_EDITOR_SHORTCUTS_EDIT = [
   { key: 'J / K',      descKey: 'shortcut.focusNextPrev' },
   { key: 'E',          descKey: 'shortcut.editFocusedItem' },
   { key: 'R',          descKey: 'shortcut.runFocused' },
-  { key: 'D',          descKey: 'shortcut.delete' },
+  { key: 'Delete',     descKey: 'shortcut.delete' },
   { key: 'A',          descKey: 'shortcut.toggleAddMenu' },
   { key: 'Return',     descKey: 'shortcut.addBlock' },
   { key: 'T',          descKey: 'shortcut.scrollToTags' },

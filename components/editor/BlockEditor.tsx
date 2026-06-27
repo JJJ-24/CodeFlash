@@ -31,7 +31,7 @@ import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
-import { useKeyCommands } from "@/lib/useKeyCommands";
+import { deleteKeySpecs, KEY_DELETE, useKeyCommands } from "@/lib/useKeyCommands";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
@@ -498,7 +498,7 @@ export function BlockEditor({
     }
 
     // プレビューモードでは ',' / '.' / M / S / X のみ受け付け、
-    // J / K / R / T / D / E / A は無効化
+    // J / K / R / T / Delete / E / A は無効化
     if (isPreviewRef.current && k !== "m" && k !== "," && k !== "." && k !== "s" && k !== "x") {
       return;
     }
@@ -546,7 +546,7 @@ export function BlockEditor({
           }));
         }
       }
-    } else if (k === "d") {
+    } else if (k === KEY_DELETE) {
       if (idx !== null && blocks[idx]) {
         const block = blocks[idx];
         const isEmpty =
@@ -868,7 +868,9 @@ export function BlockEditor({
     { input: "m", handler: () => handleKeyPress("m") },
     { input: "a", handler: () => handleKeyPress("a") },
     { input: "r", handler: () => handleKeyPress("r") },
+    // D は並び替えモードの「下に移動」専用。編集モードの削除は Backspace/Delete キー。
     { input: "d", handler: () => handleKeyPress("d") },
+    ...deleteKeySpecs(() => handleKeyPress(KEY_DELETE)),
     { input: "x", handler: () => handleKeyPress("x") },
     { input: "s", handler: () => handleKeyPress("s") },
     { input: "e", handler: () => handleKeyPress("e") },

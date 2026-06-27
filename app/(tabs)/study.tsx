@@ -59,7 +59,7 @@ const STUDY_TAB_SHORTCUTS = [
   { key: 'H',     descKey: 'shortcut.toggleHideEmpty' },
   { key: 'M',     descKey: 'shortcut.switchDeckTab' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
-  { key: '↑↓←→', descKey: 'shortcut.arrows' },
+  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 
@@ -279,11 +279,9 @@ export default function StudyScreen() {
     { input: '.', handler: () => router.navigate('/(tabs)/stats') },
     { input: ',', handler: () => router.navigate('/(tabs)') },
     { input: KeyCommand.keyInputEnter, handler: () => startStudyFocused() },
-    // 矢印キー: 上下=K/J、左右=,/.
+    // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約）
     { input: KeyCommand.keyInputUpArrow, handler: () => moveStudyFocus('prev') },
     { input: KeyCommand.keyInputDownArrow, handler: () => moveStudyFocus('next') },
-    { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)') },
-    { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)/stats') },
     // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
     { input: '\t', handler: () => router.navigate('/(tabs)/stats') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)') },

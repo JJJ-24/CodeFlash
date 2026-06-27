@@ -30,9 +30,6 @@ export default function SettingsScreen() {
   useKeyCommands([
     { input: '.', handler: () => router.navigate('/(tabs)') },
     { input: ',', handler: () => router.navigate('/(tabs)/stats') },
-    // 矢印キー: 左右=,/.（設定タブはリストが無いので上下は割り当てない）
-    { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)') },
-    { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)/stats') },
     // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
     { input: '\t', handler: () => router.navigate('/(tabs)') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/stats') },

@@ -55,7 +55,7 @@ const STATS_SHORTCUT_SECTIONS = [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: 'Space', descKey: 'shortcut.openChart' },
       { key: ', / .', descKey: 'shortcut.tabNextPrev' },
-      { key: '↑↓←→', descKey: 'shortcut.arrows' },
+      { key: '↑ / ↓', descKey: 'shortcut.arrows' },
       { key: 'ESC',  descKey: 'shortcut.esc' },
     ],
   },
@@ -1184,11 +1184,9 @@ export default function StatsScreen() {
     { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setPeriodPickerVisible(true); } },
     { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) handleToggleRankingByTime(); } },
-    // 矢印キー: 上下=K/J、左右=,/.（j/k・,/. と同じガードを適用）
+    // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約。j/k と同じガードを適用）
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('next'); } },
-    { input: KeyCommand.keyInputLeftArrow, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
-    { input: KeyCommand.keyInputRightArrow, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
     // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
     { input: '\t', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },

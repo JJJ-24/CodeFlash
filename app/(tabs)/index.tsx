@@ -48,7 +48,7 @@ const HOME_SHORTCUTS = [
   { key: 'F',     descKey: 'shortcut.search' },
   { key: 'T',     descKey: 'shortcut.tags' },
   { key: ', / .', descKey: 'shortcut.tabNextPrev' },
-  { key: '↑↓←→', descKey: 'shortcut.arrows' },
+  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 
@@ -344,11 +344,9 @@ export default function HomeScreen() {
         }
       },
     },
-    // 矢印キー: 上下=K/J、左右=,/.
+    // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約）
     { input: KeyCommand.keyInputUpArrow, handler: () => moveDeckFocus('prev') },
     { input: KeyCommand.keyInputDownArrow, handler: () => moveDeckFocus('next') },
-    { input: KeyCommand.keyInputLeftArrow, handler: () => router.navigate('/(tabs)/settings') },
-    { input: KeyCommand.keyInputRightArrow, handler: () => router.navigate('/(tabs)/study') },
     // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）。iPad の UIFocusSystem に取られないか実機確認用。
     { input: '\t', handler: () => router.navigate('/(tabs)/study') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/settings') },

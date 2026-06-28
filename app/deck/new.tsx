@@ -26,7 +26,7 @@ import { SqlInitModal } from '@/components/SqlInitModal';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { createDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
 
@@ -54,6 +54,10 @@ export default function NewDeckScreen() {
   const nameRef = useRef<TextInput>(null);
   const descRef = useRef<TextInput>(null);
   const editingRef = useRef(false);
+  // 画面スクロール（U/D・PgUp/PgDn・Home/End）用。
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const SCROLL_STEP = 240;
 
   async function handleCreate() {
     const trimmed = name.trim();
@@ -91,6 +95,11 @@ export default function NewDeckScreen() {
     setColorHex(cycle[(i + 1) % cycle.length]);
   }
 
+  // 画面スクロール（U/D は段階・Home/End は端へ）。アーカイブ等の下方フィールドへキーボードで到達するため。
+  function scrollBy(delta: number) {
+    scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
+  }
+
   // ハードキーボードのショートカット（034 / ネイティブ UIKeyCommand）。
   // 文字キーはテキスト欄フォーカス中は入力欄が消費するため、非編集時のみ発火する（住み分け）。
   // Tab/矢印は iPad のフォーカスエンジン対策で使わず、N/E でフィールドへ直接カーソルを移す。
@@ -100,12 +109,19 @@ export default function NewDeckScreen() {
   const subModalOpen = () => showIconPicker || showSqlInitModal || showDiscardModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
-    { input: 'e', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
+    { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
     { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleCreate(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
     { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
     { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
+    // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部）。
+    { input: 'u', handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
+    { input: 'd', handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
+    { input: KEY_PAGE_UP, handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
+    { input: KEY_PAGE_DOWN, handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
+    { input: KEY_HOME, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: KEY_END, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
@@ -169,6 +185,9 @@ export default function NewDeckScreen() {
       />
       <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
         <ScrollView
+          ref={scrollRef}
+          onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets

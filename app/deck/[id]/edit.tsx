@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { IconPickerModal } from '@/components/IconPickerModal';
@@ -28,6 +29,7 @@ import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
+import { deleteKeySpecs, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
 
@@ -56,6 +58,58 @@ export default function EditDeckScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+
+  // ネイティブキーコマンド用：各テキスト欄の ref と編集中フラグ（Esc の挙動分岐に使う）。
+  const nameRef = useRef<TextInput>(null);
+  const descRef = useRef<TextInput>(null);
+  const editingRef = useRef(false);
+  // 画面スクロール（U/D・PgUp/PgDn・Home/End）用。
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const SCROLL_STEP = 240;
+
+  // C キー：カラーを循環（UI の並び順＝青→プリセット→テーマ色→白黒）。
+  function cycleColor() {
+    const cycle: (string | null)[] = [PRIMARY_COLOR, ...DECK_PRESET_COLORS, DECK_THEME_COLOR, null];
+    const i = cycle.findIndex((c) => c === colorHex);
+    setColorHex(cycle[(i + 1) % cycle.length]);
+  }
+
+  // 画面スクロール（U/D は段階・Home/End は端へ）。アーカイブ等の下方フィールドへキーボードで到達するため。
+  function scrollBy(delta: number) {
+    scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
+  }
+
+  // 034: ハードキーボードショートカット（フック規約上、早期 return より前で呼ぶ。
+  // ハンドラが後方定義の値を参照するのはクロージャなので可＝キー押下時には初期化済み）。
+  // サブモーダル（アイコン/SQL/削除確認/破棄確認）は RN Modal。開いている間は親のキーを無効化する。
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showDeleteModal || showDiscardModal;
+  useKeyCommands([
+    { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
+    { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
+    { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
+    { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
+    { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
+    { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
+    { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
+    { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setArchived((v) => !v); } }, // アーカイブ切替（全画面で E に統一）
+    ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
+    // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部）。
+    { input: 'u', handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
+    { input: 'd', handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
+    { input: KEY_PAGE_UP, handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
+    { input: KEY_PAGE_DOWN, handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
+    { input: KEY_HOME, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: KEY_END, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (subModalOpen()) return; // モーダル側の Esc に委ねる
+        if (editingRef.current) { Keyboard.dismiss(); return; }
+        handleClose();
+      },
+    },
+  ]);
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -152,6 +206,9 @@ export default function EditDeckScreen() {
       />
       <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
         <ScrollView
+          ref={scrollRef}
+          onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
@@ -161,6 +218,7 @@ export default function EditDeckScreen() {
               {t('deck.name')}
             </Text>
             <TextInput
+              ref={nameRef}
               style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
               placeholder={t('deck.namePlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
@@ -168,6 +226,9 @@ export default function EditDeckScreen() {
               onChangeText={setName}
               maxLength={50}
               returnKeyType="next"
+              onFocus={() => { editingRef.current = true; }}
+              onBlur={() => { editingRef.current = false; }}
+              onSubmitEditing={() => descRef.current?.focus()}
               autoCorrect={false}
               spellCheck={false}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
@@ -178,6 +239,7 @@ export default function EditDeckScreen() {
               {t('deck.description')}
             </Text>
             <TextInput
+              ref={descRef}
               style={[styles.input, styles.multiline, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
               placeholder={t('deck.descriptionPlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
@@ -185,6 +247,8 @@ export default function EditDeckScreen() {
               onChangeText={setDescription}
               multiline
               numberOfLines={3}
+              onFocus={() => { editingRef.current = true; }}
+              onBlur={() => { editingRef.current = false; }}
               autoCorrect={false}
               spellCheck={false}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}

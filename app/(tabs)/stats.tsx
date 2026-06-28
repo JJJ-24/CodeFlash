@@ -551,6 +551,47 @@ function DeckPickerSheet({
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
   const allActive = selectedIds.length === 0;
 
+  // キーボード操作（034・複数選択）：すべて(0) ＋ デッキ(1..n) を J/K でフォーカス、Space で選択トグル。
+  const total = decks.length + 1;
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const viewportHRef = useRef(0);
+  const itemLayouts = useRef<Map<number, { y: number; h: number }>>(new Map());
+  useEffect(() => { if (visible) setFocusedIndex(0); }, [visible]);
+
+  function ensureVisible(index: number) {
+    const l = itemLayouts.current.get(index);
+    if (!l) return;
+    const top = scrollYRef.current;
+    const vh = viewportHRef.current;
+    if (l.y < top + 8) scrollRef.current?.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
+    else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
+  }
+  function move(dir: number) {
+    setFocusedIndex((p) => {
+      const next = (p + dir + total) % total;
+      setTimeout(() => ensureVisible(next), 0);
+      return next;
+    });
+  }
+  function activateFocused() {
+    if (focusedIndex === 0) { onClearAll(); return; }
+    const deck = decks[focusedIndex - 1];
+    if (deck) onToggle(deck.id);
+  }
+  useKeyCommands([
+    { input: 'j', handler: () => { if (visible) move(1); } },
+    { input: 'k', handler: () => { if (visible) move(-1); } },
+    { input: ' ', handler: () => { if (visible) activateFocused(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) onClose(); } },
+    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
+      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
+    ]) as { input: string; handler: () => void }[]),
+  ], visible);
+
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
@@ -568,10 +609,18 @@ function DeckPickerSheet({
         <Pressable onPress={onClose} style={[sheetStyles.closeBtn, { position: 'absolute', top: 14, right: 16, zIndex: 1 }]}>
           <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
         </Pressable>
-        <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={sheetStyles.body}>
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          onLayout={(e) => { viewportHRef.current = e.nativeEvent.layout.height; }}
+          scrollEventThrottle={16}
+          style={{ maxHeight: 400 }}
+          contentContainerStyle={sheetStyles.body}
+        >
           {/* すべてのデッキ */}
           <Pressable
-            onPress={onClearAll}
+            onLayout={(e) => { itemLayouts.current.set(0, { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }); }}
+            onPress={() => { setFocusedIndex(0); onClearAll(); }}
             style={({ pressed }) => [
               {
                 paddingVertical: 14,
@@ -581,6 +630,8 @@ function DeckPickerSheet({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 backgroundColor: allActive ? theme.colors.primaryLight : 'transparent',
+                borderWidth: 2,
+                borderColor: focusedIndex === 0 ? theme.colors.primary : 'transparent',
               },
               pressed && !allActive && { backgroundColor: theme.colors.buttonBorder },
             ]}
@@ -589,12 +640,13 @@ function DeckPickerSheet({
               {t('stats.gradeRankingDeckAll')}
             </Text>
           </Pressable>
-          {decks.map((deck) => {
+          {decks.map((deck, di) => {
             const isSelected = selectedIds.includes(deck.id);
             return (
               <Pressable
                 key={deck.id}
-                onPress={() => onToggle(deck.id)}
+                onLayout={(e) => { itemLayouts.current.set(di + 1, { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }); }}
+                onPress={() => { setFocusedIndex(di + 1); onToggle(deck.id); }}
                 style={({ pressed }) => [
                   {
                     paddingVertical: 14,
@@ -604,6 +656,8 @@ function DeckPickerSheet({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     backgroundColor: isSelected ? theme.colors.primaryLight : 'transparent',
+                    borderWidth: 2,
+                    borderColor: focusedIndex === di + 1 ? theme.colors.primary : 'transparent',
                   },
                   pressed && !isSelected && { backgroundColor: theme.colors.buttonBorder },
                 ]}
@@ -675,6 +729,26 @@ function PeriodPickerSheet({
     { key: '7d',  labelKey: 'stats.gradeRankingPeriod7d' },
   ];
 
+  // キーボード操作（034・単一選択）：開いたとき現在値にフォーカス。J/K 移動、Space/Return で確定。
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  useEffect(() => {
+    if (visible) { const i = options.findIndex((o) => o.key === value); setFocusedIndex(i >= 0 ? i : 0); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+  function move(dir: number) { setFocusedIndex((p) => (p + dir + options.length) % options.length); }
+  function activateFocused() { const o = options[focusedIndex]; if (o) { onSelect(o.key); onClose(); } }
+  useKeyCommands([
+    { input: 'j', handler: () => { if (visible) move(1); } },
+    { input: 'k', handler: () => { if (visible) move(-1); } },
+    { input: ' ', handler: () => { if (visible) activateFocused(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) activateFocused(); } },
+    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
+      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
+    ]) as { input: string; handler: () => void }[]),
+  ], visible);
+
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
@@ -693,7 +767,7 @@ function PeriodPickerSheet({
           <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
         </Pressable>
         <View style={sheetStyles.body}>
-          {options.map((opt) => {
+          {options.map((opt, oi) => {
             const isSelected = value === opt.key;
             return (
               <Pressable
@@ -708,6 +782,8 @@ function PeriodPickerSheet({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     backgroundColor: isSelected ? theme.colors.primaryLight : 'transparent',
+                    borderWidth: 2,
+                    borderColor: focusedIndex === oi ? theme.colors.primary : 'transparent',
                   },
                   pressed && !isSelected && { backgroundColor: theme.colors.buttonBorder },
                 ]}
@@ -1205,7 +1281,8 @@ export default function StatsScreen() {
         if (focusedItem !== null) setFocusedItem(null);
       },
     },
-  ]);
+  // デッキ/期間ピッカー表示中は親キーを解除（各シートが同じ j/k 等を登録するため多重発火を防ぐ）。
+  ], !deckPickerVisible && !periodPickerVisible);
 
   // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {

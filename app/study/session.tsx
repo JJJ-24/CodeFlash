@@ -626,8 +626,9 @@ export default function StudySessionScreen() {
       { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
       { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
     ]) as { input: string; handler: () => void }[]),
-  // リンク一覧表示中は親キーを解除（LinksSheet が J/K・Return を持つため多重発火を防ぐ）。
-  ], !showLinksModal);
+  // リンク一覧/終了確認/ショートカット一覧の表示中は背景のショートカットを解除する
+  // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/専用 Return は別フックが担当）。
+  ], !showLinksModal && !showFinishModal && !showShortcutsModal);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
   useKeyCommands([
@@ -651,6 +652,18 @@ export default function StudySessionScreen() {
       },
     },
   ]);
+
+  // 終了確認/ショートカット一覧（OK のみのアラート）表示中の Return = OK。
+  // active ゲートで「アラート表示中のみ」登録（main は同時に解除されているので Return 重複しない）。
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (showFinishModal) { setShowFinishModal(false); finishSession(); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+      },
+    },
+  ], showFinishModal || showShortcutsModal);
 
   // iPhone 用インラインカスタムヘッダー（headerShown:false のため全状態で共通利用）
   const iPhoneHeader = !(Platform as any).isPad ? (

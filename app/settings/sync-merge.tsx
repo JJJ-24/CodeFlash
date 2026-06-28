@@ -149,7 +149,11 @@ export default function SyncMergeScreen() {
   );
 
   return (
-    <SettingsDetail title={t('sync.mergeTitle')} overlay={overlay}>
+    <SettingsDetail
+      title={t('sync.mergeTitle')}
+      overlay={overlay}
+      onBack={() => { if (modal) { onModalClose(); return; } router.back(); }}
+    >
       {loading ? (
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <ActivityIndicator color={theme.colors.primary} />

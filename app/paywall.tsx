@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -12,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { InfoModal } from '@/components/InfoModal';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -66,6 +68,16 @@ export default function PaywallScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring]   = useState(false);
   const [infoModal, setInfoModal]   = useState<{ message: string; onClose?: () => void } | null>(null);
+
+  // Esc / B = 戻る（情報モーダル表示中は先に閉じる）。
+  const goBack = () => {
+    if (infoModal) { const cb = infoModal.onClose; setInfoModal(null); cb?.(); return; }
+    router.back();
+  };
+  useKeyCommands([
+    { input: 'b', handler: goBack },
+    { input: KeyCommand.keyInputEscape, handler: goBack },
+  ]);
 
   useEffect(() => {
     fetchOfferings()

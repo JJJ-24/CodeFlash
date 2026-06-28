@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -205,6 +205,7 @@ function ScheduleModal({
 export default function NotificationSettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
   const db = useSQLiteContext();
   const { bottom: bottomInset } = useSafeAreaInsets();
   const { notificationEnabled, notificationHour, notificationMinute, setNotificationEnabled } = useSettingsStore();
@@ -339,6 +340,12 @@ export default function NotificationSettingsScreen() {
   return (
     <SettingsDetail
       title={t('notification.title')}
+      onBack={() => {
+        if (showDeleteModal) { setShowDeleteModal(false); return; }
+        if (modalVisible) { closeModal(); return; }
+        if (permissionDenied) { setPermissionDenied(false); return; }
+        router.back();
+      }}
       overlay={
         <>
           {permissionDenied && (

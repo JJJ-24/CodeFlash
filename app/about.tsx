@@ -2,11 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Stack, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InfoModal } from '@/components/InfoModal';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { APP_STORE_REVIEW_URL, CONTACT_EMAIL, PRIVACY_URL, TERMS_URL } from '@/lib/links';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
@@ -22,6 +24,13 @@ export default function AboutScreen() {
   const isOpeningRef = useRef(false);
 
   const appVersion = Constants.expoConfig?.version ?? '';
+
+  // Esc / B = 戻る（エラー表示中は先に閉じる）。
+  const goBack = () => { if (errorVisible) { setErrorVisible(false); return; } router.back(); };
+  useKeyCommands([
+    { input: 'b', handler: goBack },
+    { input: KeyCommand.keyInputEscape, handler: goBack },
+  ]);
 
   async function openExternalLink(url: string) {
     if (isOpeningRef.current) return;

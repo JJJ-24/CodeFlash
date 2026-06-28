@@ -3,8 +3,11 @@ import { Stack, useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { popEscDismiss } from '@/lib/escStack';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 import { settingsStyles } from './styles';
@@ -14,6 +17,8 @@ interface Props {
   children: ReactNode;
   /** ScrollView の外（最前面）に重ねる要素。モーダルやローディングオーバーレイ用。 */
   overlay?: ReactNode;
+  /** 戻る挙動の上書き（モーダルを開いている画面は「先に閉じる」を渡す）。既定は router.back()。 */
+  onBack?: () => void;
 }
 
 /**
@@ -21,11 +26,22 @@ interface Props {
  * push 遷移時の戻るボタン残像を防ぐため headerShown:false ＋ インラインカスタムヘッダー
  * （CLAUDE.md のカスタムヘッダーパターン。about.tsx と同形）。
  */
-export function SettingsDetail({ title, children, overlay }: Props) {
+export function SettingsDetail({ title, children, overlay, onBack }: Props) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
+
+  // 戻る（Esc / B / 戻るボタン / FAB 共通）。まず最前面のインライン展開（SegmentedCard の info 等）を
+  // 閉じ、無ければ onBack（モーダルを先に閉じる等）または router.back()。
+  const handleBack = () => {
+    if (popEscDismiss()) return;
+    if (onBack) onBack(); else router.back();
+  };
+  useKeyCommands([
+    { input: 'b', handler: handleBack },
+    { input: KeyCommand.keyInputEscape, handler: handleBack },
+  ]);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -45,7 +61,7 @@ export function SettingsDetail({ title, children, overlay }: Props) {
             </Text>
           </View>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
             hitSlop={4}
           >

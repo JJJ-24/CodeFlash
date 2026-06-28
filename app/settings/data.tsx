@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +29,7 @@ type ModalConfig =
 export default function DataSettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
   const db = useSQLiteContext();
   const { decks, setDecks, addDeck } = useDeckStore();
   const { setTags } = useTagStore();
@@ -286,7 +288,19 @@ export default function DataSettingsScreen() {
   );
 
   return (
-    <SettingsDetail title={t('dataManagement.title')} overlay={overlay}>
+    <SettingsDetail
+      title={t('dataManagement.title')}
+      overlay={overlay}
+      onBack={() => {
+        if (modal) { setModal(null); return; }
+        if (tsvDeckPickerVisible) { setTsvDeckPickerVisible(false); return; }
+        if (showExportInfo || showImportInfo || showTsvExportInfo || showTsvImportInfo) {
+          setShowExportInfo(false); setShowImportInfo(false); setShowTsvExportInfo(false); setShowTsvImportInfo(false);
+          return;
+        }
+        router.back();
+      }}
+    >
       {loading ? (
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <ActivityIndicator color={theme.colors.primary} />

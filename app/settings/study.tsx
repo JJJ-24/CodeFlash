@@ -62,7 +62,10 @@ export default function StudySettingsScreen() {
   }
 
   return (
-    <SettingsDetail title={t('settings.fsrs')}>
+    <SettingsDetail
+      title={t('settings.fsrs')}
+      onBack={() => { if (showRetentionInfo) { setShowRetentionInfo(false); return; } router.back(); }}
+    >
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         {/* プリセット */}
         <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>

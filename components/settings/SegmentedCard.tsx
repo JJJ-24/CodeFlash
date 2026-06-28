@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { pushEscDismiss, removeEscDismiss } from '@/lib/escStack';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 import { settingsStyles as styles } from './styles';
@@ -19,6 +20,12 @@ interface SegmentedCardProps<T extends string> {
 export function SegmentedCard<T extends string>({ label, options, value, onChange, info }: SegmentedCardProps<T>) {
   const theme = useTheme();
   const [showInfo, setShowInfo] = useState(false);
+  // インライン info 展開中は Esc スタックへ閉じる処理を登録（SettingsDetail の Esc/戻るが先に閉じる）。
+  useEffect(() => {
+    if (!showInfo) return;
+    const id = pushEscDismiss(() => setShowInfo(false));
+    return () => removeEscDismiss(id);
+  }, [showInfo]);
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

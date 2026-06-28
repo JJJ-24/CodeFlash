@@ -294,7 +294,19 @@ export default function SyncSettingsScreen() {
   const syncing = syncStatus === 'syncing';
 
   return (
-    <SettingsDetail title={t('sync.title')} overlay={overlay}>
+    <SettingsDetail
+      title={t('sync.title')}
+      overlay={overlay}
+      onBack={() => {
+        if (modal) { setModal(null); return; }
+        if (showTagline || showRestoreSectionInfo || showAdvancedInfo || showUploadInfo || showDownloadInfo || showResetInfo || showRestoreInfo || showMergeInfo) {
+          setShowTagline(false); setShowRestoreSectionInfo(false); setShowAdvancedInfo(false); setShowUploadInfo(false);
+          setShowDownloadInfo(false); setShowResetInfo(false); setShowRestoreInfo(false); setShowMergeInfo(false);
+          return;
+        }
+        router.back();
+      }}
+    >
       {/* セクション1: iCloud 同期カード */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.notificationRow}>

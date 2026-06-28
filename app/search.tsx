@@ -433,6 +433,8 @@ export default function SearchScreen() {
         if (isPro && focusedIndex !== null && results[focusedIndex]) setStatsCardId(results[focusedIndex].id);
     } },
     { input: 'p', handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
+    // B＝戻る（ホーム）。入力欄フォーカス中は TextInput が消費するため「カーソル無し時のみ」発火。
+    { input: 'b', handler: () => { if (overlayOpen() || editingRef.current) return; router.back(); } },
     // 情報モーダル（OK のみ）表示中は Return=OK で閉じる。他オーバーレイ表示中は無効。
     { input: KeyCommand.keyInputEnter, handler: () => { if (showSearchInfo) { setShowSearchInfo(false); return; } if (overlayOpen()) return; openFocusedCard(); } },
     // Delete＝検索文字クリア＆入力欄へカーソル（Backspace/前方Delete 両対応）。

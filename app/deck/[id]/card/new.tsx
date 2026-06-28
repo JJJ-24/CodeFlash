@@ -6,10 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { constants as KeyCommand } from 'react-native-key-command';
+
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
@@ -38,6 +41,23 @@ export default function NewCardScreen() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>('edit');
+
+  // 親モーダル（破棄確認/ショートカット一覧）表示中はエディタのキーを止め、Esc で閉じる（破棄は Return 非割当）。
+  const blockingModalOpen = showDiscardModal || showShortcutsModal;
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (showDiscardModal) { setShowDiscardModal(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+      },
+    },
+    // ショートカット一覧（OK のみ）は Return でも閉じる。破棄確認は確定操作のため Return 非割当。
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); },
+    },
+  ], blockingModalOpen);
 
   const initialSnapshotRef = useRef<string>(
     JSON.stringify({
@@ -110,7 +130,7 @@ export default function NewCardScreen() {
         }}
       />
       <View style={styles.container}>
-        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} deckSqlInit={currentDeck?.sqlInit} onCancel={handleClose} onModeChange={setEditorMode} />
+        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} deckSqlInit={currentDeck?.sqlInit} onCancel={handleClose} onModeChange={setEditorMode} suspendKeys={blockingModalOpen} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Ionicons name="checkmark-sharp" size={26} color="#FFF" />

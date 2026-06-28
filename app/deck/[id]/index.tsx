@@ -114,6 +114,9 @@ export default function DeckDetailScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [infoModal, setInfoModal] = useState<{ title?: string; message: React.ReactNode } | null>(null);
+  // 閉じる（infoModal=null）瞬間にフェード中の中身が空にならないよう、直前の内容を保持する。
+  const lastInfoModalRef = useRef<{ title?: string; message: React.ReactNode } | null>(null);
+  if (infoModal) lastInfoModalRef.current = infoModal;
   const [pendingMoveDeck, setPendingMoveDeck] = useState<Deck | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -578,11 +581,16 @@ export default function DeckDetailScreen() {
     // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('next'); } },
-    // ESC: オーバーレイ → 選択モード解除 → 戻る（階層ディスマス）
+  // 削除確認/移動確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
+  // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
+  ], !showDeckPicker && !showDeleteModal && !pendingMoveDeck && !infoModal && !showShortcutsModal);
+
+  // ESC は常時有効：デッキ選択はピッカー側へ委譲、以降オーバーレイ → 選択モード解除 → 戻る。削除系は Return 非割当。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
-        if (showDeckPicker) { setShowDeckPicker(false); return; }
+        if (showDeckPicker) return; // DeckPickerModal 側の Esc が閉じる
         if (statsCardId !== null) { setStatsCardId(null); return; }
         if (showDeleteModal) { setShowDeleteModal(false); return; }
         if (pendingMoveDeck) { setPendingMoveDeck(null); return; }
@@ -592,8 +600,19 @@ export default function DeckDetailScreen() {
         router.back();
       },
     },
-  // デッキ選択モーダル表示中は親キーを解除（DeckPickerModal と同じ j/k 等の多重登録による多重発火を防ぐ）。
-  ], !showDeckPicker);
+  ]);
+
+  // 「OK のみ」アラート（情報/ショートカット一覧/移動確認）は Return=OK。表示中のみ有効（main は解除済み）。
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (infoModal) { setInfoModal(null); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (pendingMoveDeck) { doMove(); return; }
+      },
+    },
+  ], Boolean(infoModal) || showShortcutsModal || Boolean(pendingMoveDeck));
 
   if (!deck) return null;
 
@@ -1050,8 +1069,8 @@ export default function DeckDetailScreen() {
       />
       <InfoModal
         visible={!!infoModal}
-        title={infoModal?.title}
-        message={infoModal?.message ?? ''}
+        title={lastInfoModalRef.current?.title}
+        message={lastInfoModalRef.current?.message ?? ''}
         onClose={() => setInfoModal(null)}
       />
       <ConfirmModal

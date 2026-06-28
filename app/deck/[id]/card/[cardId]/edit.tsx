@@ -6,8 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { constants as KeyCommand } from 'react-native-key-command';
+
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
@@ -45,6 +48,25 @@ export default function EditCardScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>('edit');
+
+  // 親モーダル（削除確認/破棄確認/ショートカット一覧）表示中はエディタのキーを止め、Esc で閉じる。
+  // 削除/破棄は確定操作のため Return は割り当てない（タップのみ）。フック規約上、早期 return より前で呼ぶ。
+  const blockingModalOpen = showDeleteModal || showDiscardModal || showShortcutsModal;
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (showDeleteModal) { setShowDeleteModal(false); return; }
+        if (showDiscardModal) { setShowDiscardModal(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+      },
+    },
+    // ショートカット一覧（OK のみ）は Return でも閉じる。削除/破棄は確定操作のため Return 非割当。
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); },
+    },
+  ], blockingModalOpen);
   const [archived, setArchived] = useState(false);
   const initialSnapshotRef = useRef<string | null>(null);
 
@@ -192,6 +214,7 @@ export default function EditCardScreen() {
           onModeChange={setEditorMode}
           archived={archived}
           onArchivedChange={setArchived}
+          suspendKeys={blockingModalOpen}
         />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>

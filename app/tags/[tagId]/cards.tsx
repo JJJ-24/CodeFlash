@@ -259,11 +259,16 @@ export default function TagCardsScreen() {
     // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null) return; moveFocus('next'); } },
-    // ESC: オーバーレイ → 選択モード解除 → 戻る
+  // 削除確認/タグ外し確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
+  // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
+  ], !showDeckPicker && !showDeleteModal && !showRemoveTagModal && !showTagCardsInfo && !showShortcutsModal);
+
+  // ESC は常時有効：デッキ選択はピッカー側に委譲、以降オーバーレイ → 選択モード解除 → 戻る。削除系は Return 非割当。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
-        if (showDeckPicker) { setShowDeckPicker(false); return; }
+        if (showDeckPicker) return; // DeckPickerModal 側の Esc が閉じる
         if (statsCardId !== null) { setStatsCardId(null); return; }
         if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteCard(null); return; }
         if (showRemoveTagModal) { setShowRemoveTagModal(false); return; }
@@ -273,8 +278,18 @@ export default function TagCardsScreen() {
         router.back();
       },
     },
-  // デッキ選択モーダル表示中は親キーを解除（多重発火防止）。
-  ], !showDeckPicker);
+  ]);
+
+  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK（閉じる）。表示中のみ有効（main は解除済み）。
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (showTagCardsInfo) { setShowTagCardsInfo(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+      },
+    },
+  ], showTagCardsInfo || showShortcutsModal);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

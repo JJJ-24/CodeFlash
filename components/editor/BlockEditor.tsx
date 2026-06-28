@@ -115,6 +115,8 @@ interface Props {
   /** カードのアーカイブ状態。onArchivedChange を渡したときだけ末尾にトグルを表示する（編集時のみ） */
   archived?: boolean;
   onArchivedChange?: (v: boolean) => void;
+  /** 親画面のモーダル（カード削除確認・破棄確認）表示中はエディタのキーを止める */
+  suspendKeys?: boolean;
   ref?: Ref<BlockEditorRef>;
 }
 
@@ -134,6 +136,7 @@ export function BlockEditor({
   onModeChange,
   archived,
   onArchivedChange,
+  suspendKeys = false,
   ref,
 }: Props) {
   const { t } = useTranslation();
@@ -932,10 +935,11 @@ export function BlockEditor({
       { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
       { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
     ]) as { input: string; handler: () => void }[]),
-  ]);
+  // ブロック削除確認中・親モーダル（カード削除/破棄確認）表示中はナビ系を解除（背景キー抑止）。
+  ], !suspendKeys && pendingDeleteBlock === null);
 
   // ESC は編集中も含めて常時有効（編集中ブロックを抜ける／削除確認を閉じる／キャンセル）。
-  // ESC は優先フラグもフォーカスエンジン競合も無いので、編集中に1つだけ登録しても不安定化しない。
+  // ただし親モーダル表示中は親側が Esc を処理するため解除する。
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
@@ -953,7 +957,7 @@ export function BlockEditor({
         onCancel?.();
       },
     },
-  ]);
+  ], !suspendKeys);
 
   return (
     <KeyboardAvoidingView

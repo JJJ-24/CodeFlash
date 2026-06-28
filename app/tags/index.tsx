@@ -269,7 +269,12 @@ export default function TagsScreen() {
     // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (showColorPicker) return; moveFocus('next'); } },
-    // ESC: オーバーレイ → 選択モード解除 → 戻る
+  // 削除確認/一括削除/情報/ショートカット一覧の表示中は背景ナビを解除（カラーピッカーは C/Shift+C/Return を
+  // 使うので除外＝main 有効のまま。各ナビは showColorPicker を個別ガード済み）。
+  ], !showDeleteModal && !showBulkDeleteModal && !showTagListInfo && !showShortcutsModal);
+
+  // ESC は常時有効：オーバーレイ → 選択モード解除 → 戻る。削除系は Return 非割当（タップのみ）。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
@@ -283,6 +288,17 @@ export default function TagsScreen() {
       },
     },
   ]);
+
+  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK（閉じる）。表示中のみ有効（main は解除済み）。
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (showTagListInfo) { setShowTagListInfo(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+      },
+    },
+  ], showTagListInfo || showShortcutsModal);
 
   return (
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>

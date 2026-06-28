@@ -898,6 +898,9 @@ export function BlockEditor({
     { input: "u", handler: () => handleKeyPress("u") },
     { input: ",", handler: () => handleKeyPress(",") },
     { input: ".", handler: () => handleKeyPress(".") },
+    // H/L でもタブ切替（,/. と同じ。横方向＝タブの流儀を学習画面/アイコン選択と統一）
+    { input: "h", handler: () => handleKeyPress(",") },
+    { input: "l", handler: () => handleKeyPress(".") },
     // タブ直接選択（表/裏/メモ）
     { input: "1", handler: () => handleKeyPress("1") },
     { input: "2", handler: () => handleKeyPress("2") },

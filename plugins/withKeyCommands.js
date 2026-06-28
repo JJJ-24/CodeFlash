@@ -10,12 +10,15 @@ const IMPORT_LINE = '#import <react-native-key-command/HardwareShortcuts.h>';
 
 const METHODS = `
   // 034: ハードウェアキーを責任者チェーン最下層(AppDelegate)で受ける（react-native-key-command）
-  // 矢印・Tab に固定で優先を立てる（iPad の UIFocusSystem より優先＝非編集時のナビが効く）。
-  // 編集中の矢印カーソル移動は「編集中は ESC 以外のコマンドを JS 側で登録解除する」ことで実現する
-  // （優先を動的に出し分けると iPad がフリーズするため、優先は固定・登録の有無で制御する）。
+  // 矢印・Tab の優先（wantsPriorityOverSystemBehavior）は iPad 限定で立てる。
+  // ・iPad: UIFocusSystem が修飾なし矢印/Tab を横取りするため優先が必須（固定。動的出し分けはフリーズ）。
+  //   編集が起きる画面では矢印/Tab を JS 側で最初から登録しない運用で編集中カーソル移動と両立させる。
+  // ・iPhone: フォーカスエンジンが無いので優先を立てない。立てるとテキスト編集中に矢印が
+  //   カーソル移動より優先されてキーコマンド（タブ切替等）が発火してしまう。優先なしなら
+  //   責任者チェーンで自然に住み分く（編集中＝入力欄が矢印消費／非編集＝キーコマンド発火）。
   public override var keyCommands: [UIKeyCommand]? {
     let commands = HardwareShortcuts.sharedInstance().keyCommands() as? [UIKeyCommand]
-    if #available(iOS 15.0, *) {
+    if #available(iOS 15.0, *), UIDevice.current.userInterfaceIdiom == .pad {
       let focusKeys: Set<String> = [
         UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow,
         UIKeyCommand.inputLeftArrow, UIKeyCommand.inputRightArrow, "\\t",

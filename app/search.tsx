@@ -59,6 +59,39 @@ function MultiSelectPickerModal({ visible, title, allLabel, items, selectedIds, 
   const { t } = useTranslation();
   const allActive = selectedIds.length === 0;
 
+  // 先頭に「すべて」行を含む1次元データ（キーボード操作のフォーカス対象）。
+  const data = useMemo<PickerItem[]>(() => [{ id: '__all__', name: allLabel }, ...items], [allLabel, items]);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const listRef = useRef<FlatList>(null);
+  useEffect(() => { setFocusedIndex(0); }, [visible]);
+
+  function move(dir: number) {
+    setFocusedIndex((p) => {
+      const n = data.length;
+      const next = (p + dir + n) % n;
+      setTimeout(() => listRef.current?.scrollToIndex({ index: next, viewPosition: 0.5, animated: true }), 0);
+      return next;
+    });
+  }
+  function activateFocused() {
+    const item = data[focusedIndex];
+    if (!item) return;
+    if (item.id === '__all__') onClearAll(); else onToggle(item.id);
+  }
+
+  // モーダル表示中のみ発火（visible ガード）。親検索画面のキーは overlayOpen() で無効化済み。
+  useKeyCommands([
+    { input: 'j', handler: () => { if (visible) move(1); } },
+    { input: 'k', handler: () => { if (visible) move(-1); } },
+    { input: ' ', handler: () => { if (visible) activateFocused(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) onClose(); } },
+    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
+      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
+    ]) as { input: string; handler: () => void }[]),
+  ], visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={pickerStyles.overlay} onPress={onClose}>
@@ -67,16 +100,19 @@ function MultiSelectPickerModal({ visible, title, allLabel, items, selectedIds, 
             {title}
           </Text>
           <FlatList
-            data={[{ id: '__all__', name: allLabel, color: undefined }, ...items]}
+            ref={listRef}
+            data={data}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
-            renderItem={({ item }) => {
+            onScrollToIndexFailed={() => {}}
+            renderItem={({ item, index }) => {
               const isAll = item.id === '__all__';
               const active = isAll ? allActive : selectedIds.includes(item.id);
+              const focused = focusedIndex === index;
               return (
                 <Pressable
-                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent' }]}
-                  onPress={() => { if (isAll) { onClearAll(); } else { onToggle(item.id); } }}
+                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent', borderWidth: 2, borderColor: focused ? theme.colors.primary : 'transparent' }]}
+                  onPress={() => { setFocusedIndex(index); if (isAll) { onClearAll(); } else { onToggle(item.id); } }}
                 >
                   {item.color ? (
                     <View style={[pickerStyles.colorDot, { backgroundColor: active ? theme.colors.primary : item.color }]} />
@@ -174,6 +210,40 @@ function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onT
   const sorted = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
   const allActive = selectedIds.length === 0;
 
+  // フォーカスは [すべて(0), ...sorted(1..n)] の通し index で管理（すべて行はヘッダー）。
+  const total = sorted.length + 1;
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const listRef = useRef<FlatList>(null);
+  useEffect(() => { setFocusedIndex(0); }, [visible]);
+
+  function move(dir: number) {
+    setFocusedIndex((p) => {
+      const next = (p + dir + total) % total;
+      setTimeout(() => {
+        if (next === 0) listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        else listRef.current?.scrollToIndex({ index: next - 1, viewPosition: 0.5, animated: true });
+      }, 0);
+      return next;
+    });
+  }
+  function activateFocused() {
+    if (focusedIndex === 0) { onClearAll(); return; }
+    const deck = sorted[focusedIndex - 1];
+    if (deck) onToggle(deck.id);
+  }
+
+  useKeyCommands([
+    { input: 'j', handler: () => { if (visible) move(1); } },
+    { input: 'k', handler: () => { if (visible) move(-1); } },
+    { input: ' ', handler: () => { if (visible) activateFocused(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) onClose(); } },
+    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
+      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
+    ]) as { input: string; handler: () => void }[]),
+  ], visible);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={pickerStyles.overlay} onPress={onClose}>
@@ -182,13 +252,15 @@ function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onT
             {t('card.filterByDeck')}
           </Text>
           <FlatList
+            ref={listRef}
             data={sorted}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
+            onScrollToIndexFailed={() => {}}
             ListHeaderComponent={
               <Pressable
-                style={[pickerStyles.item, { backgroundColor: allActive ? theme.colors.primaryLight : 'transparent' }]}
-                onPress={onClearAll}
+                style={[pickerStyles.item, { backgroundColor: allActive ? theme.colors.primaryLight : 'transparent', borderWidth: 2, borderColor: focusedIndex === 0 ? theme.colors.primary : 'transparent' }]}
+                onPress={() => { setFocusedIndex(0); onClearAll(); }}
               >
                 <View style={{ width: 10 }} />
                 <Text
@@ -199,12 +271,13 @@ function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onT
                 </Text>
               </Pressable>
             }
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const active = selectedIds.includes(item.id);
+              const focused = focusedIndex === index + 1;
               return (
                 <Pressable
-                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent' }]}
-                  onPress={() => onToggle(item.id)}
+                  style={[pickerStyles.item, { backgroundColor: active ? theme.colors.primaryLight : 'transparent', borderWidth: 2, borderColor: focused ? theme.colors.primary : 'transparent' }]}
+                  onPress={() => { setFocusedIndex(index + 1); onToggle(item.id); }}
                 >
                   {item.iconName ? (
                     <DeckIcon iconName={item.iconName} colorHex={item.colorHex} style={{ marginRight: 0 }} />
@@ -380,7 +453,8 @@ export default function SearchScreen() {
         router.back();
       },
     },
-  ]);
+  // ピッカー表示中はメインのキー登録を外す（同じ j/k/Space 等の二重登録による多重発火を防ぐ）。
+  ], !deckPickerVisible && !tagPickerVisible);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

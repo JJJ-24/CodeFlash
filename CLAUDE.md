@@ -249,6 +249,8 @@ iPadOS は**ハードキーボードの「修飾なし矢印」と Tab を OS �
 - **デッキ編集キー**: 新規作成と同じ（N/M/C/I/Q/U/D/PgUp/PgDn/Home/End/S/X/Esc）＋ **E = アーカイブ切替**・**Delete = デッキ削除**（確認あり）。アーカイブは全画面で `E`、説明欄は `M`（スクロールの `U/D` と衝突回避のため `D`→`M`）。削除は全画面共通の Delete キー
 - **タグ新規作成キー**: N = タグ名にカーソル、C = カラー順送り（青→プリセット→テーマ色→白黒の循環。Shift+C で逆順）、U/D・PgUp/PgDn = スクロール、Home/End = 端へ、S = 保存、X = 閉じる、Esc = 編集解除/閉じる
 - **タグ編集キー**: 新規作成と同じ（N/C/U/D/PgUp/PgDn/Home/End/S/X/Esc）＋ **Delete = タグ削除**（確認あり・全画面共通の Delete キー）。タグには説明/アイコン/SQL/アーカイブが無い
+- **検索画面キー**（`app/search.tsx`・カーソル無し時）: D = デッキ選択、T = タグ選択、`,`/`.`（iPhoneは←/→）= フィールド切替（すべて/表面/裏面/メモ）、J/K（iPhoneは↑/↓）= 結果フォーカス移動、A = カード統計トグル（Pro・表示中の A/Esc で閉じる）、P/Return = フォーカスカード編集、Delete = 検索文字クリア＆入力欄へカーソル、Esc = 情報→閉じる/統計→閉じる/ピッカー表示中は委譲/編集中→カーソル解除/それ以外→戻る。検索欄は Return でもカーソル解除（onSubmitEditing で blur）
+- **検索デッキ/タグピッカーキー**（`search.tsx` 内 `DeckMultiSelectPickerModal`/`MultiSelectPickerModal`）: J/K（iPhoneは↑/↓）= フォーカス移動（「すべて」行含む・自動スクロール）、Space = 選択/解除（「すべて」行は全解除）、Return/Esc = 閉じる。`visible` ガードで表示中のみ発火、親検索画面のキーは `overlayOpen()` で無効化
 - **アイコン選択モーダルキー**（`IconPickerModal`）: `,`/`.`（H/L・iPhoneのみ←→）= 左右、J/K（iPhoneのみ↑↓）= 下/上の行（実セル座標で真上・真下の最近接を選ぶ）、Return = 選択して閉じる、Esc = 閉じる。フォーカスは青枠＋自動スクロール。矢印は iPad 非登録（フォーカスエンジン予約＝動的登録でフリーズの恐れ）
 - **SQL共通初期化モーダルキー**（`SqlInitModal`）: Esc = 閉じる（確定＝ライブ値保持）。全面テキストエディタのため他の文字キーは入力に消費される
 - **モーダル内キーと親画面の住み分け**: `IconPickerModal`/`SqlInitModal`/`ConfirmModal` 等は RN `<Modal>`（別 VC）。キーコマンドは `AppDelegate` に付くためモーダル表示中も発火しうる。各モーダル内 `useKeyCommands` は `visible` でガードし、**親フォーム（deck/new・deck/[id]/edit）は表示中のサブモーダルがあれば全ショートカットを早期 return で無効化**する（`subModalOpen()`）

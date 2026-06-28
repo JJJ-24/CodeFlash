@@ -70,14 +70,19 @@ export const KEY_END = (KeyCommand.constants?.keyInputEnd as string) || '\uF72B'
  * 動的に登録解除」しても、編集中にキャッシュが矢印/Tab を奪い続けカーソル移動/インデントが効かない。
  * そのため**編集が起きる画面（カードエディタ・学習画面）では矢印/Tab を最初から登録しない**運用にする。
  */
-export function useKeyCommands(specs: KeyCommandSpec[]) {
+export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) {
   const enabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const specsRef = useRef(specs);
   specsRef.current = specs;
 
+  // `active`：同じ入力（j/k/Space 等）を複数の useKeyCommands が同時登録するのを防ぐゲート。
+  // ネイティブ HardwareShortcut は isEqual/hash 未実装＝内容一致で重複保持されるため、常時マウントの
+  // モーダル（ピッカー）と親画面が同じキーを登録すると 1 押下で複数回発火する（J/K が2つ進む・Space が
+  // 偶数回トグルで相殺＝無反応 等）。表示側だけ active=true にして登録を一本化する。文字キー・iPhone
+  // 矢印のみを出し入れする用途に限る（iPad の矢印/Tab は元々登録しない＝フリーズ回避）。
   useFocusEffect(
     useCallback(() => {
-      if (!enabled) return;
+      if (!enabled || !active) return;
       const cmds = specsRef.current.map((s) => ({
         input: s.input,
         modifierFlags: s.modifierFlags ?? 0,
@@ -95,6 +100,6 @@ export function useKeyCommands(specs: KeyCommandSpec[]) {
         sub.remove();
         KeyCommand.unregisterKeyCommands(cmds);
       };
-    }, [enabled]),
+    }, [enabled, active]),
   );
 }

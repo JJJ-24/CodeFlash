@@ -1,8 +1,10 @@
 import { Stack, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,12 +16,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR } from '@/lib/theme';
-import { resolveTagColor } from '@/lib/tagColors';
+import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR, TAG_PRESET_COLORS } from '@/lib/theme';
+import { resolveTagColor, TAG_THEME_COLOR, TAG_MONO_COLOR } from '@/lib/tagColors';
 import { TagColorPicker } from '@/components/TagColorPicker';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { createTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
+import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { useTagStore } from '@/store/tags';
 
 export default function NewTagScreen() {
@@ -40,10 +43,52 @@ export default function NewTagScreen() {
   const isDirty = name.trim() !== '';
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
+  const nameRef = useRef<TextInput>(null);
+  const editingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const SCROLL_STEP = 240;
+
   function handleClose() {
     if (!isDirty) { router.back(); return; }
     setShowDiscardModal(true);
   }
+
+  // C キー：カラーを循環（TagColorPicker の並び順＝青→プリセット→テーマ色→白黒）。
+  function cycleColor() {
+    const cycle = [PRIMARY_COLOR, ...TAG_PRESET_COLORS, TAG_THEME_COLOR, TAG_MONO_COLOR];
+    const i = cycle.indexOf(color);
+    setColor(cycle[(i + 1) % cycle.length]);
+  }
+
+  function scrollBy(delta: number) {
+    scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
+  }
+
+  // 034: ハードキーボードショートカット。文字キーはテキスト欄フォーカス中は入力に消費される（住み分け）。
+  // Tab/矢印は不使用（iPad 対策）。破棄確認モーダル表示中は親キーを無効化。
+  const subModalOpen = () => showDiscardModal;
+  useKeyCommands([
+    { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
+    { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
+    { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
+    { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
+    // 画面スクロール。
+    { input: 'u', handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
+    { input: 'd', handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
+    { input: KEY_PAGE_UP, handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
+    { input: KEY_PAGE_DOWN, handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
+    { input: KEY_HOME, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: KEY_END, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (subModalOpen()) return;
+        if (editingRef.current) { Keyboard.dismiss(); return; }
+        handleClose();
+      },
+    },
+  ]);
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -81,18 +126,28 @@ export default function NewTagScreen() {
         }}
       />
       <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.name')}
             </Text>
             <TextInput
+              ref={nameRef}
               style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.md }]}
               placeholder={t('tag.namePlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
               onChangeText={(v) => { setName(v); setError(''); }}
               autoFocus
+              onFocus={() => { editingRef.current = true; }}
+              onBlur={() => { editingRef.current = false; }}
               autoCorrect={false}
               spellCheck={false}
               maxLength={50}

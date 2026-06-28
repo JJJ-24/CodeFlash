@@ -237,6 +237,23 @@ export default function HomeScreen() {
 
   const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, listRef, moveFocus: moveDeckFocus } = useListNavigation(displayedDecks, (deck) => deck.id);
 
+  // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート時のみ。フォーカスは ID 追跡で自動追従。
+  // 非表示（アーカイブ）デッキは元位置に固定したまま表示中だけを並べ替える（onDragEnd と同じ再構築）。
+  function moveDeckOrder(dir: 'up' | 'down') {
+    if (deckSortOrder !== 'manual' || focusedDeckIndex === null) return;
+    const to = dir === 'up' ? focusedDeckIndex - 1 : focusedDeckIndex + 1;
+    if (to < 0 || to >= displayedDecks.length) return;
+    const newDisplayed = [...displayedDecks];
+    const [moved] = newDisplayed.splice(focusedDeckIndex, 1);
+    newDisplayed.splice(to, 0, moved);
+    const visibleIds = new Set(newDisplayed.map((d) => d.id));
+    let vi = 0;
+    const full = sortedDecks.map((d) => (visibleIds.has(d.id) ? newDisplayed[vi++] : d));
+    reorderDecks(full);
+    updateDeckSortOrders(db, full.map((d) => d.id));
+    setTimeout(() => listRef.current?.scrollToIndex({ index: to, viewPosition: 0.5, animated: true }), 50);
+  }
+
   const StatsHeader = (
     <View style={styles.statsHeader}>
       <View style={styles.statsRow}>
@@ -314,6 +331,9 @@ export default function HomeScreen() {
     { input: 'm', handler: () => cycleSortOrder() },
     { input: 'j', handler: () => moveDeckFocus('next') },
     { input: 'k', handler: () => moveDeckFocus('prev') },
+    // U/D: フォーカス中のデッキを手動並べ替え（上へ/下へ）。手動ソート時のみ有効。
+    { input: 'u', handler: () => moveDeckOrder('up') },
+    { input: 'd', handler: () => moveDeckOrder('down') },
     {
       input: 'p',
       handler: () => {

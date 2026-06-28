@@ -507,6 +507,9 @@ export default function DeckDetailScreen() {
     },
     { input: 'j', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('next'); } },
     { input: 'k', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('prev'); } },
+    // U/D: フォーカス中のカードを手動並べ替え（上へ/下へ）。手動ソート・「すべて」・非選択モード時のみ有効。
+    { input: 'u', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveCardOrder('up'); } },
+    { input: 'd', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveCardOrder('down'); } },
     {
       input: 'a',
       handler: () => {
@@ -660,6 +663,20 @@ export default function DeckDetailScreen() {
     focusedCardIdRef.current = newId;
     setFocusedCardIdState(newId);
     if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+  }
+
+  // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート・「すべて」フィルター・非選択モード時のみ
+  // （ドラッグの有効条件と同じ）。フォーカスは ID 追跡で自動追従。
+  function moveCardOrder(dir: 'up' | 'down') {
+    if (selectionMode || selectedFilter !== 'all' || cardSortOrder !== 'manual' || focusedCardIndex === null) return;
+    const to = dir === 'up' ? focusedCardIndex - 1 : focusedCardIndex + 1;
+    if (to < 0 || to >= displayedCards.length) return;
+    const newOrder = [...displayedCards];
+    const [moved] = newOrder.splice(focusedCardIndex, 1);
+    newOrder.splice(to, 0, moved);
+    reorderCards(newOrder);
+    updateCardSortOrders(db, newOrder.map((c) => c.id));
+    setTimeout(() => listRef.current?.scrollToIndex({ index: to, viewPosition: 0.5, animated: true }), 50);
   }
 
   function toggleSelectAll() {

@@ -91,6 +91,19 @@ export default function TagsScreen() {
 
   const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
 
+  // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート・非選択モード時のみ。フォーカスは ID 追跡で自動追従。
+  function moveTagOrder(dir: 'up' | 'down') {
+    if (tagSortOrder !== 'manual' || selectionMode || focusedTagIndex === null) return;
+    const to = dir === 'up' ? focusedTagIndex - 1 : focusedTagIndex + 1;
+    if (to < 0 || to >= sortedTags.length) return;
+    const newOrder = [...sortedTags];
+    const [moved] = newOrder.splice(focusedTagIndex, 1);
+    newOrder.splice(to, 0, moved);
+    reorderTags(newOrder);
+    updateTagSortOrders(db, newOrder.map((tg) => tg.id));
+    setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: to, viewPosition: 0.5, animated: true }), 50);
+  }
+
   const selectedCardsCount = useMemo(
     () => sortedTags.filter(t => selectedTagIds.has(t.id)).reduce((sum, t) => sum + t.cardCount, 0),
     [sortedTags, selectedTagIds]
@@ -209,6 +222,9 @@ export default function TagsScreen() {
   useKeyCommands([
     { input: 'j', handler: () => { if (showColorPicker) return; moveFocus('next'); } },
     { input: 'k', handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
+    // U/D: フォーカス中のタグを手動並べ替え（上へ/下へ）。手動ソート・非選択モード時のみ有効。
+    { input: 'u', handler: () => { if (showColorPicker) return; moveTagOrder('up'); } },
+    { input: 'd', handler: () => { if (showColorPicker) return; moveTagOrder('down'); } },
     {
       input: ' ',
       handler: () => {

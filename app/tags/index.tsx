@@ -173,6 +173,16 @@ export default function TagsScreen() {
     setIsProcessing(false);
   }
 
+  // カラーピッカーの選択色を巡回（C=順送り / Shift+C=逆順）。タグ新規/編集と同じ操作感。
+  function cycleColor(dir: number) {
+    setPickedColor((cur) => {
+      const list = PRESET_COLORS as readonly string[];
+      const i = list.indexOf(cur);
+      const n = list.length;
+      return list[(i + dir + n) % n];
+    });
+  }
+
   useFocusEffect(
     useCallback(() => {
       lastFocusTimeRef.current = Date.now();
@@ -197,60 +207,68 @@ export default function TagsScreen() {
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。J/K は両モード共通、その他は
   // 選択/通常モードで分岐（旧 onKeyPress/onSubmitEditing と同じ割り当て）。
   useKeyCommands([
-    { input: 'j', handler: () => moveFocus('next') },
-    { input: 'k', handler: () => moveFocus('prev') },
+    { input: 'j', handler: () => { if (showColorPicker) return; moveFocus('next'); } },
+    { input: 'k', handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
     {
       input: ' ',
       handler: () => {
+        if (showColorPicker) return;
         if (selectionMode && focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
           toggleSelectTag(sortedTags[focusedTagIndex].id);
         }
       },
     },
-    { input: 'a', handler: () => { if (selectionMode) toggleSelectAll(); } },
+    { input: 'a', handler: () => { if (showColorPicker) return; if (selectionMode) toggleSelectAll(); } },
     {
       input: 'c',
       handler: () => {
+        // カラーピッカー表示中は C=順送り。選択モードで未表示なら C で開く。
+        if (showColorPicker) { cycleColor(1); return; }
         if (selectionMode && selectedTagIds.size > 0) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); }
       },
     },
+    { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (showColorPicker) cycleColor(-1); } },
     ...deleteKeySpecs(() => {
+      if (showColorPicker) return;
       if (selectionMode) {
         if (selectedTagIds.size > 0) setShowBulkDeleteModal(true);
       } else if (focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
         confirmDelete(sortedTags[focusedTagIndex]);
       }
     }),
-    { input: 's', handler: () => { if (selectionMode) exitSelectionMode(); else enterSelectionMode(); } },
+    { input: 's', handler: () => { if (showColorPicker) return; if (selectionMode) exitSelectionMode(); else enterSelectionMode(); } },
     {
       input: 'p',
       handler: () => {
+        if (showColorPicker) return;
         if (!selectionMode && focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
           router.push(`/tags/${sortedTags[focusedTagIndex].id}/edit`);
         }
       },
     },
-    { input: 'n', handler: () => { if (!selectionMode) router.push('/tags/new'); } },
+    { input: 'n', handler: () => { if (showColorPicker) return; if (!selectionMode) router.push('/tags/new'); } },
     {
       input: 'm',
       handler: () => {
-        if (selectionMode) return;
+        if (showColorPicker || selectionMode) return;
         const idx = SORT_OPTIONS.findIndex((o) => o.key === tagSortOrder);
         setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
       },
     },
-    { input: 'b', handler: () => { if (!selectionMode) router.back(); } },
+    { input: 'b', handler: () => { if (showColorPicker) return; if (!selectionMode) router.back(); } },
     {
       input: KeyCommand.keyInputEnter,
       handler: () => {
+        // カラーピッカー表示中は Return=適用。
+        if (showColorPicker) { handleBulkColorChange(); return; }
         if (!selectionMode && focusedTagIndex !== null && sortedTags[focusedTagIndex]) {
           router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: sortedTags[focusedTagIndex].id } });
         }
       },
     },
     // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
-    { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus('prev') },
-    { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus('next') },
+    { input: KeyCommand.keyInputUpArrow, handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
+    { input: KeyCommand.keyInputDownArrow, handler: () => { if (showColorPicker) return; moveFocus('next'); } },
     // ESC: オーバーレイ → 選択モード解除 → 戻る
     {
       input: KeyCommand.keyInputEscape,

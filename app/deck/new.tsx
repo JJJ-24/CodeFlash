@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
   Keyboard,
@@ -25,6 +26,7 @@ import { SqlInitModal } from '@/components/SqlInitModal';
 import type { DeckIconName } from '@/lib/deckIcons';
 import { createDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
 
@@ -47,6 +49,11 @@ export default function NewDeckScreen() {
   const language = 'ja';
   const [saving, setSaving] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+
+  // ネイティブキーコマンド用：各テキスト欄の ref と編集中フラグ（Esc の挙動分岐に使う）。
+  const nameRef = useRef<TextInput>(null);
+  const descRef = useRef<TextInput>(null);
+  const editingRef = useRef(false);
 
   async function handleCreate() {
     const trimmed = name.trim();
@@ -76,6 +83,34 @@ export default function NewDeckScreen() {
     if (!isDirty) { router.back(); return; }
     setShowDiscardModal(true);
   }
+
+  // C キー：カラーを循環（UI の並び順＝青→プリセット→テーマ色→白黒）。
+  function cycleColor() {
+    const cycle: (string | null)[] = [PRIMARY_COLOR, ...DECK_PRESET_COLORS, DECK_THEME_COLOR, null];
+    const i = cycle.findIndex((c) => c === colorHex);
+    setColorHex(cycle[(i + 1) % cycle.length]);
+  }
+
+  // ハードキーボードのショートカット（034 / ネイティブ UIKeyCommand）。
+  // 文字キーはテキスト欄フォーカス中は入力欄が消費するため、非編集時のみ発火する（住み分け）。
+  // Tab/矢印は iPad のフォーカスエンジン対策で使わず、N/E でフィールドへ直接カーソルを移す。
+  useKeyCommands([
+    { input: 'n', handler: () => nameRef.current?.focus() },
+    { input: 'e', handler: () => descRef.current?.focus() },
+    { input: 's', handler: () => { if (canSave) handleCreate(); } },
+    { input: 'x', handler: () => handleClose() },
+    { input: 'c', handler: () => cycleColor() },
+    { input: 'i', handler: () => { Keyboard.dismiss(); setShowIconPicker(true); } },
+    { input: 'q', handler: () => { if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        // 編集中は Esc でカーソル解除のみ。非編集なら閉じる（変更あれば破棄確認）。
+        if (editingRef.current) { Keyboard.dismiss(); return; }
+        handleClose();
+      },
+    },
+  ]);
 
   const { color: previewIconColor, bg: previewIconBg } = resolveDeckIconColors(colorHex, theme);
 
@@ -138,6 +173,7 @@ export default function NewDeckScreen() {
               {t('deck.name')}
             </Text>
             <TextInput
+              ref={nameRef}
               style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
               placeholder={t('deck.namePlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
@@ -146,6 +182,9 @@ export default function NewDeckScreen() {
               maxLength={50}
               autoFocus
               returnKeyType="next"
+              onFocus={() => { editingRef.current = true; }}
+              onBlur={() => { editingRef.current = false; }}
+              onSubmitEditing={() => descRef.current?.focus()}
               autoCorrect={false}
               spellCheck={false}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
@@ -156,6 +195,7 @@ export default function NewDeckScreen() {
               {t('deck.description')}
             </Text>
             <TextInput
+              ref={descRef}
               style={[styles.input, styles.multiline, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
               placeholder={t('deck.descriptionPlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
@@ -163,6 +203,8 @@ export default function NewDeckScreen() {
               onChangeText={setDescription}
               multiline
               numberOfLines={3}
+              onFocus={() => { editingRef.current = true; }}
+              onBlur={() => { editingRef.current = false; }}
               autoCorrect={false}
               spellCheck={false}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}

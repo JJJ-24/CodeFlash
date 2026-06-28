@@ -81,18 +81,22 @@
 本リポジトリ構成: ネイティブ `ios/`・`android/` がコミット済みの prebuild 構成。Expo `~54.0.33` / RN `0.81.5` / `newArchEnabled: true` / `expo-dev-client` 導入済み。ネイティブ組み込みは `expo run:ios` で可能。
 
 **`react-native-key-command`（Expensify, MIT）評価:**
+
 - 最新 `v1.0.15`、RN peer `>=0.70.4`。package.json に **codegen/Fabric の記述なし＝旧アーキ（legacy）ネイティブモジュール**。RN 0.81 + new arch では interop 層頼みで、動作保証なし（要実機確認）。
 - API: `import * as KeyCommand from 'react-native-key-command'` → `registerKeyCommands([{input, modifierFlags}])` / `unregisterKeyCommands` / `eventEmitter.addListener('onKeyCommand', cb)` / `addListener(cmd, cb)`。定数 `constants.keyInputEscape`・`keyInput{Up,Down,Left,Right}Arrow`・`keyModifierCommand/Shift/Control`。
 - **iOS セットアップが Obj-C `AppDelegate.m` 前提**（`- (NSArray *)keyCommands` と `handleKeyCommand:` を `HardwareShortcuts sharedInstance` に委譲）。**Expo 54 は Swift の `ExpoAppDelegate`** なので、Swift へ翻訳しつつ **prebuild で消えないよう config plugin で AppDelegate を注入**する必要がある（直接編集は `npx expo prebuild --clean` で消える）。← 本ライブラリ採用時の最大の手間/リスク。
 - 仕組み上、keyCommands を AppDelegate（責任者チェーン最下層）に置くため、**上位の `TextInput` がフォーカス中は単一キーが文字挿入され key command は発火しない＝住み分けが自然に成立**する見込み（修飾コンボ Cmd+B は TextInput が消費しないので発火）。
 
 **自前 Expo Module（Swift）評価:**
+
 - Expo Modules API は **new arch ネイティブで autolink・prebuild と相性良好**、外部依存ゼロ。
 - ただし「キーが無いとき自分が first responder になり `keyCommands` を返す」責任者チェーン制御を自前で実装する必要があり、ライブラリが解決済みの**一番難しい所を作ることになる**。
 
 **現時点の暫定方針（PoC で確定）:**
+
 1. まず `react-native-key-command` を **config plugin で Swift AppDelegate に注入**して PoC。new arch interop で動けば採用（設定の手間は初回のみ）。
 2. interop で不可なら **自前 Expo Module** に切替（responder 制御を実装）。
+
 - いずれも**実機（物理/Bluetooth キーボード）でのビルド・検証が必須**で、ここは要・実機作業。下記 PoC スクリーンで Phase 0 のチェック項目を一括検証する。
 
 #### Phase 0 実機検証結果（2026-06-26・採用確定）
@@ -107,6 +111,7 @@ iPhone 16e シミュレータ（new arch・Hardware Keyboard 接続）で PoC �
 - **未検証:** iPad の `Tab`（UIFocusSystem に取られる可能性）→ Phase 2 の iPad 検証で確認。
 
 **実装上の確定事項（Phase 1 へ引き継ぐ）:**
+
 - iOS セットアップ: ブリッジヘッダに `#import <react-native-key-command/HardwareShortcuts.h>`、`AppDelegate.swift`(`ExpoAppDelegate`) に `keyCommands` override と `@objc handleKeyCommand(_:)` を追加。
 - **`HardwareShortcuts.sharedInstance().keyCommands()` は Obj-C メソッドなので Swift では `()` 必須**（無いと常に nil で全く効かない。ハマりポイント）。
 - **イベント payload の `input` は登録時の数値定数ではなく iOS 特殊文字列で返る**（Esc=`uikeyinputescape`、矢印=`uikeyinputuparrow`/`...down/left/right`）。本実装のディスパッチはこの文字列でマッチさせる。

@@ -75,7 +75,7 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
 const SESSION_SHORTCUTS = [
   { key: "Space", descKey: "shortcut.flip" },
   { key: "1–4", descKey: "shortcut.grade" },
-  { key: ", / .", descKey: "shortcut.nextPrev" },
+  { key: ", / . ・H / L", descKey: "shortcut.nextPrev" },
   { key: "M", descKey: "shortcut.memo" },
   { key: "F", descKey: "shortcut.fullscreen" },
   { key: "J / K", descKey: "shortcut.focusNextPrev" },
@@ -84,7 +84,7 @@ const SESSION_SHORTCUTS = [
   { key: "U / D・PgUp / PgDn", descKey: "shortcut.scrollUpDown" },
   { key: "Home / End・⇧U/D", descKey: "shortcut.scrollTopBottom" },
   { key: "B", descKey: "shortcut.back" },
-  { key: "L", descKey: "shortcut.links" },
+  { key: "W", descKey: "shortcut.links" },
   { key: "P", descKey: "shortcut.pencil" },
   { key: "Q", descKey: "shortcut.finishSession" },
   { key: "↑↓←→", descKey: "shortcut.arrows" },
@@ -525,7 +525,7 @@ export default function StudySessionScreen() {
       handleFinishSession();
     } else if (key.toLowerCase() === "b") {
       safeBack();
-    } else if (key.toLowerCase() === "l") {
+    } else if (key.toLowerCase() === "w") {
       if (cardLinks.length > 0) { Keyboard.dismiss(); setShowLinksModal((v) => !v); }
     } else if (key.toLowerCase() === "p") {
       openCardEdit();
@@ -601,7 +601,10 @@ export default function StudySessionScreen() {
     { input: "d", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("end") },
     { input: "q", handler: () => handleKeyPress("q") },
     { input: "b", handler: () => handleKeyPress("b") },
-    { input: "l", handler: () => handleKeyPress("l") },
+    // H/L でもカード送り（,/. と同じ。iPad は矢印未登録なので H/L が左右ナビになる）。
+    { input: "h", handler: () => handleKeyPress(",") },
+    { input: "l", handler: () => handleKeyPress(".") },
+    { input: "w", handler: () => handleKeyPress("w") },
     { input: "p", handler: () => handleKeyPress("p") },
     { input: "1", handler: () => handleKeyPress("1") },
     { input: "2", handler: () => handleKeyPress("2") },

@@ -54,11 +54,12 @@ export default function NewTagScreen() {
     setShowDiscardModal(true);
   }
 
-  // C キー：カラーを循環（TagColorPicker の並び順＝青→プリセット→テーマ色→白黒）。
-  function cycleColor() {
+  // C キー：カラーを循環（TagColorPicker の並び順＝青→プリセット→テーマ色→白黒）。Shift+C で逆順。
+  function cycleColor(dir = 1) {
     const cycle = [PRIMARY_COLOR, ...TAG_PRESET_COLORS, TAG_THEME_COLOR, TAG_MONO_COLOR];
     const i = cycle.indexOf(color);
-    setColor(cycle[(i + 1) % cycle.length]);
+    const n = cycle.length;
+    setColor(cycle[(i + dir + n) % n]);
   }
 
   function scrollBy(delta: number) {
@@ -71,6 +72,7 @@ export default function NewTagScreen() {
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
+    { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
     { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     // 画面スクロール。

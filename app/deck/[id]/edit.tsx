@@ -68,11 +68,12 @@ export default function EditDeckScreen() {
   const scrollYRef = useRef(0);
   const SCROLL_STEP = 240;
 
-  // C キー：カラーを循環（UI の並び順＝青→プリセット→テーマ色→白黒）。
-  function cycleColor() {
+  // C キー：カラーを循環（UI の並び順＝青→プリセット→テーマ色→白黒）。Shift+C で逆順。
+  function cycleColor(dir = 1) {
     const cycle: (string | null)[] = [PRIMARY_COLOR, ...DECK_PRESET_COLORS, DECK_THEME_COLOR, null];
     const i = cycle.findIndex((c) => c === colorHex);
-    setColorHex(cycle[(i + 1) % cycle.length]);
+    const n = cycle.length;
+    setColorHex(cycle[(i + dir + n) % n]);
   }
 
   // 画面スクロール（U/D は段階・Home/End は端へ）。アーカイブ等の下方フィールドへキーボードで到達するため。
@@ -90,6 +91,7 @@ export default function EditDeckScreen() {
     { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
+    { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
     { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
     { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
     { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setArchived((v) => !v); } }, // アーカイブ切替（全画面で E に統一）

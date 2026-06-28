@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -13,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { searchCards, SEARCH_RESULT_LIMIT } from '@/lib/database/cards';
@@ -22,6 +24,8 @@ import { getAllTags } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
+import { useListNavigation } from '@/hooks/useListNavigation';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
 import { DeckIcon } from '@/components/DeckIcon';
@@ -321,6 +325,63 @@ export default function SearchScreen() {
 
   const hasFilter = selectedDeckIds.length > 0 || selectedTagIds.length > 0;
 
+  // ---- ハードキーボードショートカット（034） ----
+  const editingRef = useRef(false);
+  const { focusedIndex, listRef, moveFocus } = useListNavigation(results, (c) => c.id);
+
+  function cycleField(dir: number) {
+    const i = FIELD_OPTIONS.findIndex((o) => o.value === searchField);
+    const n = FIELD_OPTIONS.length;
+    const next = FIELD_OPTIONS[(i + dir + n) % n].value;
+    setSearchField(next);
+    setLastSearchField(next);
+  }
+
+  function openFocusedCard() {
+    if (focusedIndex === null) return;
+    const c = results[focusedIndex];
+    if (!c) return;
+    router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: c.deckId, cardId: c.id } });
+  }
+
+  // ピッカー/シート表示中は親キーを無効化（Esc は階層処理するので個別に判定）。
+  const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showSearchInfo;
+  useKeyCommands([
+    { input: 'd', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setDeckPickerVisible(true); } },
+    { input: 't', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setTagPickerVisible(true); } },
+    { input: ',', handler: () => { if (overlayOpen()) return; cycleField(-1); } },
+    { input: '.', handler: () => { if (overlayOpen()) return; cycleField(1); } },
+    { input: 'j', handler: () => { if (overlayOpen()) return; moveFocus('next'); } },
+    { input: 'k', handler: () => { if (overlayOpen()) return; moveFocus('prev'); } },
+    // A は統計シートのトグル（表示中の A で閉じる）。他のオーバーレイ表示中は無効。
+    { input: 'a', handler: () => {
+        if (deckPickerVisible || tagPickerVisible || showSearchInfo) return;
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (isPro && focusedIndex !== null && results[focusedIndex]) setStatsCardId(results[focusedIndex].id);
+    } },
+    { input: 'p', handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
+    // Delete＝検索文字クリア＆入力欄へカーソル（Backspace/前方Delete 両対応）。
+    ...deleteKeySpecs(() => { if (overlayOpen()) return; setQuery(''); inputRef.current?.focus(); }),
+    // 矢印は iPhone のみ（上下＝J/K、左右＝,/.）。
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => { if (overlayOpen()) return; moveFocus('next'); } },
+      { input: KeyCommand.keyInputUpArrow, handler: () => { if (overlayOpen()) return; moveFocus('prev'); } },
+      { input: KeyCommand.keyInputRightArrow, handler: () => { if (overlayOpen()) return; cycleField(1); } },
+      { input: KeyCommand.keyInputLeftArrow, handler: () => { if (overlayOpen()) return; cycleField(-1); } },
+    ]) as { input: string; handler: () => void }[]),
+    {
+      input: KeyCommand.keyInputEscape,
+      handler: () => {
+        if (showSearchInfo) { setShowSearchInfo(false); return; }
+        if (statsCardId !== null) { setStatsCardId(null); return; }
+        if (deckPickerVisible || tagPickerVisible) return; // ピッカー側の Esc に委ねる
+        if (editingRef.current) { Keyboard.dismiss(); return; }
+        router.back();
+      },
+    },
+  ]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -408,6 +469,9 @@ export default function SearchScreen() {
           onChangeText={setQuery}
           returnKeyType="search"
           clearButtonMode="never"
+          onFocus={() => { editingRef.current = true; }}
+          onBlur={() => { editingRef.current = false; }}
+          onSubmitEditing={() => inputRef.current?.blur()}
           autoCorrect={false}
           autoCapitalize="none"
           keyboardAppearance={theme.dark ? 'dark' : 'light'}
@@ -522,17 +586,19 @@ export default function SearchScreen() {
         </View>
       ) : (
         <FlatList
+          ref={listRef as any}
           style={{ flex: 1 }}
           data={results}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => {
+          onScrollToIndexFailed={() => {}}
+          renderItem={({ item, index }) => {
             const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
             const deckName = deckMap[item.deckId]?.name ?? '';
             return (
               <Pressable
-                style={[styles.resultItem, { backgroundColor: theme.colors.surface }]}
+                style={[styles.resultItem, { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: focusedIndex === index ? theme.colors.primary : 'transparent' }]}
                 onPress={() =>
                   router.push({
                     pathname: '/deck/[id]/card/[cardId]/edit',

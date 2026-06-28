@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +23,7 @@ import {
   cancelAllScheduledNotifications, requestPermission, scheduleFromDb,
 } from '@/lib/notifications';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore } from '@/store/settings';
 import type { NotificationSchedule } from '@/types';
 
@@ -221,6 +223,12 @@ export default function NotificationSettingsScreen() {
   const [editMinute, setEditMinute] = useState(0);
   const [editWeekdays, setEditWeekdays] = useState<number[]>([]);
   const [editLabel, setEditLabel] = useState('');
+
+  // 権限拒否情報（OK のみ）表示中は Return=OK で閉じる。スケジュール編集モーダルは入力欄が消費、
+  // 削除確認は確定操作のため Return 非割当。Esc/B は SettingsDetail の onBack が閉じる。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEnter, handler: () => { if (permissionDenied) setPermissionDenied(false); } },
+  ], permissionDenied);
 
   const loadSchedules = useCallback(async () => {
     const rows = await getAllSchedules(db);

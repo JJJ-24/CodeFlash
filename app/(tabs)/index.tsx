@@ -364,6 +364,17 @@ export default function HomeScreen() {
     },
   ]);
 
+  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK。表示中のみ有効（main は解除済み）。
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (showDeckListInfo) { setShowDeckListInfo(false); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+      },
+    },
+  ], showDeckListInfo || showShortcutsModal);
+
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>

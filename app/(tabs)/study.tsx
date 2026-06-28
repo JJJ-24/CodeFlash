@@ -76,6 +76,9 @@ export default function StudyScreen() {
   const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder, studyHideEmpty: hideEmpty, setStudyHideEmpty } = useSettingsStore();
 
   const [infoModal, setInfoModal] = useState<{ title?: string; message: React.ReactNode } | null>(null);
+  // 閉じる（null）瞬間にフェード中の中身が空にならないよう、直前の内容を保持する。
+  const lastInfoModalRef = useRef<{ title?: string; message: React.ReactNode } | null>(null);
+  if (infoModal) lastInfoModalRef.current = infoModal;
   const [dueCounts, setDueCounts] = useState<Record<string, number>>({});
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
   const [todayReviewedPerDeck, setTodayReviewedPerDeck] = useState<Record<string, number>>({});
@@ -285,7 +288,11 @@ export default function StudyScreen() {
     // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
     { input: '\t', handler: () => router.navigate('/(tabs)/stats') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)') },
-    // ESC: オーバーレイを閉じる → フォーカス解除（タブなので戻るは無し）
+  // 情報/ショートカット一覧（OK のみのアラート）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
+  ], !infoModal && !showShortcutsModal);
+
+  // ESC は常時有効：オーバーレイを閉じる → フォーカス解除（タブなので戻るは無し）。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
@@ -295,6 +302,17 @@ export default function StudyScreen() {
       },
     },
   ]);
+
+  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK。表示中のみ有効（main は解除済み）。
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (infoModal) { setInfoModal(null); return; }
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+      },
+    },
+  ], Boolean(infoModal) || showShortcutsModal);
 
   // アーカイブ済みデッキは学習対象から除外する
   const sortedDecks = useMemo(() => sortDecks(decks.filter((d) => !d.archived), deckSortOrder), [decks, deckSortOrder]);
@@ -629,8 +647,8 @@ export default function StudyScreen() {
 
       <InfoModal
         visible={!!infoModal}
-        title={infoModal?.title}
-        message={infoModal?.message ?? ''}
+        title={lastInfoModalRef.current?.title}
+        message={lastInfoModalRef.current?.message ?? ''}
         onClose={() => setInfoModal(null)}
       />
     </View>

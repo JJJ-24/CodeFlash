@@ -5,12 +5,14 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { createDeck, getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
@@ -38,6 +40,12 @@ export default function DataSettingsScreen() {
   const [tsvDeckPickerVisible, setTsvDeckPickerVisible] = useState(false);
   const [tsvAction, setTsvAction] = useState<'export' | 'import' | null>(null);
   const pendingTsvUriRef = useRef<string | null>(null);
+
+  // 「OK のみ」情報モーダル表示中は Return=OK で閉じる（確認モーダルは複数アクションのため Return 非割当）。
+  // Esc/B は SettingsDetail の onBack が閉じる。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEnter, handler: () => { if (modal?.kind === 'info') setModal(null); } },
+  ], modal?.kind === 'info');
   const tsvProcessingRef = useRef(false);
 
   async function doExport(includeImages: boolean) {

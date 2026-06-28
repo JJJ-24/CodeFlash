@@ -898,6 +898,9 @@ export default function StatsScreen() {
   const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string } | null>(null);
   const [showDetailStatsInfo, setShowDetailStatsInfo] = useState(false);
   const [sectionInfoModal, setSectionInfoModal] = useState<{ title: string; message: React.ReactNode } | null>(null);
+  // 閉じる（null）瞬間にフェード中の中身が空にならないよう、直前の内容を保持する。
+  const lastSectionInfoRef = useRef<{ title: string; message: React.ReactNode } | null>(null);
+  if (sectionInfoModal) lastSectionInfoRef.current = sectionInfoModal;
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -1266,14 +1269,19 @@ export default function StatsScreen() {
     // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
     { input: '\t', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
-    // ESC: 開いているオーバーレイ/シートを上から順に閉じる → フォーカス解除（タブなので戻るは無し）
+  // デッキ/期間ピッカー・月別シート・ショートカット一覧・情報モーダル表示中は背景ナビを解除（各シートの
+  // 多重発火防止＋アラート背後で 1-4/j/k 等が効かないように）。statsCardId/activeSheet は個別ガード済みで除外。
+  ], !deckPickerVisible && !periodPickerVisible && !monthlySheetData && !showShortcutsModal && !showDetailStatsInfo && sectionInfoModal === null);
+
+  // ESC は常時有効：開いているオーバーレイ/シートを上から順に閉じる → フォーカス解除（タブなので戻るは無し）。
+  // ピッカーは各シート側の Esc に委ねる。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (statsCardId !== null) { setStatsCardId(null); return; }
         if (activeSheet !== null) { closeSheet(); return; }
-        if (deckPickerVisible) { setDeckPickerVisible(false); return; }
-        if (periodPickerVisible) { setPeriodPickerVisible(false); return; }
+        if (deckPickerVisible || periodPickerVisible) return; // ピッカー側の Esc に委ねる
         if (monthlySheetData) { setMonthlySheetData(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (showDetailStatsInfo) { setShowDetailStatsInfo(false); return; }
@@ -1281,8 +1289,19 @@ export default function StatsScreen() {
         if (focusedItem !== null) setFocusedItem(null);
       },
     },
-  // デッキ/期間ピッカー表示中は親キーを解除（各シートが同じ j/k 等を登録するため多重発火を防ぐ）。
-  ], !deckPickerVisible && !periodPickerVisible);
+  ]);
+
+  // 「OK のみ」アラート（ショートカット一覧/詳細統計情報/セクション情報）は Return=OK。表示中のみ有効（main は解除済み）。
+  useKeyCommands([
+    {
+      input: KeyCommand.keyInputEnter,
+      handler: () => {
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (showDetailStatsInfo) { setShowDetailStatsInfo(false); return; }
+        if (sectionInfoModal) { setSectionInfoModal(null); return; }
+      },
+    },
+  ], showShortcutsModal || showDetailStatsInfo || sectionInfoModal !== null);
 
   // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {
@@ -1885,8 +1904,8 @@ export default function StatsScreen() {
       />
       <InfoModal
         visible={sectionInfoModal !== null}
-        title={sectionInfoModal?.title ?? ''}
-        message={sectionInfoModal?.message ?? ''}
+        title={lastSectionInfoRef.current?.title ?? ''}
+        message={lastSectionInfoRef.current?.message ?? ''}
         onClose={() => setSectionInfoModal(null)}
       />
       <PeriodPickerSheet

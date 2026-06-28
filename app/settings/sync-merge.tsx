@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { DeckIcon } from '@/components/DeckIcon';
@@ -10,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { type BackupDeckInfo, listDecksInBackup, mergeDeckFromBackup } from '@/lib/sync/deckMerge';
 import { syncErrorText } from '@/lib/sync/errorText';
@@ -116,6 +118,12 @@ export default function SyncMergeScreen() {
     setModal(null);
     if (backOnClose) router.back();
   }
+
+  // 「OK のみ」情報モーダル表示中は Return=OK で閉じる（backOnClose も onModalClose 経由で維持）。
+  // 確認モーダルは Return 非割当。Esc/B は SettingsDetail の onBack が閉じる。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEnter, handler: () => { if (modal?.kind === 'info') onModalClose(); } },
+  ], modal?.kind === 'info');
 
   const overlay = (
     <>

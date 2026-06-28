@@ -4,11 +4,13 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { syncErrorText } from '@/lib/sync/errorText';
 import {
@@ -263,6 +265,12 @@ export default function SyncSettingsScreen() {
       )}
     </>
   );
+
+  // 「OK のみ」情報モーダル表示中は Return=OK で閉じる（確認モーダルは複数アクションのため Return 非割当）。
+  // Esc/B は SettingsDetail の onBack が閉じる。早期 return より前で呼ぶ（フック規約）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEnter, handler: () => { if (modal?.kind === 'info') setModal(null); } },
+  ], modal?.kind === 'info');
 
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
   if (!isPro) {

@@ -433,7 +433,8 @@ export default function SearchScreen() {
         if (isPro && focusedIndex !== null && results[focusedIndex]) setStatsCardId(results[focusedIndex].id);
     } },
     { input: 'p', handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
-    { input: KeyCommand.keyInputEnter, handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
+    // 情報モーダル（OK のみ）表示中は Return=OK で閉じる。他オーバーレイ表示中は無効。
+    { input: KeyCommand.keyInputEnter, handler: () => { if (showSearchInfo) { setShowSearchInfo(false); return; } if (overlayOpen()) return; openFocusedCard(); } },
     // Delete＝検索文字クリア＆入力欄へカーソル（Backspace/前方Delete 両対応）。
     ...deleteKeySpecs(() => { if (overlayOpen()) return; setQuery(''); inputRef.current?.focus(); }),
     // 矢印は iPhone のみ（上下＝J/K、左右＝,/.）。
@@ -494,7 +495,7 @@ export default function SearchScreen() {
           >
             {t('card.searchTitle')}
           </Text>
-          <Pressable onPress={() => setShowSearchInfo(true)} hitSlop={8} accessibilityLabel={t('card.searchInfoLabel')}>
+          <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setShowSearchInfo(true); }} hitSlop={8} accessibilityLabel={t('card.searchInfoLabel')}>
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
           </Pressable>
         </View>

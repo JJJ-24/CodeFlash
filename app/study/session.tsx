@@ -626,7 +626,8 @@ export default function StudySessionScreen() {
       { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
       { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
     ]) as { input: string; handler: () => void }[]),
-  ]);
+  // リンク一覧表示中は親キーを解除（LinksSheet が J/K・Return を持つため多重発火を防ぐ）。
+  ], !showLinksModal);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
   useKeyCommands([

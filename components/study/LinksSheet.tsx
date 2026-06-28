@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { LinkItem } from '@/lib/study/extractLinks';
 
@@ -32,6 +34,36 @@ export function LinksSheet({ visible, onClose, links }: Props) {
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
 
+  // キーボード操作（034）：J/K（iPhoneは↑/↓）でフォーカス、Return/Space でリンク先へ。
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const listRef = useRef<FlatList>(null);
+  useEffect(() => { if (visible) setFocusedIndex(0); }, [visible]);
+
+  function move(dir: number) {
+    setFocusedIndex((p) => {
+      const n = links.length;
+      if (n === 0) return p;
+      const next = (p + dir + n) % n;
+      setTimeout(() => listRef.current?.scrollToIndex({ index: next, viewPosition: 0.5, animated: true }), 0);
+      return next;
+    });
+  }
+  function openFocused() {
+    const l = links[focusedIndex];
+    if (l) { onClose(); Linking.openURL(l.url); }
+  }
+  // 親（学習画面）のキーは表示中に active ゲートで解除済み。Esc は学習画面側が閉じる。
+  useKeyCommands([
+    { input: 'j', handler: () => { if (visible) move(1); } },
+    { input: 'k', handler: () => { if (visible) move(-1); } },
+    { input: ' ', handler: () => { if (visible) openFocused(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) openFocused(); } },
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
+      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
+    ]) as { input: string; handler: () => void }[]),
+  ], visible);
+
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
@@ -50,12 +82,14 @@ export function LinksSheet({ visible, onClose, links }: Props) {
           </Pressable>
         </View>
         <FlatList
+          ref={listRef}
           data={links}
           keyExtractor={(item) => item.url}
-          renderItem={({ item }) => (
+          onScrollToIndexFailed={() => {}}
+          renderItem={({ item, index }) => (
             <Pressable
-              style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }]}
-              onPress={() => { onClose(); Linking.openURL(item.url); }}
+              style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }, focusedIndex === index && { backgroundColor: theme.colors.primaryLight }]}
+              onPress={() => { setFocusedIndex(index); onClose(); Linking.openURL(item.url); }}
             >
               <View style={{ flex: 1 }}>
                 <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect } from 'react';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
   Keyboard,
@@ -13,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 interface Props {
@@ -39,6 +41,12 @@ export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
     if (!visible) Keyboard.dismiss();
   }, [visible]);
   useEffect(() => () => Keyboard.dismiss(), []);
+
+  // 全面テキストエディタのため、編集中も発火する Esc で「閉じる（確定＝ライブ値を保持）」だけを受ける。
+  // 非表示中は親画面の Esc に委ねるため visible でガードする。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
+  ]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>

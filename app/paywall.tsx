@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
@@ -68,6 +68,9 @@ export default function PaywallScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring]   = useState(false);
   const [infoModal, setInfoModal]   = useState<{ message: string; onClose?: () => void } | null>(null);
+  // 閉じる（null）瞬間にフェード中の中身が空にならないよう、直前の内容を保持する。
+  const lastInfoModalRef = useRef<{ message: string; onClose?: () => void } | null>(null);
+  if (infoModal) lastInfoModalRef.current = infoModal;
 
   // Esc / B = 戻る（情報モーダル表示中は先に閉じる）。
   const goBack = () => {
@@ -77,6 +80,8 @@ export default function PaywallScreen() {
   useKeyCommands([
     { input: 'b', handler: goBack },
     { input: KeyCommand.keyInputEscape, handler: goBack },
+    // 情報モーダル（OK のみ・購入/復元の結果）表示中は Return=OK で閉じる。
+    { input: KeyCommand.keyInputEnter, handler: () => { if (infoModal) { const cb = infoModal.onClose; setInfoModal(null); cb?.(); } } },
   ]);
 
   useEffect(() => {
@@ -222,7 +227,7 @@ export default function PaywallScreen() {
       </ScrollView>
       <InfoModal
         visible={infoModal !== null}
-        message={infoModal?.message ?? ''}
+        message={lastInfoModalRef.current?.message ?? ''}
         onClose={() => {
           const cb = infoModal?.onClose;
           setInfoModal(null);

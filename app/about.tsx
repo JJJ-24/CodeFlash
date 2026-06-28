@@ -30,6 +30,8 @@ export default function AboutScreen() {
   useKeyCommands([
     { input: 'b', handler: goBack },
     { input: KeyCommand.keyInputEscape, handler: goBack },
+    // エラー情報モーダル（OK のみ）表示中は Return=OK で閉じる。
+    { input: KeyCommand.keyInputEnter, handler: () => { if (errorVisible) setErrorVisible(false); } },
   ]);
 
   async function openExternalLink(url: string) {

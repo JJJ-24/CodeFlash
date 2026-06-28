@@ -567,6 +567,7 @@
     "startFocusedReview": "Start focused review",
     "delete": "Delete focused item/\nDelete card (no focus)",
     "tabNextPrevCard": "Switch tab\n(Front/Back/Memo)",
+    "tabSelectCard": "Select tab directly\n(Front/Back/Memo)",
     "cycleMode": "Cycle mode\n(Edit/Sort/Preview)",
     "toggleAddMenu": "Toggle add block menu",
     "addBlock": "Add block focused item",

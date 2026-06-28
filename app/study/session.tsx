@@ -82,7 +82,7 @@ const SESSION_SHORTCUTS = [
   { key: "R", descKey: "shortcut.runFocused" },
   { key: "E", descKey: "shortcut.editFocusedItem" },
   { key: "U / D・PgUp / PgDn", descKey: "shortcut.scrollUpDown" },
-  { key: "Home / End", descKey: "shortcut.scrollTopBottom" },
+  { key: "Home / End・⇧U/D", descKey: "shortcut.scrollTopBottom" },
   { key: "B", descKey: "shortcut.back" },
   { key: "L", descKey: "shortcut.links" },
   { key: "P", descKey: "shortcut.pencil" },
@@ -596,6 +596,9 @@ export default function StudySessionScreen() {
     // Home/End で最上部・最下部へ一気にスクロール。
     { input: KEY_HOME, handler: () => handleKeyPress("home") },
     { input: KEY_END, handler: () => handleKeyPress("end") },
+    // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
+    { input: "u", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("home") },
+    { input: "d", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("end") },
     { input: "q", handler: () => handleKeyPress("q") },
     { input: "b", handler: () => handleKeyPress("b") },
     { input: "l", handler: () => handleKeyPress("l") },

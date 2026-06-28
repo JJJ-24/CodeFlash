@@ -31,7 +31,7 @@ import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
-import { deleteKeySpecs, KEY_DELETE, useKeyCommands } from "@/lib/useKeyCommands";
+import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
@@ -462,6 +462,15 @@ export function BlockEditor({
       return;
     }
 
+    // 画面スクロール（全モード共通）。PgUp/PgDn=段階、Home/End=端へ。
+    const SCROLL_STEP = 240;
+    const curScrollY = () => scrollPosRef.current[activeTabRef.current] ?? 0;
+    const scrollByStep = (d: number) => scrollRef.current?.scrollTo({ y: Math.max(0, curScrollY() + d), animated: true });
+    if (key === KEY_PAGE_UP) { scrollByStep(-SCROLL_STEP); return; }
+    if (key === KEY_PAGE_DOWN) { scrollByStep(SCROLL_STEP); return; }
+    if (key === KEY_HOME) { scrollRef.current?.scrollTo({ y: 0, animated: true }); return; }
+    if (key === KEY_END) { scrollRef.current?.scrollToEnd({ animated: true }); return; }
+
     const cycleMode = () => {
       const modes: EditorMode[] = ["edit", "sort", "preview"];
       setEditorMode((prev) => modes[(modes.indexOf(prev) + 1) % 3]);
@@ -497,9 +506,9 @@ export function BlockEditor({
       return;
     }
 
-    // プレビューモードでは ',' / '.' / M / S / X のみ受け付け、
-    // J / K / R / T / Delete / E / A は無効化
-    if (isPreviewRef.current && k !== "m" && k !== "," && k !== "." && k !== "s" && k !== "x") {
+    // プレビューモードでは タブ操作（,/. と 1/2/3）・スクロール（U/D）・M/S/X のみ許可。
+    // J / K / R / T / Delete / E / A は無効化。
+    if (isPreviewRef.current && !["m", ",", ".", "s", "x", "u", "d", "1", "2", "3"].includes(k)) {
       return;
     }
 
@@ -570,6 +579,17 @@ export function BlockEditor({
       startEditFocusedBlock();
     } else if (k === "t") {
       scrollRef.current?.scrollToEnd({ animated: true });
+    } else if (k === "u") {
+      // 編集/プレビューモードの U/D は画面スクロール（並べ替えモードはブロック移動で上の inSort 分岐が処理）。
+      scrollByStep(-SCROLL_STEP);
+    } else if (k === "d") {
+      scrollByStep(SCROLL_STEP);
+    } else if (k === "1" || k === "2" || k === "3") {
+      // タブ直接選択（表/裏/メモ）。
+      const tabByNum: Record<string, Tab> = { "1": "front", "2": "back", "3": "memo" };
+      setEditTriggerMap({});
+      setRunTriggerMap({});
+      setActiveTab(tabByNum[k]);
     }
   }
 
@@ -878,6 +898,18 @@ export function BlockEditor({
     { input: "u", handler: () => handleKeyPress("u") },
     { input: ",", handler: () => handleKeyPress(",") },
     { input: ".", handler: () => handleKeyPress(".") },
+    // タブ直接選択（表/裏/メモ）
+    { input: "1", handler: () => handleKeyPress("1") },
+    { input: "2", handler: () => handleKeyPress("2") },
+    { input: "3", handler: () => handleKeyPress("3") },
+    // 画面スクロール（PgUp/PgDn=段階、Home/End=端へ。U/D は編集/プレビューでスクロール）
+    { input: KEY_PAGE_UP, handler: () => handleKeyPress(KEY_PAGE_UP) },
+    { input: KEY_PAGE_DOWN, handler: () => handleKeyPress(KEY_PAGE_DOWN) },
+    { input: KEY_HOME, handler: () => handleKeyPress(KEY_HOME) },
+    { input: KEY_END, handler: () => handleKeyPress(KEY_END) },
+    // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
+    { input: "u", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress(KEY_HOME) },
+    { input: "d", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress(KEY_END) },
     {
       input: KeyCommand.keyInputEnter,
       handler: () => {

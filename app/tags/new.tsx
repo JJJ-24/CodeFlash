@@ -82,6 +82,9 @@ export default function NewTagScreen() {
     { input: KEY_PAGE_DOWN, handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
     { input: KEY_HOME, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
     { input: KEY_END, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
+    // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
+    { input: 'u', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
+    { input: 'd', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {

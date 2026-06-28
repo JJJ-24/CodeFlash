@@ -347,7 +347,12 @@ export default function HomeScreen() {
     // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）。iPad の UIFocusSystem に取られないか実機確認用。
     { input: '\t', handler: () => router.navigate('/(tabs)/study') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/settings') },
-    // ESC: 開いているオーバーレイを閉じる → フォーカス解除（ホームはタブなので戻るは無し）
+  // アラート（削除確認/情報/ショートカット一覧）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
+  ], !showDeleteModal && !showShortcutsModal && !showDeckListInfo);
+
+  // ESC は常時有効：開いているオーバーレイを閉じる → フォーカス解除（ホームはタブなので戻るは無し）。
+  // 削除確認は「削除」操作のため Return は割り当てない（タップのみ）。Esc/タップでキャンセル。
+  useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {

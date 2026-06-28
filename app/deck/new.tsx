@@ -94,17 +94,22 @@ export default function NewDeckScreen() {
   // ハードキーボードのショートカット（034 / ネイティブ UIKeyCommand）。
   // 文字キーはテキスト欄フォーカス中は入力欄が消費するため、非編集時のみ発火する（住み分け）。
   // Tab/矢印は iPad のフォーカスエンジン対策で使わず、N/E でフィールドへ直接カーソルを移す。
+  // サブモーダル（アイコン/SQL/破棄確認）は RN Modal。開いている間はそのモーダル側が
+  // キーを処理するため、親画面のショートカットは無効化する（キーコマンドは AppDelegate に
+  // 付くため開いていても発火しうる＝明示ガードが必要）。
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showDiscardModal;
   useKeyCommands([
-    { input: 'n', handler: () => nameRef.current?.focus() },
-    { input: 'e', handler: () => descRef.current?.focus() },
-    { input: 's', handler: () => { if (canSave) handleCreate(); } },
-    { input: 'x', handler: () => handleClose() },
-    { input: 'c', handler: () => cycleColor() },
-    { input: 'i', handler: () => { Keyboard.dismiss(); setShowIconPicker(true); } },
-    { input: 'q', handler: () => { if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
+    { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
+    { input: 'e', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
+    { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleCreate(); } },
+    { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
+    { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
+    { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
+    { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
+        if (subModalOpen()) return; // モーダル側の Esc に委ねる
         // 編集中は Esc でカーソル解除のみ。非編集なら閉じる（変更あれば破棄確認）。
         if (editingRef.current) { Keyboard.dismiss(); return; }
         handleClose();

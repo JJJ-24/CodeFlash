@@ -592,7 +592,8 @@ export default function DeckDetailScreen() {
         router.back();
       },
     },
-  ]);
+  // デッキ選択モーダル表示中は親キーを解除（DeckPickerModal と同じ j/k 等の多重登録による多重発火を防ぐ）。
+  ], !showDeckPicker);
 
   if (!deck) return null;
 

@@ -273,7 +273,8 @@ export default function TagCardsScreen() {
         router.back();
       },
     },
-  ]);
+  // デッキ選択モーダル表示中は親キーを解除（多重発火防止）。
+  ], !showDeckPicker);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 
 import { DeckIcon } from '@/components/DeckIcon';
 import { sortDecks } from '@/lib/sortDecks';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { Deck } from '@/types';
@@ -30,11 +32,18 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
   const [newName, setNewName] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // キーボード操作（034）：新規作成行(あれば index 0) ＋ デッキ一覧をフォーカス。
+  const hasCreateRow = !!onCreateDeck;
+  const total = sortedDecks.length + (hasCreateRow ? 1 : 0);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const listRef = useRef<FlatList>(null);
+
   useEffect(() => {
     if (!visible) {
       setCreating(false);
       setNewName('');
       setSubmitting(false);
+      setFocusedIndex(0);
       // シートを閉じる際にキーボードを確実に閉じる。autoFocus の入力欄を開いたまま
       // 背景タップ・デッキ選択・親 unmount で閉じると、キーボード非表示通知が届かず
       // グローバル状態が固着して他画面が無限スクロールになるのを防ぐ。
@@ -58,6 +67,36 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
   }
 
   const canSubmit = newName.trim().length > 0 && !submitting;
+
+  function move(dir: number) {
+    setFocusedIndex((p) => {
+      const next = (p + dir + total) % total;
+      setTimeout(() => {
+        if (hasCreateRow && next === 0) listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        else listRef.current?.scrollToIndex({ index: hasCreateRow ? next - 1 : next, viewPosition: 0.5, animated: true });
+      }, 0);
+      return next;
+    });
+  }
+  function activateFocused() {
+    if (hasCreateRow && focusedIndex === 0) { setCreating(true); return; }
+    const deck = sortedDecks[hasCreateRow ? focusedIndex - 1 : focusedIndex];
+    if (deck) onSelect(deck);
+  }
+
+  // モーダル表示中のみ発火。新規作成の入力中は実 TextInput がキーを消費するため J/K 等は自然と無効
+  // （Esc は編集中も発火＝作成キャンセルに使う）。親画面のキーは active ゲートで解除済み。
+  useKeyCommands([
+    { input: 'j', handler: () => { if (visible) move(1); } },
+    { input: 'k', handler: () => { if (visible) move(-1); } },
+    { input: ' ', handler: () => { if (visible) activateFocused(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) activateFocused(); } },
+    { input: KeyCommand.keyInputEscape, handler: () => { if (!visible) return; if (creating) { setCreating(false); Keyboard.dismiss(); return; } onClose(); } },
+    ...(((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
+      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
+    ]) as { input: string; handler: () => void }[]),
+  ], visible);
 
   const header = onCreateDeck ? (
     creating ? (
@@ -88,7 +127,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
       </View>
     ) : (
       <Pressable
-        style={[styles.item, { borderBottomColor: theme.colors.border }]}
+        style={[styles.item, { borderBottomColor: theme.colors.border }, focusedIndex === 0 && { backgroundColor: theme.colors.primaryLight }]}
         onPress={() => setCreating(true)}
       >
         <Ionicons name="add" size={Math.round(theme.fontSize.xl)} color={theme.colors.primary} style={{ marginRight: 8 }} />
@@ -112,12 +151,14 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
               {title}
             </Text>
             <FlatList
+              ref={listRef}
               data={sortedDecks}
               keyExtractor={(item) => item.id}
               ListHeaderComponent={header}
-              renderItem={({ item }) => (
+              onScrollToIndexFailed={() => {}}
+              renderItem={({ item, index }) => (
                 <Pressable
-                  style={[styles.item, { borderBottomColor: theme.colors.border }]}
+                  style={[styles.item, { borderBottomColor: theme.colors.border }, focusedIndex === (hasCreateRow ? index + 1 : index) && { backgroundColor: theme.colors.primaryLight }]}
                   onPress={() => onSelect(item)}
                 >
                   {item.iconName && <DeckIcon iconName={item.iconName} colorHex={item.colorHex} style={{ marginRight: 10 }} />}

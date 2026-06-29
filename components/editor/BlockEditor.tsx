@@ -950,6 +950,10 @@ export function BlockEditor({
           const key = editingBlockKeyRef.current;
           setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
           setEditingBlockKey(null);
+          // 編集を抜けてもブロックフォーカス（青枠）を保持する（学習画面の Esc と同様）。
+          // これにより Esc 直後に R で実行・E で再編集ができる（実行ボタンの挙動と一致）。
+          const idx = currentBlocksRef.current.findIndex((b) => b._key === key);
+          setFocusedBlockIndex(idx !== -1 ? idx : null);
           Keyboard.dismiss();
           return;
         }

@@ -128,7 +128,7 @@ export default function DeckDetailScreen() {
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space',     descKey: 'shortcut.startStudy' },
-    { key: '1–4',       descKey: 'shortcut.switchFilter' },
+    { key: '1–4 / H / L', descKey: 'shortcut.switchFilter' },
     { key: 'J / K',     descKey: 'shortcut.focusNextPrev' },
     { key: 'P',         descKey: 'shortcut.editFocusedItem' },
     { key: 'A',         descKey: 'shortcut.toggleCardStats', pro: true },
@@ -582,9 +582,16 @@ export default function DeckDetailScreen() {
         }
       },
     },
-    // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
+    // ←/→・,/.・H/L = フィルター切替（タブ画面と統一）
+    { input: ',', handler: () => cycleCardFilter('prev') },
+    { input: '.', handler: () => cycleCardFilter('next') },
+    { input: 'h', handler: () => cycleCardFilter('prev') },
+    { input: 'l', handler: () => cycleCardFilter('next') },
+    // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（フィルター切替）
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('next'); } },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => cycleCardFilter('prev') },
+    { input: KeyCommand.keyInputRightArrow, handler: () => cycleCardFilter('next') },
   // 削除確認/移動確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
   // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
   ], !showDeckPicker && !showDeleteModal && !pendingMoveDeck && !infoModal && !showShortcutsModal);
@@ -678,6 +685,16 @@ export default function DeckDetailScreen() {
     reorderCards(newOrder);
     updateCardSortOrders(db, newOrder.map((c) => c.id));
     setTimeout(() => listRef.current?.scrollToIndex({ index: to, viewPosition: 0.5, animated: true }), 50);
+  }
+
+  // ←/→・,/.・H/L でフィルター（すべて/学習済み/復習/新規）を循環切替（タブ画面と同じ操作軸）。
+  function cycleCardFilter(dir: 'prev' | 'next') {
+    if (showDeckPicker || statsCardId !== null || selectionModeRef.current) return;
+    const order: FilterKey[] = ['all', 'learned', 'review', 'new'];
+    const i = order.indexOf(selectedFilterRef.current);
+    const f = order[((i < 0 ? 0 : i) + (dir === 'next' ? 1 : -1) + order.length) % order.length];
+    setSelectedFilter(f);
+    if (initialFilterPreference === 'none') setLastDeckDetailFilter(f);
   }
 
   function toggleSelectAll() {

@@ -37,7 +37,7 @@ import { useTagStore } from '@/store/tags';
 import type { Card } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
-  { key: '1 / 2',   descKey: 'shortcut.switchFilterAllActive' },
+  { key: '1 / 2 / H / L', descKey: 'shortcut.switchFilterAllActive' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'P',       descKey: 'shortcut.editFocusedItem' },
   { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
@@ -207,6 +207,14 @@ export default function TagCardsScreen() {
   );
 
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。CardStats 表示中（statsCardId）は
+  // ←/→・,/.・H/L でフィルター（すべて/有効）を循環切替（タブ画面・カード一覧と同じ操作軸）。
+  function cycleTagCardFilter(dir: 'prev' | 'next') {
+    if (statsCardId !== null || selectionMode) return;
+    const order = ['all', 'active'] as const;
+    const i = order.indexOf(lastTagCardFilter);
+    setLastTagCardFilter(order[((i < 0 ? 0 : i) + (dir === 'next' ? 1 : -1) + order.length) % order.length]);
+  }
+
   // A のみ通す。それ以外は選択/通常モードで分岐（旧 onKeyPress/onSubmitEditing と同じ割り当て）。
   useKeyCommands([
     { input: 'j', handler: () => { if (statsCardId !== null) return; moveFocus('next'); } },
@@ -236,6 +244,11 @@ export default function TagCardsScreen() {
     { input: 's', handler: () => { if (statsCardId !== null) return; if (selectionMode) exitSelectionMode(); else if (cards.length > 0) enterSelectionMode(); } },
     { input: '1', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('all'); } },
     { input: '2', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('active'); } },
+    // ←/→・,/.・H/L = フィルター切替（すべて/有効）
+    { input: ',', handler: () => cycleTagCardFilter('prev') },
+    { input: '.', handler: () => cycleTagCardFilter('next') },
+    { input: 'h', handler: () => cycleTagCardFilter('prev') },
+    { input: 'l', handler: () => cycleTagCardFilter('next') },
     {
       input: 'p',
       handler: () => {
@@ -256,9 +269,11 @@ export default function TagCardsScreen() {
         if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) navigateToEdit(displayedCards[focusedCardIndex]);
       },
     },
-    // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
+    // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（フィルター切替）
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null) return; moveFocus('next'); } },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => cycleTagCardFilter('prev') },
+    { input: KeyCommand.keyInputRightArrow, handler: () => cycleTagCardFilter('next') },
   // 削除確認/タグ外し確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
   // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
   ], !showDeckPicker && !showDeleteModal && !showRemoveTagModal && !showTagCardsInfo && !showShortcutsModal);

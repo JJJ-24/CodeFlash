@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR, TAG_PRESET_COLORS } from '@/lib/theme';
 import { resolveTagColor, TAG_THEME_COLOR, TAG_MONO_COLOR } from '@/lib/tagColors';
@@ -23,7 +23,19 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { createTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTagStore } from '@/store/tags';
+import { useSettingsStore } from '@/store/settings';
+
+const TAG_NEW_SHORTCUTS = [
+  { key: 'N', descKey: 'shortcut.focusTagName' },
+  { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
+  { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+  { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  { key: 'S', descKey: 'shortcut.save' },
+  { key: 'X', descKey: 'shortcut.close' },
+  { key: 'ESC', descKey: 'shortcut.esc' },
+];
 
 export default function NewTagScreen() {
   const db = useSQLiteContext();
@@ -31,6 +43,8 @@ export default function NewTagScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { tags, addTag } = useTagStore();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { bottom: bottomInset } = useSafeAreaInsets();
   useDismissKeyboardOnLeave();
 
@@ -68,7 +82,7 @@ export default function NewTagScreen() {
 
   // 034: ハードキーボードショートカット。文字キーはテキスト欄フォーカス中は入力に消費される（住み分け）。
   // Tab/矢印は不使用（iPad 対策）。破棄確認モーダル表示中は親キーを無効化。
-  const subModalOpen = () => showDiscardModal;
+  const subModalOpen = () => showDiscardModal || showShortcutsModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
@@ -85,9 +99,12 @@ export default function NewTagScreen() {
     // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
     { input: 'u', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
     { input: 'd', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
+    // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
+    { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); } },
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; } // ショートカット一覧を閉じる
         if (subModalOpen()) return;
         if (editingRef.current) { Keyboard.dismiss(); return; }
         handleClose();
@@ -117,7 +134,17 @@ export default function NewTagScreen() {
       <Stack.Screen
         options={{
 
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.new')}</Text>,
+          headerTitle: () => (
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            >
+              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.new')}</Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          ),
           headerLeft: () => (
             <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
@@ -206,6 +233,11 @@ export default function NewTagScreen() {
             ]
         }
         onClose={() => setShowDiscardModal(false)}
+      />
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={TAG_NEW_SHORTCUTS}
       />
     </>
   );

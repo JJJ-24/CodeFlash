@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
@@ -27,8 +27,23 @@ import type { DeckIconName } from '@/lib/deckIcons';
 import { createDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
+import { useSettingsStore } from '@/store/settings';
+
+const DECK_NEW_SHORTCUTS = [
+  { key: 'N', descKey: 'shortcut.focusDeckName' },
+  { key: 'M', descKey: 'shortcut.focusDeckDesc' },
+  { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
+  { key: 'I', descKey: 'shortcut.pickIcon' },
+  { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+  { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+  { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  { key: 'S', descKey: 'shortcut.save' },
+  { key: 'X', descKey: 'shortcut.close' },
+  { key: 'ESC', descKey: 'shortcut.esc' },
+];
 
 export default function NewDeckScreen() {
   const db = useSQLiteContext();
@@ -37,6 +52,8 @@ export default function NewDeckScreen() {
   const theme = useTheme();
   const { addDeck } = useDeckStore();
   const isPro = useProStore((s) => s.isPro);
+  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { bottom: bottomInset } = useSafeAreaInsets();
   useDismissKeyboardOnLeave();
 
@@ -107,7 +124,7 @@ export default function NewDeckScreen() {
   // サブモーダル（アイコン/SQL/破棄確認）は RN Modal。開いている間はそのモーダル側が
   // キーを処理するため、親画面のショートカットは無効化する（キーコマンドは AppDelegate に
   // 付くため開いていても発火しうる＝明示ガードが必要）。
-  const subModalOpen = () => showIconPicker || showSqlInitModal || showDiscardModal;
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showDiscardModal || showShortcutsModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
@@ -127,10 +144,13 @@ export default function NewDeckScreen() {
     // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
     { input: 'u', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
     { input: 'd', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
+    // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
+    { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); } },
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
-        if (subModalOpen()) return; // モーダル側の Esc に委ねる
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; } // ショートカット一覧を閉じる
+        if (subModalOpen()) return; // 他モーダル側の Esc に委ねる
         // 編集中は Esc でカーソル解除のみ。非編集なら閉じる（変更あれば破棄確認）。
         if (editingRef.current) { Keyboard.dismiss(); return; }
         handleClose();
@@ -175,7 +195,17 @@ export default function NewDeckScreen() {
       <Stack.Screen
         options={{
 
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.new')}</Text>,
+          headerTitle: () => (
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            >
+              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.new')}</Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          ),
           headerLeft: () => (
             <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
@@ -346,6 +376,11 @@ export default function NewDeckScreen() {
             ]
         }
         onClose={() => setShowDiscardModal(false)}
+      />
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={DECK_NEW_SHORTCUTS}
       />
     </>
   );

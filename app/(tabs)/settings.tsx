@@ -7,11 +7,21 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { useKeyCommands } from '@/lib/useKeyCommands';
+import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 
 import { settingsStyles as styles } from '@/components/settings/styles';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
+import { useSettingsStore } from '@/store/settings';
+
+const SETTINGS_SHORTCUTS = [
+  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+  { key: 'Return', descKey: 'shortcut.openFocused' },
+  { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+  { key: 'ESC', descKey: 'shortcut.esc' },
+];
 
 interface NavItem {
   key: string;
@@ -26,6 +36,9 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { isPro } = useProStore();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
 
   const navItems: NavItem[] = [
     { key: 'display', label: t('settings.display'), icon: 'color-palette-outline', onPress: () => router.push('/settings/display') },
@@ -78,8 +91,18 @@ export default function SettingsScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus(1) },
     { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus(-1) },
     { input: KeyCommand.keyInputEnter, handler: () => openFocused() },
-    { input: KeyCommand.keyInputEscape, handler: () => setFocusedIndex(null) },
+  // ショートカット一覧表示中は背景ナビを解除（Esc は別フックで常時有効）。
+  ], !showShortcutsModal);
+
+  // ESC は常時有効：ショートカット一覧を閉じる → フォーカス解除。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: () => { if (showShortcutsModal) { setShowShortcutsModal(false); return; } setFocusedIndex(null); } },
   ]);
+
+  // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   return (
     <View style={{ flex: 1 }}>
@@ -146,6 +169,11 @@ export default function SettingsScreen() {
           </Pressable>
         ))}
       </ScrollView>
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={SETTINGS_SHORTCUTS}
+      />
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -31,6 +31,7 @@ import { resolveTagColor } from '@/lib/tagColors';
 import { DeckIcon } from '@/components/DeckIcon';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
@@ -38,6 +39,18 @@ import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import { useSearchSessionStore } from '@/store/search';
 import type { Card, Deck } from '@/types';
+
+const SEARCH_SHORTCUTS = [
+  { key: ', / .', descKey: 'shortcut.switchSearchField' },
+  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+  { key: 'P', descKey: 'shortcut.editFocusedItem' },
+  { key: 'A', descKey: 'shortcut.toggleCardStats', pro: true },
+  { key: 'D', descKey: 'shortcut.selectDeck' },
+  { key: 'T', descKey: 'shortcut.selectTag' },
+  { key: 'Delete', descKey: 'shortcut.clearSearch' },
+  { key: 'B', descKey: 'shortcut.back' },
+  { key: 'ESC', descKey: 'shortcut.esc' },
+];
 
 // ---- MultiSelectPickerModal（汎用・タグ用） ----
 
@@ -318,7 +331,7 @@ export default function SearchScreen() {
   const initialTopInsetRef = useRef(insets.top);
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
-  const { lastSearchField, setLastSearchField } = useSettingsStore();
+  const { lastSearchField, setLastSearchField, keyboardShortcutsEnabled } = useSettingsStore();
   const { isPro } = useProStore();
   const inputRef = useRef<TextInput>(null);
   useDismissKeyboardOnLeave();
@@ -335,6 +348,7 @@ export default function SearchScreen() {
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [tagPickerVisible, setTagPickerVisible] = useState(false);
   const [showSearchInfo, setShowSearchInfo] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
 
   const toggleDeck = (id: string) => setSelectedDeckIds((prev) =>
@@ -418,12 +432,14 @@ export default function SearchScreen() {
   }
 
   // ピッカー/シート表示中は親キーを無効化（Esc は階層処理するので個別に判定）。
-  const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showSearchInfo;
+  const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showSearchInfo || showShortcutsModal;
   useKeyCommands([
     { input: 'd', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setTagPickerVisible(true); } },
     { input: ',', handler: () => { if (overlayOpen()) return; cycleField(-1); } },
     { input: '.', handler: () => { if (overlayOpen()) return; cycleField(1); } },
+    { input: 'h', handler: () => { if (overlayOpen()) return; cycleField(-1); } },
+    { input: 'l', handler: () => { if (overlayOpen()) return; cycleField(1); } },
     { input: 'j', handler: () => { if (overlayOpen()) return; moveFocus('next'); } },
     { input: 'k', handler: () => { if (overlayOpen()) return; moveFocus('prev'); } },
     // A は統計シートのトグル（表示中の A で閉じる）。他のオーバーレイ表示中は無効。
@@ -435,8 +451,8 @@ export default function SearchScreen() {
     { input: 'p', handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
     // B＝戻る（ホーム）。入力欄フォーカス中は TextInput が消費するため「カーソル無し時のみ」発火。
     { input: 'b', handler: () => { if (overlayOpen() || editingRef.current) return; router.back(); } },
-    // 情報モーダル（OK のみ）表示中は Return=OK で閉じる。他オーバーレイ表示中は無効。
-    { input: KeyCommand.keyInputEnter, handler: () => { if (showSearchInfo) { setShowSearchInfo(false); return; } if (overlayOpen()) return; openFocusedCard(); } },
+    // 情報/ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。他オーバーレイ表示中は無効。
+    { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) { setShowShortcutsModal(false); return; } if (showSearchInfo) { setShowSearchInfo(false); return; } if (overlayOpen()) return; openFocusedCard(); } },
     // Delete＝検索文字クリア＆入力欄へカーソル（Backspace/前方Delete 両対応）。
     ...deleteKeySpecs(() => { if (overlayOpen()) return; setQuery(''); inputRef.current?.focus(); }),
     // 矢印は iPhone のみ（上下＝J/K、左右＝,/.）。
@@ -449,6 +465,7 @@ export default function SearchScreen() {
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
+        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (showSearchInfo) { setShowSearchInfo(false); return; }
         if (statsCardId !== null) { setStatsCardId(null); return; }
         if (deckPickerVisible || tagPickerVisible) return; // ピッカー側の Esc に委ねる
@@ -484,7 +501,13 @@ export default function SearchScreen() {
             <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           </Pressable>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 36 }} />
+          {keyboardShortcutsEnabled ? (
+            <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setShowShortcutsModal(true); }} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }} hitSlop={4}>
+              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
         </View>
       </View>
 
@@ -754,6 +777,12 @@ export default function SearchScreen() {
       />
 
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
+
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={SEARCH_SHORTCUTS}
+      />
     </View>
   );
 }

@@ -53,10 +53,12 @@ export function LinksSheet({ visible, onClose, links }: Props) {
     if (l) { onClose(); Linking.openURL(l.url); }
   }
   // 親（学習画面）のキーは表示中に active ゲートで解除済み。Esc は学習画面側が閉じる。
+  // W は開閉トグル：開くのは学習画面の W、閉じるのは表示中のここが担う（親キーは解除されているため）。
   useKeyCommands([
     { input: 'j', handler: () => { if (visible) move(1); } },
     { input: 'k', handler: () => { if (visible) move(-1); } },
     { input: ' ', handler: () => { if (visible) openFocused(); } },
+    { input: 'w', handler: () => { if (visible) onClose(); } },
     { input: KeyCommand.keyInputEnter, handler: () => { if (visible) openFocused(); } },
     ...(((Platform as any).isPad ? [] : [
       { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },

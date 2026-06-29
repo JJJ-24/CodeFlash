@@ -38,8 +38,9 @@ import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
 
 const HOME_SHORTCUTS = [
-  { key: '1 / 2',   descKey: 'shortcut.switchFilterAllActive' },
+  { key: '1 / 2 / H / L', descKey: 'shortcut.switchFilterAllActive' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+  { key: 'U / D',   descKey: 'shortcut.reorderUpDown' },
   { key: 'Return', descKey: 'shortcut.openFocused' },
   { key: 'P',     descKey: 'shortcut.editFocused' },
   { key: 'Delete', descKey: 'shortcut.deleteFocused' },
@@ -47,7 +48,7 @@ const HOME_SHORTCUTS = [
   { key: 'M',     descKey: 'shortcut.cycleSort' },
   { key: 'F',     descKey: 'shortcut.search' },
   { key: 'T',     descKey: 'shortcut.tags' },
-  { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+  { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
   { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
@@ -322,6 +323,13 @@ export default function HomeScreen() {
     </View>
   );
 
+  // ←/→・,/.・H/L でフィルター（すべて/有効）を循環切替（学習/編集の横移動と同じ操作軸）。
+  function cycleHomeFilter(dir: 'prev' | 'next') {
+    const order = ['all', 'active'] as const;
+    const i = order.indexOf(selectedFilter);
+    setSelectedFilter(order[((i < 0 ? 0 : i) + (dir === 'next' ? 1 : -1) + order.length) % order.length]);
+  }
+
   // 034: 隠し TextInput + onKeyPress/onSubmitEditing をネイティブキーコマンドへ置換。
   // フックが「画面フォーカス中 かつ keyboardShortcutsEnabled」を内部で gate する。
   // Return は keyInputEnter（iOS では '\r'）で受ける（旧 onSubmitEditing の代替）。
@@ -351,8 +359,11 @@ export default function HomeScreen() {
     { input: 'n', handler: () => router.push({ pathname: '/deck/new' }) },
     { input: 'f', handler: () => router.push('/search') },
     { input: 't', handler: () => router.push('/tags') },
-    { input: '.', handler: () => router.navigate('/(tabs)/study') },
-    { input: ',', handler: () => router.navigate('/(tabs)/settings') },
+    // ←/→・,/.・H/L = フィルター切替（タブ切替は Tab/Shift+Tab に一本化）
+    { input: ',', handler: () => cycleHomeFilter('prev') },
+    { input: '.', handler: () => cycleHomeFilter('next') },
+    { input: 'h', handler: () => cycleHomeFilter('prev') },
+    { input: 'l', handler: () => cycleHomeFilter('next') },
     {
       input: KeyCommand.keyInputEnter,
       handler: () => {
@@ -361,10 +372,12 @@ export default function HomeScreen() {
         }
       },
     },
-    // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約）
+    // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（フィルター切替）。タブ切替は Tab/Shift+Tab。
     { input: KeyCommand.keyInputUpArrow, handler: () => moveDeckFocus('prev') },
     { input: KeyCommand.keyInputDownArrow, handler: () => moveDeckFocus('next') },
-    // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）。iPad の UIFocusSystem に取られないか実機確認用。
+    { input: KeyCommand.keyInputLeftArrow, handler: () => cycleHomeFilter('prev') },
+    { input: KeyCommand.keyInputRightArrow, handler: () => cycleHomeFilter('next') },
+    // Tab=次タブ・Shift+Tab=前タブ（タブ切替の唯一手段）。
     { input: '\t', handler: () => router.navigate('/(tabs)/study') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/settings') },
   // アラート（削除確認/情報/ショートカット一覧）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。

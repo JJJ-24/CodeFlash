@@ -51,10 +51,10 @@ const STATS_SHORTCUT_SECTIONS = [
   {
     titleKey: 'shortcut.sectionCommon',
     items: [
-      { key: '1–4',   descKey: 'shortcut.cycleChart' },
+      { key: '1–4 / H / L', descKey: 'shortcut.cycleChart' },
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: 'Space', descKey: 'shortcut.openChart' },
-      { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+      { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
       { key: '↑ / ↓', descKey: 'shortcut.arrows' },
       { key: 'ESC',  descKey: 'shortcut.esc' },
     ],
@@ -1188,9 +1188,21 @@ export default function StatsScreen() {
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ置換。
   // CardStatsSheet 表示中（statsCardId）は A のみ、ドーナツシート表示中（activeSheet）は
   // タブ切替/Space/Return のみ通す元の条件分岐を各ハンドラ内で再現する。
+  // ←/→・,/.・H/L で上部4ブロック（連続/学習済み/復習/新規）を循環切替（学習/編集の横移動と同じ操作軸）。
+  // 評価別ランキング（6–9/0）はこの循環に含めない（Pro 限定＋ON/OFF を持つ別系統のため）。
+  function cycleStatsBlock(dir: 'prev' | 'next') {
+    const order: BlockKey[] = ['streak', 'learned', 'due', 'new'];
+    const i = order.indexOf(selectedBlock);
+    setSelectedBlock(order[((i < 0 ? 0 : i) + (dir === 'next' ? 1 : -1) + order.length) % order.length]);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  }
+
   useKeyCommands([
-    { input: '.', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
-    { input: ',', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
+    // ←/→・,/.・H/L = 上部4ブロック切替（タブ切替は Tab/Shift+Tab に一本化）
+    { input: ',', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('prev'); } },
+    { input: '.', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('next'); } },
+    { input: 'h', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('prev'); } },
+    { input: 'l', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('next'); } },
     {
       input: ' ',
       handler: () => {
@@ -1264,9 +1276,12 @@ export default function StatsScreen() {
     { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setPeriodPickerVisible(true); } },
     { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) handleToggleRankingByTime(); } },
     // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約。j/k と同じガードを適用）
+    // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（4ブロック切替）。タブ切替は Tab/Shift+Tab。
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('next'); } },
-    // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
+    { input: KeyCommand.keyInputLeftArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('prev'); } },
+    { input: KeyCommand.keyInputRightArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('next'); } },
+    // Tab=次タブ・Shift+Tab=前タブ（タブ切替の唯一手段）。
     { input: '\t', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
   // デッキ/期間ピッカー・月別シート・ショートカット一覧・情報モーダル表示中は背景ナビを解除（各シートの

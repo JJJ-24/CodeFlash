@@ -52,13 +52,13 @@ function sumValues(map: Record<string, number>): number {
 }
 
 const STUDY_TAB_SHORTCUTS = [
-  { key: '1–4',   descKey: 'shortcut.switchFilter' },
+  { key: '1–4 / H / L', descKey: 'shortcut.switchFilter' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'Space', descKey: 'shortcut.startStudyFocused' },
   { key: 'S',     descKey: 'shortcut.toggleShuffle' },
-  { key: 'H',     descKey: 'shortcut.toggleHideEmpty' },
-  { key: 'M',     descKey: 'shortcut.switchDeckTab' },
-  { key: ', / .', descKey: 'shortcut.tabNextPrev' },
+  { key: 'E',     descKey: 'shortcut.toggleHideEmpty' },
+  { key: 'D / T', descKey: 'shortcut.switchDeckTab' },
+  { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
   { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
@@ -267,25 +267,40 @@ export default function StudyScreen() {
     }
   }
 
+  // ←/→・,/.・H/L でフィルター（すべて/学習済み/復習/新規）を循環切替（学習/編集の横移動と同じ操作軸）。
+  function cycleStudyFilter(dir: 'prev' | 'next') {
+    const order: Filter[] = ['all', 'learned', 'review', 'new'];
+    const i = order.indexOf(activeFilter);
+    setActiveFilter(order[((i < 0 ? 0 : i) + (dir === 'next' ? 1 : -1) + order.length) % order.length]);
+  }
+
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。Space/Return とも学習開始。
   useKeyCommands([
     { input: '1', handler: () => setActiveFilter('all') },
     { input: '2', handler: () => setActiveFilter('learned') },
     { input: '3', handler: () => setActiveFilter('review') },
     { input: '4', handler: () => setActiveFilter('new') },
+    // ←/→・,/.・H/L = フィルター切替（タブ切替は Tab/Shift+Tab に一本化）
+    { input: ',', handler: () => cycleStudyFilter('prev') },
+    { input: '.', handler: () => cycleStudyFilter('next') },
+    { input: 'h', handler: () => cycleStudyFilter('prev') },
+    { input: 'l', handler: () => cycleStudyFilter('next') },
     { input: 's', handler: () => setShuffleEnabled(!shuffleEnabled) },
-    { input: 'h', handler: () => { setStudyHideEmpty(!hideEmpty); clearFocus(); } },
+    // E = 対象なし行の表示/非表示トグル（旧 H。H はフィルター切替へ移動）
+    { input: 'e', handler: () => { setStudyHideEmpty(!hideEmpty); clearFocus(); } },
     { input: ' ', handler: () => startStudyFocused() },
-    { input: 'm', handler: () => setActiveTab(prev => (prev === 'decks' ? 'tags' : 'decks')) },
+    // D = デッキ表示 / T = タグ表示（旧 M トグルを明示的な直接選択に）
+    { input: 'd', handler: () => setActiveTab('decks') },
+    { input: 't', handler: () => setActiveTab('tags') },
     { input: 'j', handler: () => moveStudyFocus('next') },
     { input: 'k', handler: () => moveStudyFocus('prev') },
-    { input: '.', handler: () => router.navigate('/(tabs)/stats') },
-    { input: ',', handler: () => router.navigate('/(tabs)') },
     { input: KeyCommand.keyInputEnter, handler: () => startStudyFocused() },
-    // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約）
+    // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（フィルター切替）。タブ切替は Tab/Shift+Tab。
     { input: KeyCommand.keyInputUpArrow, handler: () => moveStudyFocus('prev') },
     { input: KeyCommand.keyInputDownArrow, handler: () => moveStudyFocus('next') },
-    // Tab テスト: Tab=次タブ・Shift+Tab=前タブ（,/. と同じ）
+    { input: KeyCommand.keyInputLeftArrow, handler: () => cycleStudyFilter('prev') },
+    { input: KeyCommand.keyInputRightArrow, handler: () => cycleStudyFilter('next') },
+    // Tab=次タブ・Shift+Tab=前タブ（タブ切替の唯一手段）。
     { input: '\t', handler: () => router.navigate('/(tabs)/stats') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)') },
   // 情報/ショートカット一覧（OK のみのアラート）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。

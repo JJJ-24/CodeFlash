@@ -42,6 +42,7 @@ const TAG_SHORTCUTS = [
   { key: 'N',      descKey: 'shortcut.new' },
   { key: 'S',      descKey: 'shortcut.toggleSelect' },
   { key: 'M',      descKey: 'shortcut.cycleSort' },
+  { key: 'U / D',  descKey: 'shortcut.reorderUpDown' },
   { key: 'B',      descKey: 'shortcut.back' },
   { key: '↑ / ↓',  descKey: 'shortcut.arrows' },
   { key: 'ESC',    descKey: 'shortcut.esc' },

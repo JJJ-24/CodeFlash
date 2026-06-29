@@ -69,9 +69,7 @@ export default function SettingsScreen() {
   }
 
   useKeyCommands([
-    // タブ切替（,/. と Tab）
-    { input: '.', handler: () => router.navigate('/(tabs)') },
-    { input: ',', handler: () => router.navigate('/(tabs)/stats') },
+    // タブ切替は Tab/Shift+Tab に一本化（設定はフィルターが無いので ,/.・←/→ は割り当てない）
     { input: '\t', handler: () => router.navigate('/(tabs)') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/stats') },
     // 設定カテゴリのフォーカス移動・展開

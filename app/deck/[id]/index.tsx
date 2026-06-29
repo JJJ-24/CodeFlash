@@ -135,6 +135,7 @@ export default function DeckDetailScreen() {
     { key: 'Delete',    descKey: 'shortcut.deleteFocused' },
     { key: 'N',         descKey: 'shortcut.new' },
     { key: 'M',         descKey: 'shortcut.cycleCardSort' },
+    { key: 'U / D',     descKey: 'shortcut.reorderUpDown' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
     { key: 'B',         descKey: 'shortcut.back' },
     { key: '↑ / ↓',     descKey: 'shortcut.arrows' },

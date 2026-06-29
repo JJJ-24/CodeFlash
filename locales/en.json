@@ -553,6 +553,7 @@
     "proBadge": "Pro",
     "cycleSort": "Cycle mode (sort)",
     "cycleCardSort": "Cycle mode (sort)\nWhen 'All' is selected",
+    "reorderUpDown": "Reorder\n(Up/Down, manual sort)",
     "search": "Search",
     "tags": "Tag manager",
     "tabNextPrev": "Switch tab\n(Home/Study/Stats/Settings)",

@@ -75,19 +75,18 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
 const SESSION_SHORTCUTS = [
   { key: "Space", descKey: "shortcut.flip" },
   { key: "1–4", descKey: "shortcut.grade" },
-  { key: ", / . ・H / L", descKey: "shortcut.nextPrev" },
+  { key: ", / .", descKey: "shortcut.nextPrev" },
   { key: "M", descKey: "shortcut.memo" },
   { key: "F", descKey: "shortcut.fullscreen" },
   { key: "J / K", descKey: "shortcut.focusNextPrev" },
   { key: "R", descKey: "shortcut.runFocused" },
   { key: "E", descKey: "shortcut.editFocusedItem" },
-  { key: "U / D・PgUp / PgDn", descKey: "shortcut.scrollUpDown" },
-  { key: "Home / End・⇧U/D", descKey: "shortcut.scrollTopBottom" },
+  { key: "U / D", descKey: "shortcut.scrollUpDown" },
+  { key: "⇧U / ⇧D", descKey: "shortcut.scrollTopBottom" },
   { key: "B", descKey: "shortcut.back" },
   { key: "W", descKey: "shortcut.links" },
   { key: "P", descKey: "shortcut.pencil" },
   { key: "Q", descKey: "shortcut.finishSession" },
-  { key: "↑↓←→", descKey: "shortcut.arrows" },
   { key: "ESC", descKey: "shortcut.esc" },
 ];
 

@@ -52,14 +52,13 @@ function sumValues(map: Record<string, number>): number {
 }
 
 const STUDY_TAB_SHORTCUTS = [
-  { key: '1–4 / H / L', descKey: 'shortcut.switchFilter' },
+  { key: '1–4', descKey: 'shortcut.switchFilter' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'Space', descKey: 'shortcut.startStudyFocused' },
   { key: 'S',     descKey: 'shortcut.toggleShuffle' },
   { key: 'E',     descKey: 'shortcut.toggleHideEmpty' },
   { key: 'D / T', descKey: 'shortcut.switchDeckTab' },
   { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
-  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 

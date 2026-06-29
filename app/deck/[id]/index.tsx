@@ -128,7 +128,7 @@ export default function DeckDetailScreen() {
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUTS_NORMAL = [
     { key: 'Space',     descKey: 'shortcut.startStudy' },
-    { key: '1–4 / H / L', descKey: 'shortcut.switchFilter' },
+    { key: '1–4', descKey: 'shortcut.switchFilter' },
     { key: 'J / K',     descKey: 'shortcut.focusNextPrev' },
     { key: 'P',         descKey: 'shortcut.editFocusedItem' },
     { key: 'A',         descKey: 'shortcut.toggleCardStats', pro: true },
@@ -138,7 +138,6 @@ export default function DeckDetailScreen() {
     { key: 'U / D',     descKey: 'shortcut.reorderUpDown' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
     { key: 'B',         descKey: 'shortcut.back' },
-    { key: '↑ / ↓',     descKey: 'shortcut.arrows' },
     { key: 'ESC',       descKey: 'shortcut.esc' },
   ];
   const DECK_SHORTCUTS_SELECT = [
@@ -150,7 +149,6 @@ export default function DeckDetailScreen() {
     { key: 'C',     descKey: 'shortcut.duplicateSelected' },
     { key: 'E',     descKey: 'shortcut.archiveSelected' },
     { key: 'S',     descKey: 'shortcut.exitSelect' },
-    { key: '↑ / ↓', descKey: 'shortcut.arrows' },
     { key: 'ESC',   descKey: 'shortcut.esc' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({

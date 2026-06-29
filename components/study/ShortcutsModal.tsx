@@ -35,7 +35,15 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
     return (
       <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border, opacity: rowOpacity }]}>
         <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }, (Platform as any).isPad && styles.keyBadgePad]}>
-          <Text style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui} numberOfLines={1}>
+          {/* 長いキー（Tab / ⇧Tab・U / D・PgUp/PgDn 等）はアプリ文字大で幅を超えるため、
+              必要なときだけ自動縮小して切れないようにする（短いキーは通常サイズのまま）。 */}
+          <Text
+            style={{ fontFamily: 'monospace', fontSize: theme.fontSize.sm, color: theme.colors.text, textAlign: 'center', width: '100%' }}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.5}
+          >
             {item.key}
           </Text>
         </View>
@@ -117,14 +125,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   keyBadge: {
-    width: 100,
+    width: 110,
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   keyBadgePad: {
-    width: 130,
+    width: 145,
   },
   proBadge: {
     paddingHorizontal: 8,

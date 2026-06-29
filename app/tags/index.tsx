@@ -44,7 +44,6 @@ const TAG_SHORTCUTS = [
   { key: 'M',      descKey: 'shortcut.cycleSort' },
   { key: 'U / D',  descKey: 'shortcut.reorderUpDown' },
   { key: 'B',      descKey: 'shortcut.back' },
-  { key: '↑ / ↓',  descKey: 'shortcut.arrows' },
   { key: 'ESC',    descKey: 'shortcut.esc' },
 ];
 
@@ -55,7 +54,6 @@ const TAG_SELECTION_SHORTCUTS = [
   { key: 'C',     descKey: 'shortcut.changeColorSelected' },
   { key: 'Delete', descKey: 'shortcut.deleteSelectedTags' },
   { key: 'S',     descKey: 'shortcut.exitSelect' },
-  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 

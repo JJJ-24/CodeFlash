@@ -38,7 +38,7 @@ import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
 
 const HOME_SHORTCUTS = [
-  { key: '1 / 2 / H / L', descKey: 'shortcut.switchFilterAllActive' },
+  { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'U / D',   descKey: 'shortcut.reorderUpDown' },
   { key: 'Return', descKey: 'shortcut.openFocused' },
@@ -49,7 +49,6 @@ const HOME_SHORTCUTS = [
   { key: 'F',     descKey: 'shortcut.search' },
   { key: 'T',     descKey: 'shortcut.tags' },
   { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
-  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 

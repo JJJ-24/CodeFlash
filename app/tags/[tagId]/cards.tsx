@@ -37,7 +37,7 @@ import { useTagStore } from '@/store/tags';
 import type { Card } from '@/types';
 
 const TAG_CARDS_SHORTCUTS = [
-  { key: '1 / 2 / H / L', descKey: 'shortcut.switchFilterAllActive' },
+  { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
   { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
   { key: 'P',       descKey: 'shortcut.editFocusedItem' },
   { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
@@ -45,7 +45,6 @@ const TAG_CARDS_SHORTCUTS = [
   { key: 'N',     descKey: 'shortcut.new' },
   { key: 'S',     descKey: 'shortcut.toggleSelect' },
   { key: 'B',     descKey: 'shortcut.back' },
-  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
@@ -56,7 +55,6 @@ const TAG_CARDS_SELECTION_SHORTCUTS = [
   { key: 'T',     descKey: 'shortcut.removeTagSelected' },
   { key: 'E',     descKey: 'shortcut.archiveSelected' },
   { key: 'S',     descKey: 'shortcut.exitSelect' },
-  { key: '↑ / ↓', descKey: 'shortcut.arrows' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 

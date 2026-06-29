@@ -51,11 +51,10 @@ const STATS_SHORTCUT_SECTIONS = [
   {
     titleKey: 'shortcut.sectionCommon',
     items: [
-      { key: '1–4 / H / L', descKey: 'shortcut.cycleChart' },
+      { key: '1–4', descKey: 'shortcut.cycleChart' },
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: 'Space', descKey: 'shortcut.openChart' },
       { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
-      { key: '↑ / ↓', descKey: 'shortcut.arrows' },
       { key: 'ESC',  descKey: 'shortcut.esc' },
     ],
   },

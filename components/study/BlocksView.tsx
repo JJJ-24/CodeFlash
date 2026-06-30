@@ -189,12 +189,12 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
 
   const markdownStyles = useMemo(() => ({
     body: { fontSize: theme.fontSize.lg, color: theme.colors.text, lineHeight: theme.fontSize.lg * 1.5 },
-    heading1: { fontSize: theme.fontSize.xxxl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
-    heading2: { fontSize: theme.fontSize.xxl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 6 },
-    heading3: { fontSize: theme.fontSize.xl, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
-    heading4: { fontSize: theme.fontSize.lg, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
-    heading5: { fontSize: theme.fontSize.md, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
-    heading6: { fontSize: theme.fontSize.sm, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+    heading1: { fontSize: theme.fontSize.xxxl, lineHeight: theme.fontSize.xxxl * 1.4, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
+    heading2: { fontSize: theme.fontSize.xxl, lineHeight: theme.fontSize.xxl * 1.4, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 6 },
+    heading3: { fontSize: theme.fontSize.xl, lineHeight: theme.fontSize.xl * 1.4, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+    heading4: { fontSize: theme.fontSize.lg, lineHeight: theme.fontSize.lg * 1.4, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+    heading5: { fontSize: theme.fontSize.md, lineHeight: theme.fontSize.md * 1.4, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
+    heading6: { fontSize: theme.fontSize.sm, lineHeight: theme.fontSize.sm * 1.4, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 4 },
     strong: { fontWeight: 'bold' as const },
     em: { fontStyle: 'italic' as const },
     code_inline: {

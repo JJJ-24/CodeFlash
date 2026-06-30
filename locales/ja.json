@@ -533,6 +533,7 @@
     "moveSelected": "移動（選択カード）",
     "deleteSelected": "削除（選択カード）",
     "duplicateSelected": "複製（選択カード）",
+    "duplicateCard": "カード複製",
     "archiveSelected": "アーカイブ切替\n（選択カード）",
     "removeTagSelected": "タグを外す\n（選択カード）",
     "exitSelect": "選択モード解除",

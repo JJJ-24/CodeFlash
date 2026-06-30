@@ -106,10 +106,12 @@ interface Props {
   saving: boolean;
   /** 新規カード作成時は true → 最初のテキストブロックを自動フォーカス。編集時は false/省略 → タップするまでフォーカスなし */
   isNewCard?: boolean;
-  /** C キーでキャンセル */
+  /** X キーでキャンセル */
   onCancel?: () => void;
   /** フォーカスなし時の D キーでカード削除 */
   onDeleteCard?: () => void;
+  /** C キーでカード複製（カード編集時のみ渡す。新規作成時は未指定＝無効） */
+  onDuplicate?: () => void;
   /** モード（edit / sort / preview）が変わったときに通知する */
   onModeChange?: (mode: EditorMode) => void;
   /** カードのアーカイブ状態。onArchivedChange を渡したときだけ末尾にトグルを表示する（編集時のみ） */
@@ -133,6 +135,7 @@ export function BlockEditor({
   isNewCard,
   onCancel,
   onDeleteCard,
+  onDuplicate,
   onModeChange,
   archived,
   onArchivedChange,
@@ -493,6 +496,9 @@ export function BlockEditor({
     if (key === KEY_PAGE_DOWN) { scrollByStep(SCROLL_STEP); return; }
     if (key === KEY_HOME) { scrollRef.current?.scrollTo({ y: 0, animated: true }); return; }
     if (key === KEY_END) { scrollRef.current?.scrollToEnd({ animated: true }); return; }
+
+    // C = カード複製（全モード共通。下部コピーボタンと同じ動作。新規作成時は onDuplicate 未指定＝無効）
+    if (k === "c") { onDuplicate?.(); return; }
 
     const cycleMode = () => {
       const modes: EditorMode[] = ["edit", "sort", "preview"];
@@ -914,6 +920,7 @@ export function BlockEditor({
     ...deleteKeySpecs(() => handleKeyPress(KEY_DELETE)),
     { input: "x", handler: () => handleKeyPress("x") },
     { input: "s", handler: () => handleKeyPress("s") },
+    { input: "c", handler: () => handleKeyPress("c") },
     { input: "e", handler: () => handleKeyPress("e") },
     { input: "t", handler: () => handleKeyPress("t") },
     { input: "u", handler: () => handleKeyPress("u") },

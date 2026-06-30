@@ -533,6 +533,7 @@
     "moveSelected": "Move selected cards",
     "deleteSelected": "Delete selected cards",
     "duplicateSelected": "Duplicate selected cards",
+    "duplicateCard": "Duplicate card",
     "archiveSelected": "Toggle archive selected",
     "removeTagSelected": "Remove tag (selected)",
     "exitSelect": "Exit selection mode",

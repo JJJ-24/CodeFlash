@@ -242,6 +242,7 @@ export default function EditCardScreen() {
           saving={saving}
           onCancel={handleClose}
           onDeleteCard={confirmDelete}
+          onDuplicate={handleDuplicate}
           onModeChange={setEditorMode}
           archived={archived}
           onArchivedChange={setArchived}

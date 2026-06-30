@@ -140,6 +140,7 @@ export default function DeckDetailScreen() {
     { key: 'U / D',     descKey: 'shortcut.reorderUpDown' },
     { key: 'S',         descKey: 'shortcut.toggleSelect' },
     { key: 'B',         descKey: 'shortcut.back' },
+    { key: '?',         descKey: 'shortcut.showShortcuts' },
     { key: 'ESC',       descKey: 'shortcut.esc' },
   ];
   const DECK_SHORTCUTS_SELECT = [
@@ -151,6 +152,7 @@ export default function DeckDetailScreen() {
     { key: 'C',     descKey: 'shortcut.duplicateSelected' },
     { key: 'E',     descKey: 'shortcut.archiveSelected' },
     { key: 'S',     descKey: 'shortcut.exitSelect' },
+    { key: '?',     descKey: 'shortcut.showShortcuts' },
     { key: 'ESC',   descKey: 'shortcut.esc' },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
@@ -640,6 +642,8 @@ export default function DeckDetailScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('next'); } },
     { input: KeyCommand.keyInputLeftArrow, handler: () => cycleCardFilter('prev') },
     { input: KeyCommand.keyInputRightArrow, handler: () => cycleCardFilter('next') },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; setShowShortcutsModal((v) => !v); } },
   // 削除確認/移動確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
   // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
   ], !showDeckPicker && !showDeleteModal && !pendingMoveDeck && !infoModal && !showShortcutsModal);

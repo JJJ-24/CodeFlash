@@ -45,6 +45,7 @@ const TAG_CARDS_SHORTCUTS = [
   { key: 'N',     descKey: 'shortcut.new' },
   { key: 'S',     descKey: 'shortcut.toggleSelect' },
   { key: 'B',     descKey: 'shortcut.back' },
+  { key: '?',     descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
@@ -55,6 +56,7 @@ const TAG_CARDS_SELECTION_SHORTCUTS = [
   { key: 'T',     descKey: 'shortcut.removeTagSelected' },
   { key: 'E',     descKey: 'shortcut.archiveSelected' },
   { key: 'S',     descKey: 'shortcut.exitSelect' },
+  { key: '?',     descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
@@ -274,6 +276,8 @@ export default function TagCardsScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (statsCardId !== null) return; moveFocus('next'); } },
     { input: KeyCommand.keyInputLeftArrow, handler: () => cycleTagCardFilter('prev') },
     { input: KeyCommand.keyInputRightArrow, handler: () => cycleTagCardFilter('next') },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; setShowShortcutsModal((v) => !v); } },
   // 削除確認/タグ外し確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
   // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
   ], !showDeckPicker && !showDeleteModal && !showRemoveTagModal && !showTagCardsInfo && !showShortcutsModal);

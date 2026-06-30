@@ -20,6 +20,7 @@ const SETTINGS_SHORTCUTS = [
   { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
   { key: 'Return', descKey: 'shortcut.openFocused' },
   { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+  { key: '?', descKey: 'shortcut.showShortcuts' },
   { key: 'ESC', descKey: 'shortcut.esc' },
 ];
 
@@ -91,6 +92,8 @@ export default function SettingsScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus(1) },
     { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus(-1) },
     { input: KeyCommand.keyInputEnter, handler: () => openFocused() },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
   // ショートカット一覧表示中は背景ナビを解除（Esc は別フックで常時有効）。
   ], !showShortcutsModal);
 

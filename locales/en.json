@@ -513,6 +513,7 @@
   },
   "shortcut": {
     "esc": "Close / back\n[⌘.] also works",
+    "showShortcuts": "Show shortcuts",
     "flip": "Flip card",
     "grade": "Grade\n(Again/Hard/Good/Easy)",
     "memo": "Toggle memo",

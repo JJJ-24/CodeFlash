@@ -49,6 +49,7 @@ const SEARCH_SHORTCUTS = [
   { key: 'T', descKey: 'shortcut.selectTag' },
   { key: 'Delete', descKey: 'shortcut.clearSearch' },
   { key: 'B', descKey: 'shortcut.back' },
+  { key: '?', descKey: 'shortcut.showShortcuts' },
   { key: 'ESC', descKey: 'shortcut.esc' },
 ];
 
@@ -473,8 +474,22 @@ export default function SearchScreen() {
         router.back();
       },
     },
-  // ピッカー表示中はメインのキー登録を外す（同じ j/k/Space 等の二重登録による多重発火を防ぐ）。
-  ], !deckPickerVisible && !tagPickerVisible);
+  // ピッカー/ショートカット一覧 表示中はメインのキー登録を外す（同じ j/k/Space 等の二重登録による
+  // 多重発火・モーダル側スクロールキーとの相互削除を防ぐ。一覧の Esc 閉じは ShortcutsModal が担当）。
+  ], !deckPickerVisible && !tagPickerVisible && !showShortcutsModal);
+
+  // ?（Shift+/）= ショートカット一覧を開く。閉じる/トグルは ShortcutsModal 側が担当。
+  // 一覧表示中は登録を外す（= モーダル側の ?/解除と同一内容コマンドが共存して相互削除されるのを防ぐ。
+  // 閉じると再登録され、再表示できる）。入力欄フォーカス中は TextInput が消費するため発火しない。
+  useKeyCommands([
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; setShowShortcutsModal(true); } },
+  ], !showShortcutsModal);
+
+  // 一覧表示中のみ有効な Esc / Return 閉じ（メイン配列を解除している間の分を補う。メイン側とは排他）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: () => setShowShortcutsModal(false) },
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

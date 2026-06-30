@@ -55,6 +55,7 @@ const STATS_SHORTCUT_SECTIONS = [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: 'Space', descKey: 'shortcut.openChart' },
       { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+      { key: '?',    descKey: 'shortcut.showShortcuts' },
       { key: 'ESC',  descKey: 'shortcut.esc' },
     ],
   },
@@ -1283,6 +1284,8 @@ export default function StatsScreen() {
     // Tab=次タブ・Shift+Tab=前タブ（タブ切替の唯一手段）。
     { input: '\t', handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/settings'); } },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; setShowShortcutsModal((v) => !v); } },
   // デッキ/期間ピッカー・月別シート・ショートカット一覧・情報モーダル表示中は背景ナビを解除（各シートの
   // 多重発火防止＋アラート背後で 1-4/j/k 等が効かないように）。statsCardId/activeSheet は個別ガード済みで除外。
   ], !deckPickerVisible && !periodPickerVisible && !monthlySheetData && !showShortcutsModal && !showDetailStatsInfo && sectionInfoModal === null);

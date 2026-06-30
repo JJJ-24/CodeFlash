@@ -243,6 +243,7 @@ export default function EditCardScreen() {
           onCancel={handleClose}
           onDeleteCard={confirmDelete}
           onDuplicate={handleDuplicate}
+          onShowShortcuts={() => setShowShortcutsModal((v) => !v)}
           onModeChange={setEditorMode}
           archived={archived}
           onArchivedChange={setArchived}

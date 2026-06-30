@@ -13,6 +13,7 @@ export const CARD_EDITOR_SHORTCUTS_EDIT = [
   { key: 'C',              descKey: 'shortcut.duplicateCard' },
   { key: 'S',              descKey: 'shortcut.save' },
   { key: 'X',              descKey: 'shortcut.close' },
+  { key: '?',              descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',            descKey: 'shortcut.esc' },
 ];
 
@@ -24,6 +25,7 @@ export const CARD_EDITOR_SHORTCUTS_SORT = [
   { key: 'C',     descKey: 'shortcut.duplicateCard' },
   { key: 'S',     descKey: 'shortcut.save' },
   { key: 'X',     descKey: 'shortcut.close' },
+  { key: '?',     descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
@@ -36,5 +38,6 @@ export const CARD_EDITOR_SHORTCUTS_PREVIEW = [
   { key: 'Delete',         descKey: 'shortcut.deleteCard' },
   { key: 'S',              descKey: 'shortcut.save' },
   { key: 'X',              descKey: 'shortcut.close' },
+  { key: '?',              descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',            descKey: 'shortcut.esc' },
 ];

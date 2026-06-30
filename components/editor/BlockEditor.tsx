@@ -112,6 +112,8 @@ interface Props {
   onDeleteCard?: () => void;
   /** C キーでカード複製（カード編集時のみ渡す。新規作成時は未指定＝無効） */
   onDuplicate?: () => void;
+  /** ?（Shift+/）でショートカット一覧を開く */
+  onShowShortcuts?: () => void;
   /** モード（edit / sort / preview）が変わったときに通知する */
   onModeChange?: (mode: EditorMode) => void;
   /** カードのアーカイブ状態。onArchivedChange を渡したときだけ末尾にトグルを表示する（編集時のみ） */
@@ -136,6 +138,7 @@ export function BlockEditor({
   onCancel,
   onDeleteCard,
   onDuplicate,
+  onShowShortcuts,
   onModeChange,
   archived,
   onArchivedChange,
@@ -921,6 +924,8 @@ export function BlockEditor({
     { input: "x", handler: () => handleKeyPress("x") },
     { input: "s", handler: () => handleKeyPress("s") },
     { input: "c", handler: () => handleKeyPress("c") },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: "/", modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (keyboardShortcutsEnabled) onShowShortcuts?.(); } },
     { input: "e", handler: () => handleKeyPress("e") },
     { input: "t", handler: () => handleKeyPress("t") },
     { input: "u", handler: () => handleKeyPress("u") },

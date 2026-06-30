@@ -59,6 +59,7 @@ const STUDY_TAB_SHORTCUTS = [
   { key: 'E',     descKey: 'shortcut.toggleHideEmpty' },
   { key: 'D / T', descKey: 'shortcut.switchDeckTab' },
   { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+  { key: '?',    descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 
@@ -302,6 +303,8 @@ export default function StudyScreen() {
     // Tab=次タブ・Shift+Tab=前タブ（タブ切替の唯一手段）。
     { input: '\t', handler: () => router.navigate('/(tabs)/stats') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)') },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
   // 情報/ショートカット一覧（OK のみのアラート）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
   ], !infoModal && !showShortcutsModal);
 

@@ -44,6 +44,7 @@ const TAG_SHORTCUTS = [
   { key: 'M',      descKey: 'shortcut.cycleSort' },
   { key: 'U / D',  descKey: 'shortcut.reorderUpDown' },
   { key: 'B',      descKey: 'shortcut.back' },
+  { key: '?',      descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',    descKey: 'shortcut.esc' },
 ];
 
@@ -54,6 +55,7 @@ const TAG_SELECTION_SHORTCUTS = [
   { key: 'C',     descKey: 'shortcut.changeColorSelected' },
   { key: 'Delete', descKey: 'shortcut.deleteSelectedTags' },
   { key: 'S',     descKey: 'shortcut.exitSelect' },
+  { key: '?',     descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',   descKey: 'shortcut.esc' },
 ];
 
@@ -286,6 +288,8 @@ export default function TagsScreen() {
     // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (showColorPicker) return; moveFocus('next'); } },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (showColorPicker) return; setShowShortcutsModal((v) => !v); } },
   // 削除確認/一括削除/情報/ショートカット一覧の表示中は背景ナビを解除（カラーピッカーは C/Shift+C/Return を
   // 使うので除外＝main 有効のまま。各ナビは showColorPicker を個別ガード済み）。
   ], !showDeleteModal && !showBulkDeleteModal && !showTagListInfo && !showShortcutsModal);

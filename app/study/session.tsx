@@ -87,6 +87,7 @@ const SESSION_SHORTCUTS = [
   { key: "W", descKey: "shortcut.links" },
   { key: "P", descKey: "shortcut.pencil" },
   { key: "Q", descKey: "shortcut.finishSession" },
+  { key: "?", descKey: "shortcut.showShortcuts" },
   { key: "ESC", descKey: "shortcut.esc" },
 ];
 
@@ -625,6 +626,8 @@ export default function StudySessionScreen() {
       { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
       { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
     ]) as { input: string; handler: () => void }[]),
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
   // リンク一覧/終了確認/ショートカット一覧の表示中は背景のショートカットを解除する
   // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/専用 Return は別フックが担当）。
   ], !showLinksModal && !showFinishModal && !showShortcutsModal);

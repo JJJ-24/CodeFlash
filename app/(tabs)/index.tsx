@@ -49,6 +49,7 @@ const HOME_SHORTCUTS = [
   { key: 'F',     descKey: 'shortcut.search' },
   { key: 'T',     descKey: 'shortcut.tags' },
   { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+  { key: '?',    descKey: 'shortcut.showShortcuts' },
   { key: 'ESC',  descKey: 'shortcut.esc' },
 ];
 
@@ -379,6 +380,8 @@ export default function HomeScreen() {
     // Tab=次タブ・Shift+Tab=前タブ（タブ切替の唯一手段）。
     { input: '\t', handler: () => router.navigate('/(tabs)/study') },
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/settings') },
+    // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
   // アラート（削除確認/情報/ショートカット一覧）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
   ], !showDeleteModal && !showShortcutsModal && !showDeckListInfo);
 

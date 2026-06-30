@@ -34,6 +34,7 @@ const TAG_NEW_SHORTCUTS = [
   { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
   { key: 'S', descKey: 'shortcut.save' },
   { key: 'X', descKey: 'shortcut.close' },
+  { key: '?', descKey: 'shortcut.showShortcuts' },
   { key: 'ESC', descKey: 'shortcut.esc' },
 ];
 
@@ -110,7 +111,22 @@ export default function NewTagScreen() {
         handleClose();
       },
     },
-  ]);
+  // ショートカット一覧 表示中はメインキーを解除（モーダル側スクロールキーとの相互削除を防ぐ。
+  // 一覧の Esc 閉じは ShortcutsModal が担当）。
+  ], !showShortcutsModal);
+
+  // ?（Shift+/）= ショートカット一覧を開く。閉じる/トグルは ShortcutsModal 側が担当。
+  // 一覧表示中は登録を外す（= モーダル側の ? と同一内容コマンドが共存して相互削除されるのを防ぐ。
+  // 閉じると再登録され、再表示できる）。
+  useKeyCommands([
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowShortcutsModal(true); } },
+  ], !showShortcutsModal);
+
+  // 一覧表示中のみ有効な Esc / Return 閉じ（メイン配列を解除している間の分を補う。メイン側とは排他）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: () => setShowShortcutsModal(false) },
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   async function handleSave() {
     const trimmed = name.trim();

@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -24,7 +24,21 @@ import { TagColorPicker } from '@/components/TagColorPicker';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { deleteKeySpecs, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTagStore } from '@/store/tags';
+import { useSettingsStore } from '@/store/settings';
+
+const TAG_EDIT_SHORTCUTS = [
+  { key: 'N', descKey: 'shortcut.focusTagName' },
+  { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
+  { key: 'Delete', descKey: 'shortcut.deleteTag' },
+  { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+  { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  { key: 'S', descKey: 'shortcut.save' },
+  { key: 'X', descKey: 'shortcut.close' },
+  { key: '?', descKey: 'shortcut.showShortcuts' },
+  { key: 'ESC', descKey: 'shortcut.esc' },
+];
 
 export default function EditTagScreen() {
   const { tagId } = useLocalSearchParams<{ tagId: string }>();
@@ -33,6 +47,8 @@ export default function EditTagScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { tags, updateTag: updateStore, removeTag } = useTagStore();
+  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { bottom: bottomInset } = useSafeAreaInsets();
   useDismissKeyboardOnLeave();
 
@@ -106,7 +122,20 @@ export default function EditTagScreen() {
         handleClose();
       },
     },
-  ]);
+  // ショートカット一覧 表示中はメインキーを解除（モーダル側スクロールキーとの相互削除を防ぐ。
+  // 一覧の Esc/Return 閉じは下の排他フックが担当）。
+  ], !showShortcutsModal);
+
+  // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当。表示中は登録を外す）。
+  useKeyCommands([
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowShortcutsModal(true); } },
+  ], !showShortcutsModal);
+
+  // 一覧表示中のみ有効な Esc / Return 閉じ（メイン配列を解除している間の分を補う。メイン側とは排他）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: () => setShowShortcutsModal(false) },
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   async function handleSave() {
     if (!existingTag) return;
@@ -143,7 +172,17 @@ export default function EditTagScreen() {
       <Stack.Screen
         options={{
 
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.edit')}</Text>,
+          headerTitle: () => (
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            >
+              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.edit')}</Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          ),
           headerLeft: () => (
             <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
@@ -243,6 +282,11 @@ export default function EditTagScreen() {
             ]
         }
         onClose={() => setShowDiscardModal(false)}
+      />
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={TAG_EDIT_SHORTCUTS}
       />
     </>
   );

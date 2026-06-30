@@ -22,7 +22,7 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
@@ -30,8 +30,26 @@ import type { DeckIconName } from '@/lib/deckIcons';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { deleteKeySpecs, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
+import { useSettingsStore } from '@/store/settings';
+
+const DECK_EDIT_SHORTCUTS = [
+  { key: 'N', descKey: 'shortcut.focusDeckName' },
+  { key: 'M', descKey: 'shortcut.focusDeckDesc' },
+  { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
+  { key: 'I', descKey: 'shortcut.pickIcon' },
+  { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+  { key: 'E', descKey: 'shortcut.toggleArchive' },
+  { key: 'Delete', descKey: 'shortcut.deleteDeck' },
+  { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+  { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  { key: 'S', descKey: 'shortcut.save' },
+  { key: 'X', descKey: 'shortcut.close' },
+  { key: '?', descKey: 'shortcut.showShortcuts' },
+  { key: 'ESC', descKey: 'shortcut.esc' },
+];
 
 export default function EditDeckScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +60,8 @@ export default function EditDeckScreen() {
   const { bottom: bottomInset } = useSafeAreaInsets();
   const { decks, updateDeck: updateStore, removeDeck } = useDeckStore();
   const isPro = useProStore((s) => s.isPro);
+  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   useDismissKeyboardOnLeave();
 
   const deck = decks.find((d) => d.id === id);
@@ -114,7 +134,20 @@ export default function EditDeckScreen() {
         handleClose();
       },
     },
-  ]);
+  // ショートカット一覧 表示中はメインキーを解除（モーダル側スクロールキーとの相互削除を防ぐ。
+  // 一覧の Esc/Return 閉じは下の排他フックが担当）。
+  ], !showShortcutsModal);
+
+  // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当。表示中は登録を外す）。
+  useKeyCommands([
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowShortcutsModal(true); } },
+  ], !showShortcutsModal);
+
+  // 一覧表示中のみ有効な Esc / Return 閉じ（メイン配列を解除している間の分を補う。メイン側とは排他）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: () => setShowShortcutsModal(false) },
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   async function handleSave() {
     const trimmed = name.trim();
@@ -196,7 +229,17 @@ export default function EditDeckScreen() {
       <Stack.Screen
         options={{
 
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.edit')}</Text>,
+          headerTitle: () => (
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            >
+              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.edit')}</Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          ),
           headerLeft: () => (
             <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
@@ -389,6 +432,11 @@ export default function EditDeckScreen() {
             ]
         }
         onClose={() => setShowDiscardModal(false)}
+      />
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        shortcuts={DECK_EDIT_SHORTCUTS}
       />
     </>
   );

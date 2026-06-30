@@ -329,7 +329,7 @@ export default function NewDeckScreen() {
                 onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
               >
                 <View style={[styles.iconCircle, { backgroundColor: sqlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
-                  <Ionicons name="server-outline" size={20} color={sqlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                  <Ionicons name={sqlInit.trim() ? 'server' : 'server-outline'} size={20} color={sqlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
                 </View>
                 <Text style={{ color: sqlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {sqlInit.trim() ? t('deck.sqlInitSet') : t('deck.sqlInitNone')}

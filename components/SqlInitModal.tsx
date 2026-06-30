@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
+
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -33,6 +34,35 @@ interface Props {
 export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const { height: winHeight } = useWindowDimensions();
+  // iPad ではモーダルが画面下端まで覆い切らず、背後のデッキ画面の保存ボタンが下にのぞくことがある
+  // （キーボードバー絡みの表示問題・別途調査中）。完全に覆う対処が難しいため、シートを保存ボタン
+  // 領域の分だけ持ち上げて、ボタンが上部欠けせず丸ごと見えるようにする（デッキ画面の bottomBar 高さに合わせる）。
+  const liftForSaveButton = Math.max(insets.bottom, 16) + 76;
+
+  // ソフトキーボード（大きいiOSキーボード）が出ているときだけシートを持ち上げて入力欄が隠れないようにする。
+  // KeyboardAvoidingView は最小化キーボードバー（外部キーボード接続時の「あ」/マイク・約55pt）も拾って
+  // 開く前後で位置が跳ねるため使わず、閾値（150pt）で「大きいキーボードのときだけ」自前で持ち上げる。
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const onChange = (e: { endCoordinates?: { height?: number } }) => {
+      const h = e.endCoordinates?.height ?? 0;
+      setKbHeight(h > 150 ? h : 0);
+    };
+    const onHide = () => setKbHeight(0);
+    const subShow = Keyboard.addListener('keyboardWillChangeFrame', onChange);
+    const subHide = Keyboard.addListener('keyboardWillHide', onHide);
+    return () => { subShow.remove(); subHide.remove(); };
+  }, []);
+
+  // 持ち上げ量：ソフトキーボード時はキーボード上端まで、それ以外は保存ボタンのすぐ上に固定。
+  const sheetLift = kbHeight > 0 ? kbHeight + 8 : liftForSaveButton;
+  // 持ち上げた分シートが画面上端を超えないよう高さ上限を設ける（入力欄が縮んでも全体は見える）。
+  // 上部に閉じる用のタップ領域（暗幕）を広めに残す。ソフトキーボード時はシートが上がり上端の隙間が
+  // 狭くなりタップしづらいので、予約分を大きめ（96pt）にして上の余白を確保する。
+  const topTapGap = 96;
+  const sheetMaxHeight = winHeight - sheetLift - insets.top - topTapGap;
 
   // シートを閉じる際にキーボードを確実に閉じる。autoFocus の入力欄を開いたまま
   // 背景タップ・完了ボタン・親 unmount で閉じると、キーボード非表示通知が届かず
@@ -50,13 +80,12 @@ export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={styles.overlay}>
-          <Pressable style={styles.closeArea} onPress={onClose} />
-          <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>
+      {/* KeyboardAvoidingView は使わない：最小化キーボードバーの高さを behavior="padding" が
+          開く前後で違う量だけ拾い、シート位置が跳ねる（開くと上がりすぎ→タップで適正）。
+          代わりにシートを marginBottom で固定量だけ持ち上げ、保存ボタンのすぐ上に安定配置する。 */}
+      <View style={styles.overlay}>
+        <Pressable style={styles.closeArea} onPress={onClose} />
+        <View style={[styles.sheet, { backgroundColor: theme.colors.surface, marginBottom: sheetLift, maxHeight: sheetMaxHeight }]}>
             <View style={styles.header}>
               <Text
                 style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
@@ -88,15 +117,13 @@ export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
               textAlignVertical="top"
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
-          </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

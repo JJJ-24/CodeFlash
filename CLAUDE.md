@@ -188,7 +188,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **フォントサイズシステム**: `AppFontSize` は `xs(12)/sm(14)/md(16)/lg(18)/xl(20)/xxl(26)` の6段階（medium設定時）。`store/theme.ts` の `fontSizePreference`（small=0.85×/medium=1.0×/large=1.2×）で全体スケールされる。StyleSheet の静的 fontSize は使わず、必ずインラインスタイルで `{ fontSize: theme.fontSize.md }` のように指定する。
 - **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで `<RootStack />` を描画しない。
 - **`FILTER_COLORS`**: `lib/theme/index.ts` にエクスポートされた定数。`learned: '#4CAF50'`、`due: '#F57C00'`。フィルター色を複数画面で使う場合はここから import する（ハードコード禁止）。
-- **CodeRunnerView のヘッダー色**: 状態（選択中・編集中・実行中）に応じてヘッダー背景色が変わる（選択: `#1A3050`、編集: `#4A3400`、実行: `#1E5024`）。ボーダー色と連動しているため、状態管理を変更する際は両方を確認する。
+- **コードブロック/エディタブロックのフォーカス系ヘッダー色**: 状態（フォーカス/選択・編集中・実行中）に応じてヘッダー背景色が変わる。色は `lib/theme` の派生定数で統一：`CODE_FOCUS_HEADER`（≈`#0F477E`・primary を 60%）／`CODE_EDITING_HEADER`（≈`#643800`・grade hard `#FB8C00` を **40%**）／`CODE_RUNNING_HEADER`（≈`#28602B`・grade good `#43A047` を 60%）。いずれも `darkenHex(base, 係数)` で「対応するボーダー色を暗くした濃色」＝ボーダーより暗いのでヘッダー上のボタンの形が浮く。暖色（オレンジ）は同係数だと知覚的に明るく浮くため**編集だけ係数を 0.4** に下げ、青/緑（0.6）と知覚輝度（≈0.06〜0.09）を揃える。`CodeRunnerView`・`CodeBlockItem`・`TextBlockItem`・`ImageBlockItem` が使用（テキスト/画像は実行状態なし＝フォーカス青と編集アンバーのみ）。ボーダー色と連動するため、状態管理を変更する際は両方を確認する。
 - **選択バーのアクションボタン**: 削除・移動などのバーボタンは言語/フォントサイズ非依存にするためアイコンのみ（テキストなし）の円形ボタンにする。`iconBtn` スタイル: `{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }`。無効時は `opacity: 0.4`。
 
 #### i18n

@@ -14,7 +14,7 @@ import { MD_TOOLBAR_ID } from './MarkdownToolbar';
 
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化
 const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark);
-import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_FOCUS_HEADER, CODE_EDITING_HEADER } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
 
@@ -259,7 +259,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           onHeaderPress={focused ? () => { inputRef.current?.blur(); } : undefined}
           hideDelete={isPreview}
           style={{
-            backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
+            backgroundColor: focused ? CODE_EDITING_HEADER : isFocused ? CODE_FOCUS_HEADER : (theme.dark ? '#252525' : '#FAFAFA'),
             borderBottomWidth: 1,
             borderBottomColor: theme.colors.border,
           }}

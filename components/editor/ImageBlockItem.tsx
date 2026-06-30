@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlockItemHeader } from './BlockItemHeader';
 import { InfoModal } from '@/components/InfoModal';
 import { pickAndSaveImage, resolveImageUri } from '@/lib/image';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, CODE_FOCUS_HEADER, CODE_EDITING_HEADER } from '@/lib/theme';
 import type { ImageBlock } from '@/types';
 
 interface Props {
@@ -111,7 +111,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
           onHeaderPress={focused ? () => { altInputRef.current?.blur(); } : undefined}
           hideDelete={isPreview}
           style={{
-            backgroundColor: focused ? '#4A3400' : isFocused ? '#1A3050' : (theme.dark ? '#252525' : '#FAFAFA'),
+            backgroundColor: focused ? CODE_EDITING_HEADER : isFocused ? CODE_FOCUS_HEADER : (theme.dark ? '#252525' : '#FAFAFA'),
             borderBottomWidth: 1,
             borderBottomColor: theme.colors.border,
           }}

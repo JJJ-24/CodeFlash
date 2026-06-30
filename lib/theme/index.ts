@@ -141,6 +141,26 @@ export const DECK_PRESET_COLORS = TAG_PRESET_COLORS;
 // light/dark とも同値（lightTheme/darkTheme の primary と一致）。
 export const PRIMARY_COLOR = '#1976D2';
 
+/** hex 色を factor 倍（0–1）に暗くする（各 RGB チャンネルを乗算）。primary 由来の濃色を作る用途。 */
+export function darkenHex(hex: string, factor: number): string {
+  const h = hex.replace('#', '');
+  const ch = (i: number) => Math.max(0, Math.min(255, Math.round(parseInt(h.slice(i, i + 2), 16) * factor)));
+  const to2 = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${to2(ch(0))}${to2(ch(2))}${to2(ch(4))}`;
+}
+
+/**
+ * コードブロックのフォーカス/選択・編集中・実行中のヘッダー色。いずれも対応するボーダー色
+ * （フォーカス=primary / 編集=grade hard / 実行=grade good）を 60% に暗くした濃色で統一する。
+ * ボーダー色より暗いのでヘッダー上のボタンの形が浮き上がり、3状態が同じ濃さの一対として揃う。
+ * 各ベース色由来なので将来ベース色を変えても連動する。
+ */
+// 注: 暖色（オレンジ）は同じ係数でも知覚的に明るく見えるため、編集だけ係数を 0.4 に下げて
+// 青(≈0.06)とほぼ同じ落ち着いた知覚輝度（≈0.055）に揃える（ダークモードでも浮かない）。青/緑は 0.6。
+export const CODE_FOCUS_HEADER = darkenHex(PRIMARY_COLOR, 0.6); // ≈ #0F477E（青）
+export const CODE_EDITING_HEADER = darkenHex('#FB8C00', 0.4); // ≈ #643800（アンバー・grade hard 由来）
+export const CODE_RUNNING_HEADER = darkenHex('#43A047', 0.6); // ≈ #28602B（緑・grade good 由来）
+
 export const GRADE_COLORS = {
   again: '#E53935',
   hard:  '#FB8C00',

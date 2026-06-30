@@ -566,6 +566,7 @@
     "toggleCountTime": "Toggle count / time",
     "startFocusedReview": "Start focused review",
     "delete": "Delete focused item/\nDelete card (no focus)",
+    "deleteCard": "Delete card",
     "tabNextPrevCard": "Switch tab\n(Front/Back/Memo)",
     "tabSelectCard": "Switch tab\n(Front/Back/Memo)\n[H/L][,/.] also works",
     "cycleMode": "Cycle mode\n(Edit/Sort/Preview)",

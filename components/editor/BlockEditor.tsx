@@ -443,6 +443,26 @@ export function BlockEditor({
     }, 350);
   }
 
+  // Delete キー共通処理：フォーカス中ブロックがあれば削除（空なら即時／非空は確認）、
+  // 無ければカード削除。編集モードと並べ替えモードの両方から呼ぶ。
+  function deleteFocusedBlockOrCard(blocks: EditBlock[], idx: number | null, tab: Tab) {
+    if (idx !== null && blocks[idx]) {
+      const block = blocks[idx];
+      const isEmpty =
+        block.type === "image"
+          ? !(block as ImageBlock).uri
+          : (block as TextBlock | CodeBlock).content.trim() === "";
+      if (isEmpty) {
+        deleteBlock(tab, block._key);
+        setFocusedBlockIndex(null);
+      } else {
+        setPendingDeleteBlock({ tab, key: block._key });
+      }
+    } else {
+      onDeleteCard?.();
+    }
+  }
+
   function handleKeyPress(key: string) {
     if (!keyboardShortcutsEnabled) return;
     const k = key.toLowerCase();
@@ -505,12 +525,24 @@ export function BlockEditor({
         }
       } else if (k === "m") {
         cycleMode();
+      } else if (k === "s") {
+        handleSave();
+      } else if (k === "x") {
+        onCancel?.();
+      } else if (k === KEY_DELETE) {
+        deleteFocusedBlockOrCard(blocks, idx, tab);
       }
       return;
     }
 
-    // プレビューモードでは タブ操作（,/. と 1/2/3）・スクロール（U/D）・M/S/X のみ許可。
-    // J / K / R / T / Delete / E / A は無効化。
+    // プレビューはブロック削除（✕・フォーカス）が無いが、カード削除（最下部ゴミ箱と同等）は
+    // Delete キーでもできるようにタップと揃える。フォーカスが無いので常にカード削除に対応。
+    if (isPreviewRef.current && k === KEY_DELETE) {
+      onDeleteCard?.();
+      return;
+    }
+    // プレビューモードでは タブ操作（,/. と 1/2/3）・スクロール（U/D）・M/S/X・Delete(カード削除) のみ許可。
+    // J / K / R / T / E / A は無効化。
     if (isPreviewRef.current && !["m", ",", ".", "s", "x", "u", "d", "1", "2", "3"].includes(k)) {
       return;
     }
@@ -559,21 +591,7 @@ export function BlockEditor({
         }
       }
     } else if (k === KEY_DELETE) {
-      if (idx !== null && blocks[idx]) {
-        const block = blocks[idx];
-        const isEmpty =
-          block.type === "image"
-            ? !(block as ImageBlock).uri
-            : (block as TextBlock | CodeBlock).content.trim() === "";
-        if (isEmpty) {
-          deleteBlock(tab, block._key);
-          setFocusedBlockIndex(null);
-        } else {
-          setPendingDeleteBlock({ tab, key: block._key });
-        }
-      } else {
-        onDeleteCard?.();
-      }
+      deleteFocusedBlockOrCard(blocks, idx, tab);
     } else if (k === "x") {
       onCancel?.();
     } else if (k === "s") {

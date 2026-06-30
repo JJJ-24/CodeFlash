@@ -566,6 +566,7 @@
     "toggleCountTime": "回数／平均時間 切替",
     "startFocusedReview": "重点復習開始",
     "delete": "削除（フォーカス項目）/\nカード削除（フォーカスなし）",
+    "deleteCard": "カード削除",
     "tabNextPrevCard": "タブ切替\n（表面/裏面/メモ）",
     "tabSelectCard": "タブ切替\n（表面/裏面/メモ）\n[H/L][,/.]でも可",
     "cycleMode": "モード切替\n（編集/並べ替え/プレビュー）",

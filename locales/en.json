@@ -512,7 +512,7 @@
     "iapNotice": "Payment will be charged to your Apple account. Purchases do not auto-renew."
   },
   "shortcut": {
-    "esc": "Close / back",
+    "esc": "Close / back\n[⌘.] also works",
     "flip": "Flip card",
     "grade": "Grade\n(Again/Hard/Good/Easy)",
     "memo": "Toggle memo",

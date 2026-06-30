@@ -1,17 +1,14 @@
-// 033 Phase 2/3/4: テキストブロック編集中にキーボード上端（InputAccessoryView）へ出す
-// マークダウン装飾ツールバー。選択範囲を囲みタイプ／行頭タイプの記法で装飾する。
+// 033/iPad対応: テキストブロック編集中に「ブロック直下」へインライン描画する
+// マークダウン装飾パレット。InputAccessoryView は使わない（iPad でフリーズ→クラッシュ
+// する独立バグの回避＋iPhone のコールド起動初回1タップ空振りも解消）。コードブロックの
+// SymbolPalette と同じく、フォーカス中ブロックの直下に普通の View として出す。
 import { Fragment } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { useTheme } from '@/lib/theme';
+import type { AppTheme } from '@/lib/theme';
 import type { MdAction } from '@/lib/editor/applyMarkdown';
-
-// カードエディタ全体で共有する InputAccessoryView の nativeID。
-// ブロックごとに別々の InputAccessoryView を mount/unmount すると、iOS で
-// タッチを横取りする残留ビューが生じるため、エディタに1つだけ常設して共有する。
-export const MD_TOOLBAR_ID = 'card-markdown-toolbar';
 
 export interface ToolbarButton {
   key: string;
@@ -35,17 +32,18 @@ export const TOOLBAR_BUTTONS: readonly ToolbarButton[] = [
 ] as const;
 
 interface Props {
-  /** 記法アクションを適用する。 */
+  visible: boolean;
+  /** 記法アクションを適用する（フォーカス中ブロックの apply 関数）。 */
   onAction: (action: MdAction) => void;
+  theme: AppTheme;
 }
 
-// 横スクロールは使わない。ScrollView を InputAccessoryView 内に置くと、アンマウント時に
-// タッチを横取りする残留ビューが生じ下部ボタンが反応しなくなるため、flex で等幅配置して全幅に収める。
-export function MarkdownToolbar({ onAction }: Props) {
-  const theme = useTheme();
+export function MarkdownPalette({ visible, onAction, theme }: Props) {
   const { t } = useTranslation();
+  if (!visible) return null;
+
   return (
-    <View style={[styles.bar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
+    <View style={[styles.bar, { backgroundColor: theme.dark ? '#252525' : '#FAFAFA', borderTopColor: theme.colors.border }]}>
       {TOOLBAR_BUTTONS.map((b) => (
         <Fragment key={b.key}>
           {b.groupStart && <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />}

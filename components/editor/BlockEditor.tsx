@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -11,7 +10,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -30,14 +28,12 @@ import { constants as KeyCommand } from "react-native-key-command";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
-import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
 import { ImageBlockItem } from "./ImageBlockItem";
-import { MarkdownToolbar, MD_TOOLBAR_ID } from "./MarkdownToolbar";
 import { TagSelector } from "./TagSelector";
 import { TextBlockItem } from "./TextBlockItem";
 
@@ -169,35 +165,8 @@ export function BlockEditor({
   });
   const blockPositions = useRef<Record<string, { y: number; h: number }>>({});
 
-  // 共有マークダウンツールバー（InputAccessoryView）から、現在フォーカス中の
-  // テキストブロックへ記法を適用するための登録口。フォーカス中ブロックが自分の
-  // apply 関数を登録し、ツールバーのボタンはそれを呼ぶ。
-  const activeWrapRef = useRef<((action: MdAction) => void) | null>(null);
-  // InputAccessoryView のマウント戦略:
-  // - iOS は「キーボード出現と同時にマウントされた accessory」しかリンクしない。先に常設すると
-  //   後からのフォーカスにリンクされず、編集画面でツールバーが出ない（新規作成は autoFocus で
-  //   キーボード出現と同時にマウントされるため出る）。→ 初回フォーカスでマウントする必要がある。
-  // - 一方、ブラーのたびにアンマウントすると、タッチを横取りする残留ビューが生じ下部ボタンが
-  //   反応しなくなる。→ 一度マウントしたらアンマウントしない。
-  // 結論: 初回フォーカスでマウント（toolbarMounted を立てる）→ 以後アンマウントせず、表示/非表示は
-  //   opacity で切り替える（toolbarActive）。
-  const [toolbarMounted, setToolbarMounted] = useState(false);
-  const [toolbarActive, setToolbarActive] = useState(false);
-  const activateToolbar = useCallback((apply: (action: MdAction) => void) => {
-    activeWrapRef.current = apply;
-    setToolbarMounted(true);
-    setToolbarActive(true);
-  }, []);
-  const deactivateToolbar = useCallback((apply: (action: MdAction) => void) => {
-    // 別ブロックが既に登録を引き継いでいる場合は消さない（フォーカス移動時の競合対策）
-    if (activeWrapRef.current === apply) {
-      activeWrapRef.current = null;
-      setToolbarActive(false); // マウントは維持。表示だけ消す。
-    }
-  }, []);
-  const handleToolbarAction = useCallback((action: MdAction) => {
-    activeWrapRef.current?.(action);
-  }, []);
+  // 装飾パレットは各テキストブロックが直下にインライン描画する（InputAccessoryView 廃止）。
+  // BlockEditor 側の共有登録口は不要になった（適用ロジックは各ブロックがローカルに持つ）。
   const focusedBlockIndexRef = useRef<number | null>(null);
   const activeTabRef = useRef<Tab>("front");
   const editorModeRef = useRef<EditorMode>("edit");
@@ -998,21 +967,6 @@ export function BlockEditor({
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* 共有マークダウン装飾ツールバー（キーボード上端）。
-          - 初回フォーカスでマウント（toolbarMounted）→ iOS がキーボードにリンクし表示される。
-            常設すると後からのフォーカスにリンクされず表示されないため、フォーカス時マウントが必須。
-          - 一度マウントしたらアンマウントしない（残留ビューによる下部ボタン不調を防ぐ）。
-          - 表示/非表示は opacity と pointerEvents（toolbarActive）で切り替え、非表示時はタップ透過。 */}
-      {/* 034: iPad ではこの装飾ツールバー（InputAccessoryView）単体がテキストブロック編集時に
-          フリーズ→クラッシュさせる（キーボードショートカットとは無関係の独立バグ・実機確認済み）。
-          当面 iPad では出さない。iPad 対応は別途要調査（TODO）。 */}
-      {Platform.OS === "ios" && !(Platform as any).isPad && toolbarMounted && (
-        <InputAccessoryView nativeID={MD_TOOLBAR_ID}>
-          <View style={{ opacity: toolbarActive ? 1 : 0 }} pointerEvents={toolbarActive ? "auto" : "none"}>
-            <MarkdownToolbar onAction={handleToolbarAction} />
-          </View>
-        </InputAccessoryView>
-      )}
       {/* タブバー */}
       <View
         style={[
@@ -1179,8 +1133,6 @@ export function BlockEditor({
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
-                  onActivateToolbar={activateToolbar}
-                  onDeactivateToolbar={deactivateToolbar}
                 />
               )}
               {block.type === "code" && (

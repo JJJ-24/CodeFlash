@@ -9,9 +9,13 @@ interface CardState {
   updateCard: (card: Card) => void;
   removeCard: (id: string) => void;
   reorderCards: (reordered: Card[]) => void;
+  // 別画面（カード編集）で複製したカードの ID。カード一覧がフォーカス時に取り込み「NEW」表示する。
+  pendingDuplicatedIds: string[];
+  markDuplicated: (ids: string[]) => void;
+  takeDuplicated: () => string[];
 }
 
-export const useCardStore = create<CardState>((set) => ({
+export const useCardStore = create<CardState>((set, get) => ({
   cards: [],
   setCards: (cards) => set({ cards }),
   addCard: (card) => set((state) => ({ cards: [...state.cards, card] })),
@@ -27,4 +31,12 @@ export const useCardStore = create<CardState>((set) => ({
         ...reordered,
       ],
     })),
+  pendingDuplicatedIds: [],
+  markDuplicated: (ids) =>
+    set((state) => ({ pendingDuplicatedIds: [...state.pendingDuplicatedIds, ...ids] })),
+  takeDuplicated: () => {
+    const ids = get().pendingDuplicatedIds;
+    if (ids.length > 0) set({ pendingDuplicatedIds: [] });
+    return ids;
+  },
 }));

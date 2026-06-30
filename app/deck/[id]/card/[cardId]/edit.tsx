@@ -16,7 +16,7 @@ import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { deleteCard, getCardById, setCardArchived, updateCard } from '@/lib/database/cards';
+import { deleteCard, duplicateCard, getCardById, setCardArchived, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
@@ -33,7 +33,7 @@ export default function EditCardScreen() {
   const { t } = useTranslation();
   const { bottom: bottomInset } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { updateCard: updateStore, removeCard } = useCardStore();
+  const { updateCard: updateStore, removeCard, markDuplicated } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
   const theme = useTheme();
   const { keyboardShortcutsEnabled } = useSettingsStore();
@@ -71,6 +71,12 @@ export default function EditCardScreen() {
   const initialSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // 複製で同一ルートへ replace 遷移したとき、画面が再利用されても BlockEditor を
+    // 新カード内容で確実に作り直すため、cardId 変更時に一旦 null へ戻して再マウントさせる。
+    setCard(null);
+    setInitialTagIds([]);
+    setFrontEmpty(false);
+    initialSnapshotRef.current = null;
     (async () => {
       const [loaded, tags] = await Promise.all([
         getCardById(db, cardId),
@@ -91,35 +97,60 @@ export default function EditCardScreen() {
     })();
   }, [cardId]);
 
+  // 現在の編集内容を DB へ永続化する（遷移は行わない）。保存・複製で共用。
+  async function persistCard(data: BlockEditorData) {
+    if (!card) return;
+    await updateCard(db, cardId, {
+      frontContent: data.frontBlocks,
+      backContent: data.backBlocks,
+      memoContent: data.memoBlocks,
+    });
+
+    // タグの差分更新
+    const toAdd = data.tagIds.filter((id) => !initialTagIds.includes(id));
+    const toRemove = initialTagIds.filter((id) => !data.tagIds.includes(id));
+    await Promise.all([
+      ...toAdd.map((tagId) => addTagToCard(db, cardId, tagId)),
+      ...toRemove.map((tagId) => removeTagFromCard(db, cardId, tagId)),
+    ]);
+
+    if (archived !== card.archived) {
+      await setCardArchived(db, cardId, archived);
+    }
+    updateStore({
+      ...card,
+      frontContent: data.frontBlocks,
+      backContent: data.backBlocks,
+      memoContent: data.memoBlocks,
+      archived,
+    });
+  }
+
   async function handleSave(data: BlockEditorData) {
     if (!card) return;
     setSaving(true);
     try {
-      await updateCard(db, cardId, {
-        frontContent: data.frontBlocks,
-        backContent: data.backBlocks,
-        memoContent: data.memoBlocks,
-      });
-
-      // タグの差分更新
-      const toAdd = data.tagIds.filter((id) => !initialTagIds.includes(id));
-      const toRemove = initialTagIds.filter((id) => !data.tagIds.includes(id));
-      await Promise.all([
-        ...toAdd.map((tagId) => addTagToCard(db, cardId, tagId)),
-        ...toRemove.map((tagId) => removeTagFromCard(db, cardId, tagId)),
-      ]);
-
-      if (archived !== card.archived) {
-        await setCardArchived(db, cardId, archived);
-      }
-      updateStore({
-        ...card,
-        frontContent: data.frontBlocks,
-        backContent: data.backBlocks,
-        memoContent: data.memoBlocks,
-        archived,
-      });
+      await persistCard(data);
       router.back();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // 現在の内容を保存したうえで複製し、複製先（A'）の編集画面へ置き換え遷移する。
+  async function handleDuplicate() {
+    if (!card || saving || frontEmpty) return;
+    const data = editorRef.current?.getData();
+    if (!data) return;
+    setSaving(true);
+    try {
+      await persistCard(data);
+      const newCard = await duplicateCard(db, cardId);
+      const deck = decks.find((d) => d.id === id);
+      if (deck) updateDeck({ ...deck, cardCount: deck.cardCount + 1 });
+      // カード一覧に戻ったとき複製先（A'）へ「NEW」を出すため保留 ID として渡す。
+      markDuplicated([newCard.id]);
+      router.replace({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id, cardId: newCard.id } });
     } finally {
       setSaving(false);
     }
@@ -220,6 +251,13 @@ export default function EditCardScreen() {
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
             <Ionicons name="trash-outline" size={26} color="#FFF" />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]}
+            onPress={handleDuplicate}
+            disabled={saving || frontEmpty}
+          >
+            <Ionicons name="copy-outline" size={26} color={saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary} />
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
             <Ionicons name="checkmark-sharp" size={26} color="#FFF" />
           </TouchableOpacity>
@@ -276,6 +314,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
+  actionBtnOutline: { borderWidth: 1.5 },
   actionBtnDisabled: { opacity: 0.5 },
   actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
 });

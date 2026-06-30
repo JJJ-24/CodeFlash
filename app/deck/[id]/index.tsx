@@ -78,7 +78,7 @@ export default function DeckDetailScreen() {
   const insets = useSafeAreaInsets();
   const initialTopInsetRef = useRef(insets.top);
   const { decks, updateDeck, addDeck } = useDeckStore();
-  const { cards, setCards, removeCard, reorderCards } = useCardStore();
+  const { cards, setCards, removeCard, reorderCards, takeDuplicated } = useCardStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
@@ -93,6 +93,8 @@ export default function DeckDetailScreen() {
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
   const restorationEndTimeRef = useRef(0);
+  // 複製で戻ってきた直後にスクロールしたい複製先（A'）の ID。一覧に現れ次第そこへスクロールする。
+  const pendingScrollToIdRef = useRef<string | null>(null);
   const filterOffsetsRef = useRef<Record<FilterKey, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const prevFilterRef = useRef<FilterKey>(selectedFilter);
   const listRef = useRef<FlatList<Card>>(null);
@@ -201,13 +203,29 @@ export default function DeckDetailScreen() {
       }
       lastFocusTimeRef.current = Date.now();
       const targetOffset = savedScrollOffsetRef.current;
-      restorationEndTimeRef.current = Date.now() + 800;
       setDescExpanded(false);
-      // 別画面から戻ってきたら「NEW」バッジは消す（複製直後の一時表示のみ）。
-      setRecentlyDuplicatedIds((prev) => (prev.size === 0 ? prev : new Set()));
+      pendingScrollToIdRef.current = null;
+      // 別画面（カード編集）で複製した分は保留 ID として取り込み「NEW」表示し、
+      // 複製先（A'）へフォーカスを移して A' までスクロールする（スクロール復元はしない）。
+      // それ以外は戻ってきた時点でバッジを消し（複製直後の一時表示のみ）、スクロール位置を復元する。
+      const pendingNew = takeDuplicated();
+      if (pendingNew.length > 0) {
+        const lastId = pendingNew[pendingNew.length - 1];
+        focusedCardIdRef.current = lastId;
+        setFocusedCardIdState(lastId);
+        pendingScrollToIdRef.current = lastId;
+        restorationEndTimeRef.current = 0;
+        setRecentlyDuplicatedIds(new Set(pendingNew));
+      } else {
+        restorationEndTimeRef.current = Date.now() + 800;
+        setRecentlyDuplicatedIds((prev) => (prev.size === 0 ? prev : new Set()));
+      }
+      // 複製で戻った場合の A' へのスクロールは専用 effect が担当するため復元しない。
+      // ref ではなくローカル値で判定し、専用 effect の ref クリアと競合しないようにする。
+      const skipRestore = pendingNew.length > 0;
       let cancelled = false;
       loadCards().then(() => {
-        if (cancelled) return;
+        if (cancelled || skipRestore) return;
         setTimeout(() => {
           if (!cancelled) listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
         }, 50);
@@ -485,6 +503,25 @@ export default function DeckDetailScreen() {
       : filteredCards,
     [filteredCards, cardSortOrder],
   );
+
+  // 複製で戻ってきた直後、複製先（A'）が一覧に現れたらそこへスクロールする。
+  useEffect(() => {
+    const targetId = pendingScrollToIdRef.current;
+    if (!targetId) return;
+    const idx = displayedCards.findIndex((c) => c.id === targetId);
+    if (idx === -1) return;
+    pendingScrollToIdRef.current = null;
+    setTimeout(() => listRef.current?.scrollToIndex({ index: idx, viewPosition: 0.5, animated: false }), 50);
+  }, [displayedCards]);
+
+  // 仮想化で未レンダリングのインデックスへの scrollToIndex は失敗するため、概算位置まで
+  // スクロールしてから再試行する（複製先 A' が末尾など画面外にある場合に必要）。
+  function handleScrollToIndexFailed(info: { index: number; averageItemLength: number }) {
+    listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+    setTimeout(() => {
+      listRef.current?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: false });
+    }, 100);
+  }
 
   selectionModeRef.current = selectionMode;
   selectedCardIdsRef.current = selectedCardIds;
@@ -967,7 +1004,7 @@ export default function DeckDetailScreen() {
               />
             }
             contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
-            onScrollToIndexFailed={() => {}}
+            onScrollToIndexFailed={handleScrollToIndexFailed}
             onDragEnd={({ data }) => {
               if (selectionMode) return;
               if (selectedFilter !== 'all' || cardSortOrder !== 'manual') return;
@@ -1013,7 +1050,7 @@ export default function DeckDetailScreen() {
               />
             }
             contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
-            onScrollToIndexFailed={() => {}}
+            onScrollToIndexFailed={handleScrollToIndexFailed}
             renderItem={({ item }) => renderItem({ item, drag: () => {} } as RenderItemParams<Card>)}
             extraData={listExtraData}
           />

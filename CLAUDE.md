@@ -214,7 +214,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **早期 return がある画面**（カード一覧 `deck/[id]`・学習セッション・エディタ）は、フック規約上 `useKeyCommands` を early return より前で呼ぶ。ハンドラが後方定義の値を参照するのはクロージャなので可（実行＝キー押下時には初期化済み・tsc も通る）。
 - **状態依存ガードはハンドラ内で再現**：旧 `onKeyPress` の「CardStats 表示中は A のみ」「DeckPicker 表示中は全無効」「選択/通常モード分岐」などは、各キーのハンドラ冒頭で `if (...) return` として表現する（フックはキー集合を focus 単位でしか変えられないため）。
 - **ネイティブ組込**：`plugins/withKeyCommands.js`（config plugin）が prebuild 時に Swift `AppDelegate` へ keyCommands override＋ブリッジヘッダ import を注入する（`ios/` は gitignore のため必須）。ネイティブ依存追加後はシミュレータ／実機それぞれで1回再ビルドが必要、以後の JS 変更はリロードのみ。
-- **矢印キー・ESC・Tab 対応済み**：`Return`/`Esc`/矢印は `KeyCommand.constants.keyInput*`、Tab は `'\t'`、Shift は `KeyCommand.constants.keyModifierShift`。ESC は階層ディスマス（開いているモーダル/シート/選択モード/全画面を閉じる→無ければ push 画面は戻る・エディタはキャンセル）。`B` は戻るの冗長エイリアスとして存続。
+- **矢印キー・ESC・Tab 対応済み**：`Return`/`Esc`/矢印は `KeyCommand.constants.keyInput*`、Tab は `'\t'`、Shift は `KeyCommand.constants.keyModifierShift`。ESC は階層ディスマス（開いているモーダル/シート/選択モード/全画面を閉じる→無ければ push 画面は戻る・エディタはキャンセル）。`B` は戻るの冗長エイリアスとして存続。**Esc キーの無いキーボード（iPad Magic Keyboard 等）向けに、`useKeyCommands` が各画面の Esc spec を代替キーへ自動展開する**：バッククォート `` ` ``（Esc の物理位置の単独キー。ただし実 TextInput フォーカス中は文字入力に消費され発火しない＝住み分け）と `Cmd+.`（iOS 標準キャンセル。修飾付きのため編集中も発火＝入力欄から抜ける用途も代替可）。展開は `expandEscapeAliases()` が担当し、画面側の Esc 登録は従来どおり1つでよい。
 - `CodeRunnerView` の `onKeyPress`（Tab 検知）は**実コード入力欄**なので存続＝正しい（隠し入力ではない）。リストの J/K ヌルサイクルは引き続き `hooks/useListNavigation.ts` が担当。
 
 #### iPad の落とし穴（UIFocusSystem）— 矢印/Tab の扱い

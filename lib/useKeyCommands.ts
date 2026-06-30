@@ -18,6 +18,38 @@ export type KeyCommandSpec = {
 const norm = (x: unknown) => String(x).toLowerCase();
 
 /**
+ * Esc キーと、その代替キー。iPad の Magic Keyboard など Esc キーが無いキーボードでも
+ * 同等の操作（モーダル/シート/選択モードを閉じる・編集解除・戻る等）ができるよう、
+ * 各画面の Esc spec を自動的に下記キーへも複製する（useKeyCommands 内で展開）。
+ *
+ * - バッククォート `` ` ``：iPad Magic Keyboard では Esc があった物理位置にこのキーがある。
+ *   単独キーで直感的。ただし実 TextInput フォーカス中は文字 '`' が入力され発火しない（住み分け＝
+ *   コード入力の邪魔をしない）。非入力時のダイアログ/モード解除/戻るに効く。
+ * - Cmd + .（ピリオド）：iOS/macOS 標準の「キャンセル」。修飾付きのためテキスト編集中でも
+ *   入力欄に消費されず発火する＝入力欄から抜ける用途も含め Esc の全機能を代替できる。
+ */
+const KEY_ESCAPE = (KeyCommand.constants?.keyInputEscape as string) ?? '';
+const KEY_MOD_COMMAND = (KeyCommand.constants?.keyModifierCommand as number) ?? 0;
+export const KEY_ESC_ALT_BACKTICK = '`';
+
+/** Esc（修飾なし）の spec を、代替キー（バッククォート・Cmd+.）へも複製した配列を返す。 */
+function expandEscapeAliases(specs: KeyCommandSpec[]): KeyCommandSpec[] {
+  if (!KEY_ESCAPE) return specs;
+  const escNorm = norm(KEY_ESCAPE);
+  const out: KeyCommandSpec[] = [];
+  for (const s of specs) {
+    out.push(s);
+    if (norm(s.input) === escNorm && (s.modifierFlags ?? 0) === 0) {
+      out.push({ input: KEY_ESC_ALT_BACKTICK, handler: s.handler });
+      if (KEY_MOD_COMMAND) {
+        out.push({ input: '.', modifierFlags: KEY_MOD_COMMAND, handler: s.handler });
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Backspace キー。iOS の UIKeyCommand では Mac/iPad キーボードの「delete」キー
  * （＝唯一の削除キー）は入力文字 '\b'（U+0008）として届く。矢印/Tab と違い
  * フォーカスエンジンに予約されていないため、優先フラグなしで安全に登録できる。
@@ -72,8 +104,9 @@ export const KEY_END = (KeyCommand.constants?.keyInputEnd as string) || '\uF72B'
  */
 export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) {
   const enabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
-  const specsRef = useRef(specs);
-  specsRef.current = specs;
+  // Esc spec を代替キー（バッククォート・Cmd+.）へ展開してから登録/マッチに使う。
+  const specsRef = useRef<KeyCommandSpec[]>(specs);
+  specsRef.current = expandEscapeAliases(specs);
 
   // `active`：同じ入力（j/k/Space 等）を複数の useKeyCommands が同時登録するのを防ぐゲート。
   // ネイティブ HardwareShortcut は isEqual/hash 未実装＝内容一致で重複保持されるため、常時マウントの

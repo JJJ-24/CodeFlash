@@ -260,8 +260,16 @@ export default function DeckDetailScreen() {
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedCardIds(new Set());
-    setFocusedCardIndex(null);
+    // カーソル（オレンジ枠）は通常モードのフォーカスへ引き継ぐ（消えた項目は ID 基準で自動的に null）
     setShowDeckPicker(false);
+  }
+
+  function enterSelectionMode() {
+    setSelectionMode(true);
+    // フォーカス中の項目があればそれを初期選択しつつカーソルを残す
+    const fid = focusedCardIdRef.current;
+    setSelectedCardIds(fid ? new Set([fid]) : new Set());
+    if (!fid) setFocusedCardIndex(null);
   }
 
   function handleDeleteSelected() {
@@ -393,6 +401,9 @@ export default function DeckDetailScreen() {
           ]}
           onPress={() => {
             if (isSelMode) {
+              // タグ画面と挙動を揃える：タップした項目へカーソル（オレンジ枠）も移動
+              focusedCardIdRef.current = item.id;
+              setFocusedCardIdState(item.id);
               toggleSelect();
             } else {
               focusedCardIdRef.current = item.id;
@@ -552,9 +563,7 @@ export default function DeckDetailScreen() {
         if (selectionMode) {
           exitSelectionMode();
         } else {
-          setSelectionMode((v) => !v);
-          setSelectedCardIds(new Set());
-          setFocusedCardIndex(null);
+          enterSelectionMode();
         }
       },
     },
@@ -810,9 +819,7 @@ export default function DeckDetailScreen() {
               if (selectionMode) {
                 exitSelectionMode();
               } else {
-                setSelectionMode(true);
-                setSelectedCardIds(new Set());
-                setFocusedCardIndex(null);
+                enterSelectionMode();
               }
             }}
             disabled={!selectionMode && displayedCards.length === 0}

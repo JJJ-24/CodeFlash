@@ -135,13 +135,15 @@ export default function TagCardsScreen() {
 
   function enterSelectionMode() {
     setSelectionMode(true);
-    setSelectedCardIds(new Set());
-    setFocusedCardIndex(null);
+    // フォーカス中の項目があればそれを初期選択しつつカーソルを残す
+    const fc = focusedCardIndex !== null ? displayedCards[focusedCardIndex] : undefined;
+    setSelectedCardIds(fc ? new Set([fc.id]) : new Set());
+    if (!fc) setFocusedCardIndex(null);
   }
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedCardIds(new Set());
-    setFocusedCardIndex(null);
+    // カーソル（オレンジ枠）は通常モードのフォーカスへ引き継ぐ（消えた項目は ID 基準で自動的に null）
   }
   function toggleSelect(id: string) {
     setSelectedCardIds((prev) => {

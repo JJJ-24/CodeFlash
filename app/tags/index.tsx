@@ -120,14 +120,16 @@ export default function TagsScreen() {
 
   function enterSelectionMode() {
     setSelectionMode(true);
-    setSelectedTagIds(new Set());
-    setFocusedTagIndex(null);
+    // フォーカス中の項目があればそれを初期選択しつつカーソルを残す
+    const ft = focusedTagIndex !== null ? sortedTags[focusedTagIndex] : undefined;
+    setSelectedTagIds(ft ? new Set([ft.id]) : new Set());
+    if (!ft) setFocusedTagIndex(null);
   }
 
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedTagIds(new Set());
-    setFocusedTagIndex(null);
+    // カーソル（オレンジ枠）は通常モードのフォーカスへ引き継ぐ（消えた項目は ID 基準で自動的に null）
   }
 
   function toggleSelectTag(id: string) {

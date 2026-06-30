@@ -157,6 +157,9 @@ export default function DeckDetailScreen() {
     review: new Set(),
     new: new Set(),
   });
+  // filterCardIds は初期値が空 Set で、loadCards 完了まで非「すべて」フィルターは 0 枚に見える。
+  // 「読み込み前の空」と「本当に 0 枚」を区別し、前者では学習開始ボタンを薄色化しない（遷移時のチラつき防止）。
+  const [filtersReady, setFiltersReady] = useState(false);
 
   const deck = decks.find((d) => d.id === id) ?? null;
 
@@ -180,6 +183,7 @@ export default function DeckDetailScreen() {
       review: new Set(dueIds),
       new: new Set(unlearnedIds),
     });
+    setFiltersReady(true);
   }, [db, id, setCards]);
 
   // 同期（ダウンロード）でローカルデータが入れ替わったら、フォーカス中でもカード一覧を再読込する。
@@ -852,7 +856,7 @@ export default function DeckDetailScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, (selectionMode || displayedCards.length === 0) && { opacity: 0.5 }]}
+          style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, (selectionMode || (filtersReady && displayedCards.length === 0)) && { opacity: 0.5 }]}
           activeOpacity={0.8}
           disabled={selectionMode || displayedCards.length === 0}
           onPress={startVisibleStudy}

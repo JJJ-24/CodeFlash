@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useFocusEffect } from 'expo-router';
-import { setStatusBarHidden } from 'expo-status-bar';
-import { useCallback } from 'react';
+import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text } from 'react-native';
 
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -17,13 +16,10 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
 
-  // 学習セッション等でステータスバーが非表示になった後、タブに戻るたびに確実に復元する。
-  // ホーム画面は useFocusEffect 内で多段タイマー復元も行うため、ここは他タブ向けのフォールバック。
-  useFocusEffect(
-    useCallback(() => {
-      setStatusBarHidden(false, 'none');
-    }, [])
-  );
+  // 学習セッション/コード実行 WebView 後にステータスバーが非表示になった状態で
+  // タブへ戻るたびに、多段タイマーで確実に復元する（WKWebView のネイティブクリーンアップは
+  // 遅れて発火するため、単発の復元では負けて学習タブ等のヘッダーが縮んだままになる）。
+  useRestoreStatusBar();
 
   return (
     <Tabs

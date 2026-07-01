@@ -35,6 +35,7 @@ import { LinksSheet } from "@/components/study/LinksSheet";
 import { ShortcutsModal } from "@/components/study/ShortcutsModal";
 import { useCodeBlockSelection } from "@/hooks/useCodeBlockSelection";
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
+import { useLockedTopInset } from "@/lib/useLockedTopInset";
 import { useStudySession } from "@/hooks/useStudySession";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import {
@@ -163,9 +164,10 @@ export default function StudySessionScreen() {
 
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { width: screenWidth } = useWindowDimensions();
-  // iPad: ステータスバーを隠す際にヘッダー高さが変わらないよう、初回 top inset を固定値として保持
+  // iPad: ステータスバーを隠す際にヘッダー高さが変わらないよう、縮まない top inset を使う
+  // （useLockedTopInset は「観測した最大値」を保持するのでフルスクリーンで insets.top=0 でも縮まない）
   const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
+  const lockedTopInset = useLockedTopInset();
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
   const sessionDeck = deckId ? decks.find((d) => d.id === deckId) : null;
@@ -669,7 +671,7 @@ export default function StudySessionScreen() {
 
   // iPhone 用インラインカスタムヘッダー（headerShown:false のため全状態で共通利用）
   const iPhoneHeader = !(Platform as any).isPad ? (
-    <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.baseSurface }}>
+    <View style={{ height: lockedTopInset + 44, backgroundColor: theme.baseSurface }}>
       <View style={{
         position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
         flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
@@ -818,7 +820,7 @@ export default function StudySessionScreen() {
         {(Platform as any).isPad ? (
           <View
             style={{
-              height: initialTopInsetRef.current + 44,
+              height: lockedTopInset + 44,
               backgroundColor: theme.baseSurface,
               justifyContent: "flex-end",
               alignItems: "center",
@@ -1380,7 +1382,7 @@ export default function StudySessionScreen() {
       {(Platform as any).isPad ? (
         <View
           style={{
-            height: initialTopInsetRef.current + 44,
+            height: lockedTopInset + 44,
             backgroundColor: theme.baseSurface,
           }}
         >

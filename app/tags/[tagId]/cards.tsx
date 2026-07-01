@@ -3,7 +3,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -26,6 +25,8 @@ import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId, setCardArchived, setCardsArchived } from '@/lib/database/cards';
 import { removeTagFromCards } from '@/lib/database/tags';
@@ -66,8 +67,8 @@ export default function TagCardsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
+  const lockedTopInset = useLockedTopInset();
+  useRestoreStatusBar();
   const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
@@ -314,7 +315,7 @@ export default function TagCardsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,

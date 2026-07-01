@@ -15,7 +15,6 @@ import {
   View,
 } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { searchCards, SEARCH_RESULT_LIMIT } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
@@ -26,6 +25,8 @@ import { sortDecks } from '@/lib/sortDecks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
 import { DeckIcon } from '@/components/DeckIcon';
@@ -328,8 +329,8 @@ export default function SearchScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
+  const lockedTopInset = useLockedTopInset();
+  useRestoreStatusBar();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
   const { lastSearchField, setLastSearchField, keyboardShortcutsEnabled } = useSettingsStore();
@@ -495,7 +496,7 @@ export default function SearchScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,

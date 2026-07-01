@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { popEscDismiss } from '@/lib/escStack';
 import { useKeyCommands } from '@/lib/useKeyCommands';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 import { settingsStyles } from './styles';
@@ -30,7 +30,7 @@ export function SettingsDetail({ title, children, overlay, onBack }: Props) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
+  const lockedTopInset = useLockedTopInset();
 
   // 戻る（Esc / B / 戻るボタン / FAB 共通）。まず最前面のインライン展開（SegmentedCard の info 等）を
   // 閉じ、無ければ onBack（モーダルを先に閉じる等）または router.back()。
@@ -47,7 +47,7 @@ export function SettingsDetail({ title, children, overlay, onBack }: Props) {
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,

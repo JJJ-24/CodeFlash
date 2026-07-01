@@ -18,7 +18,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
-import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
@@ -28,6 +28,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
@@ -199,11 +200,14 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const insets = useSafeAreaInsets();
+  const lockedTopInset = useLockedTopInset();
   const frame = useSafeAreaFrame();
-  // safe area / frame に追従させる（useRef でマウント時固定すると初期 inset 未解決の値を掴み、
-  // タブヘッダーと高さがズレる原因になる）
-  const headerHeights = useMemo(() => computeHeaderHeights(insets.top, frame), [insets.top, frame]);
+  // frame に追従しつつ、top inset は「縮まない」locked 値を使う。
+  // - useRef でマウント時固定すると初期 inset 未解決の値を掴み、タブヘッダーと高さがズレる
+  // - 生の insets.top を使うと、ステータスバー非表示や WKWebView クリーンアップで一時的に 0 へ
+  //   落ちるたびにヘッダーが縮む＝検索/新規デッキから戻った時にちらつく
+  // → 観測した最大値を保持する useLockedTopInset で両方を解消
+  const headerHeights = useMemo(() => computeHeaderHeights(lockedTopInset, frame), [lockedTopInset, frame]);
 
   async function handleDelete(id: string) {
     await deleteDeck(db, id);

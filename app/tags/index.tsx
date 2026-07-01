@@ -17,8 +17,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
@@ -26,6 +24,8 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -64,8 +64,8 @@ export default function TagsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
+  const lockedTopInset = useLockedTopInset();
+  useRestoreStatusBar();
   const { width: screenWidth } = useWindowDimensions();
   // ホーム/タグカード一覧のフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
   const blockWidth = (screenWidth - 56) / 4;
@@ -325,7 +325,7 @@ export default function TagsScreen() {
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,

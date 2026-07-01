@@ -2,7 +2,6 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -50,6 +49,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -75,8 +76,8 @@ export default function DeckDetailScreen() {
   const themeRef = useRef(theme);
   themeRef.current = theme;
   const { width: screenWidth } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const initialTopInsetRef = useRef(insets.top);
+  const lockedTopInset = useLockedTopInset();
+  useRestoreStatusBar();
   const { decks, updateDeck, addDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, takeDuplicated } = useCardStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
@@ -816,7 +817,7 @@ export default function DeckDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,

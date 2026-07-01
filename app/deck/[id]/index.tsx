@@ -5,6 +5,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   FlatList,
   Keyboard,
   Platform,
@@ -200,6 +201,42 @@ export default function DeckDetailScreen() {
   const pendingScrollToIdRef = useRef<string | null>(null);
   const filterOffsetsRef = useRef<Record<FilterKey, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const prevFilterRef = useRef<FilterKey>(selectedFilter);
+
+  // J/K の折り返し（先頭↔末尾）で遠くへスクロールする間、「移動中…」ピルを出して
+  // 「フリーズではない・いずれ止まる」ことを伝える。目的カードが可視になったら閉じる。
+  const [jumpPill, setJumpPill] = useState<null | 'top' | 'bottom'>(null);
+  const jumpTargetIdRef = useRef<string | null>(null);
+  const jumpShowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const jumpSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function clearJumpTimers() {
+    if (jumpShowTimerRef.current) { clearTimeout(jumpShowTimerRef.current); jumpShowTimerRef.current = null; }
+    if (jumpSafetyTimerRef.current) { clearTimeout(jumpSafetyTimerRef.current); jumpSafetyTimerRef.current = null; }
+  }
+  function endJumpIndicator() {
+    clearJumpTimers();
+    jumpTargetIdRef.current = null;
+    setJumpPill(null);
+  }
+  function startJumpIndicator(targetId: string, label: 'top' | 'bottom') {
+    clearJumpTimers();
+    jumpTargetIdRef.current = targetId;
+    // 250ms 以内に到着したらピルを出さない（小さいデッキで一瞬光るのを防ぐ）
+    jumpShowTimerRef.current = setTimeout(() => {
+      if (jumpTargetIdRef.current === targetId) setJumpPill(label);
+    }, 250);
+    // 保険：万一 onViewableItemsChanged が来なくても 8 秒で閉じる
+    jumpSafetyTimerRef.current = setTimeout(() => endJumpIndicator(), 8000);
+  }
+  // 現在画面に見えているカード ID の集合（ピルの要否判定に使う）。
+  const viewableKeysRef = useRef<Set<string>>(new Set());
+  // onViewableItemsChanged / viewabilityConfig は識別子が毎レンダー変わると RN が警告するため ref で固定。
+  const onViewableItemsChangedRef = useRef(({ viewableItems }: { viewableItems: { key: string }[] }) => {
+    viewableKeysRef.current = new Set(viewableItems.map((v) => v.key));
+    const target = jumpTargetIdRef.current;
+    if (target && viewableKeysRef.current.has(target)) endJumpIndicator();
+  });
+  const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 10 });
+  useEffect(() => () => clearJumpTimers(), []);
   const listRef = useRef<FlatList<Card>>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
@@ -799,6 +836,8 @@ export default function DeckDetailScreen() {
 
   function moveFocus(direction: 'next' | 'prev') {
     if (displayedCards.length === 0) return;
+    // 新しい移動が来たら、進行中の「移動中」ピルはいったん解除（目的地が変わるため）。
+    if (jumpTargetIdRef.current) endJumpIndicator();
     const currentId = focusedCardIdRef.current;
     const currentIdx = currentId != null ? displayedCards.findIndex(c => c.id === currentId) : null;
     const ci = currentIdx === -1 ? null : currentIdx;
@@ -808,7 +847,13 @@ export default function DeckDetailScreen() {
     const newId = next != null && displayedCards[next] ? displayedCards[next].id : null;
     focusedCardIdRef.current = newId;
     setFocusedCardIdState(newId);
-    if (next !== null) listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+    if (next !== null) {
+      // ヌルサイクルの折り返し（ci===null → 先頭/末尾へ）は遠くまでスクロールしうるので「移動中」ピルを出す。
+      // ただし目的カードが既に画面に見えている場合はスクロールが動かず onViewableItemsChanged も
+      // 発火しない（＝閉じられない）ので、最初から出さない。目的カードが可視になったら同ハンドラが閉じる。
+      if (ci === null && newId && !viewableKeysRef.current.has(newId)) startJumpIndicator(newId, next === 0 ? 'top' : 'bottom');
+      listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+    }
   }
 
   // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート・「すべて」フィルター・非選択モード時のみ
@@ -1104,6 +1149,8 @@ export default function DeckDetailScreen() {
             }}
             renderItem={renderItem}
             extraData={listExtraData}
+            onViewableItemsChanged={onViewableItemsChangedRef.current}
+            viewabilityConfig={viewabilityConfigRef.current}
           />
         ) : (
           <FlatList
@@ -1144,9 +1191,22 @@ export default function DeckDetailScreen() {
             onScrollToIndexFailed={handleScrollToIndexFailed}
             renderItem={({ item }) => renderItem({ item, drag: () => {} } as RenderItemParams<Card>)}
             extraData={listExtraData}
+            onViewableItemsChanged={onViewableItemsChangedRef.current}
+            viewabilityConfig={viewabilityConfigRef.current}
           />
         )}
       </Pressable>
+
+      {jumpPill && (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={[styles.jumpPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {jumpPill === 'bottom' ? t('card.jumpingToBottom') : t('card.jumpingToTop')}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {selectionMode ? (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
@@ -1305,6 +1365,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardPreview: { flex: 1 },
+  jumpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...SHADOW.subtle,
+  },
   newBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   newBadgeText: { fontWeight: '700' },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },

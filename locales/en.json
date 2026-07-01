@@ -128,6 +128,8 @@
     "reorderDisabledTitle": "Cannot Reorder",
     "reorderDisabledMessage": "Show \"All\" and switch to ≡ mode to reorder with long-press and drag.",
     "reorderDisabledMessageSort": "Switch to ≡ mode to reorder.",
+    "jumpingToTop": "Jumping to top…",
+    "jumpingToBottom": "Jumping to bottom…",
     "listInfoLabel": "About card list",
     "listInfoMessage": "[Tap]\n  Open editor\n[Swipe]\n  Archive / Delete\n※ Not available in {{menu}} mode\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\nAvailable only when \"All\" is shown.",
     "reorderHintMessage": "To reorder cards, set the filter to \"All\", switch to ≡ mode, then long-press a card and drag.",

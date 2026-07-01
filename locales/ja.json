@@ -128,6 +128,8 @@
     "reorderDisabledTitle": "並べ替えできません",
     "reorderDisabledMessage": "「すべて」を表示し、≡ モードにすると長押しドラッグで並べ替えできます。",
     "reorderDisabledMessageSort": "≡ モードにすると並べ替えできます。",
+    "jumpingToTop": "先頭へ移動中…",
+    "jumpingToBottom": "末尾へ移動中…",
     "listInfoLabel": "カード一覧の説明",
     "listInfoMessage": "[タップ]\n  編集画面へ移動\n[スワイプ]\n  アーカイブ・削除\n※ {{menu}} モード時は不可\n[学習開始]\n  学習画面へ移動\n復習対象カード（再学習含む）のみ学習履歴が更新されます。\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{newest}} 新しい順\n  {{oldest}} 古い順\n「すべて」を表示した場合のみ行えます。",
     "reorderHintMessage": "カードを並べ替えるには、フィルターを「すべて」にし、≡ モードを選んでから、カードを長押ししてドラッグします。",

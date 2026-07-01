@@ -112,6 +112,7 @@
   "card": {
     "new": "New Card",
     "edit": "Edit Card",
+    "copySuffix": " (Copy)",
     "delete": "Delete Card",
     "deleteConfirm": "Delete \"{{name}}\"?\nAssociated study history will also be deleted, which may affect your streak.",
     "noContent": "(no content)",

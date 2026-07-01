@@ -27,7 +27,7 @@ import { useSettingsStore } from '@/store/settings';
 import type { Card } from '@/types';
 
 export default function EditCardScreen() {
-  const { id, cardId, tab } = useLocalSearchParams<{ id: string; cardId: string; tab?: string }>();
+  const { id, cardId, tab, copied } = useLocalSearchParams<{ id: string; cardId: string; tab?: string; copied?: string }>();
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
@@ -150,7 +150,9 @@ export default function EditCardScreen() {
       if (deck) updateDeck({ ...deck, cardCount: deck.cardCount + 1 });
       // カード一覧に戻ったとき複製先（A'）へ「NEW」を出すため保留 ID として渡す。
       markDuplicated([newCard.id]);
-      router.replace({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id, cardId: newCard.id } });
+      // copied=1 でヘッダーに「（コピー）」を出し、複製したカードを編集中だと分かるようにする。
+      // 遷移で入った時だけ付くので、後からカード一覧経由で開き直せば通常の「カード編集」に戻る。
+      router.replace({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id, cardId: newCard.id, copied: '1' } });
     } finally {
       setSaving(false);
     }
@@ -204,7 +206,7 @@ export default function EditCardScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
             >
               <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.edit')}
+                {(editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.edit')) + (copied === '1' ? t('card.copySuffix') : '')}
               </Text>
               {keyboardShortcutsEnabled && (
                 <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />

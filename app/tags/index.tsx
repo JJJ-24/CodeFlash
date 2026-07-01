@@ -122,10 +122,9 @@ export default function TagsScreen() {
 
   function enterSelectionMode() {
     setSelectionMode(true);
-    // フォーカス中の項目があればそれを初期選択しつつカーソルを残す
-    const ft = focusedTagIndex !== null ? sortedTags[focusedTagIndex] : undefined;
-    setSelectedTagIds(ft ? new Set([ft.id]) : new Set());
-    if (!ft) setFocusedTagIndex(null);
+    // フォーカス中の項目はカーソル（オレンジ枠）として残すが、初期選択はしない。
+    // （フォーカス項目以外を選びたいケースが多く、自動チェックは誤選択を生むため）
+    setSelectedTagIds(new Set());
   }
 
   function exitSelectionMode() {

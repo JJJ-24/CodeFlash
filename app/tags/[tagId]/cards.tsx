@@ -138,10 +138,9 @@ export default function TagCardsScreen() {
 
   function enterSelectionMode() {
     setSelectionMode(true);
-    // フォーカス中の項目があればそれを初期選択しつつカーソルを残す
-    const fc = focusedCardIndex !== null ? displayedCards[focusedCardIndex] : undefined;
-    setSelectedCardIds(fc ? new Set([fc.id]) : new Set());
-    if (!fc) setFocusedCardIndex(null);
+    // フォーカス中の項目はカーソル（オレンジ枠）として残すが、初期選択はしない。
+    // （フォーカス項目以外を選びたいケースが多く、自動チェックは誤選択を生むため）
+    setSelectedCardIds(new Set());
   }
   function exitSelectionMode() {
     setSelectionMode(false);

@@ -287,10 +287,9 @@ export default function DeckDetailScreen() {
 
   function enterSelectionMode() {
     setSelectionMode(true);
-    // フォーカス中の項目があればそれを初期選択しつつカーソルを残す
-    const fid = focusedCardIdRef.current;
-    setSelectedCardIds(fid ? new Set([fid]) : new Set());
-    if (!fid) setFocusedCardIndex(null);
+    // フォーカス中の項目はカーソル（オレンジ枠）として残すが、初期選択はしない。
+    // （フォーカス項目以外を選びたいケースが多く、自動チェックは誤選択を生むため）
+    setSelectedCardIds(new Set());
   }
 
   function handleDeleteSelected() {

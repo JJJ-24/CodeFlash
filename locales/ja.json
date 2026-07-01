@@ -536,6 +536,7 @@
     "duplicateSelected": "複製（選択カード）",
     "duplicateCard": "カード複製",
     "archiveSelected": "アーカイブ切替\n（選択カード）",
+    "archiveToggle": "アーカイブ切替",
     "removeTagSelected": "タグを外す\n（選択カード）",
     "exitSelect": "選択モード解除",
     "normalMode": "通常モード",

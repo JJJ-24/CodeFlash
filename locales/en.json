@@ -536,6 +536,7 @@
     "duplicateSelected": "Duplicate selected cards",
     "duplicateCard": "Duplicate card",
     "archiveSelected": "Toggle archive selected",
+    "archiveToggle": "Toggle archive",
     "removeTagSelected": "Remove tag (selected)",
     "exitSelect": "Exit selection mode",
     "normalMode": "Normal Mode",

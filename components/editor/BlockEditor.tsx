@@ -896,6 +896,14 @@ export function BlockEditor({
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: "/", modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (keyboardShortcutsEnabled) onShowShortcuts?.(); } },
     { input: "e", handler: () => handleKeyPress("e") },
+    // ⇧E = アーカイブ切替。E 単体は「フォーカスブロック編集」で埋まるため、他画面の E=アーカイブに
+    //   合わせて Shift 併用にする。トグルが見える編集/並び替えモードのみ有効（プレビューは非表示）＆
+    //   新規作成では onArchivedChange 未提供＝無効。
+    { input: "e", modifierFlags: KeyCommand.keyModifierShift, handler: () => {
+      if (!keyboardShortcutsEnabled) return;
+      if (isPreviewRef.current || !onArchivedChange) return;
+      onArchivedChange(!archived);
+    } },
     { input: "t", handler: () => handleKeyPress("t") },
     { input: "u", handler: () => handleKeyPress("u") },
     { input: ",", handler: () => handleKeyPress(",") },

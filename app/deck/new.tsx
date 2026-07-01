@@ -29,6 +29,7 @@ import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useDeckStore } from '@/store/decks';
+import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 
@@ -52,6 +53,7 @@ export default function NewDeckScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { addDeck } = useDeckStore();
+  const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const isPro = useProStore((s) => s.isPro);
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
@@ -91,6 +93,8 @@ export default function NewDeckScreen() {
         sqlInit: sqlInit.trim() || null,
       });
       addDeck(deck);
+      // 一覧へ戻ったとき、作成したデッキへフォーカスを移す
+      setPendingFocus('deck', deck.id);
       router.back();
     } finally {
       setSaving(false);

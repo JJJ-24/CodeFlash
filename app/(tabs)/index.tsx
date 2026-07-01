@@ -34,6 +34,7 @@ import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '
 import { sortDecks } from '@/lib/sortDecks';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useDeckStore } from '@/store/decks';
+import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
@@ -144,6 +145,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { decks, setDecks, removeDeck, reorderDecks, updateDeck } = useDeckStore();
+  const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
   const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
   const { width } = useWindowDimensions();
   // 学習/統計タブの1ブロック実幅に一致させる（コンテナ余白16・行 marginHorizontal:-2・各ブロック margin:2・gap:4 の4列構成）
@@ -183,11 +185,24 @@ export default function HomeScreen() {
       setStatusBarHidden(false, 'none');
       const sbTid1 = setTimeout(() => { if (isFocusedRef.current) setStatusBarHidden(false, 'none'); }, 200);
       const sbTid2 = setTimeout(() => { if (isFocusedRef.current) setStatusBarHidden(false, 'none'); }, 550);
-      const targetOffset = savedScrollOffsetRef.current;
-      restorationEndTimeRef.current = Date.now() + 800;
-      const tid1 = setTimeout(() => {
-        listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
-      }, 50);
+      // 新規デッキ作成から戻った場合は、作成デッキへフォーカス＋スクロール（スクロール位置復元はしない）。
+      const pendingFocusDeck = takePendingFocus('deck');
+      let tid1: ReturnType<typeof setTimeout>;
+      if (pendingFocusDeck) {
+        setFocusDeckId(pendingFocusDeck);
+        restorationEndTimeRef.current = 0;
+        tid1 = setTimeout(() => {
+          if (!isFocusedRef.current) return;
+          const idx = displayedDecksRef.current.findIndex((d) => d.id === pendingFocusDeck);
+          if (idx !== -1) listRef.current?.scrollToIndex({ index: idx, viewPosition: 0.5, animated: true });
+        }, 120);
+      } else {
+        const targetOffset = savedScrollOffsetRef.current;
+        restorationEndTimeRef.current = Date.now() + 800;
+        tid1 = setTimeout(() => {
+          listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
+        }, 50);
+      }
       return () => {
         isFocusedRef.current = false;
         clearTimeout(sbTid1);
@@ -240,7 +255,10 @@ export default function HomeScreen() {
     setDeckSortOrder(next.key);
   }
 
-  const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, listRef, moveFocus: moveDeckFocus } = useListNavigation(displayedDecks, (deck) => deck.id);
+  const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, setFocusId: setFocusDeckId, listRef, moveFocus: moveDeckFocus } = useListNavigation(displayedDecks, (deck) => deck.id);
+  // フォーカス effect（deps 空）から最新の一覧を参照するための ref
+  const displayedDecksRef = useRef(displayedDecks);
+  displayedDecksRef.current = displayedDecks;
 
   // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート時のみ。フォーカスは ID 追跡で自動追従。
   // 非表示（アーカイブ）デッキは元位置に固定したまま表示中だけを並べ替える（onDragEnd と同じ再構築）。
@@ -457,6 +475,10 @@ export default function HomeScreen() {
             containerStyle={{ flex: 1 }}
             data={displayedDecks}
             keyExtractor={(item) => item.id}
+            onScrollToIndexFailed={(info) => {
+              listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+              setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: false }), 100);
+            }}
             // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false
             // にしているため既定値だと一気にスクロールしてしまう）。要調整の数値。
             autoscrollSpeed={4}

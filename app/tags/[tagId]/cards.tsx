@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -34,6 +34,7 @@ import { getCardPreview } from '@/lib/cardPreview';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import { useDeckStore } from '@/store/decks';
+import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useTagStore } from '@/store/tags';
 import type { Card } from '@/types';
 
@@ -104,7 +105,10 @@ export default function TagCardsScreen() {
   const blockWidth = (screenWidth - 56) / 4;
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
 
-  const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, listRef, moveFocus } = useListNavigation(displayedCards, (c) => c.id);
+  const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, setFocusId, listRef, moveFocus } = useListNavigation(displayedCards, (c) => c.id);
+  // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
+  const pendingFocusCardIdRef = useRef<string | null>(null);
+  const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
 
   function confirmDeleteCard(card: Card) {
     const rawPreview = getCardPreview(card.frontContent, t('card.imageBlock')).replace(/\n/g, ' ');
@@ -200,6 +204,8 @@ export default function TagCardsScreen() {
   useFocusEffect(
     useCallback(() => {
       lastFocusTimeRef.current = Date.now();
+      // 新規作成から戻った場合の作成カード ID を保留（一覧再読込後に下の effect がフォーカス＋スクロール）
+      pendingFocusCardIdRef.current = takePendingFocus('card');
       getCardsByTagId(db, tagId).then((raw) => {
         if (cardSortOrder === 'newest') setCards([...raw].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.sortOrder - a.sortOrder));
         else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder));
@@ -207,6 +213,17 @@ export default function TagCardsScreen() {
       });
     }, [db, tagId, cardSortOrder])
   );
+
+  // 保留 ID の項目が一覧に現れたらフォーカス（オレンジではなく青枠＝通常フォーカス）＋スクロールする。
+  useEffect(() => {
+    const id = pendingFocusCardIdRef.current;
+    if (!id) return;
+    const idx = displayedCards.findIndex((c) => c.id === id);
+    if (idx === -1) return;
+    pendingFocusCardIdRef.current = null;
+    setFocusId(id);
+    setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: idx, viewPosition: 0.5, animated: false }), 60);
+  }, [displayedCards, setFocusId, listRef]);
 
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。CardStats 表示中（statsCardId）は
   // ←/→・,/.・H/L でフィルター（すべて/有効）を循環切替（タブ画面・カード一覧と同じ操作軸）。
@@ -410,6 +427,10 @@ export default function TagCardsScreen() {
           ref={listRef}
           data={displayedCards}
           keyExtractor={(item) => item.id}
+          onScrollToIndexFailed={(info) => {
+            (listRef.current as any)?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+            setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: false }), 100);
+          }}
           contentContainerStyle={styles.list}
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}

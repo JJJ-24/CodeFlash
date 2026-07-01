@@ -25,6 +25,13 @@ export function useListNavigation<T>(items: T[], keyExtractor?: (item: T) => str
     }
   }, [keyExtractor, items]);
 
+  // ID を直接指定してフォーカスする（keyExtractor 使用時のみ有効）。スクロールはしない。
+  // 新規作成から戻った直後、まだ index 導出前でも id さえ分かればフォーカスできるようにする用途。
+  const setFocusId = useCallback((id: string | null) => {
+    focusedIdRef.current = id;
+    setFocusedIdState(id);
+  }, []);
+
   const moveFocus = useCallback((dir: 'next' | 'prev') => {
     if (keyExtractor) {
       // ref 経由で stale closure を回避しつつ現在の index を取得
@@ -64,5 +71,5 @@ export function useListNavigation<T>(items: T[], keyExtractor?: (item: T) => str
     }
   }, [items, keyExtractor]);
 
-  return { focusedIndex, setFocusedIndex, listRef, moveFocus };
+  return { focusedIndex, setFocusedIndex, setFocusId, listRef, moveFocus };
 }

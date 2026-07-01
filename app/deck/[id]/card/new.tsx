@@ -20,6 +20,7 @@ import { createCard } from '@/lib/database/cards';
 import { addTagToCard } from '@/lib/database/tags';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
+import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useSettingsStore } from '@/store/settings';
 
 export default function NewCardScreen() {
@@ -32,6 +33,7 @@ export default function NewCardScreen() {
   const { keyboardShortcutsEnabled } = useSettingsStore();
   useDismissKeyboardOnLeave();
   const { addCard } = useCardStore();
+  const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const { decks, updateDeck } = useDeckStore();
   const currentDeck = decks.find((d) => d.id === deckId);
   const editorRef = useRef<BlockEditorRef>(null);
@@ -93,6 +95,8 @@ export default function NewCardScreen() {
       if (deck) {
         updateDeck({ ...deck, cardCount: deck.cardCount + 1 });
       }
+      // 一覧へ戻ったとき、作成したカードへフォーカスを移す
+      setPendingFocus('card', card.id);
       router.back();
     } finally {
       setSaving(false);

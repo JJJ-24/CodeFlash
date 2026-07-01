@@ -24,6 +24,7 @@ import { createTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 
@@ -44,6 +45,7 @@ export default function NewTagScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const { tags, addTag } = useTagStore();
+  const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const { bottom: bottomInset } = useSafeAreaInsets();
@@ -139,6 +141,8 @@ export default function NewTagScreen() {
     try {
       const tag = await createTag(db, { name: trimmed, color });
       addTag({ ...tag, cardCount: 0 });
+      // 一覧へ戻ったとき、作成したタグへフォーカスを移す
+      setPendingFocus('tag', tag.id);
       router.back();
     } finally {
       setSaving(false);

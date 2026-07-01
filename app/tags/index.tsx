@@ -15,7 +15,7 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
@@ -31,6 +31,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, TAG_PRESET_CO
 import { resolveTagColor } from '@/lib/tagColors';
 import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
+import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
 
@@ -90,7 +91,10 @@ export default function TagsScreen() {
     return tags;
   }, [tags, tagSortOrder]);
 
-  const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
+  const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, setFocusId, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
+  // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
+  const pendingFocusTagIdRef = useRef<string | null>(null);
+  const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
 
   // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート・非選択モード時のみ。フォーカスは ID 追跡で自動追従。
   function moveTagOrder(dir: 'up' | 'down') {
@@ -201,12 +205,17 @@ export default function TagsScreen() {
   useFocusEffect(
     useCallback(() => {
       lastFocusTimeRef.current = Date.now();
+      // 新規作成から戻った場合の作成タグ ID を保留（一覧再読込後に下の effect がフォーカス＋スクロール）。
+      // その場合はスクロール位置の復元をしない（作成タグへスクロールするため）。
+      const pendingFocusTag = takePendingFocus('tag');
+      pendingFocusTagIdRef.current = pendingFocusTag;
       const targetOffset = savedScrollOffsetRef.current;
-      restorationEndTimeRef.current = Date.now() + 800;
+      restorationEndTimeRef.current = pendingFocusTag ? 0 : Date.now() + 800;
       let cancelled = false;
       getAllTags(db).then((loadedTags) => {
         if (cancelled) return;
         setTags(loadedTags);
+        if (pendingFocusTag) return;
         setTimeout(() => {
           if (!cancelled) (listRef.current as any)?.scrollToOffset({ offset: targetOffset, animated: false });
         }, 50);
@@ -218,6 +227,17 @@ export default function TagsScreen() {
       };
     }, [db])
   );
+
+  // 保留 ID のタグが一覧に現れたらフォーカス（青枠）＋スクロールする。
+  useEffect(() => {
+    const id = pendingFocusTagIdRef.current;
+    if (!id) return;
+    const idx = sortedTags.findIndex((tg) => tg.id === id);
+    if (idx === -1) return;
+    pendingFocusTagIdRef.current = null;
+    setFocusId(id);
+    setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: idx, viewPosition: 0.5, animated: true }), 60);
+  }, [sortedTags, setFocusId, listRef]);
 
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。J/K は両モード共通、その他は
   // 選択/通常モードで分岐（旧 onKeyPress/onSubmitEditing と同じ割り当て）。
@@ -438,6 +458,10 @@ export default function TagsScreen() {
           autoscrollSpeed={5}
           data={sortedTags}
           keyExtractor={(item) => item.id}
+          onScrollToIndexFailed={(info) => {
+            (listRef.current as any)?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+            setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: false }), 100);
+          }}
           contentContainerStyle={[styles.list, selectionMode && { paddingBottom: 160 }]}
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}

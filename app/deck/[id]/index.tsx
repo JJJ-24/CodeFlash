@@ -54,6 +54,7 @@ import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
+import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useReviewStore } from '@/store/reviews';
 import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, preferenceToFilter } from '@/store/settings';
@@ -80,6 +81,7 @@ export default function DeckDetailScreen() {
   useRestoreStatusBar();
   const { decks, updateDeck, addDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, takeDuplicated } = useCardStore();
+  const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
   const { isPro } = useProStore();
@@ -212,6 +214,8 @@ export default function DeckDetailScreen() {
       // 複製先（A'）へフォーカスを移して A' までスクロールする（スクロール復元はしない）。
       // それ以外は戻ってきた時点でバッジを消し（複製直後の一時表示のみ）、スクロール位置を復元する。
       const pendingNew = takeDuplicated();
+      // 新規作成から戻った場合の作成カード ID（複製と違い「NEW」バッジは出さず、フォーカス＋スクロールのみ）
+      const pendingFocusCard = takePendingFocus('card');
       if (pendingNew.length > 0) {
         const lastId = pendingNew[pendingNew.length - 1];
         focusedCardIdRef.current = lastId;
@@ -219,13 +223,19 @@ export default function DeckDetailScreen() {
         pendingScrollToIdRef.current = lastId;
         restorationEndTimeRef.current = 0;
         setRecentlyDuplicatedIds(new Set(pendingNew));
+      } else if (pendingFocusCard) {
+        focusedCardIdRef.current = pendingFocusCard;
+        setFocusedCardIdState(pendingFocusCard);
+        pendingScrollToIdRef.current = pendingFocusCard;
+        restorationEndTimeRef.current = 0;
+        setRecentlyDuplicatedIds((prev) => (prev.size === 0 ? prev : new Set()));
       } else {
         restorationEndTimeRef.current = Date.now() + 800;
         setRecentlyDuplicatedIds((prev) => (prev.size === 0 ? prev : new Set()));
       }
-      // 複製で戻った場合の A' へのスクロールは専用 effect が担当するため復元しない。
+      // 複製/新規作成で戻った場合の該当カードへのスクロールは専用 effect が担当するため復元しない。
       // ref ではなくローカル値で判定し、専用 effect の ref クリアと競合しないようにする。
-      const skipRestore = pendingNew.length > 0;
+      const skipRestore = pendingNew.length > 0 || !!pendingFocusCard;
       let cancelled = false;
       loadCards().then(() => {
         if (cancelled || skipRestore) return;

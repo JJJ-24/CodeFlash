@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,7 +20,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, type AppTheme } from '@/lib/theme';
 import {
   deleteCard,
   deleteCardsBulk,
@@ -64,6 +64,106 @@ import { getCardPreview } from '@/lib/cardPreview';
 import type { Card, Deck } from '@/types';
 
 type FilterKey = DeckDetailFilter;
+
+// カード行を memo 化し、フォーカス変更時に「枠が変わる2枚」だけ再描画されるようにする
+// （100枚超でも J/K のフォーカス反映が遅れない）。ドラッグ経路（ScaleDecorator）は renderItem 側に
+// 残してあり、この memo はその内側だけを対象にするため並べ替えのアニメーションには影響しない。
+// 比較は「描画に効くフィールド」のみ。callbacks は親で useCallback 済み・drag は同一セル内で有効なので比較対象外。
+type CardRowProps = {
+  item: Card;
+  drag: () => void;
+  isFocused: boolean;
+  isSelected: boolean;
+  isSelMode: boolean;
+  isNew: boolean;
+  effectiveArchived: boolean;
+  swipeEnabled: boolean;
+  isPro: boolean;
+  theme: AppTheme;
+  themeKey: string;
+  imageLabel: string;
+  noTextLabel: string;
+  onPress: (item: Card) => void;
+  onLongPress: (item: Card, drag: () => void) => void;
+  onStats: (item: Card) => void;
+  onEdit: (item: Card) => void;
+  onDelete: (item: Card) => void;
+  onArchive: (item: Card) => void;
+};
+
+const CardRow = memo(function CardRow(props: CardRowProps) {
+  const {
+    item, drag, isFocused, isSelected, isSelMode, isNew, effectiveArchived, swipeEnabled,
+    isPro, theme, imageLabel, noTextLabel, onPress, onLongPress, onStats, onEdit, onDelete, onArchive,
+  } = props;
+  const preview = getCardPreview(item.frontContent, imageLabel);
+  return (
+    <SwipeToDeleteRow
+      enabled={swipeEnabled}
+      onDelete={() => onDelete(item)}
+      onArchive={() => onArchive(item)}
+      archived={item.archived}
+      containerStyle={styles.cardRowSpacing}
+    >
+      <Pressable
+        style={[
+          styles.cardItem,
+          { backgroundColor: theme.colors.surface },
+          effectiveArchived && { opacity: 0.55 },
+          isSelMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+          isSelMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
+          !isSelMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
+        ]}
+        onPress={() => onPress(item)}
+        onLongPress={() => onLongPress(item, drag)}
+      >
+        {isSelMode && (
+          <Ionicons
+            name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+            size={22}
+            color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
+          />
+        )}
+        {/* lineHeight を明示すると小フォント時に行ボックスが不足して2行目がクリップされるため指定しない。 */}
+        <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {preview || noTextLabel}
+        </Text>
+        {isNew && (
+          <View style={[styles.newBadge, { backgroundColor: theme.colors.primary }]}>
+            <Text allowFontScaling={false} style={[styles.newBadgeText, { color: theme.colors.primaryText, fontSize: theme.fontSize.xs }]}>NEW</Text>
+          </View>
+        )}
+        {effectiveArchived && (
+          <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+        )}
+        {!isSelMode && (
+          <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+            {isPro && (
+              <Pressable onPress={() => onStats(item)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+              </Pressable>
+            )}
+            <Pressable onPress={() => onEdit(item)} hitSlop={8} style={{ padding: 4 }}>
+              <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+            </Pressable>
+          </View>
+        )}
+      </Pressable>
+    </SwipeToDeleteRow>
+  );
+}, (prev, next) =>
+  prev.item === next.item &&
+  prev.isFocused === next.isFocused &&
+  prev.isSelected === next.isSelected &&
+  prev.isSelMode === next.isSelMode &&
+  prev.isNew === next.isNew &&
+  prev.effectiveArchived === next.effectiveArchived &&
+  prev.swipeEnabled === next.swipeEnabled &&
+  prev.isPro === next.isPro &&
+  prev.themeKey === next.themeKey &&
+  prev.imageLabel === next.imageLabel &&
+  prev.noTextLabel === next.noTextLabel,
+);
 
 export default function DeckDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -394,103 +494,79 @@ export default function DeckDetailScreen() {
     router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id, cardId } });
   }, [router, id]);
 
-  const renderItem = useCallback(({ item, drag }: RenderItemParams<Card>) => {
-    const theme = themeRef.current;
-    const preview = getCardPreview(item.frontContent, imageBlockLabelRef.current);
-    const effectiveArchived = item.archived || deckArchivedRef.current;
-    const isSelected = selectedCardIdsRef.current.has(item.id);
-    const isFocused = item.id === focusedCardIdRef.current;
-    const isSelMode = selectionModeRef.current;
-    // 手動ソート時は DraggableFlatList 内なので ScaleDecorator で包む（フィルタ中もドラッグは
-    // onDragEnd 側で無効化される）。新しい/古い順は素の FlatList で描画するため包まない（context 不在）。
-    const inDraggable = cardSortOrderRef.current === 'manual';
-    const isNew = recentlyDuplicatedIdsRef.current.has(item.id);
-    function toggleSelect() {
+  // CardRow に渡す安定コールバック（ref/stable setState 経由なので依存は最小）。
+  const handleRowPress = useCallback((item: Card) => {
+    focusedCardIdRef.current = item.id;
+    setFocusedCardIdState(item.id);
+    if (selectionModeRef.current) {
+      // タグ画面と挙動を揃える：タップした項目へカーソル（オレンジ枠）も移動
       setSelectedCardIds((prev) => {
         const next = new Set(prev);
         if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
         return next;
       });
+    } else {
+      navigateToCardEdit(item.id);
     }
+  }, [navigateToCardEdit]);
+  const handleRowLongPress = useCallback((item: Card, drag: () => void) => {
+    if (selectionModeRef.current) return;
+    if (selectedFilterRef.current !== 'all') {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
+      return;
+    }
+    if (cardSortOrderRef.current !== 'manual') {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
+      return;
+    }
+    drag();
+  }, [t]);
+  const handleStatsPress = useCallback((item: Card) => {
+    focusedCardIdRef.current = item.id;
+    setFocusedCardIdState(item.id);
+    setStatsCardId(item.id);
+  }, []);
+  const handleEditPress = useCallback((item: Card) => {
+    focusedCardIdRef.current = item.id;
+    setFocusedCardIdState(item.id);
+    navigateToCardEdit(item.id);
+  }, [navigateToCardEdit]);
+  const handleDeleteRow = useCallback((item: Card) => confirmDeleteCardRef.current(item), []);
+  const handleArchiveRow = useCallback((item: Card) => archiveCardRef.current(item), []);
+
+  const renderItem = useCallback(({ item, drag }: RenderItemParams<Card>) => {
+    const theme = themeRef.current;
+    const isSelMode = selectionModeRef.current;
+    // ScaleDecorator はドラッグ並べ替えが実際に効く「すべて＋手動」のときだけ使う。
+    // 済み/復習/新規 では手動ソートでもドラッグ不可（onDragEnd で無効化）＝ScaleDecorator は不要で、
+    // その animated ラッパーが横スワイプ（削除/アーカイブ）のジェスチャーを奪ってしまうため外す。
+    // （DraggableFlatList 内でも ScaleDecorator 無しのセル描画は問題ない）
+    const inDraggable = cardSortOrderRef.current === 'manual' && selectedFilterRef.current === 'all';
     const row = (
-      <SwipeToDeleteRow
-        enabled={!isSelMode && !(selectedFilterRef.current === 'all' && cardSortOrderRef.current === 'manual')}
-        onDelete={() => confirmDeleteCardRef.current(item)}
-        onArchive={() => archiveCardRef.current(item)}
-        archived={item.archived}
-        containerStyle={styles.cardRowSpacing}
-      >
-        <Pressable
-          style={[
-            styles.cardItem,
-            { backgroundColor: theme.colors.surface },
-            effectiveArchived && { opacity: 0.55 },
-            isSelMode && isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
-            isSelMode && isFocused && { borderWidth: 2, borderColor: '#F57C00' },
-            !isSelMode && isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
-          ]}
-          onPress={() => {
-            if (isSelMode) {
-              // タグ画面と挙動を揃える：タップした項目へカーソル（オレンジ枠）も移動
-              focusedCardIdRef.current = item.id;
-              setFocusedCardIdState(item.id);
-              toggleSelect();
-            } else {
-              focusedCardIdRef.current = item.id;
-              setFocusedCardIdState(item.id);
-              navigateToCardEdit(item.id);
-            }
-          }}
-          onLongPress={() => {
-            if (isSelMode) return;
-            if (selectedFilterRef.current !== 'all') {
-              setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
-              return;
-            }
-            if (cardSortOrderRef.current !== 'manual') {
-              setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
-              return;
-            }
-            drag();
-          }}
-        >
-          {isSelMode && (
-            <Ionicons
-              name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-              size={22}
-              color={isSelected ? theme.colors.primary : theme.colors.iconSubtle}
-            />
-          )}
-          {/* lineHeight を明示すると小フォント時に行ボックスが不足して2行目がクリップされる
-              （フォント本来の行高さに満たない）ため、lineHeight は指定せずフォントのメトリクスに任せる。 */}
-          <Text style={[styles.cardPreview, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {preview || t('card.noText')}
-          </Text>
-          {isNew && (
-            <View style={[styles.newBadge, { backgroundColor: theme.colors.primary }]}>
-              <Text allowFontScaling={false} style={[styles.newBadgeText, { color: theme.colors.primaryText, fontSize: theme.fontSize.xs }]}>NEW</Text>
-            </View>
-          )}
-          {effectiveArchived && (
-            <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
-          )}
-          {!isSelMode && (
-            <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
-              {isPro && (
-                <Pressable onPress={() => { focusedCardIdRef.current = item.id; setFocusedCardIdState(item.id); setStatsCardId(item.id); }} hitSlop={8} style={{ padding: 4 }}>
-                  <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                </Pressable>
-              )}
-              <Pressable onPress={() => { focusedCardIdRef.current = item.id; setFocusedCardIdState(item.id); navigateToCardEdit(item.id); }} hitSlop={8} style={{ padding: 4 }}>
-                <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-              </Pressable>
-            </View>
-          )}
-        </Pressable>
-      </SwipeToDeleteRow>
+      <CardRow
+        item={item}
+        drag={drag}
+        isFocused={item.id === focusedCardIdRef.current}
+        isSelected={selectedCardIdsRef.current.has(item.id)}
+        isSelMode={isSelMode}
+        isNew={recentlyDuplicatedIdsRef.current.has(item.id)}
+        effectiveArchived={item.archived || deckArchivedRef.current}
+        swipeEnabled={!isSelMode && !(selectedFilterRef.current === 'all' && cardSortOrderRef.current === 'manual')}
+        isPro={isPro}
+        theme={theme}
+        themeKey={`${theme.dark}:${theme.fontScale}:${theme.colors.background}`}
+        imageLabel={imageBlockLabelRef.current}
+        noTextLabel={t('card.noText')}
+        onPress={handleRowPress}
+        onLongPress={handleRowLongPress}
+        onStats={handleStatsPress}
+        onEdit={handleEditPress}
+        onDelete={handleDeleteRow}
+        onArchive={handleArchiveRow}
+      />
     );
     return inDraggable ? <ScaleDecorator>{row}</ScaleDecorator> : row;
-  }, [isPro, t, navigateToCardEdit]);
+  }, [isPro, t, handleRowPress, handleRowLongPress, handleStatsPress, handleEditPress, handleDeleteRow, handleArchiveRow]);
 
   // FlatList の再描画トリガー。毎レンダー新オブジェクトだと並べ替えのたびに全セルが
   // 再描画されちらつくため、選択状態・フォーカス・テーマが変わったときだけ identity を変える。
@@ -974,11 +1050,12 @@ export default function DeckDetailScreen() {
       </View>
 
       <Pressable style={{ flex: 1 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
-        {/* 手動ソートのときだけ DraggableFlatList を使う。新しい/古い順は素の FlatList にすることで、
-            並びが大きく変わる切替（特に新しい順への逆転）で DraggableFlatList の全セル再測定コストを
-            避け、切替を高速化する。ドラッグ並べ替えが要るのは手動のみ。フィルタ切替では list 種別が
-            変わらない（＝再マウントしない）よう、判定はソートのみに依存させる。 */}
-        {cardSortOrder === 'manual' ? (
+        {/* DraggableFlatList は「ドラッグ並べ替えが実際に効く＝すべて＋手動」のときだけ使う。
+            それ以外（新しい/古い順、または手動でも 済み/復習/新規 フィルター）は素の FlatList。
+            理由: DraggableFlatList はセルのジェスチャー処理が横スワイプ（削除/アーカイブ）を奪うため、
+            ドラッグ不可の画面では素の FlatList にしてスワイプを効かせる。all↔他フィルターの切替で
+            list 種別が変わり再マウントするが、手動ソート時に限られるため許容。 */}
+        {cardSortOrder === 'manual' && selectedFilter === 'all' ? (
           <DraggableFlatList
             ref={listRef as any}
             // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が

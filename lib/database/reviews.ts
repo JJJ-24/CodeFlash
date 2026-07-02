@@ -728,6 +728,34 @@ function localDateDiffDays(a: string, b: string): number {
   return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
 }
 
+/** ドーナツグラフ用の文脈別（全体/デッキ/月）の学習日数と平均回答時間。
+ *  grade_logs（cardId・reviewedAt・responseTimeMs）を対象に、deckId/month で絞り込む。 */
+export interface ContextTimeStats {
+  /** 学習した延べ日数（distinct 日） */
+  studyDays: number;
+  /** 平均回答時間（ミリ秒。responseTimeMs 欠測は除外。全欠測なら null） */
+  avgTimeMs: number | null;
+}
+
+export async function getContextTimeStats(
+  db: SQLiteDatabase,
+  opts: { deckId?: string; month?: string } = {}
+): Promise<ContextTimeStats> {
+  const conds: string[] = [];
+  const params: string[] = [];
+  const join = opts.deckId ? 'JOIN cards c ON gl.cardId = c.id' : '';
+  if (opts.deckId) { conds.push('c.deckId = ?'); params.push(opts.deckId); }
+  if (opts.month) { conds.push("substr(date(gl.reviewedAt, 'localtime'), 1, 7) = ?"); params.push(opts.month); }
+  const where = conds.length > 0 ? `WHERE ${conds.join(' AND ')}` : '';
+  const row = await db.getFirstAsync<{ days: number; avg: number | null }>(
+    `SELECT COUNT(DISTINCT date(gl.reviewedAt, 'localtime')) as days,
+            AVG(CASE WHEN gl.responseTimeMs IS NOT NULL THEN gl.responseTimeMs END) as avg
+     FROM grade_logs gl ${join} ${where}`,
+    params
+  );
+  return { studyDays: row?.days ?? 0, avgTimeMs: row?.avg ?? null };
+}
+
 export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStats> {
   const dateRows = await db.getAllAsync<{ reviewedDate: string }>(
     `SELECT DISTINCT reviewedDate FROM review_logs ORDER BY reviewedDate`

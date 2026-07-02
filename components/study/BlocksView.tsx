@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Image } from 'expo-image';
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
-import { resolveImageUri } from '@/lib/image';
+import { resolveImageUri, imageMaxWidth } from '@/lib/image';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
@@ -324,7 +324,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         return (
           <View key={i} style={styles.imageBlock}>
             {imgUri ? (
-              <ZoomableImage uri={imgUri} alt={imgBlock.alt} />
+              <ZoomableImage uri={imgUri} alt={imgBlock.alt} maxWidth={imageMaxWidth(imgBlock.size)} />
             ) : (
               <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.border }]}>
                 <Text style={[styles.imagePlaceholderText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xxl }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>🖼</Text>

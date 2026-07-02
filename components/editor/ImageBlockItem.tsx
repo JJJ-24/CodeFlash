@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -14,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { InfoModal } from '@/components/InfoModal';
-import { pickAndSaveImage, resolveImageUri } from '@/lib/image';
+import { pickAndSaveImage, resolveImageUri, imageMaxWidth, DEFAULT_IMAGE_SIZE, type ImageSizeKey } from '@/lib/image';
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from '@/lib/theme';
 import type { ImageBlock } from '@/types';
 
@@ -39,9 +41,14 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const { t } = useTranslation();
   const theme = useTheme();
 
+  const isPad = (Platform as any).isPad;
   const [picking, setPicking] = useState(false);
   const [focused, setFocused] = useState(false);
   const [sizeErrorVisible, setSizeErrorVisible] = useState(false);
+  // 画像の実寸アスペクト比（幅/高さ）と利用可能幅（onLayout）。両方そろったら幅・高さを具体値で
+  // 確定する（aspectRatio + maxWidth のクランプずれで画像下に余白が出るのを避けるため）。
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [availWidth, setAvailWidth] = useState(0);
   const prevCollapsedRef = useRef(collapsed);
   const altInputRef = useRef<TextInput>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
@@ -94,6 +101,18 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const imageUri = hasImage ? resolveImageUri(block.uri) : null;
   const isEmpty = !block.uri;
 
+  // 画像の表示サイズ（学習画面と同じ最大幅クランプ）。測定・読込前は仮の高さ 200。
+  let imgBoxStyle: { width: number | `${number}%`; height: number };
+  if (ratio && availWidth) {
+    let w = Math.min(imageMaxWidth(block.size), availWidth);
+    let h = w / ratio;
+    const maxH = Dimensions.get('window').height * 0.7;
+    if (h > maxH) { h = maxH; w = h * ratio; }
+    imgBoxStyle = { width: w, height: h };
+  } else {
+    imgBoxStyle = { width: '100%', height: 200 };
+  }
+
   return (
     <View style={[
       styles.container,
@@ -128,28 +147,56 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
         <>
           {/* 画像エリア */}
           {hasImage && imageUri ? (
-            <View style={[styles.imageArea, isPreview && { paddingHorizontal: 0, paddingTop: 0 }]}>
+            <View
+              style={[styles.imageArea, isPreview && { paddingHorizontal: 0, paddingTop: 0 }]}
+              onLayout={(e) => setAvailWidth(e.nativeEvent.layout.width - (isPreview ? 0 : 24))}
+            >
               <Image
                 source={{ uri: imageUri }}
-                style={styles.image}
+                style={[styles.image, imgBoxStyle]}
                 contentFit="contain"
                 transition={200}
                 accessibilityLabel={block.alt || undefined}
+                onLoad={(e) => {
+                  const w = e.source?.width;
+                  const h = e.source?.height;
+                  if (w && h) setRatio(w / h);
+                }}
               />
               {!isPreview && (
-                <Pressable
-                  style={[styles.changeBtn, { backgroundColor: theme.colors.primaryLight }]}
-                  onPress={handlePick}
-                  disabled={picking}
-                >
-                  {picking ? (
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                  ) : (
-                    <Text style={[styles.changeBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                      {t('card.imageChange')}
-                    </Text>
-                  )}
-                </Pressable>
+                <View style={styles.controlsRow}>
+                  {/* サイズ切替（学習画面での最大幅プリセット S/M/L）。既定は M。 */}
+                  <View style={[styles.sizeGroup, { borderColor: theme.colors.inputBorder }]}>
+                    {(['S', 'M', 'L'] as ImageSizeKey[]).map((s) => {
+                      const active = (block.size ?? DEFAULT_IMAGE_SIZE) === s;
+                      return (
+                        <Pressable
+                          key={s}
+                          onPress={() => onChange({ size: s })}
+                          style={[styles.sizeBtn, { paddingHorizontal: isPad ? 24 : 16, minWidth: isPad ? 74 : 50 }, active && { backgroundColor: theme.colors.primary }]}
+                          hitSlop={4}
+                        >
+                          <Text style={{ color: active ? '#FFF' : theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                            {t(`editor.imageSize${s}`)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Pressable
+                    style={[styles.changeBtn, { paddingHorizontal: isPad ? 44 : 20, backgroundColor: theme.colors.primaryLight }]}
+                    onPress={handlePick}
+                    disabled={picking}
+                  >
+                    {picking ? (
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                    ) : (
+                      <Text style={[styles.changeBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                        {t('card.imageChange')}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
               )}
             </View>
           ) : isPreview ? (
@@ -226,9 +273,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   image: {
-    width: '100%',
-    height: 200,
+    alignSelf: 'center',
     borderRadius: 6,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  sizeGroup: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  sizeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    minWidth: 40,
+    alignItems: 'center',
   },
   changeBtn: {
     paddingHorizontal: 20,

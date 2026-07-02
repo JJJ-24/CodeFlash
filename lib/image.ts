@@ -1,8 +1,22 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+
+/** 画像ブロックの表示サイズ（最大幅 px プリセット）。実際の表示幅は min(この値, 利用可能幅) で
+ *  クランプする。iPhone は幅が狭く大きい値が全部「全幅」に潰れて差が出ないため、端末ごとに px を
+ *  分ける（iPhone は 3 段階が全部 端末幅未満で差が出るよう小さめ、iPad は大きめだが全幅にはしない）。
+ *  数値は端末で見ながら微調整する想定。既定は 'M'。 */
+export type ImageSizeKey = 'S' | 'M' | 'L';
+const IMAGE_SIZE_MAX_WIDTH_PHONE: Record<ImageSizeKey, number> = { S: 150, M: 240, L: 330 };
+const IMAGE_SIZE_MAX_WIDTH_IPAD: Record<ImageSizeKey, number> = { S: 280, M: 420, L: 560 };
+export const DEFAULT_IMAGE_SIZE: ImageSizeKey = 'M';
+export const imageMaxWidth = (size?: ImageSizeKey): number => {
+  const table = (Platform as any).isPad ? IMAGE_SIZE_MAX_WIDTH_IPAD : IMAGE_SIZE_MAX_WIDTH_PHONE;
+  return table[size ?? DEFAULT_IMAGE_SIZE];
+};
 
 export type PickAndSaveImageResult =
   | { uri: string }

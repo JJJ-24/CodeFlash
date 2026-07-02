@@ -18,6 +18,8 @@ export interface ImageBlock {
   type: 'image';
   uri: string;
   alt: string;
+  /** 学習画面での表示サイズ（最大幅プリセット）。未設定は既定 'M'。画像データ自体は不変（表示のみ） */
+  size?: 'S' | 'M' | 'L';
 }
 
 export type Block = TextBlock | CodeBlock | ImageBlock;

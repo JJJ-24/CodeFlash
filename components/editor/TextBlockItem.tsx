@@ -62,7 +62,9 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   const inputRef = useRef<TextInput>(null);
 
   // 装飾ツールバー用: 選択範囲を ref で追跡し、記法適用後はカーソルを内側へ移す。
-  const selectionRef = useRef<Sel>({ start: 0, end: 0 });
+  // 初期値は本文末尾（初回タップ時にカーソルが末尾へ＝従来挙動）。以後は onSelectionChange・
+  // フォーカス系 effect が更新し、フォーカス時は onFocus がこの値を選択に復元して画面と一致させる。
+  const selectionRef = useRef<Sel>({ start: block.content.length, end: block.content.length });
   const [pendingSelection, setPendingSelection] = useState<Sel | undefined>(undefined);
 
   const handleSelectionChange = useCallback((e: { nativeEvent: { selection: Sel } }) => {
@@ -113,11 +115,21 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }, [flashTrigger]);
 
   useEffect(() => {
-    if (autoFocus) { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); onAutoFocused?.(); }
+    if (autoFocus) {
+      // 新規/自動フォーカスは末尾にカーソル（onFocus がこの値を復元する）。
+      const len = block.content.length;
+      selectionRef.current = { start: len, end: len };
+      setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); onAutoFocused?.();
+    }
   }, []);
 
   useEffect(() => {
-    if ((editTrigger ?? 0) > 0) { setFocused(true); setTimeout(() => inputRef.current?.focus(), 50); }
+    if ((editTrigger ?? 0) > 0) {
+      // E/Return での編集開始は末尾にカーソル（従来挙動を維持）。
+      const len = block.content.length;
+      selectionRef.current = { start: len, end: len };
+      setFocused(true); setTimeout(() => inputRef.current?.focus(), 50);
+    }
   }, [editTrigger]);
 
   useEffect(() => {
@@ -308,10 +320,12 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
                   onFocusInput?.();
                   // Cmd+B 等の装飾ショートカットを、この編集中ブロックの適用関数へ橋渡し。
                   onActivateApply?.(stableApply);
-                  // プログラム的フォーカス時 iOS はカーソルを末尾に置くが、その位置の
-                  // onSelectionChange が発火しないことがあるため selectionRef を末尾で初期化。
-                  const len = block.content.length;
-                  selectionRef.current = { start: len, end: len };
+                  // selectionRef（直前の選択）を選択 prop で復元し、画面の選択と内部 ref を必ず一致させる。
+                  // プログラム的フォーカスでは iOS が末尾/前回選択のどちらを表示するか不定で
+                  // onSelectionChange も発火しないことがあるため、ここで確定させる（これをしないと
+                  // 「画面は選択あり／ref は末尾」の食い違いでツールバーが末尾に作用してしまう）。
+                  // tap 再フォーカス＝前回選択が戻り即装飾でき、E/自動フォーカスは上の effect が末尾を入れる。
+                  setPendingSelection({ ...selectionRef.current });
                 }}
                 onBlur={() => { setFocused(false); onDeactivateApply?.(stableApply); onEditBlur?.(); }}
                 textAlignVertical="top"

@@ -58,7 +58,7 @@ export function MarkdownPalette({ visible, onAction, theme }: Props) {
             accessibilityLabel={t(b.labelKey)}
             hitSlop={4}
           >
-            <FontAwesome5 name={b.icon} size={20} color={theme.colors.text} solid />
+            <FontAwesome5 name={b.icon} size={16} color={theme.colors.text} solid />
           </Pressable>
         </Fragment>
       ))}
@@ -76,12 +76,12 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: StyleSheet.hairlineWidth,
-    height: 24,
+    height: 22,
     marginHorizontal: 4,
   },
   btn: {
     flex: 1,
-    height: 38,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,

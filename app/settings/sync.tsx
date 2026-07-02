@@ -13,6 +13,7 @@ import { settingsStyles as styles } from "@/components/settings/styles";
 import { useKeyCommands } from "@/lib/useKeyCommands";
 
 import { syncErrorText } from "@/lib/sync/errorText";
+import { getRemoteStatus } from "@/lib/sync/icloud";
 import {
   type LocalBackup,
   listLocalBackups,
@@ -47,6 +48,7 @@ export default function SyncSettingsScreen() {
     direction: syncDirection,
     lastSyncedAt,
     lastDataSyncedAt,
+    lastRemoteUpdatedAt,
     errorCode: syncErrorCode,
     clearError: clearSyncError,
   } = useSyncStore();
@@ -126,10 +128,26 @@ export default function SyncSettingsScreen() {
   }
 
   async function handleForceDownload() {
+    // iCloud 上の最新版の更新時刻をライブ取得して確認文に出す（DB本体はDLせずファイル名から取得＝軽い）。
+    // 取得できない/リモートが無いときは従来の静的メッセージにフォールバック。ハング回避に短いタイムアウト。
+    let message = t("sync.forceDownloadConfirm");
+    try {
+      const remote = await Promise.race([
+        getRemoteStatus(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+      ]);
+      if (remote && remote.exists && remote.meta) {
+        message = t("sync.forceDownloadConfirmAt", {
+          datetime: formatDateTimeSec(remote.meta.updatedAt),
+        });
+      }
+    } catch {
+      // 取得失敗はフォールバック（静的メッセージ）で続行
+    }
     setModal({
       kind: "confirm",
       title: t("sync.forceDownload"),
-      message: t("sync.forceDownloadConfirm"),
+      message,
       actions: [
         {
           label: t("sync.forceDownload"),
@@ -294,6 +312,18 @@ export default function SyncSettingsScreen() {
   function formatDateTime(ts: number): string {
     const d = new Date(ts);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  // iCloud 上のデータ時刻は秒まで表示する（いつの版か厳密に分かるように）。
+  function formatDateTimeSec(ts: number): string {
+    const d = new Date(ts);
+    return `${formatDateTime(ts)}:${String(d.getSeconds()).padStart(2, "0")}`;
+  }
+
+  // iCloud 上のデータ（追いついているリモート版）の更新時刻。キャッシュ値（最後に観測した版）。
+  function formatRemoteDataAt(): string | null {
+    if (!lastRemoteUpdatedAt) return null;
+    return t("sync.remoteDataAt", { datetime: formatDateTimeSec(lastRemoteUpdatedAt) });
   }
 
   // 「最終同期」＝実際にデータを転送した時刻（no-op 照合では動かない）。
@@ -524,6 +554,19 @@ export default function SyncSettingsScreen() {
                 >
                   {t("sync.descriptionDetail")}
                 </Text>
+                {/* 表示している時刻ラベルの用語説明（最終同期／最終接続／iCloud）。
+                    上の一般説明と同じ配色・サイズに揃えて読みやすくする。 */}
+                <Text
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSize.sm,
+                    lineHeight: 20,
+                    marginTop: 8,
+                  }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t("sync.termsHelp")}
+                </Text>
               </View>
             )}
 
@@ -553,6 +596,22 @@ export default function SyncSettingsScreen() {
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {formatLastConnected()}
+              </Text>
+            )}
+
+            {/* iCloud 上のデータの更新時刻（キャッシュ＝最後に観測したリモート版・秒まで） */}
+            {formatRemoteDataAt() && (
+              <Text
+                style={[
+                  {
+                    color: theme.colors.textTertiary,
+                    fontSize: theme.fontSize.xs,
+                    marginTop: -2,
+                  },
+                ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {formatRemoteDataAt()}
               </Text>
             )}
 

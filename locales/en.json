@@ -597,6 +597,7 @@
     "selectTag": "Select tag",
     "switchSearchField": "Switch field\n(All/Front/Back/Memo)\n[H/L] also works",
     "clearSearch": "Clear search text",
+    "focusSearchInput": "Focus search field\n(edit without clearing)",
     "moveFocused": "Move focused item Up / Down",
     "sortMode": "Sort Mode",
     "editMode": "Edit Mode",

@@ -49,6 +49,7 @@ const SEARCH_SHORTCUTS = [
   { key: 'D', descKey: 'shortcut.selectDeck' },
   { key: 'T', descKey: 'shortcut.selectTag' },
   { key: 'Delete', descKey: 'shortcut.clearSearch' },
+  { key: '/', descKey: 'shortcut.focusSearchInput' },
   { key: 'B', descKey: 'shortcut.back' },
   { key: '?', descKey: 'shortcut.showShortcuts' },
   { key: 'ESC', descKey: 'shortcut.esc' },
@@ -457,6 +458,9 @@ export default function SearchScreen() {
     { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) { setShowShortcutsModal(false); return; } if (showSearchInfo) { setShowSearchInfo(false); return; } if (overlayOpen()) return; openFocusedCard(); } },
     // Delete＝検索文字クリア＆入力欄へカーソル（Backspace/前方Delete 両対応）。
     ...deleteKeySpecs(() => { if (overlayOpen()) return; setQuery(''); inputRef.current?.focus(); }),
+    // / ＝検索欄へカーソル（文字は消さず編集開始）。入力欄フォーカス中は TextInput が '/' を
+    // 文字入力に消費するため発火せず、カーソル無し時だけ効く（住み分け）。
+    { input: '/', handler: () => { if (overlayOpen()) return; inputRef.current?.focus(); } },
     // 矢印は iPhone のみ（上下＝J/K、左右＝,/.）。
     ...(((Platform as any).isPad ? [] : [
       { input: KeyCommand.keyInputDownArrow, handler: () => { if (overlayOpen()) return; moveFocus('next'); } },

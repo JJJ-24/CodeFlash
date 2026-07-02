@@ -597,6 +597,7 @@
     "selectTag": "タグ選択",
     "switchSearchField": "フィールド切替\n（すべて/表面/裏面/メモ）\n[H/L]でも可",
     "clearSearch": "検索文字クリア",
+    "focusSearchInput": "検索欄にカーソル\n（文字を消さず編集）",
     "moveFocused": "上/下 移動（フォーカス項目）",
     "sortMode": "並べ替えモード",
     "editMode": "編集モード",

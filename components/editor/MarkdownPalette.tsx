@@ -4,15 +4,18 @@
 // SymbolPalette と同じく、フォーカス中ブロックの直下に普通の View として出す。
 import { Fragment } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import type { AppTheme } from '@/lib/theme';
 import type { MdAction } from '@/lib/editor/applyMarkdown';
 
+// アイコンは FontAwesome5（solid）で統一する。装飾系（bold/italic/code/strikethrough/highlighter/
+// heading/list-ul/quote）が1セットに揃い、線幅・余白の作法が揃う。特にハイライトは蛍光ペン型の
+// highlighter、見出しは普通サイズの綺麗な H が得られる（MaterialIcons 混在時のサイズ調整が不要）。
 export interface ToolbarButton {
   key: string;
-  icon: keyof typeof MaterialIcons.glyphMap;
+  icon: keyof typeof FontAwesome5.glyphMap;
   action: MdAction;
   labelKey: string;
   /** このボタンの前に区切り線を入れる（グループの境目） */
@@ -21,14 +24,14 @@ export interface ToolbarButton {
 
 // 囲みタイプ（選択を両端で挟む）＋ 行頭タイプ（行頭に付与）。表示は markdown レンダラ側で対応済み。
 export const TOOLBAR_BUTTONS: readonly ToolbarButton[] = [
-  { key: 'bold', icon: 'format-bold', action: { kind: 'wrap', left: '**', right: '**' }, labelKey: 'editor.toolbar.bold' },
-  { key: 'italic', icon: 'format-italic', action: { kind: 'wrap', left: '*', right: '*' }, labelKey: 'editor.toolbar.italic' },
+  { key: 'bold', icon: 'bold', action: { kind: 'wrap', left: '**', right: '**' }, labelKey: 'editor.toolbar.bold' },
+  { key: 'italic', icon: 'italic', action: { kind: 'wrap', left: '*', right: '*' }, labelKey: 'editor.toolbar.italic' },
   { key: 'code', icon: 'code', action: { kind: 'wrap', left: '`', right: '`' }, labelKey: 'editor.toolbar.code' },
-  { key: 'strikethrough', icon: 'format-strikethrough', action: { kind: 'wrap', left: '~~', right: '~~' }, labelKey: 'editor.toolbar.strikethrough' },
-  { key: 'highlight', icon: 'border-color', action: { kind: 'wrap', left: '==', right: '==' }, labelKey: 'editor.toolbar.highlight' },
-  { key: 'heading', icon: 'title', action: { kind: 'heading' }, labelKey: 'editor.toolbar.heading', groupStart: true },
-  { key: 'bullet', icon: 'format-list-bulleted', action: { kind: 'prefix', prefix: '- ' }, labelKey: 'editor.toolbar.bulletList' },
-  { key: 'quote', icon: 'format-quote', action: { kind: 'prefix', prefix: '> ' }, labelKey: 'editor.toolbar.quote' },
+  { key: 'strikethrough', icon: 'strikethrough', action: { kind: 'wrap', left: '~~', right: '~~' }, labelKey: 'editor.toolbar.strikethrough' },
+  { key: 'highlight', icon: 'highlighter', action: { kind: 'wrap', left: '==', right: '==' }, labelKey: 'editor.toolbar.highlight' },
+  { key: 'heading', icon: 'heading', action: { kind: 'heading' }, labelKey: 'editor.toolbar.heading', groupStart: true },
+  { key: 'bullet', icon: 'list-ul', action: { kind: 'prefix', prefix: '- ' }, labelKey: 'editor.toolbar.bulletList' },
+  { key: 'quote', icon: 'quote-right', action: { kind: 'prefix', prefix: '> ' }, labelKey: 'editor.toolbar.quote' },
 ] as const;
 
 interface Props {
@@ -54,7 +57,7 @@ export function MarkdownPalette({ visible, onAction, theme }: Props) {
             accessibilityLabel={t(b.labelKey)}
             hitSlop={4}
           >
-            <MaterialIcons name={b.icon} size={22} color={theme.colors.text} />
+            <FontAwesome5 name={b.icon} size={20} color={theme.colors.text} solid />
           </Pressable>
         </Fragment>
       ))}

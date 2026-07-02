@@ -1,5 +1,5 @@
 export const CARD_EDITOR_SHORTCUTS_EDIT = [
-  { key: '1 / 2 / 3',      descKey: 'shortcut.tabSelectCard' },
+  { key: '1-3',      descKey: 'shortcut.tabSelectCard' },
   { key: 'J / K',          descKey: 'shortcut.focusNextPrev' },
   { key: 'E',              descKey: 'shortcut.editFocusedItem' },
   { key: 'R',              descKey: 'shortcut.runFocused' },
@@ -36,7 +36,7 @@ export const CARD_EDITOR_SHORTCUTS_SORT = [
 ];
 
 export const CARD_EDITOR_SHORTCUTS_PREVIEW = [
-  { key: '1 / 2 / 3',      descKey: 'shortcut.tabSelectCard' },
+  { key: '1-3',      descKey: 'shortcut.tabSelectCard' },
   { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
   { key: '⇧U / ⇧D',  descKey: 'shortcut.scrollTopBottom' },
   { key: 'M',              descKey: 'shortcut.cycleMode' },

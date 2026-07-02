@@ -130,11 +130,48 @@ export function cycleHeadingLines(text: string, sel: Sel, maxLevel = 3): ApplyRe
   return { text: newText, selection: { start: caret, end: caret } };
 }
 
+/**
+ * ハイライト色を循環させる（なし → 黄 `==…==` → 緑 `==g|…==` → ピンク `==p|…==` → なし）。
+ * 見出しと同じ「1ボタンで循環」の UX。色プレフィックス（`g|`/`p|`）は常に選択範囲の外側
+ * （開き `==` の直後）に置くので、選択範囲は色を変えても中身のまま保たれる。
+ *
+ * 判定は toggleWrap と同じく「マーカーが選択（またはカーソル）に隣接している」前提。選択なし
+ * （start===end・selected=''）でも同じ経路で動く（空ペアの循環）。start/end の逆順・範囲外も正規化。
+ */
+export function cycleHighlight(text: string, sel: Sel): ApplyResult {
+  const start = Math.max(0, Math.min(sel.start, sel.end));
+  const end = Math.min(text.length, Math.max(sel.start, sel.end));
+  const selected = text.slice(start, end);
+  const hasClose = text.slice(end, end + 2) === '==';
+  const pre4 = text.slice(Math.max(0, start - 4), start);
+  const pre2 = text.slice(Math.max(0, start - 2), start);
+
+  // ピンク → なし（前後のマーカー `==p|` と `==` を除去）
+  if (hasClose && start - 4 >= 0 && pre4 === '==p|') {
+    const newText = text.slice(0, start - 4) + selected + text.slice(end + 2);
+    return { text: newText, selection: { start: start - 4, end: end - 4 } };
+  }
+  // 緑 → ピンク（開き `==g|` の 'g' を 'p' に差し替え。選択位置は不変）
+  if (hasClose && start - 4 >= 0 && pre4 === '==g|') {
+    const newText = text.slice(0, start - 2) + 'p' + text.slice(start - 1);
+    return { text: newText, selection: { start, end } };
+  }
+  // 黄 → 緑（開き `==` の直後に 'g|' を挿入）
+  if (hasClose && start - 2 >= 0 && pre2 === '==') {
+    const newText = text.slice(0, start) + 'g|' + text.slice(start);
+    return { text: newText, selection: { start: start + 2, end: end + 2 } };
+  }
+  // なし → 黄（`==…==` で囲む）
+  const newText = text.slice(0, start) + '==' + selected + '==' + text.slice(end);
+  return { text: newText, selection: { start: start + 2, end: end + 2 } };
+}
+
 /** ツールバーボタンが表す記法アクション。 */
 export type MdAction =
   | { kind: 'wrap'; left: string; right: string }
   | { kind: 'prefix'; prefix: string }
-  | { kind: 'heading' };
+  | { kind: 'heading' }
+  | { kind: 'highlight' };
 
 /** アクション種別に応じて適用関数を振り分ける。 */
 export function applyAction(text: string, sel: Sel, action: MdAction): ApplyResult {
@@ -145,5 +182,7 @@ export function applyAction(text: string, sel: Sel, action: MdAction): ApplyResu
       return togglePrefixLines(text, sel, action.prefix);
     case 'heading':
       return cycleHeadingLines(text, sel);
+    case 'highlight':
+      return cycleHighlight(text, sel);
   }
 }

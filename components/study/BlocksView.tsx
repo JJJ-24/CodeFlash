@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { resolveImageUri } from '@/lib/image';
+import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
@@ -18,7 +19,8 @@ import { ZoomableImage } from './ZoomableImage';
 // 生URL も自動リンク化する。リンクは linkRule でインラインの Text として描画するため
 // （Pressable を使わない）、本文と同じフォントサイズで流れて表示がズレない。
 // markdownItMark: ==文字== をハイライト（<mark>）化（編集プレビューと表示を揃える）。
-const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark);
+// markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（編集プレビューと揃える）。
+const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor);
 
 function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -241,11 +243,13 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         accessibilityLabel={node.attributes.alt}
       />
     ),
-    // ハイライト（==文字==）。背景色のみ指定し文字色は親から継承させる。
+    // ハイライト（==文字== / ==g|文字== / ==p|文字==）。node.attributes.hl（g/p、無しは黄）で
+    // 背景色を選ぶ。背景色のみ指定し文字色は親から継承させる。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mark: (node: any, children: any) => (
-      <Text key={node.key} style={{ backgroundColor: HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'] }}>{children}</Text>
-    ),
+    mark: (node: any, children: any) => {
+      const hl = HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'];
+      return <Text key={node.key} style={{ backgroundColor: hl[(node.attributes?.hl as 'g' | 'p') ?? 'y'] ?? hl.y }}>{children}</Text>;
+    },
   }), [suppress, theme.fontSize.lg, theme.dark]);
 
   if (blocks.length === 0) {

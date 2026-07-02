@@ -900,7 +900,7 @@ export function BlockEditor({
     { input: "i", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "*", right: "*" }) },
     { input: "e", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "`", right: "`" }) },
     { input: "x", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "wrap", left: "~~", right: "~~" }) },
-    { input: "m", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "wrap", left: "==", right: "==" }) },
+    { input: "m", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "highlight" }) },
     { input: "h", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "heading" }) },
     ...numDeco("8", "*", { kind: "prefix", prefix: "- " }),
     ...numDeco("9", "(", { kind: "prefix", prefix: "> " }),

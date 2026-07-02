@@ -1,7 +1,7 @@
 # 033 テキスト装飾ツールバー（マークダウン記法挿入）とハイライト
 
 **フェーズ:** v1.8 候補
-**ステータス:** 実装済み（Phase 1〜6）／Phase 7（複数色）は未着手。※ Phase 5 は**実機確認待ち**（Cmd+B/I 等が素の TextInput に消費されず発火するか・⌘⇧8/⌘⇧9 の発火/OS 衝突）
+**ステータス:** 実装済み（Phase 1〜7）。※ Phase 7 は**実機確認待ち**（緑/ピンクの視認性を8テーマ×light/dark で確認）
 **依存:** 005（カードエディタ）, 007（学習画面）, 008（全画面+Bluetoothキーボード）, 013（ダークモード/テーマ）, 028-2（カード表示テーマ）
 **被依存:** ―
 **料金区分:** 無料機能（ハイライト複数色は将来 Pro 候補にしてもよい）
@@ -130,12 +130,18 @@
 - [x] ツールバーボタンの `accessibilityLabel`（太字・斜体・コード・取り消し線・ハイライト・見出し・箇条書き・引用）を `editor.toolbar.*` として `ja.json` / `en.json` に追加
 - [x] ショートカット説明文の追加（Phase 5 で対応）＝ `shortcut.decoInline` / `decoStrikeMark` / `decoHeading` / `decoListQuote` を ja/en に追加
 
-### Phase 7 — ハイライト複数色（将来・オプション）
+### Phase 7 — ハイライト複数色（実装済み・要実機確認）
 
-- [ ] 独自記法の設計（例 `{y:…}` `{r:…}` `{b:…}` 等）または `markdown-it-attrs` 採用検討
-- [ ] 色見本から選ぶツールバー UI（Phase 2 の基盤に相乗り）
-- [ ] 各色をカードテーマ全種で視認性確認（半透明前提）
-- [ ] Pro 機能化するかの判断
+- [x] 記法の設計 ＝ **mark 限定の色プレフィックス方式**を採用。デフォルト（黄）は `==文字==`（**後方互換**）、緑 `==g|文字==`、ピンク `==p|文字==`。`markdown-it-attrs` は不採用（`{..}` を全体解釈するとコード本文の `{ } : ! %` を誤爆させるため）。代わりに `lib/editor/markdownHighlight.ts` の core ルール `markdownItHighlightColor` が **mark トークンだけ**を見て、開き `==` 直後の `g|`/`p|` を `mark_open` の attr `hl` に移し、本文からは除去する（`node.attributes.hl` が render rule に届くのは検証済み）。
+- [x] ツールバー UI ＝ **1ボタンで色を循環**（なし→黄→緑→ピンク→なし。見出しと同じ循環 UX）。`applyMarkdown.ts` の `cycleHighlight()`（`MdAction { kind: 'highlight' }`）。色プレフィックスは常に選択範囲の外側（開き `==` の直後）に置くので、色を変えても選択は中身のまま保たれる。キーボードは `⌘⇧M`。
+- [ ] 各色をカードテーマ全種で視認性確認（半透明前提）← **残: 実機確認**（8テーマ × light/dark。特に緑/ピンクが `mint`/`rose`/`sky` テーマ上で沈まないか）。色は `lib/theme` の `HIGHLIGHT_COLORS`（`{ light/dark } × { y/g/p }`）で調整可能。
+- [ ] Pro 機能化するかの判断（現状は無料。将来 Pro 候補のまま保留）
+
+> **実装メモ（2026-07-02）:**
+> - **表示2経路を同期**：`TextBlockItem`（編集プレビュー）と `BlocksView`（学習画面）の両 MarkdownIt インスタンスに `.use(markdownItMark).use(markdownItHighlightColor)` を適用し、`mark` render rule で `HIGHLIGHT_COLORS[mode][node.attributes?.hl ?? 'y']` を使う（片方だけだと崩れる）。
+> - **波及なし**：本文はプレーンな markdown 文字列のままなので、エクスポート/インポート・TSV・検索（LIKE）・iCloud 同期はスキーマ変更・追加対応なし。
+> - **後方互換**：既存の `==文字==` は `hl` 無し＝黄で描画。循環でも「黄」状態として検出される。
+> - **循環ロジックは node で単体検証済み**（選択・カーソル両方で なし→黄→緑→ピンク→なし が正しく巡回し、選択範囲が保持されることを確認）。
 
 ---
 

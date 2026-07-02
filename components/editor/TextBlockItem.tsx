@@ -11,9 +11,11 @@ import markdownItMark from 'markdown-it-mark';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { MarkdownPalette } from './MarkdownPalette';
+import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 
-// linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化
-const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark);
+// linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化 /
+// markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（複数色ハイライト）
+const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor);
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_FOCUS_HEADER, CODE_EDITING_HEADER } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
@@ -221,7 +223,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, isPreview]);
 
-  const highlightBg = HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'];
+  const highlightColors = HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'];
   const linkRule = useMemo(() => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     link: (node: any, children: any) => (
@@ -233,12 +235,13 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{children}</Text>
       </Pressable>
     ),
-    // ハイライト（==文字==）。背景色のみ指定し文字色は親から継承させる。
+    // ハイライト（==文字== / ==g|文字== / ==p|文字==）。node.attributes.hl（g/p、無しは黄）で
+    // 背景色を選ぶ。背景色のみ指定し文字色は親から継承させる。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mark: (node: any, children: any) => (
-      <Text key={node.key} style={{ backgroundColor: highlightBg }}>{children}</Text>
+      <Text key={node.key} style={{ backgroundColor: highlightColors[(node.attributes?.hl as 'g' | 'p') ?? 'y'] ?? highlightColors.y }}>{children}</Text>
     ),
-  }), [highlightBg]);
+  }), [highlightColors]);
 
   return (
     <View style={[

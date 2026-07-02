@@ -28,7 +28,8 @@ export const TOOLBAR_BUTTONS: readonly ToolbarButton[] = [
   { key: 'italic', icon: 'italic', action: { kind: 'wrap', left: '*', right: '*' }, labelKey: 'editor.toolbar.italic' },
   { key: 'code', icon: 'code', action: { kind: 'wrap', left: '`', right: '`' }, labelKey: 'editor.toolbar.code' },
   { key: 'strikethrough', icon: 'strikethrough', action: { kind: 'wrap', left: '~~', right: '~~' }, labelKey: 'editor.toolbar.strikethrough' },
-  { key: 'highlight', icon: 'highlighter', action: { kind: 'wrap', left: '==', right: '==' }, labelKey: 'editor.toolbar.highlight' },
+  // ハイライトは1ボタンで色を循環（なし→黄→緑→ピンク→なし。見出しと同じ循環 UX）。
+  { key: 'highlight', icon: 'highlighter', action: { kind: 'highlight' }, labelKey: 'editor.toolbar.highlight' },
   { key: 'heading', icon: 'heading', action: { kind: 'heading' }, labelKey: 'editor.toolbar.heading', groupStart: true },
   { key: 'bullet', icon: 'list-ul', action: { kind: 'prefix', prefix: '- ' }, labelKey: 'editor.toolbar.bulletList' },
   { key: 'quote', icon: 'quote-right', action: { kind: 'prefix', prefix: '> ' }, labelKey: 'editor.toolbar.quote' },

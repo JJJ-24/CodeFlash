@@ -28,7 +28,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
-import { useTheme, MAX_FONT_MULTIPLIER, CODE_FOCUS_HEADER, CODE_EDITING_HEADER, CODE_RUNNING_HEADER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock } from '@/types';
@@ -177,7 +177,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         onMoveDown={onMoveDown}
         onHeaderPress={(focused || initSqlFocused) ? () => { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); } : undefined}
         hideDelete={isPreview}
-        style={{ backgroundColor: isRunning ? CODE_RUNNING_HEADER : focused ? CODE_EDITING_HEADER : isFocused ? CODE_FOCUS_HEADER : (theme.dark ? '#333333' : '#2D2D2D') }}
+        style={{ backgroundColor: isRunning ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].running : focused ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].editing : isFocused ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].focus : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
         {isPreview ? (
           <View style={styles.langBtn}>

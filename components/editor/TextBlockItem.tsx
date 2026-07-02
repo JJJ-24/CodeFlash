@@ -16,7 +16,7 @@ import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化 /
 // markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（複数色ハイライト）
 const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor);
-import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_FOCUS_HEADER, CODE_EDITING_HEADER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_STATE_HEADERS } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
 
@@ -272,7 +272,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           onHeaderPress={focused ? () => { inputRef.current?.blur(); } : undefined}
           hideDelete={isPreview}
           style={{
-            backgroundColor: focused ? CODE_EDITING_HEADER : isFocused ? CODE_FOCUS_HEADER : (theme.dark ? '#252525' : '#FAFAFA'),
+            backgroundColor: focused ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].editing : isFocused ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].focus : (theme.dark ? '#252525' : '#FAFAFA'),
             borderBottomWidth: 1,
             borderBottomColor: theme.colors.border,
           }}

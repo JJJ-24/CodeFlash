@@ -170,6 +170,22 @@ export const CODE_FOCUS_HEADER = darkenHex(PRIMARY_COLOR, 0.6); // ≈ #0F477E�
 export const CODE_EDITING_HEADER = darkenHex('#FB8C00', 0.4); // ≈ #643800（アンバー・grade hard 由来）
 export const CODE_RUNNING_HEADER = darkenHex('#43A047', 0.6); // ≈ #28602B（緑・grade good 由来）
 
+// ライトモード用のヘッダー色（028-2 のカードテーマ対策）。ダーク（上の定数）は枠線がはっきり
+// 見えるため現状維持。ライトはカードテーマ（スカイ=濃紺・ペーパー/セピア=茶系のコード背景）に
+// 同系ヘッダーが埋もれて state（フォーカス/編集/実行）が目立たない問題があるため、state 色（青/
+// アンバー/緑）を保ちつつ現状より明るくして明度で浮かせる。ヘッダー上のアイコンは theme.colors の
+// グレー系（暗色前提）なので、可読性を保てる範囲＝中間調まで上げず暗色寄りに留める。要実機微調整。
+export const CODE_FOCUS_HEADER_LIGHT = darkenHex(PRIMARY_COLOR, 0.85); // ≈ #1564B3（明るい青）
+export const CODE_EDITING_HEADER_LIGHT = darkenHex('#FB8C00', 0.6); // ≈ #975400（明るいアンバー）
+export const CODE_RUNNING_HEADER_LIGHT = darkenHex('#43A047', 0.85); // ≈ #39883C（明るい緑）
+
+// フォーカス/編集/実行ヘッダー色を light/dark でまとめて引くルックアップ。各ブロック（コード/テキスト/
+// 画像・学習/エディタ）が theme.dark で分岐して使う。dark は従来定数、light は上の明るめ版。
+export const CODE_STATE_HEADERS = {
+  light: { focus: CODE_FOCUS_HEADER_LIGHT, editing: CODE_EDITING_HEADER_LIGHT, running: CODE_RUNNING_HEADER_LIGHT },
+  dark: { focus: CODE_FOCUS_HEADER, editing: CODE_EDITING_HEADER, running: CODE_RUNNING_HEADER },
+} as const;
+
 export const GRADE_COLORS = {
   again: '#E53935',
   hard:  '#FB8C00',

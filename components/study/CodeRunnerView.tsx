@@ -25,7 +25,7 @@ import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS, PRO_LANGUAGES } from "@/lib/code-execution/constants";
 import { useProStore } from "@/store/pro";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
-import { useTheme, MAX_FONT_MULTIPLIER, CODE_FOCUS_HEADER, CODE_EDITING_HEADER, CODE_RUNNING_HEADER } from "@/lib/theme";
+import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from "@/lib/theme";
 import type { CodeBlock } from "@/types";
 
 interface Props {
@@ -298,9 +298,9 @@ export function CodeRunnerView({
       <View
         style={[
           styles.header,
-          isRunning && { backgroundColor: CODE_RUNNING_HEADER },
-          isEditing && { backgroundColor: CODE_EDITING_HEADER },
-          isSelected && !isEditing && !isRunning && { backgroundColor: CODE_FOCUS_HEADER },
+          isRunning && { backgroundColor: CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].running },
+          isEditing && { backgroundColor: CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].editing },
+          isSelected && !isEditing && !isRunning && { backgroundColor: CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].focus },
         ]}
       >
         <Pressable

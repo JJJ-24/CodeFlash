@@ -29,6 +29,7 @@ import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
+import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
@@ -168,6 +169,9 @@ export function BlockEditor({
   // 装飾パレットは各テキストブロックが直下にインライン描画する（InputAccessoryView 廃止）。
   // BlockEditor 側の共有登録口は不要になった（適用ロジックは各ブロックがローカルに持つ）。
   const focusedBlockIndexRef = useRef<number | null>(null);
+  // 033 Phase5: 編集中テキストブロックの装飾適用関数を橋渡しする ref（ハードキーボードの Cmd 系専用）。
+  // パレット（タッチ）は各ブロックがローカルに処理し続ける。非編集時は null＝Cmd+B は安全に無反応。
+  const activeApplyRef = useRef<((a: MdAction) => void) | null>(null);
   const activeTabRef = useRef<Tab>("front");
   const editorModeRef = useRef<EditorMode>("edit");
   const isSortModeRef = useRef(false);
@@ -875,6 +879,33 @@ export function BlockEditor({
     </>
   );
 
+  // 033 Phase5: テキスト編集中の装飾ショートカット（Cmd コンボ）を、フォーカス中ブロックの
+  // 適用関数へ流す。実 TextInput は素の（リッチ非対応）入力なので ⌘B/I 等を消費せず責任者チェーンを
+  // 上って発火する（Esc 代替の Cmd+. と同じ原理）。装飾対象が無いときは activeApplyRef が null＝無反応。
+  const applyDeco = (action: MdAction) => {
+    if (!keyboardShortcutsEnabled) return;
+    activeApplyRef.current?.(action);
+  };
+  const CMD = KeyCommand.keyModifierCommand;
+  const CMD_SHIFT = KeyCommand.keyModifierCommand | KeyCommand.keyModifierShift;
+  // ⌘⇧8（箇条書き）/ ⌘⇧9（引用）: Shift+数字が '8'/'*' のどちらの input 表現で届くか環境差が
+  // あるため、両候補＋修飾違いを登録して取りこぼさない（deleteKeySpecs と同じ防御的多重登録）。
+  const numDeco = (base: string, shifted: string, action: MdAction) => [
+    { input: base, modifierFlags: CMD_SHIFT, handler: () => applyDeco(action) },
+    { input: shifted, modifierFlags: CMD_SHIFT, handler: () => applyDeco(action) },
+    { input: shifted, modifierFlags: CMD, handler: () => applyDeco(action) },
+  ];
+  const decoSpecs = [
+    { input: "b", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "**", right: "**" }) },
+    { input: "i", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "*", right: "*" }) },
+    { input: "e", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "`", right: "`" }) },
+    { input: "x", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "wrap", left: "~~", right: "~~" }) },
+    { input: "m", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "wrap", left: "==", right: "==" }) },
+    { input: "h", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "heading" }) },
+    ...numDeco("8", "*", { kind: "prefix", prefix: "- " }),
+    ...numDeco("9", "(", { kind: "prefix", prefix: "> " }),
+  ];
+
   // 034: 既存の handleKeyPress(key) ディスパッチをそのまま流用し、各キーから呼ぶ。
   // ★矢印・Tab はこの画面では登録しない。理由: iPad は keyCommands をキャッシュするため、
   //   一度でも矢印/Tab を優先付きで登録すると、編集中もそのキャッシュが“ただの矢印/Tab”を奪い続け、
@@ -923,6 +954,8 @@ export function BlockEditor({
     // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
     { input: "u", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress(KEY_HOME) },
     { input: "d", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress(KEY_END) },
+    // 033 Phase5: テキスト編集中の装飾（⌘B/⌘I/⌘E/⌘⇧X/⌘⇧M/⌘⇧H/⌘⇧8/⌘⇧9）。
+    ...decoSpecs,
     {
       input: KeyCommand.keyInputEnter,
       handler: () => {
@@ -1141,6 +1174,8 @@ export function BlockEditor({
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
                   onFocusInput={() => handleBlockTapFocus(block._key)}
+                  onActivateApply={(fn) => { activeApplyRef.current = fn; }}
+                  onDeactivateApply={(fn) => { if (activeApplyRef.current === fn) activeApplyRef.current = null; }}
                 />
               )}
               {block.type === "code" && (

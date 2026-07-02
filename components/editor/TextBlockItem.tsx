@@ -40,9 +40,13 @@ interface Props {
   onEditBlur?: () => void;
   /** マウント時の autoFocus が実行されたとき BlockEditor に通知するコールバック */
   onAutoFocused?: () => void;
+  /** 033 Phase5: 編集開始時に、このブロックの装飾適用関数を BlockEditor へ登録（Cmd+B 等のルーティング用） */
+  onActivateApply?: (apply: (a: MdAction) => void) => void;
+  /** 033 Phase5: 編集終了/アンマウント時に登録解除（親側で同一関数のときだけ解除する） */
+  onDeactivateApply?: (apply: (a: MdAction) => void) => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, blurTrigger, onEditBlur, onAutoFocused }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, blurTrigger, onEditBlur, onAutoFocused, onActivateApply, onDeactivateApply }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -75,6 +79,11 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     setPendingSelection(result.selection);
   };
   const stableApply = useRef((action: MdAction) => applyImplRef.current(action)).current;
+
+  // フォーカス中でなくなった/アンマウントされた場合の保険。編集中ブロックが tab 切替等で
+  // onBlur を経ずに消えても、親の activeApplyRef に stale な関数が残らないよう解除する
+  // （親は同一関数のときだけ null 化するので、他ブロックがフォーカス済みなら無害）。
+  useEffect(() => () => onDeactivateApply?.(stableApply), []);
 
   const enterEditMode = useCallback(() => {
     setFocused(true);
@@ -294,12 +303,14 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
                 onFocus={() => {
                   setFocused(true);
                   onFocusInput?.();
+                  // Cmd+B 等の装飾ショートカットを、この編集中ブロックの適用関数へ橋渡し。
+                  onActivateApply?.(stableApply);
                   // プログラム的フォーカス時 iOS はカーソルを末尾に置くが、その位置の
                   // onSelectionChange が発火しないことがあるため selectionRef を末尾で初期化。
                   const len = block.content.length;
                   selectionRef.current = { start: len, end: len };
                 }}
-                onBlur={() => { setFocused(false); onEditBlur?.(); }}
+                onBlur={() => { setFocused(false); onDeactivateApply?.(stableApply); onEditBlur?.(); }}
                 textAlignVertical="top"
                 autoCorrect={false}
                 spellCheck={false}

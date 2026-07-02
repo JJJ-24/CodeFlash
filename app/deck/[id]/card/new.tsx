@@ -23,6 +23,15 @@ import { useDeckStore } from '@/store/decks';
 import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useSettingsStore } from '@/store/settings';
 
+// 新規作成では「カード複製(C)」「アーカイブ切替(⇧E)」は無効（どちらもカード編集時のみ）。
+// 編集画面と共有の一覧からこの2項目を除外して表示する。
+const NEW_CARD_EXCLUDED = new Set(['shortcut.duplicateCard', 'shortcut.archiveToggle']);
+const filterForNew = <T extends { descKey: string }>(items: readonly T[]) =>
+  items.filter((i) => !NEW_CARD_EXCLUDED.has(i.descKey));
+const NEW_SHORTCUTS_EDIT = filterForNew(CARD_EDITOR_SHORTCUTS_EDIT);
+const NEW_SHORTCUTS_SORT = filterForNew(CARD_EDITOR_SHORTCUTS_SORT);
+const NEW_SHORTCUTS_PREVIEW = filterForNew(CARD_EDITOR_SHORTCUTS_PREVIEW);
+
 export default function NewCardScreen() {
   const { id: deckId, tagId } = useLocalSearchParams<{ id: string; tagId?: string }>();
   const db = useSQLiteContext();
@@ -147,10 +156,10 @@ export default function NewCardScreen() {
         maxHeight="80%"
         sections={
           editorMode === 'sort'
-            ? [{ title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT }]
+            ? [{ title: t('shortcut.sortMode'), items: NEW_SHORTCUTS_SORT }]
             : editorMode === 'preview'
-            ? [{ title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW }]
-            : [{ title: t('shortcut.editMode'), items: CARD_EDITOR_SHORTCUTS_EDIT }]
+            ? [{ title: t('shortcut.previewMode'), items: NEW_SHORTCUTS_PREVIEW }]
+            : [{ title: t('shortcut.editMode'), items: NEW_SHORTCUTS_EDIT }]
         }
       />
       <ConfirmModal

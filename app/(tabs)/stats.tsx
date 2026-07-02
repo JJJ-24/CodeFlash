@@ -22,6 +22,8 @@ import {
   getDeckMasteryList,
   getGradeLogTotals,
   getLearnedUnlearnedCount,
+  getLifetimeStats,
+  type LifetimeStats,
   getMonthlyReviewCountsByGrade,
   getPast7DaysReviewedCount,
   getPast7DaysStudyActivity,
@@ -34,6 +36,8 @@ import {
 } from '@/lib/database/reviews';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
+import { LearningRecordSheet } from '@/components/stats/LearningRecordSheet';
+import { STREAK_MEDALS, SURPRISE_STREAKS } from '@/lib/stats/badges';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -83,28 +87,18 @@ const EASE_MAX = 3.0;
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type MedalInfo = { name: IoniconName ; color: string } | null;
 function getStreakMedal(streak: number): MedalInfo {
-  // サプライズアイコン（特定レンジの数日間だけ表示し、常設バッジを上書きする）
-  if (streak >= 50  && streak <= 52)  return { name: 'bug',       color: '#94e438' };
-  if (streak >= 150 && streak <= 152) return { name: 'walk',      color: '#ffffff' };
-  if (streak >= 250 && streak <= 252) return { name: 'fish',      color: '#4ac5fd' };
-  if (streak >= 350 && streak <= 352) return { name: 'bicycle',   color: '#f88e42' };
-  if (streak >= 400 && streak <= 402) return { name: 'boat',      color: '#98fff5' };
-  if (streak >= 450 && streak <= 452) return { name: 'car-sport', color: '#f72e2e' };
-  if (streak >= 600 && streak <= 602) return { name: 'train',     color: '#f5cba7' };
-  if (streak === 777)                 return { name: 'flower',    color: '#fc94b7' };
-  if (streak >= 800 && streak <= 802) return { name: 'airplane',  color: '#3beb90' };
-  if (streak >= 900 && streak <= 902) return { name: 'rocket',    color: '#ea42fc' };
-  // 常設バッジ
-  if (streak >= 1000) return { name: 'diamond',  color: '#000000' };
-  if (streak >= 730) return { name: 'diamond',  color: '#FFD700' };
-  if (streak >= 500) return { name: 'diamond',  color: '#ff9ff9' };
-  if (streak >= 365) return { name: 'diamond',  color: '#77eeff' };
-  if (streak >= 300) return { name: 'trophy',   color: '#FFD700' };
-  if (streak >= 200) return { name: 'trophy',   color: '#d7d7d7' };
-  if (streak >= 100) return { name: 'trophy',   color: '#CD7F32' };
-  if (streak >= 30)  return { name: 'ribbon',   color: '#FFD700' };
-  if (streak >= 10)  return { name: 'ribbon',   color: '#d7d7d7' };
-  if (streak >= 3)   return { name: 'ribbon',   color: '#CD7F32' };
+  // サプライズアイコン（特定レンジの数日間だけ表示し、常設バッジを上書きする）。定義元は SURPRISE_STREAKS。
+  for (const s of SURPRISE_STREAKS) {
+    if (streak >= s.threshold && streak <= s.threshold + s.window) {
+      return { name: s.icon as IoniconName, color: s.color };
+    }
+  }
+  // 常設バッジ（学習の記録シートのバッジと共通の定義元＝STREAK_MEDALS）。閾値降順に最初に満たす段位。
+  for (let i = STREAK_MEDALS.length - 1; i >= 0; i--) {
+    if (streak >= STREAK_MEDALS[i].threshold) {
+      return { name: STREAK_MEDALS[i].icon as IoniconName, color: STREAK_MEDALS[i].color };
+    }
+  }
   return null;
 }
 
@@ -897,6 +891,18 @@ export default function StatsScreen() {
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string } | null>(null);
   const [showDetailStatsInfo, setShowDetailStatsInfo] = useState(false);
+  // 草グラフタップで開く「学習の記録」シート（最長連続・累計・バッジ）。開くときに生涯集計を取得。
+  const [recordSheetVisible, setRecordSheetVisible] = useState(false);
+  const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats | null>(null);
+  const openRecordSheet = useCallback(async () => {
+    setLifetimeStats(null);
+    setRecordSheetVisible(true);
+    try {
+      setLifetimeStats(await getLifetimeStats(db));
+    } catch {
+      // 取得失敗時はローディング表示のまま（閉じれば再取得できる）
+    }
+  }, [db]);
   const [sectionInfoModal, setSectionInfoModal] = useState<{ title: string; message: React.ReactNode } | null>(null);
   // 閉じる（null）瞬間にフェード中の中身が空にならないよう、直前の内容を保持する。
   const lastSectionInfoRef = useRef<{ title: string; message: React.ReactNode } | null>(null);
@@ -1288,7 +1294,7 @@ export default function StatsScreen() {
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; setShowShortcutsModal((v) => !v); } },
   // デッキ/期間ピッカー・月別シート・ショートカット一覧・情報モーダル表示中は背景ナビを解除（各シートの
   // 多重発火防止＋アラート背後で 1-4/j/k 等が効かないように）。statsCardId/activeSheet は個別ガード済みで除外。
-  ], !deckPickerVisible && !periodPickerVisible && !monthlySheetData && !showShortcutsModal && !showDetailStatsInfo && sectionInfoModal === null);
+  ], !deckPickerVisible && !periodPickerVisible && !monthlySheetData && !recordSheetVisible && !showShortcutsModal && !showDetailStatsInfo && sectionInfoModal === null);
 
   // ESC は常時有効：開いているオーバーレイ/シートを上から順に閉じる → フォーカス解除（タブなので戻るは無し）。
   // ピッカーは各シート側の Esc に委ねる。
@@ -1298,6 +1304,7 @@ export default function StatsScreen() {
       handler: () => {
         if (statsCardId !== null) { setStatsCardId(null); return; }
         if (activeSheet !== null) { closeSheet(); return; }
+        if (recordSheetVisible) { setRecordSheetVisible(false); return; }
         if (deckPickerVisible || periodPickerVisible) return; // ピッカー側の Esc に委ねる
         if (monthlySheetData) { setMonthlySheetData(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
@@ -1507,9 +1514,9 @@ export default function StatsScreen() {
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
           </Pressable>
         </View>
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Pressable style={[styles.card, { backgroundColor: theme.colors.surface }]} onPress={openRecordSheet}>
           <ActivityHeatmap data={heatmapData} />
-        </View>
+        </Pressable>
       </Pressable>
 
       {/* 全体学習率 */}
@@ -1913,6 +1920,12 @@ export default function StatsScreen() {
         sections={STATS_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
+      <LearningRecordSheet
+        visible={recordSheetVisible}
+        onClose={() => setRecordSheetVisible(false)}
+        stats={lifetimeStats}
+        theme={theme}
+      />
       <InfoModal
         visible={showDetailStatsInfo}
         title={t('stats.proSection')}

@@ -704,3 +704,56 @@ export async function getStudyStreak(db: SQLiteDatabase): Promise<number> {
 
   return streak;
 }
+
+/** 草グラフモーダル用の生涯集計（継続・積み上げ系）。
+ *  日付ソースは review_logs.reviewedDate（カード×日で1行）で連続・日数・回数を、
+ *  学習時間は grade_logs.responseTimeMs（欠測は 0 扱い）で集計する。 */
+export interface LifetimeStats {
+  /** 最長連続学習日数 */
+  longestStreak: number;
+  /** 総学習回数（review_logs 行数＝カード×日の延べ回数） */
+  totalReviews: number;
+  /** 総学習日数（学習した延べ日数） */
+  totalDays: number;
+  /** 総学習時間（ミリ秒・概算。responseTimeMs 欠測分は含まれない） */
+  totalTimeMs: number;
+  /** 最初に学習した日（YYYY-MM-DD ローカル）。未学習は null */
+  firstDate: string | null;
+}
+
+/** 2つの YYYY-MM-DD ローカル日付の日数差（b - a）。DST の影響を避けるため UTC 換算で計算する。 */
+function localDateDiffDays(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number);
+  const [by, bm, bd] = b.split('-').map(Number);
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
+}
+
+export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStats> {
+  const dateRows = await db.getAllAsync<{ reviewedDate: string }>(
+    `SELECT DISTINCT reviewedDate FROM review_logs ORDER BY reviewedDate`
+  );
+  const dates = dateRows.map((r) => r.reviewedDate);
+
+  let longestStreak = 0;
+  let run = 0;
+  let prev: string | null = null;
+  for (const d of dates) {
+    if (prev !== null && localDateDiffDays(prev, d) === 1) run++;
+    else run = 1;
+    if (run > longestStreak) longestStreak = run;
+    prev = d;
+  }
+
+  const cntRow = await db.getFirstAsync<{ c: number }>(`SELECT COUNT(*) AS c FROM review_logs`);
+  const timeRow = await db.getFirstAsync<{ t: number | null }>(
+    `SELECT SUM(responseTimeMs) AS t FROM grade_logs`
+  );
+
+  return {
+    longestStreak,
+    totalReviews: cntRow?.c ?? 0,
+    totalDays: dates.length,
+    totalTimeMs: timeRow?.t ?? 0,
+    firstDate: dates[0] ?? null,
+  };
+}

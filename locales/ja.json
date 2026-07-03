@@ -181,6 +181,7 @@
     "recordLongestStreak": "最長連続日数",
     "recordTotalReviews": "総学習回数",
     "recordTotalTime": "総学習時間",
+    "recordTotalDays": "総学習日数",
     "recordElapsed": "開始からの日数",
     "durationHm": "{{h}}h{{m}}m",
     "durationM": "{{m}}m",

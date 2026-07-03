@@ -181,6 +181,7 @@
     "recordLongestStreak": "Longest streak",
     "recordTotalReviews": "Total reviews",
     "recordTotalTime": "Total time",
+    "recordTotalDays": "Total days",
     "recordElapsed": "Days since start",
     "durationHm": "{{h}}h{{m}}m",
     "durationM": "{{m}}m",

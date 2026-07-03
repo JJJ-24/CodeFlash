@@ -7,7 +7,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { MAX_FONT_MULTIPLIER, type AppTheme } from '@/lib/theme';
+import { MAX_FONT_MULTIPLIER, FILTER_COLORS, type AppTheme } from '@/lib/theme';
 import type { LifetimeStats } from '@/lib/database/reviews';
 import { BADGES, BADGE_SECTIONS, earnedBadgeCount, isBadgeEarned } from '@/lib/stats/badges';
 
@@ -59,12 +59,21 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const elapsed = stats ? elapsedDaysSince(stats.firstDate) : null;
   const earned = stats ? earnedBadgeCount(stats) : 0;
 
-  const numberBlocks = stats
+  // 左列：最長連続（大・プライマリ背景）＋開始からの日数（下）。右列：総学習回数・総学習時間・総学習日数の3つ。
+  const streakBlock = stats
+    ? { value: String(stats.longestStreak), label: t('stats.recordLongestStreak'), color: '#F4511E' }
+    : null;
+  // 左下：開始からの日数（数字はグレー＝フィルター「新規」色）
+  const leftBottomBlock = stats
+    ? { value: elapsed != null ? String(elapsed) : '-', label: t('stats.recordElapsed'), color: theme.colors.textSecondary }
+    : null;
+  const rightBlocks = stats
     ? [
-        { value: String(stats.longestStreak), label: t('stats.recordLongestStreak'), color: '#F4511E' },
         { value: stats.totalReviews.toLocaleString(), label: t('stats.recordTotalReviews'), color: '#1976D2' },
-        { value: formatDuration(stats.totalTimeMs), label: t('stats.recordTotalTime'), color: '#8E24AA' },
-        { value: elapsed != null ? String(elapsed) : '-', label: t('stats.recordElapsed'), color: '#43A047' },
+        // 総学習時間：オレンジ（フィルター「復習」色）
+        { value: formatDuration(stats.totalTimeMs), label: t('stats.recordTotalTime'), color: FILTER_COLORS.due },
+        // 総学習日数：旧「開始からの日数」の緑を流用
+        { value: stats.totalDays.toLocaleString(), label: t('stats.recordTotalDays'), color: '#43A047' },
       ]
     : [];
 
@@ -87,19 +96,41 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
         </Pressable>
 
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-          {/* 上部の数値ブロック */}
-          <View style={styles.numberRow}>
-            {numberBlocks.map((b, i) => (
-              <View key={i} style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
-                <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {b.value}
-                </Text>
-                <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {b.label}
-                </Text>
+          {/* 上部の数値ブロック：左列（最長連続・大＋総学習日数）／右列（3つ縦積み） */}
+          {stats && streakBlock && leftBottomBlock && (
+            <View style={styles.numberRow}>
+              <View style={styles.leftColumn}>
+                <View style={[styles.streakCell, { backgroundColor: theme.colors.primary }]}>
+                  <Text style={[styles.numberValue, { color: '#fff', fontSize: theme.fontSize.xxl * 1.5 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {streakBlock.value}
+                  </Text>
+                  <Text style={[styles.numberLabel, { color: 'rgba(255,255,255,0.85)', fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {streakBlock.label}
+                  </Text>
+                </View>
+                <View style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
+                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {leftBottomBlock.value}
+                  </Text>
+                  <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {leftBottomBlock.label}
+                  </Text>
+                </View>
               </View>
-            ))}
-          </View>
+              <View style={styles.rightColumn}>
+                {rightBlocks.map((b, i) => (
+                  <View key={i} style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
+                    <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {b.value}
+                    </Text>
+                    <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {b.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* バッジ */}
           <View style={styles.badgeHeaderRow}>
@@ -168,8 +199,11 @@ const styles = StyleSheet.create({
   title: { fontWeight: '700', textAlign: 'center' },
   closeBtn: { position: 'absolute', top: 14, right: 16, zIndex: 1, padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
-  numberRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  numberCell: { flexGrow: 1, flexBasis: '47%', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
+  numberRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
+  leftColumn: { flex: 1, gap: 8 },
+  rightColumn: { flex: 1, gap: 8 },
+  streakCell: { flexGrow: 1, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  numberCell: { borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
   numberValue: { fontWeight: '700' },
   numberLabel: { textAlign: 'center' },
   badgeHeaderRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 20, marginBottom: 4 },

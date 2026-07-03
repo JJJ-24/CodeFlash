@@ -516,7 +516,7 @@ function DonutSheet({
         <Pressable onPress={onClose} style={[sheetStyles.closeBtn, { position: 'absolute', top: 14, right: 16, zIndex: 1 }]}>
           <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
         </Pressable>
-        <View style={sheetStyles.body}>
+        <ScrollView style={sheetStyles.bodyScroll} contentContainerStyle={sheetStyles.body} showsVerticalScrollIndicator={false}>
           {dist ? (
             <GradeDistPieChart dist={dist} theme={theme} extraStats={extraStats} />
           ) : (
@@ -524,7 +524,7 @@ function DonutSheet({
               {t('common.loading')}
             </Text>
           )}
-        </View>
+        </ScrollView>
       </Animated.View>
     </View>
   );
@@ -535,6 +535,7 @@ const sheetStyles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   title: { fontWeight: '700' },
   closeBtn: { padding: 4 },
+  bodyScroll: { flexShrink: 1 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
   doneBtn: { paddingVertical: 16, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth },
 });

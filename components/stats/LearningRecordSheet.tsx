@@ -8,6 +8,7 @@ import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-ico
 import { useTranslation } from 'react-i18next';
 
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, type AppTheme } from '@/lib/theme';
+import { InfoModal } from '@/components/InfoModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
 import { BADGES, BADGE_SECTIONS, earnedBadgeCount, isBadgeEarned } from '@/lib/stats/badges';
 
@@ -23,10 +24,10 @@ type ValueSegment = { text: string; unit?: boolean };
 
 // 右列3ブロックの表示モード（ソートトグルと同じ3アイコン切替）。回数・時間に効き、日数は特別扱い。
 type RecordMode = 'total' | 'max' | 'avg';
-const RECORD_MODES: { key: RecordMode; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; labelKey: string }[] = [
-  { key: 'total', icon: 'sigma', labelKey: 'stats.recordModeTotal' },
-  { key: 'max', icon: 'format-vertical-align-top', labelKey: 'stats.recordModeMax' },
-  { key: 'avg', icon: 'scale-balance', labelKey: 'stats.recordModeAvg' },
+const RECORD_MODES: { key: RecordMode; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; labelKey: string; descKey: string }[] = [
+  { key: 'total', icon: 'sigma', labelKey: 'stats.recordModeTotal', descKey: 'stats.recordModeDescTotal' },
+  { key: 'max', icon: 'format-vertical-align-top', labelKey: 'stats.recordModeMax', descKey: 'stats.recordModeDescMax' },
+  { key: 'avg', icon: 'scale-balance', labelKey: 'stats.recordModeAvg', descKey: 'stats.recordModeDescAvg' },
 ];
 
 /** ローカル YYYY-MM-DD から今日までの経過日数（当日含む）。 */
@@ -60,7 +61,9 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
 
   // 右列3ブロックのトータル/最高/平均トグル。開くたびトータルに戻す（初期選択＝トータル）。
   const [mode, setMode] = useState<RecordMode>('total');
-  useEffect(() => { if (visible) setMode('total'); }, [visible]);
+  // 表示モードの説明モーダル（iアイコン）。シートを閉じたら一緒に閉じる。
+  const [showModeInfo, setShowModeInfo] = useState(false);
+  useEffect(() => { if (visible) setMode('total'); else setShowModeInfo(false); }, [visible]);
 
   // Esc は親 stats の常時 Esc ハンドラが閉じる（月別シートと同じ方式・二重登録を避ける）。
 
@@ -134,30 +137,40 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
         </Pressable>
 
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-          {/* 右列3ブロックの表示モード切替（ソートトグルと同じ3アイコン・右寄せ）。 */}
+          {/* 見出し＋iアイコン（左）＋右列3ブロックの表示モード切替（ソートトグルと同じ3アイコン・右）。 */}
           {stats && (
             <View style={styles.toggleRow}>
-              {RECORD_MODES.map(({ key, icon, labelKey }) => {
-                const active = mode === key;
-                return (
-                  <Pressable
-                    key={key}
-                    onPress={() => setMode(key)}
-                    accessibilityLabel={t(labelKey)}
-                    style={[
-                      styles.modeBtn,
-                      { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder },
-                      active && { backgroundColor: theme.colors.primary },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name={icon}
-                      size={Math.max(theme.fontSize.lg, 18)}
-                      color={active ? theme.colors.primaryText : theme.colors.textSecondary}
-                    />
-                  </Pressable>
-                );
-              })}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md, flexShrink: 1 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.recordSummaryTitle')}
+                </Text>
+                <Pressable onPress={() => setShowModeInfo(true)} hitSlop={8} accessibilityLabel={t('stats.recordModeInfoTitle')}>
+                  <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+                </Pressable>
+              </View>
+              <View style={styles.modeButtons}>
+                {RECORD_MODES.map(({ key, icon, labelKey }) => {
+                  const active = mode === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => setMode(key)}
+                      accessibilityLabel={t(labelKey)}
+                      style={[
+                        styles.modeBtn,
+                        { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder },
+                        active && { backgroundColor: theme.colors.primary },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={icon}
+                        size={Math.max(theme.fontSize.lg, 18)}
+                        color={active ? theme.colors.primaryText : theme.colors.textSecondary}
+                      />
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           )}
           {/* 上部の数値ブロック：左列（最長連続・大＋総学習日数）／右列（3つ縦積み） */}
@@ -259,6 +272,29 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           ))}
         </ScrollView>
       </Animated.View>
+
+      {/* 表示モードの説明（iアイコン）。ホームの情報モーダル風：[見出し]＋インラインアイコン＋一言。 */}
+      <InfoModal
+        visible={showModeInfo}
+        title={t('stats.recordSummaryTitle')}
+        message={
+          <View>
+            <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '700', marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {`[${t('stats.recordModeInfoTitle')}]`}
+            </Text>
+            {RECORD_MODES.map(({ key, icon, descKey }) => (
+              <Text key={key} style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 26, paddingLeft: 14 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <MaterialCommunityIcons name={icon} size={theme.fontSize.md} color={theme.colors.primary} />
+                {'  '}{t(descKey)}
+              </Text>
+            ))}
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('stats.recordModeContinuityNote')}
+            </Text>
+          </View>
+        }
+        onClose={() => setShowModeInfo(false)}
+      />
     </View>
   );
 }
@@ -269,7 +305,8 @@ const styles = StyleSheet.create({
   title: { fontWeight: '700', textAlign: 'center' },
   closeBtn: { position: 'absolute', top: 14, right: 16, zIndex: 1, padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
-  toggleRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, marginBottom: 10 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 },
+  modeButtons: { flexDirection: 'row', gap: 6 },
   modeBtn: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   numberRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   leftColumn: { flex: 1, gap: 8 },

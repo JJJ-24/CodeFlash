@@ -1,10 +1,10 @@
 // 統計：草グラフをタップしたときに出る「学習の記録」ボトムシート。
 // 継続・積み上げ系の指標（最長連続・総学習回数・総学習時間・経過日数）と、20個のバッジ枠を表示する。
 // ドーナツグラフ側（正答率/学習日数/平均時間）と重複しない指標に絞っている。無料機能。
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, type AppTheme } from '@/lib/theme';
@@ -17,6 +17,17 @@ interface Props {
   stats: LifetimeStats | null;
   theme: AppTheme;
 }
+
+// 数値ブロックの表示片。unit=true の片（h/m/%）だけ小さいフォントで描画する。
+type ValueSegment = { text: string; unit?: boolean };
+
+// 右列3ブロックの表示モード（ソートトグルと同じ3アイコン切替）。回数・時間に効き、日数は特別扱い。
+type RecordMode = 'total' | 'max' | 'avg';
+const RECORD_MODES: { key: RecordMode; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; labelKey: string }[] = [
+  { key: 'total', icon: 'sigma', labelKey: 'stats.recordModeTotal' },
+  { key: 'max', icon: 'format-vertical-align-top', labelKey: 'stats.recordModeMax' },
+  { key: 'avg', icon: 'scale-balance', labelKey: 'stats.recordModeAvg' },
+];
 
 /** ローカル YYYY-MM-DD から今日までの経過日数（当日含む）。 */
 function elapsedDaysSince(firstDate: string | null): number | null {
@@ -47,14 +58,23 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
 
+  // 右列3ブロックのトータル/最高/平均トグル。開くたびトータルに戻す（初期選択＝トータル）。
+  const [mode, setMode] = useState<RecordMode>('total');
+  useEffect(() => { if (visible) setMode('total'); }, [visible]);
+
   // Esc は親 stats の常時 Esc ハンドラが閉じる（月別シートと同じ方式・二重登録を避ける）。
 
-  function formatDuration(ms: number): string {
+  // 数値＋単位を片に分解する（単位は unit:true）。h があるときのみ h を出す（従来の 1h23m / 45m を踏襲）。
+  function formatDuration(ms: number): ValueSegment[] {
     const totalMin = Math.floor(ms / 60000);
     const h = Math.floor(totalMin / 60);
     const m = totalMin % 60;
-    return h > 0 ? t('stats.durationHm', { h, m }) : t('stats.durationM', { m });
+    const segs: ValueSegment[] = [];
+    if (h > 0) segs.push({ text: String(h) }, { text: t('stats.durationUnitH'), unit: true });
+    segs.push({ text: String(m) }, { text: t('stats.durationUnitM'), unit: true });
+    return segs;
   }
+  const plain = (text: string): ValueSegment[] => [{ text }];
 
   const elapsed = stats ? elapsedDaysSince(stats.firstDate) : null;
   const earned = stats ? earnedBadgeCount(stats) : 0;
@@ -67,15 +87,33 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const leftBottomBlock = stats
     ? { value: elapsed != null ? String(elapsed) : '-', label: t('stats.recordElapsed'), color: theme.colors.textSecondary }
     : null;
-  const rightBlocks = stats
+  // 回数=青／時間=オレンジ（フィルター「復習」色）／日数=緑。モードで値とラベルを切り替える。
+  // 平均は「1日あたり」＝学習日数で割る（回数・時間）。日数は継続率＝学習日数÷経過日数（%）。
+  const REVIEW_COLOR = '#1976D2';
+  const DAYS_COLOR = '#43A047';
+  const avgReviews = stats && stats.totalDays > 0 ? stats.totalReviews / stats.totalDays : 0;
+  const avgTimeMs = stats && stats.totalDays > 0 ? stats.totalTimeMs / stats.totalDays : 0;
+  const continuityPct = stats && elapsed != null && elapsed > 0 ? Math.min(100, Math.round((stats.totalDays / elapsed) * 100)) : null;
+  const rightBlocks: { segments: ValueSegment[]; label: string; color: string }[] = !stats
+    ? []
+    : mode === 'max'
     ? [
-        { value: stats.totalReviews.toLocaleString(), label: t('stats.recordTotalReviews'), color: '#1976D2' },
-        // 総学習時間：オレンジ（フィルター「復習」色）
-        { value: formatDuration(stats.totalTimeMs), label: t('stats.recordTotalTime'), color: FILTER_COLORS.due },
-        // 総学習日数：旧「開始からの日数」の緑を流用
-        { value: stats.totalDays.toLocaleString(), label: t('stats.recordTotalDays'), color: '#43A047' },
+        { segments: plain(stats.maxDailyReviews.toLocaleString()), label: t('stats.recordMaxReviews'), color: REVIEW_COLOR },
+        { segments: formatDuration(stats.maxDailyTimeMs), label: t('stats.recordMaxTime'), color: FILTER_COLORS.due },
+        // 日数の「1日の最高」は常に1で無意味なため、総学習日数のまま変化なし。
+        { segments: plain(stats.totalDays.toLocaleString()), label: t('stats.recordTotalDays'), color: DAYS_COLOR },
       ]
-    : [];
+    : mode === 'avg'
+    ? [
+        { segments: plain(avgReviews.toFixed(1)), label: t('stats.recordAvgReviews'), color: REVIEW_COLOR },
+        { segments: formatDuration(avgTimeMs), label: t('stats.recordAvgTime'), color: FILTER_COLORS.due },
+        { segments: continuityPct != null ? [{ text: String(continuityPct) }, { text: '%', unit: true }] : plain('-'), label: t('stats.recordContinuity'), color: DAYS_COLOR },
+      ]
+    : [
+        { segments: plain(stats.totalReviews.toLocaleString()), label: t('stats.recordTotalReviews'), color: REVIEW_COLOR },
+        { segments: formatDuration(stats.totalTimeMs), label: t('stats.recordTotalTime'), color: FILTER_COLORS.due },
+        { segments: plain(stats.totalDays.toLocaleString()), label: t('stats.recordTotalDays'), color: DAYS_COLOR },
+      ];
 
   return (
     <View
@@ -96,6 +134,32 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
         </Pressable>
 
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+          {/* 右列3ブロックの表示モード切替（ソートトグルと同じ3アイコン・右寄せ）。 */}
+          {stats && (
+            <View style={styles.toggleRow}>
+              {RECORD_MODES.map(({ key, icon, labelKey }) => {
+                const active = mode === key;
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => setMode(key)}
+                    accessibilityLabel={t(labelKey)}
+                    style={[
+                      styles.modeBtn,
+                      { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder },
+                      active && { backgroundColor: theme.colors.primary },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={icon}
+                      size={Math.max(theme.fontSize.lg, 18)}
+                      color={active ? theme.colors.primaryText : theme.colors.textSecondary}
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
           {/* 上部の数値ブロック：左列（最長連続・大＋総学習日数）／右列（3つ縦積み） */}
           {stats && streakBlock && leftBottomBlock && (
             <View style={styles.numberRow}>
@@ -109,7 +173,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                   </Text>
                 </View>
                 <View style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
-                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {leftBottomBlock.value}
                   </Text>
                   <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -120,8 +184,13 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               <View style={styles.rightColumn}>
                 {rightBlocks.map((b, i) => (
                   <View key={i} style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
-                    <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {b.value}
+                    <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xxl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {b.segments.map((s, si) => (
+                        // 単位（h/m/%）は数値より一段小さく（md）・やや細く描画する。色は継承。
+                        <Text key={si} style={s.unit ? { fontSize: theme.fontSize.md, fontWeight: '600' } : undefined}>
+                          {s.text}
+                        </Text>
+                      ))}
                     </Text>
                     <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {b.label}
@@ -199,6 +268,8 @@ const styles = StyleSheet.create({
   title: { fontWeight: '700', textAlign: 'center' },
   closeBtn: { position: 'absolute', top: 14, right: 16, zIndex: 1, padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
+  toggleRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, marginBottom: 10 },
+  modeBtn: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   numberRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   leftColumn: { flex: 1, gap: 8 },
   rightColumn: { flex: 1, gap: 8 },

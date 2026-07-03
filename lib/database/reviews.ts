@@ -717,9 +717,16 @@ export interface LifetimeStats {
   totalDays: number;
   /** 総学習時間（ミリ秒・概算。responseTimeMs 欠測分は含まれない） */
   totalTimeMs: number;
+  /** 1日の最高学習回数（review_logs を日別 COUNT した最大値） */
+  maxDailyReviews: number;
+  /** 1日の最高学習時間（ミリ秒。1回答を MAX_ANSWER_MS でクリップして日別合計した最大値） */
+  maxDailyTimeMs: number;
   /** 最初に学習した日（YYYY-MM-DD ローカル）。未学習は null */
   firstDate: string | null;
 }
+
+/** 「1日の最高学習時間」を求めるときに、1回答あたりの時間を丸める上限（放置=AFK 対策）。5分。 */
+const MAX_ANSWER_MS = 5 * 60 * 1000;
 
 /** 2つの YYYY-MM-DD ローカル日付の日数差（b - a）。DST の影響を避けるため UTC 換算で計算する。 */
 function localDateDiffDays(a: string, b: string): number {
@@ -776,12 +783,28 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
   const timeRow = await db.getFirstAsync<{ t: number | null }>(
     `SELECT SUM(responseTimeMs) AS t FROM grade_logs`
   );
+  // 1日の最高学習回数：日別 COUNT の最大値。
+  const maxCntRow = await db.getFirstAsync<{ m: number | null }>(
+    `SELECT MAX(c) AS m FROM (SELECT COUNT(*) AS c FROM review_logs GROUP BY reviewedDate)`
+  );
+  // 1日の最高学習時間：1回答を MAX_ANSWER_MS でクリップ（放置対策）→ ローカル日別合計 → 最大値。
+  const maxTimeRow = await db.getFirstAsync<{ m: number | null }>(
+    `SELECT MAX(s) AS m FROM (
+       SELECT SUM(MIN(responseTimeMs, ?)) AS s
+       FROM grade_logs
+       WHERE responseTimeMs IS NOT NULL
+       GROUP BY date(reviewedAt, 'localtime')
+     )`,
+    [MAX_ANSWER_MS]
+  );
 
   return {
     longestStreak,
     totalReviews: cntRow?.c ?? 0,
     totalDays: dates.length,
     totalTimeMs: timeRow?.t ?? 0,
+    maxDailyReviews: maxCntRow?.m ?? 0,
+    maxDailyTimeMs: maxTimeRow?.m ?? 0,
     firstDate: dates[0] ?? null,
   };
 }

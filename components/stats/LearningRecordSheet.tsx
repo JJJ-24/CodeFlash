@@ -217,10 +217,11 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                 {t(sec.labelKey)}
               </Text>
               <View style={styles.badgeGrid}>
-                {BADGES.filter((b) => b.kind === sec.kind).map((b) => {
+                {/* 連続日数は未獲得を表示しない（白丸を出さず、獲得したメダルだけ並べる）。他カテゴリは全枠表示。 */}
+                {BADGES.filter((b) => b.kind === sec.kind && (b.kind !== 'streak' || (stats ? isBadgeEarned(b, stats) : false))).map((b) => {
                   const got = stats ? isBadgeEarned(b, stats) : false;
                   const isStreak = b.kind === 'streak';
-                  // 連続：未獲得＝白丸のみ／獲得＝プライマリ背景の丸＋メダル色アイコン＋日数。
+                  // 連続：獲得＝プライマリ背景の丸＋メダル色アイコン＋日数（未獲得は上の filter で除外済み）。
                   // その他：最初から薄いグレーのアイコン＋文字（獲得で色付き）。
                   const showIcon = isStreak ? got : true;
                   const iconColor = isStreak ? b.color : got ? b.color : theme.colors.iconSubtle;

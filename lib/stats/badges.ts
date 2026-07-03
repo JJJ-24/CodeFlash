@@ -5,7 +5,7 @@
 // ため STREAK_MEDALS を唯一の定義元とし、フィルターブロック側もこれを参照する。
 import type { LifetimeStats } from '@/lib/database/reviews';
 
-export type BadgeKind = 'streak' | 'reviews' | 'days' | 'special';
+export type BadgeKind = 'streak' | 'reviews' | 'time' | 'days';
 
 export interface BadgeDef {
   id: string;
@@ -53,9 +53,9 @@ export const SURPRISE_STREAKS: { threshold: number; window: number; icon: string
 ];
 
 const REVIEW_COLOR = '#1976D2';
+const TIME_COLOR = '#F57C00'; // 学習時間＝オレンジ（記録シートの時間ブロック FILTER_COLORS.due と同色）
 const DAYS_COLOR = '#43A047';
-const SPECIAL_COLOR = '#8E24AA';
-const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 // 連続日数バッジ＝常設メダル＋サプライズメダルを閾値昇順で並べた 20 個。
 const STREAK_ALL = [
@@ -66,8 +66,8 @@ const STREAK_ALL = [
 export const BADGE_SECTIONS: { kind: BadgeKind; labelKey: string }[] = [
   { kind: 'streak', labelKey: 'stats.badgeSectionStreak' },
   { kind: 'reviews', labelKey: 'stats.badgeSectionReviews' },
+  { kind: 'time', labelKey: 'stats.badgeSectionTime' },
   { kind: 'days', labelKey: 'stats.badgeSectionDays' },
-  { kind: 'special', labelKey: 'stats.badgeSectionSpecial' },
 ];
 
 export const BADGES: readonly BadgeDef[] = [
@@ -81,20 +81,24 @@ export const BADGES: readonly BadgeDef[] = [
     color: m.color,
     short: String(m.threshold),
   })),
-  // 累計学習回数（6）
+  // 累計学習回数（5）
   { id: 'rev100', kind: 'reviews', threshold: 100, iconSet: 'fa5', icon: 'layer-group', color: REVIEW_COLOR, short: '100' },
   { id: 'rev500', kind: 'reviews', threshold: 500, iconSet: 'fa5', icon: 'layer-group', color: REVIEW_COLOR, short: '500' },
   { id: 'rev1000', kind: 'reviews', threshold: 1000, iconSet: 'fa5', icon: 'layer-group', color: REVIEW_COLOR, short: '1k' },
-  { id: 'rev3000', kind: 'reviews', threshold: 3000, iconSet: 'fa5', icon: 'layer-group', color: REVIEW_COLOR, short: '3k' },
   { id: 'rev5000', kind: 'reviews', threshold: 5000, iconSet: 'fa5', icon: 'layer-group', color: REVIEW_COLOR, short: '5k' },
   { id: 'rev10000', kind: 'reviews', threshold: 10000, iconSet: 'fa5', icon: 'layer-group', color: REVIEW_COLOR, short: '10k' },
-  // 累計学習日数（4）
+  // 学習時間（5）＝総学習時間
+  { id: 'time1h', kind: 'time', threshold: 1 * HOUR_MS, iconSet: 'fa5', icon: 'stopwatch', color: TIME_COLOR, short: '1h' },
+  { id: 'time5h', kind: 'time', threshold: 5 * HOUR_MS, iconSet: 'fa5', icon: 'stopwatch', color: TIME_COLOR, short: '5h' },
+  { id: 'time10h', kind: 'time', threshold: 10 * HOUR_MS, iconSet: 'fa5', icon: 'stopwatch', color: TIME_COLOR, short: '10h' },
+  { id: 'time30h', kind: 'time', threshold: 30 * HOUR_MS, iconSet: 'fa5', icon: 'stopwatch', color: TIME_COLOR, short: '30h' },
+  { id: 'time50h', kind: 'time', threshold: 50 * HOUR_MS, iconSet: 'fa5', icon: 'stopwatch', color: TIME_COLOR, short: '50h' },
+  // 累計学習日数（5）
   { id: 'days10', kind: 'days', threshold: 10, iconSet: 'fa5', icon: 'calendar-check', color: DAYS_COLOR, short: '10' },
   { id: 'days30', kind: 'days', threshold: 30, iconSet: 'fa5', icon: 'calendar-check', color: DAYS_COLOR, short: '30' },
   { id: 'days100', kind: 'days', threshold: 100, iconSet: 'fa5', icon: 'calendar-check', color: DAYS_COLOR, short: '100' },
+  { id: 'days200', kind: 'days', threshold: 200, iconSet: 'fa5', icon: 'calendar-check', color: DAYS_COLOR, short: '200' },
   { id: 'days365', kind: 'days', threshold: 365, iconSet: 'fa5', icon: 'calendar-check', color: DAYS_COLOR, short: '365' },
-  // 特別（1）＝総学習時間
-  { id: 'time10h', kind: 'special', threshold: TEN_HOURS_MS, iconSet: 'fa5', icon: 'stopwatch', color: SPECIAL_COLOR, short: '10h' },
 ] as const;
 
 /** そのバッジを獲得済みか（単調増加指標なので一度 true になれば以後も true）。 */
@@ -104,10 +108,10 @@ export function isBadgeEarned(b: BadgeDef, s: LifetimeStats): boolean {
       return s.longestStreak >= b.threshold;
     case 'reviews':
       return s.totalReviews >= b.threshold;
+    case 'time':
+      return s.totalTimeMs >= b.threshold;
     case 'days':
       return s.totalDays >= b.threshold;
-    case 'special':
-      return s.totalTimeMs >= b.threshold;
   }
 }
 

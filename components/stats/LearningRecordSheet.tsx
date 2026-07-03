@@ -6,7 +6,9 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimen
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as KeyCommand from 'react-native-key-command';
 
+import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, type AppTheme } from '@/lib/theme';
 import { InfoModal } from '@/components/InfoModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
@@ -65,7 +67,13 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const [showModeInfo, setShowModeInfo] = useState(false);
   useEffect(() => { if (visible) setMode('total'); else setShowModeInfo(false); }, [visible]);
 
+  // Space / Return でシートを閉じる（ドーナツシートと同じトグル挙動）。表示中のみ有効。
+  // 説明モーダル（i アイコン）表示中は誤ってシートを閉じないよう解除する。
   // Esc は親 stats の常時 Esc ハンドラが閉じる（月別シートと同じ方式・二重登録を避ける）。
+  useKeyCommands([
+    { input: ' ', handler: onClose },
+    { input: KeyCommand.constants.keyInputEnter as string, handler: onClose },
+  ], visible && !showModeInfo);
 
   // 数値＋単位を片に分解する（単位は unit:true）。h があるときのみ h を出す（従来の 1h23m / 45m を踏襲）。
   function formatDuration(ms: number): ValueSegment[] {

@@ -603,7 +603,7 @@
     "tags": "タグ管理",
     "tabNextPrev": "タブ切替\n（ホーム/学習/統計/設定）",
     "cycleChart": "グラフ切替\n（連続/済み/復習/新規）\n[H/L][,/.]でも可",
-    "openChart": "グラフ表示（フォーカス項目）\n[Return]でも可",
+    "openChart": "グラフ/記録を表示（フォーカス項目）\n[Return]でも可",
     "switchGrade": "グレード切替\n[0]で選択解除",
     "sectionCommon": "共通",
     "sectionGradeRanking": "評価別ランキング",

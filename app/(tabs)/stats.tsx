@@ -871,6 +871,7 @@ function fillPast7Days(rows: ScheduleItem[]): ScheduleItem[] {
 // フォーカス対象（ヌルサイクル）
 type FocusedItem =
   | null
+  | { kind: 'heatmap' }
   | { kind: 'total' }
   | { kind: 'deck'; idx: number }
   | { kind: 'card'; idx: number };
@@ -878,7 +879,7 @@ type FocusedItem =
 function isSameItem(a: FocusedItem, b: FocusedItem): boolean {
   if (a === null || b === null) return a === b;
   if (a.kind !== b.kind) return false;
-  if (a.kind === 'total') return true;
+  if (a.kind === 'heatmap' || a.kind === 'total') return true;
   return a.idx === (b as { idx: number }).idx;
 }
 
@@ -892,13 +893,14 @@ export default function StatsScreen() {
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<{
+    heatmap: number;
     total: number;
     decks: number[];
     proSection: number;
     ranking: number;
     rankingOuter: number;
     rankingInner: number;
-  }>({ total: 0, decks: [], proSection: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
+  }>({ heatmap: 0, total: 0, decks: [], proSection: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
   const pendingFocusRankingRef = useRef(false);
   const shouldScrollAfterLoadRef = useRef(false);
   const cardLayoutMap = useRef<Map<string, { y: number; h: number }>>(new Map());
@@ -1043,6 +1045,7 @@ export default function StatsScreen() {
 
   const focusList = useMemo<FocusedItem[]>(() => {
     const list: FocusedItem[] = [
+      { kind: 'heatmap' },
       { kind: 'total' },
       ...sortedDeckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })),
     ];
@@ -1085,7 +1088,9 @@ export default function StatsScreen() {
 
   function scrollToFocus(item: FocusedItem) {
     if (item === null) return;
-    if (item.kind === 'total') {
+    if (item.kind === 'heatmap') {
+      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.heatmap, animated: true });
+    } else if (item.kind === 'total') {
       scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total, animated: true });
     } else if (item.kind === 'deck') {
       const y = sectionOffsets.current.decks[item.idx] ?? 0;
@@ -1250,6 +1255,7 @@ export default function StatsScreen() {
       handler: () => {
         if (statsCardId !== null) return;
         if (activeSheet !== null) { closeSheet(); }
+        else if (focusedItem?.kind === 'heatmap') { openRecordSheet(); }
         else if (focusedItem?.kind === 'total') { openSheet('total'); }
         else if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); }
         else if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) { startFocusedReview(); }
@@ -1265,6 +1271,7 @@ export default function StatsScreen() {
           if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
           return;
         }
+        if (focusedItem?.kind === 'heatmap') { openRecordSheet(); return; }
         if (focusedItem?.kind === 'total') { openSheet('total'); return; }
         if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); return; }
       },
@@ -1541,7 +1548,7 @@ export default function StatsScreen() {
       </Pressable>
 
       {/* 学習履歴（草グラフ） */}
-      <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
+      <View style={styles.section} onLayout={(e) => { sectionOffsets.current.heatmap = e.nativeEvent.layout.y; }}>
         <View style={styles.proSectionTitle}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('stats.activityHeatmap')}
@@ -1550,10 +1557,18 @@ export default function StatsScreen() {
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
           </Pressable>
         </View>
-        <Pressable style={[styles.card, { backgroundColor: theme.colors.surface }]} onPress={openRecordSheet}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.card,
+            { backgroundColor: theme.colors.surface },
+            focusedItem?.kind === 'heatmap' && { borderWidth: 2, borderColor: theme.colors.primary },
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => { setFocusedItem({ kind: 'heatmap' }); openRecordSheet(); }}
+        >
           <ActivityHeatmap data={heatmapData} />
         </Pressable>
-      </Pressable>
+      </View>
 
       {/* 全体学習率 */}
       <View

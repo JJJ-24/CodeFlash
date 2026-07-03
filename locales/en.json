@@ -603,7 +603,7 @@
     "tags": "Tag manager",
     "tabNextPrev": "Switch tab\n(Home/Study/Stats/Settings)",
     "cycleChart": "Cycle charts\n(Streak/Done/Due/New)\n[H/L][,/.] also works",
-    "openChart": "Open chart focused item\n[Return] also works",
+    "openChart": "Open chart / record (focused item)\n[Return] also works",
     "switchGrade": "Switch grade\n[0] to deselect",
     "sectionCommon": "Common",
     "sectionGradeRanking": "Grade Ranking",

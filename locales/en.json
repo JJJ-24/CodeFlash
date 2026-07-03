@@ -206,7 +206,7 @@
     "badgeSectionTime": "Study time",
     "badgeSectionDays": "Study days",
     "activityHeatmapInfoLabel": "About activity history",
-    "activityHeatmapInfoMessage": "Low {{heatscale}} High\nShows how many cards you studied each day.\nShows the past year of activity.",
+    "activityHeatmapInfoMessage": "Low {{heatscale}} High\nShows how many cards you studied each day.\nShows the past year of activity.\n\n[Tap]\n  Show Learning Record",
     "totalProgress": "Overall Progress",
     "totalProgressInfoLabel": "About overall progress",
     "totalProgressInfoMessage": "The number on the right is the percentage of learned cards.\n\n[Tap]\n  Show donut chart\nSee the breakdown by grade.",

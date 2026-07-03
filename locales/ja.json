@@ -206,7 +206,7 @@
     "badgeSectionTime": "学習時間",
     "badgeSectionDays": "学習日数",
     "activityHeatmapInfoLabel": "学習履歴の説明",
-    "activityHeatmapInfoMessage": "少 {{heatscale}} 多\n日ごとの学習量を色の濃さで表しています。\n過去1年分の記録を確認できます。",
+    "activityHeatmapInfoMessage": "少 {{heatscale}} 多\n日ごとの学習量を色の濃さで表しています。\n過去1年分の記録を確認できます。\n\n[タップ]\n  学習の記録を表示",
     "totalProgress": "全体学習率",
     "totalProgressInfoLabel": "全体学習率の説明",
     "totalProgressInfoMessage": "右側の数字は、学習済みカードの割合（％）です。\n\n[タップ]\n  ドーナツグラフ表示\n評価ごとの内訳を確認できます。",

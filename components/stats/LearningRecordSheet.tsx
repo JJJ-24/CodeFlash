@@ -42,6 +42,8 @@ function elapsedDaysSince(firstDate: string | null): number | null {
   return Math.round((today - start) / 86400000) + 1;
 }
 
+const IS_PAD = (Platform as any).isPad;
+
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const { t } = useTranslation();
   const { height: screenHeight } = useWindowDimensions();
@@ -237,7 +239,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               <Text style={[styles.badgeSectionLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t(sec.labelKey)}
               </Text>
-              <View style={styles.badgeGrid}>
+              <View style={[styles.badgeGrid, IS_PAD && { gap: 16 }]}>
                 {/* 連続日数は未獲得を表示しない（白丸を出さず、獲得したメダルだけ並べる）。他カテゴリは全枠表示。 */}
                 {BADGES.filter((b) => b.kind === sec.kind && (b.kind !== 'streak' || (stats ? isBadgeEarned(b, stats) : false))).map((b) => {
                   const got = stats ? isBadgeEarned(b, stats) : false;
@@ -255,7 +257,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       : { borderColor: theme.colors.border, backgroundColor: 'transparent' };
                   const labelHidden = isStreak && !got;
                   return (
-                    <View key={b.id} style={styles.badgeCell}>
+                    <View key={b.id} style={[styles.badgeCell, IS_PAD && { width: 76 }]}>
                       <View style={[styles.badgeIconWrap, circleStyle, !got && { opacity: isStreak ? 1 : 0.6 }]}>
                         {showIcon ? (
                           b.iconSet === 'ionicons' ? (
@@ -268,6 +270,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       <Text
                         style={[styles.badgeShort, { color: labelHidden ? 'transparent' : got ? theme.colors.text : theme.colors.textTertiary, fontSize: theme.fontSize.xs }]}
                         numberOfLines={1}
+                        adjustsFontSizeToFit
                         maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                       >
                         {labelHidden ? ' ' : b.short}

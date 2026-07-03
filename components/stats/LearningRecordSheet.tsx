@@ -2,7 +2,7 @@
 // 継続・積み上げ系の指標（最長連続・総学習回数・総学習時間・経過日数）と、20個のバッジ枠を表示する。
 // ドーナツグラフ側（正答率/学習日数/平均時間）と重複しない指標に絞っている。無料機能。
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -158,13 +158,13 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       accessibilityLabel={t(labelKey)}
                       style={[
                         styles.modeBtn,
-                        { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder },
+                        { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 10 },
                         active && { backgroundColor: theme.colors.primary },
                       ]}
                     >
                       <MaterialCommunityIcons
                         name={icon}
-                        size={Math.max(theme.fontSize.lg, 18)}
+                        size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
                         color={active ? theme.colors.primaryText : theme.colors.textSecondary}
                       />
                     </Pressable>
@@ -178,7 +178,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
             <View style={styles.numberRow}>
               <View style={styles.leftColumn}>
                 <View style={[styles.streakCell, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={[styles.numberValue, { color: '#fff', fontSize: theme.fontSize.xxl * 1.5 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  <Text style={[styles.numberValue, { color: '#fff', fontSize: theme.fontSize.xxl * 1.2 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {streakBlock.value}
                   </Text>
                   <Text style={[styles.numberLabel, { color: 'rgba(255,255,255,0.85)', fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -186,7 +186,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                   </Text>
                 </View>
                 <View style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
-                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * 0.8 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {leftBottomBlock.value}
                   </Text>
                   <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -197,7 +197,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               <View style={styles.rightColumn}>
                 {rightBlocks.map((b, i) => (
                   <View key={i} style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
-                    <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xxl }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xxl * 0.8 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {b.segments.map((s, si) => (
                         // 単位（h/m/%）は数値より一段小さく（md）・やや細く描画する。色は継承。
                         <Text key={si} style={s.unit ? { fontSize: theme.fontSize.md, fontWeight: '600' } : undefined}>
@@ -283,12 +283,12 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               {`[${t('stats.recordModeInfoTitle')}]`}
             </Text>
             {RECORD_MODES.map(({ key, icon, descKey }) => (
-              <Text key={key} style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 26, paddingLeft: 14 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text key={key} style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 24, paddingLeft: 14 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 <MaterialCommunityIcons name={icon} size={theme.fontSize.md} color={theme.colors.primary} />
                 {'  '}{t(descKey)}
               </Text>
             ))}
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('stats.recordModeContinuityNote')}
             </Text>
           </View>
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   title: { fontWeight: '700', textAlign: 'center' },
   closeBtn: { position: 'absolute', top: 14, right: 16, zIndex: 1, padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, marginBottom: 10 },
   modeButtons: { flexDirection: 'row', gap: 6 },
   modeBtn: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   numberRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },

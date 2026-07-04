@@ -35,29 +35,43 @@ import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useTagStore } from '@/store/tags';
 import type { TagWithCount } from '@/store/tags';
 
-const TAG_SHORTCUTS = [
-  { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
-  { key: 'Return', descKey: 'shortcut.openFocused' },
-  { key: 'P',      descKey: 'shortcut.editFocused' },
-  { key: 'Delete', descKey: 'shortcut.deleteFocused' },
-  { key: 'N',      descKey: 'shortcut.new' },
-  { key: 'S',      descKey: 'shortcut.toggleSelect' },
-  { key: 'M',      descKey: 'shortcut.cycleSort' },
-  { key: 'U / D',  descKey: 'shortcut.reorderUpDown' },
-  { key: 'B',      descKey: 'shortcut.back' },
-  { key: '?',      descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC',    descKey: 'shortcut.esc' },
+const TAG_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: 'M',      descKey: 'shortcut.cycleSort' },
+    { key: 'S',      descKey: 'shortcut.toggleSelect' },
+  ] },
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
+    { key: 'U / D',  descKey: 'shortcut.reorderUpDown' },
+    { key: 'Return', descKey: 'shortcut.openFocused' },
+    { key: 'P',      descKey: 'shortcut.editFocused' },
+    { key: 'Delete', descKey: 'shortcut.deleteFocused' },
+  ] },
+  { titleKey: 'shortcut.catNavigate', items: [
+    { key: 'N',      descKey: 'shortcut.new' },
+    { key: 'B',      descKey: 'shortcut.back' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC',    descKey: 'shortcut.esc' },
+    { key: '?',      descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
-const TAG_SELECTION_SHORTCUTS = [
-  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-  { key: 'Space', descKey: 'shortcut.toggleCheck' },
-  { key: 'A',     descKey: 'shortcut.selectAll' },
-  { key: 'C',     descKey: 'shortcut.changeColorSelected' },
-  { key: 'Delete', descKey: 'shortcut.deleteSelectedTags' },
-  { key: 'S',     descKey: 'shortcut.exitSelect' },
-  { key: '?',     descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC',   descKey: 'shortcut.esc' },
+const TAG_SELECTION_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: 'S',     descKey: 'shortcut.exitSelect' },
+  ] },
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'Space', descKey: 'shortcut.toggleCheck' },
+    { key: 'A',     descKey: 'shortcut.selectAll' },
+    { key: 'C',     descKey: 'shortcut.changeColorSelected' },
+    { key: 'Delete', descKey: 'shortcut.deleteSelectedTags' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC',   descKey: 'shortcut.esc' },
+    { key: '?',     descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 export default function TagsScreen() {
@@ -607,9 +621,9 @@ export default function TagsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={selectionMode
-          ? [{ title: t('shortcut.selectMode'), items: TAG_SELECTION_SHORTCUTS }]
-          : [{ title: t('shortcut.normalMode'), items: TAG_SHORTCUTS }]
+        subtitle={selectionMode ? t('shortcut.selectMode') : t('shortcut.normalMode')}
+        sections={(selectionMode ? TAG_SELECTION_SHORTCUT_SECTIONS : TAG_SHORTCUT_SECTIONS)
+          .map((s) => ({ title: t(s.titleKey), items: s.items }))
         }
       />
       <ConfirmDeleteModal

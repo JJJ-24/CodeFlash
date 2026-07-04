@@ -35,20 +35,26 @@ import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 
-const DECK_EDIT_SHORTCUTS = [
-  { key: 'N', descKey: 'shortcut.focusDeckName' },
-  { key: 'M', descKey: 'shortcut.focusDeckDesc' },
-  { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
-  { key: 'I', descKey: 'shortcut.pickIcon' },
-  { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
-  { key: 'E', descKey: 'shortcut.toggleArchive' },
-  { key: 'Delete', descKey: 'shortcut.deleteDeck' },
-  { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
-  { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
-  { key: 'S', descKey: 'shortcut.save' },
-  { key: 'X', descKey: 'shortcut.close' },
-  { key: '?', descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC', descKey: 'shortcut.esc' },
+const DECK_EDIT_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+    { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  ] },
+  { titleKey: 'shortcut.catAction', items: [
+    { key: 'N', descKey: 'shortcut.focusDeckName' },
+    { key: 'M', descKey: 'shortcut.focusDeckDesc' },
+    { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
+    { key: 'I', descKey: 'shortcut.pickIcon' },
+    { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+    { key: 'E', descKey: 'shortcut.toggleArchive' },
+    { key: 'S', descKey: 'shortcut.save' },
+    { key: 'Delete', descKey: 'shortcut.deleteDeck' },
+    { key: 'X', descKey: 'shortcut.close' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC', descKey: 'shortcut.esc' },
+    { key: '?', descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 export default function EditDeckScreen() {
@@ -436,7 +442,7 @@ export default function EditDeckScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={DECK_EDIT_SHORTCUTS}
+        sections={DECK_EDIT_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
     </>
   );

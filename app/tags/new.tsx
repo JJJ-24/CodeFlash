@@ -28,15 +28,21 @@ import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 
-const TAG_NEW_SHORTCUTS = [
-  { key: 'N', descKey: 'shortcut.focusTagName' },
-  { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
-  { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
-  { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
-  { key: 'S', descKey: 'shortcut.save' },
-  { key: 'X', descKey: 'shortcut.close' },
-  { key: '?', descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC', descKey: 'shortcut.esc' },
+const TAG_NEW_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+    { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  ] },
+  { titleKey: 'shortcut.catAction', items: [
+    { key: 'N', descKey: 'shortcut.focusTagName' },
+    { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
+    { key: 'S', descKey: 'shortcut.save' },
+    { key: 'X', descKey: 'shortcut.close' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC', descKey: 'shortcut.esc' },
+    { key: '?', descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 export default function NewTagScreen() {
@@ -257,7 +263,7 @@ export default function NewTagScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={TAG_NEW_SHORTCUTS}
+        sections={TAG_NEW_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
     </>
   );

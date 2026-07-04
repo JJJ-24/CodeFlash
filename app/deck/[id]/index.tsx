@@ -268,32 +268,46 @@ export default function DeckDetailScreen() {
   const [focusedCardId, setFocusedCardIdState] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [descTruncatable, setDescTruncatable] = useState(false);
-  const DECK_SHORTCUTS_NORMAL = [
-    { key: 'Space',     descKey: 'shortcut.startStudy' },
-    { key: '1–4', descKey: 'shortcut.switchFilter' },
-    { key: 'J / K',     descKey: 'shortcut.focusNextPrev' },
-    { key: 'P',         descKey: 'shortcut.editFocusedItem' },
-    { key: 'A',         descKey: 'shortcut.toggleCardStats', pro: true },
-    { key: 'Delete',    descKey: 'shortcut.deleteFocused' },
-    { key: 'N',         descKey: 'shortcut.new' },
-    { key: 'M',         descKey: 'shortcut.cycleCardSort' },
-    { key: 'U / D',     descKey: 'shortcut.reorderUpDown' },
-    { key: 'S',         descKey: 'shortcut.toggleSelect' },
-    { key: 'B',         descKey: 'shortcut.back' },
-    { key: '?',         descKey: 'shortcut.showShortcuts' },
-    { key: 'ESC',       descKey: 'shortcut.esc' },
+  const DECK_SHORTCUT_SECTIONS_NORMAL = [
+    { titleKey: 'shortcut.catDisplay', items: [
+      { key: '1–4', descKey: 'shortcut.switchFilter' },
+      { key: 'M',         descKey: 'shortcut.cycleCardSort' },
+      { key: 'S',         descKey: 'shortcut.toggleSelect' },
+    ] },
+    { titleKey: 'shortcut.catFocus', items: [
+      { key: 'J / K',     descKey: 'shortcut.focusNextPrev' },
+      { key: 'U / D',     descKey: 'shortcut.reorderUpDown' },
+      { key: 'P',         descKey: 'shortcut.editFocusedItem' },
+      { key: 'A',         descKey: 'shortcut.toggleCardStats', pro: true },
+      { key: 'Delete',    descKey: 'shortcut.deleteFocused' },
+    ] },
+    { titleKey: 'shortcut.catNavigate', items: [
+      { key: 'Space',     descKey: 'shortcut.startStudy' },
+      { key: 'N',         descKey: 'shortcut.new' },
+      { key: 'B',         descKey: 'shortcut.back' },
+    ] },
+    { titleKey: 'shortcut.catOther', items: [
+      { key: 'ESC',       descKey: 'shortcut.esc' },
+      { key: '?',         descKey: 'shortcut.showShortcuts' },
+    ] },
   ];
-  const DECK_SHORTCUTS_SELECT = [
-    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-    { key: 'Space', descKey: 'shortcut.toggleCheck' },
-    { key: 'A',     descKey: 'shortcut.selectAll' },
-    { key: 'M',     descKey: 'shortcut.moveSelected' },
-    { key: 'Delete', descKey: 'shortcut.deleteSelected' },
-    { key: 'C',     descKey: 'shortcut.duplicateSelected' },
-    { key: 'E',     descKey: 'shortcut.archiveSelected' },
-    { key: 'S',     descKey: 'shortcut.exitSelect' },
-    { key: '?',     descKey: 'shortcut.showShortcuts' },
-    { key: 'ESC',   descKey: 'shortcut.esc' },
+  const DECK_SHORTCUT_SECTIONS_SELECT = [
+    { titleKey: 'shortcut.catDisplay', items: [
+      { key: 'S',     descKey: 'shortcut.exitSelect' },
+    ] },
+    { titleKey: 'shortcut.catFocus', items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+      { key: 'Space', descKey: 'shortcut.toggleCheck' },
+      { key: 'A',     descKey: 'shortcut.selectAll' },
+      { key: 'M',     descKey: 'shortcut.moveSelected' },
+      { key: 'Delete', descKey: 'shortcut.deleteSelected' },
+      { key: 'C',     descKey: 'shortcut.duplicateSelected' },
+      { key: 'E',     descKey: 'shortcut.archiveSelected' },
+    ] },
+    { titleKey: 'shortcut.catOther', items: [
+      { key: 'ESC',   descKey: 'shortcut.esc' },
+      { key: '?',     descKey: 'shortcut.showShortcuts' },
+    ] },
   ];
   const [filterCardIds, setFilterCardIds] = useState<Record<FilterKey, Set<string>>>({
     all: new Set(),
@@ -1288,9 +1302,9 @@ export default function DeckDetailScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="75%"
-        sections={selectionMode
-          ? [{ title: t('shortcut.selectMode'), items: DECK_SHORTCUTS_SELECT }]
-          : [{ title: t('shortcut.normalMode'), items: DECK_SHORTCUTS_NORMAL }]
+        subtitle={selectionMode ? t('shortcut.selectMode') : t('shortcut.normalMode')}
+        sections={(selectionMode ? DECK_SHORTCUT_SECTIONS_SELECT : DECK_SHORTCUT_SECTIONS_NORMAL)
+          .map((s) => ({ title: t(s.titleKey), items: s.items }))
         }
       />
       <ConfirmDeleteModal

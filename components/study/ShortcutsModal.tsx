@@ -19,15 +19,23 @@ interface ShortcutSection {
   items: ShortcutItem[];
 }
 
+// 2階層グループ（強調見出し＝グループ、その中にカテゴリー小見出し）。統計タブ（共通/評価別ランキング）で使う。
+interface ShortcutGroup {
+  title: string;
+  sections: ShortcutSection[];
+}
+
 interface Props {
   visible: boolean;
   onClose: () => void;
-  shortcuts?: ShortcutItem[];
   sections?: ShortcutSection[];
+  groups?: ShortcutGroup[];
+  /** タイトル下に表示する副題（モードのある画面で「通常モード」「選択モード」等を示す）。 */
+  subtitle?: string;
   maxHeight?: ViewStyle['maxHeight'];
 }
 
-export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeight = '70%' }: Props) {
+export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, maxHeight = '70%' }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { isPro } = useProStore();
@@ -97,15 +105,40 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.baseSurface, maxHeight }]}>
-          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }, subtitle != null && { paddingBottom: 4 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('settings.keyboardShortcuts')}
           </Text>
+          {subtitle != null && (
+            <Text style={[styles.subtitle, { color: theme.colors.text, fontSize: theme.fontSize.sm, fontWeight: '800' }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {`■ ${subtitle}`}
+            </Text>
+          )}
           <ScrollView
             ref={scrollRef}
             onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => { offsetRef.current = e.nativeEvent.contentOffset.y; }}
             scrollEventThrottle={16}
           >
-            {sections ? (
+            {groups ? (
+              groups.map((group, groupIndex) => (
+                <View key={group.title}>
+                  <View style={[styles.groupHeader, groupIndex > 0 && styles.groupHeaderSeparator]}>
+                    <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.sm, fontWeight: '800' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {`■ ${group.title}`}
+                    </Text>
+                  </View>
+                  {group.sections.map((section) => (
+                    <View key={section.title}>
+                      <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border }]}>
+                        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                          {section.title}
+                        </Text>
+                      </View>
+                      {section.items.map(renderItem)}
+                    </View>
+                  ))}
+                </View>
+              ))
+            ) : sections ? (
               sections.map((section, sectionIndex) => (
                 <View key={section.title}>
                   <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border }, sectionIndex > 0 && styles.sectionHeaderSeparator]}>
@@ -116,9 +149,7 @@ export function ShortcutsModal({ visible, onClose, shortcuts, sections, maxHeigh
                   {section.items.map(renderItem)}
                 </View>
               ))
-            ) : (
-              (shortcuts ?? []).map(renderItem)
-            )}
+            ) : null}
           </ScrollView>
         </View>
       </View>
@@ -143,6 +174,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
+  subtitle: {
+    fontWeight: '700',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
   sectionHeader: {
     paddingHorizontal: 20,
     paddingVertical: 8,
@@ -150,6 +186,16 @@ const styles = StyleSheet.create({
   },
   sectionHeaderSeparator: {
     marginTop: 8,
+  },
+  // 2階層グループ（統計）用：グループ見出しは「■ タイトル」の素テキスト（帯なし）。
+  // カテゴリー小見出しは他画面と同じ sectionHeader（帯＋青文字）を流用する。
+  groupHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+  groupHeaderSeparator: {
+    marginTop: 12,
   },
   row: {
     flexDirection: 'row',

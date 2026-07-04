@@ -53,28 +53,43 @@ import { useReviewStore } from '@/store/reviews';
 import { useSyncStore } from '@/store/sync';
 import type { Block, Deck } from '@/types';
 
-const STATS_SHORTCUT_SECTIONS = [
+// 統計は「共通」「評価別ランキング（Pro）」が同時表示のため 2 階層（グループ→カテゴリー）。
+const STATS_SHORTCUT_GROUPS = [
   {
     titleKey: 'shortcut.sectionCommon',
-    items: [
-      { key: '1–4', descKey: 'shortcut.cycleChart' },
-      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-      { key: 'Space', descKey: 'shortcut.openChart' },
-      { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
-      { key: '?',    descKey: 'shortcut.showShortcuts' },
-      { key: 'ESC',  descKey: 'shortcut.esc' },
+    sections: [
+      { titleKey: 'shortcut.catDisplay', items: [
+        { key: '1–4', descKey: 'shortcut.cycleChart' },
+      ] },
+      { titleKey: 'shortcut.catFocus', items: [
+        { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+        { key: 'Space', descKey: 'shortcut.openChart' },
+      ] },
+      { titleKey: 'shortcut.catNavigate', items: [
+        { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+      ] },
+      { titleKey: 'shortcut.catOther', items: [
+        { key: 'ESC',  descKey: 'shortcut.esc' },
+        { key: '?',    descKey: 'shortcut.showShortcuts' },
+      ] },
     ],
   },
   {
     titleKey: 'shortcut.sectionGradeRanking',
-    items: [
-      { key: '6-9',   descKey: 'shortcut.switchGrade', pro: true },
-      { key: 'D',     descKey: 'shortcut.selectDeck', pro: true },
-      { key: 'T',     descKey: 'shortcut.selectPeriod', pro: true },
-      { key: 'M',     descKey: 'shortcut.toggleCountTime', pro: true },
-      { key: 'Space', descKey: 'shortcut.startFocusedReview', pro: true },
-      { key: 'P',     descKey: 'shortcut.editFocusedItem', pro: true },
-      { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
+    sections: [
+      { titleKey: 'shortcut.catDisplay', items: [
+        { key: '6-9',   descKey: 'shortcut.switchGrade', pro: true },
+        { key: 'D',     descKey: 'shortcut.selectDeck', pro: true },
+        { key: 'T',     descKey: 'shortcut.selectPeriod', pro: true },
+        { key: 'M',     descKey: 'shortcut.toggleCountTime', pro: true },
+      ] },
+      { titleKey: 'shortcut.catFocus', items: [
+        { key: 'P',     descKey: 'shortcut.editFocusedItem', pro: true },
+        { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
+      ] },
+      { titleKey: 'shortcut.catNavigate', items: [
+        { key: 'Space', descKey: 'shortcut.startFocusedReview', pro: true },
+      ] },
     ],
   },
 ];
@@ -1972,7 +1987,7 @@ export default function StatsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={STATS_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        groups={STATS_SHORTCUT_GROUPS.map((g) => ({ title: t(g.titleKey), sections: g.sections.map((s) => ({ title: t(s.titleKey), items: s.items })) }))}
       />
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <LearningRecordSheet

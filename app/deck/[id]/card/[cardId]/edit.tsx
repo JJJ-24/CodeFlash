@@ -20,7 +20,7 @@ import { deleteCard, duplicateCard, getCardById, setCardArchived, updateCard } f
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
-import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
+import { CARD_EDITOR_SECTIONS_EDIT, CARD_EDITOR_SECTIONS_SORT, CARD_EDITOR_SECTIONS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { useSettingsStore } from '@/store/settings';
@@ -271,13 +271,13 @@ export default function EditCardScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
-        sections={
-          editorMode === 'sort'
-            ? [{ title: t('shortcut.sortMode'), items: CARD_EDITOR_SHORTCUTS_SORT }]
-            : editorMode === 'preview'
-            ? [{ title: t('shortcut.previewMode'), items: CARD_EDITOR_SHORTCUTS_PREVIEW }]
-            : [{ title: t('shortcut.editMode'), items: CARD_EDITOR_SHORTCUTS_EDIT }]
-        }
+        subtitle={editorMode === 'sort' ? t('shortcut.sortMode') : editorMode === 'preview' ? t('shortcut.previewMode') : t('shortcut.editMode')}
+        sections={(editorMode === 'sort'
+          ? CARD_EDITOR_SECTIONS_SORT
+          : editorMode === 'preview'
+          ? CARD_EDITOR_SECTIONS_PREVIEW
+          : CARD_EDITOR_SECTIONS_EDIT
+        ).map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

@@ -28,16 +28,22 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 
-const TAG_EDIT_SHORTCUTS = [
-  { key: 'N', descKey: 'shortcut.focusTagName' },
-  { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
-  { key: 'Delete', descKey: 'shortcut.deleteTag' },
-  { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
-  { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
-  { key: 'S', descKey: 'shortcut.save' },
-  { key: 'X', descKey: 'shortcut.close' },
-  { key: '?', descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC', descKey: 'shortcut.esc' },
+const TAG_EDIT_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+    { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  ] },
+  { titleKey: 'shortcut.catAction', items: [
+    { key: 'N', descKey: 'shortcut.focusTagName' },
+    { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
+    { key: 'S', descKey: 'shortcut.save' },
+    { key: 'Delete', descKey: 'shortcut.deleteTag' },
+    { key: 'X', descKey: 'shortcut.close' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC', descKey: 'shortcut.esc' },
+    { key: '?', descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 export default function EditTagScreen() {
@@ -286,7 +292,7 @@ export default function EditTagScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={TAG_EDIT_SHORTCUTS}
+        sections={TAG_EDIT_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
     </>
   );

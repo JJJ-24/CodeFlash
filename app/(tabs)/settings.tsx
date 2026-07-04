@@ -16,12 +16,18 @@ import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 
-const SETTINGS_SHORTCUTS = [
-  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-  { key: 'Return', descKey: 'shortcut.openFocused' },
-  { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
-  { key: '?', descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC', descKey: 'shortcut.esc' },
+const SETTINGS_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'Return', descKey: 'shortcut.openFocused' },
+  ] },
+  { titleKey: 'shortcut.catNavigate', items: [
+    { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC', descKey: 'shortcut.esc' },
+    { key: '?', descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 interface NavItem {
@@ -175,7 +181,7 @@ export default function SettingsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={SETTINGS_SHORTCUTS}
+        sections={SETTINGS_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
     </View>
   );

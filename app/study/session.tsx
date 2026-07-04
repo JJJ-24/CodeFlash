@@ -73,23 +73,33 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 3, labelKey: "grade.easy", color: GRADE_COLORS.easy },
 ];
 
-const SESSION_SHORTCUTS = [
-  { key: "Space", descKey: "shortcut.flip" },
-  { key: "1–4", descKey: "shortcut.grade" },
-  { key: ", / .", descKey: "shortcut.nextPrev" },
-  { key: "M", descKey: "shortcut.memo" },
-  { key: "F", descKey: "shortcut.fullscreen" },
-  { key: "J / K", descKey: "shortcut.focusNextPrev" },
-  { key: "R", descKey: "shortcut.runFocused" },
-  { key: "E", descKey: "shortcut.editFocusedItem" },
-  { key: "U / D", descKey: "shortcut.scrollUpDown" },
-  { key: "⇧U / ⇧D", descKey: "shortcut.scrollTopBottom" },
-  { key: "B", descKey: "shortcut.back" },
-  { key: "W", descKey: "shortcut.links" },
-  { key: "P", descKey: "shortcut.pencil" },
-  { key: "Q", descKey: "shortcut.finishSession" },
-  { key: "?", descKey: "shortcut.showShortcuts" },
-  { key: "ESC", descKey: "shortcut.esc" },
+const SESSION_SHORTCUT_SECTIONS = [
+  { titleKey: "shortcut.catDisplay", items: [
+    { key: "Space", descKey: "shortcut.flip" },
+    { key: "M", descKey: "shortcut.memo" },
+    { key: "F", descKey: "shortcut.fullscreen" },
+    { key: "U / D", descKey: "shortcut.scrollUpDown" },
+    { key: "⇧U / ⇧D", descKey: "shortcut.scrollTopBottom" },
+  ] },
+  { titleKey: "shortcut.catFocus", items: [
+    { key: "J / K", descKey: "shortcut.focusNextPrev" },
+    { key: "R", descKey: "shortcut.runFocused" },
+    { key: "E", descKey: "shortcut.editFocusedItem" },
+  ] },
+  { titleKey: "shortcut.catNavigate", items: [
+    { key: ", / .", descKey: "shortcut.nextPrev" },
+    { key: "P", descKey: "shortcut.pencil" },
+    { key: "Q", descKey: "shortcut.finishSession" },
+    { key: "B", descKey: "shortcut.back" },
+  ] },
+  { titleKey: "shortcut.catAction", items: [
+    { key: "1–4", descKey: "shortcut.grade" },
+  ] },
+  { titleKey: "shortcut.catOther", items: [
+    { key: "ESC", descKey: "shortcut.esc" },
+    { key: "W", descKey: "shortcut.links" },
+    { key: "?", descKey: "shortcut.showShortcuts" },
+  ] },
 ];
 
 export default function StudySessionScreen() {
@@ -1702,7 +1712,7 @@ export default function StudySessionScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={SESSION_SHORTCUTS}
+        sections={SESSION_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <ConfirmModal
         visible={showFinishModal}

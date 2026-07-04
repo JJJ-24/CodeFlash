@@ -41,18 +41,28 @@ import { useProStore } from '@/store/pro';
 import { useSearchSessionStore } from '@/store/search';
 import type { Card, Deck } from '@/types';
 
-const SEARCH_SHORTCUTS = [
-  { key: ', / .', descKey: 'shortcut.switchSearchField' },
-  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-  { key: 'P', descKey: 'shortcut.editFocusedItem' },
-  { key: 'A', descKey: 'shortcut.toggleCardStats', pro: true },
-  { key: 'D', descKey: 'shortcut.selectDeck' },
-  { key: 'T', descKey: 'shortcut.selectTag' },
-  { key: 'Delete', descKey: 'shortcut.clearSearch' },
-  { key: '/', descKey: 'shortcut.focusSearchInput' },
-  { key: 'B', descKey: 'shortcut.back' },
-  { key: '?', descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC', descKey: 'shortcut.esc' },
+const SEARCH_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: ', / .', descKey: 'shortcut.switchSearchField' },
+    { key: 'D', descKey: 'shortcut.selectDeck' },
+    { key: 'T', descKey: 'shortcut.selectTag' },
+  ] },
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'P', descKey: 'shortcut.editFocusedItem' },
+    { key: 'A', descKey: 'shortcut.toggleCardStats', pro: true },
+  ] },
+  { titleKey: 'shortcut.catNavigate', items: [
+    { key: 'B', descKey: 'shortcut.back' },
+  ] },
+  { titleKey: 'shortcut.catAction', items: [
+    { key: '/', descKey: 'shortcut.focusSearchInput' },
+    { key: 'Delete', descKey: 'shortcut.clearSearch' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC', descKey: 'shortcut.esc' },
+    { key: '?', descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 // ---- MultiSelectPickerModal（汎用・タグ用） ----
@@ -801,7 +811,7 @@ export default function SearchScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={SEARCH_SHORTCUTS}
+        sections={SEARCH_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
     </View>
   );

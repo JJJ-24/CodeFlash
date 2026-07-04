@@ -38,28 +38,42 @@ import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useTagStore } from '@/store/tags';
 import type { Card } from '@/types';
 
-const TAG_CARDS_SHORTCUTS = [
-  { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
-  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
-  { key: 'P',       descKey: 'shortcut.editFocusedItem' },
-  { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
-  { key: 'Delete', descKey: 'shortcut.deleteFocused' },
-  { key: 'N',     descKey: 'shortcut.new' },
-  { key: 'S',     descKey: 'shortcut.toggleSelect' },
-  { key: 'B',     descKey: 'shortcut.back' },
-  { key: '?',     descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC',   descKey: 'shortcut.esc' },
+const TAG_CARDS_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
+    { key: 'S',     descKey: 'shortcut.toggleSelect' },
+  ] },
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+    { key: 'P',       descKey: 'shortcut.editFocusedItem' },
+    { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
+    { key: 'Delete', descKey: 'shortcut.deleteFocused' },
+  ] },
+  { titleKey: 'shortcut.catNavigate', items: [
+    { key: 'N',     descKey: 'shortcut.new' },
+    { key: 'B',     descKey: 'shortcut.back' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC',   descKey: 'shortcut.esc' },
+    { key: '?',     descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
-const TAG_CARDS_SELECTION_SHORTCUTS = [
-  { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-  { key: 'Space', descKey: 'shortcut.toggleCheck' },
-  { key: 'A',     descKey: 'shortcut.selectAll' },
-  { key: 'T',     descKey: 'shortcut.removeTagSelected' },
-  { key: 'E',     descKey: 'shortcut.archiveSelected' },
-  { key: 'S',     descKey: 'shortcut.exitSelect' },
-  { key: '?',     descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC',   descKey: 'shortcut.esc' },
+const TAG_CARDS_SELECTION_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: 'S',     descKey: 'shortcut.exitSelect' },
+  ] },
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'Space', descKey: 'shortcut.toggleCheck' },
+    { key: 'A',     descKey: 'shortcut.selectAll' },
+    { key: 'T',     descKey: 'shortcut.removeTagSelected' },
+    { key: 'E',     descKey: 'shortcut.archiveSelected' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC',   descKey: 'shortcut.esc' },
+    { key: '?',     descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 export default function TagCardsScreen() {
@@ -592,9 +606,9 @@ export default function TagCardsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={selectionMode
-          ? [{ title: t('shortcut.selectMode'), items: TAG_CARDS_SELECTION_SHORTCUTS }]
-          : [{ title: t('shortcut.normalMode'), items: TAG_CARDS_SHORTCUTS }]}
+        subtitle={selectionMode ? t('shortcut.selectMode') : t('shortcut.normalMode')}
+        sections={(selectionMode ? TAG_CARDS_SELECTION_SHORTCUT_SECTIONS : TAG_CARDS_SHORTCUT_SECTIONS)
+          .map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

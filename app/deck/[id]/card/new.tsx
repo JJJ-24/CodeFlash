@@ -15,7 +15,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
-import { CARD_EDITOR_SHORTCUTS_EDIT, CARD_EDITOR_SHORTCUTS_SORT, CARD_EDITOR_SHORTCUTS_PREVIEW } from '@/lib/cardEditorShortcuts';
+import { CARD_EDITOR_SECTIONS_EDIT, CARD_EDITOR_SECTIONS_SORT, CARD_EDITOR_SECTIONS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { createCard } from '@/lib/database/cards';
 import { addTagToCard } from '@/lib/database/tags';
 import { useCardStore } from '@/store/cards';
@@ -24,13 +24,16 @@ import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useSettingsStore } from '@/store/settings';
 
 // 新規作成では「カード複製(C)」「アーカイブ切替(⇧E)」は無効（どちらもカード編集時のみ）。
-// 編集画面と共有の一覧からこの2項目を除外して表示する。
+// 編集画面と共有のセクションからこの2項目を除外し、空になったカテゴリーも落とす。
 const NEW_CARD_EXCLUDED = new Set(['shortcut.duplicateCard', 'shortcut.archiveToggle']);
-const filterForNew = <T extends { descKey: string }>(items: readonly T[]) =>
-  items.filter((i) => !NEW_CARD_EXCLUDED.has(i.descKey));
-const NEW_SHORTCUTS_EDIT = filterForNew(CARD_EDITOR_SHORTCUTS_EDIT);
-const NEW_SHORTCUTS_SORT = filterForNew(CARD_EDITOR_SHORTCUTS_SORT);
-const NEW_SHORTCUTS_PREVIEW = filterForNew(CARD_EDITOR_SHORTCUTS_PREVIEW);
+type ShortcutSectionDef = { titleKey: string; items: { key: string; descKey: string; pro?: boolean }[] };
+const filterForNew = (sections: ShortcutSectionDef[]): ShortcutSectionDef[] =>
+  sections
+    .map((s) => ({ ...s, items: s.items.filter((i) => !NEW_CARD_EXCLUDED.has(i.descKey)) }))
+    .filter((s) => s.items.length > 0);
+const NEW_SECTIONS_EDIT = filterForNew(CARD_EDITOR_SECTIONS_EDIT);
+const NEW_SECTIONS_SORT = filterForNew(CARD_EDITOR_SECTIONS_SORT);
+const NEW_SECTIONS_PREVIEW = filterForNew(CARD_EDITOR_SECTIONS_PREVIEW);
 
 export default function NewCardScreen() {
   const { id: deckId, tagId } = useLocalSearchParams<{ id: string; tagId?: string }>();
@@ -154,13 +157,13 @@ export default function NewCardScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
-        sections={
-          editorMode === 'sort'
-            ? [{ title: t('shortcut.sortMode'), items: NEW_SHORTCUTS_SORT }]
-            : editorMode === 'preview'
-            ? [{ title: t('shortcut.previewMode'), items: NEW_SHORTCUTS_PREVIEW }]
-            : [{ title: t('shortcut.editMode'), items: NEW_SHORTCUTS_EDIT }]
-        }
+        subtitle={editorMode === 'sort' ? t('shortcut.sortMode') : editorMode === 'preview' ? t('shortcut.previewMode') : t('shortcut.editMode')}
+        sections={(editorMode === 'sort'
+          ? NEW_SECTIONS_SORT
+          : editorMode === 'preview'
+          ? NEW_SECTIONS_PREVIEW
+          : NEW_SECTIONS_EDIT
+        ).map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <ConfirmModal
         visible={showDiscardModal}

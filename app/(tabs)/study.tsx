@@ -51,16 +51,24 @@ function sumValues(map: Record<string, number>): number {
   return Object.values(map).reduce((s, v) => s + v, 0);
 }
 
-const STUDY_TAB_SHORTCUTS = [
-  { key: '1–4', descKey: 'shortcut.switchFilter' },
-  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
-  { key: 'Space', descKey: 'shortcut.startStudyFocused' },
-  { key: 'S',     descKey: 'shortcut.toggleShuffle' },
-  { key: 'E',     descKey: 'shortcut.toggleHideEmpty' },
-  { key: 'D / T', descKey: 'shortcut.switchDeckTab' },
-  { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
-  { key: '?',    descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC',  descKey: 'shortcut.esc' },
+const STUDY_TAB_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: '1–4', descKey: 'shortcut.switchFilter' },
+    { key: 'D / T', descKey: 'shortcut.switchDeckTab' },
+    { key: 'E',     descKey: 'shortcut.toggleHideEmpty' },
+  ] },
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'Space', descKey: 'shortcut.startStudyFocused' },
+    { key: 'S',     descKey: 'shortcut.toggleShuffle' },
+  ] },
+  { titleKey: 'shortcut.catNavigate', items: [
+    { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'ESC',  descKey: 'shortcut.esc' },
+    { key: '?',    descKey: 'shortcut.showShortcuts' },
+  ] },
 ];
 
 export default function StudyScreen() {
@@ -659,7 +667,7 @@ export default function StudyScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={STUDY_TAB_SHORTCUTS}
+        sections={STUDY_TAB_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
 
       <InfoModal

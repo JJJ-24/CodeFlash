@@ -39,20 +39,42 @@ import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
 
-const HOME_SHORTCUTS = [
-  { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
-  { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
-  { key: 'U / D',   descKey: 'shortcut.reorderUpDown' },
-  { key: 'Return', descKey: 'shortcut.openFocused' },
-  { key: 'P',     descKey: 'shortcut.editFocused' },
-  { key: 'Delete', descKey: 'shortcut.deleteFocused' },
-  { key: 'N',     descKey: 'shortcut.new' },
-  { key: 'M',     descKey: 'shortcut.cycleSort' },
-  { key: 'F',     descKey: 'shortcut.search' },
-  { key: 'T',     descKey: 'shortcut.tags' },
-  { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
-  { key: '?',    descKey: 'shortcut.showShortcuts' },
-  { key: 'ESC',  descKey: 'shortcut.esc' },
+// ショートカット一覧を6カテゴリー（表示/フォーカス・選択/移動/操作/文字装飾/その他）に分類。
+// 該当するカテゴリーだけを並べる（順序固定・同じキーは全画面で同じ分類）。
+const HOME_SHORTCUT_SECTIONS = [
+  {
+    titleKey: 'shortcut.catDisplay',
+    items: [
+      { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
+      { key: 'M',     descKey: 'shortcut.cycleSort' },
+    ],
+  },
+  {
+    titleKey: 'shortcut.catFocus',
+    items: [
+      { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
+      { key: 'U / D',   descKey: 'shortcut.reorderUpDown' },
+      { key: 'Return', descKey: 'shortcut.openFocused' },
+      { key: 'P',     descKey: 'shortcut.editFocused' },
+      { key: 'Delete', descKey: 'shortcut.deleteFocused' },
+    ],
+  },
+  {
+    titleKey: 'shortcut.catNavigate',
+    items: [
+      { key: 'N',     descKey: 'shortcut.new' },
+      { key: 'F',     descKey: 'shortcut.search' },
+      { key: 'T',     descKey: 'shortcut.tags' },
+      { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
+    ],
+  },
+  {
+    titleKey: 'shortcut.catOther',
+    items: [
+      { key: 'ESC',  descKey: 'shortcut.esc' },
+      { key: '?',    descKey: 'shortcut.showShortcuts' },
+    ],
+  },
 ];
 
 function truncate(str: string, max = 20): string {
@@ -564,7 +586,7 @@ export default function HomeScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        shortcuts={HOME_SHORTCUTS}
+        sections={HOME_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

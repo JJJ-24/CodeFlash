@@ -580,7 +580,7 @@
     "new": "New",
     "toggleSelect": "Toggle selection mode",
     "toggleCheck": "Select / Deselect focused item",
-    "selectAll": "Select all / Deselect all",
+    "selectAll": "Select all / Deselect all\n[⌘A] also works",
     "moveSelected": "Move selected cards",
     "deleteSelected": "Delete selected cards",
     "duplicateSelected": "Duplicate selected cards",

@@ -712,6 +712,8 @@ export default function DeckDetailScreen() {
         }
       },
     },
+    // ⌘A = 全選択（選択モードのみ・OS 慣習のエイリアス）
+    { input: 'a', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode) toggleSelectAll(); } },
     {
       input: 'm',
       handler: () => {

@@ -271,6 +271,8 @@ export default function TagsScreen() {
       },
     },
     { input: 'a', handler: () => { if (showColorPicker) return; if (selectionMode) toggleSelectAll(); } },
+    // ⌘A = 全選択（選択モードのみ・OS 慣習のエイリアス）
+    { input: 'a', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (showColorPicker) return; if (selectionMode) toggleSelectAll(); } },
     {
       input: 'c',
       handler: () => {

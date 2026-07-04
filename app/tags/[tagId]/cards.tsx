@@ -272,6 +272,8 @@ export default function TagCardsScreen() {
         }
       },
     },
+    // ⌘A = 全選択（選択モードのみ・OS 慣習のエイリアス）
+    { input: 'a', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (statsCardId !== null) return; if (selectionMode) toggleSelectAll(); } },
     { input: 't', handler: () => { if (statsCardId !== null) return; if (selectionMode) handleRemoveTagSelected(); } },
     { input: 'e', handler: () => { if (statsCardId !== null) return; if (selectionMode) handleArchiveSelected(); } },
     { input: 's', handler: () => { if (statsCardId !== null) return; if (selectionMode) exitSelectionMode(); else if (cards.length > 0) enterSelectionMode(); } },

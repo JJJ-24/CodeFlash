@@ -580,7 +580,7 @@
     "new": "新規作成",
     "toggleSelect": "選択モード",
     "toggleCheck": "選択/解除\n（フォーカス項目）",
-    "selectAll": "全選択/全解除",
+    "selectAll": "全選択/全解除\n[⌘A]でも可",
     "moveSelected": "移動（選択カード）",
     "deleteSelected": "削除（選択カード）",
     "duplicateSelected": "複製（選択カード）",

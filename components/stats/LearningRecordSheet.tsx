@@ -203,12 +203,6 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
             <View style={styles.numberRow}>
               <View style={styles.leftColumn}>
                 <View style={[styles.streakCell, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={[styles.numberValue, { color: '#fff', fontSize: theme.fontSize.xxl * 1.2 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {streakBlock.value}
-                  </Text>
-                  <Text style={[styles.numberLabel, { color: 'rgba(255,255,255,0.85)', fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                    {streakBlock.label}
-                  </Text>
                   {recordPill && (
                     <View style={styles.recordPill}>
                       <Ionicons name={recordPill.icon} size={Math.max(theme.fontSize.xs, 12)} color={recordPill.iconColor} />
@@ -217,6 +211,12 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       </Text>
                     </View>
                   )}
+                  <Text style={[styles.numberValue, { color: '#fff', fontSize: theme.fontSize.xxl * 1.2 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {streakBlock.value}
+                  </Text>
+                  <Text style={[styles.numberLabel, { color: 'rgba(255,255,255,0.85)', fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {streakBlock.label}
+                  </Text>
                 </View>
                 <View style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
                   <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * 0.8 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   leftColumn: { flex: 1, gap: 8 },
   rightColumn: { flex: 1, gap: 8 },
   streakCell: { flexGrow: 1, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', gap: 4 },
-  recordPill: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.22)' },
+  recordPill: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.22)' },
   recordPillText: { fontWeight: '700' },
   numberCell: { borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
   numberValue: { fontWeight: '700' },

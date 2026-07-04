@@ -711,6 +711,10 @@ export async function getStudyStreak(db: SQLiteDatabase): Promise<number> {
 export interface LifetimeStats {
   /** 最長連続学習日数 */
   longestStreak: number;
+  /** 現在の連続学習日数（今日起点で遡る。今日未学習なら 0） */
+  currentStreak: number;
+  /** 進行中の連続（最後の run）を除いた自己ベスト連続日数。記録更新の状態判定に使う */
+  prevBestStreak: number;
   /** 総学習回数（review_logs 行数＝カード×日の延べ回数） */
   totalReviews: number;
   /** 総学習日数（学習した延べ日数） */
@@ -772,13 +776,33 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
   const dates = dateRows.map((r) => r.reviewedDate);
 
   let longestStreak = 0;
+  // prevRunMax：run が途切れる（新しい run が始まる）たびに、直前に完了した run の長さを記録。
+  // 最後の（進行中の）run は加算されないため、ループ後は「進行中を除く自己ベスト」になる。
+  let prevRunMax = 0;
   let run = 0;
   let prev: string | null = null;
   for (const d of dates) {
     if (prev !== null && localDateDiffDays(prev, d) === 1) run++;
-    else run = 1;
+    else {
+      if (run > 0) prevRunMax = Math.max(prevRunMax, run); // 直前に完了した run を確定
+      run = 1;
+    }
     if (run > longestStreak) longestStreak = run;
     prev = d;
+  }
+
+  // 現在の連続日数：今日から過去に遡って連続する学習日を数える（今日未学習なら 0）。
+  const dateSet = new Set(dates);
+  let currentStreak = 0;
+  const cur = new Date();
+  for (let i = 0; i < dates.length; i++) {
+    const y = cur.getFullYear();
+    const mo = String(cur.getMonth() + 1).padStart(2, '0');
+    const da = String(cur.getDate()).padStart(2, '0');
+    if (dateSet.has(`${y}-${mo}-${da}`)) {
+      currentStreak++;
+      cur.setDate(cur.getDate() - 1);
+    } else break;
   }
 
   const cntRow = await db.getFirstAsync<{ c: number }>(`SELECT COUNT(*) AS c FROM review_logs`);
@@ -810,6 +834,8 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
 
   return {
     longestStreak,
+    currentStreak,
+    prevBestStreak: prevRunMax,
     totalReviews: cntRow?.c ?? 0,
     totalDays: dates.length,
     totalTimeMs: timeRow?.t ?? 0,

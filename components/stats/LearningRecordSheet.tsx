@@ -43,6 +43,8 @@ function elapsedDaysSince(firstDate: string | null): number | null {
 }
 
 const IS_PAD = (Platform as any).isPad;
+// 「新記録まで N 日」を表示する残り日数の上限（これ以内なら近いカウントダウンを出す）。
+const RECORD_COUNTDOWN_MAX = 3;
 
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const { t } = useTranslation();
@@ -91,6 +93,19 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
 
   const elapsed = stats ? elapsedDaysSince(stats.firstDate) : null;
   const earned = stats ? earnedBadgeCount(stats) : 0;
+  // 最長連続セル内のバッジ：現在の連続（今日起点。今日未学習なら 0）と、進行中を除く自己ベスト prevBestStreak
+  // の関係で 4 状態を出し分ける。もうすぐ→タイ→達成→更新中 と日ごとに変化する。
+  const recordPill = ((): { icon: React.ComponentProps<typeof Ionicons>['name']; iconColor: string; text: string } | null => {
+    if (!stats || stats.currentStreak <= 0) return null;
+    const cur = stats.currentStreak;
+    const prev = stats.prevBestStreak;
+    if (cur > prev + 1) return { icon: 'flame', iconColor: '#FFD54F', text: t('stats.recordStreakUpdating') };
+    if (cur === prev + 1) return { icon: 'trophy', iconColor: '#FFD54F', text: t('stats.recordStreakNewBest') };
+    if (cur === prev) return { icon: 'flame-outline', iconColor: '#FFD54F', text: t('stats.recordStreakTie') };
+    const days = prev - cur + 1; // 記録を「抜く」のに必要な残り日数
+    if (days <= RECORD_COUNTDOWN_MAX) return { icon: 'flag', iconColor: '#fff', text: t('stats.recordStreakCountdown', { days }) };
+    return null;
+  })();
 
   // 左列：最長連続（大・プライマリ背景）＋開始からの日数（下）。右列：総学習回数・総学習時間・総学習日数の3つ。
   const streakBlock = stats
@@ -194,6 +209,14 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                   <Text style={[styles.numberLabel, { color: 'rgba(255,255,255,0.85)', fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {streakBlock.label}
                   </Text>
+                  {recordPill && (
+                    <View style={styles.recordPill}>
+                      <Ionicons name={recordPill.icon} size={Math.max(theme.fontSize.xs, 12)} color={recordPill.iconColor} />
+                      <Text style={[styles.recordPillText, { color: '#fff', fontSize: theme.fontSize.xs }]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                        {recordPill.text}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <View style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
                   <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * 0.8 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -323,6 +346,8 @@ const styles = StyleSheet.create({
   leftColumn: { flex: 1, gap: 8 },
   rightColumn: { flex: 1, gap: 8 },
   streakCell: { flexGrow: 1, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  recordPill: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.22)' },
+  recordPillText: { fontWeight: '700' },
   numberCell: { borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
   numberValue: { fontWeight: '700' },
   numberLabel: { textAlign: 'center' },

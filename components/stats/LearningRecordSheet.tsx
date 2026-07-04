@@ -113,8 +113,8 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
     ? [
         { segments: plain(stats.maxDailyReviews.toLocaleString()), label: t('stats.recordMaxReviews'), color: REVIEW_COLOR },
         { segments: formatDuration(stats.maxDailyTimeMs), label: t('stats.recordMaxTime'), color: FILTER_COLORS.due },
-        // 日数の「1日の最高」は常に1で無意味なため、総学習日数のまま変化なし。
-        { segments: plain(stats.totalDays.toLocaleString()), label: t('stats.recordTotalDays'), color: DAYS_COLOR },
+        // 日数の「最高」は暦月ごとの最高学習日数（1日の最高＝常に1で無意味なため月単位に）。
+        { segments: plain(stats.maxMonthlyDays.toLocaleString()), label: t('stats.recordMaxMonthlyDays'), color: DAYS_COLOR },
       ]
     : mode === 'avg'
     ? [

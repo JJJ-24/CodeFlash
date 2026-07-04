@@ -721,6 +721,8 @@ export interface LifetimeStats {
   maxDailyReviews: number;
   /** 1日の最高学習時間（ミリ秒。1回答を MAX_ANSWER_MS でクリップして日別合計した最大値） */
   maxDailyTimeMs: number;
+  /** 1ヶ月の最高学習日数（暦月ごとの学習日数の最大値） */
+  maxMonthlyDays: number;
   /** 最初に学習した日（YYYY-MM-DD ローカル）。未学習は null */
   firstDate: string | null;
 }
@@ -797,6 +799,14 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
      )`,
     [MAX_ANSWER_MS]
   );
+  // 1ヶ月の最高学習日数：暦月（YYYY-MM）ごとの distinct 学習日数を数え、その最大値。
+  const maxMonthRow = await db.getFirstAsync<{ m: number | null }>(
+    `SELECT MAX(c) AS m FROM (
+       SELECT COUNT(DISTINCT reviewedDate) AS c
+       FROM review_logs
+       GROUP BY substr(reviewedDate, 1, 7)
+     )`
+  );
 
   return {
     longestStreak,
@@ -805,6 +815,7 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
     totalTimeMs: timeRow?.t ?? 0,
     maxDailyReviews: maxCntRow?.m ?? 0,
     maxDailyTimeMs: maxTimeRow?.m ?? 0,
+    maxMonthlyDays: maxMonthRow?.m ?? 0,
     firstDate: dates[0] ?? null,
   };
 }

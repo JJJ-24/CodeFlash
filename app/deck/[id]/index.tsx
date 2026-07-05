@@ -90,12 +90,13 @@ type CardRowProps = {
   onEdit: (item: Card) => void;
   onDelete: (item: Card) => void;
   onArchive: (item: Card) => void;
+  onStudyFromHere: (item: Card) => void;
 };
 
 const CardRow = memo(function CardRow(props: CardRowProps) {
   const {
     item, drag, isFocused, isSelected, isSelMode, isNew, effectiveArchived, swipeEnabled,
-    isPro, theme, imageLabel, noTextLabel, onPress, onLongPress, onStats, onEdit, onDelete, onArchive,
+    isPro, theme, imageLabel, noTextLabel, onPress, onLongPress, onStats, onEdit, onDelete, onArchive, onStudyFromHere,
   } = props;
   const preview = getCardPreview(item.frontContent, imageLabel);
   return (
@@ -103,6 +104,8 @@ const CardRow = memo(function CardRow(props: CardRowProps) {
       enabled={swipeEnabled}
       onDelete={() => onDelete(item)}
       onArchive={() => onArchive(item)}
+      // 右スワイプ「ここから学習」。選択モードでは出さない（swipeEnabled が false なので実質不要だが明示）。
+      onStudyFromHere={isSelMode ? undefined : () => onStudyFromHere(item)}
       archived={item.archived}
       containerStyle={styles.cardRowSpacing}
     >
@@ -253,6 +256,7 @@ export default function DeckDetailScreen() {
   const deckArchivedRef = useRef(false);
   const confirmDeleteCardRef = useRef<(card: Card) => void>(() => {});
   const archiveCardRef = useRef<(card: Card) => void>(() => {});
+  const startStudyFromCardRef = useRef<(cardId: string) => void>(() => {});
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [infoModal, setInfoModal] = useState<{ title?: string; message: React.ReactNode } | null>(null);
@@ -283,6 +287,7 @@ export default function DeckDetailScreen() {
     ] },
     { titleKey: 'shortcut.catNavigate', items: [
       { key: 'Space',     descKey: 'shortcut.startStudy' },
+      { key: '⇧Space',    descKey: 'shortcut.startStudyFromFocus' },
       { key: 'N',         descKey: 'shortcut.new' },
       { key: 'B',         descKey: 'shortcut.back' },
     ] },
@@ -584,6 +589,7 @@ export default function DeckDetailScreen() {
   }, [navigateToCardEdit]);
   const handleDeleteRow = useCallback((item: Card) => confirmDeleteCardRef.current(item), []);
   const handleArchiveRow = useCallback((item: Card) => archiveCardRef.current(item), []);
+  const handleStudyFromHere = useCallback((item: Card) => startStudyFromCardRef.current(item.id), []);
 
   const renderItem = useCallback(({ item, drag }: RenderItemParams<Card>) => {
     const theme = themeRef.current;
@@ -614,10 +620,11 @@ export default function DeckDetailScreen() {
         onEdit={handleEditPress}
         onDelete={handleDeleteRow}
         onArchive={handleArchiveRow}
+        onStudyFromHere={handleStudyFromHere}
       />
     );
     return inDraggable ? <ScaleDecorator>{row}</ScaleDecorator> : row;
-  }, [isPro, t, handleRowPress, handleRowLongPress, handleStatsPress, handleEditPress, handleDeleteRow, handleArchiveRow]);
+  }, [isPro, t, handleRowPress, handleRowLongPress, handleStatsPress, handleEditPress, handleDeleteRow, handleArchiveRow, handleStudyFromHere]);
 
   // FlatList の再描画トリガー。毎レンダー新オブジェクトだと並べ替えのたびに全セルが
   // 再描画されちらつくため、選択状態・フォーカス・テーマが変わったときだけ identity を変える。
@@ -690,6 +697,19 @@ export default function DeckDetailScreen() {
               return next;
             });
           }
+        } else {
+          startVisibleStudy();
+        }
+      },
+    },
+    // ⇧Space = フォーカスカードから一覧末尾までを学習（フォーカス無しは通常開始にフォールバック）。
+    {
+      input: ' ',
+      modifierFlags: KeyCommand.keyModifierShift,
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null || selectionMode) return;
+        if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+          startStudyFromCard(displayedCards[focusedCardIndex].id);
         } else {
           startVisibleStudy();
         }
@@ -852,6 +872,21 @@ export default function DeckDetailScreen() {
     setStudyCardIds(cardIds);
     router.push({ pathname: '/study/session', params: { deckId: id, order: '1' } });
   };
+
+  // フォーカス/右スワイプの「ここから学習」：指定カードから一覧末尾までを、一覧順で学習する
+  // （startVisibleStudy の部分集合＝先頭を startId に切り詰めただけ）。アーカイブは同様に除外。
+  const startStudyFromCard = (startId: string) => {
+    const startIdx = displayedCards.findIndex((c) => c.id === startId);
+    if (startIdx === -1) return;
+    const cardIds = displayedCards
+      .slice(startIdx)
+      .filter((c) => !c.archived && !deck.archived)
+      .map((c) => c.id);
+    if (cardIds.length === 0) return;
+    setStudyCardIds(cardIds);
+    router.push({ pathname: '/study/session', params: { deckId: id, order: '1' } });
+  };
+  startStudyFromCardRef.current = startStudyFromCard;
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
 

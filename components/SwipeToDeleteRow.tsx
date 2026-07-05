@@ -35,10 +35,35 @@ function RightActions({ drag, totalWidth, dangerColor, archiveColor, archived, o
   );
 }
 
+// 右スワイプで左側に出す「ここから学習」ボタン（学習グリーン・▶）。左アクションは
+// drag.value（右スワイプで正）に追従させ、初期は画面外左（translateX=-width）に置く。
+function LeftAction({ drag, width, color, onPress }: {
+  drag: SharedValue<number>;
+  width: number;
+  color: string;
+  onPress: () => void;
+}) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drag.value - width }],
+  }));
+  return (
+    <Reanimated.View style={[{ width, flexDirection: 'row' }, animatedStyle]}>
+      <Pressable onPress={onPress} style={[styles.action, { backgroundColor: color }]} hitSlop={4}>
+        <Ionicons name="play" size={24} color="#fff" />
+      </Pressable>
+    </Reanimated.View>
+  );
+}
+
 interface Props {
   children: ReactNode;
   /** 削除アクション（ゴミ箱）タップ時。呼び出し側で確認ダイアログを出す想定。 */
   onDelete: () => void;
+  /**
+   * 右スワイプで現れる「ここから学習」アクション。渡したときだけ左側に表示する（カード一覧専用・opt-in）。
+   * このカードから一覧末尾までを学習する想定。
+   */
+  onStudyFromHere?: () => void;
   /**
    * アーカイブ/解除アクションタップ時。渡したときだけ削除ボタンの左にアーカイブボタンを表示する。
    * 即時トグル想定（archived の真偽でアイコンを切り替える）。
@@ -65,7 +90,7 @@ interface Props {
  * デッキ一覧・カード一覧・タグカード一覧で共用する。
  * 削除は onDelete 内で ConfirmDeleteModal を出して確定する（誤削除防止）。
  */
-export function SwipeToDeleteRow({ children, onDelete, onArchive, archived, enabled = true, containerStyle }: Props) {
+export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, onArchive, archived, enabled = true, containerStyle }: Props) {
   const theme = useTheme();
   if (!enabled) return <View style={containerStyle}>{children}</View>;
   const totalWidth = onArchive ? ACTION_WIDTH * 2 : ACTION_WIDTH;
@@ -74,7 +99,17 @@ export function SwipeToDeleteRow({ children, onDelete, onArchive, archived, enab
       containerStyle={containerStyle}
       friction={2}
       rightThreshold={ACTION_WIDTH * 0.5}
+      leftThreshold={ACTION_WIDTH * 0.5}
       overshootRight={false}
+      overshootLeft={false}
+      renderLeftActions={onStudyFromHere ? (_progress, drag, swipeable: SwipeableMethods) => (
+        <LeftAction
+          drag={drag}
+          width={ACTION_WIDTH}
+          color={theme.colors.primary}
+          onPress={() => { swipeable.close(); onStudyFromHere(); }}
+        />
+      ) : undefined}
       renderRightActions={(_progress, drag, swipeable: SwipeableMethods) => (
         <RightActions
           drag={drag}

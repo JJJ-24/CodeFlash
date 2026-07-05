@@ -271,7 +271,7 @@ export default function DeckDetailScreen() {
   const DECK_SHORTCUT_SECTIONS_NORMAL = [
     { titleKey: 'shortcut.catDisplay', items: [
       { key: '1–4', descKey: 'shortcut.switchFilter' },
-      { key: 'M',         descKey: 'shortcut.cycleCardSort' },
+      { key: 'M / ⇧M',    descKey: 'shortcut.cycleCardSort' },
       { key: 'S',         descKey: 'shortcut.toggleSelect' },
     ] },
     { titleKey: 'shortcut.catFocus', items: [
@@ -723,6 +723,18 @@ export default function DeckDetailScreen() {
         } else if (selectedFilter === 'all') {
           const orders: CardSortOrder[] = ['manual', 'newest', 'oldest'];
           setCardSortOrder(orders[(orders.indexOf(cardSortOrder) + 1) % 3]);
+        }
+      },
+    },
+    // ⇧M = ソート逆順（通常モード・「すべて」フィルター時のみ。選択モードでは無効）。
+    {
+      input: 'm',
+      modifierFlags: KeyCommand.keyModifierShift,
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null || selectionMode) return;
+        if (selectedFilter === 'all') {
+          const orders: CardSortOrder[] = ['manual', 'newest', 'oldest'];
+          setCardSortOrder(orders[(orders.indexOf(cardSortOrder) - 1 + 3) % 3]);
         }
       },
     },

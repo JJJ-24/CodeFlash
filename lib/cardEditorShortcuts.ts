@@ -6,7 +6,7 @@ export const CARD_EDITOR_SECTIONS_EDIT = [
     { key: 'U / D',    descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
     { key: 'T',        descKey: 'shortcut.scrollToTags' },
-    { key: 'M',        descKey: 'shortcut.cycleMode' },
+    { key: 'M / ⇧M',        descKey: 'shortcut.cycleMode' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K',    descKey: 'shortcut.focusNextPrev' },
@@ -40,7 +40,7 @@ export const CARD_EDITOR_SECTIONS_EDIT = [
 
 export const CARD_EDITOR_SECTIONS_SORT = [
   { titleKey: 'shortcut.catDisplay', items: [
-    { key: 'M',      descKey: 'shortcut.cycleMode' },
+    { key: 'M / ⇧M',      descKey: 'shortcut.cycleMode' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
@@ -64,7 +64,7 @@ export const CARD_EDITOR_SECTIONS_PREVIEW = [
     { key: '1-3',      descKey: 'shortcut.tabSelectCard' },
     { key: 'U / D',    descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
-    { key: 'M',        descKey: 'shortcut.cycleMode' },
+    { key: 'M / ⇧M',        descKey: 'shortcut.cycleMode' },
   ] },
   { titleKey: 'shortcut.catAction', items: [
     { key: 'S',        descKey: 'shortcut.save' },

@@ -476,9 +476,9 @@ export function BlockEditor({
     // C = カード複製（全モード共通。下部コピーボタンと同じ動作。新規作成時は onDuplicate 未指定＝無効）
     if (k === "c") { onDuplicate?.(); return; }
 
-    const cycleMode = () => {
+    const cycleMode = (dir = 1) => {
       const modes: EditorMode[] = ["edit", "sort", "preview"];
-      setEditorMode((prev) => modes[(modes.indexOf(prev) + 1) % 3]);
+      setEditorMode((prev) => modes[(modes.indexOf(prev) + dir + 3) % 3]);
     };
 
     if (inSort) {
@@ -507,6 +507,8 @@ export function BlockEditor({
         }
       } else if (k === "m") {
         cycleMode();
+      } else if (k === "m_rev") {
+        cycleMode(-1);
       } else if (k === "s") {
         handleSave();
       } else if (k === "x") {
@@ -525,7 +527,7 @@ export function BlockEditor({
     }
     // プレビューモードでは タブ操作（,/. と 1/2/3）・スクロール（U/D）・M/S/X・Delete(カード削除) のみ許可。
     // J / K / R / T / E / A は無効化。
-    if (isPreviewRef.current && !["m", ",", ".", "s", "x", "u", "d", "1", "2", "3"].includes(k)) {
+    if (isPreviewRef.current && !["m", "m_rev", ",", ".", "s", "x", "u", "d", "1", "2", "3"].includes(k)) {
       return;
     }
 
@@ -541,6 +543,8 @@ export function BlockEditor({
       });
     } else if (k === "m") {
       cycleMode();
+    } else if (k === "m_rev") {
+      cycleMode(-1);
     } else if (key === ",") {
       const tabOrder: Tab[] = ["front", "back", "memo"];
       setEditTriggerMap({});
@@ -916,6 +920,8 @@ export function BlockEditor({
     { input: "j", handler: () => handleKeyPress("j") },
     { input: "k", handler: () => handleKeyPress("k") },
     { input: "m", handler: () => handleKeyPress("m") },
+    // ⇧M = モード逆順（編集→プレビュー→並べ替え→編集）。M の順送りの逆。
+    { input: "m", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("m_rev") },
     { input: "a", handler: () => handleKeyPress("a") },
     { input: "r", handler: () => handleKeyPress("r") },
     // D は並び替えモードの「下に移動」専用。編集モードの削除は Backspace/Delete キー。

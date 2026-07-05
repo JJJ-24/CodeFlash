@@ -46,7 +46,7 @@ const HOME_SHORTCUT_SECTIONS = [
     titleKey: 'shortcut.catDisplay',
     items: [
       { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
-      { key: 'M',     descKey: 'shortcut.cycleSort' },
+      { key: 'M / ⇧M', descKey: 'shortcut.cycleSort' },
     ],
   },
   {
@@ -279,9 +279,10 @@ export default function HomeScreen() {
     [sortedDecks, selectedFilter]
   );
 
-  function cycleSortOrder() {
+  function cycleSortOrder(dir = 1) {
+    const n = SORT_OPTIONS.length;
     const idx = SORT_OPTIONS.findIndex((o) => o.key === deckSortOrder);
-    const next = SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length];
+    const next = SORT_OPTIONS[(idx + dir + n) % n];
     setDeckSortOrder(next.key);
   }
 
@@ -389,6 +390,7 @@ export default function HomeScreen() {
     { input: '1', handler: () => setSelectedFilter('all') },
     { input: '2', handler: () => setSelectedFilter('active') },
     { input: 'm', handler: () => cycleSortOrder() },
+    { input: 'm', modifierFlags: KeyCommand.keyModifierShift, handler: () => cycleSortOrder(-1) },
     { input: 'j', handler: () => moveDeckFocus('next') },
     { input: 'k', handler: () => moveDeckFocus('prev') },
     // U/D: フォーカス中のデッキを手動並べ替え（上へ/下へ）。手動ソート時のみ有効。

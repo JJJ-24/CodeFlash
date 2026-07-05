@@ -47,7 +47,7 @@ function elapsedDaysSince(firstDate: string | null): number | null {
 // ショートカット一覧（? キー）の表示内容。
 const RECORD_SHEET_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catDisplay', items: [
-    { key: 'M', descKey: 'shortcut.recordModeToggle' },
+    { key: 'M / ⇧M', descKey: 'shortcut.recordModeToggle' },
     { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
   ] },
@@ -102,11 +102,12 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
     scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
   const scrollToTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
   const scrollToBottom = () => scrollRef.current?.scrollToEnd({ animated: true });
-  // M：右列の表示モード（トータル→最高→平均）を循環。stale closure を避けるため関数更新で回す。
-  const cycleMode = () =>
+  // M：右列の表示モード（トータル→最高→平均）を循環。⇧M で逆順。stale closure を避け関数更新で回す。
+  const cycleMode = (dir = 1) =>
     setMode((cur) => {
+      const n = RECORD_MODES.length;
       const i = RECORD_MODES.findIndex((m) => m.key === cur);
-      return RECORD_MODES[(i + 1) % RECORD_MODES.length].key;
+      return RECORD_MODES[(i + dir + n) % n].key;
     });
 
   // Space / Return でシートを閉じる（ドーナツシートと同じトグル挙動）。表示中のみ有効。
@@ -116,7 +117,8 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   useKeyCommands([
     { input: ' ', handler: onClose },
     { input: KeyCommand.constants.keyInputEnter as string, handler: onClose },
-    { input: 'm', handler: cycleMode },
+    { input: 'm', handler: () => cycleMode(1) },
+    { input: 'm', modifierFlags: KeyCommand.constants.keyModifierShift, handler: () => cycleMode(-1) },
     { input: 'u', handler: () => scrollBy(-SCROLL_STEP) },
     { input: 'd', handler: () => scrollBy(SCROLL_STEP) },
     { input: KEY_PAGE_UP, handler: () => scrollBy(-SCROLL_STEP) },

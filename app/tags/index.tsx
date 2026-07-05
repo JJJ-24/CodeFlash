@@ -37,7 +37,7 @@ import type { TagWithCount } from '@/store/tags';
 
 const TAG_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catDisplay', items: [
-    { key: 'M',      descKey: 'shortcut.cycleSort' },
+    { key: 'M / ⇧M', descKey: 'shortcut.cycleSort' },
     { key: 'S',      descKey: 'shortcut.toggleSelect' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
@@ -307,6 +307,16 @@ export default function TagsScreen() {
         if (showColorPicker || selectionMode) return;
         const idx = SORT_OPTIONS.findIndex((o) => o.key === tagSortOrder);
         setTagSortOrder(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key);
+      },
+    },
+    {
+      input: 'm',
+      modifierFlags: KeyCommand.keyModifierShift,
+      handler: () => {
+        if (showColorPicker || selectionMode) return;
+        const n = SORT_OPTIONS.length;
+        const idx = SORT_OPTIONS.findIndex((o) => o.key === tagSortOrder);
+        setTagSortOrder(SORT_OPTIONS[(idx - 1 + n) % n].key);
       },
     },
     { input: 'b', handler: () => { if (showColorPicker) return; if (!selectionMode) router.back(); } },

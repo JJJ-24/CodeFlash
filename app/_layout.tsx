@@ -1,6 +1,7 @@
 import '@/lib/i18n';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Network from 'expo-network';
+import { StatusBar } from 'expo-status-bar';
 import { router, Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -104,6 +105,10 @@ function RootStack() {
 
   return (
     <ThemeProvider value={navigationTheme}>
+    {/* アプリ全体のステータスバー文字色の基準（ダーク=白/ライト=黒）。
+        WebView クリーンアップ等で壊れた後の恒久的な基準色を正しく保つ。
+        学習セッションはより深い階層で <StatusBar hidden> を出して一時的に上書きする。 */}
+    <StatusBar style={theme.dark ? 'light' : 'dark'} />
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: theme.colors.surface },
@@ -116,13 +121,13 @@ function RootStack() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '' }} />
       <Stack.Screen name="deck/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="deck/new" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="deck/[id]/card/new" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="deck/[id]/card/[cardId]/edit" options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="deck/new" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      <Stack.Screen name="deck/[id]/card/new" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      <Stack.Screen name="deck/[id]/card/[cardId]/edit" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       <Stack.Screen name="tags/index" options={{ headerShown: false }} />
-      <Stack.Screen name="tags/new" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="tags/[tagId]/edit" options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="tags/new" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      <Stack.Screen name="tags/[tagId]/edit" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       <Stack.Screen name="tags/[tagId]/cards" options={{ headerShown: false }} />
       <Stack.Screen
         name="study/session"

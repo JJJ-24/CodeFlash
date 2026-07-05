@@ -749,7 +749,7 @@ export default function StudySessionScreen() {
   if (loading) {
     return (
       <>
-        <StatusBar hidden={statusBarHidden} />
+        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         {iPhoneHeader}
         <View style={[styles.center, { backgroundColor: theme.baseBackground }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -825,7 +825,7 @@ export default function StudySessionScreen() {
 
     return (
       <>
-        <StatusBar hidden={statusBarHidden} />
+        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         <Stack.Screen options={{ headerShown: false }} />
         {(Platform as any).isPad ? (
           <View
@@ -1027,7 +1027,7 @@ export default function StudySessionScreen() {
   if (!currentCard) {
     return (
       <>
-        <StatusBar hidden={statusBarHidden} />
+        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         {iPhoneHeader}
       </>
     );
@@ -1154,7 +1154,7 @@ export default function StudySessionScreen() {
   if (isFullscreen) {
     return (
       <>
-        <StatusBar hidden={statusBarHidden} />
+        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         <Stack.Screen
           options={{
             title: t("study.title"),
@@ -1387,7 +1387,7 @@ export default function StudySessionScreen() {
 
   return (
     <>
-      <StatusBar hidden={statusBarHidden} />
+      <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
       <Stack.Screen options={{ headerShown: false }} />
       {(Platform as any).isPad ? (
         <View

@@ -17,6 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR, TAG_PRESET_COLORS } from '@/lib/theme';
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { resolveTagColor, TAG_THEME_COLOR, TAG_MONO_COLOR } from '@/lib/tagColors';
 import { TagColorPicker } from '@/components/TagColorPicker';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -50,6 +52,8 @@ export default function NewTagScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  useRestoreStatusBar();
+  const lockedTopInset = useLockedTopInset();
   const { tags, addTag } = useTagStore();
   const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const { keyboardShortcutsEnabled } = useSettingsStore();
@@ -157,33 +161,32 @@ export default function NewTagScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-
-          headerTitle: () => (
-            <Pressable
-              onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-            >
-              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.new')}</Text>
-              {keyboardShortcutsEnabled && (
-                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-              )}
-            </Pressable>
-          ),
-          headerLeft: () => (
-            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
+      {/* fullScreenModal の標準ヘッダーはステータスバー inset に追従して縮むため、検索画面と同じ
+          高さ固定のカスタムヘッダー（useLockedTopInset）にする。表示・色は useRestoreStatusBar が担当。 */}
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+        <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable onPress={handleSave} disabled={!canSave} style={{ paddingHorizontal: 4 }}>
+            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }} pointerEvents="box-none">
+              <Pressable
+                onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              >
+                <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.new')}</Text>
+                {keyboardShortcutsEnabled && (
+                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+                )}
+              </Pressable>
+            </View>
+            <View style={{ flex: 1 }} />
+            <Pressable onPress={handleSave} disabled={!canSave} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
               <Ionicons name="checkmark-sharp" size={26} color={canSave ? theme.colors.primary : theme.colors.textTertiary} />
             </Pressable>
-          ),
-        }}
-      />
-      <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+          </View>
+        </View>
         <ScrollView
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}

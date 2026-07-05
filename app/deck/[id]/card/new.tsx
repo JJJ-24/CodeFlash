@@ -14,6 +14,8 @@ import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/e
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { CARD_EDITOR_SECTIONS_EDIT, CARD_EDITOR_SECTIONS_SORT, CARD_EDITOR_SECTIONS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { createCard } from '@/lib/database/cards';
@@ -41,6 +43,8 @@ export default function NewCardScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  useRestoreStatusBar();
+  const lockedTopInset = useLockedTopInset();
   const { width: screenWidth } = useWindowDimensions();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   useDismissKeyboardOnLeave();
@@ -117,35 +121,34 @@ export default function NewCardScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-
-          headerTitle: () => (
-            <Pressable
-              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
-            >
-              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.new')}
-              </Text>
-              {keyboardShortcutsEnabled && (
-                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-              )}
-            </Pressable>
-          ),
-          headerLeft: () => (
-            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
+      {/* fullScreenModal の標準ヘッダーはステータスバー inset に追従して縮むため、検索画面と同じ
+          高さ固定のカスタムヘッダー（useLockedTopInset）にする。表示・色は useRestoreStatusBar が担当。 */}
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.container}>
+        <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4 }}>
+            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }} pointerEvents="box-none">
+              <Pressable
+                onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
+              >
+                <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.new')}
+                </Text>
+                {keyboardShortcutsEnabled && (
+                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+                )}
+              </Pressable>
+            </View>
+            <View style={{ flex: 1 }} />
+            <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
               <Ionicons name="checkmark-sharp" size={26} color={saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary} />
             </Pressable>
-          ),
-        }}
-      />
-      <View style={styles.container}>
+          </View>
+        </View>
         <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} deckSqlInit={currentDeck?.sqlInit} onCancel={handleClose} onShowShortcuts={() => setShowShortcutsModal((v) => !v)} onModeChange={setEditorMode} suspendKeys={blockingModalOpen} />
         <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>

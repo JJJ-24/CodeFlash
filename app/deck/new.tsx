@@ -19,6 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
+import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { IconPickerModal } from '@/components/IconPickerModal';
@@ -58,6 +60,9 @@ export default function NewDeckScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  useRestoreStatusBar();
+  // ステータスバーが WebView 破壊で隠れても高さが縮まないカスタムヘッダー用（検索画面と同方式）。
+  const lockedTopInset = useLockedTopInset();
   const { addDeck } = useDeckStore();
   const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const isPro = useProStore((s) => s.isPro);
@@ -218,33 +223,33 @@ export default function NewDeckScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-
-          headerTitle: () => (
-            <Pressable
-              onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-            >
-              <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.new')}</Text>
-              {keyboardShortcutsEnabled && (
-                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-              )}
-            </Pressable>
-          ),
-          headerLeft: () => (
-            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4 }}>
+      {/* fullScreenModal の標準ヘッダーは高さが live なステータスバー inset に追従するため、
+          コード実行 WebView がステータスバーを隠すと縮む。検索画面と同じ「高さ固定の
+          カスタムヘッダー」（useLockedTopInset）にして、ステータスバー状態に依らず縮まないようにする。 */}
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+        <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
               <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
             </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable onPress={handleCreate} disabled={!canSave} style={{ paddingHorizontal: 4 }}>
+            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }} pointerEvents="box-none">
+              <Pressable
+                onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              >
+                <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('deck.new')}</Text>
+                {keyboardShortcutsEnabled && (
+                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+                )}
+              </Pressable>
+            </View>
+            <View style={{ flex: 1 }} />
+            <Pressable onPress={handleCreate} disabled={!canSave} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
               <Ionicons name="checkmark-sharp" size={26} color={canSave ? theme.colors.primary : theme.colors.textTertiary} />
             </Pressable>
-          ),
-        }}
-      />
-      <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+          </View>
+        </View>
         <ScrollView
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}

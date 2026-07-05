@@ -259,7 +259,9 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     <View style={[
       styles.container,
       isPreview
-        ? { backgroundColor: 'transparent', borderWidth: 0 }
+        // プレビューは枠線も背景も無いので overflow:hidden 不要。むしろ container の borderRadius:10 で
+        // fence（角丸6）の四隅がクリップされ欠けて見えるため overflow:'visible' に戻す（ダークで顕著）。
+        ? { backgroundColor: 'transparent', borderWidth: 0, overflow: 'visible' }
         : { backgroundColor: theme.colors.surface, borderColor: flashTrigger > 0 ? theme.colors.primary : focused ? '#FB8C00' : isFocused ? theme.colors.primary : theme.colors.inputBorder, borderWidth: (focused || isFocused) ? 2 : 1 },
     ]}>
       {!isPreview && (

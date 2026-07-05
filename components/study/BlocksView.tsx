@@ -200,7 +200,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     strong: { fontWeight: 'bold' as const },
     em: { fontStyle: 'italic' as const },
     code_inline: {
-      backgroundColor: theme.dark ? '#2C2C2C' : '#F0F0F0',
+      backgroundColor: theme.dark ? '#333333' : '#F0F0F0',
       fontFamily: 'monospace',
       fontSize: theme.fontSize.md,
       color: theme.colors.danger,

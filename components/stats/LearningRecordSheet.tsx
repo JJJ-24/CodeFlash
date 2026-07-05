@@ -45,6 +45,10 @@ function elapsedDaysSince(firstDate: string | null): number | null {
 const IS_PAD = (Platform as any).isPad;
 // 「新記録まで N 日」を表示する残り日数の上限（これ以内なら近いカウントダウンを出す）。
 const RECORD_COUNTDOWN_MAX = 3;
+// 5つの数値ブロックの下ラベル（「最長連続」等）の Dynamic Type 拡大上限。
+// 既定の content（iPad 2.5 / iPhone 1.5）だとアクセシビリティ最大で大きすぎるため、専用に抑える。
+// ここを変えるとラベルの最大サイズを調整できる（数字は allowFontScaling={false} で固定・別管理）。
+const RECORD_LABEL_MAX_FONT = IS_PAD ? 2 : 1.3;
 
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const { t } = useTranslation();
@@ -211,18 +215,18 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       </Text>
                     </View>
                   )}
-                  <Text style={[styles.numberValue, { color: '#fff', fontSize: theme.fontSize.xxl * 1.2 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  <Text style={[styles.numberValue, { color: '#fff', fontSize: theme.fontSize.xxl * (IS_PAD ? 2.3 : 1.6) }]} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
                     {streakBlock.value}
                   </Text>
-                  <Text style={[styles.numberLabel, { color: 'rgba(255,255,255,0.85)', fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  <Text style={[styles.numberLabel, { color: 'rgba(255,255,255,0.85)', fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={RECORD_LABEL_MAX_FONT}>
                     {streakBlock.label}
                   </Text>
                 </View>
                 <View style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
-                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * 0.8 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * (IS_PAD ? 1.5 : 1.1) }]} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
                     {leftBottomBlock.value}
                   </Text>
-                  <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={RECORD_LABEL_MAX_FONT}>
                     {leftBottomBlock.label}
                   </Text>
                 </View>
@@ -230,7 +234,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               <View style={styles.rightColumn}>
                 {rightBlocks.map((b, i) => (
                   <View key={i} style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
-                    <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xxl * 0.8 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xxl * (IS_PAD ? 1.5 : 1.1) }]} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
                       {b.segments.map((s, si) => (
                         // 単位（h/m/%）は数値より一段小さく（md）・やや細く描画する。色は継承。
                         <Text key={si} style={s.unit ? { fontSize: theme.fontSize.md, fontWeight: '600' } : undefined}>
@@ -238,7 +242,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                         </Text>
                       ))}
                     </Text>
-                    <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={RECORD_LABEL_MAX_FONT}>
                       {b.label}
                     </Text>
                   </View>

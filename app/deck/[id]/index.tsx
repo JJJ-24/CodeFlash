@@ -1152,7 +1152,9 @@ export default function DeckDetailScreen() {
             keyExtractor={(item) => item.id}
             // autoscroll をゆっくりにして細かい位置調整を可能にする（パッチで animated:false
             // にしているため既定値だと一気にスクロールしてしまう）。要調整の数値。
-            autoscrollSpeed={10}
+            // ※速度はリリースビルド（TestFlight）基準で調整すること。dev（expo start）は JS スレッドが
+            //   遅くカクつき・体感速度が変わるため判断材料にしない。リリースで速すぎたため 10→6 に。
+            autoscrollSpeed={6}
             keyboardShouldPersistTaps="handled"
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}

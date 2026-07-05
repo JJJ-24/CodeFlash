@@ -101,6 +101,7 @@ export default function NewTagScreen() {
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
     { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
     { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
+    { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     // 画面スクロール。
     { input: 'u', handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },

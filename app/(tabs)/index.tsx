@@ -412,6 +412,8 @@ export default function HomeScreen() {
     }),
     { input: 'n', handler: () => router.push({ pathname: '/deck/new' }) },
     { input: 'f', handler: () => router.push('/search') },
+    // ⌘F = 検索（OS 慣習のエイリアス）
+    { input: 'f', modifierFlags: KeyCommand.keyModifierCommand, handler: () => router.push('/search') },
     { input: 't', handler: () => router.push('/tags') },
     // ←/→・,/.・H/L = フィルター切替（タブ切替は Tab/Shift+Tab に一本化）
     { input: ',', handler: () => cycleHomeFilter('prev') },

@@ -145,6 +145,7 @@ export default function NewDeckScreen() {
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
     { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleCreate(); } },
+    { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; if (canSave) handleCreate(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
     { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },

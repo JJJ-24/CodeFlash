@@ -758,6 +758,8 @@ export default function DeckDetailScreen() {
       },
     },
     { input: 'c', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); } },
+    // ⌘C = 複製（選択モードのみ・OS 慣習のエイリアス）
+    { input: 'c', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); } },
     { input: 'e', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleArchiveSelected(); } },
     {
       input: 'p',

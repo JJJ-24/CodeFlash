@@ -930,6 +930,10 @@ export function BlockEditor({
     { input: "x", handler: () => handleKeyPress("x") },
     { input: "s", handler: () => handleKeyPress("s") },
     { input: "c", handler: () => handleKeyPress("c") },
+    // ⌘S = 保存 / ⌘C = 複製（OS 慣習のエイリアス）。テキスト編集中は ⌘C はテキストのコピーが
+    //   優先される（テキスト入力が先に消費）ため、非編集時のみカード複製として発火する。
+    { input: "s", modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleKeyPress("s") },
+    { input: "c", modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleKeyPress("c") },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: "/", modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (keyboardShortcutsEnabled) onShowShortcuts?.(); } },
     { input: "e", handler: () => handleKeyPress("e") },

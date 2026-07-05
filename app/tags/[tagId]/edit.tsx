@@ -112,6 +112,7 @@ export default function EditTagScreen() {
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
     { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
     { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
+    { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール。

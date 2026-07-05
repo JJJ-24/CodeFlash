@@ -156,9 +156,12 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 </View>
 ```
 
-- `initialTopInsetRef = useRef(insets.top)` でマウント時の safe area 高さを固定（キーボード表示時に揺れない）
+- 高さの固定は `lib/useLockedTopInset.ts` の `useLockedTopInset()`（観測した最大 `insets.top` を保持＝縮まない・上方向にだけ自己修復）を使う。旧 `initialTopInsetRef = useRef(insets.top)` はマウント時に過小値を掴むと縮んだままになるため置換済み（`height: lockedTopInset + 44`）。
 - 戻るボタンには 350ms ガード（モーダルを閉じた直後の誤タップ防止）
-- モーダル画面（`presentation: 'modal'`）は標準ヘッダーのまま
+
+**入力系モーダルは必ず自前の固定ヘッダーにする（標準ヘッダー禁止）**：デッキ/カード/タグの新規・編集6画面（`deck/new`・`deck/[id]/edit`・`deck/[id]/card/new`・`deck/[id]/card/[cardId]/edit`・`tags/new`・`tags/[tagId]/edit`）は `presentation: 'fullScreenModal'` だが、**標準（native-stack）ヘッダーではなく `headerShown: false` ＋ `useLockedTopInset` の自前固定ヘッダー**にしている。理由は、コード実行 WebView が iOS ステータスバーを隠すと、標準ヘッダーは高さが status bar inset に追従して**縮む**うえ、**ネイティブのバーボタンのホバー/ハイライトのカプセルが横長の楕円に変形する**（保存ボタンの丸枠がタイトルまで伸びる）ため。自前ヘッダー（ただの `Pressable`＋`Ionicons`）ならネイティブのバーボタンが無いので、縮み・楕円変形ともに原理的に発生しない。詳細は [[project_statusbar-header-inset-ipad]]。**新しい入力系モーダルを追加するときも同じ自前ヘッダーにすること**（標準ヘッダーで追加するとその画面だけ再発する）。
+  - 落とし穴：モーダルで `headerShown` を画面側で動的に `true→false` すると remount ループ（`Maximum update depth exceeded`）になる。**必ず `_layout.tsx` の各 `Stack.Screen` 登録に静的に `headerShown: false` を付ける**（画面側の `<Stack.Screen options={{ headerShown:false }} />` は同値の再指定にとどめる）。
+- `presentation: 'modal'`（`paywall` など純粋な情報/購入モーダル）は標準ヘッダーのままでよい（テキスト入力もコード実行 WebView も無いため）。
 
 ### 型定義
 

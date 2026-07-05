@@ -603,6 +603,7 @@
     "nextPrev": "Previous /\nNext (no grade)\n[H/L] also works",
     "scrollUpDown": "Scroll Up / Down\n[PgUp/PgDn] also works",
     "scrollTopBottom": "Scroll to Top / Bottom\n[Home/End] also works",
+    "recordModeToggle": "Switch view\n(Total / Max / Avg)",
     "toggleShuffle": "Toggle shuffle",
     "toggleHideEmpty": "Hide / Show empty items",
     "switchDeckTab": "Switch Decks / Tags",

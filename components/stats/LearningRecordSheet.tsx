@@ -1,16 +1,18 @@
 // 統計：草グラフをタップしたときに出る「学習の記録」ボトムシート。
 // 継続・積み上げ系の指標（最長連続・総学習回数・総学習時間・経過日数）と、20個のバッジ枠を表示する。
 // ドーナツグラフ側（正答率/学習日数/平均時間）と重複しない指標に絞っている。無料機能。
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as KeyCommand from 'react-native-key-command';
 
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
+import { useSettingsStore } from '@/store/settings';
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, type AppTheme } from '@/lib/theme';
 import { InfoModal } from '@/components/InfoModal';
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
 import { BADGES, BADGE_SECTIONS, earnedBadgeCount, isBadgeEarned } from '@/lib/stats/badges';
 
@@ -42,6 +44,20 @@ function elapsedDaysSince(firstDate: string | null): number | null {
   return Math.round((today - start) / 86400000) + 1;
 }
 
+// ショートカット一覧（? キー）の表示内容。
+const RECORD_SHEET_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catDisplay', items: [
+    { key: 'M', descKey: 'shortcut.recordModeToggle' },
+    { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
+    { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
+  ] },
+  { titleKey: 'shortcut.catOther', items: [
+    { key: 'Space / Return', descKey: 'shortcut.close' },
+    { key: 'ESC', descKey: 'shortcut.esc' },
+    { key: '?', descKey: 'shortcut.showShortcuts' },
+  ] },
+];
+
 const IS_PAD = (Platform as any).isPad;
 // 「新記録まで N 日」を表示する残り日数の上限（これ以内なら近いカウントダウンを出す）。
 const RECORD_COUNTDOWN_MAX = 3;
@@ -52,6 +68,7 @@ const RECORD_LABEL_MAX_FONT = IS_PAD ? 2 : 1.3;
 
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const { t } = useTranslation();
+  const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const { height: screenHeight } = useWindowDimensions();
   const sheetY = useSharedValue(screenHeight);
   const overlayOpacity = useSharedValue(0);
@@ -73,15 +90,44 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const [mode, setMode] = useState<RecordMode>('total');
   // 表示モードの説明モーダル（iアイコン）。シートを閉じたら一緒に閉じる。
   const [showModeInfo, setShowModeInfo] = useState(false);
-  useEffect(() => { if (visible) setMode('total'); else setShowModeInfo(false); }, [visible]);
+  // ショートカット一覧（? キー）。シートを閉じたら一緒に閉じる。
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  useEffect(() => { if (visible) setMode('total'); else { setShowModeInfo(false); setShowShortcutsModal(false); } }, [visible]);
+
+  // 画面スクロール（U/D・PgUp/PgDn＝段階、⇧U/⇧D・Home/End＝最上部/最下部）用。
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const SCROLL_STEP = 240;
+  const scrollBy = (delta: number) =>
+    scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
+  const scrollToTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
+  const scrollToBottom = () => scrollRef.current?.scrollToEnd({ animated: true });
+  // M：右列の表示モード（トータル→最高→平均）を循環。stale closure を避けるため関数更新で回す。
+  const cycleMode = () =>
+    setMode((cur) => {
+      const i = RECORD_MODES.findIndex((m) => m.key === cur);
+      return RECORD_MODES[(i + 1) % RECORD_MODES.length].key;
+    });
 
   // Space / Return でシートを閉じる（ドーナツシートと同じトグル挙動）。表示中のみ有効。
-  // 説明モーダル（i アイコン）表示中は誤ってシートを閉じないよう解除する。
+  // 説明モーダル（i アイコン）／ショートカット一覧表示中は解除する。
   // Esc は親 stats の常時 Esc ハンドラが閉じる（月別シートと同じ方式・二重登録を避ける）。
+  // M＝モード切替、U/D・PgUp/PgDn＝段階スクロール、⇧U/⇧D・Home/End＝最上部/最下部、?＝一覧。
   useKeyCommands([
     { input: ' ', handler: onClose },
     { input: KeyCommand.constants.keyInputEnter as string, handler: onClose },
-  ], visible && !showModeInfo);
+    { input: 'm', handler: cycleMode },
+    { input: 'u', handler: () => scrollBy(-SCROLL_STEP) },
+    { input: 'd', handler: () => scrollBy(SCROLL_STEP) },
+    { input: KEY_PAGE_UP, handler: () => scrollBy(-SCROLL_STEP) },
+    { input: KEY_PAGE_DOWN, handler: () => scrollBy(SCROLL_STEP) },
+    { input: 'u', modifierFlags: KeyCommand.constants.keyModifierShift, handler: scrollToTop },
+    { input: 'd', modifierFlags: KeyCommand.constants.keyModifierShift, handler: scrollToBottom },
+    { input: KEY_HOME, handler: scrollToTop },
+    { input: KEY_END, handler: scrollToBottom },
+    // ?（Shift+/）でショートカット一覧を開く。閉じるは一覧側の ? が担当（一覧表示中は下の gate で解除）。
+    { input: '/', modifierFlags: KeyCommand.constants.keyModifierShift, handler: () => setShowShortcutsModal(true) },
+  ], visible && !showModeInfo && !showShortcutsModal);
 
   // 数値＋単位を片に分解する（単位は unit:true）。h があるときのみ h を出す（従来の 1h23m / 45m を踏襲）。
   function formatDuration(ms: number): ValueSegment[] {
@@ -157,15 +203,30 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
       </Animated.View>
       <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('stats.recordTitle')}
-          </Text>
+          {/* 設定 ON のときはタイトル横にキーボードアイコンを出し、タップでショートカット一覧を開く（他画面と統一）。 */}
+          <Pressable
+            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+          >
+            <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg, flexShrink: 1 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('stats.recordTitle')}
+            </Text>
+            {keyboardShortcutsEnabled && (
+              <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+            )}
+          </Pressable>
         </View>
         <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
           <Ionicons name="close-outline" size={24} color={theme.colors.iconSubtle} />
         </Pressable>
 
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.body}
+          showsVerticalScrollIndicator={false}
+        >
           {/* 見出し＋iアイコン（左）＋右列3ブロックの表示モード切替（ソートトグルと同じ3アイコン・右）。 */}
           {stats && (
             <View style={styles.toggleRow}>
@@ -332,6 +393,13 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           </View>
         }
         onClose={() => setShowModeInfo(false)}
+      />
+
+      {/* ショートカット一覧（? キー）。閉じる/トグルは一覧本体の ? が担当。 */}
+      <ShortcutsModal
+        visible={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        sections={RECORD_SHEET_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
     </View>
   );

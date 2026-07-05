@@ -603,6 +603,7 @@
     "nextPrev": "前へ/次へ（評価なし）\n[H/L]でも可",
     "scrollUpDown": "上/下 スクロール\n[PgUp/PgDn]でも可",
     "scrollTopBottom": "最上部/最下部\n[Home/End]でも可",
+    "recordModeToggle": "表示切替\n（合計/最高/平均）",
     "toggleShuffle": "シャッフル",
     "toggleHideEmpty": "対象なし 表示/非表示",
     "switchDeckTab": "デッキ/タグ",

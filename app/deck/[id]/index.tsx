@@ -887,9 +887,20 @@ export default function DeckDetailScreen() {
   }
 
   // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート・「すべて」フィルター・非選択モード時のみ
-  // （ドラッグの有効条件と同じ）。フォーカスは ID 追跡で自動追従。
+  // 実際に動く（ドラッグの有効条件と同じ）。並べ替え不可の状態で押したときは、タップ（長押し）と
+  // 同じ案内アラートを出す。フォーカスは ID 追跡で自動追従。
   function moveCardOrder(dir: 'up' | 'down') {
-    if (selectionMode || selectedFilter !== 'all' || cardSortOrder !== 'manual' || focusedCardIndex === null) return;
+    if (selectionMode) return; // 選択モードでは U/D は並べ替えではない
+    // 並べ替えできない状態＝長押しドラッグと同じ案内を出す（分岐順もタップと揃える）。
+    if (selectedFilter !== 'all') {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
+      return;
+    }
+    if (cardSortOrder !== 'manual') {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
+      return;
+    }
+    if (focusedCardIndex === null) return;
     const to = dir === 'up' ? focusedCardIndex - 1 : focusedCardIndex + 1;
     if (to < 0 || to >= displayedCards.length) return;
     const newOrder = [...displayedCards];

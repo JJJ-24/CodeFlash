@@ -1381,6 +1381,23 @@ export default function StudySessionScreen() {
           onClose={() => setShowLinksModal(false)}
           links={cardLinks}
         />
+        {/* 全画面モードでも ? / Q のモーダルを描画する（通常モードの末尾と同一）。
+            これが無いと全画面で Q を押しても ConfirmModal が描画されず、
+            showFinishModal=true でメインキーが gate オフになったまま操作不能になる。 */}
+        <ShortcutsModal
+          visible={showShortcutsModal}
+          onClose={() => setShowShortcutsModal(false)}
+          sections={SESSION_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        />
+        <ConfirmModal
+          visible={showFinishModal}
+          title={t("study.finishConfirmTitle")}
+          message={t("study.finishConfirmMessage", { count: result.totalCards - result.reviewed })}
+          actions={[
+            { label: t("common.ok"), onPress: () => { setShowFinishModal(false); finishSession(); } },
+          ]}
+          onClose={() => setShowFinishModal(false)}
+        />
       </>
     );
   }

@@ -21,7 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, type AppTheme } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, type AppTheme } from '@/lib/theme';
 import {
   deleteCard,
   deleteCardsBulk,
@@ -1192,7 +1192,7 @@ export default function DeckDetailScreen() {
                     key={key}
                     style={[
                       styles.sortBtn,
-                      { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                      { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                       active && { backgroundColor: theme.colors.primary },
                     ]}
                     onPress={() => setCardSortOrder(key)}

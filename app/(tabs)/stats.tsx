@@ -10,7 +10,7 @@ import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
+import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
 import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS } from '@/store/settings';
 import type { InitialFilterPreference, GradeRankingPeriod } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -1718,7 +1718,7 @@ export default function StatsScreen() {
                   accessibilityLabel={t('stats.gradeRankingDeckOpen')}
                   style={[
                     styles.rankingToggleBtn,
-                    { borderColor: gradeRankingDeckIds.length > 0 ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: gradeRankingDeckIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                     gradeRankingDeckIds.length > 0 && { backgroundColor: theme.colors.primary },
                   ]}
                 >
@@ -1733,7 +1733,7 @@ export default function StatsScreen() {
                   accessibilityLabel={t('stats.gradeRankingPeriodOpen')}
                   style={[
                     styles.rankingToggleBtn,
-                    { borderColor: gradeRankingPeriod !== 'all' ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: gradeRankingPeriod !== 'all' ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                     gradeRankingPeriod !== 'all' && { backgroundColor: theme.colors.primary },
                   ]}
                 >
@@ -1748,7 +1748,7 @@ export default function StatsScreen() {
                   accessibilityLabel={t(gradeRankingByTime ? 'stats.gradeRankingToggleCount' : 'stats.gradeRankingToggleTime')}
                   style={[
                     styles.rankingToggleBtn,
-                    { borderColor: gradeRankingByTime ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: gradeRankingByTime ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                     gradeRankingByTime && { backgroundColor: theme.colors.primary },
                   ]}
                 >

@@ -27,7 +27,7 @@ import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
 import { DeckIcon } from '@/components/DeckIcon';
 import { InfoModal } from '@/components/InfoModal';
@@ -558,7 +558,7 @@ export default function SearchScreen() {
           onPress={() => setDeckPickerVisible(true)}
           style={[
             styles.filterBtn,
-            { borderColor: selectedDeckIds.length > 0 ? theme.colors.primary : theme.colors.buttonBorder },
+            { borderColor: selectedDeckIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme) },
             { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
           ]}
           hitSlop={4}
@@ -573,7 +573,7 @@ export default function SearchScreen() {
           onPress={() => setTagPickerVisible(true)}
           style={[
             styles.filterBtn,
-            { borderColor: selectedTagIds.length > 0 ? theme.colors.primary : theme.colors.buttonBorder },
+            { borderColor: selectedTagIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme) },
             { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
           ]}
           hitSlop={4}

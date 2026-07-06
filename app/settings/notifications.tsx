@@ -22,7 +22,7 @@ import {
 import {
   cancelAllScheduledNotifications, requestPermission, scheduleFromDb,
 } from '@/lib/notifications';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, themedFrameBorder } from '@/lib/theme';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore } from '@/store/settings';
 import type { NotificationSchedule } from '@/types';
@@ -151,7 +151,7 @@ function ScheduleModal({
                     onPress={() => onToggleWeekday(i)}
                     style={[
                       sheetStyles.dayBtn,
-                      { borderColor: sel ? theme.colors.primary : theme.colors.buttonBorder },
+                      { borderColor: sel ? theme.colors.primary : themedFrameBorder(theme) },
                       sel && { backgroundColor: theme.colors.primary },
                     ]}
                   >

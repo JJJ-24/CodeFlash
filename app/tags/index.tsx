@@ -27,7 +27,7 @@ import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
 import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
@@ -453,7 +453,7 @@ export default function TagsScreen() {
                   onPress={() => setTagSortOrder(key)}
                   style={[
                     styles.sortBtn,
-                    { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                     active && { backgroundColor: theme.colors.primary },
                   ]}
                 >

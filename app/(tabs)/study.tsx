@@ -22,7 +22,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
 import {
   getDueCountPerDeck,
@@ -473,7 +473,7 @@ export default function StudyScreen() {
             }}
             style={[
               styles.shuffleBtn,
-              { borderColor: hideEmpty ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+              { borderColor: hideEmpty ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
               hideEmpty && { backgroundColor: theme.colors.primary },
             ]}
           >
@@ -487,7 +487,7 @@ export default function StudyScreen() {
             onPress={() => setShuffleEnabled(!shuffleEnabled)}
             style={[
               styles.shuffleBtn,
-              { borderColor: shuffleEnabled ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+              { borderColor: shuffleEnabled ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
               shuffleEnabled && { backgroundColor: theme.colors.primary },
             ]}
           >

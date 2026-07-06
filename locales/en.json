@@ -134,6 +134,8 @@
     "sortDescManualLocked": "Reorder locked",
     "jumpingToTop": "Jumping to top…",
     "jumpingToBottom": "Jumping to bottom…",
+    "archivedPill": "Archived",
+    "unarchivedPill": "Unarchived",
     "listInfoLabel": "About card list",
     "listInfoMessage": "[Tap]\n  Open editor\n[Swipe]\n  Left: Archive / Delete\n  Right: Study from here\n※ Not available in {{menu}} mode (when unlocked)\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\n※ Only when \"All\" is shown",
     "reorderHintMessage": "To reorder cards, set the filter to \"All\", switch to ≡ mode, then long-press a card and drag.",

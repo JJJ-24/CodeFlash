@@ -30,7 +30,7 @@ import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
-import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
+import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
@@ -158,6 +158,7 @@ export function BlockEditor({
     const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardPadding(0));
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
+  useEffect(() => () => { if (archivePillTimerRef.current) clearTimeout(archivePillTimerRef.current); }, []);
   const scrollViewHeightRef = useRef(windowHeight);
   const scrollPosRef = useRef<Record<Tab, number>>({
     front: 0,
@@ -210,6 +211,9 @@ export function BlockEditor({
   const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(
     null,
   );
+  // アーカイブ欄が画面外でも結果が分かるよう、E/⇧E でのアーカイブ切替時に中央ピルで通知する。
+  const [archivePill, setArchivePill] = useState<null | boolean>(null); // true=アーカイブ / false=解除
+  const archivePillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [editTriggerMap, setEditTriggerMap] = useState<Record<string, number>>(
     {},
   );
@@ -392,6 +396,16 @@ export function BlockEditor({
   function handleBlockEditBlur() {
     setEditingBlockKey(null);
     // 034: 再フォーカス不要（住み分けは責任者チェーンで自動成立）。
+  }
+
+  // E（フォーカスなし）/ ⇧E からのアーカイブ切替。結果を中央ピルで数秒通知する。
+  function toggleArchiveWithPill() {
+    if (isPreviewRef.current || !onArchivedChange) return;
+    const next = !archived;
+    onArchivedChange(next);
+    if (archivePillTimerRef.current) clearTimeout(archivePillTimerRef.current);
+    setArchivePill(next);
+    archivePillTimerRef.current = setTimeout(() => setArchivePill(null), 2500);
   }
 
   function startEditFocusedBlock() {
@@ -943,8 +957,7 @@ export function BlockEditor({
     { input: "e", handler: () => {
       if (!keyboardShortcutsEnabled) return;
       if (focusedBlockIndexRef.current === null) {
-        if (isPreviewRef.current || !onArchivedChange) return;
-        onArchivedChange(!archived);
+        toggleArchiveWithPill();
         return;
       }
       handleKeyPress("e");
@@ -953,8 +966,7 @@ export function BlockEditor({
     //   邪魔されずアーカイブしたいとき用。ガードは E のアーカイブ分岐と同じ。
     { input: "e", modifierFlags: KeyCommand.keyModifierShift, handler: () => {
       if (!keyboardShortcutsEnabled) return;
-      if (isPreviewRef.current || !onArchivedChange) return;
-      onArchivedChange(!archived);
+      toggleArchiveWithPill();
     } },
     { input: "t", handler: () => handleKeyPress("t") },
     { input: "u", handler: () => handleKeyPress("u") },
@@ -1273,11 +1285,31 @@ export function BlockEditor({
         }}
         onClose={() => setPendingDeleteBlock(null)}
       />
+      {archivePill !== null && (
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, alignItems: "center", justifyContent: "center" }}>
+          <View style={[styles.archivePill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <Ionicons name={archivePill ? "archive" : "arrow-undo-outline"} size={18} color={theme.colors.primary} />
+            <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {archivePill ? t("card.archivedPill") : t("card.unarchivedPill")}
+            </Text>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  archivePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...SHADOW.subtle,
+  },
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,

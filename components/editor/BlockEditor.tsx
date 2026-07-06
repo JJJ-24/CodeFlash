@@ -916,6 +916,7 @@ export function BlockEditor({
   const decoSpecs = [
     { input: "b", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "**", right: "**" }) },
     { input: "i", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "*", right: "*" }) },
+    { input: "u", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "++", right: "++" }) },
     { input: "e", modifierFlags: CMD, handler: () => applyDeco({ kind: "wrap", left: "`", right: "`" }) },
     { input: "x", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "wrap", left: "~~", right: "~~" }) },
     { input: "m", modifierFlags: CMD_SHIFT, handler: () => applyDeco({ kind: "highlight" }) },
@@ -987,7 +988,7 @@ export function BlockEditor({
     // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
     { input: "u", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress(KEY_HOME) },
     { input: "d", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress(KEY_END) },
-    // 033 Phase5: テキスト編集中の装飾（⌘B/⌘I/⌘E/⌘⇧X/⌘⇧M/⌘⇧H/⌘⇧8/⌘⇧9）。
+    // 033 Phase5: テキスト編集中の装飾（⌘B/⌘I/⌘U/⌘E/⌘⇧X/⌘⇧M/⌘⇧H/⌘⇧8/⌘⇧9）。
     ...decoSpecs,
     {
       input: KeyCommand.keyInputEnter,

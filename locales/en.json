@@ -340,6 +340,7 @@
     "toolbar": {
       "bold": "Bold",
       "italic": "Italic",
+      "underline": "Underline",
       "code": "Inline code",
       "strikethrough": "Strikethrough",
       "highlight": "Highlight",
@@ -597,6 +598,7 @@
     "archiveToggle": "Toggle archive",
     "decoBold": "Bold",
     "decoItalic": "Italic",
+    "decoUnderline": "Underline",
     "decoCode": "Inline code",
     "decoStrike": "Strikethrough",
     "decoMark": "Highlight",

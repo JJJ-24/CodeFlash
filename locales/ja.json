@@ -340,6 +340,7 @@
     "toolbar": {
       "bold": "太字",
       "italic": "斜体",
+      "underline": "下線",
       "code": "インラインコード",
       "strikethrough": "取り消し線",
       "highlight": "ハイライト",
@@ -597,6 +598,7 @@
     "archiveToggle": "アーカイブ切替",
     "decoBold": "太字",
     "decoItalic": "斜体",
+    "decoUnderline": "下線",
     "decoCode": "インラインコード",
     "decoStrike": "取り消し線",
     "decoMark": "マーカー",

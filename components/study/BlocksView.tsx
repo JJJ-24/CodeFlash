@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { resolveImageUri, imageMaxWidth } from '@/lib/image';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
+import { markdownItIns } from '@/lib/editor/markdownItIns';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
 import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
@@ -20,7 +21,7 @@ import { ZoomableImage } from './ZoomableImage';
 // （Pressable を使わない）、本文と同じフォントサイズで流れて表示がズレない。
 // markdownItMark: ==文字== をハイライト（<mark>）化（編集プレビューと表示を揃える）。
 // markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（編集プレビューと揃える）。
-const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor);
+const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor).use(markdownItIns);
 
 function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -250,6 +251,10 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       const hl = HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'];
       return <Text key={node.key} style={{ backgroundColor: hl[(node.attributes?.hl as 'g' | 'p') ?? 'y'] ?? hl.y }}>{children}</Text>;
     },
+    // アンダーライン（++文字++）。色は親から継承し下線のみ付ける。
+    ins: (node: any, children: any) => (
+      <Text key={node.key} style={{ textDecorationLine: 'underline' }}>{children}</Text>
+    ),
   }), [suppress, theme.fontSize.lg, theme.dark]);
 
   if (blocks.length === 0) {

@@ -25,6 +25,7 @@ export const CARD_EDITOR_SECTIONS_EDIT = [
   { titleKey: 'shortcut.catFormat', items: [
     { key: '⌘B',  descKey: 'shortcut.decoBold' },
     { key: '⌘I',  descKey: 'shortcut.decoItalic' },
+    { key: '⌘U',  descKey: 'shortcut.decoUnderline' },
     { key: '⌘E',  descKey: 'shortcut.decoCode' },
     { key: '⌘⇧X', descKey: 'shortcut.decoStrike' },
     { key: '⌘⇧M', descKey: 'shortcut.decoMark' },

@@ -26,6 +26,7 @@ export interface ToolbarButton {
 export const TOOLBAR_BUTTONS: readonly ToolbarButton[] = [
   { key: 'bold', icon: 'bold', action: { kind: 'wrap', left: '**', right: '**' }, labelKey: 'editor.toolbar.bold' },
   { key: 'italic', icon: 'italic', action: { kind: 'wrap', left: '*', right: '*' }, labelKey: 'editor.toolbar.italic' },
+  { key: 'underline', icon: 'underline', action: { kind: 'wrap', left: '++', right: '++' }, labelKey: 'editor.toolbar.underline' },
   { key: 'code', icon: 'code', action: { kind: 'wrap', left: '`', right: '`' }, labelKey: 'editor.toolbar.code' },
   { key: 'strikethrough', icon: 'strikethrough', action: { kind: 'wrap', left: '~~', right: '~~' }, labelKey: 'editor.toolbar.strikethrough' },
   // ハイライトは1ボタンで色を循環（なし→黄→緑→ピンク→なし。見出しと同じ循環 UX）。

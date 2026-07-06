@@ -12,10 +12,11 @@ import markdownItMark from 'markdown-it-mark';
 import { BlockItemHeader } from './BlockItemHeader';
 import { MarkdownPalette } from './MarkdownPalette';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
+import { markdownItIns } from '@/lib/editor/markdownItIns';
 
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化 /
 // markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（複数色ハイライト）
-const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor);
+const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor).use(markdownItIns);
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_STATE_HEADERS } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
@@ -252,6 +253,10 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mark: (node: any, children: any) => (
       <Text key={node.key} style={{ backgroundColor: highlightColors[(node.attributes?.hl as 'g' | 'p') ?? 'y'] ?? highlightColors.y }}>{children}</Text>
+    ),
+    // アンダーライン（++文字++）。色は親から継承し下線のみ付ける。
+    ins: (node: any, children: any) => (
+      <Text key={node.key} style={{ textDecorationLine: 'underline' }}>{children}</Text>
     ),
   }), [highlightColors]);
 

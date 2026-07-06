@@ -358,7 +358,9 @@ export default function HomeScreen() {
           {/* 手動ソート時のみ表示：ドラッグ並べ替えロック（ON=固定してスワイプ可）。左端・枠なしアイコンのみ。 */}
           {deckSortOrder === 'manual' && (
             <Pressable
-              style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 7, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
+              // paddingVertical はソートチップ（styles.sortBtn の 4）に合わせる。大きいと
+              // ロックがチップより背高になり、手動切替時に行の高さが増えて他アイコンが下にずれる。
+              style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 4, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
               hitSlop={8}
               onPress={() => setDeckSortLocked(!deckSortLocked)}
             >
@@ -650,7 +652,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontWeight: '700' },
   sectionTitleCol: { flexDirection: 'column', gap: 2, flex: 1 },
-  sortButtons: { flexDirection: 'row', gap: 6 },
+  // alignItems: 'center' は必須。既定の stretch だと、手動時に出る背の高いロックアイコン
+  // （paddingVertical が大きい）に合わせてソートチップが縦に引き伸ばされ、中身が上寄りになる。
+  sortButtons: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   sortBtn: {
     borderRadius: 6,
     borderWidth: 1,

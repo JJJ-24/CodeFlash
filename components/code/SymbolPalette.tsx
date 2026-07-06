@@ -43,7 +43,13 @@ export function SymbolPalette({ visible, onInsertPair, suppress, theme }: Props)
           ]}
           onPress={() => onInsertPair(open, close)}
         >
-          <Text style={[styles.paletteBtnText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{label}</Text>
+          <Text
+            style={[styles.paletteBtnText, { fontSize: theme.fontSize.sm }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >{label}</Text>
         </Pressable>
       ))}
     </View>
@@ -51,17 +57,21 @@ export function SymbolPalette({ visible, onInsertPair, suppress, theme }: Props)
 }
 
 const styles = StyleSheet.create({
+  // テキストブロックのツールバー（MarkdownPalette）と揃える：1行・等間隔（flex:1）・高さ32。
+  // ただし記号キーは枠/背景を残して「押せるキー」感を維持する（Option B）。
   palette: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     borderTopWidth: 1,
   },
   paletteBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    flex: 1,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 6,
     borderWidth: 1,
   },

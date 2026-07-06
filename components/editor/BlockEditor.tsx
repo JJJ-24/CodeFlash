@@ -1151,7 +1151,12 @@ export function BlockEditor({
         onLayout={(e) => {
           scrollViewHeightRef.current = e.nativeEvent.layout.height;
         }}
-        keyboardShouldPersistTaps="handled"
+        // "always": ブロックにフォーカス中（TextInput が first responder）にツールバー/補助パレットを
+        // タップしても、キーボード解除＝編集解除にならないようにする。iOS の「フォーカス外の初回タップが
+        // resignFirstResponder に消費される」2度タップ問題自体は残る（初回は空振り→2度目で入力）が、
+        // "handled" だとその初回タップがキーボード解除まで起こして編集を失うため "always" を採用。
+        // 詳細と失敗策は memory: project_editor-first-tap-toolbar-swallow。
+        keyboardShouldPersistTaps="always"
         scrollEventThrottle={100}
         onScroll={(e) => {
           scrollPosRef.current[activeTabRef.current] =

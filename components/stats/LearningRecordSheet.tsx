@@ -52,7 +52,6 @@ const RECORD_SHEET_SHORTCUT_SECTIONS = [
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
-    { key: 'Space / Return', descKey: 'shortcut.close' },
     { key: 'ESC', descKey: 'shortcut.esc' },
     { key: '?', descKey: 'shortcut.showShortcuts' },
   ] },

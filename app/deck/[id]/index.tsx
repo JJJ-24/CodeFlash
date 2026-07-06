@@ -277,6 +277,7 @@ export default function DeckDetailScreen() {
     { titleKey: 'shortcut.catDisplay', items: [
       { key: '1–4', descKey: 'shortcut.switchFilter' },
       { key: 'M / ⇧M',    descKey: 'shortcut.cycleCardSort' },
+      { key: '⌘L',        descKey: 'shortcut.toggleSortLock' },
       { key: 'S',         descKey: 'shortcut.toggleSelect' },
     ] },
     { titleKey: 'shortcut.catFocus', items: [
@@ -763,6 +764,16 @@ export default function DeckDetailScreen() {
           const orders: CardSortOrder[] = ['manual', 'newest', 'oldest'];
           setCardSortOrder(orders[(orders.indexOf(cardSortOrder) - 1 + 3) % 3]);
         }
+      },
+    },
+    // ⌘L = ドラッグ並べ替えロックの切替（通常モード・手動ソート＋「すべて」フィルター時のみ）。
+    // L 単独はフィルター切替のため修飾必須。ロックボタンの表示条件と一致させる。
+    {
+      input: 'l',
+      modifierFlags: KeyCommand.keyModifierCommand,
+      handler: () => {
+        if (showDeckPicker || statsCardId !== null || selectionMode) return;
+        if (selectedFilter === 'all' && cardSortOrder === 'manual') setManualSortLocked(!manualSortLocked);
       },
     },
     ...deleteKeySpecs(() => {

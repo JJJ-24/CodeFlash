@@ -47,6 +47,7 @@ const HOME_SHORTCUT_SECTIONS = [
     items: [
       { key: '1 / 2', descKey: 'shortcut.switchFilterAllActive' },
       { key: 'M / ⇧M', descKey: 'shortcut.cycleSort' },
+      { key: '⌘L', descKey: 'shortcut.toggleSortLock' },
     ],
   },
   {
@@ -411,6 +412,8 @@ export default function HomeScreen() {
     { input: '2', handler: () => setSelectedFilter('active') },
     { input: 'm', handler: () => cycleSortOrder() },
     { input: 'm', modifierFlags: KeyCommand.keyModifierShift, handler: () => cycleSortOrder(-1) },
+    // ⌘L = ドラッグ並べ替えロックの切替（手動ソート時のみ）。L 単独はフィルター切替のため修飾必須。
+    { input: 'l', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (deckSortOrder === 'manual') setDeckSortLocked(!deckSortLocked); } },
     { input: 'j', handler: () => moveDeckFocus('next') },
     { input: 'k', handler: () => moveDeckFocus('prev') },
     // U/D: フォーカス中のデッキを手動並べ替え（上へ/下へ）。手動ソート時のみ有効。

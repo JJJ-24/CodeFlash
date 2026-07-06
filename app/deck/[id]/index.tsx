@@ -187,7 +187,7 @@ export default function DeckDetailScreen() {
   const { cards, setCards, removeCard, reorderCards, takeDuplicated } = useCardStore();
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
-  const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder } = useSettingsStore();
+  const { initialFilterPreference, lastDeckDetailFilter, setLastDeckDetailFilter, keyboardShortcutsEnabled, cardSortOrder, setCardSortOrder, manualSortLocked, setManualSortLocked } = useSettingsStore();
   const { isPro } = useProStore();
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const [todayReviewed, setTodayReviewed] = useState<number | null>(null);
@@ -251,6 +251,7 @@ export default function DeckDetailScreen() {
   const [recentlyDuplicatedIds, setRecentlyDuplicatedIds] = useState<Set<string>>(new Set());
   const recentlyDuplicatedIdsRef = useRef<Set<string>>(new Set());
   const cardSortOrderRef = useRef(cardSortOrder);
+  const manualSortLockedRef = useRef(manualSortLocked);
   const selectedFilterRef = useRef(selectedFilter);
   const imageBlockLabelRef = useRef('');
   const deckArchivedRef = useRef(false);
@@ -575,6 +576,10 @@ export default function DeckDetailScreen() {
       setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
       return;
     }
+    if (manualSortLockedRef.current) {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderLockedMessage') });
+      return;
+    }
     drag();
   }, [t]);
   const handleStatsPress = useCallback((item: Card) => {
@@ -598,7 +603,8 @@ export default function DeckDetailScreen() {
     // 済み/復習/新規 では手動ソートでもドラッグ不可（onDragEnd で無効化）＝ScaleDecorator は不要で、
     // その animated ラッパーが横スワイプ（削除/アーカイブ）のジェスチャーを奪ってしまうため外す。
     // （DraggableFlatList 内でも ScaleDecorator 無しのセル描画は問題ない）
-    const inDraggable = cardSortOrderRef.current === 'manual' && selectedFilterRef.current === 'all';
+    // ロック中はドラッグ並べ替えを止め、素の FlatList にしてスワイプ（ここから学習/削除/アーカイブ）を効かせる。
+    const inDraggable = cardSortOrderRef.current === 'manual' && selectedFilterRef.current === 'all' && !manualSortLockedRef.current;
     const row = (
       <CardRow
         item={item}
@@ -608,7 +614,7 @@ export default function DeckDetailScreen() {
         isSelMode={isSelMode}
         isNew={recentlyDuplicatedIdsRef.current.has(item.id)}
         effectiveArchived={item.archived || deckArchivedRef.current}
-        swipeEnabled={!isSelMode && !(selectedFilterRef.current === 'all' && cardSortOrderRef.current === 'manual')}
+        swipeEnabled={!isSelMode && !inDraggable}
         isPro={isPro}
         theme={theme}
         themeKey={`${theme.dark}:${theme.fontScale}:${theme.colors.background}`}
@@ -673,6 +679,7 @@ export default function DeckDetailScreen() {
   selectedCardIdsRef.current = selectedCardIds;
   recentlyDuplicatedIdsRef.current = recentlyDuplicatedIds;
   cardSortOrderRef.current = cardSortOrder;
+  manualSortLockedRef.current = manualSortLocked;
   selectedFilterRef.current = selectedFilter;
   imageBlockLabelRef.current = t('card.imageBlock');
   // デッキ自体がアーカイブ済みなら配下カードも実質的に学習対象外なのでグレー表示する
@@ -935,6 +942,10 @@ export default function DeckDetailScreen() {
       setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
       return;
     }
+    if (manualSortLocked) {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderLockedMessage') });
+      return;
+    }
     if (focusedCardIndex === null) return;
     const to = dir === 'up' ? focusedCardIndex - 1 : focusedCardIndex + 1;
     if (to < 0 || to >= displayedCards.length) return;
@@ -977,6 +988,7 @@ export default function DeckDetailScreen() {
 
   const cardSortDesc = cardSortOrder === 'newest' ? t('card.sortDescNewest')
     : cardSortOrder === 'oldest' ? t('card.sortDescOldest')
+    : manualSortLocked ? t('card.sortDescManualLocked')
     : t('home.sortDescManual');
   const filterDescMap: Record<FilterKey, string> = {
     all: cardSortDesc,
@@ -1148,6 +1160,20 @@ export default function DeckDetailScreen() {
           </View>
           {selectedFilter === 'all' && !selectionMode && (
             <View style={styles.sortButtons}>
+              {/* 手動ソート時のみ表示：ドラッグ並べ替えロック（ON=固定してスワイプ可）。左端・枠なしアイコンのみ。 */}
+              {cardSortOrder === 'manual' && (
+                <Pressable
+                  style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 7, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
+                  hitSlop={8}
+                  onPress={() => setManualSortLocked(!manualSortLocked)}
+                >
+                  <Ionicons
+                    name={manualSortLocked ? 'lock-closed' : 'lock-open-outline'}
+                    size={(Platform as any).isPad ? Math.max(theme.fontSize.lg, 20) : Math.max(theme.fontSize.lg, 18)}
+                    color={manualSortLocked ? theme.colors.primary : theme.colors.textSecondary}
+                  />
+                </Pressable>
+              )}
               {CARD_SORT_OPTIONS.map(({ key, icon }) => {
                 const active = cardSortOrder === key;
                 return (
@@ -1176,7 +1202,7 @@ export default function DeckDetailScreen() {
             理由: DraggableFlatList はセルのジェスチャー処理が横スワイプ（削除/アーカイブ）を奪うため、
             ドラッグ不可の画面では素の FlatList にしてスワイプを効かせる。all↔他フィルターの切替で
             list 種別が変わり再マウントするが、手動ソート時に限られるため許容。 */}
-        {cardSortOrder === 'manual' && selectedFilter === 'all' ? (
+        {cardSortOrder === 'manual' && selectedFilter === 'all' && !manualSortLocked ? (
           <DraggableFlatList
             ref={listRef as any}
             // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が

@@ -936,10 +936,21 @@ export function BlockEditor({
     { input: "c", modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleKeyPress("c") },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: "/", modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (keyboardShortcutsEnabled) onShowShortcuts?.(); } },
-    { input: "e", handler: () => handleKeyPress("e") },
-    // ⇧E = アーカイブ切替。E 単体は「フォーカスブロック編集」で埋まるため、他画面の E=アーカイブに
-    //   合わせて Shift 併用にする。トグルが見える編集/並び替えモードのみ有効（プレビューは非表示）＆
+    // E = フォーカスあり→そのブロックを編集 / フォーカスなし→アーカイブ切替。
+    //   Delete キーと同じ「フォーカスあり＝ブロック単位／なし＝カード単位」の流儀に合わせる。
+    //   アーカイブはトグルが見える編集/並び替えモードのみ有効（プレビューは非表示）＆
     //   新規作成では onArchivedChange 未提供＝無効。
+    { input: "e", handler: () => {
+      if (!keyboardShortcutsEnabled) return;
+      if (focusedBlockIndexRef.current === null) {
+        if (isPreviewRef.current || !onArchivedChange) return;
+        onArchivedChange(!archived);
+        return;
+      }
+      handleKeyPress("e");
+    } },
+    // ⇧E = アーカイブ切替（フォーカスの有無に関わらず常時）。フォーカス中でもブロック編集に
+    //   邪魔されずアーカイブしたいとき用。ガードは E のアーカイブ分岐と同じ。
     { input: "e", modifierFlags: KeyCommand.keyModifierShift, handler: () => {
       if (!keyboardShortcutsEnabled) return;
       if (isPreviewRef.current || !onArchivedChange) return;

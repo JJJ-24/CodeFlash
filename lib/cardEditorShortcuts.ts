@@ -1,5 +1,5 @@
 // カードエディタ（新規/編集）のショートカット一覧。6カテゴリー分類。
-// 新規作成時は「カード複製(C)」「アーカイブ切替(⇧E)」を new.tsx の filterForNew が除外する。
+// 新規作成時は「カード複製(C)」「アーカイブ(E・フォーカスなし)」を new.tsx の filterForNew が除外する。
 export const CARD_EDITOR_SECTIONS_EDIT = [
   { titleKey: 'shortcut.catDisplay', items: [
     { key: '1-3',      descKey: 'shortcut.tabSelectCard' },
@@ -10,7 +10,7 @@ export const CARD_EDITOR_SECTIONS_EDIT = [
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K',    descKey: 'shortcut.focusNextPrev' },
-    { key: 'E',        descKey: 'shortcut.editFocusedItem' },
+    { key: 'E',        descKey: 'shortcut.editArchiveCombo' },
     { key: 'R',        descKey: 'shortcut.runFocused' },
     { key: 'Delete',   descKey: 'shortcut.delete' },
     { key: 'A',        descKey: 'shortcut.toggleAddMenu' },
@@ -45,6 +45,7 @@ export const CARD_EDITOR_SECTIONS_SORT = [
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
     { key: 'U / D',  descKey: 'shortcut.moveFocused' },
+    { key: 'E',      descKey: 'shortcut.archiveUnfocused' },
     { key: 'Delete', descKey: 'shortcut.delete' },
   ] },
   { titleKey: 'shortcut.catAction', items: [

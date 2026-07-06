@@ -25,13 +25,20 @@ import { useDeckStore } from '@/store/decks';
 import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useSettingsStore } from '@/store/settings';
 
-// 新規作成では「カード複製(C)」「アーカイブ切替(⇧E)」は無効（どちらもカード編集時のみ）。
+// 新規作成では「カード複製(C)」「アーカイブ(E・フォーカスなし / ⇧E)」は無効（どちらもカード編集時のみ）。
 // 編集画面と共有のセクションからこの2項目を除外し、空になったカテゴリーも落とす。
-const NEW_CARD_EXCLUDED = new Set(['shortcut.duplicateCard', 'shortcut.archiveToggle']);
+const NEW_CARD_EXCLUDED = new Set(['shortcut.duplicateCard', 'shortcut.archiveUnfocused', 'shortcut.archiveToggle']);
+// 新規作成では E は編集のみ（アーカイブ不可）。編集＋アーカイブの結合表示を編集専用の文言へ差し替える。
+const NEW_CARD_REMAP: Record<string, string> = { 'shortcut.editArchiveCombo': 'shortcut.editFocusedItem' };
 type ShortcutSectionDef = { titleKey: string; items: { key: string; descKey: string; pro?: boolean }[] };
 const filterForNew = (sections: ShortcutSectionDef[]): ShortcutSectionDef[] =>
   sections
-    .map((s) => ({ ...s, items: s.items.filter((i) => !NEW_CARD_EXCLUDED.has(i.descKey)) }))
+    .map((s) => ({
+      ...s,
+      items: s.items
+        .filter((i) => !NEW_CARD_EXCLUDED.has(i.descKey))
+        .map((i) => (NEW_CARD_REMAP[i.descKey] ? { ...i, descKey: NEW_CARD_REMAP[i.descKey] } : i)),
+    }))
     .filter((s) => s.items.length > 0);
 const NEW_SECTIONS_EDIT = filterForNew(CARD_EDITOR_SECTIONS_EDIT);
 const NEW_SECTIONS_SORT = filterForNew(CARD_EDITOR_SECTIONS_SORT);

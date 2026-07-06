@@ -72,7 +72,7 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
     const locked = item.pro && !isPro;
     const rowOpacity = locked ? 0.4 : 1;
     return (
-      <View key={item.key} style={[styles.row, { borderBottomColor: theme.colors.border, opacity: rowOpacity }]}>
+      <View key={`${item.key}-${item.descKey}`} style={[styles.row, { borderBottomColor: theme.colors.border, opacity: rowOpacity }]}>
         <View style={[styles.keyBadge, { backgroundColor: theme.colors.background }, (Platform as any).isPad && styles.keyBadgePad]}>
           {/* 長いキー（Tab / ⇧Tab・U / D・PgUp/PgDn 等）はアプリ文字大で幅を超えるため、
               必要なときだけ自動縮小して切れないようにする（短いキーは通常サイズのまま）。 */}

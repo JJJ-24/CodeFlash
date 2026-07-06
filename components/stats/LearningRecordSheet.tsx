@@ -202,8 +202,8 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
       <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
       </Animated.View>
-      <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.colors.surface }]}>
-        <View style={styles.header}>
+      <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16 }]}>
           {/* 設定 ON のときはタイトル横にキーボードアイコンを出し、タップでショートカット一覧を開く（他画面と統一）。 */}
           <Pressable
             onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
@@ -284,7 +284,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                     {streakBlock.label}
                   </Text>
                 </View>
-                <View style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
+                <View style={[styles.numberCell, { backgroundColor: theme.colors.surface }]}>
                   <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * (IS_PAD ? 1.5 : 1.1) }]} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
                     {leftBottomBlock.value}
                   </Text>
@@ -295,7 +295,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               </View>
               <View style={styles.rightColumn}>
                 {rightBlocks.map((b, i) => (
-                  <View key={i} style={[styles.numberCell, { backgroundColor: theme.colors.background }]}>
+                  <View key={i} style={[styles.numberCell, { backgroundColor: theme.colors.surface }]}>
                     <Text style={[styles.numberValue, { color: b.color, fontSize: theme.fontSize.xxl * (IS_PAD ? 1.5 : 1.1) }]} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
                       {b.segments.map((s, si) => (
                         // 単位（h/m/%）は数値より一段小さく（md）・やや細く描画する。色は継承。
@@ -343,7 +343,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       : { borderColor: theme.colors.inputBorder, backgroundColor: 'transparent' }
                     : got
                       ? { borderColor: b.color, backgroundColor: b.color + '22' }
-                      : { borderColor: theme.colors.border, backgroundColor: 'transparent' };
+                      : { borderColor: theme.colors.buttonBorder, backgroundColor: 'transparent' };
                   const labelHidden = isStreak && !got;
                   return (
                     <View key={b.id} style={[styles.badgeCell, IS_PAD && { width: 76 }]}>

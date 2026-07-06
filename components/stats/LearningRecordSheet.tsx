@@ -10,7 +10,7 @@ import * as KeyCommand from 'react-native-key-command';
 
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore } from '@/store/settings';
-import { MAX_FONT_MULTIPLIER, FILTER_COLORS, type AppTheme } from '@/lib/theme';
+import { MAX_FONT_MULTIPLIER, FILTER_COLORS, themedFrameBorder, type AppTheme } from '@/lib/theme';
 import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
@@ -142,6 +142,9 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   }
   const plain = (text: string): ValueSegment[] => [{ text }];
 
+  // モード切替ボタンの非選択枠・未達成バッジの丸枠に使うテーマ追従の枠線色。
+  const frameBorder = themedFrameBorder(theme);
+
   const elapsed = stats ? elapsedDaysSince(stats.firstDate) : null;
   const earned = stats ? earnedBadgeCount(stats) : 0;
   // 最長連続セル内のバッジ：現在の連続（今日起点。今日未学習なら 0）と、進行中を除く自己ベスト prevBestStreak
@@ -249,7 +252,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       accessibilityLabel={t(labelKey)}
                       style={[
                         styles.modeBtn,
-                        { borderColor: active ? theme.colors.primary : theme.colors.buttonBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 10 },
+                        { borderColor: active ? theme.colors.primary : frameBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 10 },
                         active && { backgroundColor: theme.colors.primary },
                       ]}
                     >
@@ -343,7 +346,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       : { borderColor: theme.colors.inputBorder, backgroundColor: 'transparent' }
                     : got
                       ? { borderColor: b.color, backgroundColor: b.color + '22' }
-                      : { borderColor: theme.colors.buttonBorder, backgroundColor: 'transparent' };
+                      : { borderColor: frameBorder, backgroundColor: 'transparent' };
                   const labelHidden = isStreak && !got;
                   return (
                     <View key={b.id} style={[styles.badgeCell, IS_PAD && { width: 76 }]}>

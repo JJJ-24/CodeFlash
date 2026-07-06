@@ -222,6 +222,14 @@ export function fontSizeForDigits(theme: AppTheme, digits: number, scale = 1): n
   return size * scale;
 }
 
+/** モード切替ボタンの非選択枠やバッジの未達成丸枠など「テーマに追従させたい薄枠」の色を返す。
+ *  カードテーマ選択時はテーマの枠線色（例: graphite=#9DA8BC）を使い、default（無彩色テーマ・
+ *  枠線が surface と同色で埋もれる）のときだけ従来の buttonBorder を使う。
+ *  グラファイト等のテーマ背景に buttonBorder(#D8D8D8) が溶け込んで見えにくい問題への対策。 */
+export function themedFrameBorder(theme: AppTheme): string {
+  return theme.cardTheme.background === theme.baseSurface ? theme.colors.buttonBorder : theme.cardTheme.border;
+}
+
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);

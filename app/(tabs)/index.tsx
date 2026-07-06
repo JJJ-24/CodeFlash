@@ -171,7 +171,7 @@ export default function HomeScreen() {
   darkRef.current = theme.dark;
   const { decks, setDecks, removeDeck, reorderDecks, updateDeck } = useDeckStore();
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
-  const { deckSortOrder, setDeckSortOrder, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
+  const { deckSortOrder, setDeckSortOrder, deckSortLocked, setDeckSortLocked, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
   const { width } = useWindowDimensions();
   // 学習/統計タブの1ブロック実幅に一致させる（コンテナ余白16・行 marginHorizontal:-2・各ブロック margin:2・gap:4 の4列構成）
   const blockWidth = (width - 56) / 4;
@@ -278,6 +278,8 @@ export default function HomeScreen() {
     () => (selectedFilter === 'active' ? sortedDecks.filter((d) => !d.archived) : sortedDecks),
     [sortedDecks, selectedFilter]
   );
+  // 手動ソート かつ 未ロックのときだけドラッグ並べ替えが有効。ロック中はドラッグを止めてスワイプ可にする。
+  const deckDragActive = deckSortOrder === 'manual' && !deckSortLocked;
 
   function cycleSortOrder(dir = 1) {
     const n = SORT_OPTIONS.length;
@@ -294,7 +296,7 @@ export default function HomeScreen() {
   // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート時のみ。フォーカスは ID 追跡で自動追従。
   // 非表示（アーカイブ）デッキは元位置に固定したまま表示中だけを並べ替える（onDragEnd と同じ再構築）。
   function moveDeckOrder(dir: 'up' | 'down') {
-    if (deckSortOrder !== 'manual' || focusedDeckIndex === null) return;
+    if (!deckDragActive || focusedDeckIndex === null) return;
     const to = dir === 'up' ? focusedDeckIndex - 1 : focusedDeckIndex + 1;
     if (to < 0 || to >= displayedDecks.length) return;
     const newDisplayed = [...displayedDecks];
@@ -347,10 +349,26 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t(`home.sortDesc${deckSortOrder.charAt(0).toUpperCase()}${deckSortOrder.slice(1)}`)}
+            {deckSortOrder === 'manual' && deckSortLocked
+              ? t('home.sortDescManualLocked')
+              : t(`home.sortDesc${deckSortOrder.charAt(0).toUpperCase()}${deckSortOrder.slice(1)}`)}
           </Text>
         </View>
         <View style={styles.sortButtons}>
+          {/* 手動ソート時のみ表示：ドラッグ並べ替えロック（ON=固定してスワイプ可）。左端・枠なしアイコンのみ。 */}
+          {deckSortOrder === 'manual' && (
+            <Pressable
+              style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 7, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
+              hitSlop={8}
+              onPress={() => setDeckSortLocked(!deckSortLocked)}
+            >
+              <Ionicons
+                name={deckSortLocked ? 'lock-closed' : 'lock-open-outline'}
+                size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                color={deckSortLocked ? theme.colors.primary : theme.colors.textSecondary}
+              />
+            </Pressable>
+          )}
           {SORT_OPTIONS.map(({ key, icon }) => {
             const active = deckSortOrder === key;
             return (
@@ -533,7 +551,7 @@ export default function HomeScreen() {
             }}
             onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
             onDragEnd={({ data }) => {
-              if (deckSortOrder !== 'manual') return;
+              if (!deckDragActive) return;
               // 「有効」表示中はアーカイブ済みデッキが data に含まれない。
               // 非表示デッキは元の位置に固定したまま、表示中デッキの並びだけを並べ替え結果で埋める
               // （末尾送りを防ぎ、「すべて」に戻したときアーカイブデッキの位置が動かないようにする）。
@@ -546,16 +564,16 @@ export default function HomeScreen() {
             ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedDeckIndex(null)} />}
             renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
               <ScaleDecorator>
-                {/* 手動並び替えモード以外で左スワイプ削除を有効化（手動時はドラッグ優先で無効） */}
+                {/* ドラッグ並べ替えが有効なとき（手動＋未ロック）以外は左スワイプを有効化。ロック中もスワイプ可。 */}
                 <SwipeToDeleteRow
-                  enabled={deckSortOrder !== 'manual'}
+                  enabled={!deckDragActive}
                   onDelete={() => { setPendingDeleteDeck(item); setShowDeleteModal(true); }}
                   onArchive={() => toggleDeckArchive(item)}
                   archived={item.archived}
                 >
                   <DeckCard
                     deck={item}
-                    drag={deckSortOrder === 'manual' ? drag : null}
+                    drag={deckDragActive ? drag : null}
                     onEdit={(id) => {
                       const idx = getIndex();
                       if (idx !== undefined) setFocusedDeckIndex(idx);

@@ -6,10 +6,11 @@
     "noActiveDecks": "有効なデッキがありません",
     "noActiveDecksSub": "「すべて」でアーカイブ済みを\n表示できます",
     "sortDescManual": "長押しで並べ替え",
+    "sortDescManualLocked": "並べ替えロック中",
     "sortDescName": "名前順",
     "sortDescCardCount": "カード枚数の多い順",
     "deckListInfoLabel": "デッキ一覧の説明",
-    "deckListInfoMessage": "[タップ]\n  カード一覧へ移動\n[スワイプ]\n  アーカイブ・削除\n※ {{menu}} モード時は不可\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習・統計タブにも反映されます。"
+    "deckListInfoMessage": "[タップ]\n  カード一覧へ移動\n[スワイプ]\n  アーカイブ・削除\n※ {{menu}} モード（ロック解除時）では不可\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習・統計タブにも反映されます。"
   },
   "deck": {
     "new": "新規デッキ",

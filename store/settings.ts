@@ -13,6 +13,7 @@ const NOTIFICATION_ENABLED_KEY = '@codeflash_notification_enabled';
 const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
 const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
 const DECK_SORT_KEY = '@codeflash_deck_sort';
+const DECK_SORT_LOCKED_KEY = '@codeflash_deck_sort_locked';
 const TAG_SORT_KEY = '@codeflash_tag_sort';
 const CARD_SORT_KEY = '@codeflash_card_sort';
 const MANUAL_SORT_LOCKED_KEY = '@codeflash_manual_sort_locked';
@@ -95,6 +96,9 @@ interface SettingsState {
   setNotificationTime: (hour: number, minute: number) => void;
   deckSortOrder: DeckSortOrder;
   setDeckSortOrder: (v: DeckSortOrder) => void;
+  // ホーム（デッキ一覧）「手動ソート」のドラッグ並べ替えロック（true=固定してスワイプ可）
+  deckSortLocked: boolean;
+  setDeckSortLocked: (v: boolean) => void;
   tagSortOrder: DeckSortOrder;
   setTagSortOrder: (v: DeckSortOrder) => void;
   cardSortOrder: CardSortOrder;
@@ -163,6 +167,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setDeckSortOrder: (v) => {
     set({ deckSortOrder: v });
     AsyncStorage.setItem(DECK_SORT_KEY, v);
+  },
+  deckSortLocked: false,
+  setDeckSortLocked: (v) => {
+    set({ deckSortLocked: v });
+    AsyncStorage.setItem(DECK_SORT_LOCKED_KEY, String(v));
   },
   tagSortOrder: 'manual',
   setTagSortOrder: (v) => {
@@ -240,13 +249,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 }));
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, tagSort, cardSort, manualSortLocked, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckIds, cardTheme, languagePref, homeFilter, tagCardFilter] = await Promise.all([
+  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, deckSortLocked, tagSort, cardSort, manualSortLocked, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckIds, cardTheme, languagePref, homeFilter, tagCardFilter] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEY),
     AsyncStorage.getItem(FILTER_STORAGE_KEY),
     AsyncStorage.getItem(LANG_STORAGE_KEY),
     AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY),
     AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY),
     AsyncStorage.getItem(DECK_SORT_KEY),
+    AsyncStorage.getItem(DECK_SORT_LOCKED_KEY),
     AsyncStorage.getItem(TAG_SORT_KEY),
     AsyncStorage.getItem(CARD_SORT_KEY),
     AsyncStorage.getItem(MANUAL_SORT_LOCKED_KEY),
@@ -267,7 +277,7 @@ export async function hydrateSettings(): Promise<void> {
   const update: Partial<Pick<SettingsState,
     'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
     'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
-    'deckSortOrder' | 'tagSortOrder' | 'cardSortOrder' | 'manualSortLocked' | 'shuffleEnabled' | 'lastSearchField' |
+    'deckSortOrder' | 'deckSortLocked' | 'tagSortOrder' | 'cardSortOrder' | 'manualSortLocked' | 'shuffleEnabled' | 'lastSearchField' |
     'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckIds' |
     'cardThemePreference' | 'languagePreference' | 'lastHomeFilter' | 'lastTagCardFilter'
   >> = {};
@@ -277,6 +287,7 @@ export async function hydrateSettings(): Promise<void> {
   if (deckFilter !== null) update.lastDeckDetailFilter = deckFilter as DeckDetailFilter;
   if (notifEnabled !== null) update.notificationEnabled = notifEnabled === 'true';
   if (deckSort !== null) update.deckSortOrder = deckSort as DeckSortOrder;
+  if (deckSortLocked !== null) update.deckSortLocked = deckSortLocked === 'true';
   if (tagSort !== null) update.tagSortOrder = tagSort as DeckSortOrder;
   if (cardSort !== null) update.cardSortOrder = cardSort as CardSortOrder;
   if (manualSortLocked !== null) update.manualSortLocked = manualSortLocked === 'true';

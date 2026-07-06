@@ -6,10 +6,11 @@
     "noActiveDecks": "No active decks",
     "noActiveDecksSub": "Use \"All\" to show\narchived decks",
     "sortDescManual": "Long-press to reorder",
+    "sortDescManualLocked": "Reorder locked",
     "sortDescName": "Sorted by deck name",
     "sortDescCardCount": "Most cards first",
     "deckListInfoLabel": "About deck list",
-    "deckListInfoMessage": "[Tap]\n  Open card list\n[Swipe]\n  Archive / Delete\n※ Not available in {{menu}} mode\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study and Stats tabs."
+    "deckListInfoMessage": "[Tap]\n  Open card list\n[Swipe]\n  Archive / Delete\n※ Not available in {{menu}} mode (when unlocked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study and Stats tabs."
   },
   "deck": {
     "new": "New Deck",

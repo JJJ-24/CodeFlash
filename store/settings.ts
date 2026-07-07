@@ -5,30 +5,6 @@ import { create } from 'zustand';
 import i18n from '@/lib/i18n';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 
-const STORAGE_KEY = '@codeflash_keyboard_shortcuts';
-const FILTER_STORAGE_KEY = '@codeflash_initial_filter';
-const LANG_STORAGE_KEY = '@codeflash_last_code_language';
-const DECK_FILTER_STORAGE_KEY = '@codeflash_last_deck_detail_filter';
-const NOTIFICATION_ENABLED_KEY = '@codeflash_notification_enabled';
-const NOTIFICATION_HOUR_KEY = '@codeflash_notification_hour';
-const NOTIFICATION_MINUTE_KEY = '@codeflash_notification_minute';
-const DECK_SORT_KEY = '@codeflash_deck_sort';
-const DECK_SORT_LOCKED_KEY = '@codeflash_deck_sort_locked';
-const TAG_SORT_KEY = '@codeflash_tag_sort';
-const CARD_SORT_KEY = '@codeflash_card_sort';
-const MANUAL_SORT_LOCKED_KEY = '@codeflash_manual_sort_locked';
-const SHUFFLE_KEY = '@codeflash_shuffle';
-const SEARCH_FIELD_KEY = '@codeflash_last_search_field';
-const FSRS_RETENTION_KEY = '@codeflash_fsrs_retention';
-const STUDY_HIDE_EMPTY_KEY = '@codeflash_study_hide_empty';
-const GRADE_RANKING_BY_TIME_KEY = '@codeflash_grade_ranking_by_time';
-const GRADE_RANKING_PERIOD_KEY = '@codeflash_grade_ranking_period';
-const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
-const CARD_THEME_KEY = '@codeflash_card_theme';
-const LANGUAGE_PREF_KEY = '@codeflash_language_pref';
-const HOME_FILTER_KEY = '@codeflash_last_home_filter';
-const TAG_CARD_FILTER_KEY = '@codeflash_last_tag_card_filter';
-
 /** ホーム画面のデッキ絞り込み。active=有効デッキのみ / all=アーカイブ含む全デッキ */
 export type HomeFilter = 'active' | 'all';
 
@@ -65,6 +41,8 @@ export const FSRS_RETENTION_MIN = 0.70;
 export const FSRS_RETENTION_MAX = 0.99;
 export const FSRS_RETENTION_DEFAULT = 0.90;
 
+const clampRetention = (v: number) => Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
+
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
 
@@ -80,245 +58,204 @@ export function preferenceToFilter(pref: InitialFilterPreference): DeckDetailFil
   return pref === 'none' ? null : pref;
 }
 
-interface SettingsState {
+/** 設定値（永続化対象）。setter は SettingsState 側で定義する。 */
+interface SettingsValues {
   keyboardShortcutsEnabled: boolean;
-  setKeyboardShortcutsEnabled: (v: boolean) => void;
   initialFilterPreference: InitialFilterPreference;
-  setInitialFilterPreference: (v: InitialFilterPreference) => void;
   lastSelectedCodeLanguage: string;
-  setLastSelectedCodeLanguage: (v: string) => void;
   lastDeckDetailFilter: DeckDetailFilter;
-  setLastDeckDetailFilter: (v: DeckDetailFilter) => void;
   notificationEnabled: boolean;
   notificationHour: number;
   notificationMinute: number;
-  setNotificationEnabled: (v: boolean) => void;
-  setNotificationTime: (hour: number, minute: number) => void;
   deckSortOrder: DeckSortOrder;
-  setDeckSortOrder: (v: DeckSortOrder) => void;
   // ホーム（デッキ一覧）「手動ソート」のドラッグ並べ替えロック（true=固定してスワイプ可）
   deckSortLocked: boolean;
-  setDeckSortLocked: (v: boolean) => void;
   tagSortOrder: DeckSortOrder;
-  setTagSortOrder: (v: DeckSortOrder) => void;
   cardSortOrder: CardSortOrder;
-  setCardSortOrder: (v: CardSortOrder) => void;
   // カード一覧「すべて＋手動ソート」のドラッグ並べ替えロック（true=固定してスワイプ可）
   manualSortLocked: boolean;
-  setManualSortLocked: (v: boolean) => void;
   shuffleEnabled: boolean;
-  setShuffleEnabled: (v: boolean) => void;
   lastSearchField: string;
-  setLastSearchField: (v: string) => void;
   fsrsDesiredRetention: number;
-  setFsrsDesiredRetention: (v: number) => void;
   studyHideEmpty: boolean;
-  setStudyHideEmpty: (v: boolean) => void;
   gradeRankingByTime: boolean;
-  setGradeRankingByTime: (v: boolean) => void;
   gradeRankingPeriod: GradeRankingPeriod;
-  setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   gradeRankingDeckIds: string[];
-  setGradeRankingDeckIds: (v: string[]) => void;
   cardThemePreference: CardThemeName;
-  setCardThemePreference: (v: CardThemeName) => void;
   languagePreference: LanguagePreference;
-  setLanguagePreference: (v: LanguagePreference) => void;
   lastHomeFilter: HomeFilter;
-  setLastHomeFilter: (v: HomeFilter) => void;
   lastTagCardFilter: HomeFilter;
+}
+
+/**
+ * 設定1件分の永続化定義。
+ * - `key`: AsyncStorage キー。**変更するとユーザーの既存設定が読めなくなるため厳守**
+ *   （エクスポート対象キーは lib/settings-keys.ts が別途参照する）。
+ * - `parse`: 保存文字列 → 値。`undefined` を返すと無効値として無視（既定値のまま）。
+ * - `normalize`: setter での正規化（clamp 等）。
+ * - `persist`: 既定の `AsyncStorage.setItem(key, String(v))` を差し替える（配列の JSON 化等）。
+ * - `onApply`: setter 適用時・hydrate 成功時の副作用（言語切替等）。
+ */
+interface SettingDef<T> {
+  key: string;
+  default: T;
+  parse: (raw: string) => T | undefined;
+  normalize?: (v: T) => T;
+  persist?: (v: T) => void;
+  onApply?: (v: T) => void;
+}
+
+const asIs = (raw: string) => raw;
+const asBool = (raw: string) => raw === 'true';
+const asNum = (raw: string) => Number(raw);
+const oneOf = <T extends string>(values: readonly T[]) => (raw: string): T | undefined =>
+  (values as readonly string[]).includes(raw) ? (raw as T) : undefined;
+
+const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
+
+const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
+  keyboardShortcutsEnabled: { key: '@codeflash_keyboard_shortcuts', default: true, parse: asBool },
+  initialFilterPreference: { key: '@codeflash_initial_filter', default: 'review', parse: (r) => r as InitialFilterPreference },
+  lastSelectedCodeLanguage: { key: '@codeflash_last_code_language', default: 'javascript', parse: asIs },
+  lastDeckDetailFilter: { key: '@codeflash_last_deck_detail_filter', default: 'review', parse: (r) => r as DeckDetailFilter },
+  notificationEnabled: { key: '@codeflash_notification_enabled', default: false, parse: asBool },
+  notificationHour: { key: '@codeflash_notification_hour', default: 9, parse: asNum },
+  notificationMinute: { key: '@codeflash_notification_minute', default: 0, parse: asNum },
+  deckSortOrder: { key: '@codeflash_deck_sort', default: 'manual', parse: (r) => r as DeckSortOrder },
+  deckSortLocked: { key: '@codeflash_deck_sort_locked', default: false, parse: asBool },
+  tagSortOrder: { key: '@codeflash_tag_sort', default: 'manual', parse: (r) => r as DeckSortOrder },
+  cardSortOrder: { key: '@codeflash_card_sort', default: 'manual', parse: (r) => r as CardSortOrder },
+  manualSortLocked: { key: '@codeflash_manual_sort_locked', default: false, parse: asBool },
+  shuffleEnabled: { key: '@codeflash_shuffle', default: false, parse: asBool },
+  lastSearchField: { key: '@codeflash_last_search_field', default: 'all', parse: asIs },
+  fsrsDesiredRetention: {
+    key: '@codeflash_fsrs_retention',
+    default: FSRS_RETENTION_DEFAULT,
+    parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampRetention(v); },
+    normalize: clampRetention,
+  },
+  studyHideEmpty: { key: '@codeflash_study_hide_empty', default: false, parse: asBool },
+  gradeRankingByTime: { key: '@codeflash_grade_ranking_by_time', default: false, parse: asBool },
+  gradeRankingPeriod: { key: '@codeflash_grade_ranking_period', default: 'all', parse: oneOf(['all', '90d', '30d', '7d'] as const) },
+  gradeRankingDeckIds: {
+    key: GRADE_RANKING_DECK_IDS_KEY,
+    default: [],
+    parse: (r) => {
+      try {
+        const parsed = JSON.parse(r);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch { return undefined; }
+    },
+    // 空配列（=絞り込みなし）はキー自体を消す。
+    persist: (v) => {
+      if (v.length === 0) AsyncStorage.removeItem(GRADE_RANKING_DECK_IDS_KEY);
+      else AsyncStorage.setItem(GRADE_RANKING_DECK_IDS_KEY, JSON.stringify(v));
+    },
+  },
+  cardThemePreference: {
+    key: '@codeflash_card_theme',
+    default: 'default',
+    parse: (r) => ((CARD_THEME_NAMES as readonly string[]).includes(r) ? (r as CardThemeName) : undefined),
+  },
+  languagePreference: {
+    key: '@codeflash_language_pref',
+    default: 'system',
+    parse: oneOf(['system', 'ja', 'en'] as const),
+    onApply: (v) => { i18n.changeLanguage(resolveLanguage(v)); },
+  },
+  lastHomeFilter: { key: '@codeflash_last_home_filter', default: 'active', parse: oneOf(['active', 'all'] as const) },
+  lastTagCardFilter: { key: '@codeflash_last_tag_card_filter', default: 'active', parse: oneOf(['active', 'all'] as const) },
+};
+
+const SETTING_KEYS = Object.keys(DEFS) as (keyof SettingsValues)[];
+
+const DEFAULTS = Object.fromEntries(
+  SETTING_KEYS.map((k) => [k, DEFS[k].default]),
+) as unknown as SettingsValues;
+
+interface SettingsState extends SettingsValues {
+  setKeyboardShortcutsEnabled: (v: boolean) => void;
+  setInitialFilterPreference: (v: InitialFilterPreference) => void;
+  setLastSelectedCodeLanguage: (v: string) => void;
+  setLastDeckDetailFilter: (v: DeckDetailFilter) => void;
+  setNotificationEnabled: (v: boolean) => void;
+  setNotificationTime: (hour: number, minute: number) => void;
+  setDeckSortOrder: (v: DeckSortOrder) => void;
+  setDeckSortLocked: (v: boolean) => void;
+  setTagSortOrder: (v: DeckSortOrder) => void;
+  setCardSortOrder: (v: CardSortOrder) => void;
+  setManualSortLocked: (v: boolean) => void;
+  setShuffleEnabled: (v: boolean) => void;
+  setLastSearchField: (v: string) => void;
+  setFsrsDesiredRetention: (v: number) => void;
+  setStudyHideEmpty: (v: boolean) => void;
+  setGradeRankingByTime: (v: boolean) => void;
+  setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
+  setGradeRankingDeckIds: (v: string[]) => void;
+  setCardThemePreference: (v: CardThemeName) => void;
+  setLanguagePreference: (v: LanguagePreference) => void;
+  setLastHomeFilter: (v: HomeFilter) => void;
   setLastTagCardFilter: (v: HomeFilter) => void;
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
-  keyboardShortcutsEnabled: true,
-  setKeyboardShortcutsEnabled: (v) => {
-    set({ keyboardShortcutsEnabled: v });
-    AsyncStorage.setItem(STORAGE_KEY, String(v));
-  },
-  initialFilterPreference: 'review',
-  setInitialFilterPreference: (v) => {
-    set({ initialFilterPreference: v });
-    AsyncStorage.setItem(FILTER_STORAGE_KEY, v);
-  },
-  lastSelectedCodeLanguage: 'javascript',
-  setLastSelectedCodeLanguage: (v) => {
-    set({ lastSelectedCodeLanguage: v });
-    AsyncStorage.setItem(LANG_STORAGE_KEY, v);
-  },
-  lastDeckDetailFilter: 'review',
-  setLastDeckDetailFilter: (v) => {
-    set({ lastDeckDetailFilter: v });
-    AsyncStorage.setItem(DECK_FILTER_STORAGE_KEY, v);
-  },
-  notificationEnabled: false,
-  notificationHour: 9,
-  notificationMinute: 0,
-  setNotificationEnabled: (v) => {
-    set({ notificationEnabled: v });
-    AsyncStorage.setItem(NOTIFICATION_ENABLED_KEY, String(v));
-  },
-  setNotificationTime: (hour, minute) => {
-    set({ notificationHour: hour, notificationMinute: minute });
-    AsyncStorage.setItem(NOTIFICATION_HOUR_KEY, String(hour));
-    AsyncStorage.setItem(NOTIFICATION_MINUTE_KEY, String(minute));
-  },
-  deckSortOrder: 'manual',
-  setDeckSortOrder: (v) => {
-    set({ deckSortOrder: v });
-    AsyncStorage.setItem(DECK_SORT_KEY, v);
-  },
-  deckSortLocked: false,
-  setDeckSortLocked: (v) => {
-    set({ deckSortLocked: v });
-    AsyncStorage.setItem(DECK_SORT_LOCKED_KEY, String(v));
-  },
-  tagSortOrder: 'manual',
-  setTagSortOrder: (v) => {
-    set({ tagSortOrder: v });
-    AsyncStorage.setItem(TAG_SORT_KEY, v);
-  },
-  cardSortOrder: 'manual',
-  setCardSortOrder: (v) => {
-    set({ cardSortOrder: v });
-    AsyncStorage.setItem(CARD_SORT_KEY, v);
-  },
-  manualSortLocked: false,
-  setManualSortLocked: (v) => {
-    set({ manualSortLocked: v });
-    AsyncStorage.setItem(MANUAL_SORT_LOCKED_KEY, String(v));
-  },
-  shuffleEnabled: false,
-  setShuffleEnabled: (v) => {
-    set({ shuffleEnabled: v });
-    AsyncStorage.setItem(SHUFFLE_KEY, String(v));
-  },
-  lastSearchField: 'all',
-  setLastSearchField: (v) => {
-    set({ lastSearchField: v });
-    AsyncStorage.setItem(SEARCH_FIELD_KEY, v);
-  },
-  fsrsDesiredRetention: FSRS_RETENTION_DEFAULT,
-  setFsrsDesiredRetention: (v) => {
-    const clamped = Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
-    set({ fsrsDesiredRetention: clamped });
-    AsyncStorage.setItem(FSRS_RETENTION_KEY, String(clamped));
-  },
-  studyHideEmpty: false,
-  setStudyHideEmpty: (v) => {
-    set({ studyHideEmpty: v });
-    AsyncStorage.setItem(STUDY_HIDE_EMPTY_KEY, String(v));
-  },
-  gradeRankingByTime: false,
-  setGradeRankingByTime: (v) => {
-    set({ gradeRankingByTime: v });
-    AsyncStorage.setItem(GRADE_RANKING_BY_TIME_KEY, String(v));
-  },
-  gradeRankingPeriod: 'all',
-  setGradeRankingPeriod: (v) => {
-    set({ gradeRankingPeriod: v });
-    AsyncStorage.setItem(GRADE_RANKING_PERIOD_KEY, v);
-  },
-  gradeRankingDeckIds: [],
-  setGradeRankingDeckIds: (v) => {
-    set({ gradeRankingDeckIds: v });
-    if (v.length === 0) AsyncStorage.removeItem(GRADE_RANKING_DECK_IDS_KEY);
-    else AsyncStorage.setItem(GRADE_RANKING_DECK_IDS_KEY, JSON.stringify(v));
-  },
-  cardThemePreference: 'default',
-  setCardThemePreference: (v) => {
-    set({ cardThemePreference: v });
-    AsyncStorage.setItem(CARD_THEME_KEY, v);
-  },
-  languagePreference: 'system',
-  setLanguagePreference: (v) => {
-    set({ languagePreference: v });
-    AsyncStorage.setItem(LANGUAGE_PREF_KEY, v);
-    i18n.changeLanguage(resolveLanguage(v));
-  },
-  lastHomeFilter: 'active',
-  setLastHomeFilter: (v) => {
-    set({ lastHomeFilter: v });
-    AsyncStorage.setItem(HOME_FILTER_KEY, v);
-  },
-  lastTagCardFilter: 'active',
-  setLastTagCardFilter: (v) => {
-    set({ lastTagCardFilter: v });
-    AsyncStorage.setItem(TAG_CARD_FILTER_KEY, v);
-  },
-}));
+export const useSettingsStore = create<SettingsState>((set) => {
+  // 汎用 setter：normalize → state 反映 → AsyncStorage 永続化 → 副作用（DEFS の定義に従う）。
+  const makeSetter = <K extends keyof SettingsValues>(k: K) => (v: SettingsValues[K]) => {
+    const def = DEFS[k];
+    const value = def.normalize ? def.normalize(v) : v;
+    set({ [k]: value } as unknown as Partial<SettingsState>);
+    if (def.persist) def.persist(value);
+    else AsyncStorage.setItem(def.key, String(value));
+    def.onApply?.(value);
+  };
+  return {
+    ...DEFAULTS,
+    setKeyboardShortcutsEnabled: makeSetter('keyboardShortcutsEnabled'),
+    setInitialFilterPreference: makeSetter('initialFilterPreference'),
+    setLastSelectedCodeLanguage: makeSetter('lastSelectedCodeLanguage'),
+    setLastDeckDetailFilter: makeSetter('lastDeckDetailFilter'),
+    setNotificationEnabled: makeSetter('notificationEnabled'),
+    // 時・分は2キーへ同時保存するため個別定義（DEFS は hydrate 用）。
+    setNotificationTime: (hour, minute) => {
+      set({ notificationHour: hour, notificationMinute: minute });
+      AsyncStorage.setItem(DEFS.notificationHour.key, String(hour));
+      AsyncStorage.setItem(DEFS.notificationMinute.key, String(minute));
+    },
+    setDeckSortOrder: makeSetter('deckSortOrder'),
+    setDeckSortLocked: makeSetter('deckSortLocked'),
+    setTagSortOrder: makeSetter('tagSortOrder'),
+    setCardSortOrder: makeSetter('cardSortOrder'),
+    setManualSortLocked: makeSetter('manualSortLocked'),
+    setShuffleEnabled: makeSetter('shuffleEnabled'),
+    setLastSearchField: makeSetter('lastSearchField'),
+    setFsrsDesiredRetention: makeSetter('fsrsDesiredRetention'),
+    setStudyHideEmpty: makeSetter('studyHideEmpty'),
+    setGradeRankingByTime: makeSetter('gradeRankingByTime'),
+    setGradeRankingPeriod: makeSetter('gradeRankingPeriod'),
+    setGradeRankingDeckIds: makeSetter('gradeRankingDeckIds'),
+    setCardThemePreference: makeSetter('cardThemePreference'),
+    setLanguagePreference: makeSetter('languagePreference'),
+    setLastHomeFilter: makeSetter('lastHomeFilter'),
+    setLastTagCardFilter: makeSetter('lastTagCardFilter'),
+  };
+});
+
+/** 保存済みの1件を parse し、有効値なら update へ反映＋副作用を実行する（型を per-key に保つための generic）。 */
+function hydrateOne<K extends keyof SettingsValues>(k: K, raw: string, update: Partial<SettingsValues>) {
+  const def = DEFS[k];
+  const parsed = def.parse(raw);
+  if (parsed === undefined) return;
+  update[k] = parsed;
+  def.onApply?.(parsed);
+}
 
 export async function hydrateSettings(): Promise<void> {
-  const [keyboard, filter, lang, deckFilter, notifEnabled, deckSort, deckSortLocked, tagSort, cardSort, manualSortLocked, shuffle, notifHour, notifMinute, searchField, fsrsRetention, studyHideEmpty, gradeRankingByTime, gradeRankingPeriod, gradeRankingDeckIds, cardTheme, languagePref, homeFilter, tagCardFilter] = await Promise.all([
-    AsyncStorage.getItem(STORAGE_KEY),
-    AsyncStorage.getItem(FILTER_STORAGE_KEY),
-    AsyncStorage.getItem(LANG_STORAGE_KEY),
-    AsyncStorage.getItem(DECK_FILTER_STORAGE_KEY),
-    AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY),
-    AsyncStorage.getItem(DECK_SORT_KEY),
-    AsyncStorage.getItem(DECK_SORT_LOCKED_KEY),
-    AsyncStorage.getItem(TAG_SORT_KEY),
-    AsyncStorage.getItem(CARD_SORT_KEY),
-    AsyncStorage.getItem(MANUAL_SORT_LOCKED_KEY),
-    AsyncStorage.getItem(SHUFFLE_KEY),
-    AsyncStorage.getItem(NOTIFICATION_HOUR_KEY),
-    AsyncStorage.getItem(NOTIFICATION_MINUTE_KEY),
-    AsyncStorage.getItem(SEARCH_FIELD_KEY),
-    AsyncStorage.getItem(FSRS_RETENTION_KEY),
-    AsyncStorage.getItem(STUDY_HIDE_EMPTY_KEY),
-    AsyncStorage.getItem(GRADE_RANKING_BY_TIME_KEY),
-    AsyncStorage.getItem(GRADE_RANKING_PERIOD_KEY),
-    AsyncStorage.getItem(GRADE_RANKING_DECK_IDS_KEY),
-    AsyncStorage.getItem(CARD_THEME_KEY),
-    AsyncStorage.getItem(LANGUAGE_PREF_KEY),
-    AsyncStorage.getItem(HOME_FILTER_KEY),
-    AsyncStorage.getItem(TAG_CARD_FILTER_KEY),
-  ]);
-  const update: Partial<Pick<SettingsState,
-    'keyboardShortcutsEnabled' | 'initialFilterPreference' | 'lastSelectedCodeLanguage' |
-    'lastDeckDetailFilter' | 'notificationEnabled' | 'notificationHour' | 'notificationMinute' |
-    'deckSortOrder' | 'deckSortLocked' | 'tagSortOrder' | 'cardSortOrder' | 'manualSortLocked' | 'shuffleEnabled' | 'lastSearchField' |
-    'fsrsDesiredRetention' | 'studyHideEmpty' | 'gradeRankingByTime' | 'gradeRankingPeriod' | 'gradeRankingDeckIds' |
-    'cardThemePreference' | 'languagePreference' | 'lastHomeFilter' | 'lastTagCardFilter'
-  >> = {};
-  if (keyboard !== null) update.keyboardShortcutsEnabled = keyboard === 'true';
-  if (filter !== null) update.initialFilterPreference = filter as InitialFilterPreference;
-  if (lang !== null) update.lastSelectedCodeLanguage = lang;
-  if (deckFilter !== null) update.lastDeckDetailFilter = deckFilter as DeckDetailFilter;
-  if (notifEnabled !== null) update.notificationEnabled = notifEnabled === 'true';
-  if (deckSort !== null) update.deckSortOrder = deckSort as DeckSortOrder;
-  if (deckSortLocked !== null) update.deckSortLocked = deckSortLocked === 'true';
-  if (tagSort !== null) update.tagSortOrder = tagSort as DeckSortOrder;
-  if (cardSort !== null) update.cardSortOrder = cardSort as CardSortOrder;
-  if (manualSortLocked !== null) update.manualSortLocked = manualSortLocked === 'true';
-  if (shuffle !== null) update.shuffleEnabled = shuffle === 'true';
-  if (notifHour !== null) update.notificationHour = Number(notifHour);
-  if (notifMinute !== null) update.notificationMinute = Number(notifMinute);
-  if (searchField !== null) update.lastSearchField = searchField;
-  if (fsrsRetention !== null) {
-    const v = Number(fsrsRetention);
-    if (!Number.isNaN(v)) update.fsrsDesiredRetention = Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
-  }
-  if (studyHideEmpty !== null) update.studyHideEmpty = studyHideEmpty === 'true';
-  if (gradeRankingByTime !== null) update.gradeRankingByTime = gradeRankingByTime === 'true';
-  if (gradeRankingPeriod !== null && (gradeRankingPeriod === 'all' || gradeRankingPeriod === '90d' || gradeRankingPeriod === '30d' || gradeRankingPeriod === '7d')) {
-    update.gradeRankingPeriod = gradeRankingPeriod;
-  }
-  if (gradeRankingDeckIds !== null) {
-    try {
-      const parsed = JSON.parse(gradeRankingDeckIds);
-      if (Array.isArray(parsed)) update.gradeRankingDeckIds = parsed;
-    } catch { /* ignore */ }
-  }
-  if (cardTheme !== null && (CARD_THEME_NAMES as readonly string[]).includes(cardTheme)) {
-    update.cardThemePreference = cardTheme as CardThemeName;
-  }
-  if (languagePref !== null && ['system', 'ja', 'en'].includes(languagePref)) {
-    update.languagePreference = languagePref as LanguagePreference;
-    i18n.changeLanguage(resolveLanguage(languagePref as LanguagePreference));
-  }
-  if (homeFilter === 'active' || homeFilter === 'all') update.lastHomeFilter = homeFilter;
-  if (tagCardFilter === 'active' || tagCardFilter === 'all') update.lastTagCardFilter = tagCardFilter;
+  const raws = await Promise.all(SETTING_KEYS.map((k) => AsyncStorage.getItem(DEFS[k].key)));
+  const update: Partial<SettingsValues> = {};
+  SETTING_KEYS.forEach((k, i) => {
+    const raw = raws[i];
+    if (raw !== null) hydrateOne(k, raw, update);
+  });
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 }
 

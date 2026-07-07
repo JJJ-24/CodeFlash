@@ -5,7 +5,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle } from 'react-n
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
-import { useKeyCommands, KEY_PAGE_UP, KEY_PAGE_DOWN, KEY_HOME, KEY_END } from '@/lib/useKeyCommands';
+import { useKeyCommands, scrollKeySpecs } from '@/lib/useKeyCommands';
 import { useProStore } from '@/store/pro';
 
 interface ShortcutItem {
@@ -47,7 +47,8 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
   const scrollBy = (d: number) =>
     scrollRef.current?.scrollTo({ y: Math.max(0, offsetRef.current + d), animated: true });
 
-  // 表示中のキー：?（Shift+/）で閉じる、J/K・U/D・PgUp/PgDn・矢印でスクロール、Home/End で端へ。
+  // 表示中のキー：?（Shift+/）で閉じる、J/K・U/D・PgUp/PgDn・矢印でスクロール、
+  // Home/End・⇧U/⇧D で最上部/最下部へ（scrollKeySpecs の共通8spec）。
   // Esc 閉じは各画面側（常時有効な Esc フック）が担当する。ここで Esc を登録すると、内容一致の
   // ネイティブ登録仕様により、閉じる際に各画面の常時 Esc フックの Esc まで巻き添え削除してしまうため入れない。
   // 一覧表示中は各画面側がメインキーを解除しているので、ここで同じ J/K/U/D 等を登録しても衝突しない。
@@ -56,12 +57,7 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: onClose },
     { input: 'j', handler: () => scrollBy(SCROLL_STEP) },
     { input: 'k', handler: () => scrollBy(-SCROLL_STEP) },
-    { input: 'd', handler: () => scrollBy(SCROLL_STEP) },
-    { input: 'u', handler: () => scrollBy(-SCROLL_STEP) },
-    { input: KEY_PAGE_DOWN, handler: () => scrollBy(SCROLL_STEP) },
-    { input: KEY_PAGE_UP, handler: () => scrollBy(-SCROLL_STEP) },
-    { input: KEY_HOME, handler: () => scrollRef.current?.scrollTo({ y: 0, animated: true }) },
-    { input: KEY_END, handler: () => scrollRef.current?.scrollToEnd({ animated: true }) },
+    ...scrollKeySpecs({ scrollRef, scrollYRef: offsetRef, step: SCROLL_STEP }),
     ...(((Platform as any).isPad ? [] : [
       { input: KeyCommand.keyInputDownArrow, handler: () => scrollBy(SCROLL_STEP) },
       { input: KeyCommand.keyInputUpArrow, handler: () => scrollBy(-SCROLL_STEP) },

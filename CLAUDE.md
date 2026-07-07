@@ -75,7 +75,7 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 ├── theme.ts             # useThemeStore（themePreference・fontSizePreference、AsyncStorage永続化）
 ├── sync.ts              # useSyncStore（iCloud同期状態・dataRevision）
 ├── pro.ts               # useProStore（買い切り課金の Pro フラグ）
-└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastHomeFilter・lastSelectedCodeLanguage・deck/tag/cardSortOrder・shuffleEnabled・lastSearchField・fsrsDesiredRetention・studyHideEmpty・gradeRanking系・cardThemePreference・languagePreference・通知設定、AsyncStorage永続化）
+└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastHomeFilter・lastSelectedCodeLanguage・deck/tag/cardSortOrder・shuffleEnabled・lastSearchField・fsrsDesiredRetention・studyHideEmpty・gradeRanking系・cardThemePreference・languagePreference・通知設定、AsyncStorage永続化）。永続化定義は DEFS テーブル（キー・既定値・parse・persist・onApply）に一元化＝設定追加は DEFS 1エントリ＋setter 1行。**追加したら lib/settings-keys.ts（JSONエクスポート対象キー一覧）にも必ず追加する**（漏れるとエクスポート/インポートで復元されない）
 
 components/
 ├── code/

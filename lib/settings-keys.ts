@@ -13,6 +13,7 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_deck_sort',
   '@codeflash_deck_sort_locked',
   '@codeflash_tag_sort',
+  '@codeflash_tag_sort_locked',
   '@codeflash_card_sort',
   '@codeflash_manual_sort_locked',
   '@codeflash_shuffle',

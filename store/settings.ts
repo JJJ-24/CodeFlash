@@ -71,6 +71,8 @@ interface SettingsValues {
   // ホーム（デッキ一覧）「手動ソート」のドラッグ並べ替えロック（true=固定してスワイプ可）
   deckSortLocked: boolean;
   tagSortOrder: DeckSortOrder;
+  // タグ管理「手動ソート」のドラッグ並べ替えロック（true=固定してスワイプ可）
+  tagSortLocked: boolean;
   cardSortOrder: CardSortOrder;
   // カード一覧「すべて＋手動ソート」のドラッグ並べ替えロック（true=固定してスワイプ可）
   manualSortLocked: boolean;
@@ -124,6 +126,7 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   deckSortOrder: { key: '@codeflash_deck_sort', default: 'manual', parse: (r) => r as DeckSortOrder },
   deckSortLocked: { key: '@codeflash_deck_sort_locked', default: false, parse: asBool },
   tagSortOrder: { key: '@codeflash_tag_sort', default: 'manual', parse: (r) => r as DeckSortOrder },
+  tagSortLocked: { key: '@codeflash_tag_sort_locked', default: false, parse: asBool },
   cardSortOrder: { key: '@codeflash_card_sort', default: 'manual', parse: (r) => r as CardSortOrder },
   manualSortLocked: { key: '@codeflash_manual_sort_locked', default: false, parse: asBool },
   shuffleEnabled: { key: '@codeflash_shuffle', default: false, parse: asBool },
@@ -183,6 +186,7 @@ interface SettingsState extends SettingsValues {
   setDeckSortOrder: (v: DeckSortOrder) => void;
   setDeckSortLocked: (v: boolean) => void;
   setTagSortOrder: (v: DeckSortOrder) => void;
+  setTagSortLocked: (v: boolean) => void;
   setCardSortOrder: (v: CardSortOrder) => void;
   setManualSortLocked: (v: boolean) => void;
   setShuffleEnabled: (v: boolean) => void;
@@ -224,6 +228,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setDeckSortOrder: makeSetter('deckSortOrder'),
     setDeckSortLocked: makeSetter('deckSortLocked'),
     setTagSortOrder: makeSetter('tagSortOrder'),
+    setTagSortLocked: makeSetter('tagSortLocked'),
     setCardSortOrder: makeSetter('cardSortOrder'),
     setManualSortLocked: makeSetter('manualSortLocked'),
     setShuffleEnabled: makeSetter('shuffleEnabled'),

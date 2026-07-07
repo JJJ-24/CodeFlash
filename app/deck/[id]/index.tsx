@@ -570,15 +570,15 @@ export default function DeckDetailScreen() {
   const handleRowLongPress = useCallback((item: Card, drag: () => void) => {
     if (selectionModeRef.current) return;
     if (selectedFilterRef.current !== 'all') {
-      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderDisabledMessage')} /> });
       return;
     }
     if (cardSortOrderRef.current !== 'manual') {
-      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderDisabledMessageSort')} /> });
       return;
     }
     if (manualSortLockedRef.current) {
-      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderLockedMessage') });
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderLockedMessage')} /> });
       return;
     }
     drag();
@@ -946,15 +946,15 @@ export default function DeckDetailScreen() {
     if (selectionMode) return; // 選択モードでは U/D は並べ替えではない
     // 並べ替えできない状態＝長押しドラッグと同じ案内を出す（分岐順もタップと揃える）。
     if (selectedFilter !== 'all') {
-      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessage') });
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderDisabledMessage')} /> });
       return;
     }
     if (cardSortOrder !== 'manual') {
-      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderDisabledMessageSort') });
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderDisabledMessageSort')} /> });
       return;
     }
     if (manualSortLocked) {
-      setInfoModal({ title: t('card.reorderDisabledTitle'), message: t('card.reorderLockedMessage') });
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderLockedMessage')} /> });
       return;
     }
     if (focusedCardIndex === null) return;

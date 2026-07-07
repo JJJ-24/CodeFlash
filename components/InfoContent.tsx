@@ -6,6 +6,7 @@ import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 // マークアップ文字列の {{token}} を Ionicons に対応づける
 const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   menu: 'reorder-three-outline',
+  lock: 'lock-closed',
   name: 'text-outline',
   count: 'layers-outline',
   newest: 'arrow-down-outline',
@@ -99,7 +100,7 @@ export function InfoContent({ text }: Props) {
           );
         }
 
-        // 注意行 ※
+        // 注意行 ※（テキストはグレーのまま、インラインアイコンは項目行と同じ青で統一）
         if (line.startsWith('※')) {
           return (
             <Text
@@ -107,7 +108,7 @@ export function InfoContent({ text }: Props) {
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 2 }}
             >
-              {renderInline(line, theme.colors.textSecondary, theme.fontSize.sm, `n${idx}`, theme.colors.border)}
+              {renderInline(line, theme.colors.primary, theme.fontSize.sm, `n${idx}`, theme.colors.border)}
             </Text>
           );
         }

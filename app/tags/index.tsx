@@ -38,6 +38,7 @@ import type { TagWithCount } from '@/store/tags';
 const TAG_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catDisplay', items: [
     { key: 'M / ⇧M', descKey: 'shortcut.cycleSort' },
+    { key: '⌘L', descKey: 'shortcut.toggleSortLock' },
     { key: 'S',      descKey: 'shortcut.toggleSelect' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
@@ -90,7 +91,7 @@ export default function TagsScreen() {
   const savedScrollOffsetRef = useRef(0);
   const restorationEndTimeRef = useRef(0);
   const { tags, setTags, reorderTags, removeTag } = useTagStore();
-  const { keyboardShortcutsEnabled, tagSortOrder, setTagSortOrder } = useSettingsStore();
+  const { keyboardShortcutsEnabled, tagSortOrder, setTagSortOrder, tagSortLocked, setTagSortLocked } = useSettingsStore();
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
@@ -105,14 +106,17 @@ export default function TagsScreen() {
     return tags;
   }, [tags, tagSortOrder]);
 
+  // 手動ソート かつ 未ロックのときだけドラッグ並べ替えが有効。ロック中はドラッグを止めてスワイプ可にする（ホームと同方式）。
+  const tagDragActive = tagSortOrder === 'manual' && !tagSortLocked;
+
   const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, setFocusId, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
   // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
   const pendingFocusTagIdRef = useRef<string | null>(null);
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
 
-  // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート・非選択モード時のみ。フォーカスは ID 追跡で自動追従。
+  // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート（未ロック）・非選択モード時のみ。フォーカスは ID 追跡で自動追従。
   function moveTagOrder(dir: 'up' | 'down') {
-    if (tagSortOrder !== 'manual' || selectionMode || focusedTagIndex === null) return;
+    if (!tagDragActive || selectionMode || focusedTagIndex === null) return;
     const to = dir === 'up' ? focusedTagIndex - 1 : focusedTagIndex + 1;
     if (to < 0 || to >= sortedTags.length) return;
     const newOrder = [...sortedTags];
@@ -319,6 +323,8 @@ export default function TagsScreen() {
         setTagSortOrder(SORT_OPTIONS[(idx - 1 + n) % n].key);
       },
     },
+    // ⌘L = ドラッグ並べ替えロックの切替（手動ソート時のみ・ホーム/カード一覧と統一）。
+    { input: 'l', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (showColorPicker || selectionMode) return; if (tagSortOrder === 'manual') setTagSortLocked(!tagSortLocked); } },
     { input: 'b', handler: () => { if (showColorPicker) return; if (!selectionMode) router.back(); } },
     {
       input: KeyCommand.keyInputEnter,
@@ -439,12 +445,30 @@ export default function TagsScreen() {
           )}
           {!selectionMode && (
             <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t(`home.sortDesc${tagSortOrder.charAt(0).toUpperCase()}${tagSortOrder.slice(1)}`)}
+              {tagSortOrder === 'manual' && tagSortLocked
+                ? t('home.sortDescManualLocked')
+                : t(`home.sortDesc${tagSortOrder.charAt(0).toUpperCase()}${tagSortOrder.slice(1)}`)}
             </Text>
           )}
         </View>
         {!selectionMode && (
           <View style={styles.sortButtons}>
+            {/* 手動ソート時のみ表示：ドラッグ並べ替えロック（ON=固定してスワイプ可）。左端・枠なしアイコンのみ（ホームと統一）。 */}
+            {tagSortOrder === 'manual' && (
+              <Pressable
+                // paddingVertical はソートチップ（styles.sortBtn の 4）に合わせる。大きいと
+                // ロックがチップより背高になり、手動切替時に行の高さが増えて他アイコンが下にずれる。
+                style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 4, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
+                hitSlop={8}
+                onPress={() => setTagSortLocked(!tagSortLocked)}
+              >
+                <Ionicons
+                  name={tagSortLocked ? 'lock-closed' : 'lock-open-outline'}
+                  size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                  color={tagSortLocked ? theme.colors.primary : theme.colors.textSecondary}
+                />
+              </Pressable>
+            )}
             {SORT_OPTIONS.map(({ key, icon }) => {
               const active = tagSortOrder === key;
               return (
@@ -505,7 +529,7 @@ export default function TagsScreen() {
           }}
           onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
           onDragEnd={({ data }) => {
-            if (selectionMode) return;
+            if (selectionMode || !tagDragActive) return;
             reorderTags(data);
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
@@ -515,9 +539,9 @@ export default function TagsScreen() {
             const isSelected = selectedTagIds.has(item.id);
             return (
               <ScaleDecorator>
-                {/* 手動並び替え・選択モード以外で左スワイプ削除を有効化 */}
+                {/* ドラッグ並べ替えが有効なとき（手動＋未ロック）と選択モード以外で左スワイプ削除を有効化。ロック中もスワイプ可。 */}
                 <SwipeToDeleteRow
-                  enabled={!selectionMode && tagSortOrder !== 'manual'}
+                  enabled={!selectionMode && !tagDragActive}
                   onDelete={() => confirmDelete(item)}
                 >
                   <Pressable
@@ -538,7 +562,7 @@ export default function TagsScreen() {
                       if (idx !== undefined) setFocusedTagIndex(idx);
                       router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
                     }}
-                    onLongPress={!selectionMode && tagSortOrder === 'manual' ? drag : undefined}
+                    onLongPress={!selectionMode && tagDragActive ? drag : undefined}
                   >
                     {selectionMode && (
                       <Ionicons

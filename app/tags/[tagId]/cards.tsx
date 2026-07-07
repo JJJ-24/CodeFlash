@@ -2,7 +2,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -84,6 +84,9 @@ export default function TagCardsScreen() {
   const theme = useTheme();
   const lockedTopInset = useLockedTopInset();
   useRestoreStatusBar();
+  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のリストだけ有効にする
+  // （有効候補が複数あると iOS が機能を無効化するため）。
+  const isScreenFocused = useIsFocused();
   const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
@@ -451,7 +454,7 @@ export default function TagCardsScreen() {
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}
           automaticallyAdjustsScrollIndicatorInsets={false}
-          scrollsToTop={false}
+          scrollsToTop={isScreenFocused}
           ListHeaderComponent={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, marginHorizontal: 20 }}>
               <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0, marginHorizontal: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

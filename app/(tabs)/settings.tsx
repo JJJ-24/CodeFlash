@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -62,6 +63,9 @@ export default function SettingsScreen() {
   const focusActions: (() => void)[] = [proPress, ...navItems.map((n) => n.onPress)];
   const focusCount = focusActions.length;
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
+  // （有効候補が複数あると iOS が機能を無効化するため）。
+  const isScreenFocused = useIsFocused();
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
   const viewportHRef = useRef(0);
@@ -125,7 +129,7 @@ export default function SettingsScreen() {
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        scrollsToTop={false}
+        scrollsToTop={isScreenFocused}
       >
         {/* Pro プラン */}
         <Pressable

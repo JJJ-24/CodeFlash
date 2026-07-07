@@ -1,6 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { getDefaultHeaderHeight } from '@react-navigation/elements';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { setStatusBarHidden, setStatusBarStyle } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -180,6 +180,10 @@ export default function HomeScreen() {
   // ホームのデッキ絞り込み（active=有効デッキのみ / all=アーカイブ含む全デッキ）。最後の選択を永続化。
   const selectedFilter = lastHomeFilter;
   const setSelectedFilter = setLastHomeFilter;
+  // ステータスバータップで先頭へ戻す（iOS標準 scrollsToTop）用。有効な縦スクロールビューが
+  // 画面上に複数あると iOS が機能自体を無効化するため、フォーカス中の画面のリストだけ有効にする
+  // （タブ画面は非表示でもマウントされたままなので isFocused で絞る）。
+  const isScreenFocused = useIsFocused();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeckListInfo, setShowDeckListInfo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -543,7 +547,7 @@ export default function HomeScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={false}
+            scrollsToTop={isScreenFocused}
             onScrollOffsetChange={(offset) => {
               scrollOffsetRef.current = offset;
               if (

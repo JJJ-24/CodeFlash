@@ -99,6 +99,9 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        // ステータスバータップ（scrollsToTop）の候補から外す。既定 true のままだと統計画面の
+        // メイン ScrollView と候補が重複し、「先頭へ戻る」が iOS に無効化されるため。
+        scrollsToTop={false}
         contentContainerStyle={{ paddingBottom: 4, paddingRight: 12 }}
       >
         <View>

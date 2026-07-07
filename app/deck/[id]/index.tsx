@@ -2,7 +2,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -196,6 +196,9 @@ export default function DeckDetailScreen() {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(
     () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
   );
+  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のリストだけ有効にする
+  // （有効候補が複数あると iOS が機能を無効化するため）。
+  const isScreenFocused = useIsFocused();
   const lastFocusTimeRef = useRef(0);
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
@@ -1235,7 +1238,7 @@ export default function DeckDetailScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={false}
+            scrollsToTop={isScreenFocused}
             // ドラッグ autoscroll でセルが空白になりやすいので広めに描画する。
             windowSize={21}
             onScrollOffsetChange={(offset) => {
@@ -1281,7 +1284,7 @@ export default function DeckDetailScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={false}
+            scrollsToTop={isScreenFocused}
             // ドラッグしないので保持セルを減らし、並びが変わる切替を軽くする。
             windowSize={9}
             scrollEventThrottle={16}

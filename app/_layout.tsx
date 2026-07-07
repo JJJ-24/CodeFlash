@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
+import { installNavigationGuard } from '@/lib/navigationGuard';
 import { cancelAllScheduledNotifications, scheduleFromDb, updateBadgeCount } from '@/lib/notifications';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { syncNoticeText } from '@/lib/sync/errorText';
@@ -22,6 +23,7 @@ import { useSyncStore } from '@/store/sync';
 import { useThemeStore } from '@/store/theme';
 
 initializePurchases();
+installNavigationGuard();
 
 function RootStack() {
   const theme = useTheme();

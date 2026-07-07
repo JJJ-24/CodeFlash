@@ -205,9 +205,12 @@ export default function DeckDetailScreen() {
   const filterOffsetsRef = useRef<Record<FilterKey, number>>({ all: 0, learned: 0, review: 0, new: 0 });
   const prevFilterRef = useRef<FilterKey>(selectedFilter);
 
-  // J/K の折り返し（先頭↔末尾）で遠くへスクロールする間、「移動中…」ピルを出して
+  // K の折り返し（先頭→末尾）で遠くへスクロールする間、「末尾へ移動中…」ピルを出して
   // 「フリーズではない・いずれ止まる」ことを伝える。目的カードが可視になったら閉じる。
-  const [jumpPill, setJumpPill] = useState<null | 'top' | 'bottom'>(null);
+  // 末尾への折り返し限定：仮想化の逐次描画で時間がかかるのは「遠い未レンダリングの末尾」へ
+  // 向かうときだけで、先頭へはオフセット0が正確に分かるため常に一瞬＝ピル不要
+  // （出すとスクロールアニメーション中に一瞬ちらつくだけの害になる）。
+  const [jumpPill, setJumpPill] = useState(false);
   const jumpTargetIdRef = useRef<string | null>(null);
   const jumpShowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const jumpSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -218,14 +221,14 @@ export default function DeckDetailScreen() {
   function endJumpIndicator() {
     clearJumpTimers();
     jumpTargetIdRef.current = null;
-    setJumpPill(null);
+    setJumpPill(false);
   }
-  function startJumpIndicator(targetId: string, label: 'top' | 'bottom') {
+  function startJumpIndicator(targetId: string) {
     clearJumpTimers();
     jumpTargetIdRef.current = targetId;
     // 250ms 以内に到着したらピルを出さない（小さいデッキで一瞬光るのを防ぐ）
     jumpShowTimerRef.current = setTimeout(() => {
-      if (jumpTargetIdRef.current === targetId) setJumpPill(label);
+      if (jumpTargetIdRef.current === targetId) setJumpPill(true);
     }, 250);
     // 保険：万一 onViewableItemsChanged が来なくても 8 秒で閉じる
     jumpSafetyTimerRef.current = setTimeout(() => endJumpIndicator(), 8000);
@@ -931,10 +934,11 @@ export default function DeckDetailScreen() {
     focusedCardIdRef.current = newId;
     setFocusedCardIdState(newId);
     if (next !== null) {
-      // ヌルサイクルの折り返し（ci===null → 先頭/末尾へ）は遠くまでスクロールしうるので「移動中」ピルを出す。
-      // ただし目的カードが既に画面に見えている場合はスクロールが動かず onViewableItemsChanged も
-      // 発火しない（＝閉じられない）ので、最初から出さない。目的カードが可視になったら同ハンドラが閉じる。
-      if (ci === null && newId && !viewableKeysRef.current.has(newId)) startJumpIndicator(newId, next === 0 ? 'top' : 'bottom');
+      // ヌルサイクルの折り返しのうち「末尾へ」（ci===null → 最後のカード）だけ「移動中」ピルを出す
+      // （先頭へは常に一瞬なので不要）。ただし目的カードが既に画面に見えている場合はスクロールが
+      // 動かず onViewableItemsChanged も発火しない（＝閉じられない）ので、最初から出さない。
+      // 目的カードが可視になったら同ハンドラが閉じる。
+      if (ci === null && next === displayedCards.length - 1 && newId && !viewableKeysRef.current.has(newId)) startJumpIndicator(newId);
       listRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
     }
   }
@@ -1317,7 +1321,7 @@ export default function DeckDetailScreen() {
           <View style={[styles.jumpPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <ActivityIndicator size="small" color={theme.colors.primary} />
             <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {jumpPill === 'bottom' ? t('card.jumpingToBottom') : t('card.jumpingToTop')}
+              {t('card.jumpingToBottom')}
             </Text>
           </View>
         </View>

@@ -132,7 +132,6 @@
     "reorderDisabledMessageSort": "{{menu}} モードにすると並べ替えできます。",
     "reorderLockedMessage": "並べ替えロック中です。 {{lock}} をタップして解除できます。\nロック中はスワイプ操作も可能です。",
     "sortDescManualLocked": "並べ替えロック中",
-    "jumpingToTop": "先頭へ移動中…",
     "jumpingToBottom": "末尾へ移動中…",
     "archivedPill": "アーカイブしました",
     "unarchivedPill": "アーカイブを解除しました",

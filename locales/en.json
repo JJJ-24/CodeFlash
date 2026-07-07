@@ -132,7 +132,6 @@
     "reorderDisabledMessageSort": "Switch to {{menu}} mode to reorder.",
     "reorderLockedMessage": "Reordering is locked. Tap {{lock}} to unlock.\nSwipe actions remain available while locked.",
     "sortDescManualLocked": "Reorder locked",
-    "jumpingToTop": "Jumping to top…",
     "jumpingToBottom": "Jumping to bottom…",
     "archivedPill": "Archived",
     "unarchivedPill": "Unarchived",

@@ -1037,7 +1037,6 @@ export default function StatsScreen() {
       const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter);
       setGradeBlockCards(cards);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db]);
 
   useFocusEffect(

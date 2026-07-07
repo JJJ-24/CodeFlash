@@ -1,21 +1,19 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { constants as KeyCommand } from 'react-native-key-command';
 
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
+import { FormBottomBar } from '@/components/FormBottomBar';
+import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { CARD_EDITOR_SECTIONS_EDIT, CARD_EDITOR_SECTIONS_SORT, CARD_EDITOR_SECTIONS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { createCard } from '@/lib/database/cards';
@@ -49,9 +47,7 @@ export default function NewCardScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
-  const theme = useTheme();
   useRestoreStatusBar();
-  const lockedTopInset = useLockedTopInset();
   const { width: screenWidth } = useWindowDimensions();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   useDismissKeyboardOnLeave();
@@ -60,7 +56,6 @@ export default function NewCardScreen() {
   const { decks, updateDeck } = useDeckStore();
   const currentDeck = decks.find((d) => d.id === deckId);
   const editorRef = useRef<BlockEditorRef>(null);
-  const { bottom: bottomInset } = useSafeAreaInsets();
   const [saving, setSaving] = useState(false);
   const [frontEmpty, setFrontEmpty] = useState(true);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
@@ -128,40 +123,20 @@ export default function NewCardScreen() {
 
   return (
     <>
-      {/* fullScreenModal の標準ヘッダーはステータスバー inset に追従して縮むため、検索画面と同じ
-          高さ固定のカスタムヘッダー（useLockedTopInset）にする。表示・色は useRestoreStatusBar が担当。 */}
+      {/* 標準ヘッダーは WebView がステータスバーを隠すと縮むため、自前固定ヘッダーを使う（詳細は ModalFormHeader）。 */}
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
-        <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
-            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
-              <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
-            </Pressable>
-            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }} pointerEvents="box-none">
-              <Pressable
-                onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
-              >
-                <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.new')}
-                </Text>
-                {keyboardShortcutsEnabled && (
-                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-                )}
-              </Pressable>
-            </View>
-            <View style={{ flex: 1 }} />
-            <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
-              <Ionicons name="checkmark-sharp" size={26} color={saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary} />
-            </Pressable>
-          </View>
-        </View>
+        <ModalFormHeader
+          title={editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.new')}
+          onClose={handleClose}
+          onSave={() => editorRef.current?.save()}
+          canSave={!(saving || frontEmpty)}
+          showKeyboardIcon={keyboardShortcutsEnabled}
+          onTitlePress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+          titleMaxWidth={screenWidth * 0.5}
+        />
         <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} deckSqlInit={currentDeck?.sqlInit} onCancel={handleClose} onShowShortcuts={() => setShowShortcutsModal((v) => !v)} onModeChange={setEditorMode} suspendKeys={blockingModalOpen} />
-        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
-            <Ionicons name="checkmark-sharp" size={26} color="#FFF" />
-          </TouchableOpacity>
-        </View>
+        <FormBottomBar onSave={() => editorRef.current?.save()} saveDisabled={saving || frontEmpty} horizontalPadding={16} />
       </View>
       <ShortcutsModal
         visible={showShortcutsModal}
@@ -175,18 +150,11 @@ export default function NewCardScreen() {
           : NEW_SECTIONS_EDIT
         ).map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
-      <ConfirmModal
+      <DiscardConfirmModal
         visible={showDiscardModal}
-        message={t('common.discardChanges')}
-        actions={!frontEmpty
-          ? [
-              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); editorRef.current?.save(); } },
-              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); } },
-            ]
-          : [
-              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); } },
-            ]
-        }
+        canSave={!frontEmpty}
+        onSave={() => { setShowDiscardModal(false); editorRef.current?.save(); }}
+        onDiscard={() => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); }}
         onClose={() => setShowDiscardModal(false)}
       />
     </>
@@ -195,19 +163,4 @@ export default function NewCardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  bottomBar: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
 });

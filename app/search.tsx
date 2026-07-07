@@ -24,7 +24,7 @@ import { getCardPreview } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
@@ -493,18 +493,13 @@ export default function SearchScreen() {
   // 多重発火・モーダル側スクロールキーとの相互削除を防ぐ。一覧の Esc 閉じは ShortcutsModal が担当）。
   ], !deckPickerVisible && !tagPickerVisible && !showShortcutsModal);
 
-  // ?（Shift+/）= ショートカット一覧を開く。閉じる/トグルは ShortcutsModal 側が担当。
-  // 一覧表示中は登録を外す（= モーダル側の ?/解除と同一内容コマンドが共存して相互削除されるのを防ぐ。
-  // 閉じると再登録され、再表示できる）。入力欄フォーカス中は TextInput が消費するため発火しない。
-  useKeyCommands([
-    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; setShowShortcutsModal(true); } },
-  ], !showShortcutsModal);
-
-  // 一覧表示中のみ有効な Esc / Return 閉じ（メイン配列を解除している間の分を補う。メイン側とは排他）。
-  useKeyCommands([
-    { input: KeyCommand.keyInputEscape, handler: () => setShowShortcutsModal(false) },
-    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
-  ], showShortcutsModal);
+  // ?（Shift+/）= ショートカット一覧を開く／表示中は Esc・Return で閉じる（共通フック）。
+  // 入力欄フォーカス中は TextInput が消費するため発火しない。
+  useShortcutsToggleKeys(
+    showShortcutsModal,
+    () => { if (overlayOpen()) return; setShowShortcutsModal(true); },
+    () => setShowShortcutsModal(false),
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

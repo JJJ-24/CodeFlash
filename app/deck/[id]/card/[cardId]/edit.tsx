@@ -1,19 +1,18 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
+import { FormBottomBar } from '@/components/FormBottomBar';
+import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
@@ -33,13 +32,11 @@ export default function EditCardScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
-  const { bottom: bottomInset } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { updateCard: updateStore, removeCard, markDuplicated } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
   const theme = useTheme();
   useRestoreStatusBar();
-  const lockedTopInset = useLockedTopInset();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   useDismissKeyboardOnLeave();
 
@@ -201,34 +198,18 @@ export default function EditCardScreen() {
 
   return (
     <>
-      {/* fullScreenModal の標準ヘッダーはステータスバー inset に追従して縮むため、検索画面と同じ
-          高さ固定のカスタムヘッダー（useLockedTopInset）にする。表示・色は useRestoreStatusBar が担当。 */}
+      {/* 標準ヘッダーは WebView がステータスバーを隠すと縮むため、自前固定ヘッダーを使う（詳細は ModalFormHeader）。 */}
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
-        <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
-            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
-              <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
-            </Pressable>
-            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }} pointerEvents="box-none">
-              <Pressable
-                onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: screenWidth * 0.5 }}
-              >
-                <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, flexShrink: 1 }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {(editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.edit')) + (copied === '1' ? t('card.copySuffix') : '')}
-                </Text>
-                {keyboardShortcutsEnabled && (
-                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-                )}
-              </Pressable>
-            </View>
-            <View style={{ flex: 1 }} />
-            <Pressable onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
-              <Ionicons name="checkmark-sharp" size={26} color={saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary} />
-            </Pressable>
-          </View>
-        </View>
+        <ModalFormHeader
+          title={(editorMode === 'sort' ? t('editor.sortModeLabel') : editorMode === 'preview' ? t('editor.previewModeLabel') : t('card.edit')) + (copied === '1' ? t('card.copySuffix') : '')}
+          onClose={handleClose}
+          onSave={() => editorRef.current?.save()}
+          canSave={!(saving || frontEmpty)}
+          showKeyboardIcon={keyboardShortcutsEnabled}
+          onTitlePress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+          titleMaxWidth={screenWidth * 0.5}
+        />
         <BlockEditor
           ref={editorRef}
           initialData={{
@@ -254,21 +235,14 @@ export default function EditCardScreen() {
           onArchivedChange={setArchived}
           suspendKeys={blockingModalOpen}
         />
-        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={confirmDelete}>
-            <Ionicons name="trash-outline" size={26} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]}
-            onPress={handleDuplicate}
-            disabled={saving || frontEmpty}
-          >
-            <Ionicons name="copy-outline" size={26} color={saving || frontEmpty ? theme.colors.textTertiary : theme.colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, (saving || frontEmpty) && styles.actionBtnDisabled]} onPress={() => editorRef.current?.save()} disabled={saving || frontEmpty}>
-            <Ionicons name="checkmark-sharp" size={26} color="#FFF" />
-          </TouchableOpacity>
-        </View>
+        <FormBottomBar
+          onSave={() => editorRef.current?.save()}
+          saveDisabled={saving || frontEmpty}
+          onDelete={confirmDelete}
+          onDuplicate={handleDuplicate}
+          duplicateDisabled={saving || frontEmpty}
+          horizontalPadding={16}
+        />
       </View>
       <ShortcutsModal
         visible={showShortcutsModal}
@@ -288,18 +262,11 @@ export default function EditCardScreen() {
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
       />
-      <ConfirmModal
+      <DiscardConfirmModal
         visible={showDiscardModal}
-        message={t('common.discardChanges')}
-        actions={!frontEmpty
-          ? [
-              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); editorRef.current?.save(); } },
-              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); } },
-            ]
-          : [
-              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); } },
-            ]
-        }
+        canSave={!frontEmpty}
+        onSave={() => { setShowDiscardModal(false); editorRef.current?.save(); }}
+        onDiscard={() => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); }}
         onClose={() => setShowDiscardModal(false)}
       />
     </>
@@ -308,20 +275,4 @@ export default function EditCardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  bottomBar: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  actionBtnOutline: { borderWidth: 1.5 },
-  actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
 });

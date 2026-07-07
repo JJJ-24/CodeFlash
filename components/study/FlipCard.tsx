@@ -60,7 +60,6 @@ export const FlipCard = forwardRef<FlipCardRef, Props>(
       if (!suppressedRef.current) onFlip();
     }, [onFlip, suppressedRef]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const tapGesture = useMemo(
       () => Gesture.Tap().maxDistance(10).onEnd(() => runOnJS(handleTap)()),
       [handleTap]

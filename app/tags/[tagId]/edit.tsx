@@ -5,27 +5,24 @@ import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
   Keyboard,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
+import { FormBottomBar } from '@/components/FormBottomBar';
+import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { resolveTagColor, TAG_THEME_COLOR, TAG_MONO_COLOR } from '@/lib/tagColors';
 import { TagColorPicker } from '@/components/TagColorPicker';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
-import { deleteKeySpecs, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
@@ -55,11 +52,9 @@ export default function EditTagScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   useRestoreStatusBar();
-  const lockedTopInset = useLockedTopInset();
   const { tags, updateTag: updateStore, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  const { bottom: bottomInset } = useSafeAreaInsets();
   useDismissKeyboardOnLeave();
 
   const existingTag = tags.find((t) => t.id === tagId);
@@ -85,7 +80,6 @@ export default function EditTagScreen() {
   const editingRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
-  const SCROLL_STEP = 240;
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }
@@ -100,10 +94,6 @@ export default function EditTagScreen() {
     setColor(cycle[(i + dir + n) % n]);
   }
 
-  function scrollBy(delta: number) {
-    scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
-  }
-
   // 034: ハードキーボードショートカット。文字キーはテキスト欄フォーカス中は入力に消費される（住み分け）。
   // 削除確認/破棄確認モーダル表示中は親キーを無効化。
   const subModalOpen = () => showDeleteModal || showDiscardModal;
@@ -115,16 +105,8 @@ export default function EditTagScreen() {
     { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
-    // 画面スクロール。
-    { input: 'u', handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
-    { input: 'd', handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
-    { input: KEY_PAGE_UP, handler: () => { if (subModalOpen()) return; scrollBy(-SCROLL_STEP); } },
-    { input: KEY_PAGE_DOWN, handler: () => { if (subModalOpen()) return; scrollBy(SCROLL_STEP); } },
-    { input: KEY_HOME, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
-    { input: KEY_END, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
-    // Home/End の無いキーボード向け：Shift+U=最上部 / Shift+D=最下部。
-    { input: 'u', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollTo({ y: 0, animated: true }); } },
-    { input: 'd', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; scrollRef.current?.scrollToEnd({ animated: true }); } },
+    // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
+    ...scrollKeySpecs({ scrollRef, scrollYRef, guard: subModalOpen }),
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
@@ -137,16 +119,12 @@ export default function EditTagScreen() {
   // 一覧の Esc/Return 閉じは下の排他フックが担当）。
   ], !showShortcutsModal);
 
-  // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当。表示中は登録を外す）。
-  useKeyCommands([
-    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowShortcutsModal(true); } },
-  ], !showShortcutsModal);
-
-  // 一覧表示中のみ有効な Esc / Return 閉じ（メイン配列を解除している間の分を補う。メイン側とは排他）。
-  useKeyCommands([
-    { input: KeyCommand.keyInputEscape, handler: () => setShowShortcutsModal(false) },
-    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
-  ], showShortcutsModal);
+  // ?（Shift+/）= ショートカット一覧を開く／表示中は Esc・Return で閉じる（共通フック）。
+  useShortcutsToggleKeys(
+    showShortcutsModal,
+    () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowShortcutsModal(true); },
+    () => setShowShortcutsModal(false),
+  );
 
   async function handleSave() {
     if (!existingTag) return;
@@ -180,32 +158,17 @@ export default function EditTagScreen() {
 
   return (
     <>
-      {/* fullScreenModal の標準ヘッダーはステータスバー inset に追従して縮むため、検索画面と同じ
-          高さ固定のカスタムヘッダー（useLockedTopInset）にする。表示・色は useRestoreStatusBar が担当。 */}
+      {/* 標準ヘッダーは WebView がステータスバーを隠すと縮むため、自前固定ヘッダーを使う（詳細は ModalFormHeader）。 */}
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
-        <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
-            <Pressable onPress={handleClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
-              <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
-            </Pressable>
-            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }} pointerEvents="box-none">
-              <Pressable
-                onPress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-              >
-                <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tag.edit')}</Text>
-                {keyboardShortcutsEnabled && (
-                  <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-                )}
-              </Pressable>
-            </View>
-            <View style={{ flex: 1 }} />
-            <Pressable onPress={handleSave} disabled={!canSave} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
-              <Ionicons name="checkmark-sharp" size={26} color={canSave ? theme.colors.primary : theme.colors.textTertiary} />
-            </Pressable>
-          </View>
-        </View>
+        <ModalFormHeader
+          title={t('tag.edit')}
+          onClose={handleClose}
+          onSave={handleSave}
+          canSave={canSave}
+          showKeyboardIcon={keyboardShortcutsEnabled}
+          onTitlePress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+        />
         <ScrollView
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
@@ -257,21 +220,7 @@ export default function EditTagScreen() {
           </View>
         </ScrollView>
 
-        <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]}
-            onPress={confirmDelete}
-          >
-            <Ionicons name="trash-outline" size={26} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: theme.colors.primary }, !canSave && styles.actionBtnDisabled]}
-            onPress={handleSave}
-            disabled={!canSave}
-          >
-            <Ionicons name="checkmark-sharp" size={26} color="#FFF" />
-          </TouchableOpacity>
-        </View>
+        <FormBottomBar onSave={handleSave} saveDisabled={!canSave} onDelete={confirmDelete} />
       </View>
       <ConfirmDeleteModal
         visible={showDeleteModal}
@@ -279,18 +228,11 @@ export default function EditTagScreen() {
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
       />
-      <ConfirmModal
+      <DiscardConfirmModal
         visible={showDiscardModal}
-        message={t('common.discardChanges')}
-        actions={canSave
-          ? [
-              { label: t('common.save'), onPress: () => { setShowDiscardModal(false); handleSave(); } },
-              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
-            ]
-          : [
-              { label: t('common.discard'), destructive: true, onPress: () => { setShowDiscardModal(false); router.back(); } },
-            ]
-        }
+        canSave={canSave}
+        onSave={() => { setShowDiscardModal(false); handleSave(); }}
+        onDiscard={() => { setShowDiscardModal(false); router.back(); }}
         onClose={() => setShowDiscardModal(false)}
       />
       <ShortcutsModal
@@ -313,21 +255,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  colorCell: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  colorCellSelected: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
   preview: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,19 +264,4 @@ const styles = StyleSheet.create({
   },
   previewDot: { width: 14, height: 14, borderRadius: 7 },
   previewName: { flex: 1 },
-  bottomBar: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  actionBtnDisabled: { opacity: 0.5 },
-  actionBtnTextLight: { fontWeight: '700', color: '#FFF' },
 });

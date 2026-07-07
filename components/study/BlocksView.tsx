@@ -82,7 +82,6 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     const base = scrollBaseYRef?.current ?? 0;
     const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
     const blockH = blockHeights.current[blockIdx] ?? 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (scrollRef.current as any).measure?.((
       _x: number, _y: number, _w: number, svH: number, _pageX: number, pageY: number
     ) => {
@@ -217,13 +216,11 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       paddingVertical: 4,
       marginVertical: 4,
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [theme]);
 
   const linkRule = useMemo(() => ({
     // リンクはインラインの Text として描画する（Pressable=View だとテキストの流れを崩して
     // 表示がズレるため）。本文と同じフォントサイズで青字下線にし、長押しで開く。
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     link: (node: any, children: any) => (
       <Text
         key={node.key}
@@ -234,7 +231,6 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
         {children}
       </Text>
     ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     image: (node: any) => (
       <Image
         key={node.key}
@@ -246,7 +242,6 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     ),
     // ハイライト（==文字== / ==g|文字== / ==p|文字==）。node.attributes.hl（g/p、無しは黄）で
     // 背景色を選ぶ。背景色のみ指定し文字色は親から継承させる。
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mark: (node: any, children: any) => {
       const hl = HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'];
       return <Text key={node.key} style={{ backgroundColor: hl[(node.attributes?.hl as 'g' | 'p') ?? 'y'] ?? hl.y }}>{children}</Text>;

@@ -62,7 +62,7 @@ lib/
 ├── donut.ts             # ドーナツグラフの定数（DONUT_SIZE 等）とパス計算（donutArcPath）
 ├── cardPreview.ts       # getCardPreview()：ブロック配列からプレビューテキストを生成
 ├── cardEditorShortcuts.ts  # CARD_EDITOR_SHORTCUTS_EDIT / _SORT の定義（ShortcutsModal 用）
-├── useKeyCommands.ts    # ネイティブ UIKeyCommand（react-native-key-command）でハードキーを受ける共通フック（隠しTextInput不使用・034）
+├── useKeyCommands.ts    # ネイティブ UIKeyCommand（react-native-key-command）でハードキーを受ける共通フック（隠しTextInput不使用・034）。deleteKeySpecs（Backspace/Delete）・scrollKeySpecs（U/D・PgUp/PgDn・Home/End・⇧U/⇧D の8spec生成）・useShortcutsToggleKeys（?で開く/表示中Esc・Returnで閉じる）もここ
 ├── study/
 │   └── extractLinks.ts  # カードブロックからリンクを抽出（学習画面 L キー = リンク一覧用）
 └── ...
@@ -92,6 +92,9 @@ components/
 ├── DeckIcon.tsx            # デッキの色付きアイコン（iconName + colorHex、未設定は primary）
 ├── IconPickerModal.tsx     # デッキアイコン選択モーダル
 ├── SwipeToDeleteRow.tsx    # 左スワイプで [アーカイブ/解除][削除] を出す共通ラッパー（onArchive は任意）
+├── ModalFormHeader.tsx     # 入力系モーダル（デッキ/タグ/カードの新規・編集6画面）共通の自前固定ヘッダー（×・中央タイトル＋キーボードアイコン・✓。useLockedTopInset 内蔵）
+├── DiscardConfirmModal.tsx # 「変更を破棄しますか？」確認（保存/破棄 actions。ConfirmModal のラッパー）
+├── FormBottomBar.tsx       # 入力系モーダル共通の底部バー（削除?・複製?・保存。アイコンのみ）
 └── EmptyState.tsx          # 空状態表示（アイコン＋タイトル＋サブタイトル）
 
 hooks/
@@ -159,7 +162,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - 高さの固定は `lib/useLockedTopInset.ts` の `useLockedTopInset()`（観測した最大 `insets.top` を保持＝縮まない・上方向にだけ自己修復）を使う。旧 `initialTopInsetRef = useRef(insets.top)` はマウント時に過小値を掴むと縮んだままになるため置換済み（`height: lockedTopInset + 44`）。
 - 戻るボタンには 350ms ガード（モーダルを閉じた直後の誤タップ防止）
 
-**入力系モーダルは必ず自前の固定ヘッダーにする（標準ヘッダー禁止）**：デッキ/カード/タグの新規・編集6画面（`deck/new`・`deck/[id]/edit`・`deck/[id]/card/new`・`deck/[id]/card/[cardId]/edit`・`tags/new`・`tags/[tagId]/edit`）は `presentation: 'fullScreenModal'` だが、**標準（native-stack）ヘッダーではなく `headerShown: false` ＋ `useLockedTopInset` の自前固定ヘッダー**にしている。理由は、コード実行 WebView が iOS ステータスバーを隠すと、標準ヘッダーは高さが status bar inset に追従して**縮む**うえ、**ネイティブのバーボタンのホバー/ハイライトのカプセルが横長の楕円に変形する**（保存ボタンの丸枠がタイトルまで伸びる）ため。自前ヘッダー（ただの `Pressable`＋`Ionicons`）ならネイティブのバーボタンが無いので、縮み・楕円変形ともに原理的に発生しない。詳細は [[project_statusbar-header-inset-ipad]]。**新しい入力系モーダルを追加するときも同じ自前ヘッダーにすること**（標準ヘッダーで追加するとその画面だけ再発する）。
+**入力系モーダルは必ず自前の固定ヘッダーにする（標準ヘッダー禁止）**：デッキ/カード/タグの新規・編集6画面（`deck/new`・`deck/[id]/edit`・`deck/[id]/card/new`・`deck/[id]/card/[cardId]/edit`・`tags/new`・`tags/[tagId]/edit`）は `presentation: 'fullScreenModal'` だが、**標準（native-stack）ヘッダーではなく `headerShown: false` ＋ `useLockedTopInset` の自前固定ヘッダー**にしている。理由は、コード実行 WebView が iOS ステータスバーを隠すと、標準ヘッダーは高さが status bar inset に追従して**縮む**うえ、**ネイティブのバーボタンのホバー/ハイライトのカプセルが横長の楕円に変形する**（保存ボタンの丸枠がタイトルまで伸びる）ため。自前ヘッダー（ただの `Pressable`＋`Ionicons`）ならネイティブのバーボタンが無いので、縮み・楕円変形ともに原理的に発生しない。詳細は [[project_statusbar-header-inset-ipad]]。**新しい入力系モーダルを追加するときも同じ自前ヘッダーにすること**（標準ヘッダーで追加するとその画面だけ再発する）。この自前ヘッダーは **`components/ModalFormHeader.tsx` に共通化済み**（底部バーは `FormBottomBar`・破棄確認は `DiscardConfirmModal`）なので、新規追加時はこれらを使う。
   - 落とし穴：モーダルで `headerShown` を画面側で動的に `true→false` すると remount ループ（`Maximum update depth exceeded`）になる。**必ず `_layout.tsx` の各 `Stack.Screen` 登録に静的に `headerShown: false` を付ける**（画面側の `<Stack.Screen options={{ headerShown:false }} />` は同値の再指定にとどめる）。
 - `presentation: 'modal'`（`paywall` など純粋な情報/購入モーダル）は標準ヘッダーのままでよい（テキスト入力もコード実行 WebView も無いため）。
 

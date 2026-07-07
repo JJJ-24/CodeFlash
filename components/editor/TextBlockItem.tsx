@@ -233,12 +233,10 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         marginVertical: 4,
       },
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, isPreview]);
 
   const highlightColors = HIGHLIGHT_COLORS[theme.dark ? 'dark' : 'light'];
   const linkRule = useMemo(() => ({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     link: (node: any, children: any) => (
       <Pressable
         key={node.key}
@@ -250,7 +248,6 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     ),
     // ハイライト（==文字== / ==g|文字== / ==p|文字==）。node.attributes.hl（g/p、無しは黄）で
     // 背景色を選ぶ。背景色のみ指定し文字色は親から継承させる。
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mark: (node: any, children: any) => (
       <Text key={node.key} style={{ backgroundColor: highlightColors[(node.attributes?.hl as 'g' | 'p') ?? 'y'] ?? highlightColors.y }}>{children}</Text>
     ),

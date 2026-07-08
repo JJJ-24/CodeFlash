@@ -398,18 +398,20 @@ export default function TagCardsScreen() {
         </View>
       </View>
 
-      <Pressable style={{ flex: 1 }} onPress={() => setFocusedCardIndex(null)}>
+      {/* 余白タップ解除は固定部（フィルター行）とリスト内フッターに分けて配置。
+          リストの祖先 Pressable はスクロール不能の原因になる（統計参照）。 */}
+      <View style={{ flex: 1 }}>
       {cards.length === 0 ? (
-        <View style={styles.empty}>
+        <Pressable style={styles.empty} onPress={() => setFocusedCardIndex(null)}>
           <Ionicons name="card-outline" size={64} color={theme.colors.iconSubtle} />
           <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('deck.noCards')}
           </Text>
-        </View>
+        </Pressable>
       ) : (
       <>
         {/* フィルター：すべて（全件・青数字）／有効（アーカイブ除外・グレー数字） */}
-        <View style={styles.filterRow}>
+        <Pressable style={styles.filterRow} onPress={() => setFocusedCardIndex(null)}>
           <Pressable
             style={[
               styles.statItem,
@@ -434,7 +436,7 @@ export default function TagCardsScreen() {
             <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeCardCount).length) }]}>{activeCardCount}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.active')}</Text>
           </Pressable>
-        </View>
+        </Pressable>
         {displayedCards.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="archive-outline" size={64} color={theme.colors.iconSubtle} />
@@ -557,7 +559,7 @@ export default function TagCardsScreen() {
           </Pressable>
         </>
       )}
-      </Pressable>
+      </View>
 
       {selectionMode && (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>

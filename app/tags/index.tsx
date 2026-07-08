@@ -423,15 +423,17 @@ export default function TagsScreen() {
         </View>
       </View>
 
-      <Pressable style={{ flex: 1 }} onPress={() => setFocusedTagIndex(null)}>
+      <View style={{ flex: 1 }}>
       {/* 総数ブロック（他画面のフィルターブロックと統一）。タグにアーカイブ概念は
-          無いため「すべて」のみの非操作の数値表示にする。 */}
-      <View style={styles.filterRow}>
+          無いため「すべて」のみの非操作の数値表示にする。
+          余白タップでフォーカス解除は、リストの祖先 Pressable だと押せる要素のない場所からの
+          ドラッグでスクロールが始まらない不具合があるため、固定部とリスト内フッターに分ける（統計参照）。 */}
+      <Pressable style={styles.filterRow} onPress={() => setFocusedTagIndex(null)}>
         <View style={[styles.statItem, { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, margin: 0, borderWidth: 2, borderColor: theme.colors.primary }]}>
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(tags.length).length) }]}>{tags.length}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
         </View>
-      </View>
+      </Pressable>
       <View style={[styles.sectionRow, { paddingHorizontal: 16, paddingTop: 16, backgroundColor: theme.colors.background }]}>
         <View style={styles.sectionTitleCol}>
           {selectionMode ? (
@@ -616,7 +618,7 @@ export default function TagsScreen() {
           <Ionicons name="add" size={28} color="#FFF" />
         </Pressable>
       )}
-      </Pressable>
+      </View>
 
       {/* 選択モードバー */}
       {selectionMode && (

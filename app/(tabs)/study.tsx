@@ -427,9 +427,11 @@ export default function StudyScreen() {
           <ActivityIndicator color={theme.colors.primary} />
         </View>
       ) : (
-      <Pressable style={{ flex: 1 }} onPress={clearFocus}>
-      {/* フィルターブロック */}
-      <View style={styles.filterSection}>
+      <View style={{ flex: 1 }}>
+      {/* フィルターブロック。余白タップでフォーカス解除は、リストの祖先 Pressable だと
+          押せる要素のない場所からのドラッグでスクロールが始まらない不具合があるため、
+          固定部（ここ）とリスト内フッターに分けて配置する（統計参照）。 */}
+      <Pressable style={styles.filterSection} onPress={clearFocus}>
         <View style={styles.summaryRow}>
           {filterBlocks.map((block) => {
             const selected = activeFilter === block.key;
@@ -501,7 +503,7 @@ export default function StudyScreen() {
             />
           </Pressable>
         </View>
-      </View>
+      </Pressable>
 
       {/* タブバー */}
       <View style={[styles.tabBar, { borderBottomColor: theme.colors.border }]}>
@@ -664,7 +666,7 @@ export default function StudyScreen() {
         )}
       </View>
 
-      </Pressable>
+      </View>
       )}
 
       <ShortcutsModal

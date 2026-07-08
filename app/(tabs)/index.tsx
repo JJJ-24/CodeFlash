@@ -499,10 +499,13 @@ export default function HomeScreen() {
           )}
         </View>
       </View>
-      <Pressable style={{ flex: 1 }} onPress={() => setFocusedDeckIndex(null)}>
-        <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>
+      {/* 余白タップでフォーカス解除。Pressable を ScrollView/FlatList の祖先に置くと
+          押せる要素のない場所からのドラッグでスクロールが始まらない（統計のフリーズの原因）ため、
+          固定ヘッダー部とリスト内（フッター）に分けて配置する。 */}
+      <View style={{ flex: 1 }}>
+        <Pressable style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]} onPress={() => setFocusedDeckIndex(null)}>
           {StatsHeader}
-        </View>
+        </Pressable>
         <View style={{ flex: 1 }}>
         {decks.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -600,7 +603,7 @@ export default function HomeScreen() {
         >
           <Ionicons name="add" size={30} color="#FFF" />
         </TouchableOpacity>
-      </Pressable>
+      </View>
       <InfoModal
         visible={showDeckListInfo}
         title={t('home.title')}

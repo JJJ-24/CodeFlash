@@ -1215,7 +1215,9 @@ export default function DeckDetailScreen() {
 
       </View>
 
-      <Pressable style={{ flex: 1 }} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
+      {/* 余白タップ解除はリスト内フッター（ListFooterComponent）が担う。ここを Pressable にすると
+          押せる要素のない場所からのドラッグでスクロールが始まらない不具合がある（統計参照）。 */}
+      <View style={{ flex: 1 }}>
         {/* DraggableFlatList は「ドラッグ並べ替えが実際に効く＝すべて＋手動」のときだけ使う。
             それ以外（新しい/古い順、または手動でも 済み/復習/新規 フィルター）は素の FlatList。
             理由: DraggableFlatList はセルのジェスチャー処理が横スワイプ（削除/アーカイブ）を奪うため、
@@ -1318,7 +1320,7 @@ export default function DeckDetailScreen() {
             viewabilityConfig={viewabilityConfigRef.current}
           />
         )}
-      </Pressable>
+      </View>
 
       {jumpPill && (
         <View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' }}>

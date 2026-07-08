@@ -119,20 +119,22 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* 余白タップでフォーカス解除（ホーム等と同じパターン）。カード等の操作要素が先にタップを消費する */}
-      <Pressable style={{ flex: 1 }} onPress={() => setFocusedIndex(null)}>
       <ScrollView
         ref={scrollRef}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
         onLayout={(e) => { viewportHRef.current = e.nativeEvent.layout.height; }}
         scrollEventThrottle={16}
         style={{ flex: 1, backgroundColor: theme.colors.background }}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={{ flexGrow: 1 }}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
         scrollsToTop={isScreenFocused}
       >
+        {/* 余白タップでフォーカス解除。Pressable は必ずスクロール内容の「内側」に置く
+            （ScrollView の祖先に置くと押せる要素のない場所からのドラッグでスクロールが始まらない。
+            詳細は stats.tsx の同コメント参照） */}
+        <Pressable style={[styles.container, { flexGrow: 1 }]} onPress={() => setFocusedIndex(null)}>
         {/* Pro プラン */}
         <Pressable
           style={[styles.card, styles.proCard, { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: focusedIndex === 0 ? theme.colors.primary : 'transparent' }]}
@@ -183,8 +185,8 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
           </Pressable>
         ))}
+        </Pressable>
       </ScrollView>
-      </Pressable>
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}

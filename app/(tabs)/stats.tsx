@@ -1486,7 +1486,7 @@ export default function StatsScreen() {
         const statValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : maxDigits);
         const statBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
         return (
-      <View style={[styles.summarySection, { backgroundColor: theme.colors.background }]}>
+      <Pressable style={[styles.summarySection, { backgroundColor: theme.colors.background }]} onPress={() => setFocusedItem(null)}>
         <View style={styles.summaryRow}>
         <Pressable
           style={[
@@ -1538,15 +1538,13 @@ export default function StatsScreen() {
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.new')}</Text>
         </Pressable>
         </View>
-      </View>
+      </Pressable>
         );
       })()}
       {/* 余白タップでフォーカス解除（ホーム等と同じパターン）。セクション内の操作要素が先にタップを消費する */}
-      <Pressable style={{ flex: 1 }} onPress={() => setFocusedItem(null)}>
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
@@ -1555,6 +1553,11 @@ export default function StatsScreen() {
         onScroll={(e) => { currentScrollYRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={32}
       >
+      {/* 余白タップでフォーカス解除。ScrollView の「外側」に Pressable を置くと、Fabric の
+          touchesShouldCancelInContentView が「祖先が JS レスポンダ」判定でスクロール開始を拒否し、
+          押せる要素のない場所（下部余白等）からのドラッグが無反応＝フリーズする。
+          スクロール内容の「内側」に置けば祖先にならず、スクロールと共存できる。 */}
+      <Pressable style={styles.content} onPress={() => setFocusedItem(null)}>
 
       {/* 7日間バーチャート */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
@@ -1972,9 +1975,8 @@ export default function StatsScreen() {
           </Pressable>
         )}
       </View>
-
-      </ScrollView>
       </Pressable>
+      </ScrollView>
       <DonutSheet
         visible={activeSheet !== null}
         title={sheetTitle}

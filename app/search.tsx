@@ -537,8 +537,10 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      {/* 余白タップでフォーカス解除（ホーム等と同じパターン）。入力欄・チップ・行の操作要素が先にタップを消費する */}
-      <Pressable style={{ flex: 1 }} onPress={() => setFocusedIndex(null)}>
+      {/* 余白タップでフォーカス解除。Pressable をリスト（FlatList）の祖先に置くと、
+          押せる要素のない場所からのドラッグでスクロールが始まらない不具合があるため、
+          固定部（タイトル〜件数）とリスト内フッターに分けて配置する（統計参照）。 */}
+      <Pressable onPress={() => setFocusedIndex(null)}>
       {/* タイトル行: 「カード検索」＋フィルターアイコン */}
       <View style={styles.titleRow}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -705,13 +707,15 @@ export default function SearchScreen() {
         </Text>
       )}
 
+      </Pressable>
+
       {/* 結果 */}
       {searched && results.length === 0 ? (
-        <View style={styles.empty}>
+        <Pressable style={styles.empty} onPress={() => setFocusedIndex(null)}>
           <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('card.searchNoResults')}
           </Text>
-        </View>
+        </Pressable>
       ) : (
         <FlatList
           ref={listRef as any}
@@ -719,7 +723,9 @@ export default function SearchScreen() {
           data={results}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { flexGrow: 1 }]}
+          ListFooterComponent={<Pressable style={{ flexGrow: 1, minHeight: 120 }} onPress={() => setFocusedIndex(null)} />}
+          ListFooterComponentStyle={{ flexGrow: 1 }}
           onScrollToIndexFailed={() => {}}
           renderItem={({ item, index }) => {
             const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
@@ -771,8 +777,6 @@ export default function SearchScreen() {
           }}
         />
       )}
-
-      </Pressable>
 
       {/* FAB: 戻る */}
       <Pressable style={[styles.fab, { backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>

@@ -100,6 +100,12 @@ export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, onArchiv
       friction={2}
       rightThreshold={ACTION_WIDTH * 0.5}
       leftThreshold={ACTION_WIDTH * 0.5}
+      // 横パンの発火閾値（既定10px）を広げる。Swipeable の内部パンは failOffsetY を持たないため、
+      // 縦スクロールの出だしに横成分が10px混ざるだけで行パンがタッチを奪い、
+      // 「スワイプしたのにスクロールしない（空振り）」になる。28px なら縦スクロールが確実に先勝ちし、
+      // 意図的な左スワイプ（削除/アーカイブ）には十分反応する。
+      dragOffsetFromRightEdge={28}
+      dragOffsetFromLeftEdge={28}
       overshootRight={false}
       overshootLeft={false}
       renderLeftActions={onStudyFromHere ? (_progress, drag, swipeable: SwipeableMethods) => (

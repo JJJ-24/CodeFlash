@@ -5,6 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import {
   Modal,
+  FlatList,
   Platform,
   Pressable,
   StyleSheet,
@@ -377,6 +378,61 @@ export default function TagsScreen() {
     },
   ], showTagListInfo || showShortcutsModal);
 
+  // タグ行の共通レンダラー（DraggableFlatList / 素の FlatList 両分岐で共用）。
+  // ScaleDecorator はドラッグ有効時のみ呼び出し側で被せる。
+  const renderTagRow = (item: TagWithCount, index: number | undefined, drag: (() => void) | null) => {
+    const isFocused = focusedTagIndex !== null && index === focusedTagIndex;
+    const isSelected = selectedTagIds.has(item.id);
+    return (
+      <SwipeToDeleteRow
+                  enabled={!selectionMode && !tagDragActive}
+                  onDelete={() => confirmDelete(item)}
+                >
+                  <Pressable
+                    style={[
+                      styles.tagItem,
+                      { backgroundColor: theme.colors.surface },
+                      isFocused && !selectionMode && { borderWidth: 2, borderColor: theme.colors.primary },
+                      isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
+                      isFocused && selectionMode && { borderWidth: 2, borderColor: '#F57C00' },
+                    ]}
+                    onPress={() => {
+                      const idx = index;
+                      if (selectionMode) {
+                        if (idx !== undefined) setFocusedTagIndex(idx);
+                        toggleSelectTag(item.id);
+                        return;
+                      }
+                      if (idx !== undefined) setFocusedTagIndex(idx);
+                      router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
+                    }}
+                    onLongPress={!selectionMode && tagDragActive ? drag : undefined}
+                  >
+                    {selectionMode && (
+                      <Ionicons
+                        name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={24}
+                        color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
+                      />
+                    )}
+                    <View style={[styles.colorDot, { backgroundColor: resolveTagColor(item.color, theme) }]} />
+                    <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
+                    <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
+                      <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
+                    </View>
+                    {!selectionMode && (
+                      <>
+                        <Pressable onPress={() => { const idx = index; if (idx !== undefined) setFocusedTagIndex(idx); router.push(`/tags/${item.id}/edit`); }} hitSlop={8} style={styles.editBtn}>
+                          <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
+                        </Pressable>
+                        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+                      </>
+                    )}
+                  </Pressable>
+                </SwipeToDeleteRow>
+    );
+  };
+
   return (
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -500,7 +556,10 @@ export default function TagsScreen() {
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
           <EmptyState icon="pricetags-outline" title={t('tag.empty')} subtitle={t('tag.emptySub')} />
         </View>
-      ) : (
+      ) : tagDragActive ? (
+        // ドラッグ並べ替えが実際に効く「手動＋未ロック」のときだけ DraggableFlatList を使う。
+        // それ以外は素の FlatList。DraggableFlatList はリスト全体を RNGH のパンで包むため、
+        // 慣性スクロール整定直後のスワイプを取りこぼす（1〜2回空振り）ことがある（カード一覧と同じ対策）。
         <DraggableFlatList
           ref={listRef as any}
           style={{ backgroundColor: theme.colors.background }}
@@ -541,61 +600,42 @@ export default function TagsScreen() {
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedTagIndex(null)} />}
-          renderItem={({ item, drag, getIndex }: RenderItemParams<TagWithCount>) => {
-            const isFocused = focusedTagIndex !== null && getIndex() === focusedTagIndex;
-            const isSelected = selectedTagIds.has(item.id);
-            return (
-              <ScaleDecorator>
-                {/* ドラッグ並べ替えが有効なとき（手動＋未ロック）と選択モード以外で左スワイプ削除を有効化。ロック中もスワイプ可。 */}
-                <SwipeToDeleteRow
-                  enabled={!selectionMode && !tagDragActive}
-                  onDelete={() => confirmDelete(item)}
-                >
-                  <Pressable
-                    style={[
-                      styles.tagItem,
-                      { backgroundColor: theme.colors.surface },
-                      isFocused && !selectionMode && { borderWidth: 2, borderColor: theme.colors.primary },
-                      isSelected && { borderWidth: 2, borderColor: theme.colors.primary },
-                      isFocused && selectionMode && { borderWidth: 2, borderColor: '#F57C00' },
-                    ]}
-                    onPress={() => {
-                      const idx = getIndex();
-                      if (selectionMode) {
-                        if (idx !== undefined) setFocusedTagIndex(idx);
-                        toggleSelectTag(item.id);
-                        return;
-                      }
-                      if (idx !== undefined) setFocusedTagIndex(idx);
-                      router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
-                    }}
-                    onLongPress={!selectionMode && tagDragActive ? drag : undefined}
-                  >
-                    {selectionMode && (
-                      <Ionicons
-                        name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={24}
-                        color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
-                      />
-                    )}
-                    <View style={[styles.colorDot, { backgroundColor: resolveTagColor(item.color, theme) }]} />
-                    <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
-                    <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
-                    </View>
-                    {!selectionMode && (
-                      <>
-                        <Pressable onPress={() => { const idx = getIndex(); if (idx !== undefined) setFocusedTagIndex(idx); router.push(`/tags/${item.id}/edit`); }} hitSlop={8} style={styles.editBtn}>
-                          <Ionicons name="pencil-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
-                        </Pressable>
-                        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
-                      </>
-                    )}
-                  </Pressable>
-                </SwipeToDeleteRow>
-              </ScaleDecorator>
-            );
+          renderItem={({ item, drag, getIndex }: RenderItemParams<TagWithCount>) => (
+            <ScaleDecorator>
+              {renderTagRow(item, getIndex(), drag)}
+            </ScaleDecorator>
+          )}
+        />
+      ) : (
+        <FlatList<TagWithCount>
+          ref={listRef}
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
+          data={sortedTags}
+          keyExtractor={(item) => item.id}
+          onScrollToIndexFailed={(info) => {
+            (listRef.current as any)?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+            setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: false }), 100);
           }}
+          contentContainerStyle={[styles.list, selectionMode && { paddingBottom: 160 }]}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          automaticallyAdjustsScrollIndicatorInsets={false}
+          scrollsToTop={isScreenFocused}
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            const offset = e.nativeEvent.contentOffset.y;
+            scrollOffsetRef.current = offset;
+            if (
+              Date.now() < restorationEndTimeRef.current &&
+              savedScrollOffsetRef.current > 50 &&
+              offset < savedScrollOffsetRef.current - 30
+            ) {
+              (listRef.current as any)?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+            }
+          }}
+          onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
+          ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedTagIndex(null)} />}
+          renderItem={({ item, index }) => renderTagRow(item, index, null)}
         />
       )}
 

@@ -6,6 +6,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  FlatList,
   Platform,
   Pressable,
   StyleSheet,
@@ -478,6 +479,31 @@ export default function HomeScreen() {
     },
   ], showDeckListInfo || showShortcutsModal);
 
+  // デッキ行の共通レンダラー（DraggableFlatList / 素の FlatList 両分岐で共用）。
+  // ScaleDecorator はドラッグ有効時のみ呼び出し側で被せる。
+  const renderDeckRow = (item: Deck, index: number | undefined, drag: (() => void) | null) => (
+    <SwipeToDeleteRow
+      enabled={!deckDragActive}
+      onDelete={() => { setPendingDeleteDeck(item); setShowDeleteModal(true); }}
+      onArchive={() => toggleDeckArchive(item)}
+      archived={item.archived}
+    >
+      <DeckCard
+        deck={item}
+        drag={deckDragActive && drag ? drag : null}
+        onEdit={(id) => {
+          if (index !== undefined) setFocusedDeckIndex(index);
+          router.push({ pathname: '/deck/[id]/edit', params: { id } });
+        }}
+        onPress={() => {
+          if (index !== undefined) setFocusedDeckIndex(index);
+          router.push({ pathname: '/deck/[id]', params: { id: item.id } });
+        }}
+        isFocused={focusedDeckIndex !== null && index === focusedDeckIndex}
+      />
+    </SwipeToDeleteRow>
+  );
+
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
@@ -516,8 +542,12 @@ export default function HomeScreen() {
             <EmptyState icon="archive-outline" title={t('home.noActiveDecks')} subtitle={t('home.noActiveDecksSub')} />
           </View>
         ) : (
+        // ドラッグ並べ替えが実際に効く「手動＋未ロック」のときだけ DraggableFlatList を使う。
+        // それ以外は素の FlatList。DraggableFlatList はリスト全体を RNGH のパンで包むため、
+        // 慣性スクロール整定直後のスワイプを取りこぼす（1〜2回空振り）ことがある（カード一覧と同じ対策）。
+        deckDragActive ? (
           <DraggableFlatList
-            ref={listRef}
+            ref={listRef as any}
             // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
             // コンテンツ全体高さになり、ドラッグ中の端でのオートスクロールが正しく働かない
             // （カード一覧と同じ対策）。
@@ -561,33 +591,42 @@ export default function HomeScreen() {
             ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedDeckIndex(null)} />}
             renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
               <ScaleDecorator>
-                {/* ドラッグ並べ替えが有効なとき（手動＋未ロック）以外は左スワイプを有効化。ロック中もスワイプ可。 */}
-                <SwipeToDeleteRow
-                  enabled={!deckDragActive}
-                  onDelete={() => { setPendingDeleteDeck(item); setShowDeleteModal(true); }}
-                  onArchive={() => toggleDeckArchive(item)}
-                  archived={item.archived}
-                >
-                  <DeckCard
-                    deck={item}
-                    drag={deckDragActive ? drag : null}
-                    onEdit={(id) => {
-                      const idx = getIndex();
-                      if (idx !== undefined) setFocusedDeckIndex(idx);
-                      router.push({ pathname: '/deck/[id]/edit', params: { id } });
-                    }}
-                    onPress={() => {
-                      const idx = getIndex();
-                      if (idx !== undefined) setFocusedDeckIndex(idx);
-                      router.push({ pathname: '/deck/[id]', params: { id: item.id } });
-                    }}
-                    isFocused={focusedDeckIndex !== null && getIndex() === focusedDeckIndex}
-                  />
-                </SwipeToDeleteRow>
+                {renderDeckRow(item, getIndex(), drag)}
               </ScaleDecorator>
             )}
           />
-        )}
+        ) : (
+          <FlatList
+            ref={listRef}
+            style={{ flex: 1 }}
+            data={displayedDecks}
+            keyExtractor={(item) => item.id}
+            onScrollToIndexFailed={(info) => {
+              listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+              setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: false }), 100);
+            }}
+            contentContainerStyle={styles.listContent}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            scrollsToTop={isScreenFocused}
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              const offset = e.nativeEvent.contentOffset.y;
+              scrollOffsetRef.current = offset;
+              if (
+                Date.now() < restorationEndTimeRef.current &&
+                savedScrollOffsetRef.current > 50 &&
+                offset < savedScrollOffsetRef.current - 30
+              ) {
+                listRef.current?.scrollToOffset({ offset: savedScrollOffsetRef.current, animated: false });
+              }
+            }}
+            onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
+            ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedDeckIndex(null)} />}
+            renderItem={({ item, index }) => renderDeckRow(item, index, null)}
+          />
+        ))}
         </View>
         <TouchableOpacity
           style={[styles.fabLeft, { backgroundColor: theme.colors.surface }]}

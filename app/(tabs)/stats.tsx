@@ -2042,7 +2042,8 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   summarySection: { paddingHorizontal: 16, paddingTop: 16 },
-  content: { paddingHorizontal: 16, paddingBottom: 32, gap: 4 },
+  // paddingBottom は学習タブの下部余白（paddingVertical 8 + 余白フッター120 = 128）に合わせる
+  content: { paddingHorizontal: 16, paddingBottom: 128, gap: 4 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
 
   // Summary row

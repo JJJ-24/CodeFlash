@@ -6,7 +6,7 @@
 //   ダーク: background より 10〜15% 明るい同系色
 // これは現状の `theme.colors.surface` と `theme.colors.memoBackground` の関係を踏襲する。
 
-export type CardThemeName = 'default' | 'paper' | 'mint' | 'graphite' | 'lavender' | 'sepia' | 'sky' | 'rose';
+export type CardThemeName = 'default' | 'paper' | 'mint' | 'graphite' | 'lavender' | 'sepia' | 'sky' | 'rose' | 'apricot' | 'turquoise';
 
 export interface CardThemePalette {
   /** 表面・裏面のカード本体背景 */
@@ -20,7 +20,7 @@ export interface CardThemePalette {
 }
 
 export const CARD_THEME_NAMES: readonly CardThemeName[] = [
-  'default', 'paper', 'sky', 'rose', 'mint', 'lavender', 'graphite', 'sepia',
+  'default', 'paper', 'sky', 'turquoise', 'rose', 'apricot', 'mint', 'lavender', 'graphite', 'sepia',
 ] as const;
 
 /** 無料版でも選べる配色（味見用）。これ以外は Pro 限定。 */
@@ -39,6 +39,8 @@ export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThe
     sepia:    { background: '#ECDCB0', memoBackground: '#DCC890', border: '#B89968', codeBackground: '#5A3315' },
     sky:      { background: '#DCEAFB', memoBackground: '#C8DCF3', border: '#9CC2EC', codeBackground: '#103A6B' },
     rose:     { background: '#F8DCE8', memoBackground: '#F0C6D8', border: '#E099B8', codeBackground: '#5A1033' },
+    apricot:  { background: '#FBE3CC', memoBackground: '#F2D3B0', border: '#E0AC78', codeBackground: '#6B3408' },
+    turquoise: { background: '#D2EEEC', memoBackground: '#B8E0DD', border: '#82C4C0', codeBackground: '#0C4440' },
   },
   dark: {
     // ダーク側も同じ方向性。本体背景より明らかに色味が立ち、コード領域が「深く色付いた箱」として見える。
@@ -50,6 +52,8 @@ export const CARD_THEMES: Record<'light' | 'dark', Record<CardThemeName, CardThe
     sepia:    { background: '#2E2418', memoBackground: '#423324', border: '#5A4632', codeBackground: '#42280A' },
     sky:      { background: '#16263F', memoBackground: '#26395A', border: '#3A567E', codeBackground: '#123E72' },
     rose:     { background: '#341F2A', memoBackground: '#4A2E3B', border: '#6E4255', codeBackground: '#5A1536' },
+    apricot:  { background: '#362213', memoBackground: '#4C311C', border: '#6E4828', codeBackground: '#5E3208' },
+    turquoise: { background: '#132E2C', memoBackground: '#204440', border: '#2F5E5A', codeBackground: '#0E4B46' },
   },
 };
 

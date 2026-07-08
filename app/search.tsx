@@ -727,12 +727,15 @@ export default function SearchScreen() {
             return (
               <Pressable
                 style={[styles.resultItem, { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: focusedIndex === index ? theme.colors.primary : 'transparent' }]}
-                onPress={() =>
+                // タップしたカードにフォーカスしてから遷移する（カード一覧と同じ挙動。
+                // ID ベース追跡なので、編集で updatedAt 順が変わっても戻り後に正しい行へ当たる）
+                onPress={() => {
+                  setFocusedIndex(index);
                   router.push({
                     pathname: '/deck/[id]/card/[cardId]/edit',
                     params: { id: item.deckId, cardId: item.id },
-                  })
-                }
+                  });
+                }}
               >
                 <View style={styles.resultText}>
                   <Text
@@ -751,12 +754,12 @@ export default function SearchScreen() {
                 </View>
                 <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
                   {isPro && (
-                    <Pressable onPress={() => setStatsCardId(item.id)} hitSlop={8} style={{ padding: 4 }}>
+                    <Pressable onPress={() => { setFocusedIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={{ padding: 4 }}>
                       <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                     </Pressable>
                   )}
                   <Pressable
-                    onPress={() => router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: item.deckId, cardId: item.id } })}
+                    onPress={() => { setFocusedIndex(index); router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: item.deckId, cardId: item.id } }); }}
                     hitSlop={8}
                     style={{ padding: 4 }}
                   >

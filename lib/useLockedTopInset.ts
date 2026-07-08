@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getDefaultHeaderHeight } from '@react-navigation/elements';
+import { useEffect, useMemo, useState } from 'react';
+import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * カスタムヘッダーの高さ計算に使う「上端 safe area（ステータスバー）」を返す。
@@ -23,4 +24,27 @@ export function useLockedTopInset() {
     if (insets.top > top) setTop(insets.top);
   }, [insets.top, top]);
   return top;
+}
+
+/**
+ * カスタムヘッダーの高さを React Navigation の標準ヘッダーと同じ算出で返す共通フック。
+ *
+ * `lockedTopInset + 44` の直書きは Dynamic Island 搭載 iPhone でズレる：
+ * `getDefaultHeaderHeight` は inset > 50 のとき「ステータスバー高 = inset − 5.33」の
+ * 補正を行うため、標準ヘッダー（タブ）とホームは inset+38.67、直書き画面は inset+44 と
+ * 約5.3pt 高くなっていた（iPad も標準はコンテンツ行 50 で直書き 44 と 6pt ズレ）。
+ *
+ * - `total`: ヘッダー全体の高さ（ステータスバー込み）。外側 View の height に使う
+ * - `content`: コンテンツ行の高さ（total − inset）。下端寄せの内側行の height に使う
+ *
+ * ホームのタブヘッダー合わせ（旧 computeHeaderHeights）と push 画面の自前ヘッダーの両方が
+ * このフックを使うことで、全画面のヘッダー高さ・タイトル位置が一致する。
+ */
+export function useLockedHeaderHeights() {
+  const lockedTopInset = useLockedTopInset();
+  const frame = useSafeAreaFrame();
+  return useMemo(() => {
+    const total = getDefaultHeaderHeight(frame, false, lockedTopInset);
+    return { total, content: total - lockedTopInset };
+  }, [frame, lockedTopInset]);
 }

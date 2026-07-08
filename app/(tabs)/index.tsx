@@ -1,5 +1,4 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { getDefaultHeaderHeight } from '@react-navigation/elements';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { setStatusBarHidden, setStatusBarStyle } from 'expo-status-bar';
@@ -18,7 +17,6 @@ import {
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
-import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
@@ -28,7 +26,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
@@ -80,14 +78,6 @@ const HOME_SHORTCUT_SECTIONS = [
 
 function truncate(str: string, max = 20): string {
   return str.length > max ? str.slice(0, max) + '…' : str;
-}
-
-function computeHeaderHeights(topInset: number, frame: { width: number; height: number }) {
-  // React Navigation のヘッダーと同じ算出：total（ステータスバー込み）から
-  // ステータスバー（insets.top）を引いた残りがコンテンツ行の高さ。
-  // 下端基準でこの高さの行を置き、中身を中央寄せするとタブヘッダーのタイトル/アイコン位置と一致する。
-  const total = getDefaultHeaderHeight(frame, false, topInset);
-  return { total, content: total - topInset };
 }
 
 function DeckCard({
@@ -250,14 +240,9 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const lockedTopInset = useLockedTopInset();
-  const frame = useSafeAreaFrame();
-  // frame に追従しつつ、top inset は「縮まない」locked 値を使う。
-  // - useRef でマウント時固定すると初期 inset 未解決の値を掴み、タブヘッダーと高さがズレる
-  // - 生の insets.top を使うと、ステータスバー非表示や WKWebView クリーンアップで一時的に 0 へ
-  //   落ちるたびにヘッダーが縮む＝検索/新規デッキから戻った時にちらつく
-  // → 観測した最大値を保持する useLockedTopInset で両方を解消
-  const headerHeights = useMemo(() => computeHeaderHeights(lockedTopInset, frame), [lockedTopInset, frame]);
+  // React Navigation の標準ヘッダーと同じ算出（Dynamic Island 補正込み）＋縮まない inset。
+  // 詳細は lib/useLockedTopInset.ts の useLockedHeaderHeights を参照。
+  const headerHeights = useLockedHeaderHeights();
 
   async function handleDelete(id: string) {
     await deleteDeck(db, id);

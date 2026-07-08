@@ -25,7 +25,7 @@ import { sortDecks } from '@/lib/sortDecks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -340,7 +340,8 @@ export default function SearchScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const lockedTopInset = useLockedTopInset();
+  // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
+  const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
@@ -505,9 +506,9 @@ export default function SearchScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }}>

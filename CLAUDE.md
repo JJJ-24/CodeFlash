@@ -149,9 +149,9 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 // 画面コンポーネント内でも明示
 <Stack.Screen options={{ headerShown: false }} />
 
-// カスタムヘッダー構造
-<View style={{ height: initialTopInsetRef.current + 44, backgroundColor: theme.colors.surface }}>
-  <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+// カスタムヘッダー構造（headerHeights = useLockedHeaderHeights()）
+<View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+  <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
     {/* タイトル: position: absolute で left:0 right:0 に広げて中央配置 */}
     {/* 戻るボタン(左) + スペーサー + アクションボタン(右) */}
@@ -159,7 +159,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 </View>
 ```
 
-- 高さの固定は `lib/useLockedTopInset.ts` の `useLockedTopInset()`（観測した最大 `insets.top` を保持＝縮まない・上方向にだけ自己修復）を使う。旧 `initialTopInsetRef = useRef(insets.top)` はマウント時に過小値を掴むと縮んだままになるため置換済み（`height: lockedTopInset + 44`）。
+- 高さは `lib/useLockedTopInset.ts` の **`useLockedHeaderHeights()`**（`{ total, content }`）を使う。標準ヘッダーと同じ `getDefaultHeaderHeight` 算出（**Dynamic Island 搭載機は inset−5.33 の補正・iPad はコンテンツ行 50**）＋「縮まない」`useLockedTopInset`（観測した最大 `insets.top` を保持＝上方向にだけ自己修復）の組み合わせ。旧 `lockedTopInset + 44` の直書きは DI 機で標準/ホームのヘッダーより約5.3pt 高くズレるため全画面置換済み（ホームの旧 `computeHeaderHeights` もこのフックに統合）。旧 `initialTopInsetRef = useRef(insets.top)` はマウント時に過小値を掴むと縮んだままになるため廃止済み。
 - 戻るボタンには 350ms ガード（モーダルを閉じた直後の誤タップ防止）
 
 **入力系モーダルは必ず自前の固定ヘッダーにする（標準ヘッダー禁止）**：デッキ/カード/タグの新規・編集6画面（`deck/new`・`deck/[id]/edit`・`deck/[id]/card/new`・`deck/[id]/card/[cardId]/edit`・`tags/new`・`tags/[tagId]/edit`）は `presentation: 'fullScreenModal'` だが、**標準（native-stack）ヘッダーではなく `headerShown: false` ＋ `useLockedTopInset` の自前固定ヘッダー**にしている。理由は、コード実行 WebView が iOS ステータスバーを隠すと、標準ヘッダーは高さが status bar inset に追従して**縮む**うえ、**ネイティブのバーボタンのホバー/ハイライトのカプセルが横長の楕円に変形する**（保存ボタンの丸枠がタイトルまで伸びる）ため。自前ヘッダー（ただの `Pressable`＋`Ionicons`）ならネイティブのバーボタンが無いので、縮み・楕円変形ともに原理的に発生しない。詳細は [[project_statusbar-header-inset-ipad]]。**新しい入力系モーダルを追加するときも同じ自前ヘッダーにすること**（標準ヘッダーで追加するとその画面だけ再発する）。この自前ヘッダーは **`components/ModalFormHeader.tsx` に共通化済み**（底部バーは `FormBottomBar`・破棄確認は `DiscardConfirmModal`）なので、新規追加時はこれらを使う。

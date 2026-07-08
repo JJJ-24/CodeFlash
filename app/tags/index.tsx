@@ -25,7 +25,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
@@ -81,7 +81,8 @@ export default function TagsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const lockedTopInset = useLockedTopInset();
+  // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
+  const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
   const { width: screenWidth } = useWindowDimensions();
   // ホーム/タグカード一覧のフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
@@ -380,9 +381,9 @@ export default function TagsScreen() {
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <Pressable

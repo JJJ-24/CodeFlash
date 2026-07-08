@@ -25,7 +25,7 @@ import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId, setCardArchived, setCardsArchived } from '@/lib/database/cards';
@@ -82,7 +82,8 @@ export default function TagCardsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  const lockedTopInset = useLockedTopInset();
+  // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
+  const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のリストだけ有効にする
   // （有効候補が複数あると iOS が機能を無効化するため）。
@@ -350,9 +351,9 @@ export default function TagCardsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <Pressable

@@ -50,7 +50,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { createDeck } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
@@ -181,7 +181,8 @@ export default function DeckDetailScreen() {
   const themeRef = useRef(theme);
   themeRef.current = theme;
   const { width: screenWidth } = useWindowDimensions();
-  const lockedTopInset = useLockedTopInset();
+  // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
+  const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
   const { decks, updateDeck, addDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, takeDuplicated } = useCardStore();
@@ -1053,9 +1054,9 @@ export default function DeckDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <Pressable

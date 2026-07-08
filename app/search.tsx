@@ -527,12 +527,12 @@ export default function SearchScreen() {
             <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           </Pressable>
           <View style={{ flex: 1 }} />
-          {keyboardShortcutsEnabled ? (
-            <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setShowShortcutsModal(true); }} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }} hitSlop={4}>
+          {keyboardShortcutsEnabled && (
+            // ホームのショートカットアイコンとスタイルを完全に揃える（animation:'none' の
+            // ホーム⇄検索切替でアイコン位置がズレて見えないよう、padding 方式・値も同一にする）
+            <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setShowShortcutsModal(true); }} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }} hitSlop={4}>
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             </Pressable>
-          ) : (
-            <View style={{ width: 36 }} />
           )}
         </View>
       </View>

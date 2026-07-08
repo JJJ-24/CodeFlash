@@ -119,6 +119,8 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* 余白タップでフォーカス解除（ホーム等と同じパターン）。カード等の操作要素が先にタップを消費する */}
+      <Pressable style={{ flex: 1 }} onPress={() => setFocusedIndex(null)}>
       <ScrollView
         ref={scrollRef}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
@@ -182,6 +184,7 @@ export default function SettingsScreen() {
           </Pressable>
         ))}
       </ScrollView>
+      </Pressable>
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}

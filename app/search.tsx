@@ -428,7 +428,7 @@ export default function SearchScreen() {
 
   // ---- ハードキーボードショートカット（034） ----
   const editingRef = useRef(false);
-  const { focusedIndex, listRef, moveFocus } = useListNavigation(results, (c) => c.id);
+  const { focusedIndex, setFocusedIndex, listRef, moveFocus } = useListNavigation(results, (c) => c.id);
 
   function cycleField(dir: number) {
     const i = FIELD_OPTIONS.findIndex((o) => o.value === searchField);
@@ -537,6 +537,8 @@ export default function SearchScreen() {
         </View>
       </View>
 
+      {/* 余白タップでフォーカス解除（ホーム等と同じパターン）。入力欄・チップ・行の操作要素が先にタップを消費する */}
+      <Pressable style={{ flex: 1 }} onPress={() => setFocusedIndex(null)}>
       {/* タイトル行: 「カード検索」＋フィルターアイコン */}
       <View style={styles.titleRow}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -766,6 +768,8 @@ export default function SearchScreen() {
           }}
         />
       )}
+
+      </Pressable>
 
       {/* FAB: 戻る */}
       <Pressable style={[styles.fab, { backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>

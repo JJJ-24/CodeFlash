@@ -1541,8 +1541,11 @@ export default function StatsScreen() {
       </View>
         );
       })()}
+      {/* 余白タップでフォーカス解除（ホーム等と同じパターン）。セクション内の操作要素が先にタップを消費する */}
+      <Pressable style={{ flex: 1 }} onPress={() => setFocusedItem(null)}>
       <ScrollView
         ref={scrollViewRef}
+        style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
@@ -1971,6 +1974,7 @@ export default function StatsScreen() {
       </View>
 
       </ScrollView>
+      </Pressable>
       <DonutSheet
         visible={activeSheet !== null}
         title={sheetTitle}

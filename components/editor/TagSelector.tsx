@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, themedFrameBorder } from '@/lib/theme';
 import { resolveTagColor, contrastText } from '@/lib/tagColors';
 import { getAllTags } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
@@ -56,6 +56,11 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
       {tags.map((tag) => {
         const selected = selectedTagIds.includes(tag.id);
         const tagColor = resolveTagColor(tag.color, theme);
+        // テーマ追従（__theme__）や色なしのタグは resolveTagColor が画面背景色を返すため、
+        // 背景色ベースのチップでは枠線・ドットが溶けて見えなくなる。その場合は
+        // モード切替アイコンの非選択枠と同じ themedFrameBorder（テーマごとの枠色）で縁取る。
+        const blendsWithBackdrop = tagColor === theme.colors.background;
+        const outline = themedFrameBorder(theme);
         return (
           <Pressable
             key={tag.id}
@@ -64,10 +69,13 @@ export function TagSelector({ selectedTagIds, onChange }: Props) {
               selected
                 ? { backgroundColor: tagColor }
                 : { backgroundColor: theme.colors.background, borderColor: tagColor, borderWidth: 1.5, opacity: 0.45 },
+              blendsWithBackdrop && { borderColor: outline, borderWidth: 1.5 },
             ]}
             onPress={() => toggle(tag.id)}
           >
-            {!selected && <View style={[styles.dot, { backgroundColor: tagColor }]} />}
+            {!selected && (
+              <View style={[styles.dot, { backgroundColor: tagColor }, blendsWithBackdrop && { borderWidth: 1, borderColor: outline }]} />
+            )}
             <Text style={[styles.chipText, { color: selected ? contrastText(tagColor) : theme.colors.text, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {truncateTag(tag.name)}
             </Text>

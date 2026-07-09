@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -64,8 +64,10 @@ export default function SettingsScreen() {
   const focusCount = focusActions.length;
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
-  // （有効候補が複数あると iOS が機能を無効化するため）。
-  const isScreenFocused = useIsFocused();
+  // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 はポップ遷移終了時に
+  // scrollsToTop を誤発火させる（下へスクロールした状態で push 画面から戻ると一瞬ちらつく）ため、
+  // フォーカス直後 800ms も無効のままにする（詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop();
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
   const viewportHRef = useRef(0);
@@ -129,7 +131,7 @@ export default function SettingsScreen() {
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        scrollsToTop={isScreenFocused}
+        scrollsToTop={scrollsToTopArmed}
       >
         {/* 余白タップでフォーカス解除。Pressable は必ずスクロール内容の「内側」に置く
             （ScrollView の祖先に置くと押せる要素のない場所からのドラッグでスクロールが始まらない。

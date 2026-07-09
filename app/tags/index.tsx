@@ -1,6 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import {
@@ -89,9 +89,11 @@ export default function TagsScreen() {
   // ホーム/タグカード一覧のフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
   const blockWidth = (screenWidth - 56) / 4;
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
-  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のリストだけ有効にする
-  // （有効候補が複数あると iOS が機能を無効化するため）。
-  const isScreenFocused = useIsFocused();
+  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
+  // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 はポップ遷移終了時に
+  // scrollsToTop を誤発火させる（下へスクロールした状態で push 画面から戻ると一瞬ちらつく）ため、
+  // フォーカス直後 800ms も無効のままにする（詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop();
   const lastFocusTimeRef = useRef(0);
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
@@ -582,7 +584,7 @@ export default function TagsScreen() {
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}
           automaticallyAdjustsScrollIndicatorInsets={false}
-          scrollsToTop={isScreenFocused}
+          scrollsToTop={scrollsToTopArmed}
           onScrollOffsetChange={(offset) => {
             scrollOffsetRef.current = offset;
             if (
@@ -620,7 +622,7 @@ export default function TagsScreen() {
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}
           automaticallyAdjustsScrollIndicatorInsets={false}
-          scrollsToTop={isScreenFocused}
+          scrollsToTop={scrollsToTopArmed}
           scrollEventThrottle={16}
           onScroll={(e) => {
             const offset = e.nativeEvent.contentOffset.y;

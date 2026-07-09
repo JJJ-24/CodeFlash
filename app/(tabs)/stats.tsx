@@ -6,7 +6,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, V
 import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
@@ -913,7 +913,10 @@ export default function StatsScreen() {
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のメイン
   // ScrollView だけ有効にする（有効候補が複数あると iOS が機能を無効化するため。
   // 画面内の横スクロール系＝月別グラフ・草グラフは個別に scrollsToTop={false} 済み）。
-  const isScreenFocused = useIsFocused();
+  // さらに iPadOS 26 はポップ遷移終了時に scrollsToTop を誤発火させる（下へスクロールした状態で
+  // push 画面から戻ると一瞬ちらつく）ため、フォーカス直後 800ms も無効のままにする
+  // （詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop();
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<{
     heatmap: number;
@@ -1548,7 +1551,7 @@ export default function StatsScreen() {
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        scrollsToTop={isScreenFocused}
+        scrollsToTop={scrollsToTopArmed}
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
         onScroll={(e) => { currentScrollYRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={32}

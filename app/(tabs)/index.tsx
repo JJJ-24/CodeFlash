@@ -1,5 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { setStatusBarHidden, setStatusBarStyle } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -28,6 +28,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
+import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
@@ -172,9 +173,11 @@ export default function HomeScreen() {
   const selectedFilter = lastHomeFilter;
   const setSelectedFilter = setLastHomeFilter;
   // ステータスバータップで先頭へ戻す（iOS標準 scrollsToTop）用。有効な縦スクロールビューが
-  // 画面上に複数あると iOS が機能自体を無効化するため、フォーカス中の画面のリストだけ有効にする
-  // （タブ画面は非表示でもマウントされたままなので isFocused で絞る）。
-  const isScreenFocused = useIsFocused();
+  // 画面上に複数あると iOS が機能自体を無効化するため、フォーカス中の画面のリストだけ有効にする。
+  // さらに iPadOS 26 はポップ遷移終了時に scrollsToTop を誤発火させる（下へスクロールした状態で
+  // push 画面から戻ると一瞬ちらつく）ため、フォーカス直後 800ms も無効のままにする
+  // （詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeckListInfo, setShowDeckListInfo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -565,7 +568,7 @@ export default function HomeScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={isScreenFocused}
+            scrollsToTop={scrollsToTopArmed}
             onScrollOffsetChange={(offset) => {
               scrollOffsetRef.current = offset;
               if (
@@ -609,7 +612,7 @@ export default function HomeScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={isScreenFocused}
+            scrollsToTop={scrollsToTopArmed}
             scrollEventThrottle={16}
             onScroll={(e) => {
               const offset = e.nativeEvent.contentOffset.y;

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -99,7 +100,10 @@ export default function StudyScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('decks');
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。有効な候補が複数あると iOS が
   // 機能を無効化するため、画面フォーカス中かつ表示中のタブ（デッキ/タグ）のリストだけ有効にする。
-  const isScreenFocused = useIsFocused();
+  // さらに iPadOS 26 はポップ遷移終了時に scrollsToTop を誤発火させる（下へスクロールした状態で
+  // push 画面から戻ると一瞬ちらつく）ため、フォーカス直後 800ms も無効のままにする
+  // （詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop();
   const [activeFilter, setActiveFilter] = useState<Filter>('review');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
@@ -544,7 +548,7 @@ export default function StudyScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={isScreenFocused && activeTab === 'decks'}
+            scrollsToTop={scrollsToTopArmed && activeTab === 'decks'}
             onScroll={(e) => { deckFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
             scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}
@@ -615,7 +619,7 @@ export default function StudyScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={isScreenFocused && activeTab === 'tags'}
+            scrollsToTop={scrollsToTopArmed && activeTab === 'tags'}
             onScroll={(e) => { tagFilterOffsets.current[activeFilter] = e.nativeEvent.contentOffset.y; }}
             scrollEventThrottle={100}
             onScrollToIndexFailed={() => {}}

@@ -2,7 +2,8 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -197,9 +198,11 @@ export default function DeckDetailScreen() {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>(
     () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
   );
-  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のリストだけ有効にする
-  // （有効候補が複数あると iOS が機能を無効化するため）。
-  const isScreenFocused = useIsFocused();
+  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
+  // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 はポップ遷移終了時に
+  // scrollsToTop を誤発火させる（下へスクロールした状態で push 画面から戻ると一瞬ちらつく）ため、
+  // フォーカス直後 800ms も無効のままにする（詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop();
   const lastFocusTimeRef = useRef(0);
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
@@ -1241,7 +1244,7 @@ export default function DeckDetailScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={isScreenFocused}
+            scrollsToTop={scrollsToTopArmed}
             // ドラッグ autoscroll でセルが空白になりやすいので広めに描画する。
             windowSize={21}
             onScrollOffsetChange={(offset) => {
@@ -1287,7 +1290,7 @@ export default function DeckDetailScreen() {
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustContentInsets={false}
             automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollsToTop={isScreenFocused}
+            scrollsToTop={scrollsToTopArmed}
             // ドラッグしないので保持セルを減らし、並びが変わる切替を軽くする。
             windowSize={9}
             scrollEventThrottle={16}

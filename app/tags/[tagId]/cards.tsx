@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTranslation } from 'react-i18next';
@@ -118,9 +118,13 @@ export default function TagCardsScreen() {
     [decks],
   );
   const activeCardCount = useMemo(() => cards.filter((c) => !isEffectivelyArchived(c)).length, [cards, isEffectivelyArchived]);
+  // フィルター切替の体感レスポンス改善（カード一覧 deck/[id]/index.tsx と同じ手法）:
+  // ブロックのハイライトは即時に描画し、リスト本体のデータ入れ替え（保持セルの
+  // 同期再構築＝カード数が多いと重い）は useDeferredValue で次のレンダーに分離する。
+  const deferredFilter = useDeferredValue(lastTagCardFilter);
   const displayedCards = useMemo(
-    () => (lastTagCardFilter === 'active' ? cards.filter((c) => !isEffectivelyArchived(c)) : cards),
-    [cards, lastTagCardFilter, isEffectivelyArchived],
+    () => (deferredFilter === 'active' ? cards.filter((c) => !isEffectivelyArchived(c)) : cards),
+    [cards, deferredFilter, isEffectivelyArchived],
   );
   // ホームのフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
   const blockWidth = (screenWidth - 56) / 4;

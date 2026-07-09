@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTranslation } from 'react-i18next';
@@ -615,7 +615,8 @@ export default function DeckDetailScreen() {
     // その animated ラッパーが横スワイプ（削除/アーカイブ）のジェスチャーを奪ってしまうため外す。
     // （DraggableFlatList 内でも ScaleDecorator 無しのセル描画は問題ない）
     // ロック中はドラッグ並べ替えを止め、素の FlatList にしてスワイプ（ここから学習/削除/アーカイブ）を効かせる。
-    const inDraggable = cardSortOrderRef.current === 'manual' && selectedFilterRef.current === 'all' && !manualSortLockedRef.current;
+    // ※リスト種別の分岐と同じ deferred 由来の値（listIsDraggableRef）を参照する。
+    const inDraggable = listIsDraggableRef.current;
     const row = (
       <CardRow
         item={item}
@@ -651,21 +652,36 @@ export default function DeckDetailScreen() {
     [selectionMode, selectedCardIds, focusedCardId, theme.dark, theme.fontScale, theme.colors.background],
   );
 
+  // フィルター/ソート切替の体感レスポンス改善（500枚級デッキ対策）:
+  // 選択 state（ブロックのハイライト・カウント表示）は即時に描画し、リスト本体の
+  // データ入れ替え（表示ウィンドウ内セル≒windowSize分の同期再構築＝重い）は
+  // useDeferredValue で次のレンダーに分離する。総コストは不変だがタップへの応答が
+  // 先に画面へ出るため「押しても固まっている」感が消える。両側に多数のカードがある
+  // フィルター同士（すべて↔復習など）や並び順が変わるソート切替で効く。
+  // ※windowSize を絞る高速化は高速スクロール時のセル透明化とトレードオフのため不採用（828b9d5）。
+  const deferredFilter = useDeferredValue(selectedFilter);
+  const deferredSort = useDeferredValue(cardSortOrder);
   const deckCards = useMemo(() => cards.filter((c) => c.deckId === id), [cards, id]);
   const filteredCards = useMemo(
-    () => selectedFilter === 'all'
+    () => deferredFilter === 'all'
       ? deckCards
-      : deckCards.filter((c) => filterCardIds[selectedFilter].has(c.id)),
-    [deckCards, selectedFilter, filterCardIds],
+      : deckCards.filter((c) => filterCardIds[deferredFilter].has(c.id)),
+    [deckCards, deferredFilter, filterCardIds],
   );
   const displayedCards = useMemo(
-    () => cardSortOrder === 'newest'
+    () => deferredSort === 'newest'
       ? [...filteredCards].sort((a, b) => (b.createdAt > a.createdAt ? 1 : b.createdAt < a.createdAt ? -1 : 0) || b.sortOrder - a.sortOrder)
-      : cardSortOrder === 'oldest'
+      : deferredSort === 'oldest'
       ? [...filteredCards].sort((a, b) => (a.createdAt > b.createdAt ? 1 : a.createdAt < b.createdAt ? -1 : 0) || a.sortOrder - b.sortOrder)
       : filteredCards,
-    [filteredCards, cardSortOrder],
+    [filteredCards, deferredSort],
   );
+  // リストの種別（DraggableFlatList/FlatList）とセル内の ScaleDecorator 有無は、
+  // 表示中のデータと同じ deferred 値から決める（即時値だとデータ更新前に種別だけ
+  // 先に入れ替わり、余計な再マウントが挟まる）。
+  const listIsDraggable = deferredSort === 'manual' && deferredFilter === 'all' && !manualSortLocked;
+  const listIsDraggableRef = useRef(listIsDraggable);
+  listIsDraggableRef.current = listIsDraggable;
 
   // 複製で戻ってきた直後、複製先（A'）が一覧に現れたらそこへスクロールする。
   useEffect(() => {
@@ -1225,8 +1241,9 @@ export default function DeckDetailScreen() {
             それ以外（新しい/古い順、または手動でも 済み/復習/新規 フィルター）は素の FlatList。
             理由: DraggableFlatList はセルのジェスチャー処理が横スワイプ（削除/アーカイブ）を奪うため、
             ドラッグ不可の画面では素の FlatList にしてスワイプを効かせる。all↔他フィルターの切替で
-            list 種別が変わり再マウントするが、手動ソート時に限られるため許容。 */}
-        {cardSortOrder === 'manual' && selectedFilter === 'all' && !manualSortLocked ? (
+            list 種別が変わり再マウントするが、手動ソート時に限られるため許容。
+            分岐はデータと同じ deferred 由来の listIsDraggable で判定する（体感レスポンス改善）。 */}
+        {listIsDraggable ? (
           <DraggableFlatList
             ref={listRef as any}
             // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
@@ -1263,8 +1280,8 @@ export default function DeckDetailScreen() {
             ListEmptyComponent={
               <EmptyState
                 icon="card-outline"
-                title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
-                subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
+                title={deferredFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
+                subtitle={deferredFilter === 'all' ? t('deck.noCardsSub') : undefined}
               />
             }
             contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
@@ -1311,8 +1328,8 @@ export default function DeckDetailScreen() {
             ListEmptyComponent={
               <EmptyState
                 icon="card-outline"
-                title={selectedFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
-                subtitle={selectedFilter === 'all' ? t('deck.noCardsSub') : undefined}
+                title={deferredFilter === 'all' ? t('deck.noCards') : t('deck.noCardsInFilter')}
+                subtitle={deferredFilter === 'all' ? t('deck.noCardsSub') : undefined}
               />
             }
             contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}

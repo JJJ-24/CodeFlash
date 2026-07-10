@@ -1,5 +1,7 @@
 /** エクスポート/インポート対象の AsyncStorage キー一覧。
- *  Pro ステータス（@codeflash_is_pro）は意図的に除外（RevenueCat 経由で正規に復元するため）。 */
+ *  Pro ステータス（@codeflash_is_pro）は意図的に除外（RevenueCat 経由で正規に復元するため）。
+ *  Pro トライアル関連（@codeflash_trial_*、lib/proTrial.ts）も意図的に除外
+ *  （バックアップの書き戻しで体験状態を復元・改変できてしまうため）。 */
 export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_theme',
   '@codeflash_font_size',

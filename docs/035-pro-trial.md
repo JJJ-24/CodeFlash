@@ -1,7 +1,7 @@
 # 035 Pro 1週間体験（無料トライアル）
 
 **フェーズ:** 未定（キーボード/無料版変更の次リリース以降）
-**ステータス:** 未着手（設計検討済み・本チケットで実装計画を確定）
+**ステータス:** 実装中（Phase 0〜1 完了・v1.9.0-dev。次は Phase 2: 自動同期ゲート）
 **依存:** 016（買い切り課金 `useProStore`）, 014（iCloud同期）, 025（FSRS カスタマイズ）, 028-2（カード表示テーマ）
 **被依存:** なし
 **料金区分:** 課金導線（無料ユーザーへの体験提供）
@@ -81,12 +81,13 @@ Pro機能はすべて `useProStore` の `isPro` を**実行時に動的参照**�
 
 ### Phase 1: トライアル状態管理（コア）
 
-- [ ] `store/pro.ts` に `purchased` / `trialStartedAt` / `trialActive` を追加し、`isPro = purchased || trialActive` を算出
-- [ ] `lib/purchases.ts` を「実課金は `purchased` へ」に整理（`isPro` を直接立てない）
-- [ ] `lib/proTrial.ts` 新規：`startTrial()` / `refreshTrial()` / `getTrialRemainingMs()`、iCloud KV への `trialStartedAt` 保存・読込＋ローカルキャッシュ
-- [ ] 再トライアル防止：KV に既存の `trialStartedAt` があれば `startTrial()` を拒否（体験済み判定）
-- [ ] 時計巻き戻しガード：`lastSeenAt` 保存＋逆行検知で体験無効化
-- [ ] 起動時・フォアグラウンド復帰時（`_layout`）に `refreshTrial()` を呼び、期限跨ぎで `isPro` を false に反映
+- [x] `store/pro.ts` に `purchased` / `trialStartedAt` / `trialActive` を追加し、`isPro = purchased || trialActive` を算出。永続化キーは旧 `@codeflash_is_pro` を `purchased` として踏襲（従来 `setIsPro` が保存していたのは実エンタイトルメント＝purchased そのものなので既存ユーザーの値を引き継げる）
+- [x] `lib/purchases.ts` を「実課金は `purchased` へ」に整理（`setIsPro` → `setPurchased`。設定タブの `__DEV__` 長押しトグルも `purchased` を反転する形へ変更）
+- [x] `lib/proTrial.ts` 新規：`startTrial()` / `refreshTrial()` / `getTrialRemainingMs()`。KV（`proTrialStartedAt`）を真実・AsyncStorage（`@codeflash_trial_started_at`）をキャッシュ兼フォールバックとし、`refreshTrial()` で双方向 repair（KV→ローカル反映／ローカルのみ開始→KV 復帰時に書き戻し）。トライアルキーは `lib/settings-keys.ts`（JSONエクスポート対象）へ**意図的に入れない**（バックアップ書き戻しで体験状態を改変できてしまうため）
+- [x] 再トライアル防止：`startTrial()` 冒頭で `refreshTrial()` を呼び、KV/ローカルいずれかに `trialStartedAt` があれば `'alreadyUsed'` で拒否
+- [x] 時計巻き戻しガード：`@codeflash_trial_last_seen_at`（単調増加）＋逆行検知（許容幅5分・NTP補正の誤検知防止）で `@codeflash_trial_invalidated` を立てて恒久無効化。`startedAt` が未来のケースも同様に無効化
+- [x] 起動時・フォアグラウンド復帰時（`_layout` の専用 useEffect + AppState listener）に `refreshTrial()` を呼び、期限跨ぎで `isPro` を false に反映
+- 動作確認は Phase 2/4 でまとめて実施（この時点では `startTrial()` を呼ぶ UI がまだ無い）
 
 ### Phase 2: 機能ゲート（同期のみ改修）
 

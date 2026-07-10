@@ -20,18 +20,18 @@ export function initializePurchases() {
 }
 
 export async function restoreProStatus(): Promise<boolean> {
-  if (IS_EXPO_GO) return useProStore.getState().isPro;
+  if (IS_EXPO_GO) return useProStore.getState().purchased;
   // 開発ビルドでは RevenueCat で上書きせず、手動 Pro トグルの値を維持する
   // （マウント時の restoreProStatus が走って開発用トグルが OFF に戻るのを防ぐ）。
   // 本番（リリースビルド）は __DEV__ が false なので従来どおり実エンタイトルメントで判定する。
-  if (__DEV__) return useProStore.getState().isPro;
+  if (__DEV__) return useProStore.getState().purchased;
   try {
     const customerInfo = await Purchases.getCustomerInfo();
-    const isPro = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-    useProStore.getState().setIsPro(isPro);
-    return isPro;
+    const purchased = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    useProStore.getState().setPurchased(purchased);
+    return purchased;
   } catch {
-    return useProStore.getState().isPro;
+    return useProStore.getState().purchased;
   }
 }
 
@@ -47,19 +47,19 @@ export async function fetchOfferings(): Promise<PurchasesPackage | null> {
 
 export async function purchasePro(pkg: PurchasesPackage): Promise<boolean> {
   if (IS_EXPO_GO) {
-    useProStore.getState().setIsPro(true);
+    useProStore.getState().setPurchased(true);
     return true;
   }
   const { customerInfo } = await Purchases.purchasePackage(pkg);
-  const isPro = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-  useProStore.getState().setIsPro(isPro);
-  return isPro;
+  const purchased = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+  useProStore.getState().setPurchased(purchased);
+  return purchased;
 }
 
 export async function restorePurchases(): Promise<boolean> {
-  if (IS_EXPO_GO) return useProStore.getState().isPro;
+  if (IS_EXPO_GO) return useProStore.getState().purchased;
   const customerInfo = await Purchases.restorePurchases();
-  const isPro = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-  useProStore.getState().setIsPro(isPro);
-  return isPro;
+  const purchased = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+  useProStore.getState().setPurchased(purchased);
+  return purchased;
 }

@@ -14,6 +14,7 @@ import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { installNavigationGuard } from '@/lib/navigationGuard';
 import { cancelAllScheduledNotifications, scheduleFromDb, updateBadgeCount } from '@/lib/notifications';
+import { refreshTrial } from '@/lib/proTrial';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { syncNoticeText } from '@/lib/sync/errorText';
 import { listLocalBackups, triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
@@ -50,6 +51,16 @@ function RootStack() {
       .then((backups) => cleanupOrphanImages(db, backups.map((b) => b.path)))
       .catch(() => {});
     restoreProStatus().catch(() => {});
+  }, []);
+
+  // Pro トライアルの期限再判定：起動時とフォアグラウンド復帰時に実効 isPro を更新する
+  // （期限跨ぎ・別端末での体験開始（iCloud KV）・時計巻き戻しを反映）
+  useEffect(() => {
+    refreshTrial().catch(() => {});
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') refreshTrial().catch(() => {});
+    });
+    return () => sub.remove();
   }, []);
 
   // iCloud 同期の自動トリガー：起動／フォアグラウンド復帰でプル、バックグラウンド移行でアップ。

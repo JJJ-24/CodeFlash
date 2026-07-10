@@ -142,7 +142,7 @@ export default function SettingsScreen() {
           style={[styles.card, styles.proCard, { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: focusedIndex === 0 ? theme.colors.primary : 'transparent' }]}
           onLayout={(e) => { itemLayouts.current.set(0, { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }); }}
           onPress={() => { setFocusedIndex(0); if (!isPro) router.push('/paywall'); }}
-          onLongPress={() => { if (__DEV__) useProStore.getState().setIsPro(!isPro); }}
+          onLongPress={() => { if (__DEV__) useProStore.getState().setPurchased(!useProStore.getState().purchased); }}
           disabled={isPro && !__DEV__}
         >
           <View style={styles.proRow}>

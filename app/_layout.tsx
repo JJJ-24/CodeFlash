@@ -19,6 +19,7 @@ import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { syncNoticeText } from '@/lib/sync/errorText';
 import { listLocalBackups, triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
 import { useTheme } from '@/lib/theme';
+import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 import { useSyncStore } from '@/store/sync';
 import { useThemeStore } from '@/store/theme';
@@ -44,6 +45,7 @@ function RootStack() {
   const { notificationEnabled } = useSettingsStore();
   const syncHydrated = useSyncStore((s) => s.hydrated);
   const syncEnabled = useSyncStore((s) => s.enabled);
+  const isPro = useProStore((s) => s.isPro);
 
   useEffect(() => {
     // 保持中の自動バックアップが参照する画像は温存する（029 案B）。
@@ -64,9 +66,10 @@ function RootStack() {
   }, []);
 
   // iCloud 同期の自動トリガー：起動／フォアグラウンド復帰でプル、バックグラウンド移行でアップ。
-  // hydrated・enabled の変化で張り直す（無効時はリスナーを張らない）。判定は trigger 内でも再確認する。
+  // hydrated・enabled・実効Pro の変化で張り直す（無効時はリスナーを張らない）。判定は trigger 内でも再確認する。
+  // isPro は実効値（purchased || trialActive）＝トライアル期限切れで自動同期も止まる（035）。
   useEffect(() => {
-    if (!syncHydrated || !syncEnabled) return;
+    if (!syncHydrated || !syncEnabled || !isPro) return;
     triggerForegroundSync(db);
     const sub = AppState.addEventListener('change', (next) => {
       if (next === 'active') triggerForegroundSync(db);
@@ -99,7 +102,7 @@ function RootStack() {
       sub.remove();
       netSub.remove();
     };
-  }, [db, syncHydrated, syncEnabled]);
+  }, [db, syncHydrated, syncEnabled, isPro]);
 
   // アプリがフォアグラウンドに戻るたびに通知を再スケジュール（OS による消去に対応）
   useEffect(() => {

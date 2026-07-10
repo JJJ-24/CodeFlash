@@ -14,6 +14,7 @@ import {
   endBackgroundTask,
 } from "@/modules/background-task";
 import { useDeckStore } from "@/store/decks";
+import { useProStore } from "@/store/pro";
 import { useSyncStore, type SyncErrorCode } from "@/store/sync";
 import { useTagStore } from "@/store/tags";
 
@@ -1016,6 +1017,9 @@ async function runForegroundSync(
 ): Promise<void> {
   const s = useSyncStore.getState();
   if (!s.hydrated || !s.enabled || s.status === "syncing") return;
+  // 実効 Pro（購入 or トライアル中）でなければ自動同期しない（トライアル期限切れ対策・035）。
+  // _layout 側のゲートに加え、期限切れ境界のレース（AppState 発火順）もここで塞ぐ。
+  if (!useProStore.getState().isPro) return;
   if (
     s.lastSyncedAt != null &&
     Date.now() - s.lastSyncedAt < FOREGROUND_SYNC_THROTTLE_MS
@@ -1104,6 +1108,8 @@ export async function triggerBackgroundUpload(
 ): Promise<void> {
   const s = useSyncStore.getState();
   if (!s.hydrated || !s.enabled || s.status === "syncing") return;
+  // 実効 Pro でなければ自動アップロードしない（トライアル期限切れ対策・035）
+  if (!useProStore.getState().isPro) return;
   // オフライン時はアップロードしようがないのでスキップ（バックグラウンド猶予も無駄にしない）。
   if (!(await isOnline())) return;
   // iOS のバックグラウンド実行猶予（~30秒）を要求してから走らせる。これが無いと、

@@ -1,7 +1,7 @@
 # 035 Pro 1週間体験（無料トライアル）
 
 **フェーズ:** 未定（キーボード/無料版変更の次リリース以降）
-**ステータス:** 実装中（Phase 0〜1 完了・v1.9.0-dev。次は Phase 2: 自動同期ゲート）
+**ステータス:** 実装中（Phase 0〜2 完了・v1.9.0-dev。次は Phase 3: Paywall UI。Phase 2 の実機回帰確認は Phase 4 でまとめて実施）
 **依存:** 016（買い切り課金 `useProStore`）, 014（iCloud同期）, 025（FSRS カスタマイズ）, 028-2（カード表示テーマ）
 **被依存:** なし
 **料金区分:** 課金導線（無料ユーザーへの体験提供）
@@ -91,10 +91,10 @@ Pro機能はすべて `useProStore` の `isPro` を**実行時に動的参照**�
 
 ### Phase 2: 機能ゲート（同期のみ改修）
 
-- [ ] `app/_layout.tsx` の自動同期起動条件に実効Pro判定を追加（期限切れで停止）
-- [ ] 期限切れ時に `syncEnabled` を false にし、設定トグルの表示も無料状態に整合
-- [ ] 期限切れでテーマ→`default`、FSRS→90% に戻ることを確認（改修不要だが回帰確認）
-- [ ] クラウドデータを削除しないこと・再Pro/再体験なしで同期再開しないことを確認
+- [x] `app/_layout.tsx` の自動同期起動条件に実効Pro判定を追加（`!isPro` ならリスナー自体を張らない）。加えて `syncEngine.ts` の自動経路2本（`runForegroundSync`／`triggerBackgroundUpload`）の冒頭ガードにも `!isPro` チェックを追加＝期限切れ境界のレース（AppState 発火順で refreshTrial より先に同期が走る）も塞ぐ。手動同期は設定画面の Pro ロックが担うため自動経路のみ
+- [x] 期限切れ時に `syncEnabled` を false に：`refreshTrial()` 末尾で「体験記録あり＆非アクティブ＆未購入」なら `setEnabled(false)`（設定トグル表示と実挙動を無料状態に整合・クラウドデータは消さない）。**pro/sync 両ストアの hydrated ガード必須**（hydrate 前は purchased が false に見え、購入済みユーザーの同期を誤ってオフにするため）
+- [ ] 期限切れでテーマ→`default`、FSRS→90% に戻ることを確認（改修不要だが回帰確認・実機は Phase 4 でまとめて）
+- [ ] クラウドデータを削除しないこと・再Pro/再体験なしで同期再開しないことを確認（実機は Phase 4 でまとめて）
 
 ### Phase 3: Paywall UI
 

@@ -16,6 +16,7 @@ import {
   setICloudKVString,
 } from '@/modules/icloud-kv';
 import { useProStore } from '@/store/pro';
+import { useSyncStore } from '@/store/sync';
 
 export const TRIAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -80,6 +81,17 @@ export async function refreshTrial(): Promise<void> {
 
   const active = !invalidated && startedAt != null && now - startedAt < TRIAL_DURATION_MS;
   useProStore.getState().setTrialState(startedAt, active);
+
+  // 体験が終わった（期限切れ or 無効化）未購入ユーザーは同期設定もオフに戻し、
+  // 設定画面のトグル表示と実挙動を無料状態に整合させる（クラウド上のデータは消さない）。
+  // pro/sync ストアが未 hydrate の間は何もしない（hydrate 前は purchased が false に見え、
+  // 購入済みユーザーの同期を誤ってオフにしうる。自動同期は _layout／trigger 内の実効Proゲートで
+  // 既に止まっており、次のフォアグラウンド復帰の refreshTrial が拾う）。
+  const pro = useProStore.getState();
+  if (startedAt != null && !active && pro.hydrated && !pro.purchased) {
+    const sync = useSyncStore.getState();
+    if (sync.hydrated && sync.enabled) sync.setEnabled(false);
+  }
 }
 
 export type StartTrialResult = 'started' | 'alreadyUsed';

@@ -35,6 +35,7 @@ export default function StudySettingsScreen() {
     studyTimerEndBehavior, setStudyTimerEndBehavior,
   } = useSettingsStore();
   const [showRetentionInfo, setShowRetentionInfo] = useState(false);
+  const [showTimerInfo, setShowTimerInfo] = useState(false);
 
   function handleFsrsPresetSelect(preset: FsrsPreset) {
     setFsrsDesiredRetention(FSRS_PRESET_RETENTION[preset]);
@@ -74,16 +75,19 @@ export default function StudySettingsScreen() {
   return (
     <SettingsDetail
       title={t('settings.studySettings')}
-      onBack={() => { if (showRetentionInfo) { setShowRetentionInfo(false); return; } router.back(); }}
+      onBack={() => {
+        if (showRetentionInfo || showTimerInfo) { setShowRetentionInfo(false); setShowTimerInfo(false); return; }
+        router.back();
+      }}
     >
       {/* FSRSカスタマイズ */}
-      <Text
-        style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '700', marginBottom: 8, paddingHorizontal: 4 }}
-        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-      >
-        {t('settings.fsrs')}
-      </Text>
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text
+          style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+        >
+          {t('settings.fsrs')}
+        </Text>
         {/* プリセット */}
         <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
           {(['longTerm', 'standard', 'exam'] as FsrsPreset[]).map((preset) => {
@@ -160,14 +164,32 @@ export default function StudySettingsScreen() {
         </View>
       </View>
 
-      {/* 学習タイマー（036・Pro） */}
-      <Text
-        style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '700', marginTop: 16, marginBottom: 8, paddingHorizontal: 4 }}
-        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-      >
-        {t('settings.studyTimer')}
-      </Text>
+      {/* 学習タイマー（036・Pro）。説明は常時表示せず、i アイコンのタップで展開（目標保持率と同じ流儀） */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Pressable
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          onPress={() => setShowTimerInfo((v) => !v)}
+          hitSlop={6}
+        >
+          <Text
+            style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+          >
+            {t('settings.studyTimer')}
+          </Text>
+          <Ionicons
+            name={showTimerInfo ? 'information-circle' : 'information-circle-outline'}
+            size={Math.max(theme.fontSize.lg, 20)}
+            color={theme.colors.textTertiary}
+          />
+        </Pressable>
+        {showTimerInfo && (
+          <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('settings.studyTimerInfo')}
+            </Text>
+          </View>
+        )}
         <View style={styles.notificationRow}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyTimerEnable')}
@@ -252,12 +274,6 @@ export default function StudySettingsScreen() {
                   );
                 })}
               </View>
-            </View>
-
-            <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('settings.studyTimerInfo')}
-              </Text>
             </View>
           </>
         )}

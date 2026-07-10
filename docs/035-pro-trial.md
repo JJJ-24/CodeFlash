@@ -20,12 +20,12 @@
 
 Pro機能はすべて `useProStore` の `isPro` を**実行時に動的参照**しているため、`isPro` を期限切れで false にするだけで大半が自動で無料状態へ戻る。3機能を確認済み:
 
-| 機能 | 現状の実装 | 期限切れ時 | 改修 |
-|---|---|---|---|
-| カードテーマ | `lib/theme/index.ts` L234–237：`!isPro` かつ無料配色でなければ `default` にフォールバック。選好値は保持し再Pro時に自動復元 | 自動で戻る | **不要** |
-| FSRS保持率 | `lib/fsrs.ts` `getRequestRetention()`：`!isPro` なら既定90%、Proなら設定値。毎回 `useProStore.getState().isPro` を参照 | 自動で戻る | **不要** |
-| iCloud同期（設定画面） | `app/settings/sync.tsx` L391 `if (!isPro)` でガード | 画面は自動でロック | 不要 |
-| iCloud同期（自動同期） | `app/_layout.tsx` L55–88：`syncEnabled`（`useSyncStore`）で起動。**isPro を見ていない** | ⚠️ そのままだと走り続ける | **要ゲート追加** |
+| 機能                   | 現状の実装                                                                                                                 | 期限切れ時                | 改修             |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------- |
+| カードテーマ           | `lib/theme/index.ts` L234–237：`!isPro` かつ無料配色でなければ `default` にフォールバック。選好値は保持し再Pro時に自動復元 | 自動で戻る                | **不要**         |
+| FSRS保持率             | `lib/fsrs.ts` `getRequestRetention()`：`!isPro` なら既定90%、Proなら設定値。毎回 `useProStore.getState().isPro` を参照     | 自動で戻る                | **不要**         |
+| iCloud同期（設定画面） | `app/settings/sync.tsx` L391 `if (!isPro)` でガード                                                                        | 画面は自動でロック        | 不要             |
+| iCloud同期（自動同期） | `app/_layout.tsx` L55–88：`syncEnabled`（`useSyncStore`）で起動。**isPro を見ていない**                                    | ⚠️ そのままだと走り続ける | **要ゲート追加** |
 
 → 実質の改修は「トライアル状態の管理・期限判定・Paywall UI・自動同期ゲート1箇所」に集約される。
 
@@ -72,11 +72,15 @@ Pro機能はすべて `useProStore` の `isPro` を**実行時に動的参照**�
 ## Todo（フェーズ別）
 
 ### Phase 0: 設計・ネイティブ手段確定
-- [ ] iCloud KV アクセス手段を確定（Expo Module 自作 or 既存ライブラリの新アーキ対応を確認）
-- [ ] `app.json` / entitlements に iCloud Key-Value Store 権限を追加し、Development Build で読み書き PoC
-- [ ] 既存の iCloud Documents 同期と KV が共存できることを確認
+
+- [x] iCloud KV アクセス手段を確定 → **自作ローカル Expo Module（`modules/icloud-kv`）**。理由: ①`modules/background-task` で同方式のビルド実績あり（autolinking 動作済み）②API が極小（get/set/remove/サインイン判定の4関数）で自作コストが依存追加リスクを下回る ③新アーキ対応は Expo Modules API なら定義上保証される。Swift 本体＋遅延 `requireNativeModule` の TS ラッパー（未リンク環境で null 安全）
+- [x] `app.json` の `ios.entitlements` に `com.apple.developer.ubiquity-kvstore-identifier`（`$(TeamIdentifierPrefix)$(CFBundleIdentifier)`）を追加。`expo config --type introspect` で既存 iCloud Documents 権限（container/services）と正しく合成されることを確認済み
+- [x] Development Build（再ビルド）で読み書き PoC：**実機で合格（2026-07-10）**。write（sync受理=true）→ 完全再起動で同値 read → **アプリ削除→再インストール後も同値 read（1783677738366）**＝ Apple ID 単位で残ることを確認（再トライアル防止が成立）。PoC コード（`_layout` の `__DEV__` ログ）は確認後に削除済み
+  - 落とし穴（解決済み）: `modules/` にローカル Expo Module を追加しても Podfile 自体は変わらないため `expo run:ios` が pod install をスキップし、**モジュール抜きのビルド**ができる（`linked=false`）。`npx pod-install` を明示実行してからビルドすること
+- [x] 既存の iCloud Documents 同期と KV の共存：entitlements は introspect＋署名済みバイナリ（`codesign -d --entitlements`）で共存確認済み。KV は Documents 権限が同居するバイナリ上で正常動作した。DB 同期を実際に ON にした状態での動作は Phase 2/4 の確認に含める
 
 ### Phase 1: トライアル状態管理（コア）
+
 - [ ] `store/pro.ts` に `purchased` / `trialStartedAt` / `trialActive` を追加し、`isPro = purchased || trialActive` を算出
 - [ ] `lib/purchases.ts` を「実課金は `purchased` へ」に整理（`isPro` を直接立てない）
 - [ ] `lib/proTrial.ts` 新規：`startTrial()` / `refreshTrial()` / `getTrialRemainingMs()`、iCloud KV への `trialStartedAt` 保存・読込＋ローカルキャッシュ
@@ -85,18 +89,21 @@ Pro機能はすべて `useProStore` の `isPro` を**実行時に動的参照**�
 - [ ] 起動時・フォアグラウンド復帰時（`_layout`）に `refreshTrial()` を呼び、期限跨ぎで `isPro` を false に反映
 
 ### Phase 2: 機能ゲート（同期のみ改修）
+
 - [ ] `app/_layout.tsx` の自動同期起動条件に実効Pro判定を追加（期限切れで停止）
 - [ ] 期限切れ時に `syncEnabled` を false にし、設定トグルの表示も無料状態に整合
 - [ ] 期限切れでテーマ→`default`、FSRS→90% に戻ることを確認（改修不要だが回帰確認）
 - [ ] クラウドデータを削除しないこと・再Pro/再体験なしで同期再開しないことを確認
 
 ### Phase 3: Paywall UI
+
 - [ ] 「Proを1週間体験」ボタン（未体験時のみ活性）
 - [ ] 体験中：残り日数バッジ＋購入導線（体験中も購入可能）
 - [ ] 体験済み/期限切れ：ボタンを無効化し「体験済み」表示＋購入導線
 - [ ] locales（ja/en）：体験ボタン・残り日数・体験済み・期限切れの文言
 
 ### Phase 4: 確認
+
 - [ ] 開始→7日経過（時計操作）で全Pro機能が無料へ戻ることを実機確認
 - [ ] 再インストール後に再体験できない（iCloud KV）ことを実機確認
 - [ ] 期限切れ→購入でテーマ/FSRS選好値が自動復元されることを確認

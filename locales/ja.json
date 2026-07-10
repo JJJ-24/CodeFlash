@@ -579,7 +579,16 @@
     "alreadyPro": "すでに Pro プランです",
     "upgradeButton": "Pro にアップグレード",
     "loading": "価格を読み込み中...",
-    "iapNotice": "お支払いは Apple アカウントに請求されます。購入は自動的に更新されません。"
+    "iapNotice": "お支払いは Apple アカウントに請求されます。購入は自動的に更新されません。",
+    "trialButton": "Pro を1週間無料で体験",
+    "trialUsed": "体験済み",
+    "trialUsedHint": "無料体験は終了しました。引き続き Pro 機能を使うには購入してください",
+    "trialRemaining": "体験中：残り{{count}}日",
+    "trialConfirmTitle": "Pro を1週間体験しますか？",
+    "trialConfirmMessage": "無料体験は一度きりです。開始から7日間、すべての Pro 機能を利用できます。7日を過ぎると自動的に無料版へ戻ります（データは消えません）。",
+    "trialConfirmAction": "体験を開始",
+    "trialStarted": "無料体験を開始しました。7日間すべての Pro 機能を利用できます",
+    "trialAlreadyUsed": "この Apple ID では無料体験を利用済みのため、開始できません"
   },
   "shortcut": {
     "catDisplay": "表示",

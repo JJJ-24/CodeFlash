@@ -13,6 +13,7 @@ import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { settingsStyles as styles } from '@/components/settings/styles';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 
+import { getTrialRemainingMs } from '@/lib/proTrial';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
@@ -43,7 +44,12 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
-  const { isPro } = useProStore();
+  // isPro は実効値（購入 or トライアル中）。Pro カードの導線は purchased で分岐する：
+  // トライアル中もカードから paywall を開けるようにする（体験中も購入可能・035）
+  const { isPro, purchased, trialActive } = useProStore();
+  const trialDaysLeft = trialActive
+    ? Math.max(1, Math.ceil(getTrialRemainingMs() / (24 * 60 * 60 * 1000)))
+    : 0;
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
@@ -59,7 +65,7 @@ export default function SettingsScreen() {
 
   // ---- キーボード操作（034）：Pro カード(0) ＋ navItems(1..n) を J/K でフォーカス、Return で開く ----
   // 値変更はタップ限定（誤操作防止）。ここはナビゲーションのみ。
-  const proPress = () => { if (!isPro) router.push('/paywall'); };
+  const proPress = () => { if (!purchased) router.push('/paywall'); };
   const focusActions: (() => void)[] = [proPress, ...navItems.map((n) => n.onPress)];
   const focusCount = focusActions.length;
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -141,9 +147,9 @@ export default function SettingsScreen() {
         <Pressable
           style={[styles.card, styles.proCard, { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: focusedIndex === 0 ? theme.colors.primary : 'transparent' }]}
           onLayout={(e) => { itemLayouts.current.set(0, { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }); }}
-          onPress={() => { setFocusedIndex(0); if (!isPro) router.push('/paywall'); }}
+          onPress={() => { setFocusedIndex(0); if (!purchased) router.push('/paywall'); }}
           onLongPress={() => { if (__DEV__) useProStore.getState().setPurchased(!useProStore.getState().purchased); }}
-          disabled={isPro && !__DEV__}
+          disabled={purchased && !__DEV__}
         >
           <View style={styles.proRow}>
             <View style={{ flex: 1, gap: 2 }}>
@@ -158,10 +164,12 @@ export default function SettingsScreen() {
                 )}
               </View>
               <Text style={[styles.proSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {isPro ? t('pro.alreadyPro') : t('pro.paywallSubtitle')}
+                {purchased ? t('pro.alreadyPro')
+                  : trialActive ? t('pro.trialRemaining', { count: trialDaysLeft })
+                  : t('pro.paywallSubtitle')}
               </Text>
             </View>
-            {isPro ? (
+            {purchased ? (
               <Ionicons name="checkmark-circle" size={22} color={theme.colors.primary} />
             ) : (
               <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />

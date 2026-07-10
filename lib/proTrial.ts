@@ -112,6 +112,29 @@ export async function startTrial(): Promise<StartTrialResult> {
   return 'started';
 }
 
+/**
+ * 開発用：トライアル記録（iCloud KV・ローカルキャッシュ・巻き戻し無効化フラグ）を
+ * 完全消去して未体験状態に戻す。__DEV__ 以外では何もしない。
+ * KV は Apple ID 単位で残り通常の手段では消せないため、動作確認のやり直しに必須。
+ */
+export async function resetTrialForDev(): Promise<string> {
+  if (!__DEV__) return '';
+  // removeObject だと削除がサーバーへ届く前に同期が切れた場合（時計操作中など）、
+  // 次回同期でサーバーの旧値が端末に復元されてしまう。削除ではなく無効値 '0'
+  // （parseTimestamp が null 扱い）の上書きにすれば LWW の書き込みとして確実に伝播する。
+  const accepted = setICloudKVString(KV_TRIAL_STARTED_AT, '0');
+  await AsyncStorage.multiRemove([
+    LOCAL_TRIAL_STARTED_AT,
+    LOCAL_TRIAL_LAST_SEEN_AT,
+    LOCAL_TRIAL_INVALIDATED,
+  ]);
+  useProStore.getState().setTrialState(null, false);
+  // 診断用：どの段階で旧値が生き残っているか切り分けるための読み戻し
+  const kvRaw = getICloudKVString(KV_TRIAL_STARTED_AT);
+  const localRaw = await AsyncStorage.getItem(LOCAL_TRIAL_STARTED_AT);
+  return `write=${accepted}\nKV=${kvRaw ?? 'null'}\nlocal=${localRaw ?? 'null'}\niCloud=${isICloudKVAvailable()}`;
+}
+
 /** 体験の残り時間（ms）。体験中でなければ 0。Paywall の残り日数表示用 */
 export function getTrialRemainingMs(): number {
   const { trialStartedAt, trialActive } = useProStore.getState();

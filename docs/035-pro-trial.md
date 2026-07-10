@@ -1,7 +1,7 @@
 # 035 Pro 1週間体験（無料トライアル）
 
 **フェーズ:** 未定（キーボード/無料版変更の次リリース以降）
-**ステータス:** 実装中（Phase 0〜2 完了・v1.9.0-dev。次は Phase 3: Paywall UI。Phase 2 の実機回帰確認は Phase 4 でまとめて実施）
+**ステータス:** 実装中（Phase 0〜3 完了・v1.9.0-dev。残りは Phase 4: 実機確認のみ）
 **依存:** 016（買い切り課金 `useProStore`）, 014（iCloud同期）, 025（FSRS カスタマイズ）, 028-2（カード表示テーマ）
 **被依存:** なし
 **料金区分:** 課金導線（無料ユーザーへの体験提供）
@@ -98,10 +98,13 @@ Pro機能はすべて `useProStore` の `isPro` を**実行時に動的参照**�
 
 ### Phase 3: Paywall UI
 
-- [ ] 「Proを1週間体験」ボタン（未体験時のみ活性）
-- [ ] 体験中：残り日数バッジ＋購入導線（体験中も購入可能）
-- [ ] 体験済み/期限切れ：ボタンを無効化し「体験済み」表示＋購入導線
-- [ ] locales（ja/en）：体験ボタン・残り日数・体験済み・期限切れの文言
+- [x] 「Proを1週間体験」ボタン（未体験時のみ活性）：購入ボタンの下にアウトラインボタンで配置。タップ→ `ConfirmModal` で「一度きり」を明示して確認（App Store 審査対策も兼ねる。確定操作なので Return は割り当てない）→ `startTrial()`。開始成功で InfoModal→閉じると paywall も閉じる。`alreadyUsed`（別端末・再インストール前の記録を KV で検出）なら通知し、ボタンは store 更新で「体験済み」表示へ自動追従
+- [x] 体験中：残り日数バッジ（`time-outline`＋「体験中：残り N 日」・`ceil` で最低1日表示）＋購入導線（購入・復元ボタンは体験中も表示し続ける）。paywall の出し分けは実効 `isPro` ではなく **`purchased` で分岐**（トライアル中に「すでに Pro」と誤表示しない）
+- [x] 体験済み/期限切れ：体験ボタンを無効化（opacity 0.4）し「体験済み」表示＋購入案内ヒント＋購入導線
+- [x] locales（ja/en）：`pro.trialButton / trialUsed / trialUsedHint / trialRemaining（en は _one 併設）/ trialConfirmTitle / trialConfirmMessage / trialConfirmAction / trialStarted / trialAlreadyUsed`
+- [x] （追加）設定タブの Pro カード：導線判定を `purchased` に変更（トライアル中もタップで paywall を開ける＝購入導線を塞がない）。サブタイトルは購入済み=「すでに Pro」／体験中=残り日数／無料=誘導文の3分岐。Pro バッジは実効 `isPro`（体験中も表示）
+- [x] （追加・開発用）`resetTrialForDev()`（`__DEV__` 限定）：**paywall の PRO バッジ長押し**でトライアル記録を全消去（Phase 4 の時計操作テストのやり直しに必須）。iCloud KV は `removeObject` だと時計操作中に同期が切れてサーバー旧値が復元されうるため、**無効値 `'0'` の上書き（tombstone・`parseTimestamp` が null 扱い）**でリセットする。診断表示（write/KV/local/iCloud）付き。※**設定タブ Pro カードの長押しは別機能（`purchased` トグル）**なので混同注意
+- [x] 実機確認（2026-07-11）：未体験表示→確認モーダル→開始→体験中バッジ→設定カード残り日数→Pro機能解放→DEVリセットで未体験へ復帰、まで確認済み
 
 ### Phase 4: 確認
 

@@ -7,12 +7,14 @@ import { useTranslation } from 'react-i18next';
 import {
   Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
+import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
 import {
@@ -215,6 +217,8 @@ export default function NotificationSettingsScreen() {
   const [schedules, setSchedules] = useState<NotificationSchedule[]>([]);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // 行の左スワイプ削除の対象 id（編集モーダル経由の削除＝showDeleteModal とは別トリガー）
+  const [swipeDeleteId, setSwipeDeleteId] = useState<string | null>(null);
 
   // モーダル状態
   const [modalVisible, setModalVisible] = useState(false);
@@ -333,12 +337,14 @@ export default function NotificationSettingsScreen() {
     setShowDeleteModal(true);
   }
 
-  // 削除確認後の実行
+  // 削除確認後の実行（編集モーダル経由＝editingId／スワイプ経由＝swipeDeleteId の両対応）
   async function handleDeleteConfirm() {
-    if (!editingId) return;
+    const targetId = swipeDeleteId ?? editingId;
+    if (!targetId) return;
     setShowDeleteModal(false);
-    await deleteSchedule(db, editingId);
-    setSchedules((prev) => prev.filter((s) => s.id !== editingId));
+    setSwipeDeleteId(null);
+    await deleteSchedule(db, targetId);
+    setSchedules((prev) => prev.filter((s) => s.id !== targetId));
     closeModal();
     if (notificationEnabled) scheduleFromDb(db).catch(() => {});
   }
@@ -346,10 +352,12 @@ export default function NotificationSettingsScreen() {
   const dayNames = getWeekdayShort(t);
 
   return (
+    // 行スワイプ（SwipeToDeleteRow）は RNGH のため、push 画面ごとの GestureHandlerRootView が必須
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SettingsDetail
       title={t('notification.title')}
       onBack={() => {
-        if (showDeleteModal) { setShowDeleteModal(false); return; }
+        if (showDeleteModal || swipeDeleteId !== null) { setShowDeleteModal(false); setSwipeDeleteId(null); return; }
         if (modalVisible) { closeModal(); return; }
         if (permissionDenied) { setPermissionDenied(false); return; }
         router.back();
@@ -381,10 +389,10 @@ export default function NotificationSettingsScreen() {
             onClose={closeModal}
           />
           <ConfirmDeleteModal
-            visible={showDeleteModal}
+            visible={showDeleteModal || swipeDeleteId !== null}
             message={t('notification.deleteScheduleConfirm')}
             onConfirm={handleDeleteConfirm}
-            onClose={() => setShowDeleteModal(false)}
+            onClose={() => { setShowDeleteModal(false); setSwipeDeleteId(null); }}
           />
         </>
       }
@@ -416,8 +424,8 @@ export default function NotificationSettingsScreen() {
         </View>
       ) : (
         schedules.map((s) => (
+          <SwipeToDeleteRow key={s.id} onDelete={() => setSwipeDeleteId(s.id)}>
           <Pressable
-            key={s.id}
             onPress={() => openEditModal(s)}
             style={({ pressed }) => [
               styles.card,
@@ -464,6 +472,7 @@ export default function NotificationSettingsScreen() {
               />
             </View>
           </Pressable>
+          </SwipeToDeleteRow>
         ))
       )}
 
@@ -489,6 +498,7 @@ export default function NotificationSettingsScreen() {
         </Text>
       )}
     </SettingsDetail>
+    </GestureHandlerRootView>
   );
 }
 

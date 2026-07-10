@@ -75,7 +75,15 @@
     "skipped": "保留",
     "shuffle": "シャッフル",
     "finishConfirmTitle": "学習終了",
-    "finishConfirmMessage": "未評価の{{count}}枚をスキップして集計画面へ移動します"
+    "finishConfirmMessage": "未評価の{{count}}枚をスキップして集計画面へ移動します",
+    "timerEndTitle": "時間になりました",
+    "timerEndMessage": "設定した学習時間が経過しました。",
+    "timerContinue": "学習を続ける",
+    "timerFinish": "学習を完了",
+    "timerMenuTitle": "学習タイマー",
+    "timerMenuMessage": "操作を選択してください。",
+    "timerRestart": "タイマーを再スタート",
+    "timerStop": "タイマーを終了"
   },
   "tag": {
     "tagListTitle": "タグ一覧",
@@ -387,7 +395,18 @@
     "fsrsPresetStandard": "標準",
     "fsrsPresetLongTerm": "気楽",
     "fsrsRetention": "目標保持率",
-    "fsrsRetentionInfo": "次回までに「思い出せている確率」の目標値です。高いほど復習頻度が増え、忘れにくくなります。変更の反映は次回学習カードからになります。"
+    "fsrsRetentionInfo": "次回までに「思い出せている確率」の目標値です。高いほど復習頻度が増え、忘れにくくなります。変更の反映は次回学習カードからになります。",
+    "studySettings": "学習設定",
+    "studyTimer": "学習タイマー",
+    "studyTimerEnable": "タイマーを使う",
+    "studyTimerMinutes": "時間",
+    "studyTimerMinutesValue": "{{n}}分",
+    "studyTimerRingVisible": "円を表示",
+    "studyTimerShowTime": "残り時間を表示",
+    "studyTimerEndBehavior": "終了時の動作",
+    "studyTimerEndAlert": "アラート",
+    "studyTimerEndBlink": "点滅のみ",
+    "studyTimerInfo": "タイマーは学習画面を表示している間だけ進みます（他画面への移動やバックグラウンドで自動一時停止）。デッキを替えても残り時間から継続し、時間切れ・終了後は次の学習開始で新しくスタートします。円のタップで一時停止/再開、長押しでメニューを表示します。"
   },
   "about": {
     "title": "アプリについて",

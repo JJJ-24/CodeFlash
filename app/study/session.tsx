@@ -1,5 +1,6 @@
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
+import * as Haptics from "expo-haptics";
 import {
   Stack,
   useFocusEffect,
@@ -33,7 +34,9 @@ import { BlocksView } from "@/components/study/BlocksView";
 import { FlipCard, type FlipCardRef } from "@/components/study/FlipCard";
 import { LinksSheet } from "@/components/study/LinksSheet";
 import { ShortcutsModal } from "@/components/study/ShortcutsModal";
+import { StudyTimer } from "@/components/study/StudyTimer";
 import { useCodeBlockSelection } from "@/hooks/useCodeBlockSelection";
+import { useStudyTimer } from "@/hooks/useStudyTimer";
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { useLockedHeaderHeights } from "@/lib/useLockedTopInset";
 import { useStudySession } from "@/hooks/useStudySession";
@@ -55,6 +58,7 @@ import { extractLinks } from "@/lib/study/extractLinks";
 import { resolveDeckIconColors } from "@/lib/deckIconColors";
 import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits } from "@/lib/theme";
 import { useDeckStore } from "@/store/decks";
+import { useProStore } from "@/store/pro";
 import { useReviewStore } from "@/store/reviews";
 import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
@@ -172,7 +176,15 @@ export default function StudySessionScreen() {
     }, [refreshCurrentCard]),
   );
 
-  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const {
+    keyboardShortcutsEnabled,
+    studyTimerEnabled,
+    studyTimerMinutes,
+    studyTimerRingVisible,
+    studyTimerShowTime,
+    studyTimerEndBehavior,
+  } = useSettingsStore();
+  const { isPro } = useProStore();
   const { width: screenWidth } = useWindowDimensions();
   // iPad: ステータスバーを隠す際にヘッダー高さが変わらないよう、縮まない top inset を使う
   // （useLockedTopInset は「観測した最大値」を保持するのでフルスクリーンで insets.top=0 でも縮まない）
@@ -214,6 +226,8 @@ export default function StudySessionScreen() {
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
+  const [showTimerMenu, setShowTimerMenu] = useState(false);
+  const [showTimerEndModal, setShowTimerEndModal] = useState(false);
   const [kbHeight, setKbHeight] = useState(0);
 
   // キーボード表示時に paddingBottom を追加してスクロール余白を確保する。
@@ -317,6 +331,39 @@ export default function StudySessionScreen() {
   // 保存/削除が初回タップで反応しなくなる。画面がフォーカスを失っている間は無効化して透過させる。
   const isScreenFocused = useIsFocused();
   swipe.panGesture.enabled(isScreenFocused);
+
+  // 学習タイマー（036）: isPro && studyTimerEnabled ならセッション開始と同時に自動スタート。
+  // 状態は store/studyTimer（アプリスコープ）にあり、セッションを跨いで残り時間から継続する。
+  // 画面フォーカス喪失（カード編集モーダル等）・完了画面・バックグラウンドでは自動一時停止し、
+  // 復帰で再開する（手動 pause とは独立）。時間切れ/手動終了後は次のセッション開始で新規スタート。
+  const studyTimerActive = isPro && studyTimerEnabled;
+  const handleTimerFinish = useCallback(() => {
+    if (useSettingsStore.getState().studyTimerEndBehavior === "alert") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setShowTimerEndModal(true);
+    }
+    // 'blink' はリング自身の点滅表示のみ（タップで解除）
+  }, []);
+  const timer = useStudyTimer({
+    enabled: studyTimerActive,
+    minutes: studyTimerMinutes,
+    suspended: !isScreenFocused || completed,
+    onFinish: handleTimerFinish,
+  });
+  const timerBlinking = timer.phase === "finished" && studyTimerEndBehavior === "blink";
+  // 円非表示設定でもマウントはする（開始時のイントロ表示→フェードアウトと終了通知は
+  // コンポーネント側の introOnly が担当）。カード内上部の余白確保は常時表示のときだけ。
+  const timerMounted =
+    studyTimerActive && !completed && !loading && !!currentCard &&
+    (timer.phase === "running" || timer.phase === "paused" || timer.phase === "finished");
+  const timerContentPad = timerMounted && studyTimerRingVisible;
+  function handleTimerPress() {
+    if (timer.phase === "finished") { timer.stop(); return; }
+    timer.togglePause();
+  }
+  function handleTimerLongPress() {
+    if (timer.phase === "running" || timer.phase === "paused") setShowTimerMenu(true);
+  }
 
   // 画面下ボタンの長押しオートリピート。setInterval は固定クロージャになるため、
   // 常に最新の navigateWithSlide / currentIndex を ref 経由で参照する（毎レンダー更新）。
@@ -641,9 +688,10 @@ export default function StudySessionScreen() {
     ]) as { input: string; handler: () => void }[]),
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
-  // リンク一覧/終了確認/ショートカット一覧の表示中は背景のショートカットを解除する
+  // リンク一覧/終了確認/ショートカット一覧/タイマー系モーダルの表示中は背景のショートカットを解除する
   // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/専用 Return は別フックが担当）。
-  ], !showLinksModal && !showFinishModal && !showShortcutsModal);
+  // タイマー終了/メニューは確定操作を含むため Return は割り当てない（タップ/Esc のみ）。
+  ], !showLinksModal && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showTimerMenu);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
   useKeyCommands([
@@ -656,6 +704,8 @@ export default function StudySessionScreen() {
         if (showLinksModal) { setShowLinksModal(false); return; }
         if (showFinishModal) { setShowFinishModal(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+        if (showTimerEndModal) { setShowTimerEndModal(false); timer.stop(); return; }
+        if (showTimerMenu) { setShowTimerMenu(false); return; }
         if (isFullscreen) {
           setCodeEditing(false);
           setIsFullscreen(false);
@@ -1152,6 +1202,34 @@ export default function StudySessionScreen() {
     </View>
   );
 
+  // タイマーの長押しメニューと終了アラート（通常/全画面の両モードで描画する。
+  // 全画面に置かないと、gate オフのままモーダルが出ず操作不能になる＝? / Q モーダルと同じ理由）。
+  // 終了アラートは確定操作なので Return は割り当てない（タップ/Esc のみ・既存慣習）。
+  const timerModals = (
+    <>
+      <ConfirmModal
+        visible={showTimerMenu}
+        title={t("study.timerMenuTitle")}
+        message={t("study.timerMenuMessage")}
+        actions={[
+          { label: t("study.timerRestart"), onPress: () => { setShowTimerMenu(false); timer.restart(); } },
+          { label: t("study.timerStop"), onPress: () => { setShowTimerMenu(false); timer.stop(); } },
+        ]}
+        onClose={() => setShowTimerMenu(false)}
+      />
+      <ConfirmModal
+        visible={showTimerEndModal}
+        title={t("study.timerEndTitle")}
+        message={t("study.timerEndMessage")}
+        actions={[
+          { label: t("study.timerContinue"), onPress: () => { setShowTimerEndModal(false); timer.stop(); } },
+          { label: t("study.timerFinish"), onPress: () => { setShowTimerEndModal(false); finishSession(); } },
+        ]}
+        onClose={() => { setShowTimerEndModal(false); timer.stop(); }}
+      />
+    </>
+  );
+
   if (isFullscreen) {
     return (
       <>
@@ -1253,7 +1331,7 @@ export default function StudySessionScreen() {
                       style={{ flex: 1 }}
                       // 表面は下部左右隅のフローティングボタンが常に出るので、最下部の文字が
                       // 隠れないよう（ボタン高さ＋余白＋safe area 分）下に多めにスクロールできるようにする。
-                      contentContainerStyle={[styles.fullscreenContent, { paddingBottom: insets.bottom + 88 }, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
+                      contentContainerStyle={[styles.fullscreenContent, timerContentPad && styles.fullscreenContentTimerPad, { paddingBottom: insets.bottom + 88 }, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
@@ -1289,7 +1367,7 @@ export default function StudySessionScreen() {
                     <ScrollView
                       ref={backScrollRef}
                       style={{ flex: 1 }}
-                      contentContainerStyle={[styles.fullscreenContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
+                      contentContainerStyle={[styles.fullscreenContent, timerContentPad && styles.fullscreenContentTimerPad, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
@@ -1339,6 +1417,23 @@ export default function StudySessionScreen() {
               </FlipSuppressContext.Provider>
             </Animated.View>
           </GestureDetector>
+
+          {/* 学習タイマー（全画面モードでも右上に表示） */}
+          {timerMounted && (
+            <StudyTimer
+              phase={timer.phase}
+              remainingMs={timer.remainingMs}
+              totalMs={timer.totalMs}
+              counting={timer.counting}
+              epoch={timer.epoch}
+              showTime={studyTimerShowTime}
+              blinking={timerBlinking}
+              introOnly={!studyTimerRingVisible}
+              onPress={handleTimerPress}
+              onLongPress={handleTimerLongPress}
+              style={styles.timerFloatingFullscreen}
+            />
+          )}
 
           {isFlipped && <View style={styles.bottom}>{gradeRow}</View>}
 
@@ -1399,6 +1494,7 @@ export default function StudySessionScreen() {
           ]}
           onClose={() => setShowFinishModal(false)}
         />
+        {timerModals}
       </>
     );
   }
@@ -1540,7 +1636,7 @@ export default function StudySessionScreen() {
                   <ScrollView
                     ref={frontScrollRef}
                     style={{ flex: 1 }}
-                    contentContainerStyle={[styles.faceContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
+                    contentContainerStyle={[styles.faceContent, timerContentPad && styles.faceContentTimerPad, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     bounces={false}
@@ -1576,7 +1672,7 @@ export default function StudySessionScreen() {
                   <ScrollView
                     ref={backScrollRef}
                     style={{ flex: 1 }}
-                    contentContainerStyle={[styles.faceContent, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
+                    contentContainerStyle={[styles.faceContent, timerContentPad && styles.faceContentTimerPad, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     bounces={false}
@@ -1658,6 +1754,23 @@ export default function StudySessionScreen() {
             </Pressable>
           )}
         </View>
+
+        {/* 学習タイマー（カード内上部の余白に収まるフローティング。欠けた部分は透明＝カード背景） */}
+        {timerMounted && (
+          <StudyTimer
+            phase={timer.phase}
+            remainingMs={timer.remainingMs}
+            totalMs={timer.totalMs}
+            counting={timer.counting}
+            epoch={timer.epoch}
+            showTime={studyTimerShowTime}
+            blinking={timerBlinking}
+            introOnly={!studyTimerRingVisible}
+            onPress={handleTimerPress}
+            onLongPress={handleTimerLongPress}
+            style={styles.timerFloating}
+          />
+        )}
 
         {/* ヒント or 自己評価ボタン */}
         <View style={styles.bottom}>
@@ -1741,6 +1854,7 @@ export default function StudySessionScreen() {
         ]}
         onClose={() => setShowFinishModal(false)}
       />
+      {timerModals}
     </>
   );
 }
@@ -1776,6 +1890,11 @@ const styles = StyleSheet.create({
   },
   cardArea: { flex: 1, paddingHorizontal: 20, paddingVertical: 12 },
   faceContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 8 },
+  // タイマー常時表示中はカード内上部の余白を広げ、タイマー（56pt）が内容と重ならず収まるようにする。
+  // 通常モードは FlipCard の cardInner padding(24) が加算されるため、その分を差し引いて
+  // 「タイマー下端と1行目の間 ≈ 12pt」（全画面モードと同じ間隔）になる値にする。
+  faceContentTimerPad: { paddingTop: 52 },
+  fullscreenContentTimerPad: { paddingTop: 76 },
   faceLabel: {
     fontWeight: "700",
     marginBottom: 12,
@@ -1830,6 +1949,22 @@ const styles = StyleSheet.create({
   // 全画面モードの表面で下部左右隅に重ねるフローティング配置
   navFabFloating: {
     position: "absolute",
+  },
+  // 学習タイマー（通常モード）: カード内上部の余白（faceContentTimerPad で確保）の右側に収める。
+  // top はプログレスバー(4)+進捗行(≈30)+cardArea padding(12)+カード内マージン(8) ≈ 54
+  timerFloating: {
+    position: "absolute",
+    top: 54,
+    right: 28,
+    zIndex: 10,
+  },
+  // 学習タイマー（全画面モード）: ヘッダー行（paddingTop 48 + アイコン行 ≈ 94）＋進捗バー(2)の
+  // 下に 8pt 空けて配置（バーに接しないように）
+  timerFloatingFullscreen: {
+    position: "absolute",
+    top: 104,
+    right: 16,
+    zIndex: 20,
   },
   gradeRow: { flexDirection: "row", gap: 8 },
   gradeBtn: {

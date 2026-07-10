@@ -29,4 +29,9 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_language_pref',
   '@codeflash_last_home_filter',
   '@codeflash_last_tag_card_filter',
+  '@codeflash_study_timer_enabled',
+  '@codeflash_study_timer_minutes',
+  '@codeflash_study_timer_ring_visible',
+  '@codeflash_study_timer_show_time',
+  '@codeflash_study_timer_end_behavior',
 ] as const;

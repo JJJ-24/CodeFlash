@@ -75,7 +75,15 @@
     "skipped": "Skip",
     "shuffle": "Shuffle",
     "finishConfirmTitle": "Finish Session",
-    "finishConfirmMessage": "Skip {{count}} ungraded cards and go to summary?"
+    "finishConfirmMessage": "Skip {{count}} ungraded cards and go to summary?",
+    "timerEndTitle": "Time's Up",
+    "timerEndMessage": "Your study time is over.",
+    "timerContinue": "Keep Studying",
+    "timerFinish": "Finish Session",
+    "timerMenuTitle": "Study Timer",
+    "timerMenuMessage": "Choose an action.",
+    "timerRestart": "Restart Timer",
+    "timerStop": "Stop Timer"
   },
   "tag": {
     "tagListTitle": "Tags",
@@ -387,7 +395,18 @@
     "fsrsPresetStandard": "Normal",
     "fsrsPresetLongTerm": "Relax",
     "fsrsRetention": "Desired Retention",
-    "fsrsRetentionInfo": "Target probability of recalling a card at its next review. Higher values mean more frequent reviews and better recall. Changes apply only to cards reviewed from now on."
+    "fsrsRetentionInfo": "Target probability of recalling a card at its next review. Higher values mean more frequent reviews and better recall. Changes apply only to cards reviewed from now on.",
+    "studySettings": "Study Settings",
+    "studyTimer": "Study Timer",
+    "studyTimerEnable": "Use timer",
+    "studyTimerMinutes": "Duration",
+    "studyTimerMinutesValue": "{{n}} min",
+    "studyTimerRingVisible": "Show circle",
+    "studyTimerShowTime": "Show remaining time",
+    "studyTimerEndBehavior": "When time is up",
+    "studyTimerEndAlert": "Alert",
+    "studyTimerEndBlink": "Blink only",
+    "studyTimerInfo": "The timer runs only while the study screen is visible (it pauses automatically when you leave the screen or background the app). It keeps counting across decks, and starts fresh at the next session after it ends. Tap the circle to pause/resume, long-press for the menu."
   },
   "about": {
     "title": "About",

@@ -230,6 +230,13 @@ export function themedFrameBorder(theme: AppTheme): string {
   return theme.cardTheme.background === theme.baseSurface ? theme.colors.buttonBorder : theme.cardTheme.border;
 }
 
+/** 学習タイマーなど「カードテーマの代表色に追従させたい濃色」を返す。
+ *  カードテーマ選択時はテーマの濃い代表色（codeBackground）、default（無彩色＝
+ *  codeBackground がグレーでダーク背景に埋もれる）のときは primary を使う。 */
+export function themedAccentColor(theme: AppTheme): string {
+  return theme.cardTheme.background === theme.baseSurface ? theme.colors.primary : theme.cardTheme.codeBackground;
+}
+
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
   const preference = useThemeStore((s) => s.preference);

@@ -4,6 +4,7 @@ import { create } from 'zustand';
 
 import i18n from '@/lib/i18n';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
+import { useStudyTimerStore } from '@/store/studyTimer';
 
 /** ホーム画面のデッキ絞り込み。active=有効デッキのみ / all=アーカイブ含む全デッキ */
 export type HomeFilter = 'active' | 'all';
@@ -42,6 +43,16 @@ export const FSRS_RETENTION_MAX = 0.99;
 export const FSRS_RETENTION_DEFAULT = 0.90;
 
 const clampRetention = (v: number) => Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
+
+/** 学習タイマーの終了時動作。alert=バイブ＋モーダル / blink=リング点滅のみ */
+export type StudyTimerEndBehavior = 'alert' | 'blink';
+
+export const STUDY_TIMER_MINUTES_MIN = 1;
+export const STUDY_TIMER_MINUTES_MAX = 60;
+export const STUDY_TIMER_MINUTES_DEFAULT = 10;
+
+const clampTimerMinutes = (v: number) =>
+  Math.max(STUDY_TIMER_MINUTES_MIN, Math.min(STUDY_TIMER_MINUTES_MAX, Math.round(v)));
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
@@ -87,6 +98,11 @@ interface SettingsValues {
   languagePreference: LanguagePreference;
   lastHomeFilter: HomeFilter;
   lastTagCardFilter: HomeFilter;
+  studyTimerEnabled: boolean;
+  studyTimerMinutes: number;
+  studyTimerRingVisible: boolean;
+  studyTimerShowTime: boolean;
+  studyTimerEndBehavior: StudyTimerEndBehavior;
 }
 
 /**
@@ -168,6 +184,23 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   },
   lastHomeFilter: { key: '@codeflash_last_home_filter', default: 'active', parse: oneOf(['active', 'all'] as const) },
   lastTagCardFilter: { key: '@codeflash_last_tag_card_filter', default: 'active', parse: oneOf(['active', 'all'] as const) },
+  studyTimerEnabled: { key: '@codeflash_study_timer_enabled', default: false, parse: asBool },
+  studyTimerMinutes: {
+    key: '@codeflash_study_timer_minutes',
+    default: STUDY_TIMER_MINUTES_DEFAULT,
+    parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampTimerMinutes(v); },
+    normalize: clampTimerMinutes,
+    // 作動中（一時停止含む）に時間を変更したら計り直す（旧い残り時間のままだと設定が
+    // 効いていないように見えるため）。次の学習開始時に新しい分数でスタートする。
+    // hydrate 時にも呼ばれるが、起動直後はタイマー未開始（idle）なので無害。
+    onApply: () => {
+      const st = useStudyTimerStore.getState();
+      if (st.phase !== 'idle') st.reset();
+    },
+  },
+  studyTimerRingVisible: { key: '@codeflash_study_timer_ring_visible', default: true, parse: asBool },
+  studyTimerShowTime: { key: '@codeflash_study_timer_show_time', default: false, parse: asBool },
+  studyTimerEndBehavior: { key: '@codeflash_study_timer_end_behavior', default: 'alert', parse: oneOf(['alert', 'blink'] as const) },
 };
 
 const SETTING_KEYS = Object.keys(DEFS) as (keyof SettingsValues)[];
@@ -200,6 +233,11 @@ interface SettingsState extends SettingsValues {
   setLanguagePreference: (v: LanguagePreference) => void;
   setLastHomeFilter: (v: HomeFilter) => void;
   setLastTagCardFilter: (v: HomeFilter) => void;
+  setStudyTimerEnabled: (v: boolean) => void;
+  setStudyTimerMinutes: (v: number) => void;
+  setStudyTimerRingVisible: (v: boolean) => void;
+  setStudyTimerShowTime: (v: boolean) => void;
+  setStudyTimerEndBehavior: (v: StudyTimerEndBehavior) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => {
@@ -242,6 +280,11 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setLanguagePreference: makeSetter('languagePreference'),
     setLastHomeFilter: makeSetter('lastHomeFilter'),
     setLastTagCardFilter: makeSetter('lastTagCardFilter'),
+    setStudyTimerEnabled: makeSetter('studyTimerEnabled'),
+    setStudyTimerMinutes: makeSetter('studyTimerMinutes'),
+    setStudyTimerRingVisible: makeSetter('studyTimerRingVisible'),
+    setStudyTimerShowTime: makeSetter('studyTimerShowTime'),
+    setStudyTimerEndBehavior: makeSetter('studyTimerEndBehavior'),
   };
 });
 

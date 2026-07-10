@@ -3,7 +3,7 @@ import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
@@ -14,8 +14,11 @@ import {
   FSRS_PRESET_RETENTION,
   FSRS_RETENTION_MAX,
   FSRS_RETENTION_MIN,
+  STUDY_TIMER_MINUTES_MAX,
+  STUDY_TIMER_MINUTES_MIN,
   useSettingsStore,
   type FsrsPreset,
+  type StudyTimerEndBehavior,
 } from '@/store/settings';
 
 export default function StudySettingsScreen() {
@@ -23,7 +26,14 @@ export default function StudySettingsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { isPro } = useProStore();
-  const { fsrsDesiredRetention, setFsrsDesiredRetention } = useSettingsStore();
+  const {
+    fsrsDesiredRetention, setFsrsDesiredRetention,
+    studyTimerEnabled, setStudyTimerEnabled,
+    studyTimerMinutes, setStudyTimerMinutes,
+    studyTimerRingVisible, setStudyTimerRingVisible,
+    studyTimerShowTime, setStudyTimerShowTime,
+    studyTimerEndBehavior, setStudyTimerEndBehavior,
+  } = useSettingsStore();
   const [showRetentionInfo, setShowRetentionInfo] = useState(false);
 
   function handleFsrsPresetSelect(preset: FsrsPreset) {
@@ -37,7 +47,7 @@ export default function StudySettingsScreen() {
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
   if (!isPro) {
     return (
-      <SettingsDetail title={t('settings.fsrs')}>
+      <SettingsDetail title={t('settings.studySettings')}>
         <Pressable
           style={[styles.card, { backgroundColor: theme.colors.surface }]}
           onPress={() => router.push('/paywall')}
@@ -46,7 +56,7 @@ export default function StudySettingsScreen() {
             <View style={{ flex: 1, gap: 2 }}>
               <View style={styles.proTitleRow}>
                 <Text style={[styles.proTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.fsrs')}
+                  {t('settings.studySettings')}
                 </Text>
                 <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />
               </View>
@@ -63,9 +73,16 @@ export default function StudySettingsScreen() {
 
   return (
     <SettingsDetail
-      title={t('settings.fsrs')}
+      title={t('settings.studySettings')}
       onBack={() => { if (showRetentionInfo) { setShowRetentionInfo(false); return; } router.back(); }}
     >
+      {/* FSRSカスタマイズ */}
+      <Text
+        style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '700', marginBottom: 8, paddingHorizontal: 4 }}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+      >
+        {t('settings.fsrs')}
+      </Text>
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         {/* プリセット */}
         <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
@@ -141,6 +158,109 @@ export default function StudySettingsScreen() {
             </View>
           )}
         </View>
+      </View>
+
+      {/* 学習タイマー（036・Pro） */}
+      <Text
+        style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '700', marginTop: 16, marginBottom: 8, paddingHorizontal: 4 }}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+      >
+        {t('settings.studyTimer')}
+      </Text>
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <View style={styles.notificationRow}>
+          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.studyTimerEnable')}
+          </Text>
+          <Switch
+            value={studyTimerEnabled}
+            onValueChange={setStudyTimerEnabled}
+            trackColor={{ true: theme.colors.primary }}
+          />
+        </View>
+
+        {studyTimerEnabled && (
+          <>
+            {/* 時間（1〜60分） */}
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.studyTimerMinutes')}
+                </Text>
+                <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('settings.studyTimerMinutesValue', { n: studyTimerMinutes })}
+                </Text>
+              </View>
+              <Slider
+                minimumValue={STUDY_TIMER_MINUTES_MIN}
+                maximumValue={STUDY_TIMER_MINUTES_MAX}
+                step={1}
+                value={studyTimerMinutes}
+                onValueChange={setStudyTimerMinutes}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor={theme.colors.iconSubtle}
+                thumbTintColor={theme.colors.primary}
+              />
+            </View>
+
+            {/* リングを表示 */}
+            <View style={styles.notificationRow}>
+              <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.studyTimerRingVisible')}
+              </Text>
+              <Switch
+                value={studyTimerRingVisible}
+                onValueChange={setStudyTimerRingVisible}
+                trackColor={{ true: theme.colors.primary }}
+              />
+            </View>
+
+            {/* 残り時間を表示 */}
+            <View style={styles.notificationRow}>
+              <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.studyTimerShowTime')}
+              </Text>
+              <Switch
+                value={studyTimerShowTime}
+                onValueChange={setStudyTimerShowTime}
+                trackColor={{ true: theme.colors.primary }}
+              />
+            </View>
+
+            {/* 終了時の動作 */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.studyTimerEndBehavior')}
+              </Text>
+              <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+                {(['alert', 'blink'] as StudyTimerEndBehavior[]).map((behavior) => {
+                  const active = behavior === studyTimerEndBehavior;
+                  return (
+                    <Pressable
+                      key={behavior}
+                      style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                      onPress={() => setStudyTimerEndBehavior(behavior)}
+                    >
+                      <Text style={[
+                        styles.segmentText,
+                        { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
+                        active && styles.segmentTextActive,
+                      ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                        {t(behavior === 'alert' ? 'settings.studyTimerEndAlert' : 'settings.studyTimerEndBlink')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.studyTimerInfo')}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
     </SettingsDetail>
   );

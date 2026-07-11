@@ -45,6 +45,8 @@ interface Props {
   blinking: boolean;
   /** 円非表示設定（studyTimerRingVisible=false）: 開始時のみ表示→フェードアウト */
   introOnly: boolean;
+  /** 表示を維持する（長押しメニュー表示中など。introOnly のフェードアウトを保留） */
+  forceVisible?: boolean;
   onPress: () => void;
   onLongPress: () => void;
   /** 親画面側の絶対配置スタイル */
@@ -60,6 +62,7 @@ export function StudyTimer({
   showTime,
   blinking,
   introOnly,
+  forceVisible = false,
   onPress,
   onLongPress,
   style,
@@ -106,19 +109,20 @@ export function StudyTimer({
     }
   }, [blinking, blinkOpacity]);
 
-  // 円非表示設定: 計時開始（マウント・再スタート・一時停止からの再開）ごとに
-  // INTRO_VISIBLE_MS 表示 → フェードアウト → 非描画。一時停止・終了中は表示を維持する。
+  // 円非表示設定: 計時開始（マウント・再スタート・一時停止からの再開）とゴーストタップ（ピーク）ごとに
+  // INTRO_VISIBLE_MS 表示 → フェードアウト → ゴースト円へ。一時停止・終了中・forceVisible 中は表示を維持する。
   const fade = useSharedValue(1);
   const [introDone, setIntroDone] = useState(false);
+  const [peekNonce, setPeekNonce] = useState(0);
   useEffect(() => {
     cancelAnimation(fade);
     fade.value = 1;
     setIntroDone(false);
-    if (!introOnly || phase !== 'running') return;
+    if (!introOnly || phase !== 'running' || forceVisible) return;
     fade.value = withDelay(INTRO_VISIBLE_MS, withTiming(0, { duration: INTRO_FADE_MS }));
     const id = setTimeout(() => setIntroDone(true), INTRO_VISIBLE_MS + INTRO_FADE_MS);
     return () => clearTimeout(id);
-  }, [introOnly, epoch, phase, fade]);
+  }, [introOnly, epoch, phase, forceVisible, peekNonce, fade]);
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: blinkOpacity.value * fade.value,
@@ -129,8 +133,21 @@ export function StudyTimer({
   // 数字のみ（単位なし）: 1分1秒までは分（floor）、残り1分ちょうどからは秒（60→59→…）
   const timeLabel = String(secondsLeft > 60 ? Math.floor(secondsLeft / 60) : secondsLeft);
 
-  // フェードアウト完了後は非描画（終了時は blink/アラート通知のため再表示される）
-  if (introOnly && introDone && phase === 'running') return null;
+  // フェードアウト完了後はゴースト円（薄い枠線のみ）に切り替える（終了時は blink/アラート通知のため再表示される）。
+  // タップ＝ピーク再表示（計時は継続・約3秒でまたフェードアウト）、長押し＝通常どおりメニュー
+  // （メニュー表示中は親が forceVisible を立てるため円が維持される）。
+  if (introOnly && introDone && phase === 'running') {
+    return (
+      <View style={style}>
+        <Pressable
+          onPress={() => setPeekNonce((n) => n + 1)}
+          onLongPress={onLongPress}
+          style={[styles.body, styles.ghost, { borderColor: theme.colors.textTertiary }]}
+          hitSlop={6}
+        />
+      </View>
+    );
+  }
 
   return (
     <Animated.View style={[style, containerStyle]}>
@@ -188,6 +205,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // 円非表示設定のフェードアウト後に残すゴースト円: 薄い枠線のみでタップ位置だけ示す
+  ghost: {
+    borderWidth: 1,
+    opacity: 0.3,
   },
   // パイの上に白数字/アイコンを載せるため、透明部分（カード背景）の上でも読めるよう影で縁取る
   overlayShadow: {

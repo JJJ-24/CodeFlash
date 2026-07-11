@@ -352,11 +352,12 @@ export default function StudySessionScreen() {
   });
   const timerBlinking = timer.phase === "finished" && studyTimerEndBehavior === "blink";
   // 円非表示設定でもマウントはする（開始時のイントロ表示→フェードアウトと終了通知は
-  // コンポーネント側の introOnly が担当）。カード内上部の余白確保は常時表示のときだけ。
+  // コンポーネント側の introOnly が担当）。カード内上部の余白は円非表示でも確保する
+  // （フェードアウト後もゴースト円が常時タップ対象として残るため、1行目右側のボタン類と競合させない）。
   const timerMounted =
     studyTimerActive && !completed && !loading && !!currentCard &&
     (timer.phase === "running" || timer.phase === "paused" || timer.phase === "finished");
-  const timerContentPad = timerMounted && studyTimerRingVisible;
+  const timerContentPad = timerMounted;
   function handleTimerPress() {
     if (timer.phase === "finished") { timer.stop(); return; }
     timer.togglePause();
@@ -1429,6 +1430,7 @@ export default function StudySessionScreen() {
               showTime={studyTimerShowTime}
               blinking={timerBlinking}
               introOnly={!studyTimerRingVisible}
+              forceVisible={showTimerMenu}
               onPress={handleTimerPress}
               onLongPress={handleTimerLongPress}
               style={styles.timerFloatingFullscreen}
@@ -1766,6 +1768,7 @@ export default function StudySessionScreen() {
             showTime={studyTimerShowTime}
             blinking={timerBlinking}
             introOnly={!studyTimerRingVisible}
+            forceVisible={showTimerMenu}
             onPress={handleTimerPress}
             onLongPress={handleTimerLongPress}
             style={styles.timerFloating}

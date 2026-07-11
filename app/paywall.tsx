@@ -52,6 +52,11 @@ const CURRENT_FEATURES: Feature[] = [
     descKey:  'pro.featureFSRSDesc',
   },
   {
+    icon: 'timer-outline',
+    titleKey: 'pro.featureTimer',
+    descKey:  'pro.featureTimerDesc',
+  },
+  {
     icon: 'terminal-outline',
     titleKey: 'pro.featureSQL',
     descKey:  'pro.featureSQLDesc',

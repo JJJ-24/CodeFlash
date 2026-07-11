@@ -78,7 +78,7 @@
     "finishConfirmMessage": "未評価の{{count}}枚をスキップして集計画面へ移動します",
     "timerEndTitle": "時間になりました",
     "timerEndMessage": "設定した学習時間が経過しました。",
-    "timerContinue": "学習を続ける",
+    "timerContinue": "続ける（タイマー再開）",
     "timerFinish": "学習を完了",
     "timerMenuTitle": "学習タイマー",
     "timerMenuMessage": "操作を選択してください。",

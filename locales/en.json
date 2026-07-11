@@ -78,7 +78,7 @@
     "finishConfirmMessage": "Skip {{count}} ungraded cards and go to summary?",
     "timerEndTitle": "Time's Up",
     "timerEndMessage": "Your study time is over.",
-    "timerContinue": "Keep Studying",
+    "timerContinue": "Continue (Restart Timer)",
     "timerFinish": "Finish Session",
     "timerMenuTitle": "Study Timer",
     "timerMenuMessage": "Choose an action.",

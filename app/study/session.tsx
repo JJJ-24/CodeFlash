@@ -1223,7 +1223,9 @@ export default function StudySessionScreen() {
         title={t("study.timerEndTitle")}
         message={t("study.timerEndMessage")}
         actions={[
-          { label: t("study.timerContinue"), onPress: () => { setShowTimerEndModal(false); timer.stop(); } },
+          // 「続ける」＝タイマーを設定分数で再スタート（もう1周）。タイマー無しで続けたい場合は
+          // Esc/背景タップ（onClose）で閉じる＝stop のまま
+          { label: t("study.timerContinue"), onPress: () => { setShowTimerEndModal(false); timer.restart(); } },
           { label: t("study.timerFinish"), onPress: () => { setShowTimerEndModal(false); finishSession(); } },
         ]}
         onClose={() => { setShowTimerEndModal(false); timer.stop(); }}

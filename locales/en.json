@@ -586,7 +586,7 @@
     "trialRemaining": "Trial active: {{count}} days left",
     "trialRemaining_one": "Trial active: 1 day left",
     "trialConfirmTitle": "Start your 1-week Pro trial?",
-    "trialConfirmMessage": "The free trial can be used only once. You'll get all Pro features for 7 days from the start. After 7 days the app automatically returns to the free plan (your data is kept).",
+    "trialConfirmMessage": "The free trial can be used only once. You'll get all Pro features for 7 days from the start. After 7 days the app automatically returns to the free plan (your data is kept).\n\nPro features like detailed stats become more useful as your study data grows. We recommend studying for a while before starting your trial.",
     "trialConfirmAction": "Start Trial",
     "trialStarted": "Your free trial has started. Enjoy all Pro features for 7 days.",
     "trialAlreadyUsed": "The free trial has already been used with this Apple ID."

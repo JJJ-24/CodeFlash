@@ -585,7 +585,7 @@
     "trialUsedHint": "無料体験は終了しました。引き続き Pro 機能を使うには購入してください",
     "trialRemaining": "体験中：残り{{count}}日",
     "trialConfirmTitle": "Pro を1週間体験しますか？",
-    "trialConfirmMessage": "無料体験は一度きりです。開始から7日間、すべての Pro 機能を利用できます。7日を過ぎると自動的に無料版へ戻ります（データは消えません）。",
+    "trialConfirmMessage": "無料体験は一度きりです。開始から7日間、すべての Pro 機能を利用できます。7日を過ぎると自動的に無料版へ戻ります（データは消えません）。\n\n詳細統計などの Pro 機能は学習データが多いほど役立ちます。ある程度学習を積んでからの開始がおすすめです。",
     "trialConfirmAction": "体験を開始",
     "trialStarted": "無料体験を開始しました。7日間すべての Pro 機能を利用できます",
     "trialAlreadyUsed": "この Apple ID では無料体験を利用済みのため、開始できません"

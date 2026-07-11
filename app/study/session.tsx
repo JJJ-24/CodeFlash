@@ -1892,8 +1892,8 @@ const styles = StyleSheet.create({
   faceContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 8 },
   // タイマー常時表示中はカード内上部の余白を広げ、タイマー（56pt）が内容と重ならず収まるようにする。
   // 通常モードは FlipCard の cardInner padding(24) が加算されるため、その分を差し引いて
-  // 「タイマー下端と1行目の間 ≈ 12pt」（全画面モードと同じ間隔）になる値にする。
-  faceContentTimerPad: { paddingTop: 52 },
+  // 「タイマー下端と1行目の間 ≈ 6pt」になる値にする（全画面モードは ≈ 12pt）。
+  faceContentTimerPad: { paddingTop: 58 },
   fullscreenContentTimerPad: { paddingTop: 76 },
   faceLabel: {
     fontWeight: "700",
@@ -1951,11 +1951,12 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   // 学習タイマー（通常モード）: カード内上部の余白（faceContentTimerPad で確保）の右側に収める。
-  // top はプログレスバー(4)+進捗行(≈30)+cardArea padding(12)+カード内マージン(8) ≈ 54
+  // top はプログレスバー(4)+進捗行(≈30)+cardArea padding(12)+カード内マージン(20) ≈ 66
+  // （カード上端に近すぎたためマージンを 8→20 に拡大。faceContentTimerPad も +12 して間隔維持）
   timerFloating: {
     position: "absolute",
-    top: 54,
-    right: 28,
+    top: 66,
+    right: 40,
     zIndex: 10,
   },
   // 学習タイマー（全画面モード）: ヘッダー行（paddingTop 48 + アイコン行 ≈ 94）＋進捗バー(2)の

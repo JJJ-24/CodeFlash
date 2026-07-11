@@ -10,7 +10,7 @@
     "sortDescName": "Sorted by deck name",
     "sortDescCardCount": "Most cards first",
     "deckListInfoLabel": "About deck list",
-    "deckListInfoMessage": "[Tap]\n  Open card list\n[Swipe]\n  Archive / Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study and Stats tabs."
+    "deckListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit deck\n[Swipe]\n  Archive / Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study and Stats tabs."
   },
   "deck": {
     "new": "New Deck",
@@ -88,13 +88,13 @@
   "tag": {
     "tagListTitle": "Tags",
     "tagListInfoLabel": "About tag list",
-    "tagListInfoMessage": "[Tap]\n  Open card list\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study tab.",
+    "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study tab.",
     "cardListTitle": "Tag Card List",
     "removeFromCards": "Remove tag",
     "removeFromCardsAction": "Remove",
     "removeFromCardsConfirm": "Remove the tag \"{{name}}\" from {{count}} selected card(s)?",
     "cardListInfoLabel": "About tag card list",
-    "cardListInfoMessage": "[Tap]\n  Open editor\n[Swipe]\n  Archive / Delete\n\nOrder follows the sort setting of the deck's card list.",
+    "cardListInfoMessage": "[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Swipe]\n  Archive / Delete\n\nOrder follows the sort setting of the deck's card list.",
     "selectHint": "Tap tags to select",
     "title": "Tags",
     "new": "New Tag",
@@ -144,7 +144,7 @@
     "archivedPill": "Archived",
     "unarchivedPill": "Unarchived",
     "listInfoLabel": "About card list",
-    "listInfoMessage": "[Tap]\n  Open editor\n[Swipe]\n  Left: Archive / Delete\n  Right: Study from here\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\n※ Only when \"All\" is shown",
+    "listInfoMessage": "[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Swipe]\n  Left: Archive / Delete\n  Right: Study from here\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\n※ Only when \"All\" is shown",
     "reorderHintMessage": "To reorder cards, set the filter to \"All\", switch to {{menu}} mode, then long-press a card and drag.",
     "sortDescNewest": "Newest first",
     "sortDescOldest": "Oldest first",
@@ -236,7 +236,7 @@
     "learnedOf": "Done {{learned}} / {{total}} cards",
     "proSection": "Detailed Stats",
     "detailStatsInfoLabel": "How to use Detailed Stats",
-    "detailStatsInfoMessage": "■ Monthly study count\n[Tap]\n  Show donut chart\n\n■ Grade ranking\n[Tap (grade)]\n  Show ranking\n[Tap (card)]\n  Open editor\n[Focused review]\n  Open study screen\n\n[Display modes]\n  {{albums}} Filter by deck\n  {{calendar}} Change period\n  {{timer}} Average answer time",
+    "detailStatsInfoMessage": "■ Monthly study count\n[Tap]\n  Show donut chart\n\n■ Grade ranking\n[Tap (grade)]\n  Show ranking\n[Tap (card)]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Focused review]\n  Open study screen\n\n[Display modes]\n  {{albums}} Filter by deck\n  {{calendar}} Change period\n  {{timer}} Average answer time",
     "monthlyActivity": "Monthly Reviews",
     "proUpgradePrompt": "Upgrade to Pro to\nunlock detailed stats",
     "proFeatureMonthly": "Monthly activity chart",

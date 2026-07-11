@@ -10,7 +10,7 @@
     "sortDescName": "名前順",
     "sortDescCardCount": "カード枚数の多い順",
     "deckListInfoLabel": "デッキ一覧の説明",
-    "deckListInfoMessage": "[タップ]\n  カード一覧へ移動\n[スワイプ]\n  アーカイブ・削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習・統計タブにも反映されます。"
+    "deckListInfoMessage": "[タップ]\n  カード一覧へ移動\n  {{pencil}} デッキ編集\n[スワイプ]\n  アーカイブ・削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習・統計タブにも反映されます。"
   },
   "deck": {
     "new": "新規デッキ",
@@ -88,13 +88,13 @@
   "tag": {
     "tagListTitle": "タグ一覧",
     "tagListInfoLabel": "タグ一覧の説明",
-    "tagListInfoMessage": "[タップ]\n  カード一覧へ移動\n[スワイプ]\n  削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習タブにも反映されます。",
+    "tagListInfoMessage": "[タップ]\n  カード一覧へ移動\n  {{pencil}} タグ編集\n[スワイプ]\n  削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習タブにも反映されます。",
     "cardListTitle": "タグカード一覧",
     "removeFromCards": "タグを外す",
     "removeFromCardsAction": "外す",
     "removeFromCardsConfirm": "選択した {{count}} 枚のカードからタグ「{{name}}」を外しますか？",
     "cardListInfoLabel": "タグカード一覧の説明",
-    "cardListInfoMessage": "[タップ]\n  編集画面へ移動\n[スワイプ]\n  アーカイブ・削除\n\n並び順はデッキ別カード一覧の設定に連動します。",
+    "cardListInfoMessage": "[タップ]\n  編集画面へ移動\n  {{analytics}} カード統計（Pro）\n[スワイプ]\n  アーカイブ・削除\n\n並び順はデッキ別カード一覧の設定に連動します。",
     "selectHint": "タグをタップして選択",
     "title": "タグ管理",
     "new": "新規タグ",
@@ -144,7 +144,7 @@
     "archivedPill": "アーカイブしました",
     "unarchivedPill": "アーカイブを解除しました",
     "listInfoLabel": "カード一覧の説明",
-    "listInfoMessage": "[タップ]\n  編集画面へ移動\n[スワイプ]\n  左：アーカイブ・削除\n  右：ここから学習\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n[学習開始]\n  学習画面へ移動\n復習対象カード（再学習含む）のみ学習履歴が更新されます。\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{newest}} 新しい順\n  {{oldest}} 古い順\n※「すべて」表示時のみ",
+    "listInfoMessage": "[タップ]\n  編集画面へ移動\n  {{analytics}} カード統計（Pro）\n[スワイプ]\n  左：アーカイブ・削除\n  右：ここから学習\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n[学習開始]\n  学習画面へ移動\n復習対象カード（再学習含む）のみ学習履歴が更新されます。\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{newest}} 新しい順\n  {{oldest}} 古い順\n※「すべて」表示時のみ",
     "reorderHintMessage": "カードを並べ替えるには、フィルターを「すべて」にし、{{menu}} モードを選んでから、カードを長押ししてドラッグします。",
     "sortDescNewest": "新しい順",
     "sortDescOldest": "古い順",
@@ -236,7 +236,7 @@
     "learnedOf": "学習済み {{learned}} / {{total}} 枚",
     "proSection": "詳細統計",
     "detailStatsInfoLabel": "詳細統計の使い方",
-    "detailStatsInfoMessage": "■ 月別学習枚数\n[タップ]\n  ドーナツグラフ表示\n\n■ 評価別ランキング\n[タップ（評価）]\n  ランキング表示\n[タップ（カード）]\n  編集画面へ移動\n[重点復習]\n  学習画面へ移動\n\n[表示モード]\n  {{albums}} デッキ絞り込み\n  {{calendar}} 期間変更\n  {{timer}} 平均回答時間",
+    "detailStatsInfoMessage": "■ 月別学習枚数\n[タップ]\n  ドーナツグラフ表示\n\n■ 評価別ランキング\n[タップ（評価）]\n  ランキング表示\n[タップ（カード）]\n  編集画面へ移動\n  {{analytics}} カード統計（Pro）\n[重点復習]\n  学習画面へ移動\n\n[表示モード]\n  {{albums}} デッキ絞り込み\n  {{calendar}} 期間変更\n  {{timer}} 平均回答時間",
     "monthlyActivity": "月別学習枚数",
     "proUpgradePrompt": "Pro にアップグレードして\n詳細統計を確認しよう",
     "proFeatureMonthly": "月別学習グラフ",

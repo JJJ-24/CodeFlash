@@ -135,7 +135,7 @@ function masteryColor(pct: number): string {
 type ScheduleItem = { date: string; count: number };
 type MonthlyGradeData = { month: string; again: number; hard: number; good: number; easy: number };
 type MasteryItem = { deckId: string; avgEase: number | null; learnedCount: number; newCount: number };
-type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null };
+type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null; archived: boolean };
 type GradeTotals = { again: number; hard: number; good: number; easy: number };
 type GradeAvgTimes = { again: number | null; hard: number | null; good: number | null; easy: number | null };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
@@ -1899,6 +1899,7 @@ export default function StatsScreen() {
                           styles.card,
                           styles.weakCardRow,
                           { backgroundColor: theme.colors.surface },
+                          card.archived && { opacity: 0.55 },
                           isCardFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                           pressed && { opacity: 0.7 },
                         ]}
@@ -1924,6 +1925,9 @@ export default function StatsScreen() {
                             </Text>
                           </View>
                         </View>
+                        {card.archived && (
+                          <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
+                        )}
                         <Pressable
                           onPress={() => {
                             setFocusedItem({ kind: 'card', idx });

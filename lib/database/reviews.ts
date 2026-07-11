@@ -609,7 +609,7 @@ export async function getTopCardsByGrade(
   sortBy: GradeRankingSortBy = 'count',
   since?: string,
   deckIds?: string[]
-): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null }[]> {
+): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null; archived: boolean }[]> {
   // count モード：評価回数の多い順。同数のときは grade 0/1 は時間 DESC（遅い順）、grade 2/3 は時間 ASC（早い順）。
   // time モード：平均回答時間の遅い順（全グレード共通）。同時間のときは評価回数の多い順。NULL は常に末尾。
   let orderBy: string;
@@ -627,10 +627,16 @@ export async function getTopCardsByGrade(
     params.push(...deckIds);
   }
   params.push(limit);
-  return db.getAllAsync(
+  // 過去実績のためアーカイブ除外はしない（docs/032 の原則）が、UI 側でグレー表示するため
+  // 実効アーカイブ（カード自身 or 所属デッキ）を返す。
+  const rows = await db.getAllAsync<{
+    cardId: string; deckId: string; deckName: string; frontContent: string;
+    gradeCount: number; avgResponseTimeMs: number | null; archived: number;
+  }>(
     `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent,
             COUNT(gl.id) AS gradeCount,
-            AVG(gl.responseTimeMs) AS avgResponseTimeMs
+            AVG(gl.responseTimeMs) AS avgResponseTimeMs,
+            (c.archived OR d.archived) AS archived
      FROM grade_logs gl
      JOIN cards c ON gl.cardId = c.id
      JOIN card_contents cc ON c.id = cc.cardId
@@ -641,6 +647,7 @@ export async function getTopCardsByGrade(
      LIMIT ?`,
     params
   );
+  return rows.map((r) => ({ ...r, archived: !!r.archived }));
 }
 
 export async function getCardCorrectRates(

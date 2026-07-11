@@ -75,6 +75,7 @@
 - [x] ヒートマップ / 日次・月次（`getPast7DaysReviewedCount` / `getPast7DaysStudyActivity` / `getDailyReviewCounts` / `getMonthlyReviewCounts` / `getMonthlyReviewCountsByGrade`）
 - [x] ストリーク（`getStudyStreak`）
 - [x] 正答率・グレードログ系（`getGradeLogTotals` / `getCardGradeStats` / `getCardGradeHistory` / `getGradeAvgResponseTimes` / `getTopCardsByGrade` / `getCardCorrectRates`）
+  - 追記（2026-07-11）: `getTopCardsByGrade` は実効アーカイブ（カード自身 or 所属デッキ）を `archived` として返し、統計タブの評価別ランキング行を一覧慣習と同じ**グレー表示（opacity 0.55＋archive アイコン）**にする。除外はしない（過去実績の原則どおり・デッキ選択/期間で絞り込み可能）
 - [x] 新規作成の履歴チャート（`getPast7DaysCreatedCount`）— 作成履歴は実績扱いで無変更
 
 > 注意: カード一覧/タグ一覧の生取得（`getCardsByDeckId` / `getCardsByTagId` / `searchCards`）は**意図的に除外していない**。アーカイブカードを「すべて」フィルターでグレー表示するため、絞り込みは UI 側（Phase 5）で行う。

@@ -167,7 +167,7 @@
     "searchResultCount": "{{count}}件",
     "searchResultCountMax": "{{count}}件以上",
     "searchInfoLabel": "検索の説明",
-    "searchInfoMessage": "■ 検索\n複数のキーワードはスペースで区切ると、すべてを含むカードを検索します（AND検索）。\n\n■ 絞り込み\n  {{albums}} デッキで絞り込む\n  {{pricetag}} タグで絞り込む\n※ どちらも複数選択でき、検索結果をさらに限定します。",
+    "searchInfoMessage": "■ 検索\n複数のキーワードはスペースで区切ると、すべてを含むカードを検索します（AND検索）。\n\n■ 絞り込み\n  {{albums}} デッキで絞り込む\n  {{pricetag}} タグで絞り込む\n※ どちらも複数選択でき、検索結果をさらに限定します。\n\n■ 検索結果\n[タップ]\n  編集画面へ移動\n  {{analytics}} カード統計（Pro）",
     "filterByDeck": "デッキで絞り込む",
     "filterByTag": "タグで絞り込む",
     "allDecks": "すべてのデッキ",

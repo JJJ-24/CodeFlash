@@ -167,7 +167,7 @@
     "searchResultCount": "{{count}} result(s)",
     "searchResultCountMax": "{{count}}+ results",
     "searchInfoLabel": "About search",
-    "searchInfoMessage": "■ Search\nSeparate multiple keywords with spaces to find cards containing all of them (AND search).\n\n■ Filter\n  {{albums}} Filter by deck\n  {{pricetag}} Filter by tag\n※ Each supports multiple selections and further narrows the results.",
+    "searchInfoMessage": "■ Search\nSeparate multiple keywords with spaces to find cards containing all of them (AND search).\n\n■ Filter\n  {{albums}} Filter by deck\n  {{pricetag}} Filter by tag\n※ Each supports multiple selections and further narrows the results.\n\n■ Results\n[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)",
     "filterByDeck": "Filter by Deck",
     "filterByTag": "Filter by Tag",
     "allDecks": "All Decks",

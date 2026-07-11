@@ -111,18 +111,27 @@ export function StudyTimer({
 
   // 円非表示設定: 計時開始（マウント・再スタート・一時停止からの再開）とゴーストタップ（ピーク）ごとに
   // INTRO_VISIBLE_MS 表示 → フェードアウト → ゴースト円へ。一時停止・終了中・forceVisible 中は表示を維持する。
+  // 数字ON のときはイントロ自体を出さず最初からゴースト＋数字（開始の合図は数字の出現で足りるし、
+  // 円OFF を選んだ人にパイを見せない）。
   const fade = useSharedValue(1);
   const [introDone, setIntroDone] = useState(false);
   const [peekNonce, setPeekNonce] = useState(0);
   useEffect(() => {
     cancelAnimation(fade);
     fade.value = 1;
+    if (!introOnly || phase !== 'running' || forceVisible) {
+      setIntroDone(false);
+      return;
+    }
+    if (showTime) {
+      setIntroDone(true);
+      return;
+    }
     setIntroDone(false);
-    if (!introOnly || phase !== 'running' || forceVisible) return;
     fade.value = withDelay(INTRO_VISIBLE_MS, withTiming(0, { duration: INTRO_FADE_MS }));
     const id = setTimeout(() => setIntroDone(true), INTRO_VISIBLE_MS + INTRO_FADE_MS);
     return () => clearTimeout(id);
-  }, [introOnly, epoch, phase, forceVisible, peekNonce, fade]);
+  }, [introOnly, epoch, phase, forceVisible, showTime, peekNonce, fade]);
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: blinkOpacity.value * fade.value,
@@ -134,17 +143,44 @@ export function StudyTimer({
   const timeLabel = String(secondsLeft > 60 ? Math.floor(secondsLeft / 60) : secondsLeft);
 
   // フェードアウト完了後はゴースト円（薄い枠線のみ）に切り替える（終了時は blink/アラート通知のため再表示される）。
-  // タップ＝ピーク再表示（計時は継続・約3秒でまたフェードアウト）、長押し＝通常どおりメニュー
-  // （メニュー表示中は親が forceVisible を立てるため円が維持される）。
-  if (introOnly && introDone && phase === 'running') {
+  // showTime ON なら中央に残り時間を常時表示（＝ミニマル数字タイマー）。背景はカード地なので
+  // パイ上の白文字＋影ではなくテーマ文字色を使う（枠線は 30% アルファで薄く・数字はそれより濃く）。
+  // 数字ON は一時停止中もパイに切り替えず、数字を pause アイコンに置き換えるだけ（このモードで
+  // パイが出るのは長押しメニュー中と終了時だけ、という整理を保つ）。
+  // タップ: 数字OFF＝ピーク再表示（残り時間の確認が目的。計時は継続・約3秒でまたフェードアウト）→
+  // 再タップで一時停止の2段構え。数字ON＝残り時間は常に見えているのでピークを挟まず直接一時停止/再開。
+  // 長押し＝どちらもメニュー（表示中は親が forceVisible を立てるため円が維持される）。
+  const ghostMode =
+    introOnly &&
+    !forceVisible &&
+    (showTime
+      ? phase === 'running' || phase === 'paused'
+      : introDone && phase === 'running');
+  if (ghostMode) {
     return (
       <View style={style}>
         <Pressable
-          onPress={() => setPeekNonce((n) => n + 1)}
+          onPress={showTime ? onPress : () => setPeekNonce((n) => n + 1)}
           onLongPress={onLongPress}
-          style={[styles.body, styles.ghost, { borderColor: theme.colors.textTertiary }]}
+          style={[styles.body, styles.ghost, { borderColor: theme.colors.textTertiary + '4D' }]}
           hitSlop={6}
-        />
+        >
+          {showTime && (
+            <View style={styles.center} pointerEvents="none">
+              {paused ? (
+                <Ionicons name="pause" size={20} color={theme.colors.textSecondary} />
+              ) : (
+                <Text
+                  style={{ fontSize: theme.fontSize.md, fontWeight: '700', color: theme.colors.textSecondary }}
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                >
+                  {timeLabel}
+                </Text>
+              )}
+            </View>
+          )}
+        </Pressable>
       </View>
     );
   }
@@ -206,10 +242,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // 円非表示設定のフェードアウト後に残すゴースト円: 薄い枠線のみでタップ位置だけ示す
+  // 円非表示設定のフェードアウト後に残すゴースト円: 薄い枠線でタップ位置だけ示す
+  // （不透明度は borderColor のアルファで表現。showTime の数字まで薄くしないため opacity は使わない）
   ghost: {
     borderWidth: 1,
-    opacity: 0.3,
   },
   // パイの上に白数字/アイコンを載せるため、透明部分（カード背景）の上でも読めるよう影で縁取る
   overlayShadow: {

@@ -89,10 +89,11 @@
   - `grade_logs.reviewedAt` は `now.toISOString()`（UTC ISO）、`todayLocalRange().start` も `toISOString()` で同形式 → 文字列比較が成立。前日 23:59 のログは start 未満で除外・当日 0:00 以降は包含（sqlite3 で実地確認済み）。上限は不要（reviewedAt は未来にならない）
 
 ### Phase 2: 行 UI
-- [ ] `stats.tsx`: セクション追加（配置: ヒートマップ下・全体の学習率上）
-- [ ] 積み上げバー（緑/オレンジ）＋「済み X」「復習 Y」ラベル＋消化率 %
-- [ ] 空状態（済み 0・復習 0）: % は「—」・バーは `progressBg` のみ
-- [ ] ⓘ 情報モーダル（定義の説明・「新規＝今日作成」との違い・先取り学習は含まれない旨）
+- [x] `stats.tsx`: セクション追加（配置: ヒートマップ下・全体の学習率上）
+- [x] 積み上げバー（緑/オレンジ）＋「済み X」「復習 Y」ラベル＋消化率 %（ラベルは既存 `common.learned`/`common.due` を流用・行左は `stats.todayPlan`「今日の予定」）
+- [x] 空状態（済み 0・復習 0）: % は「—」・バーは `progressBg` のみ
+- [x] ⓘ 情報モーダル（定義の説明・「新規＝今日作成」との違い・先取り学習は含まれない旨）
+- 備考: `FocusedItem` に `{ kind: 'today' }` を追加し focusList にも組込済み（focusList 外のフォーカスは exists チェックで即クリアされる invariant のため Phase 2 で実施）。行タップは現状フォーカスのみ・シート開閉は Phase 3 で接続
 
 ### Phase 3: シート
 - [ ] `GradeDistPieChart` の一般化（ヘッダー・グレースライスラベル・下段3項目を props 化。既存表示は不変）

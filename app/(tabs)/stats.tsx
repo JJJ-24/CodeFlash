@@ -891,6 +891,7 @@ function fillPast7Days(rows: ScheduleItem[]): ScheduleItem[] {
 type FocusedItem =
   | null
   | { kind: 'heatmap' }
+  | { kind: 'today' }
   | { kind: 'total' }
   | { kind: 'deck'; idx: number }
   | { kind: 'card'; idx: number };
@@ -898,7 +899,7 @@ type FocusedItem =
 function isSameItem(a: FocusedItem, b: FocusedItem): boolean {
   if (a === null || b === null) return a === b;
   if (a.kind !== b.kind) return false;
-  if (a.kind === 'heatmap' || a.kind === 'total') return true;
+  if (a.kind === 'heatmap' || a.kind === 'today' || a.kind === 'total') return true;
   return a.idx === (b as { idx: number }).idx;
 }
 
@@ -920,13 +921,14 @@ export default function StatsScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<{
     heatmap: number;
+    today: number;
     total: number;
     decks: number[];
     proSection: number;
     ranking: number;
     rankingOuter: number;
     rankingInner: number;
-  }>({ heatmap: 0, total: 0, decks: [], proSection: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
+  }>({ heatmap: 0, today: 0, total: 0, decks: [], proSection: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
   const pendingFocusRankingRef = useRef(false);
   const shouldScrollAfterLoadRef = useRef(false);
   const cardLayoutMap = useRef<Map<string, { y: number; h: number }>>(new Map());
@@ -1071,6 +1073,7 @@ export default function StatsScreen() {
   const focusList = useMemo<FocusedItem[]>(() => {
     const list: FocusedItem[] = [
       { kind: 'heatmap' },
+      { kind: 'today' },
       { kind: 'total' },
       ...sortedDeckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })),
     ];
@@ -1115,6 +1118,8 @@ export default function StatsScreen() {
     if (item === null) return;
     if (item.kind === 'heatmap') {
       scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.heatmap, animated: true });
+    } else if (item.kind === 'today') {
+      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.today, animated: true });
     } else if (item.kind === 'total') {
       scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total, animated: true });
     } else if (item.kind === 'deck') {
@@ -1457,6 +1462,10 @@ export default function StatsScreen() {
   const total = learned + unlearned;
   const learnedPct = total > 0 ? Math.round((learned / total) * 100) : 0;
 
+  // 今日のサマリー：消化率 = 済み / (済み + 残り復習)。予定ゼロの日は「—」表示
+  const todayPlanTotal = todayReviewed + todayDue;
+  const todayDigestPct = todayPlanTotal > 0 ? Math.round((todayReviewed / todayPlanTotal) * 100) : null;
+
   if (!hasData && total === 0) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
@@ -1598,6 +1607,42 @@ export default function StatsScreen() {
           onPress={() => { setFocusedItem({ kind: 'heatmap' }); openRecordSheet(); }}
         >
           <ActivityHeatmap data={heatmapData} />
+        </Pressable>
+      </View>
+
+      {/* 今日のサマリー */}
+      <View
+        style={styles.section}
+        onLayout={(e) => { sectionOffsets.current.today = e.nativeEvent.layout.y; }}
+      >
+        <View style={styles.proSectionTitle}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {t('stats.todaySummary')}
+          </Text>
+          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.todaySummary'), message: <InfoContent text={t('stats.todaySummaryInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.todaySummaryInfoLabel')}>
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+          </Pressable>
+        </View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.card,
+            { backgroundColor: theme.colors.surface },
+            focusedItem?.kind === 'today' && { borderWidth: 2, borderColor: theme.colors.primary },
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => { setFocusedItem({ kind: 'today' }); }}
+        >
+          <View style={styles.masteryHeader}>
+            <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.todayPlan')}</Text>
+            <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{todayDigestPct === null ? '—' : `${todayDigestPct}%`}</Text>
+          </View>
+          <View style={[styles.progressBarBg, styles.todayBar, { backgroundColor: theme.colors.progressBg }]}>
+            {todayReviewed > 0 && <View style={{ flex: todayReviewed, backgroundColor: FILTER_COLORS.learned }} />}
+            {todayDue > 0 && <View style={{ flex: todayDue, backgroundColor: FILTER_COLORS.due }} />}
+          </View>
+          <Text style={[styles.progressSubLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+            {t('common.learned')}: {todayReviewed}{'        '}{t('common.due')}: {todayDue}
+          </Text>
         </Pressable>
       </View>
 
@@ -2093,6 +2138,7 @@ const styles = StyleSheet.create({
   progressBarBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#1976D2', borderRadius: 5 },
   progressSubLabel: { marginTop: 6 },
+  todayBar: { flexDirection: 'row' },
 
   // Deck mastery
   deckMasteryList: { gap: 8 },

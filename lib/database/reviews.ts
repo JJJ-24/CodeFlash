@@ -315,6 +315,33 @@ export async function getTodayDueCount(db: SQLiteDatabase): Promise<number> {
   return row?.count ?? 0;
 }
 
+/** 今日のサマリー用集計（037）: 初学カード数＋今日の平均回答時間。
+ *  初学 = 今日「初めて」学習したカード数（review_logs の初回日が今日。上部ブロック「新規」＝今日作成とは別物）。
+ *  いずれも過去実績（review_logs / grade_logs ベース）のため activeCardCond は適用しない（032 の方針）。 */
+export async function getTodayStudySummary(
+  db: SQLiteDatabase
+): Promise<{ firstLearnedCount: number; avgResponseTimeMs: number | null }> {
+  const { start, end } = todayLocalRange();
+  const firstRow = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM (
+       SELECT cardId, MIN(reviewedDate) as firstDate
+       FROM review_logs
+       GROUP BY cardId
+     ) WHERE firstDate = ?`,
+    [todayISO()]
+  );
+  const timeRow = await db.getFirstAsync<{ avgTime: number | null }>(
+    `SELECT AVG(responseTimeMs) as avgTime
+     FROM grade_logs
+     WHERE reviewedAt >= ? AND reviewedAt < ?`,
+    [start, end]
+  );
+  return {
+    firstLearnedCount: firstRow?.count ?? 0,
+    avgResponseTimeMs: timeRow?.avgTime ?? null,
+  };
+}
+
 /** 学習済み・未学習カード数 */
 export async function getLearnedUnlearnedCount(
   db: SQLiteDatabase

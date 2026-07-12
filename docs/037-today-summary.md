@@ -84,8 +84,9 @@
 ## Todo（フェーズ別）
 
 ### Phase 1: DB クエリ
-- [ ] `lib/database/reviews.ts`: 今日の平均回答時間＋初学カード数のクエリ追加
-- [ ] `getGradeLogTotals(db, todayLocalRange().start)` で今日の評価内訳が取れることを確認（境界: 日付跨ぎ直後）
+- [x] `lib/database/reviews.ts`: 今日の平均回答時間＋初学カード数のクエリ追加（`getTodayStudySummary(db)` 1関数に集約）
+- [x] `getGradeLogTotals(db, todayLocalRange().start)` で今日の評価内訳が取れることを確認（境界: 日付跨ぎ直後）
+  - `grade_logs.reviewedAt` は `now.toISOString()`（UTC ISO）、`todayLocalRange().start` も `toISOString()` で同形式 → 文字列比較が成立。前日 23:59 のログは start 未満で除外・当日 0:00 以降は包含（sqlite3 で実地確認済み）。上限は不要（reviewedAt は未来にならない）
 
 ### Phase 2: 行 UI
 - [ ] `stats.tsx`: セクション追加（配置: ヒートマップ下・全体の学習率上）

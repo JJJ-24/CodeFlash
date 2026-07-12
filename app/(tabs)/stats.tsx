@@ -1741,7 +1741,7 @@ export default function StatsScreen() {
           onPress={() => { setFocusedItem({ kind: 'today' }); activeSheet === 'today' ? closeSheet() : openSheet('today'); }}
         >
           <View style={styles.masteryHeader}>
-            <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.todayProgressLabel')}</Text>
+            <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.todayCompletionLabel')}</Text>
             <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{todayDigestPct === null ? '—' : `${todayDigestPct}%`}</Text>
           </View>
           <View style={[styles.progressBarBg, styles.todayBar, { backgroundColor: theme.colors.progressBg }]}>

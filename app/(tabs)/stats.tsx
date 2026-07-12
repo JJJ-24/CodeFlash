@@ -1328,6 +1328,7 @@ export default function StatsScreen() {
         if (statsCardId !== null) return;
         if (activeSheet !== null) { closeSheet(); }
         else if (focusedItem?.kind === 'heatmap') { openRecordSheet(); }
+        else if (focusedItem?.kind === 'today') { openSheet('today'); }
         else if (focusedItem?.kind === 'total') { openSheet('total'); }
         else if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); }
         else if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) { startFocusedReview(); }
@@ -1344,6 +1345,7 @@ export default function StatsScreen() {
           return;
         }
         if (focusedItem?.kind === 'heatmap') { openRecordSheet(); return; }
+        if (focusedItem?.kind === 'today') { openSheet('today'); return; }
         if (focusedItem?.kind === 'total') { openSheet('total'); return; }
         if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); return; }
       },
@@ -1687,7 +1689,7 @@ export default function StatsScreen() {
           onPress={() => { setFocusedItem({ kind: 'today' }); activeSheet === 'today' ? closeSheet() : openSheet('today'); }}
         >
           <View style={styles.masteryHeader}>
-            <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.todayPlan')}</Text>
+            <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.todayProgressLabel')}</Text>
             <Text style={[styles.progressPct, { color: theme.colors.primary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{todayDigestPct === null ? '—' : `${todayDigestPct}%`}</Text>
           </View>
           <View style={[styles.progressBarBg, styles.todayBar, { backgroundColor: theme.colors.progressBg }]}>

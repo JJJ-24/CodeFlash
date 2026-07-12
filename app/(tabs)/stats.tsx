@@ -1629,9 +1629,15 @@ export default function StatsScreen() {
 
       {/* 7日間バーチャート */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {chartConfig.title}
-        </Text>
+        <View style={styles.proSectionTitle}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {chartConfig.title}
+          </Text>
+          {/* 説明は4ブロック共通のため、モーダルタイトルは動的なセクションタイトルでなく固定文言 */}
+          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.topBlocksInfoTitle'), message: <InfoContent text={t('stats.topBlocksInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.topBlocksInfoLabel')}>
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+          </Pressable>
+        </View>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <BarChart
             schedule={chartConfig.data}

@@ -188,6 +188,7 @@
     "past7DaysReviewed": "Last 7 Days Studied",
     "past7DaysActivity": "Last 7 Days Activity",
     "past7DaysCreated": "Last 7 Days New Created",
+    "sectionCollapseHint": "[Tap the title]\n  Collapse/expand this section",
     "topBlocksInfoTitle": "Top Blocks & Bar Chart",
     "topBlocksInfoLabel": "About top blocks and bar chart",
     "topBlocksInfoMessage": "The 4 blocks show today's numbers; the bar chart shows one week of the selected block.\n\nStreak: consecutive study days\n* The chart shows studied or not (0/1), past 7 days\nDone: cards studied today\nDue: cards to study today\nNew: cards created today\n\nNote: \"New\" in the Study tab and card lists means unlearned cards — a different meaning.",

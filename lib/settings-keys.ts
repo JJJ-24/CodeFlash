@@ -27,6 +27,8 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   // デッキIDの配列。別データへの merge では存在しないIDになりうるが、
   // 統計画面側で存在しないIDは実質無視されるため無害（replace では整合する）。
   '@codeflash_grade_ranking_deck_ids',
+  // 統計タブの折りたたみ中セクションID配列（'chart' 等の固定IDなので端末間で常に有効）
+  '@codeflash_stats_collapsed_sections',
   '@codeflash_card_theme',
   '@codeflash_language_pref',
   '@codeflash_last_home_filter',

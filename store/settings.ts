@@ -94,6 +94,8 @@ interface SettingsValues {
   gradeRankingByTime: boolean;
   gradeRankingPeriod: GradeRankingPeriod;
   gradeRankingDeckIds: string[];
+  // 統計タブで折りたたみ中のセクションID（'chart'|'heatmap'|'today'|'total'|'mastery'|'pro'）
+  statsCollapsedSections: string[];
   cardThemePreference: CardThemeName;
   languagePreference: LanguagePreference;
   lastHomeFilter: HomeFilter;
@@ -130,6 +132,7 @@ const oneOf = <T extends string>(values: readonly T[]) => (raw: string): T | und
   (values as readonly string[]).includes(raw) ? (raw as T) : undefined;
 
 const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
+const STATS_COLLAPSED_SECTIONS_KEY = '@codeflash_stats_collapsed_sections';
 
 const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   keyboardShortcutsEnabled: { key: '@codeflash_keyboard_shortcuts', default: true, parse: asBool },
@@ -169,6 +172,21 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     persist: (v) => {
       if (v.length === 0) AsyncStorage.removeItem(GRADE_RANKING_DECK_IDS_KEY);
       else AsyncStorage.setItem(GRADE_RANKING_DECK_IDS_KEY, JSON.stringify(v));
+    },
+  },
+  statsCollapsedSections: {
+    key: STATS_COLLAPSED_SECTIONS_KEY,
+    default: [],
+    parse: (r) => {
+      try {
+        const parsed = JSON.parse(r);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch { return undefined; }
+    },
+    // 空配列（=すべて展開）はキー自体を消す。
+    persist: (v) => {
+      if (v.length === 0) AsyncStorage.removeItem(STATS_COLLAPSED_SECTIONS_KEY);
+      else AsyncStorage.setItem(STATS_COLLAPSED_SECTIONS_KEY, JSON.stringify(v));
     },
   },
   cardThemePreference: {
@@ -229,6 +247,7 @@ interface SettingsState extends SettingsValues {
   setGradeRankingByTime: (v: boolean) => void;
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   setGradeRankingDeckIds: (v: string[]) => void;
+  toggleStatsSection: (id: string) => void;
   setCardThemePreference: (v: CardThemeName) => void;
   setLanguagePreference: (v: LanguagePreference) => void;
   setLastHomeFilter: (v: HomeFilter) => void;
@@ -276,6 +295,15 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setGradeRankingByTime: makeSetter('gradeRankingByTime'),
     setGradeRankingPeriod: makeSetter('gradeRankingPeriod'),
     setGradeRankingDeckIds: makeSetter('gradeRankingDeckIds'),
+    // 配列へのトグル追加/削除のため個別定義（永続化は DEFS の persist に従う）。
+    toggleStatsSection: (id) => {
+      set((state) => {
+        const cur = state.statsCollapsedSections;
+        const next = cur.includes(id) ? cur.filter((s) => s !== id) : [...cur, id];
+        DEFS.statsCollapsedSections.persist?.(next);
+        return { statsCollapsedSections: next };
+      });
+    },
     setCardThemePreference: makeSetter('cardThemePreference'),
     setLanguagePreference: makeSetter('languagePreference'),
     setLastHomeFilter: makeSetter('lastHomeFilter'),

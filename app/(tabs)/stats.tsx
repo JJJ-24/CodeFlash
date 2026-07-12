@@ -931,12 +931,41 @@ function isSameItem(a: FocusedItem, b: FocusedItem): boolean {
   return a.idx === (b as { idx: number }).idx;
 }
 
+// セクションタイトル行（行タップで折りたたみトグル・右端に chevron で状態表示）。
+// ⓘ は内側の独立 Pressable（タップ領域分離）。chevron の開閉アイコンは settings/sync.tsx の
+// 既存アコーディオンと同じ（開: chevron-down / 閉: chevron-forward）。
+function CollapsibleSectionTitle({ title, collapsed, onToggle, onInfo, infoLabel, badge, theme }: {
+  title: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  onInfo?: () => void;
+  infoLabel?: string;
+  badge?: React.ReactNode;
+  theme: AppTheme;
+}) {
+  return (
+    <Pressable style={styles.proSectionTitle} onPress={onToggle} accessibilityRole="button">
+      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+        {title}
+      </Text>
+      {badge}
+      {onInfo && (
+        <Pressable onPress={onInfo} hitSlop={8} accessibilityLabel={infoLabel}>
+          <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+        </Pressable>
+      )}
+      <View style={{ flex: 1 }} />
+      <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
+    </Pressable>
+  );
+}
+
 export default function StatsScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder, statsCollapsedSections, toggleStatsSection } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のメイン
@@ -1006,6 +1035,12 @@ export default function StatsScreen() {
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
           deckMastery, decks, heatmapData, gradeTotals, gradeAvgTimes, monthlyReviewed } = stats;
+
+  // セクション折りたたみ（タイトル行タップ・永続化は useSettingsStore）
+  const collapsedSet = useMemo(() => new Set(statsCollapsedSections), [statsCollapsedSections]);
+  const isSectionCollapsed = (id: string) => collapsedSet.has(id);
+  // 各セクションの ⓘ 説明の末尾に付ける折りたたみ操作の共通ヒント
+  const collapseHint = '\n\n' + t('stats.sectionCollapseHint');
 
   // openSheet 内で参照するため useMemo で安定化
   const deckMap = useMemo(
@@ -1101,17 +1136,20 @@ export default function StatsScreen() {
   }, [dataRevision, loadStats]);
 
   const focusList = useMemo<FocusedItem[]>(() => {
-    const list: FocusedItem[] = [
-      { kind: 'heatmap' },
-      { kind: 'today' },
-      { kind: 'total' },
-      ...sortedDeckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })),
-    ];
-    if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) {
+    // 折りたたみ中セクションの行は J/K サイクルから除外する（フォーカス中に畳んだ場合は
+    // 下の exists チェックで自動クリアされる）
+    const list: FocusedItem[] = [];
+    if (!collapsedSet.has('heatmap')) list.push({ kind: 'heatmap' });
+    if (!collapsedSet.has('today')) list.push({ kind: 'today' });
+    if (!collapsedSet.has('total')) list.push({ kind: 'total' });
+    if (!collapsedSet.has('mastery')) {
+      list.push(...sortedDeckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })));
+    }
+    if (!collapsedSet.has('pro') && isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) {
       gradeBlockCards.forEach((_, i) => list.push({ kind: 'card', idx: i }));
     }
     return list;
-  }, [sortedDeckMastery, isPro, selectedGradeBlock, gradeBlockCards]);
+  }, [sortedDeckMastery, isPro, selectedGradeBlock, gradeBlockCards, collapsedSet]);
 
   function scrollToRankingTop() {
     const y = sectionOffsets.current.proSection + sectionOffsets.current.ranking;
@@ -1203,6 +1241,8 @@ export default function StatsScreen() {
 
   function handleGradeKey(grade: 0 | 1 | 2 | 3) {
     if (!isPro) return;
+    // 詳細統計セクションが折りたたみ中はランキングが不可視のため無効
+    if (isSectionCollapsed('pro')) return;
     // 同じグレードを連打しても解除しない（1–4 キーと同じ idempotent な作り）。
     // タップ側のトグル動作は handleGradeBlockTap 側でそのまま維持。
     if (selectedGradeBlock !== grade) {
@@ -1362,6 +1402,7 @@ export default function StatsScreen() {
       input: '0',
       handler: () => {
         if (statsCardId !== null || activeSheet !== null) return;
+        if (isSectionCollapsed('pro')) return;
         // 隠しコマンド：グレード選択を解除（ランキング非表示に戻す）
         if (isPro && selectedGradeBlock !== null) {
           handleGradeBlockTap(selectedGradeBlock);
@@ -1395,9 +1436,9 @@ export default function StatsScreen() {
         }
       },
     },
-    { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setDeckPickerVisible(true); } },
-    { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) setPeriodPickerVisible(true); } },
-    { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null) return; if (isPro) handleToggleRankingByTime(); } },
+    { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setDeckPickerVisible(true); } },
+    { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setPeriodPickerVisible(true); } },
+    { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) handleToggleRankingByTime(); } },
     // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約。j/k と同じガードを適用）
     // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（4ブロック切替）。タブ切替は Tab/Shift+Tab。
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
@@ -1629,47 +1670,51 @@ export default function StatsScreen() {
 
       {/* 7日間バーチャート */}
       <Pressable style={styles.section} onPress={() => setFocusedItem(null)}>
-        <View style={styles.proSectionTitle}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {chartConfig.title}
-          </Text>
-          {/* 説明は4ブロック共通のため、モーダルタイトルは動的なセクションタイトルでなく固定文言 */}
-          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.topBlocksInfoTitle'), message: <InfoContent text={t('stats.topBlocksInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.topBlocksInfoLabel')}>
-            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-          </Pressable>
-        </View>
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <BarChart
-            schedule={chartConfig.data}
-            locale={i18n.language}
-            theme={theme}
-            barColor={chartConfig.color}
-            todayIsLast={chartConfig.todayIsLast}
-          />
-        </View>
+        {/* 説明は4ブロック共通のため、モーダルタイトルは動的なセクションタイトルでなく固定文言 */}
+        <CollapsibleSectionTitle
+          title={chartConfig.title}
+          collapsed={isSectionCollapsed('chart')}
+          onToggle={() => toggleStatsSection('chart')}
+          onInfo={() => setSectionInfoModal({ title: t('stats.topBlocksInfoTitle'), message: <InfoContent text={t('stats.topBlocksInfoMessage') + collapseHint} /> })}
+          infoLabel={t('stats.topBlocksInfoLabel')}
+          theme={theme}
+        />
+        {!isSectionCollapsed('chart') && (
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <BarChart
+              schedule={chartConfig.data}
+              locale={i18n.language}
+              theme={theme}
+              barColor={chartConfig.color}
+              todayIsLast={chartConfig.todayIsLast}
+            />
+          </View>
+        )}
       </Pressable>
 
       {/* 学習履歴（草グラフ） */}
       <View style={styles.section} onLayout={(e) => { sectionOffsets.current.heatmap = e.nativeEvent.layout.y; }}>
-        <View style={styles.proSectionTitle}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('stats.activityHeatmap')}
-          </Text>
-          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.activityHeatmap'), message: <InfoContent text={t('stats.activityHeatmapInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.activityHeatmapInfoLabel')}>
-            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+        <CollapsibleSectionTitle
+          title={t('stats.activityHeatmap')}
+          collapsed={isSectionCollapsed('heatmap')}
+          onToggle={() => toggleStatsSection('heatmap')}
+          onInfo={() => setSectionInfoModal({ title: t('stats.activityHeatmap'), message: <InfoContent text={t('stats.activityHeatmapInfoMessage') + collapseHint} /> })}
+          infoLabel={t('stats.activityHeatmapInfoLabel')}
+          theme={theme}
+        />
+        {!isSectionCollapsed('heatmap') && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.card,
+              { backgroundColor: theme.colors.surface },
+              focusedItem?.kind === 'heatmap' && { borderWidth: 2, borderColor: theme.colors.primary },
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={() => { setFocusedItem({ kind: 'heatmap' }); openRecordSheet(); }}
+          >
+            <ActivityHeatmap data={heatmapData} />
           </Pressable>
-        </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.card,
-            { backgroundColor: theme.colors.surface },
-            focusedItem?.kind === 'heatmap' && { borderWidth: 2, borderColor: theme.colors.primary },
-            pressed && { opacity: 0.7 },
-          ]}
-          onPress={() => { setFocusedItem({ kind: 'heatmap' }); openRecordSheet(); }}
-        >
-          <ActivityHeatmap data={heatmapData} />
-        </Pressable>
+        )}
       </View>
 
       {/* 今日のサマリー */}
@@ -1677,14 +1722,15 @@ export default function StatsScreen() {
         style={styles.section}
         onLayout={(e) => { sectionOffsets.current.today = e.nativeEvent.layout.y; }}
       >
-        <View style={styles.proSectionTitle}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('stats.todaySummary')}
-          </Text>
-          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.todaySummary'), message: <InfoContent text={t('stats.todaySummaryInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.todaySummaryInfoLabel')}>
-            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-          </Pressable>
-        </View>
+        <CollapsibleSectionTitle
+          title={t('stats.todaySummary')}
+          collapsed={isSectionCollapsed('today')}
+          onToggle={() => toggleStatsSection('today')}
+          onInfo={() => setSectionInfoModal({ title: t('stats.todaySummary'), message: <InfoContent text={t('stats.todaySummaryInfoMessage') + collapseHint} /> })}
+          infoLabel={t('stats.todaySummaryInfoLabel')}
+          theme={theme}
+        />
+        {!isSectionCollapsed('today') && (
         <Pressable
           style={({ pressed }) => [
             styles.card,
@@ -1706,6 +1752,7 @@ export default function StatsScreen() {
             {t('common.learned')}: {todayReviewed}{'        '}{t('common.due')}: {todayDue}
           </Text>
         </Pressable>
+        )}
       </View>
 
       {/* 全体学習率 */}
@@ -1713,14 +1760,15 @@ export default function StatsScreen() {
         style={styles.section}
         onLayout={(e) => { sectionOffsets.current.total = e.nativeEvent.layout.y; }}
       >
-        <View style={styles.proSectionTitle}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('stats.totalProgress')}
-          </Text>
-          <Pressable onPress={() => setSectionInfoModal({ title: t('stats.totalProgress'), message: <InfoContent text={t('stats.totalProgressInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.totalProgressInfoLabel')}>
-            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-          </Pressable>
-        </View>
+        <CollapsibleSectionTitle
+          title={t('stats.totalProgress')}
+          collapsed={isSectionCollapsed('total')}
+          onToggle={() => toggleStatsSection('total')}
+          onInfo={() => setSectionInfoModal({ title: t('stats.totalProgress'), message: <InfoContent text={t('stats.totalProgressInfoMessage') + collapseHint} /> })}
+          infoLabel={t('stats.totalProgressInfoLabel')}
+          theme={theme}
+        />
+        {!isSectionCollapsed('total') && (
         <Pressable
           style={({ pressed }) => [
             styles.card,
@@ -1741,19 +1789,21 @@ export default function StatsScreen() {
             {t('common.learned')}: {learned}{'        '}{t('common.new')}: {unlearned}
           </Text>
         </Pressable>
+        )}
       </View>
 
       {/* デッキ別習熟度 */}
       {sortedDeckMastery.length > 0 && (
         <View style={styles.section}>
-          <View style={styles.proSectionTitle}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('stats.deckMastery')}
-            </Text>
-            <Pressable onPress={() => setSectionInfoModal({ title: t('stats.deckMastery'), message: <InfoContent text={t('stats.deckMasteryInfoMessage')} /> })} hitSlop={8} accessibilityLabel={t('stats.deckMasteryInfoLabel')}>
-              <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-            </Pressable>
-          </View>
+          <CollapsibleSectionTitle
+            title={t('stats.deckMastery')}
+            collapsed={isSectionCollapsed('mastery')}
+            onToggle={() => toggleStatsSection('mastery')}
+            onInfo={() => setSectionInfoModal({ title: t('stats.deckMastery'), message: <InfoContent text={t('stats.deckMasteryInfoMessage') + collapseHint} /> })}
+            infoLabel={t('stats.deckMasteryInfoLabel')}
+            theme={theme}
+          />
+          {!isSectionCollapsed('mastery') && (
           <View style={styles.deckMasteryList}>
             {sortedDeckMastery.map((m, idx) => {
               const deck = deckMap[m.deckId];
@@ -1774,6 +1824,7 @@ export default function StatsScreen() {
               );
             })}
           </View>
+          )}
         </View>
       )}
 
@@ -1782,22 +1833,22 @@ export default function StatsScreen() {
         style={styles.section}
         onLayout={(e) => { sectionOffsets.current.proSection = e.nativeEvent.layout.y; }}
       >
-        <View style={styles.proSectionTitle}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {t('stats.proSection')}
-          </Text>
-          {/* Pro バッジは未加入者への訴求用。加入後は出さない（配色・同期など他機能と統一） */}
-          {!isPro && (
+        {/* Pro バッジは未加入者への訴求用。加入後は出さない（配色・同期など他機能と統一） */}
+        <CollapsibleSectionTitle
+          title={t('stats.proSection')}
+          collapsed={isSectionCollapsed('pro')}
+          onToggle={() => toggleStatsSection('pro')}
+          onInfo={() => setShowDetailStatsInfo(true)}
+          infoLabel={t('stats.detailStatsInfoLabel')}
+          badge={!isPro ? (
             <View style={[styles.proBadge, { backgroundColor: theme.colors.primary }]}>
               <Text style={[styles.proBadgeText, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>Pro</Text>
             </View>
-          )}
-          <Pressable onPress={() => setShowDetailStatsInfo(true)} hitSlop={8} accessibilityLabel={t('stats.detailStatsInfoLabel')}>
-            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-          </Pressable>
-        </View>
+          ) : undefined}
+          theme={theme}
+        />
 
-        {isPro ? (
+        {!isSectionCollapsed('pro') && (isPro ? (
           <>
             {/* 月別学習グラフ */}
             <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -2087,7 +2138,7 @@ export default function StatsScreen() {
               </Text>
             </View>
           </Pressable>
-        )}
+        ))}
       </View>
       </Pressable>
       </ScrollView>
@@ -2130,7 +2181,7 @@ export default function StatsScreen() {
       <InfoModal
         visible={showDetailStatsInfo}
         title={t('stats.proSection')}
-        message={<InfoContent text={t('stats.detailStatsInfoMessage')} />}
+        message={<InfoContent text={t('stats.detailStatsInfoMessage') + collapseHint} />}
         onClose={() => setShowDetailStatsInfo(false)}
       />
       <InfoModal

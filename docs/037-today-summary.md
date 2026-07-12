@@ -96,9 +96,9 @@
 - 備考: `FocusedItem` に `{ kind: 'today' }` を追加し focusList にも組込済み（focusList 外のフォーカスは exists チェックで即クリアされる invariant のため Phase 2 で実施）。行タップは現状フォーカスのみ・シート開閉は Phase 3 で接続
 
 ### Phase 3: シート
-- [ ] `GradeDistPieChart` の一般化（ヘッダー・グレースライスラベル・下段3項目を props 化。既存表示は不変）
-- [ ] 今日版: 評価4色＋残り復習グレー・中央=消化率 %・下段=正答率/初学/平均時間
-- [ ] 行タップで `DonutSheet` 表示・空の日の表示
+- [x] `GradeDistPieChart` の一般化（`header`・`grayLabel`・`bottomStats` props 追加。既存表示は不変＝未指定時は従来どおり extraStats から組立）
+- [x] 今日版: 評価4色＋残り復習グレー・中央=消化率 %（unlearned スロットに todayDue を入れることで既存の中央%計算がそのまま消化率になる）・下段=正答率/初学/平均時間
+- [x] 行タップで `DonutSheet` 表示（`activeSheet` に `'today'` を追加・トグル開閉）・空の日は `emptyText` prop で「今日の学習データはまだありません」表示
 
 ### Phase 4: キーボード
 - [ ] J/K フォーカスサイクルに行を組込み・Return で開閉

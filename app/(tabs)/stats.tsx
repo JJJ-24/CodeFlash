@@ -33,10 +33,12 @@ import {
   getStudyStreak,
   getTodayDueCount,
   getTodayReviewedCount,
+  getTodayStudySummary,
   getGradeAvgResponseTimes,
   getTopCardsByGrade,
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
+import { todayLocalRange } from '@/lib/database/utils';
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { LearningRecordSheet } from '@/components/stats/LearningRecordSheet';
@@ -185,7 +187,18 @@ const INITIAL_STATS: StatsData = {
 // ──────────────────────────────────────────────
 type PieSlice = { value: number; color: string; label: string };
 
-function GradeDistPieChart({ dist, theme, extraStats }: { dist: GradeDistribution; theme: AppTheme; extraStats?: ContextTimeStats | null }) {
+// 下段3項目（値・ラベル・単位）の差し替え用。未指定時は extraStats から既定の
+// 正答率/学習日数/平均時間 を組み立てる（今日のサマリーは 正答率/初学/平均時間 を渡す）
+type PieBottomStat = { value: string; label: string; unit: string };
+
+function GradeDistPieChart({ dist, theme, extraStats, header, grayLabel, bottomStats }: {
+  dist: GradeDistribution;
+  theme: AppTheme;
+  extraStats?: ContextTimeStats | null;
+  header?: string;
+  grayLabel?: string;
+  bottomStats?: PieBottomStat[] | null;
+}) {
   const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
   const total = dist.again + dist.hard + dist.normal + dist.easy + dist.unlearned;
@@ -196,9 +209,11 @@ function GradeDistPieChart({ dist, theme, extraStats }: { dist: GradeDistributio
   // 正答率＝(わかった+バッチリ)/学習済み（学習完了画面と定義を揃える）。
   const correctRate = learned > 0 ? Math.round(((dist.normal + dist.easy) / learned) * 100) : 0;
 
+  // グレースライス＝既定は「新規（未習）」。今日のサマリーでは「復習（残り）」に差し替わる
+  const graySliceLabel = grayLabel ?? t('common.new');
   // 凡例用（新規未習→再度→難しい→普通→簡単 の順）
   const slices: PieSlice[] = [
-    ...(dist.unlearned > 0 ? [{ value: dist.unlearned, color: '#9E9E9E', label: t('common.new') }] : []),
+    ...(dist.unlearned > 0 ? [{ value: dist.unlearned, color: '#9E9E9E', label: graySliceLabel }] : []),
     { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
     { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
     { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
@@ -210,8 +225,14 @@ function GradeDistPieChart({ dist, theme, extraStats }: { dist: GradeDistributio
     { value: dist.normal,    color: GRADE_COLORS.good,  label: t('grade.good') },
     { value: dist.hard,      color: GRADE_COLORS.hard,  label: t('grade.hard') },
     { value: dist.again,     color: GRADE_COLORS.again, label: t('grade.again') },
-    { value: dist.unlearned, color: '#9E9E9E',           label: t('common.new') },
+    { value: dist.unlearned, color: '#9E9E9E',           label: graySliceLabel },
   ];
+
+  const bottomItems: PieBottomStat[] | null = bottomStats ?? (extraStats ? [
+    { value: String(correctRate), label: t('stats.correctRate'), unit: t('stats.unitPercent') },
+    { value: String(extraStats.studyDays), label: t('stats.studyDaysLabel'), unit: t('stats.unitDays') },
+    { value: extraStats.avgTimeMs != null ? (extraStats.avgTimeMs / 1000).toFixed(1) : '-', label: t('stats.avgResponseTime'), unit: t('stats.unitSeconds') },
+  ] : null);
 
   const maxCountDigits = Math.max(...slices.map(s => String(s.value).length));
   const gradeCountScale = (Platform as any).isPad
@@ -227,7 +248,7 @@ function GradeDistPieChart({ dist, theme, extraStats }: { dist: GradeDistributio
     <View style={pieStyles.container}>
       {/* ヘッダー: 学習済み / トータル */}
       <Text style={[pieStyles.learnedHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-        {t('stats.learnedOf', { learned, total })}
+        {header ?? t('stats.learnedOf', { learned, total })}
       </Text>
       {/* ドーナツチャート */}
       <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
@@ -267,23 +288,15 @@ function GradeDistPieChart({ dist, theme, extraStats }: { dist: GradeDistributio
       </View>
 
       {/* 正答率・学習日数・平均時間（学習完了画面と同じ 値＋ラベル＋単位 の3項目レイアウト） */}
-      {extraStats && (
+      {bottomItems && (
         <View style={[pieStyles.statRow, { maxWidth: Math.min(screenWidth * 0.92, 520) }]}>
-          <View style={pieStyles.statItem}>
-            <Text style={[pieStyles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{correctRate}</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.correctRate')}</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.unitPercent')}</Text>
-          </View>
-          <View style={pieStyles.statItem}>
-            <Text style={[pieStyles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{extraStats.studyDays}</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.studyDaysLabel')}</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.unitDays')}</Text>
-          </View>
-          <View style={pieStyles.statItem}>
-            <Text style={[pieStyles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{extraStats.avgTimeMs != null ? (extraStats.avgTimeMs / 1000).toFixed(1) : '-'}</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.avgResponseTime')}</Text>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('stats.unitSeconds')}</Text>
-          </View>
+          {bottomItems.map((item) => (
+            <View key={item.label} style={pieStyles.statItem}>
+              <Text style={[pieStyles.statValue, { color: theme.colors.text, fontSize: theme.fontSize.xl }]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.value}</Text>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.label}</Text>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.unit}</Text>
+            </View>
+          ))}
         </View>
       )}
     </View>
@@ -485,6 +498,10 @@ function DonutSheet({
   colorHex,
   dist,
   extraStats,
+  header,
+  grayLabel,
+  bottomStats,
+  emptyText,
   onClose,
   theme,
 }: {
@@ -494,6 +511,11 @@ function DonutSheet({
   colorHex?: string | null;
   dist: GradeDistribution | null;
   extraStats?: ContextTimeStats | null;
+  header?: string;
+  grayLabel?: string;
+  bottomStats?: PieBottomStat[] | null;
+  /** dist が全ゼロ（開けるがデータなし）のとき表示する文言。未指定なら何も出さない */
+  emptyText?: string;
   onClose: () => void;
   theme: AppTheme;
 }) {
@@ -537,7 +559,13 @@ function DonutSheet({
         </Pressable>
         <ScrollView style={sheetStyles.bodyScroll} contentContainerStyle={sheetStyles.body} showsVerticalScrollIndicator={false}>
           {dist ? (
-            <GradeDistPieChart dist={dist} theme={theme} extraStats={extraStats} />
+            emptyText != null && dist.again + dist.hard + dist.normal + dist.easy + dist.unlearned === 0 ? (
+              <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {emptyText}
+              </Text>
+            ) : (
+              <GradeDistPieChart dist={dist} theme={theme} extraStats={extraStats} header={header} grayLabel={grayLabel} bottomStats={bottomStats} />
+            )
           ) : (
             <Text style={{ color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('common.loading')}
@@ -938,7 +966,7 @@ export default function StatsScreen() {
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
   const [stats, setStats] = useState<StatsData>(INITIAL_STATS);
   const [focusedItem, setFocusedItem] = useState<FocusedItem>(null);
-  const [activeSheet, setActiveSheet] = useState<null | 'total' | number>(null);
+  const [activeSheet, setActiveSheet] = useState<null | 'today' | 'total' | number>(null);
   const [sheetDist, setSheetDist] = useState<GradeDistribution | null>(null);
   const [sheetTitle, setSheetTitle] = useState('');
   // ドーナツシートのタイトル横に出すデッキアイコン（「すべてのデッキ」のときは null）
@@ -953,6 +981,8 @@ export default function StatsScreen() {
   const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string; extra: ContextTimeStats } | null>(null);
   // ドーナツ（全体/デッキ）に添える文脈別の学習日数・平均時間。
   const [sheetExtra, setSheetExtra] = useState<ContextTimeStats | null>(null);
+  // 今日のサマリーシート専用（初学カード数・今日の平均回答時間）
+  const [todaySheetStats, setTodaySheetStats] = useState<{ firstLearned: number; avgTimeMs: number | null } | null>(null);
   const [showDetailStatsInfo, setShowDetailStatsInfo] = useState(false);
   // 草グラフタップで開く「学習の記録」シート（最長連続・累計・バッジ）。開くときに生涯集計を取得。
   const [recordSheetVisible, setRecordSheetVisible] = useState(false);
@@ -1194,11 +1224,23 @@ export default function StatsScreen() {
     }
   }, [gradeBlockLoading, gradeBlockCards, selectedGradeBlock]);
 
-  const openSheet = useCallback(async (target: 'total' | number) => {
+  const openSheet = useCallback(async (target: 'today' | 'total' | number) => {
     setActiveSheet(target);
     setSheetDist(null);
     setSheetExtra(null);
-    if (target === 'total') {
+    setTodaySheetStats(null);
+    if (target === 'today') {
+      setSheetTitle(t('stats.todaySummary'));
+      setSheetIcon(null);
+      // 評価内訳は grade_logs ベース（アーカイブ除外なし＝032 の「過去実績は消さない」方針）。
+      // 残り復習（グレースライス）は行と同じ todayDue（activeCardCond 適用）で、僅差は許容（docs/037）
+      const [totals, summary] = await Promise.all([
+        getGradeLogTotals(db, todayLocalRange().start),
+        getTodayStudySummary(db),
+      ]);
+      setSheetDist({ again: totals.again, hard: totals.hard, normal: totals.good, easy: totals.easy, unlearned: todayDue });
+      setTodaySheetStats({ firstLearned: summary.firstLearnedCount, avgTimeMs: summary.avgResponseTimeMs });
+    } else if (target === 'total') {
       setSheetTitle(t('stats.totalProgress'));
       setSheetIcon(null);
       const [dist, extra] = await Promise.all([getAllGradeDistribution(db), getContextTimeStats(db)]);
@@ -1214,7 +1256,7 @@ export default function StatsScreen() {
       setSheetDist(dist);
       setSheetExtra(extra);
     }
-  }, [db, sortedDeckMastery, deckMap, t]);
+  }, [db, sortedDeckMastery, deckMap, t, todayDue]);
 
   const closeSheet = useCallback(() => setActiveSheet(null), []);
 
@@ -1466,6 +1508,18 @@ export default function StatsScreen() {
   const todayPlanTotal = todayReviewed + todayDue;
   const todayDigestPct = todayPlanTotal > 0 ? Math.round((todayReviewed / todayPlanTotal) * 100) : null;
 
+  // 今日のサマリーシート：ヘッダー「済み X / Y 枚」と下段3項目（正答率/初学/平均時間）。
+  // 済み＝今日の評価4色の合計（grade_logs 同日デデュープ済み）
+  const todaySheetGraded = sheetDist ? sheetDist.again + sheetDist.hard + sheetDist.normal + sheetDist.easy : 0;
+  const todayBottomStats: PieBottomStat[] | null =
+    activeSheet === 'today' && sheetDist && todaySheetStats
+      ? [
+          { value: String(todaySheetGraded > 0 ? Math.round(((sheetDist.normal + sheetDist.easy) / todaySheetGraded) * 100) : 0), label: t('stats.correctRate'), unit: t('stats.unitPercent') },
+          { value: String(todaySheetStats.firstLearned), label: t('stats.firstLearned'), unit: t('stats.unitCards') },
+          { value: todaySheetStats.avgTimeMs != null ? (todaySheetStats.avgTimeMs / 1000).toFixed(1) : '-', label: t('stats.avgResponseTime'), unit: t('stats.unitSeconds') },
+        ]
+      : null;
+
   if (!hasData && total === 0) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
@@ -1630,7 +1684,7 @@ export default function StatsScreen() {
             focusedItem?.kind === 'today' && { borderWidth: 2, borderColor: theme.colors.primary },
             pressed && { opacity: 0.7 },
           ]}
-          onPress={() => { setFocusedItem({ kind: 'today' }); }}
+          onPress={() => { setFocusedItem({ kind: 'today' }); activeSheet === 'today' ? closeSheet() : openSheet('today'); }}
         >
           <View style={styles.masteryHeader}>
             <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.todayPlan')}</Text>
@@ -2036,6 +2090,10 @@ export default function StatsScreen() {
         colorHex={sheetIcon?.colorHex}
         dist={sheetDist}
         extraStats={sheetExtra}
+        header={activeSheet === 'today' && sheetDist ? t('stats.todayDoneOf', { done: todaySheetGraded, total: todaySheetGraded + sheetDist.unlearned }) : undefined}
+        grayLabel={activeSheet === 'today' ? t('common.due') : undefined}
+        bottomStats={todayBottomStats}
+        emptyText={activeSheet === 'today' ? t('stats.todaySheetEmpty') : undefined}
         onClose={closeSheet}
         theme={theme}
       />

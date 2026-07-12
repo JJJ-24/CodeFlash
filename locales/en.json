@@ -82,6 +82,7 @@
     "timerFinish": "Finish Session",
     "timerMenuTitle": "Study Timer",
     "timerMenuMessage": "Choose an action.",
+    "timerStartHint": "{{minutes}} min",
     "timerRestart": "Restart Timer",
     "timerStop": "Stop Timer"
   },

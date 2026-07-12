@@ -82,6 +82,7 @@
     "timerFinish": "学習を完了",
     "timerMenuTitle": "学習タイマー",
     "timerMenuMessage": "操作を選択してください。",
+    "timerStartHint": "{{minutes}}分",
     "timerRestart": "タイマーを再スタート",
     "timerStop": "タイマーを終了"
   },

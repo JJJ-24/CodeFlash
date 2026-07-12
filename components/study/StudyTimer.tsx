@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
@@ -68,6 +69,47 @@ export function StudyTimer({
   style,
 }: Props) {
   const theme = useTheme();
+  const { t } = useTranslation();
+
+  // 開始/再スタート（epoch が進む）から3秒間、円の左に「⏱ N分」を表示して設定時間を思い出せるようにする。
+  // 表示設定（円/数字）に関係なく常に出す：数字ON でも残り分数は floor 表示で開始直後に 5→4 と
+  // 変わるため「何分設定だっけ？」は同様に起こる。一時停止→再開（epoch 不変）では出さない。
+  const hintOpacity = useSharedValue(0);
+  const [hintVisible, setHintVisible] = useState(false);
+  const hintPrevEpochRef = useRef<number | null>(null);
+  useEffect(() => {
+    // 本コンポーネントは timerMounted ゲートにより「開始後」にマウントされるため、開始は
+    // epoch 変化だけでは検出できない（初回実行時にはすでに epoch が進んでいる）。
+    // 初回実行（マウント）では「残りがほぼ満タン＝開始直後」のときだけ表示し、
+    // 進行中タイマーのまま学習画面へ入り直した（別デッキ・同デッキやり直し・全画面切替）
+    // ケース＝残りが減っている状態では出さない。以降は epoch 変化（再スタート等）で表示。
+    const isFirstRun = hintPrevEpochRef.current === null;
+    hintPrevEpochRef.current = epoch;
+    if (phase !== 'running') return;
+    if (isFirstRun && remainingRef.current < totalRef.current - 2000) return;
+    cancelAnimation(hintOpacity);
+    hintOpacity.value = 1;
+    setHintVisible(true);
+    hintOpacity.value = withDelay(INTRO_VISIBLE_MS, withTiming(0, { duration: INTRO_FADE_MS }));
+    const id = setTimeout(() => setHintVisible(false), INTRO_VISIBLE_MS + INTRO_FADE_MS);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epoch]);
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hintOpacity.value }));
+  const totalMinutes = Math.round(totalMs / 60_000);
+  const startHint = hintVisible && totalMinutes > 0 && (
+    <Animated.View style={[styles.startHintWrap, hintStyle]} pointerEvents="none">
+      <View style={[styles.startHint, { backgroundColor: theme.colors.surface, borderColor: theme.colors.textTertiary + '4D' }]}>
+        <Ionicons name="timer-outline" size={16} color={theme.colors.textSecondary} />
+        <Text
+          style={{ fontSize: theme.fontSize.sm, fontWeight: '600', color: theme.colors.textSecondary }}
+          allowFontScaling={false}
+        >
+          {t('study.timerStartHint', { minutes: totalMinutes })}
+        </Text>
+      </View>
+    </Animated.View>
+  );
 
   // パイの進行は reanimated の UI スレッドで連続アニメーションさせる（store の秒粒度更新だとカクつく）。
   // counting 中は「現在の残り割合 → 0」へ残り時間ぶんの線形アニメーション、停止時は現在値へスナップ。
@@ -159,6 +201,7 @@ export function StudyTimer({
   if (ghostMode) {
     return (
       <View style={style}>
+        {startHint}
         <Pressable
           onPress={showTime ? onPress : () => setPeekNonce((n) => n + 1)}
           onLongPress={onLongPress}
@@ -187,6 +230,7 @@ export function StudyTimer({
 
   return (
     <Animated.View style={[style, containerStyle]}>
+      {startHint}
       <Pressable
         onPress={onPress}
         onLongPress={onLongPress}
@@ -246,6 +290,25 @@ const styles = StyleSheet.create({
   // （不透明度は borderColor のアルファで表現。showTime の数字まで薄くしないため opacity は使わない）
   ghost: {
     borderWidth: 1,
+  },
+  // 開始時に円の左へ出す「⏱ N分」ピル。右アンカーのみの絶対配置は親（56pt）の幅を制約に
+  // シュリンク計測されて文字末尾が潰れるため、十分な固定幅の透明ラッパーを絶対配置し、
+  // その中で通常フローのピルを右寄せする（ピルは制約内の auto 幅＝パディングが正しく効く）。
+  startHintWrap: {
+    position: 'absolute',
+    right: STUDY_TIMER_SIZE + 6,
+    top: (STUDY_TIMER_SIZE - 28) / 2,
+    width: 200,
+    alignItems: 'flex-end',
+  },
+  startHint: {
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   // パイの上に白数字/アイコンを載せるため、透明部分（カード背景）の上でも読めるよう影で縁取る
   overlayShadow: {

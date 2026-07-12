@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useKeyCommands } from '@/lib/useKeyCommands';
+import { isRemoteKeyboardEvent } from '@/lib/keyboardEvent';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 interface Props {
@@ -46,11 +47,15 @@ export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
   // 開く前後で位置が跳ねるため使わず、閾値（150pt）で「大きいキーボードのときだけ」自前で持ち上げる。
   const [kbHeight, setKbHeight] = useState(0);
   useEffect(() => {
-    const onChange = (e: { endCoordinates?: { height?: number } }) => {
+    const onChange = (e: { endCoordinates?: { height?: number }; isEventFromThisApp?: boolean }) => {
+      if (isRemoteKeyboardEvent(e)) return;
       const h = e.endCoordinates?.height ?? 0;
       setKbHeight(h > 150 ? h : 0);
     };
-    const onHide = () => setKbHeight(0);
+    const onHide = (e: { isEventFromThisApp?: boolean }) => {
+      if (isRemoteKeyboardEvent(e)) return;
+      setKbHeight(0);
+    };
     const subShow = Keyboard.addListener('keyboardWillChangeFrame', onChange);
     const subHide = Keyboard.addListener('keyboardWillHide', onHide);
     return () => { subShow.remove(); subHide.remove(); };

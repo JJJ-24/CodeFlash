@@ -37,6 +37,7 @@ import { ShortcutsModal } from "@/components/study/ShortcutsModal";
 import { StudyTimer } from "@/components/study/StudyTimer";
 import { useCodeBlockSelection } from "@/hooks/useCodeBlockSelection";
 import { useStudyTimer } from "@/hooks/useStudyTimer";
+import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { useLockedHeaderHeights } from "@/lib/useLockedTopInset";
 import { useStudySession } from "@/hooks/useStudySession";
@@ -236,9 +237,13 @@ export default function StudySessionScreen() {
   // この画面がフォーカス中のときだけ kbHeight を増やす（hide は常に 0 で安全側）。
   useEffect(() => {
     const show = Keyboard.addListener('keyboardWillShow', (e) => {
+      if (isRemoteKeyboardEvent(e)) return;
       if (isScreenFocusedRef.current) setKbHeight(e.endCoordinates.height);
     });
-    const hide = Keyboard.addListener('keyboardWillHide', () => setKbHeight(0));
+    const hide = Keyboard.addListener('keyboardWillHide', (e) => {
+      if (isRemoteKeyboardEvent(e)) return;
+      setKbHeight(0);
+    });
     return () => { show.remove(); hide.remove(); };
   }, [isScreenFocusedRef]);
 

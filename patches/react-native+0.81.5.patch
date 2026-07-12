@@ -1,0 +1,48 @@
+diff --git a/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js b/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js
+index 6eca156..7015d25 100644
+--- a/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js
++++ b/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js
+@@ -111,6 +111,11 @@ class KeyboardAvoidingView extends React.Component<
+   }
+ 
+   _onKeyboardChange = (event: ?KeyboardEvent) => {
++    // Ignore keyboard events from other apps (iPad Split View / Stage Manager),
++    // otherwise the view shifts when a neighboring app shows its keyboard.
++    if (event != null && event.isEventFromThisApp === false) {
++      return;
++    }
+     this._keyboardEvent = event;
+     // $FlowFixMe[unused-promise]
+     this._updateBottomIfNecessary();
+diff --git a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
+index 1494fd2..f43ea8a 100644
+--- a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
++++ b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
+@@ -175,6 +175,11 @@ - (void)_keyboardWillChangeFrame:(NSNotification *)notification
+   if (!_automaticallyAdjustKeyboardInsets) {
+     return;
+   }
++  // Ignore keyboard events from other apps (iPad Split View / Stage Manager),
++  // otherwise insets are adjusted when a neighboring app shows its keyboard.
++  if (![notification.userInfo[UIKeyboardIsLocalUserInfoKey] boolValue]) {
++    return;
++  }
+   BOOL isHorizontal = _scrollView.contentSize.width > self.frame.size.width;
+   if (isHorizontal) {
+     return;
+diff --git a/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m b/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m
+index 59f956d..e50c5b2 100644
+--- a/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m
++++ b/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m
+@@ -284,6 +284,11 @@ - (void)_keyboardWillChangeFrame:(NSNotification *)notification
+   if (![self automaticallyAdjustKeyboardInsets]) {
+     return;
+   }
++  // Ignore keyboard events from other apps (iPad Split View / Stage Manager),
++  // otherwise insets are adjusted when a neighboring app shows its keyboard.
++  if (![notification.userInfo[UIKeyboardIsLocalUserInfoKey] boolValue]) {
++    return;
++  }
+   if ([self isHorizontal:_scrollView]) {
+     return;
+   }

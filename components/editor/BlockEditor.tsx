@@ -28,6 +28,7 @@ import { constants as KeyCommand } from "react-native-key-command";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
+import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from "@/lib/theme";
@@ -154,8 +155,14 @@ export function BlockEditor({
   useEffect(() => {
     const showEvt = Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow";
     const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const showSub = Keyboard.addListener(showEvt, (e) => setKeyboardPadding(e.endCoordinates?.height ?? 0));
-    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardPadding(0));
+    const showSub = Keyboard.addListener(showEvt, (e) => {
+      if (isRemoteKeyboardEvent(e)) return;
+      setKeyboardPadding(e.endCoordinates?.height ?? 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvt, (e) => {
+      if (isRemoteKeyboardEvent(e)) return;
+      setKeyboardPadding(0);
+    });
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
   useEffect(() => () => { if (archivePillTimerRef.current) clearTimeout(archivePillTimerRef.current); }, []);

@@ -12,8 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.jjj24.codeflash",
       "icon": {
-        "light":  "./assets/images/icon-light.png",
-        "dark":   "./assets/images/icon-dark.png",
+        "light": "./assets/images/icon-light.png",
+        "dark": "./assets/images/icon-dark.png",
         "tinted": "./assets/images/icon-tinted.png"
       },
       "infoPlist": {
@@ -79,7 +79,16 @@
           "containerName": "$(PRODUCT_NAME)"
         }
       ],
-      "./plugins/withKeyCommands"
+      "./plugins/withKeyCommands",
+      "./plugins/withPrebuiltRNDeps",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "buildReactNativeFromSource": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

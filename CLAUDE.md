@@ -197,6 +197,13 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **コードブロック/エディタブロックのフォーカス系ヘッダー色**: 状態（フォーカス/選択・編集中・実行中）に応じてヘッダー背景色が変わる。色は `lib/theme` の派生定数で統一：`CODE_FOCUS_HEADER`（≈`#0F477E`・primary を 60%）／`CODE_EDITING_HEADER`（≈`#643800`・grade hard `#FB8C00` を **40%**）／`CODE_RUNNING_HEADER`（≈`#28602B`・grade good `#43A047` を 60%）。いずれも `darkenHex(base, 係数)` で「対応するボーダー色を暗くした濃色」＝ボーダーより暗いのでヘッダー上のボタンの形が浮く。暖色（オレンジ）は同係数だと知覚的に明るく浮くため**編集だけ係数を 0.4** に下げ、青/緑（0.6）と知覚輝度（≈0.06〜0.09）を揃える。`CodeRunnerView`・`CodeBlockItem`・`TextBlockItem`・`ImageBlockItem` が使用（テキスト/画像は実行状態なし＝フォーカス青と編集アンバーのみ）。ボーダー色と連動するため、状態管理を変更する際は両方を確認する。
 - **選択バーのアクションボタン**: 削除・移動などのバーボタンは言語/フォントサイズ非依存にするためアイコンのみ（テキストなし）の円形ボタンにする。`iconBtn` スタイル: `{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }`。無効時は `opacity: 0.4`。
 
+#### iPad マルチウィンドウとキーボード通知（Split View / Stage Manager）
+
+- **隣のアプリがキーボードを出すと、自アプリにも UIKeyboard\* 通知が届く**（`isEventFromThisApp = false` / ネイティブは `UIKeyboardIsLocalUserInfoKey = NO`）。無視しないと「分割表示で隣のメモアプリをタップした瞬間、カードエディタがほぼ真っ白に潰れる・デッキ/タグフォームのスクロールがズレる」不具合になる（実例・修正済み）。
+- **JS 側の `Keyboard.addListener` は必ず `lib/keyboardEvent.ts` の `isRemoteKeyboardEvent(e)` で先頭ガードする**（`BlockEditor`・`BlocksView`・`study/session`・`SqlInitModal` に適用済み。新しくキーボードリスナーを書くときも同様にする）。
+- **`KeyboardAvoidingView` と `automaticallyAdjustKeyboardInsets`（Fabric/Paper の ScrollView）は RN 本体がリモートキーボードを区別しない**ため、`patches/react-native+0.81.5.patch` でガードを注入済み（KAV の `_onKeyboardChange`・`RCTScrollViewComponentView.mm`・`RCTScrollView.m` の3箇所）。**RN をアップグレードしたらこのパッチの当たり直しを必ず確認する**。ネイティブ側の変更なので反映には dev client の再ビルドが必要（JS 側はリロードのみ）。
+- **RN ネイティブへのパッチはビルド設定とセット（重要）**: Expo SDK 54 の iOS ビルドは既定で「プリコンパイル済み RN コア」を使うため、**node_modules 内の RN ネイティブソースにパッチを当ててもビルドに含まれない**（JS のパッチは Metro 経由で効く）。本プロジェクトは `expo-build-properties` の `ios.buildReactNativeFromSource: true` で RN 本体をソースビルドに切替済み。ただし**フルソースビルドは fmt が新しい Xcode の Clang で consteval エラーになる**ため、`plugins/withPrebuiltRNDeps.js`（config plugin）が Podfile に `RCT_USE_RN_DEP=1` を注入し、サードパーティ依存（fmt/folly/glog/boost）だけプリビルド（`ReactNativeDependencies`）を使う構成にしている。prebuild で `ios/` を作り直してもこの2つ（build-properties＋plugin）で再現される。RN/Expo を上げるときはこの組み合わせが維持されているか `ios/Podfile.lock`（`React-Core (from ../node_modules/react-native/)` と `ReactNativeDependencies` の共存・`fmt` Pod が無いこと）で確認する。
+
 #### i18n
 
 - **言語フォールバック**: 端末言語を自動検出し、未対応言語の場合は**英語**にフォールバック（`lib/i18n/index.ts` の `fallbackLng: 'en'`）。`ja.json` を変更したら `en.json` も必ずセットで更新する。

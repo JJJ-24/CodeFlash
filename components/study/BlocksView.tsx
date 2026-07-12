@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Image } from 'expo-image';
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
+import { isRemoteKeyboardEvent } from '@/lib/keyboardEvent';
 import { resolveImageUri, imageMaxWidth } from '@/lib/image';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
@@ -124,13 +125,15 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   // キーボード表示完了時に編集中ブロックが隠れないよう再スクロールする
   useEffect(() => {
     const show = Keyboard.addListener('keyboardWillShow', (e) => {
+      if (isRemoteKeyboardEvent(e)) return;
       const kh = e.endCoordinates.height;
       kbHeightRef.current = kh;
       const blockIdx = editingBlockIdxRef.current;
       if (blockIdx === null || !scrollRef?.current) return;
       scrollToBlockEnd(blockIdx, kh);
     });
-    const hide = Keyboard.addListener('keyboardWillHide', () => {
+    const hide = Keyboard.addListener('keyboardWillHide', (e) => {
+      if (isRemoteKeyboardEvent(e)) return;
       kbHeightRef.current = 0;
     });
     return () => { show.remove(); hide.remove(); };

@@ -38,4 +38,6 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_study_timer_ring_visible',
   '@codeflash_study_timer_show_time',
   '@codeflash_study_timer_end_behavior',
+  '@codeflash_study_timer_break_minutes',
+  '@codeflash_study_timer_cycles',
 ] as const;

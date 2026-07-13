@@ -3,6 +3,7 @@ import { getLocales } from 'expo-localization';
 import { create } from 'zustand';
 
 import i18n from '@/lib/i18n';
+import { cancelBreakEndNotification } from '@/lib/notifications';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
@@ -53,6 +54,21 @@ export const STUDY_TIMER_MINUTES_DEFAULT = 10;
 
 const clampTimerMinutes = (v: number) =>
   Math.max(STUDY_TIMER_MINUTES_MIN, Math.min(STUDY_TIMER_MINUTES_MAX, Math.round(v)));
+
+// ポモドーロ拡張（039）: 休憩時間と繰り返し回数。回数1（既定）＝従来の単発タイマーと同一挙動。
+export const STUDY_TIMER_BREAK_MINUTES_MIN = 1;
+export const STUDY_TIMER_BREAK_MINUTES_MAX = 30;
+export const STUDY_TIMER_BREAK_MINUTES_DEFAULT = 5;
+
+const clampBreakMinutes = (v: number) =>
+  Math.max(STUDY_TIMER_BREAK_MINUTES_MIN, Math.min(STUDY_TIMER_BREAK_MINUTES_MAX, Math.round(v)));
+
+export const STUDY_TIMER_CYCLES_MIN = 1;
+export const STUDY_TIMER_CYCLES_MAX = 12;
+export const STUDY_TIMER_CYCLES_DEFAULT = 1;
+
+const clampTimerCycles = (v: number) =>
+  Math.max(STUDY_TIMER_CYCLES_MIN, Math.min(STUDY_TIMER_CYCLES_MAX, Math.round(v)));
 
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
@@ -105,6 +121,8 @@ interface SettingsValues {
   studyTimerRingVisible: boolean;
   studyTimerShowTime: boolean;
   studyTimerEndBehavior: StudyTimerEndBehavior;
+  studyTimerBreakMinutes: number;
+  studyTimerCycles: number;
 }
 
 /**
@@ -133,6 +151,19 @@ const oneOf = <T extends string>(values: readonly T[]) => (raw: string): T | und
 
 const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
 const STATS_COLLAPSED_SECTIONS_KEY = '@codeflash_stats_collapsed_sections';
+
+// 作動中（一時停止含む）にタイマー設定（分数/休憩/回数）を変更したら計り直す（旧い残り時間の
+// ままだと設定が効いていないように見えるため）。次の学習開始時に新しい設定でスタートする。
+// hydrate 時にも呼ばれるが、起動直後はタイマー未開始（idle）なので無害。
+// 休憩中だった場合は予約済みの休憩終了通知も掃除する（039・休憩開始時予約方式）。
+const resetStudyTimerIfActive = () => {
+  const st = useStudyTimerStore.getState();
+  if (st.phase !== 'idle') {
+    const wasBreak = st.mode === 'break';
+    st.reset();
+    if (wasBreak) cancelBreakEndNotification();
+  }
+};
 
 const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   keyboardShortcutsEnabled: { key: '@codeflash_keyboard_shortcuts', default: true, parse: asBool },
@@ -202,23 +233,39 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   },
   lastHomeFilter: { key: '@codeflash_last_home_filter', default: 'active', parse: oneOf(['active', 'all'] as const) },
   lastTagCardFilter: { key: '@codeflash_last_tag_card_filter', default: 'active', parse: oneOf(['active', 'all'] as const) },
-  studyTimerEnabled: { key: '@codeflash_study_timer_enabled', default: false, parse: asBool },
+  studyTimerEnabled: {
+    key: '@codeflash_study_timer_enabled',
+    default: false,
+    // OFF にしたら作動中タイマーを即リセットする（039: 休憩中に OFF にした場合、予約済みの
+    // 休憩終了通知を残さないため。従来の「次回セッションマウント時に掃除」だと通知だけ先に鳴り得る）。
+    // hydrate 時（起動直後＝idle）は無害。
+    parse: asBool,
+    onApply: (v) => { if (!v) resetStudyTimerIfActive(); },
+  },
   studyTimerMinutes: {
     key: '@codeflash_study_timer_minutes',
     default: STUDY_TIMER_MINUTES_DEFAULT,
     parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampTimerMinutes(v); },
     normalize: clampTimerMinutes,
-    // 作動中（一時停止含む）に時間を変更したら計り直す（旧い残り時間のままだと設定が
-    // 効いていないように見えるため）。次の学習開始時に新しい分数でスタートする。
-    // hydrate 時にも呼ばれるが、起動直後はタイマー未開始（idle）なので無害。
-    onApply: () => {
-      const st = useStudyTimerStore.getState();
-      if (st.phase !== 'idle') st.reset();
-    },
+    onApply: resetStudyTimerIfActive,
   },
   studyTimerRingVisible: { key: '@codeflash_study_timer_ring_visible', default: true, parse: asBool },
   studyTimerShowTime: { key: '@codeflash_study_timer_show_time', default: false, parse: asBool },
   studyTimerEndBehavior: { key: '@codeflash_study_timer_end_behavior', default: 'alert', parse: oneOf(['alert', 'blink'] as const) },
+  studyTimerBreakMinutes: {
+    key: '@codeflash_study_timer_break_minutes',
+    default: STUDY_TIMER_BREAK_MINUTES_DEFAULT,
+    parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampBreakMinutes(v); },
+    normalize: clampBreakMinutes,
+    onApply: resetStudyTimerIfActive,
+  },
+  studyTimerCycles: {
+    key: '@codeflash_study_timer_cycles',
+    default: STUDY_TIMER_CYCLES_DEFAULT,
+    parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampTimerCycles(v); },
+    normalize: clampTimerCycles,
+    onApply: resetStudyTimerIfActive,
+  },
 };
 
 const SETTING_KEYS = Object.keys(DEFS) as (keyof SettingsValues)[];
@@ -257,6 +304,8 @@ interface SettingsState extends SettingsValues {
   setStudyTimerRingVisible: (v: boolean) => void;
   setStudyTimerShowTime: (v: boolean) => void;
   setStudyTimerEndBehavior: (v: StudyTimerEndBehavior) => void;
+  setStudyTimerBreakMinutes: (v: number) => void;
+  setStudyTimerCycles: (v: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => {
@@ -313,6 +362,8 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setStudyTimerRingVisible: makeSetter('studyTimerRingVisible'),
     setStudyTimerShowTime: makeSetter('studyTimerShowTime'),
     setStudyTimerEndBehavior: makeSetter('studyTimerEndBehavior'),
+    setStudyTimerBreakMinutes: makeSetter('studyTimerBreakMinutes'),
+    setStudyTimerCycles: makeSetter('studyTimerCycles'),
   };
 });
 

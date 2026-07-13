@@ -1,7 +1,7 @@
 # 039 学習タイマーのポモドーロ拡張（学習→休憩の繰り返し）
 
 **フェーズ:** 未定
-**ステータス:** 未着手
+**ステータス:** 完了（2026-07-13・全Phase実装＋実機確認済み）
 **依存:** 036（学習タイマー）, 016（買い切り課金 `useProStore`）
 **被依存:** なし
 **料金区分:** Pro 機能
@@ -70,6 +70,7 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 - **学習 tick（既存 effect の最小変更）**: `counting` 条件に `mode==='study'` を追加。`rem <= 0` の分岐を「最終インターバル（`cycleIndex >= cycleCount`）なら `finish()`＋onFinish／中間なら `startBreak()`＋onBreakStart」に変更。cleanup の書き戻しは既存の epoch 一致ガードがそのまま有効（startBreak が epoch を進めるため stale 書き戻しを防ぐ）。
   - **学習→休憩の遷移検出は学習 tick 内だけで十分**: 学習計時はフォーカス中＋フォアグラウンドのみ動くので、学習インターバルの時間切れは必ず画面上で起こる。
 - **休憩 tick（新規 effect）**: 発火条件 `enabled && phase==='running' && mode==='break'`。**`suspended`・`appActive` を条件に含めない**（壁時計＝編集モーダル上・完了画面でも進む）。250ms tick で `rem = breakEndAt - Date.now()` を秒粒度書込。cleanup の書き戻しは**不要**（breakEndAt が真実・remainingMs は表示キャッシュ）。
+  - **表示（フック返り値）の残り時間はレンダー時に breakEndAt から導出**（`Math.min(remainingMs, breakEndAt - now)`・2026-07-13 実機で発見・修正）: 画面を出入りすると tick が止まりキャッシュが古いまま残り、StudyTimer のパイが「古い残量」を起点に再アニメーションして実際とズレるため（数字は tick 再開で直るがパイの起点は直らない）。min の形にするのは ①キャッシュは大きい側にしかズレない（breakEndAt 固定）＝小さい方が常に正 ②React Compiler のメモ化でも tick の毎秒更新で再計算される、の2点。
 - **`endBreak(reason: 'natural' | 'skip' | 'stop')` に離脱を一元化**: `delta = now - breakStartedAt`（0以上に clamp）→ `onBreakElapsed(delta)`（統計除外）→ stop なら `store.stop()`／それ以外は `startNextStudy()`＋onBreakEnd → 休憩終了通知キャンセル。hook が返す `stop` は「休憩中なら endBreak('stop')」のラッパーに差し替え。`skipBreak = () => endBreak('skip')` を返す。
   - `onBreakEnd`（UX＝ハプティクス）と `onBreakElapsed`（統計＝除外時間）を分ける: **stop で休憩を抜けた場合は遷移演出は不要だが統計除外は必要**。
 - **`resolveBreak()`（復帰時解決）**: `mode==='break' && now >= breakEndAt` なら `endBreak('natural')`。呼び出しは3箇所 — ①マウント時（startedRef ブロック末尾＝デッキ切替中に休憩が終わったケース）②AppState 'active' 遷移時（バックグラウンド中に終わったケース）③休憩 tick effect 冒頭（250ms 遅延の排除）。バックグラウンド中に学習は進まない設計なので、**飛び越すべき遷移は最大1つ**（多段解決ループ不要）。
@@ -78,16 +79,18 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 
 ### ローカル通知（lib/notifications.ts）
 
-- **「バックグラウンド遷移時に予約・active 復帰時にキャンセル」方式**（採用・決定的な理由あり）:
-  - `app/_layout.tsx` は AppState→active のたびに全通知キャンセル→リマインダー再登録（`scheduleFromDb`）を実行する。**休憩開始時に予約する方式だと「休憩中に一度復帰→再バックグラウンド」で通知が黙って消える**。バックグラウンド遷移時予約なら、cancel-all は「不要になった時（復帰時）」にしか走らないため干渉しない。
-  - さらに**フォアグラウンド中は通知が存在しない**ことが構造的に保証され、「フォアグラウンドで鳴らさない」も同時に解決（`setNotificationHandler` 未登録＝フォアグラウンド非表示、が二重の保険）。
-  - 不採用: 休憩開始時に予約 — cancel-all 干渉に加え、スキップ/停止/リセットの全経路でキャンセル漏れを追うことになり事故りやすい。
+- **「休憩開始時に予約・全離脱経路でキャンセル」方式**（**2026-07-13 実機確認後に変更**）:
+  - 当初は「バックグラウンド遷移時に予約・active 復帰時にキャンセル」方式（フォアグラウンドに通知を存在させない設計）を採用したが、予約リスナーが学習画面スコープ（useStudyTimer）のため、**①休憩中に学習画面から他画面（ホーム等）へ移動している間②他画面経由でバックグラウンド化した場合に通知が届かない**ことが実機確認で判明し、ユーザー要望により方式変更。
+  - 新方式: `startBreak` 直後（useStudyTimer の学習 tick 内）に `scheduleBreakEndNotification(breakEndAt)` を予約する。**キャンセルは全離脱経路で行う**: `endBreak`（自然終了/スキップ/停止）・`resetStudyTimerIfActive`（設定変更・タイマーOFF）・hook マウント時の enabled=false 掃除・起動時クリーンアップ。
+  - **cancel-all との干渉は「復元」で解決**: `_layout.tsx` の active 復帰時 cancel-all（`scheduleFromDb`/`cancelAllScheduledNotifications`）の直後に **`syncBreakEndNotification()`**（ストアが休憩中かつ残り≥1秒なら予約し直し・それ以外はキャンセル＝残骸掃除）を必ず呼ぶ。これで「休憩中に一度復帰→再バックグラウンド」でも消えない。
+  - **フォアグラウンド表示はハンドラで制御**: `setNotificationHandler`（lib/notifications.ts のモジュールスコープで登録）が「休憩終了通知（identifier 判定）**かつ** タイマーUIが不可視」のときだけバナー/サウンドを許可する。**抑制条件は「学習画面がフォーカス中かつ完了画面でない」＝タイマーの suspended の反転**（2026-07-13 実機確認で「マウント中」から絞り込み）: 編集モーダル中はリングが隠れ・完了画面はリング自体が非表示で、合図がハプティクスのみ＝iPad（非搭載）では無音無表示になるため、これらではバナーを表示する。リング・ピル・遷移ハプティクス＋ヒントが見えている学習画面本体でのみ抑制。**デイリーリマインダー等の他通知は false を返し、従来どおりフォアグラウンド非表示を維持**（ハンドラ未登録時代の挙動を identifier 判定で保存）。可視状態は session.tsx が `setStudyTimerUiVisible()` で更新する。
 - 追加関数（identifier は `'study-break-end'` 固定＝二重予約は上書きで自然解消）:
-  - `scheduleBreakEndNotification(endAt)`: `getPermissionsAsync()` が granted でなければ何もしない（バックグラウンドでは requestPermission 不可）。`endAt - now < 1000` なら予約しない（即発火の競合回避＝復帰時解決に任せる）。trigger は DATE、文言は `getReminderBody` と同じ **expo-localization 直参照**（React コンテキスト外で使うためこのファイルの既存慣習に従う）。
+  - `scheduleBreakEndNotification(endAt)`: `getPermissionsAsync()` が granted でなければ何もしない。`endAt - now < 1000` なら予約しない（即発火と画面内解決の競合回避）。trigger は DATE、文言は `getReminderBody` と同じ **expo-localization 直参照**（React コンテキスト外で使うためこのファイルの既存慣習に従う）。
   - `cancelBreakEndNotification()`: `cancelScheduledNotificationAsync(...).catch(() => {})`。
-- 予約/キャンセルの実行位置: `useStudyTimer` の既存 AppState リスナーを拡張。'background' で休憩中なら予約（'inactive' では予約しない＝過渡状態の churn 回避・iOS は background が別途来る）。'active' でキャンセル→`resolveBreak()`。
+  - `syncBreakEndNotification()`: タイマーストアの現状に合わせて予約し直し/掃除（_layout の active 復帰時に使用）。
 - **権限リクエストは設定画面で**: 繰り返し回数を 1→2以上 に変えた瞬間に `requestPermission()` を fire-and-forget（`app/settings/notifications.tsx` の既存パターン）。学習中のモーダル割込みは不採用。**未許可でも通知なしで完全動作**（復帰時に `resolveBreak()` が即遷移＋ハプティクス）。
 - **起動時クリーンアップ**: アプリ再起動でタイマー（インメモリ）は消えるが OS の予約通知は残り得る → `_layout.tsx` の初期化で `cancelBreakEndNotification()` を1回（cold start は AppState change が発火しないため active リスナーでは拾えない）。
+- **studyTimerEnabled OFF の即時リセット**: 作動中に「タイマーを使う」を OFF にしたら onApply で即 reset（休憩中なら通知キャンセル込み）。従来の「次回セッションマウント時に掃除」だと OFF 後に休憩終了通知だけ鳴り得るため。
 
 ### UI（session.tsx / StudyTimer.tsx）
 
@@ -103,6 +106,7 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
   - 「休憩中」ピル: 既存 `startHintWrap`/`startHint` スタイルを再利用し、休憩中は**フェードなしで常時表示**（アイコンは Ionicons `cafe-outline`＋テキスト）。
   - 開始ヒントの break ガード: epoch effect に `breakMode` 中は発火しないガードを追加（`startBreak` の epoch+1 で「⏱ 5分」が誤表示されるのを防ぐ。休憩開始の合図はピル自身）。休憩→学習の epoch+1 では既存ロジックがそのまま発火し、`cycleCount > 1` ならラベルを「⏱ N分 (2/3)」に（新 i18n キー）。
   - **休憩中は円非表示（ゴースト）設定を無視してフルリング表示**: カードがグレーアウト済みで「画面をクリーンに保つ」動機が消えており、リングが見えないと残り休憩時間の確認手段がない（タップ無効のためピークも使えない）。
+  - **パイは連続（スムーズ）欠けを維持**（2026-07-13 確定）: 開始「60」は正円で、1秒かけて6°（1分設定時）欠けたところで「59」＝数字の変わり目とパイの欠け量が一致。終端は残り「1」の間に細い扇がスムーズに消え 0 でちょうど空になる（最後の1秒がほぼ不可視なのは連続式の宿命・許容）。**不採用（試行済み・再試行しない）**: 「残り秒の切り上げで1秒＝1目盛りの段階欠け（ceil ステップを `useAnimatedProps` で導出）」— 数字とは常に一致するが実機でカクついて見えるためユーザー却下。
   - showTime: 休憩中も中央数字が休憩残りを自然に表示（変更不要）。paused 半透明分岐は休憩では発生しない（pause 不可）。
 - 終了文言: `cycleCount > 1` のとき終了モーダル（alert）のタイトル/メッセージを「ポモドーロ完了」版に差し替え。blink は変更なし。
 
@@ -118,7 +122,7 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 
 | # | ケース | 挙動/対処 |
 |---|---|---|
-| 1 | 休憩中にセッション完了（ヘッダー完了 or Q） | 許可。completed で timerMounted=false（リング非表示）だが休憩 tick は継続。休憩終了で次学習へ遷移するが suspended のため計時は進まず、次セッション開始で継続（036 のデッキ跨ぎ継続と同じ思想） |
+| 1 | 休憩中にセッション完了（ヘッダー完了 or Q） | 許可。completed で timerMounted=false（リング非表示）だが休憩 tick は継続。休憩終了で次学習へ遷移するが suspended のため計時は進まず、次セッション開始で継続（036 のデッキ跨ぎ継続と同じ思想）。**完了画面はリングが無く合図ゼロのため休憩終了バナーを表示する**（2026-07-13） |
 | 2 | 休憩中にアプリ再起動 | タイマーは idle に戻る（インメモリ・036 仕様）。OS に残った予約通知は `_layout.tsx` 起動時の `cancelBreakEndNotification()` で掃除 |
 | 3 | 作動中に設定変更（分数/休憩/回数） | 新2設定の onApply に既存 `studyTimerMinutes` と同じ「phase!=='idle' なら reset」。reset は mode/breakEndAt もクリア。通知キャンセル不要（設定画面＝フォアグラウンド＝予約が存在しない、が予約方式で保証される） |
 | 4 | 繰り返し回数の実行中変更 | cycleCount は start 時に確定コピー＝次の新規スタートから反映（分数と同じ整理） |
@@ -126,10 +130,10 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 | 6 | 通知権限なし | 予約が静かにスキップされるだけで機能は完全動作（復帰時に即遷移）。設定画面に注記1行 |
 | 7 | 休憩中に手動終了（メニュー） | `endBreak('stop')` → 統計除外も実施 → stopped・グレーアウト解除・次セッションで新規スタート |
 | 8 | 休憩終了の瞬間にフォアグラウンド復帰 | 通知とアプリ内遷移が重なり得るが二重通知1回のみで実害なし・許容。残り<1秒は予約しないガードで大半を回避 |
-| 9 | 休憩中に編集モーダル（鉛筆は活性） | 休憩 tick は suspended 非依存で継続。モーダル下で遷移したらハプティクスのみ・復帰時には学習インターバル表示（suspended 中は計時停止のまま） |
+| 9 | 休憩中に編集モーダル（鉛筆は活性） | 休憩 tick は suspended 非依存で継続。モーダル下で遷移したらハプティクス＋**バナー表示**（2026-07-13 変更: リングがモーダルに隠れ、iPad はハプティクス非搭載で合図が無くなるため）。復帰時には学習インターバル表示（suspended 中は計時停止のまま） |
 | 10 | 繰り返し1回（既定） | startBreak 経路に入らない＝既存コードパスと同一（構造的保証） |
-| 11 | 休憩中に studyTimerEnabled OFF / Pro 失効 | 次回マウント時の enabled=false クリーンアップ（既存）で reset。通知はフォアグラウンドでは予約されないため残骸なし |
-| 12 | **学習画面以外でバックグラウンド化**（休憩中にホームへ戻ってから背景へ） | hook がアンマウント済みのため通知は予約されない。**許容制限として明記**（タイマー UX は学習画面スコープという 036 の設計線を守る。`_layout` へのリスナー移設はスコープ過大で不採用） |
+| 11 | 休憩中に studyTimerEnabled OFF / Pro 失効 | OFF は onApply で**即 reset＋通知キャンセル**（方式変更に伴い「次回マウント時掃除」から前倒し）。Pro 失効は次回マウント時クリーンアップのまま（最悪でも正しい内容の通知が1回鳴るだけ・許容） |
+| 12 | **学習画面以外でバックグラウンド化**（休憩中にホームへ戻ってから背景へ） | **解決済み（2026-07-13 方式変更）**: 休憩開始時に予約するため、学習画面の外にいても・どの画面からバックグラウンド化しても通知が届く。ホーム等の他画面にフォアグラウンドでいる間もハンドラがバナー表示する |
 
 ---
 
@@ -148,8 +152,8 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 - `components/study/StudyTimer.tsx` … breakMode props・休憩色リング・「休憩中」ピル・開始ヒントの break ガード＋「(i/n)」・休憩中は introOnly 無効。
 - `app/study/session.tsx` … onBreak 導出・グレーアウトオーバーレイ（通常/全画面）・スワイプ/キー/タップのガード・長押しメニュー分岐・ハプティクス接続・ポモドーロ完了文言。
 - `hooks/useStudySession.ts` … `shiftCardShownAt(deltaMs)` 追加（return へ）。
-- `lib/notifications.ts` … `scheduleBreakEndNotification`/`cancelBreakEndNotification`。
-- `app/_layout.tsx` … 起動時の残留通知クリーンアップ1回。
+- `lib/notifications.ts` … `scheduleBreakEndNotification`/`cancelBreakEndNotification`/`syncBreakEndNotification`・`setNotificationHandler`（フォアグラウンド表示制御）・`setStudyTimerUiVisible`。
+- `app/_layout.tsx` … 起動時の残留通知クリーンアップ1回・active 復帰時の `syncBreakEndNotification()`。
 - `app/settings/study.tsx` … 「学習タイマー」セクションに繰り返し回数 Slider（1〜12）・休憩時間 Slider（1〜30・回数2以上のとき表示）・通知注記・回数 1→2以上で `requestPermission()`。
 - `locales/ja.json` / `en.json` … 設定ラベル・ピル・スキップ・ヒント(i/n)・ポモドーロ完了文言（必ずセットで）。
 - ShortcutsModal … 変更なし（休憩中は既存キーが無効になるだけで新キーは増えない）。
@@ -168,54 +172,59 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 ## Todo（フェーズ別）
 
 ### Phase 1: 設定ストア＋設定UI
-- [ ] `store/settings.ts`: `studyTimerBreakMinutes`/`studyTimerCycles` を DEFS＋makeSetter に追加（onApply=作動中 reset）・clamp 定数
-- [ ] `lib/settings-keys.ts` に2キー追加（JSONエクスポート対象）
-- [ ] `app/settings/study.tsx`: 繰り返し回数 Slider（1〜12）・休憩時間 Slider（1〜30・回数2以上で表示）・通知注記・回数 1→2以上で `requestPermission()`
-- [ ] `locales/ja.json`・`en.json` に設定文言追加（セットで）
+- [x] `store/settings.ts`: `studyTimerBreakMinutes`/`studyTimerCycles` を DEFS＋makeSetter に追加（onApply=作動中 reset）・clamp 定数
+- [x] `lib/settings-keys.ts` に2キー追加（JSONエクスポート対象）
+- [x] `app/settings/study.tsx`: 繰り返し回数 Slider（1〜12）・休憩時間 Slider（1〜30・回数2以上で表示）・通知注記・回数 1→2以上で `requestPermission()`
+- [x] `locales/ja.json`・`en.json` に設定文言追加（セットで）
 
 ### Phase 2: ストア状態機械
-- [ ] `store/studyTimer.ts`: 新フィールド追加（mode/cycleIndex/cycleCount/studyTotalMs/breakTotalMs/breakEndAt/breakStartedAt）
-- [ ] `start(studyMs, config)` 拡張・`startBreak(now)`/`startNextStudy()` 新規
-- [ ] `togglePause`（break ガード）・`restart`（全サイクル再開）・`stop`/`reset`（新フィールドのクリア）
+- [x] `store/studyTimer.ts`: 新フィールド追加（mode/cycleIndex/cycleCount/studyTotalMs/breakTotalMs/breakEndAt/breakStartedAt）
+- [x] `start(studyMs, config)` 拡張・`startBreak(now)`/`startNextStudy()` 新規
+- [x] `togglePause`（break ガード）・`restart`（全サイクル再開）・`stop`/`reset`（新フィールドのクリア）
 
 ### Phase 3: 計時と遷移（useStudyTimer）
-- [ ] options/返り値の拡張（breakMinutes/cycles/onBreakStart/onBreakEnd/onBreakElapsed・mode/cycleIndex/cycleCount/skipBreak）
-- [ ] 学習 tick: `mode==='study'` 条件＋時間切れ分岐（最終→finish／中間→startBreak）
-- [ ] 休憩 tick（suspended/appActive 非依存・breakEndAt 基準・冒頭で即時解決）
-- [ ] `endBreak(reason)` 一元化（elapsed 通知・自然終了/スキップ/停止）・stop ラッパー差し替え
-- [ ] `resolveBreak()`: マウント時・AppState active 時の復帰解決
-- [ ] `counting` の休憩対応（リングアニメが休憩中も進む）
+- [x] options/返り値の拡張（breakMinutes/cycles/onBreakStart/onBreakEnd/onBreakElapsed・mode/cycleIndex/cycleCount/skipBreak）
+- [x] 学習 tick: `mode==='study'` 条件＋時間切れ分岐（最終→finish／中間→startBreak）
+- [x] 休憩 tick（suspended/appActive 非依存・breakEndAt 基準・冒頭で即時解決）
+- [x] `endBreak(reason)` 一元化（elapsed 通知・自然終了/スキップ/停止）・stop ラッパー差し替え
+- [x] `resolveBreak()`: マウント時・AppState active 時の復帰解決
+- [x] `counting` の休憩対応（リングアニメが休憩中も進む）
 
 ### Phase 4: ローカル通知
-- [ ] `lib/notifications.ts`: `scheduleBreakEndNotification(endAt)`/`cancelBreakEndNotification()`（identifier 固定・granted チェック・DATE トリガー・残り<1秒ガード・Localization 直参照文言）
-- [ ] `useStudyTimer` AppState リスナー: 'background' で予約（'inactive' は無視）・'active' でキャンセル＋resolveBreak
-- [ ] `_layout.tsx`: 起動時に残留通知クリーンアップ1回
+- [x] `lib/notifications.ts`: `scheduleBreakEndNotification(endAt)`/`cancelBreakEndNotification()`（identifier 固定・granted チェック・DATE トリガー・残り<1秒ガード・Localization 直参照文言）
+- [x] ~~`useStudyTimer` AppState リスナー: 'background' で予約・'active' でキャンセル＋resolveBreak~~ → **方式変更（2026-07-13）**: 休憩開始時（startBreak 直後）に予約・全離脱経路（endBreak/reset/OFF）でキャンセル。AppState 'active' は resolveBreak のみ
+- [x] `setNotificationHandler`（フォアグラウンド表示制御: 休憩終了通知×タイマーUI不可視時のみバナー・他通知は非表示維持）＋ `setStudyTimerUiVisible` フラグ（session.tsx が「フォーカス中かつ未完了」＝suspended の反転で更新。編集モーダル中・完了画面はバナー表示）
+- [x] `syncBreakEndNotification()`: `_layout` の active 復帰 cancel-all 直後に予約復元・残骸掃除
+- [x] `store/settings.ts`: `studyTimerEnabled` OFF の onApply で即 reset（休憩中なら通知キャンセル）
+- [x] `_layout.tsx`: 起動時に残留通知クリーンアップ1回
 
 ### Phase 5: UI（StudyTimer/session）
-- [ ] `StudyTimer.tsx`: breakMode/cycleIndex/cycleCount props・休憩色リング（ライト/ダークペア・実機で選定）・「休憩中」ピル常時表示（cafe-outline）
-- [ ] `StudyTimer.tsx`: 開始ヒントの break ガード＋「⏱ N分 (i/n)」表示・休憩中は introOnly（ゴースト）無効
-- [ ] `session.tsx`: onBreak 導出・グレーアウトオーバーレイ（通常/全画面・タイマーより下・タッチ吸収）
-- [ ] `session.tsx`: スワイプ無効・handleKeyPress/Enter ガード（Q/B は許可）・タップ無反応
-- [ ] `session.tsx`: 長押しメニューの休憩分岐（スキップ/終了）・onBreakStart/End ハプティクス・ポモドーロ完了文言（cycleCount>1）
-- [ ] `locales/ja.json`・`en.json`: ピル・スキップ・ヒント(i/n)・完了文言（セットで）
+- [x] `StudyTimer.tsx`: breakMode/cycleIndex/cycleCount props・休憩色リング（ライト/ダークペア・実機で選定）・「休憩中」ピル常時表示（cafe-outline）
+- [x] `StudyTimer.tsx`: 開始ヒントの break ガード＋「⏱ N分 (i/n)」表示・休憩中は introOnly（ゴースト）無効
+- [x] `session.tsx`: onBreak 導出・グレーアウトオーバーレイ（通常/全画面・タイマーより下・タッチ吸収）
+- [x] `session.tsx`: スワイプ無効・handleKeyPress/Enter ガード（Q/B は許可）・タップ無反応
+- [x] `session.tsx`: 長押しメニューの休憩分岐（スキップ/終了）・onBreakStart/End ハプティクス・ポモドーロ完了文言（cycleCount>1）
+- [x] `locales/ja.json`・`en.json`: ピル・スキップ・ヒント(i/n)・完了文言（セットで）
 
 ### Phase 6: 統計除外
-- [ ] `hooks/useStudySession.ts`: `shiftCardShownAt(deltaMs)`（`Math.min(Date.now(), …)` clamp 付き）を追加し return へ
-- [ ] `session.tsx`: `onBreakElapsed: shiftCardShownAt` を接続
+- [x] `hooks/useStudySession.ts`: `shiftCardShownAt(deltaMs)`（`Math.min(Date.now(), …)` clamp 付き）を追加し return へ
+- [x] `session.tsx`: `onBreakElapsed: shiftCardShownAt` を接続
 
 ### Phase 7: 確認
-- [ ] 繰り返し1回＝036 と完全同一挙動（開始/一時停止/再スタート/終了/alert/blink/ゴースト/ヒント）
-- [ ] 25分×3・休憩5分で 学習→休憩→…→学習→完了（休憩は N−1 回・最後は学習で終了時動作・「ポモドーロ完了」文言）
-- [ ] 学習→休憩の自動移行（ハプティクス・モーダルなし）・休憩→学習でヒント「⏱ N分 (2/3)」
-- [ ] 休憩中: グレーアウト＋タッチ/キー無効（Q/B/戻る/鉛筆/完了は可）・タップ無反応・長押し=スキップ/終了
-- [ ] 休憩の壁時計: 編集モーダル中・デッキ切替中・バックグラウンド中も進む。復帰/再マウントで正しく解決
-- [ ] バックグラウンド中の休憩終了→通知が届く。**休憩中に一度復帰→再バックグラウンドでも通知が消えない**（_layout の cancel-all 干渉確認）
-- [ ] フォアグラウンドでは通知が出ない。権限拒否でも動作継続（復帰時に即遷移）
-- [ ] 休憩を挟んだカードの responseTimeMs から休憩時間が除外される（統計の平均時間で確認）
-- [ ] 休憩中の設定変更 reset／アプリ再起動（残留通知キャンセル）／休憩中のセッション完了→次セッションで継続
-- [ ] 円非表示・数字ON/OFF・ライト/ダーク・全画面モード・フォント3段階
-- [ ] JSONエクスポート→インポートで新2設定が復元される
-- [ ] `npm run lint`・tsc が通る
+- [x] 繰り返し1回＝036 と完全同一挙動（開始/一時停止/再スタート/終了/alert/blink/ゴースト/ヒント）
+- [x] 25分×3・休憩5分で 学習→休憩→…→学習→完了（休憩は N−1 回・最後は学習で終了時動作・「ポモドーロ完了」文言）
+- [x] 学習→休憩の自動移行（ハプティクス・モーダルなし）・休憩→学習でヒント「⏱ N分 (2/3)」
+- [x] 休憩中: グレーアウト＋タッチ/キー無効（Q/B/戻る/鉛筆/完了は可）・タップ無反応・長押し=スキップ/終了
+- [x] 休憩の壁時計: 編集モーダル中・デッキ切替中・バックグラウンド中も進む。復帰/再マウントで正しく解決
+- [x] バックグラウンド中の休憩終了→通知が届く。**休憩中に一度復帰→再バックグラウンドでも通知が消えない**（_layout の cancel-all 干渉確認）
+- [x] **学習画面以外（ホーム等）にいる間・他画面経由のバックグラウンドでも通知が届く**（2026-07-13 方式変更分）。学習画面本体（リング表示中）ではバナーが出ない。デイリーリマインダーは従来どおりフォアグラウンド非表示のまま
+- [x] **編集モーダル中・完了画面では休憩終了バナーが出る**（2026-07-13 抑制条件の絞り込み: リングが見えず iPad はハプティクスも無いため）
+- [x] 権限拒否でも動作継続（復帰時に即遷移）。作動中の設定変更・タイマーOFFで通知が残らない
+- [x] 休憩を挟んだカードの responseTimeMs から休憩時間が除外される（統計の平均時間で確認）
+- [x] 休憩中の設定変更 reset／アプリ再起動（残留通知キャンセル）／休憩中のセッション完了→次セッションで継続
+- [x] 円非表示・数字ON/OFF・ライト/ダーク・全画面モード・フォント3段階
+- [x] JSONエクスポート→インポートで新2設定が復元される
+- [x] `npm run lint`・tsc が通る
 
 ---
 

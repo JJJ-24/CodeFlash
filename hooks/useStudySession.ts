@@ -221,6 +221,14 @@ export function useStudySession() {
     setCompleted(true);
   }, []);
 
+  // 休憩（039 ポモドーロ）の実時間ぶんカード表示時刻を前へずらし、休憩を挟んだカードの
+  // responseTimeMs から休憩時間を除外する（休憩前の閲覧時間は保持）。
+  // Math.min(Date.now(), …) の clamp は必須: デッキ切替の loadSession が休憩中に
+  // cardShownAt を再設定した後にフル休憩時間をシフトすると未来時刻→負の responseTimeMs になり得る。
+  const shiftCardShownAt = useCallback((deltaMs: number) => {
+    cardShownAtRef.current = Math.min(Date.now(), cardShownAtRef.current + deltaMs);
+  }, []);
+
   return {
     loading,
     completed,
@@ -233,5 +241,6 @@ export function useStudySession() {
     goNext,
     refreshCurrentCard,
     finishSession,
+    shiftCardShownAt,
   };
 }

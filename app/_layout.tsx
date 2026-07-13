@@ -13,7 +13,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { installNavigationGuard } from '@/lib/navigationGuard';
-import { cancelAllScheduledNotifications, scheduleFromDb, updateBadgeCount } from '@/lib/notifications';
+import { cancelAllScheduledNotifications, cancelBreakEndNotification, scheduleFromDb, syncBreakEndNotification, updateBadgeCount } from '@/lib/notifications';
 import { refreshTrial } from '@/lib/proTrial';
 import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { syncNoticeText } from '@/lib/sync/errorText';
@@ -53,6 +53,10 @@ function RootStack() {
       .then((backups) => cleanupOrphanImages(db, backups.map((b) => b.path)))
       .catch(() => {});
     restoreProStatus().catch(() => {});
+    // 休憩中（039）にアプリを終了した場合の残留通知を掃除する。タイマーはインメモリなので
+    // 再起動で idle に戻るが、OS の予約通知は残り得る（cold start は AppState change が
+    // 発火しないため active リスナーでは拾えない）。
+    cancelBreakEndNotification();
   }, []);
 
   // Pro トライアルの期限再判定：起動時とフォアグラウンド復帰時に実効 isPro を更新する
@@ -104,15 +108,18 @@ function RootStack() {
     };
   }, [db, syncHydrated, syncEnabled, isPro]);
 
-  // アプリがフォアグラウンドに戻るたびに通知を再スケジュール（OS による消去に対応）
+  // アプリがフォアグラウンドに戻るたびに通知を再スケジュール（OS による消去に対応）。
+  // どちらの分岐も cancel-all を含み、予約済みの休憩終了通知（039）まで巻き込んで消すため、
+  // 完了後に syncBreakEndNotification() で「休憩中なら予約し直す」（休憩中でなければ掃除）。
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        if (notificationEnabled) {
-          scheduleFromDb(db).catch(() => {});
-        } else {
-          cancelAllScheduledNotifications().catch(() => {});
-        }
+        const reschedule = notificationEnabled
+          ? scheduleFromDb(db)
+          : cancelAllScheduledNotifications();
+        reschedule
+          .catch(() => {})
+          .finally(() => { syncBreakEndNotification().catch(() => {}); });
         updateBadgeCount(db).catch(() => {});
       }
     });

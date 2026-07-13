@@ -29,6 +29,10 @@ const PIE_CIRCUMFERENCE = 2 * Math.PI * PIE_RADIUS;
 // 円非表示設定時: 開始時だけ表示し、フェードアウトして消える
 const INTRO_VISIBLE_MS = 3000;
 const INTRO_FADE_MS = 800;
+// 休憩リング色（039）: 緑/ティール系のライト・ダークペア。学習リング（themedAccentColor＝青系 or
+// カードテーマ濃色）と全カードテーマ上で識別できるよう、グレードの緑（#43A047）とも離したティール。
+const BREAK_RING_LIGHT = '#26A69A';
+const BREAK_RING_DARK = '#4DB6AC';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -46,6 +50,11 @@ interface Props {
   blinking: boolean;
   /** 円非表示設定（studyTimerRingVisible=false）: 開始時のみ表示→フェードアウト */
   introOnly: boolean;
+  /** 休憩中（039）: リングを休憩色にし「休憩中」ピルを常時表示。introOnly（ゴースト）は無視 */
+  breakMode?: boolean;
+  /** 現在の学習サイクル番号（1始まり）。cycleCount > 1 のとき開始ヒントに (i/n) を付ける */
+  cycleIndex?: number;
+  cycleCount?: number;
   /** 表示を維持する（長押しメニュー表示中など。introOnly のフェードアウトを保留） */
   forceVisible?: boolean;
   onPress: () => void;
@@ -63,6 +72,9 @@ export function StudyTimer({
   showTime,
   blinking,
   introOnly,
+  breakMode = false,
+  cycleIndex = 1,
+  cycleCount = 1,
   forceVisible = false,
   onPress,
   onLongPress,
@@ -86,6 +98,9 @@ export function StudyTimer({
     const isFirstRun = hintPrevEpochRef.current === null;
     hintPrevEpochRef.current = epoch;
     if (phase !== 'running') return;
+    // 休憩開始（startBreak）も epoch を進めるが「⏱ N分」は学習の合図なので出さない
+    // （休憩開始の合図はピル自身）。休憩→学習の epoch では通常どおり発火する。
+    if (breakMode) return;
     if (isFirstRun && remainingRef.current < totalRef.current - 2000) return;
     cancelAnimation(hintOpacity);
     hintOpacity.value = 1;
@@ -105,10 +120,27 @@ export function StudyTimer({
           style={{ fontSize: theme.fontSize.sm, fontWeight: '600', color: theme.colors.textSecondary }}
           allowFontScaling={false}
         >
-          {t('study.timerStartHint', { minutes: totalMinutes })}
+          {cycleCount > 1
+            ? t('study.timerStartHintCycle', { minutes: totalMinutes, i: cycleIndex, n: cycleCount })
+            : t('study.timerStartHint', { minutes: totalMinutes })}
         </Text>
       </View>
     </Animated.View>
+  );
+
+  // 休憩中は「☕ 休憩中」ピルをフェードなしで常時表示（startHint と同じスタイルを再利用）
+  const breakPill = breakMode && (
+    <View style={styles.startHintWrap} pointerEvents="none">
+      <View style={[styles.startHint, { backgroundColor: theme.colors.surface, borderColor: theme.colors.textTertiary + '4D' }]}>
+        <Ionicons name="cafe-outline" size={16} color={theme.colors.textSecondary} />
+        <Text
+          style={{ fontSize: theme.fontSize.sm, fontWeight: '600', color: theme.colors.textSecondary }}
+          allowFontScaling={false}
+        >
+          {t('study.breakPill')}
+        </Text>
+      </View>
+    </View>
   );
 
   // パイの進行は reanimated の UI スレッドで連続アニメーションさせる（store の秒粒度更新だとカクつく）。
@@ -137,6 +169,12 @@ export function StudyTimer({
   // rotate(-90) でパス始点を12時に置くと、offset = C*(1+fraction) は
   // 「パス位置 C*(1-fraction)〜C」＝残り扇形の終端を12時に固定し、始端が時計回りに進む
   // （標準の C*(1-fraction) だと反時計回りに欠けてしまう）。
+  //
+  // パイは連続（スムーズ）に欠けさせる: 開始「60」は正円で、1秒かけて6°（1分設定時）
+  // 欠けたところで「59」になる＝数字の変わり目とパイの欠け量が一致する。終端は残り「1」の間に
+  // 1/60 の細い扇がスムーズに消えて 0 でちょうど空になる（細くてほぼ見えないのは連続式の宿命・許容）。
+  // ※「残り秒の切り上げで1秒＝1目盛りの段階欠け（ceil ステップ）」は実機でカクついて見えるため
+  //   不採用（2026-07-13 試行済み・再試行しない）。
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: PIE_CIRCUMFERENCE * (1 + progress.value),
   }));
@@ -161,7 +199,10 @@ export function StudyTimer({
   useEffect(() => {
     cancelAnimation(fade);
     fade.value = 1;
-    if (!introOnly || phase !== 'running' || forceVisible) {
+    // 休憩中はゴースト（円非表示）設定を無視してフルリング表示: カードはグレーアウト済みで
+    // 「画面をクリーンに保つ」動機が消えており、タップ無効＝ピークも使えないため、
+    // リングが唯一の残り休憩時間の確認手段になる。
+    if (!introOnly || phase !== 'running' || forceVisible || breakMode) {
       setIntroDone(false);
       return;
     }
@@ -173,7 +214,7 @@ export function StudyTimer({
     fade.value = withDelay(INTRO_VISIBLE_MS, withTiming(0, { duration: INTRO_FADE_MS }));
     const id = setTimeout(() => setIntroDone(true), INTRO_VISIBLE_MS + INTRO_FADE_MS);
     return () => clearTimeout(id);
-  }, [introOnly, epoch, phase, forceVisible, showTime, peekNonce, fade]);
+  }, [introOnly, epoch, phase, forceVisible, showTime, peekNonce, breakMode, fade]);
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: blinkOpacity.value * fade.value,
@@ -195,6 +236,7 @@ export function StudyTimer({
   const ghostMode =
     introOnly &&
     !forceVisible &&
+    !breakMode &&
     (showTime
       ? phase === 'running' || phase === 'paused'
       : introDone && phase === 'running');
@@ -230,7 +272,7 @@ export function StudyTimer({
 
   return (
     <Animated.View style={[style, containerStyle]}>
-      {startHint}
+      {breakMode ? breakPill : startHint}
       <Pressable
         onPress={onPress}
         onLongPress={onLongPress}
@@ -242,7 +284,7 @@ export function StudyTimer({
             cx={HALF}
             cy={HALF}
             r={PIE_RADIUS}
-            stroke={themedAccentColor(theme)}
+            stroke={breakMode ? (theme.dark ? BREAK_RING_DARK : BREAK_RING_LIGHT) : themedAccentColor(theme)}
             strokeWidth={PIE_STROKE}
             fill="none"
             strokeDasharray={[PIE_CIRCUMFERENCE, PIE_CIRCUMFERENCE]}

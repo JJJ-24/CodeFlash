@@ -8,12 +8,17 @@ import { Pressable, Switch, Text, View } from 'react-native';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
 
+import { requestPermission } from '@/lib/notifications';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import {
   FSRS_PRESET_RETENTION,
   FSRS_RETENTION_MAX,
   FSRS_RETENTION_MIN,
+  STUDY_TIMER_BREAK_MINUTES_MAX,
+  STUDY_TIMER_BREAK_MINUTES_MIN,
+  STUDY_TIMER_CYCLES_MAX,
+  STUDY_TIMER_CYCLES_MIN,
   STUDY_TIMER_MINUTES_MAX,
   STUDY_TIMER_MINUTES_MIN,
   useSettingsStore,
@@ -33,6 +38,8 @@ export default function StudySettingsScreen() {
     studyTimerRingVisible, setStudyTimerRingVisible,
     studyTimerShowTime, setStudyTimerShowTime,
     studyTimerEndBehavior, setStudyTimerEndBehavior,
+    studyTimerBreakMinutes, setStudyTimerBreakMinutes,
+    studyTimerCycles, setStudyTimerCycles,
   } = useSettingsStore();
   const [showRetentionInfo, setShowRetentionInfo] = useState(false);
   const [showTimerInfo, setShowTimerInfo] = useState(false);
@@ -43,6 +50,13 @@ export default function StudySettingsScreen() {
 
   function handleFsrsRetentionChange(value: number) {
     setFsrsDesiredRetention(Math.round(value * 100) / 100);
+  }
+
+  // 繰り返し回数を 1→2以上 に変えた瞬間、休憩終了通知のために権限を fire-and-forget で要求する。
+  // 未許可でも機能は完全動作（復帰時に即遷移）のため結果は見ない（039）。
+  function handleCyclesChange(value: number) {
+    if (studyTimerCycles <= 1 && value >= 2) requestPermission().catch(() => {});
+    setStudyTimerCycles(value);
   }
 
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
@@ -224,6 +238,55 @@ export default function StudySettingsScreen() {
                 thumbTintColor={theme.colors.primary}
               />
             </View>
+
+            {/* 繰り返し回数（039 ポモドーロ・1〜12回。1回＝従来の単発タイマー） */}
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.studyTimerCycles')}
+                </Text>
+                <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('settings.studyTimerCyclesValue', { n: studyTimerCycles })}
+                </Text>
+              </View>
+              <Slider
+                minimumValue={STUDY_TIMER_CYCLES_MIN}
+                maximumValue={STUDY_TIMER_CYCLES_MAX}
+                step={1}
+                value={studyTimerCycles}
+                onValueChange={handleCyclesChange}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor={theme.colors.iconSubtle}
+                thumbTintColor={theme.colors.primary}
+              />
+            </View>
+
+            {/* 休憩時間（1〜30分）＋通知注記。繰り返し2回以上のときだけ意味を持つ */}
+            {studyTimerCycles >= 2 && (
+              <View style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('settings.studyTimerBreakMinutes')}
+                  </Text>
+                  <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes })}
+                  </Text>
+                </View>
+                <Slider
+                  minimumValue={STUDY_TIMER_BREAK_MINUTES_MIN}
+                  maximumValue={STUDY_TIMER_BREAK_MINUTES_MAX}
+                  step={1}
+                  value={studyTimerBreakMinutes}
+                  onValueChange={setStudyTimerBreakMinutes}
+                  minimumTrackTintColor={theme.colors.primary}
+                  maximumTrackTintColor={theme.colors.iconSubtle}
+                  thumbTintColor={theme.colors.primary}
+                />
+                <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                  {t('settings.studyTimerBreakNotice')}
+                </Text>
+              </View>
+            )}
 
             {/* リングを表示 */}
             <View style={styles.notificationRow}>

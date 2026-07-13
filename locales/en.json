@@ -83,8 +83,13 @@
     "timerMenuTitle": "Study Timer",
     "timerMenuMessage": "Choose an action.",
     "timerStartHint": "{{minutes}} min",
+    "timerStartHintCycle": "{{minutes}} min ({{i}}/{{n}})",
     "timerRestart": "Restart Timer",
-    "timerStop": "Stop Timer"
+    "timerStop": "Stop Timer",
+    "timerSkipBreak": "Skip Break",
+    "breakPill": "On break",
+    "timerPomodoroEndTitle": "Pomodoro Complete",
+    "timerPomodoroEndMessage": "You've completed all study cycles."
   },
   "tag": {
     "tagListTitle": "Tags",
@@ -419,6 +424,10 @@
     "studyTimerEndBehavior": "When time is up",
     "studyTimerEndAlert": "Alert",
     "studyTimerEndBlink": "Blink only",
+    "studyTimerCycles": "Repeat count",
+    "studyTimerCyclesValue": "{{n}}x",
+    "studyTimerBreakMinutes": "Break duration",
+    "studyTimerBreakNotice": "A break is inserted between study intervals. If a break ends while the app is in the background, a notification lets you know (without notification permission, it switches to the next interval when you return to the app).",
     "studyTimerInfo": "The timer runs only while the study screen is visible (it pauses automatically when you leave the screen or background the app). It keeps counting across decks, and starts fresh at the next session after it ends. Tap the circle to pause/resume, long-press for the menu."
   },
   "about": {

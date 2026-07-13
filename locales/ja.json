@@ -83,8 +83,13 @@
     "timerMenuTitle": "学習タイマー",
     "timerMenuMessage": "操作を選択してください。",
     "timerStartHint": "{{minutes}}分",
+    "timerStartHintCycle": "{{minutes}}分 ({{i}}/{{n}})",
     "timerRestart": "タイマーを再スタート",
-    "timerStop": "タイマーを終了"
+    "timerStop": "タイマーを終了",
+    "timerSkipBreak": "休憩をスキップ",
+    "breakPill": "休憩中",
+    "timerPomodoroEndTitle": "ポモドーロ完了",
+    "timerPomodoroEndMessage": "設定した学習サイクルがすべて完了しました。"
   },
   "tag": {
     "tagListTitle": "タグ一覧",
@@ -419,6 +424,10 @@
     "studyTimerEndBehavior": "終了時の動作",
     "studyTimerEndAlert": "アラート",
     "studyTimerEndBlink": "点滅のみ",
+    "studyTimerCycles": "繰り返し回数",
+    "studyTimerCyclesValue": "{{n}}回",
+    "studyTimerBreakMinutes": "休憩時間",
+    "studyTimerBreakNotice": "学習と学習の間に休憩が入ります。バックグラウンド中に休憩が終わると通知でお知らせします（通知が未許可の場合は、アプリに戻ったときに次の学習へ切り替わります）。",
     "studyTimerInfo": "タイマーは学習画面を表示している間だけ進みます（他画面への移動やバックグラウンドで自動一時停止）。デッキを替えても残り時間から継続し、時間切れ・終了後は次の学習開始で新しくスタートします。円のタップで一時停止/再開、長押しでメニューを表示します。"
   },
   "about": {

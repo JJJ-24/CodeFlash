@@ -52,7 +52,7 @@ import {
 } from "@/lib/donut";
 import { FlipSuppressContext } from "@/lib/FlipSuppressContext";
 import { getReviewByCardId } from "@/lib/database/reviews";
-import { updateBadgeCount } from "@/lib/notifications";
+import { setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
 import type { Block } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
@@ -143,6 +143,7 @@ export default function StudySessionScreen() {
     goNext,
     refreshCurrentCard,
     finishSession,
+    shiftCardShownAt,
   } = useStudySession();
 
   // 034: この画面がフォアグラウンドか（モーダルが上に乗っていないか）を表す ref。
@@ -184,6 +185,8 @@ export default function StudySessionScreen() {
     studyTimerRingVisible,
     studyTimerShowTime,
     studyTimerEndBehavior,
+    studyTimerBreakMinutes,
+    studyTimerCycles,
   } = useSettingsStore();
   const { isPro } = useProStore();
   const { width: screenWidth } = useWindowDimensions();
@@ -335,12 +338,22 @@ export default function StudySessionScreen() {
   // 背面に残ったまま新アーキ + RNGH のヒットテストでモーダル下部ボタンのタップを横取りし、
   // 保存/削除が初回タップで反応しなくなる。画面がフォーカスを失っている間は無効化して透過させる。
   const isScreenFocused = useIsFocused();
-  swipe.panGesture.enabled(isScreenFocused);
+
+  // 休憩終了通知（039）のフォアグラウンド表示判定: タイマーUI（リング・ピル・遷移ハプティクス＋
+  // ヒント）が実際に見えている間だけバナーを抑制する。編集モーダル中（フォーカス喪失＝リングが
+  // 隠れる）や完了画面（リング非表示）は画面内の合図が届かないためバナーを表示する
+  // （＝タイマーの suspended 条件の反転と同条件）。
+  const timerUiVisible = isScreenFocused && !completed;
+  useEffect(() => {
+    setStudyTimerUiVisible(timerUiVisible);
+    return () => setStudyTimerUiVisible(false);
+  }, [timerUiVisible]);
 
   // 学習タイマー（036）: isPro && studyTimerEnabled ならセッション開始と同時に自動スタート。
   // 状態は store/studyTimer（アプリスコープ）にあり、セッションを跨いで残り時間から継続する。
   // 画面フォーカス喪失（カード編集モーダル等）・完了画面・バックグラウンドでは自動一時停止し、
   // 復帰で再開する（手動 pause とは独立）。時間切れ/手動終了後は次のセッション開始で新規スタート。
+  // 039: 繰り返し2回以上なら学習→休憩→学習…のポモドーロ。遷移はハプティクスで知らせる。
   const studyTimerActive = isPro && studyTimerEnabled;
   const handleTimerFinish = useCallback(() => {
     if (useSettingsStore.getState().studyTimerEndBehavior === "alert") {
@@ -349,13 +362,26 @@ export default function StudySessionScreen() {
     }
     // 'blink' はリング自身の点滅表示のみ（タップで解除）
   }, []);
+  const handleBreakTransition = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, []);
   const timer = useStudyTimer({
     enabled: studyTimerActive,
     minutes: studyTimerMinutes,
+    breakMinutes: studyTimerBreakMinutes,
+    cycles: studyTimerCycles,
     suspended: !isScreenFocused || completed,
     onFinish: handleTimerFinish,
+    onBreakStart: handleBreakTransition,
+    onBreakEnd: handleBreakTransition,
+    // 休憩を挟んだカードの responseTimeMs から実休憩時間を除外する（全離脱経路で呼ばれる）
+    onBreakElapsed: shiftCardShownAt,
   });
   const timerBlinking = timer.phase === "finished" && studyTimerEndBehavior === "blink";
+  // 休憩中（039）: カード面グレーアウト＋操作無効。ヘッダー（戻る/鉛筆/完了）と
+  // タイマー長押しメニュー（スキップ/終了）・Q/B/Esc キーは生かす。
+  const onBreak = timer.mode === "break" && timer.phase === "running";
+  swipe.panGesture.enabled(isScreenFocused && !onBreak);
   // 円非表示設定でもマウントはする（開始時のイントロ表示→フェードアウトと終了通知は
   // コンポーネント側の introOnly が担当）。カード内上部の余白は円非表示でも確保する
   // （フェードアウト後もゴースト円が常時タップ対象として残るため、1行目右側のボタン類と競合させない）。
@@ -364,6 +390,8 @@ export default function StudySessionScreen() {
     (timer.phase === "running" || timer.phase === "paused" || timer.phase === "finished");
   const timerContentPad = timerMounted;
   function handleTimerPress() {
+    // 休憩中のタップは無反応（休憩の一時停止は不可＝壁時計ベース。store の togglePause ガードと二重に安全）
+    if (onBreak) return;
     if (timer.phase === "finished") { timer.stop(); return; }
     timer.togglePause();
   }
@@ -544,6 +572,9 @@ export default function StudySessionScreen() {
     // 学習中（カード表示中）以外ではショートカットを無効化する。
     // ネイティブキーコマンドは完了画面/ロード中でも登録されたままのため明示的に弾く。
     if (completed || !currentCard) return;
+    // 休憩中（039）はカード操作系のキーを無効化する（状態依存ガード方式・034 の慣習）。
+    // Q（セッション終了）と B（戻る）はヘッダー活性の方針と揃えて許可。
+    if (onBreak && key.toLowerCase() !== "q" && key.toLowerCase() !== "b") return;
 
     if (key === " ") {
       cbs.setRunTrigger(0);
@@ -681,6 +712,7 @@ export default function StudySessionScreen() {
       handler: () => {
         if (completed) { safeBack(); return; }
         if (!currentCard) return;
+        if (onBreak) return;
         if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
       },
     },
@@ -1217,7 +1249,11 @@ export default function StudySessionScreen() {
         visible={showTimerMenu}
         title={t("study.timerMenuTitle")}
         message={t("study.timerMenuMessage")}
-        actions={[
+        actions={onBreak ? [
+          // 休憩中の長押しメニュー: スキップ（次の学習へ）と終了の2択（039）
+          { label: t("study.timerSkipBreak"), onPress: () => { setShowTimerMenu(false); timer.skipBreak(); } },
+          { label: t("study.timerStop"), onPress: () => { setShowTimerMenu(false); timer.stop(); } },
+        ] : [
           { label: t("study.timerRestart"), onPress: () => { setShowTimerMenu(false); timer.restart(); } },
           { label: t("study.timerStop"), onPress: () => { setShowTimerMenu(false); timer.stop(); } },
         ]}
@@ -1225,11 +1261,11 @@ export default function StudySessionScreen() {
       />
       <ConfirmModal
         visible={showTimerEndModal}
-        title={t("study.timerEndTitle")}
-        message={t("study.timerEndMessage")}
+        title={t(timer.cycleCount > 1 ? "study.timerPomodoroEndTitle" : "study.timerEndTitle")}
+        message={t(timer.cycleCount > 1 ? "study.timerPomodoroEndMessage" : "study.timerEndMessage")}
         actions={[
-          // 「続ける」＝タイマーを設定分数で再スタート（もう1周）。タイマー無しで続けたい場合は
-          // Esc/背景タップ（onClose）で閉じる＝stop のまま
+          // 「続ける」＝タイマーを設定分数で再スタート（もう1周・ポモドーロは全サイクルをサイクル1から）。
+          // タイマー無しで続けたい場合は Esc/背景タップ（onClose）で閉じる＝stop のまま
           { label: t("study.timerContinue"), onPress: () => { setShowTimerEndModal(false); timer.restart(); } },
           { label: t("study.timerFinish"), onPress: () => { setShowTimerEndModal(false); finishSession(); } },
         ]}
@@ -1252,8 +1288,9 @@ export default function StudySessionScreen() {
         <View
           style={[styles.container, { backgroundColor: theme.cardTheme.background }]}
         >
-          {/* ヘッダー行（実体あり、スクロール外） */}
-          <View style={styles.fullscreenHeader}>
+          {/* ヘッダー行（実体あり、スクロール外）。休憩中はオーバーレイより上に残す
+              （戻る/リンク/鉛筆/完了は休憩中も活性＝離脱を塞がない方針・039） */}
+          <View style={[styles.fullscreenHeader, onBreak && { zIndex: 30 }]}>
             <Pressable
               style={styles.fullscreenExitBtn}
               onPress={() => {
@@ -1426,6 +1463,15 @@ export default function StudySessionScreen() {
             </Animated.View>
           </GestureDetector>
 
+          {/* 休憩中: カード面＋下部操作列を覆うグレーアウト（タッチ吸収）。
+              タイマー（zIndex 20）とヘッダー（zIndex 30）だけ上に残す（039） */}
+          {onBreak && (
+            <View
+              pointerEvents="auto"
+              style={[styles.breakOverlay, { backgroundColor: theme.dark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.6)" }]}
+            />
+          )}
+
           {/* 学習タイマー（全画面モードでも右上に表示） */}
           {timerMounted && (
             <StudyTimer
@@ -1437,6 +1483,9 @@ export default function StudySessionScreen() {
               showTime={studyTimerShowTime}
               blinking={timerBlinking}
               introOnly={!studyTimerRingVisible}
+              breakMode={onBreak}
+              cycleIndex={timer.cycleIndex}
+              cycleCount={timer.cycleCount}
               forceVisible={showTimerMenu}
               onPress={handleTimerPress}
               onLongPress={handleTimerLongPress}
@@ -1764,6 +1813,15 @@ export default function StudySessionScreen() {
           )}
         </View>
 
+        {/* 休憩中: カード面＋下部操作列を覆うグレーアウト（タッチ吸収）。タイマーだけ上に残す（039）。
+            ヘッダーはこの View の外（上）にあるため覆われない＝戻る/鉛筆/完了は活性のまま */}
+        {onBreak && (
+          <View
+            pointerEvents="auto"
+            style={[styles.breakOverlay, { backgroundColor: theme.dark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.6)" }]}
+          />
+        )}
+
         {/* 学習タイマー（カード内上部の余白に収まるフローティング。欠けた部分は透明＝カード背景） */}
         {timerMounted && (
           <StudyTimer
@@ -1775,6 +1833,9 @@ export default function StudySessionScreen() {
             showTime={studyTimerShowTime}
             blinking={timerBlinking}
             introOnly={!studyTimerRingVisible}
+            breakMode={onBreak}
+            cycleIndex={timer.cycleIndex}
+            cycleCount={timer.cycleCount}
             forceVisible={showTimerMenu}
             onPress={handleTimerPress}
             onLongPress={handleTimerLongPress}
@@ -1963,11 +2024,12 @@ const styles = StyleSheet.create({
   // 学習タイマー（通常モード）: カード内上部の余白（faceContentTimerPad で確保）の右側に収める。
   // top はプログレスバー(4)+進捗行(≈30)+cardArea padding(12)+カード内マージン(20) ≈ 66
   // （カード上端に近すぎたためマージンを 8→20 に拡大。faceContentTimerPad も +12 して間隔維持）
+  // zIndex は休憩オーバーレイ（15）より上（長押しメニュー＝スキップ/終了への導線を残す・039）
   timerFloating: {
     position: "absolute",
     top: 66,
     right: 40,
-    zIndex: 10,
+    zIndex: 20,
   },
   // 学習タイマー（全画面モード）: ヘッダー行（paddingTop 48 + アイコン行 ≈ 94）＋進捗バー(2)の
   // 下に 8pt 空けて配置（バーに接しないように）
@@ -1976,6 +2038,13 @@ const styles = StyleSheet.create({
     top: 104,
     right: 16,
     zIndex: 20,
+  },
+  // 休憩中のグレーアウト（039）: 画面全体を覆いタッチを吸収する。zIndex はタイマー（20）と
+  // 全画面ヘッダー（30）より下、その他の操作要素（全画面ボタン行=10・下部操作列）より上。
+  // 背景色はテーマ依存でインライン指定。
+  breakOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 15,
   },
   gradeRow: { flexDirection: "row", gap: 8 },
   gradeBtn: {

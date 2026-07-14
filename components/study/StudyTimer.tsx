@@ -227,10 +227,17 @@ export function StudyTimer({
   // 数字のみ（単位なし）: 1分1秒までは分（floor）、残り1分ちょうどからは秒（60→59→…）
   const timeLabel = String(secondsLeft > 60 ? Math.floor(secondsLeft / 60) : secondsLeft);
 
-  // 円（パイ）を出すか: 休憩・終了(blink/アラート)は設定に関係なく常に出す（残り休憩時間の確認・
-  // 時間切れの合図のため）。それ以外は ringMode に従い on=常時 / start=ウィンドウ中のみ / off=出さない（ゴースト枠線）。
+  // 円（パイ）を出すか:
+  // - 終了(blink/アラート)は設定に関係なく常に出す（時間切れの合図）。
+  // - 休憩中はタップ無効＝ピーク不可なので必ず1つは残り時間の指標を残す: 円=常に(on) のとき、
+  //   または数字も出ない（time!=='on'）ときのフォールバックとして円を出す。数字だけ出るとき
+  //   （ring≠on かつ time==='on'）は円を出さない（＝円オフの意図を休憩中も尊重）。
+  // - 通常は ringMode に従い on=常時 / start=ウィンドウ中のみ / off=出さない（ゴースト枠線）。
   const showPie =
-    breakMode || phase === 'finished' || ringMode === 'on' || (ringMode === 'start' && transientShown);
+    phase === 'finished' ||
+    (breakMode
+      ? ringMode === 'on' || timeMode !== 'on'
+      : ringMode === 'on' || (ringMode === 'start' && transientShown));
   // ウィンドウ中だけ出るパイ（=フェード対象）。休憩・終了の常時パイはフェードしない。
   const pieIsTransient = showPie && ringMode === 'start' && !breakMode && phase !== 'finished';
   // 数字を出すか: on=常時 / start=ウィンドウ中のみ（休憩中は出さない）/ off=出さない。

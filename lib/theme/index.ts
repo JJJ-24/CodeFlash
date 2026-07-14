@@ -230,11 +230,14 @@ export function themedFrameBorder(theme: AppTheme): string {
   return theme.cardTheme.background === theme.baseSurface ? theme.colors.buttonBorder : theme.cardTheme.border;
 }
 
-/** 学習タイマーなど「カードテーマの代表色に追従させたい濃色」を返す。
- *  カードテーマ選択時はテーマの濃い代表色（codeBackground）、default（無彩色＝
- *  codeBackground がグレーでダーク背景に埋もれる）のときは primary を使う。 */
+/** 学習タイマーの円（リング）色。カードテーマの色味に追従させる。
+ *  - default（無彩色＝codeBackground がグレーで背景に埋もれる）: primary（青）
+ *  - カードテーマ選択・ライト: テーマ濃色 codeBackground（明るいカード面で映える）
+ *  - カードテーマ選択・ダーク: codeBackground は暗いカード面に埋もれるため、テーマ枠線色を
+ *    明るく持ち上げた色（darkenHex は factor>1 で明色化）でリングを目立たせる。 */
 export function themedAccentColor(theme: AppTheme): string {
-  return theme.cardTheme.background === theme.baseSurface ? theme.colors.primary : theme.cardTheme.codeBackground;
+  if (theme.cardTheme.background === theme.baseSurface) return theme.colors.primary;
+  return theme.dark ? darkenHex(theme.cardTheme.border, 1.6) : theme.cardTheme.codeBackground;
 }
 
 export function useTheme(): AppTheme {

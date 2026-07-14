@@ -293,7 +293,9 @@ export default function StudySettingsScreen() {
                     {timerInfoIcon('break')}
                   </Pressable>
                   <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes })}
+                    {studyTimerBreakMinutes === 0
+                      ? t('settings.studyTimerBreakNone')
+                      : t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes })}
                   </Text>
                 </View>
                 <Slider

@@ -86,7 +86,8 @@ const clampTimerMinutes = (v: number) =>
   Math.max(STUDY_TIMER_MINUTES_MIN, Math.min(STUDY_TIMER_MINUTES_MAX, Math.round(v)));
 
 // ポモドーロ拡張（039）: 休憩時間と繰り返し回数。回数1（既定）＝従来の単発タイマーと同一挙動。
-export const STUDY_TIMER_BREAK_MINUTES_MIN = 1;
+// 0分＝休憩なし（休憩モードに入らず次の学習インターバルへ直行＝連続セット）。
+export const STUDY_TIMER_BREAK_MINUTES_MIN = 0;
 export const STUDY_TIMER_BREAK_MINUTES_MAX = 30;
 export const STUDY_TIMER_BREAK_MINUTES_DEFAULT = 5;
 

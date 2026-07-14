@@ -137,6 +137,13 @@ export function useStudyTimer({
           // 最終インターバル終了＝ポモドーロ完了（cycleCount=1 なら従来の時間切れと同一）
           st.finish();
           onFinishRef.current();
+        } else if (st.breakTotalMs <= 0) {
+          // 休憩0分（連続セット）: 休憩モードに入らず次の学習インターバルへ直行する。
+          // 0分の休憩を実際に発生させるとグレーアウトが一瞬点滅・ハプティクスが2連発するため回避。
+          // 通知・グレーアウト・実休憩時間はゼロ＝発生しない。切替の合図（ハプティクス1回）と
+          // 「⏱ N分 (i/n)」ヒント（startNextStudy の epoch+1 で発火）だけ出す。
+          st.startNextStudy();
+          breakCallbacksRef.current.onBreakStart?.();
         } else {
           // 中間インターバル終了→休憩へ自動移行（epoch が進むためこの effect は再起動され、
           // studyCounting=false で tick は止まる）。休憩終了通知はこの時点で予約する

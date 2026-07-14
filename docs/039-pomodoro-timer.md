@@ -143,7 +143,7 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 
   | 設定 | key | 既定値 |
   |---|---|---|
-  | `studyTimerBreakMinutes` | `@codeflash_study_timer_break_minutes` | `5`（normalize: 1〜30 clamp・onApply: 作動中 reset） |
+  | `studyTimerBreakMinutes` | `@codeflash_study_timer_break_minutes` | `5`（normalize: 0〜30 clamp〈0＝休憩なし〉・onApply: 作動中 reset） |
   | `studyTimerCycles` | `@codeflash_study_timer_cycles` | `1`（normalize: 1〜12 clamp・onApply: 作動中 reset） |
 
 - `lib/settings-keys.ts` … 上記2キーを追加（**漏れるとJSONエクスポート/インポートで復元されない**）。
@@ -270,6 +270,14 @@ running/paused ──次セッション──▶ 継続（休憩中なら休憩�
 - 休憩中の**円**：`ring==='on'` のとき、**または**数字も出ない（`time!=='on'`）ときのフォールバックとして表示。
 - 結果、変わるのは「円≠常に かつ 時間=常に」＝**円オフ/開始時 × 時間=常に → 休憩中は数字のみ**（従来は円＋数字）。他は現状維持（何も on でなければ円が出るので指標は必ず残る）。「☕休憩中」ピルは常時表示なので休憩状態は円が無くても分かる。
 - 変更は `StudyTimer.tsx` の `showPie` のみ（`breakMode ? ring==='on' || time!=='on' : …`）。設定を完全反映（開始時＝3秒／両off＝非表示）にしない理由は、タップ無効で残り休憩が確認不能になるため。
+
+### 追追追記（2026-07-14）：休憩0分＝休憩なし（連続セット）
+
+「10分×Nセットを休憩なしで連続、ただしセット番号は知りたい」用途のため、休憩時間の下限を `1→0` に拡張。**0分は"0分の休憩"ではなく"休憩モードに入らず次の学習インターバルへ直行"** として実装（0分の休憩を実際に発生させるとグレーアウトの一瞬点滅・ハプティクス2連発になるため回避）。
+- `store/settings.ts`: `STUDY_TIMER_BREAK_MINUTES_MIN` を `0` に。
+- `hooks/useStudyTimer.ts`: 学習 tick の中間インターバル終了時、`breakTotalMs <= 0` なら `startBreak` せず **`startNextStudy()` を直接呼ぶ**（切替ハプティクス1回＋`epoch+1` で「⏱ N分 (i/n)」ヒント）。通知・グレーアウト・実休憩時間はゼロ＝発生しない。統計除外（`onBreakElapsed`）も呼ばれない（休憩が無い）。
+- `app/settings/study.tsx`: 休憩スライダーは 0〜30。値表示は `0` のとき `studyTimerBreakNone`＝「なし」。休憩時間の i（`studyTimerBreakNotice`）に「0分＝休憩なしで連続」を追記。
+- 回数1のときは従来どおり休憩スライダー非表示（0分は回数2以上でのみ意味を持つ）。
 
 ---
 

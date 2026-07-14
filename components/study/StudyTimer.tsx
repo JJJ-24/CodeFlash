@@ -239,12 +239,16 @@ export function StudyTimer({
   // 数字/pause アイコンの配色: パイの上＝白＋影 / ゴースト（カード地の上）＝テーマ文字色。
   const onPie = showPie;
 
-  // タップ: 円がゴースト状態（start/off）で、隠れている「開始時」要素があれば1回目はピーク再表示
-  // （残り時間や円の確認が目的。計時は継続・約3秒で再フェード）→ ピーク中の再タップで一時停止の2段構え。
-  // それ以外（円が常時表示 on／開始時要素なし＝両方 on/off）は直接 onPress（一時停止/再開）。
-  // 長押しはどちらもメニュー（表示中は親が forceVisible を立てて表示を維持）。
+  // タップ: ピークは「『常に(on)』表示が無く（円も残り時間も on でない）、隠れている『開始時(start)』
+  // 表示があるとき」だけ＝3パターン（円start+時間start／円start+時間off／円off+時間start）。1回目で
+  // その表示を数秒再表示（計時は継続・約3秒で再フェード）→ ピーク中の再タップで一時停止の2段構え。
+  // 円か残り時間のどちらかが「常に」表示のとき（見えているものを直接止めたい）と両方 off のときは
+  // 直接 onPress（一時停止/再開）。長押しはメニュー（表示中は親が forceVisible を立てて表示を維持）。
   function handlePress() {
-    if (phase === 'running' && !breakMode && ringMode !== 'on' && hasStartEl && !transientShown) {
+    if (
+      phase === 'running' && !breakMode &&
+      ringMode !== 'on' && timeMode !== 'on' && hasStartEl && !transientShown
+    ) {
       setPeekNonce((n) => n + 1);
       return;
     }

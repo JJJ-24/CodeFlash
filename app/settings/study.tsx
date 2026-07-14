@@ -44,7 +44,8 @@ export default function StudySettingsScreen() {
     studyTimerCycles, setStudyTimerCycles,
   } = useSettingsStore();
   const [showRetentionInfo, setShowRetentionInfo] = useState(false);
-  const [showTimerInfo, setShowTimerInfo] = useState(false);
+  // 学習タイマー各設定の情報 i アイコン。開くのは1つずつ（キー: general/cycles/break/ring/time/end）。
+  const [openTimerInfo, setOpenTimerInfo] = useState<string | null>(null);
 
   function handleFsrsPresetSelect(preset: FsrsPreset) {
     setFsrsDesiredRetention(FSRS_PRESET_RETENTION[preset]);
@@ -66,6 +67,24 @@ export default function StudySettingsScreen() {
     t(m === 'on' ? 'settings.studyTimerDisplayAlways'
       : m === 'start' ? 'settings.studyTimerDisplayStart'
       : 'settings.studyTimerDisplayOff');
+
+  // 学習タイマー各設定の情報 i アイコン（1つずつ開閉）。
+  const toggleTimerInfo = (key: string) => setOpenTimerInfo((cur) => (cur === key ? null : key));
+  const timerInfoIcon = (key: string) => (
+    <Ionicons
+      name={openTimerInfo === key ? 'information-circle' : 'information-circle-outline'}
+      size={Math.max(theme.fontSize.lg, 20)}
+      color={theme.colors.textTertiary}
+    />
+  );
+  const timerInfoBox = (key: string, textKey: string) =>
+    openTimerInfo === key ? (
+      <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {t(textKey)}
+        </Text>
+      </View>
+    ) : null;
 
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
   if (!isPro) {
@@ -98,7 +117,7 @@ export default function StudySettingsScreen() {
     <SettingsDetail
       title={t('settings.studySettings')}
       onBack={() => {
-        if (showRetentionInfo || showTimerInfo) { setShowRetentionInfo(false); setShowTimerInfo(false); return; }
+        if (showRetentionInfo || openTimerInfo) { setShowRetentionInfo(false); setOpenTimerInfo(null); return; }
         router.back();
       }}
     >
@@ -190,7 +209,7 @@ export default function StudySettingsScreen() {
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Pressable
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-          onPress={() => setShowTimerInfo((v) => !v)}
+          onPress={() => toggleTimerInfo('general')}
           hitSlop={6}
         >
           <Text
@@ -199,19 +218,9 @@ export default function StudySettingsScreen() {
           >
             {t('settings.studyTimer')}
           </Text>
-          <Ionicons
-            name={showTimerInfo ? 'information-circle' : 'information-circle-outline'}
-            size={Math.max(theme.fontSize.lg, 20)}
-            color={theme.colors.textTertiary}
-          />
+          {timerInfoIcon('general')}
         </Pressable>
-        {showTimerInfo && (
-          <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('settings.studyTimerInfo')}
-            </Text>
-          </View>
-        )}
+        {timerInfoBox('general', 'settings.studyTimerInfo')}
         <View style={styles.notificationRow}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyTimerEnable')}
@@ -250,9 +259,12 @@ export default function StudySettingsScreen() {
             {/* 繰り返し回数（039 ポモドーロ・1〜12回。1回＝従来の単発タイマー） */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.studyTimerCycles')}
-                </Text>
+                <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleTimerInfo('cycles')} hitSlop={6}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('settings.studyTimerCycles')}
+                  </Text>
+                  {timerInfoIcon('cycles')}
+                </Pressable>
                 <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t('settings.studyTimerCyclesValue', { n: studyTimerCycles })}
                 </Text>
@@ -267,15 +279,19 @@ export default function StudySettingsScreen() {
                 maximumTrackTintColor={theme.colors.iconSubtle}
                 thumbTintColor={theme.colors.primary}
               />
+              {timerInfoBox('cycles', 'settings.studyTimerCyclesInfo')}
             </View>
 
             {/* 休憩時間（1〜30分）＋通知注記。繰り返し2回以上のときだけ意味を持つ */}
             {studyTimerCycles >= 2 && (
               <View style={{ gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                    {t('settings.studyTimerBreakMinutes')}
-                  </Text>
+                  <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleTimerInfo('break')} hitSlop={6}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('settings.studyTimerBreakMinutes')}
+                    </Text>
+                    {timerInfoIcon('break')}
+                  </Pressable>
                   <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes })}
                   </Text>
@@ -290,17 +306,18 @@ export default function StudySettingsScreen() {
                   maximumTrackTintColor={theme.colors.iconSubtle}
                   thumbTintColor={theme.colors.primary}
                 />
-                <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                  {t('settings.studyTimerBreakNotice')}
-                </Text>
+                {timerInfoBox('break', 'settings.studyTimerBreakNotice')}
               </View>
             )}
 
             {/* 円の表示（常に / 開始時 / オフ） */}
             <View style={{ gap: 6 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('settings.studyTimerRingVisible')}
-              </Text>
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleTimerInfo('ring')} hitSlop={6}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.studyTimerRingVisible')}
+                </Text>
+                {timerInfoIcon('ring')}
+              </Pressable>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {STUDY_TIMER_ELEMENT_MODES.map((mode) => {
                   const active = mode === studyTimerRing;
@@ -321,13 +338,17 @@ export default function StudySettingsScreen() {
                   );
                 })}
               </View>
+              {timerInfoBox('ring', 'settings.studyTimerRingInfo')}
             </View>
 
             {/* 残り時間の表示（常に / 開始時 / オフ） */}
             <View style={{ gap: 6 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('settings.studyTimerShowTime')}
-              </Text>
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleTimerInfo('time')} hitSlop={6}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.studyTimerShowTime')}
+                </Text>
+                {timerInfoIcon('time')}
+              </Pressable>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {STUDY_TIMER_ELEMENT_MODES.map((mode) => {
                   const active = mode === studyTimerTime;
@@ -348,13 +369,17 @@ export default function StudySettingsScreen() {
                   );
                 })}
               </View>
+              {timerInfoBox('time', 'settings.studyTimerTimeInfo')}
             </View>
 
             {/* 終了時の動作 */}
             <View style={{ gap: 6 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('settings.studyTimerEndBehavior')}
-              </Text>
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleTimerInfo('end')} hitSlop={6}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.studyTimerEndBehavior')}
+                </Text>
+                {timerInfoIcon('end')}
+              </Pressable>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {(['alert', 'blink'] as StudyTimerEndBehavior[]).map((behavior) => {
                   const active = behavior === studyTimerEndBehavior;
@@ -375,6 +400,7 @@ export default function StudySettingsScreen() {
                   );
                 })}
               </View>
+              {timerInfoBox('end', 'settings.studyTimerEndInfo')}
             </View>
           </>
         )}

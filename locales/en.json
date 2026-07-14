@@ -430,8 +430,12 @@
     "studyTimerCycles": "Repeat count",
     "studyTimerCyclesValue": "{{n}}x",
     "studyTimerBreakMinutes": "Break duration",
-    "studyTimerBreakNotice": "A break is inserted between study intervals. If a break ends while the app is in the background, a notification lets you know (without notification permission, it switches to the next interval when you return to the app).",
-    "studyTimerInfo": "The timer runs only while the study screen is visible (it pauses automatically when you leave the screen or background the app). It keeps counting across decks, and starts fresh at the next session after it ends. The circle and remaining time can each be set to Always, At start, or Off (\"At start\" shows for a few seconds right after starting). When the circle is hidden, the first tap peeks whatever is set to \"At start\" for a few seconds; otherwise a tap pauses/resumes. Long-press for the menu."
+    "studyTimerBreakNotice": "A break is inserted between study intervals. Even on another screen or with the app closed, a notification tells you when the break ends (if notifications aren't allowed, it switches to the next study timer when you return to the study screen).",
+    "studyTimerInfo": "The timer only advances on the study screen (it auto-pauses when you leave the screen or close the app). It continues from the remaining time across decks, and starts fresh at the next session after time is up or it ends.\n\n[Tap]\n- While shown: pause/resume\n- While hidden (\"At start\" mode): re-show for a few seconds\n* If both circle and time are \"Off\": pause/resume\n\n[Long-press]\n- Normal timer: restart/stop\n- Break timer: skip/stop",
+    "studyTimerCyclesInfo": "Set the repeat count to 2 or more to enable break time. You can also use it as a Pomodoro timer, e.g. repeating \"25 min study → 5 min break\" four times.",
+    "studyTimerRingInfo": "Starts as a full circle and empties clockwise as time passes. When the circle is gone, time is up.\n- Always: always show the circle\n- At start: show for a few seconds after starting\n- Off: don't show the circle",
+    "studyTimerTimeInfo": "Shows minutes until under 1 minute remains, then seconds.\n- Always: always show the remaining time\n- At start: show for a few seconds after starting\n- Off: don't show the remaining time",
+    "studyTimerEndInfo": "- Alert: notifies you when time is up and lets you choose Resume/Finish\n- Blink only: the circle blinks; tap to stop"
   },
   "about": {
     "title": "About",

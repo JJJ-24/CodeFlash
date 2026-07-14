@@ -419,8 +419,11 @@
     "studyTimerEnable": "タイマーを使う",
     "studyTimerMinutes": "時間",
     "studyTimerMinutesValue": "{{n}}分",
-    "studyTimerRingVisible": "円を表示",
-    "studyTimerShowTime": "残り時間を表示",
+    "studyTimerRingVisible": "円の表示",
+    "studyTimerShowTime": "残り時間の表示",
+    "studyTimerDisplayAlways": "常に",
+    "studyTimerDisplayStart": "開始時",
+    "studyTimerDisplayOff": "オフ",
     "studyTimerEndBehavior": "終了時の動作",
     "studyTimerEndAlert": "アラート",
     "studyTimerEndBlink": "点滅のみ",
@@ -428,7 +431,7 @@
     "studyTimerCyclesValue": "{{n}}回",
     "studyTimerBreakMinutes": "休憩時間",
     "studyTimerBreakNotice": "学習と学習の間に休憩が入ります。バックグラウンド中に休憩が終わると通知でお知らせします（通知が未許可の場合は、アプリに戻ったときに次の学習へ切り替わります）。",
-    "studyTimerInfo": "タイマーは学習画面を表示している間だけ進みます（他画面への移動やバックグラウンドで自動一時停止）。デッキを替えても残り時間から継続し、時間切れ・終了後は次の学習開始で新しくスタートします。円のタップで一時停止/再開、長押しでメニューを表示します。"
+    "studyTimerInfo": "タイマーは学習画面を表示している間だけ進みます（他画面への移動やバックグラウンドで自動一時停止）。デッキを替えても残り時間から継続し、時間切れ・終了後は次の学習開始で新しくスタートします。円・残り時間はそれぞれ「常に／開始時／オフ」から選べます（「開始時」は開始直後の数秒だけ表示）。タップは、円が非表示のとき1回目で「開始時」に設定した表示を数秒だけピーク確認、それ以外は一時停止/再開。長押しでメニューを表示します。"
   },
   "about": {
     "title": "アプリについて",

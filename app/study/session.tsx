@@ -182,8 +182,8 @@ export default function StudySessionScreen() {
     keyboardShortcutsEnabled,
     studyTimerEnabled,
     studyTimerMinutes,
-    studyTimerRingVisible,
-    studyTimerShowTime,
+    studyTimerRing,
+    studyTimerTime,
     studyTimerEndBehavior,
     studyTimerBreakMinutes,
     studyTimerCycles,
@@ -382,8 +382,8 @@ export default function StudySessionScreen() {
   // タイマー長押しメニュー（スキップ/終了）・Q/B/Esc キーは生かす。
   const onBreak = timer.mode === "break" && timer.phase === "running";
   swipe.panGesture.enabled(isScreenFocused && !onBreak);
-  // 円非表示設定でもマウントはする（開始時のイントロ表示→フェードアウトと終了通知は
-  // コンポーネント側の introOnly が担当）。カード内上部の余白は円非表示でも確保する
+  // 円が非表示（ring=start/off）でもマウントはする（開始時の表示→フェードアウトと終了通知は
+  // コンポーネント側の ringMode が担当）。カード内上部の余白は円非表示でも確保する
   // （フェードアウト後もゴースト円が常時タップ対象として残るため、1行目右側のボタン類と競合させない）。
   const timerMounted =
     studyTimerActive && !completed && !loading && !!currentCard &&
@@ -1480,9 +1480,9 @@ export default function StudySessionScreen() {
               totalMs={timer.totalMs}
               counting={timer.counting}
               epoch={timer.epoch}
-              showTime={studyTimerShowTime}
+              timeMode={studyTimerTime}
               blinking={timerBlinking}
-              introOnly={!studyTimerRingVisible}
+              ringMode={studyTimerRing}
               breakMode={onBreak}
               cycleIndex={timer.cycleIndex}
               cycleCount={timer.cycleCount}
@@ -1830,9 +1830,9 @@ export default function StudySessionScreen() {
             totalMs={timer.totalMs}
             counting={timer.counting}
             epoch={timer.epoch}
-            showTime={studyTimerShowTime}
+            timeMode={studyTimerTime}
             blinking={timerBlinking}
-            introOnly={!studyTimerRingVisible}
+            ringMode={studyTimerRing}
             breakMode={onBreak}
             cycleIndex={timer.cycleIndex}
             cycleCount={timer.cycleCount}

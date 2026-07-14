@@ -419,8 +419,11 @@
     "studyTimerEnable": "Use timer",
     "studyTimerMinutes": "Duration",
     "studyTimerMinutesValue": "{{n}} min",
-    "studyTimerRingVisible": "Show circle",
-    "studyTimerShowTime": "Show remaining time",
+    "studyTimerRingVisible": "Circle",
+    "studyTimerShowTime": "Remaining time",
+    "studyTimerDisplayAlways": "Always",
+    "studyTimerDisplayStart": "At start",
+    "studyTimerDisplayOff": "Off",
     "studyTimerEndBehavior": "When time is up",
     "studyTimerEndAlert": "Alert",
     "studyTimerEndBlink": "Blink only",
@@ -428,7 +431,7 @@
     "studyTimerCyclesValue": "{{n}}x",
     "studyTimerBreakMinutes": "Break duration",
     "studyTimerBreakNotice": "A break is inserted between study intervals. If a break ends while the app is in the background, a notification lets you know (without notification permission, it switches to the next interval when you return to the app).",
-    "studyTimerInfo": "The timer runs only while the study screen is visible (it pauses automatically when you leave the screen or background the app). It keeps counting across decks, and starts fresh at the next session after it ends. Tap the circle to pause/resume, long-press for the menu."
+    "studyTimerInfo": "The timer runs only while the study screen is visible (it pauses automatically when you leave the screen or background the app). It keeps counting across decks, and starts fresh at the next session after it ends. The circle and remaining time can each be set to Always, At start, or Off (\"At start\" shows for a few seconds right after starting). When the circle is hidden, the first tap peeks whatever is set to \"At start\" for a few seconds; otherwise a tap pauses/resumes. Long-press for the menu."
   },
   "about": {
     "title": "About",

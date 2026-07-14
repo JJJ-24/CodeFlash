@@ -19,10 +19,12 @@ import {
   STUDY_TIMER_BREAK_MINUTES_MIN,
   STUDY_TIMER_CYCLES_MAX,
   STUDY_TIMER_CYCLES_MIN,
+  STUDY_TIMER_ELEMENT_MODES,
   STUDY_TIMER_MINUTES_MAX,
   STUDY_TIMER_MINUTES_MIN,
   useSettingsStore,
   type FsrsPreset,
+  type StudyTimerElementMode,
   type StudyTimerEndBehavior,
 } from '@/store/settings';
 
@@ -35,8 +37,8 @@ export default function StudySettingsScreen() {
     fsrsDesiredRetention, setFsrsDesiredRetention,
     studyTimerEnabled, setStudyTimerEnabled,
     studyTimerMinutes, setStudyTimerMinutes,
-    studyTimerRingVisible, setStudyTimerRingVisible,
-    studyTimerShowTime, setStudyTimerShowTime,
+    studyTimerRing, setStudyTimerRing,
+    studyTimerTime, setStudyTimerTime,
     studyTimerEndBehavior, setStudyTimerEndBehavior,
     studyTimerBreakMinutes, setStudyTimerBreakMinutes,
     studyTimerCycles, setStudyTimerCycles,
@@ -58,6 +60,12 @@ export default function StudySettingsScreen() {
     if (studyTimerCycles <= 1 && value >= 2) requestPermission().catch(() => {});
     setStudyTimerCycles(value);
   }
+
+  // 円/残り時間の表示モード（on/start/off）のラベル。
+  const modeLabel = (m: StudyTimerElementMode) =>
+    t(m === 'on' ? 'settings.studyTimerDisplayAlways'
+      : m === 'start' ? 'settings.studyTimerDisplayStart'
+      : 'settings.studyTimerDisplayOff');
 
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
   if (!isPro) {
@@ -288,28 +296,58 @@ export default function StudySettingsScreen() {
               </View>
             )}
 
-            {/* リングを表示 */}
-            <View style={styles.notificationRow}>
-              <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {/* 円の表示（常に / 開始時 / オフ） */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyTimerRingVisible')}
               </Text>
-              <Switch
-                value={studyTimerRingVisible}
-                onValueChange={setStudyTimerRingVisible}
-                trackColor={{ true: theme.colors.primary }}
-              />
+              <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+                {STUDY_TIMER_ELEMENT_MODES.map((mode) => {
+                  const active = mode === studyTimerRing;
+                  return (
+                    <Pressable
+                      key={mode}
+                      style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                      onPress={() => setStudyTimerRing(mode)}
+                    >
+                      <Text style={[
+                        styles.segmentText,
+                        { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
+                        active && styles.segmentTextActive,
+                      ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                        {modeLabel(mode)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
 
-            {/* 残り時間を表示 */}
-            <View style={styles.notificationRow}>
-              <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {/* 残り時間の表示（常に / 開始時 / オフ） */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyTimerShowTime')}
               </Text>
-              <Switch
-                value={studyTimerShowTime}
-                onValueChange={setStudyTimerShowTime}
-                trackColor={{ true: theme.colors.primary }}
-              />
+              <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+                {STUDY_TIMER_ELEMENT_MODES.map((mode) => {
+                  const active = mode === studyTimerTime;
+                  return (
+                    <Pressable
+                      key={mode}
+                      style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                      onPress={() => setStudyTimerTime(mode)}
+                    >
+                      <Text style={[
+                        styles.segmentText,
+                        { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
+                        active && styles.segmentTextActive,
+                      ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                        {modeLabel(mode)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
 
             {/* 終了時の動作 */}

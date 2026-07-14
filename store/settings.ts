@@ -48,6 +48,36 @@ const clampRetention = (v: number) => Math.max(FSRS_RETENTION_MIN, Math.min(FSRS
 /** 学習タイマーの終了時動作。alert=バイブ＋モーダル / blink=リング点滅のみ */
 export type StudyTimerEndBehavior = 'alert' | 'blink';
 
+/**
+ * 学習タイマーの表示要素（円・残り時間）の表示モード。
+ * - 'on'    : 常に表示
+ * - 'start' : 開始時（＋タップ時のピーク）に数秒だけ表示→フェードアウト
+ * - 'off'   : 一切表示しない
+ * タップのピークは「'start' に設定された要素だけ」を再表示する（円が 'on'＝常時表示のときは
+ * タップ＝一時停止で、ピークはしない）。両方 'off' はピークなし（枠線＋開始ヒントのみ）。
+ */
+export type StudyTimerElementMode = 'on' | 'start' | 'off';
+export const STUDY_TIMER_ELEMENT_MODES = ['on', 'start', 'off'] as const;
+
+// 旧 bool 設定からの移行つき parse（キーは据え置きで値の意味だけ拡張）。
+//  円   : 旧 true（常時表示）→'on' / 旧 false（＝当時の「OFF」＝開始時のみ表示＋ゴースト＋ピーク）→'start'
+//  残時間: 旧 true→'on' / 旧 false→'off'
+// ※旧「円OFF＋残時間ON」（＝ミニマル数字時計・円は一切出ない）だけは 'start'+'on' に移行して
+//   開始時に円が一瞬出るようになるが、該当する組み合わせは稀なため許容（既定 on/off と
+//   「円OFF＋残時間OFF」のピーク挙動は正確に保たれる）。
+const parseStudyTimerRing = (raw: string): StudyTimerElementMode | undefined => {
+  if ((STUDY_TIMER_ELEMENT_MODES as readonly string[]).includes(raw)) return raw as StudyTimerElementMode;
+  if (raw === 'true') return 'on';
+  if (raw === 'false') return 'start';
+  return undefined;
+};
+const parseStudyTimerTime = (raw: string): StudyTimerElementMode | undefined => {
+  if ((STUDY_TIMER_ELEMENT_MODES as readonly string[]).includes(raw)) return raw as StudyTimerElementMode;
+  if (raw === 'true') return 'on';
+  if (raw === 'false') return 'off';
+  return undefined;
+};
+
 export const STUDY_TIMER_MINUTES_MIN = 1;
 export const STUDY_TIMER_MINUTES_MAX = 60;
 export const STUDY_TIMER_MINUTES_DEFAULT = 10;
@@ -118,8 +148,8 @@ interface SettingsValues {
   lastTagCardFilter: HomeFilter;
   studyTimerEnabled: boolean;
   studyTimerMinutes: number;
-  studyTimerRingVisible: boolean;
-  studyTimerShowTime: boolean;
+  studyTimerRing: StudyTimerElementMode;
+  studyTimerTime: StudyTimerElementMode;
   studyTimerEndBehavior: StudyTimerEndBehavior;
   studyTimerBreakMinutes: number;
   studyTimerCycles: number;
@@ -249,8 +279,8 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     normalize: clampTimerMinutes,
     onApply: resetStudyTimerIfActive,
   },
-  studyTimerRingVisible: { key: '@codeflash_study_timer_ring_visible', default: true, parse: asBool },
-  studyTimerShowTime: { key: '@codeflash_study_timer_show_time', default: false, parse: asBool },
+  studyTimerRing: { key: '@codeflash_study_timer_ring_visible', default: 'on', parse: parseStudyTimerRing },
+  studyTimerTime: { key: '@codeflash_study_timer_show_time', default: 'off', parse: parseStudyTimerTime },
   studyTimerEndBehavior: { key: '@codeflash_study_timer_end_behavior', default: 'alert', parse: oneOf(['alert', 'blink'] as const) },
   studyTimerBreakMinutes: {
     key: '@codeflash_study_timer_break_minutes',
@@ -301,8 +331,8 @@ interface SettingsState extends SettingsValues {
   setLastTagCardFilter: (v: HomeFilter) => void;
   setStudyTimerEnabled: (v: boolean) => void;
   setStudyTimerMinutes: (v: number) => void;
-  setStudyTimerRingVisible: (v: boolean) => void;
-  setStudyTimerShowTime: (v: boolean) => void;
+  setStudyTimerRing: (v: StudyTimerElementMode) => void;
+  setStudyTimerTime: (v: StudyTimerElementMode) => void;
   setStudyTimerEndBehavior: (v: StudyTimerEndBehavior) => void;
   setStudyTimerBreakMinutes: (v: number) => void;
   setStudyTimerCycles: (v: number) => void;
@@ -359,8 +389,8 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setLastTagCardFilter: makeSetter('lastTagCardFilter'),
     setStudyTimerEnabled: makeSetter('studyTimerEnabled'),
     setStudyTimerMinutes: makeSetter('studyTimerMinutes'),
-    setStudyTimerRingVisible: makeSetter('studyTimerRingVisible'),
-    setStudyTimerShowTime: makeSetter('studyTimerShowTime'),
+    setStudyTimerRing: makeSetter('studyTimerRing'),
+    setStudyTimerTime: makeSetter('studyTimerTime'),
     setStudyTimerEndBehavior: makeSetter('studyTimerEndBehavior'),
     setStudyTimerBreakMinutes: makeSetter('studyTimerBreakMinutes'),
     setStudyTimerCycles: makeSetter('studyTimerCycles'),

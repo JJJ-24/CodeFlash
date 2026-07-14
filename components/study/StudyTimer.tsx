@@ -15,6 +15,7 @@ import Animated, {
 import Svg, { Circle } from 'react-native-svg';
 
 import { themedAccentColor, useTheme } from '@/lib/theme';
+import type { StudyTimerElementMode } from '@/store/settings';
 import type { StudyTimerPhase } from '@/store/studyTimer';
 
 // navFab と同じ 56pt の円形フローティング
@@ -44,18 +45,18 @@ interface Props {
   counting: boolean;
   /** start/restart で進む世代番号（アニメーションの起点取り直しトリガー） */
   epoch: number;
-  /** 中央に残り時間の数字を表示（studyTimerShowTime） */
-  showTime: boolean;
+  /** 残り時間（数字）の表示モード（studyTimerTime）: on=常時 / start=開始時＋ピーク / off=非表示 */
+  timeMode: StudyTimerElementMode;
   /** 終了時 blink 動作中（円の点滅） */
   blinking: boolean;
-  /** 円非表示設定（studyTimerRingVisible=false）: 開始時のみ表示→フェードアウト */
-  introOnly: boolean;
-  /** 休憩中（039）: リングを休憩色にし「休憩中」ピルを常時表示。introOnly（ゴースト）は無視 */
+  /** 円（パイ/ゴースト）の表示モード（studyTimerRing）: on=常時 / start=開始時＋ピーク→ゴースト / off=ゴーストのみ */
+  ringMode: StudyTimerElementMode;
+  /** 休憩中（039）: リングを休憩色にし「休憩中」ピルを常時表示。ringMode（ゴースト）は無視 */
   breakMode?: boolean;
   /** 現在の学習サイクル番号（1始まり）。cycleCount > 1 のとき開始ヒントに (i/n) を付ける */
   cycleIndex?: number;
   cycleCount?: number;
-  /** 表示を維持する（長押しメニュー表示中など。introOnly のフェードアウトを保留） */
+  /** 表示を維持する（長押しメニュー表示中など。「開始時」要素のフェードアウトを保留） */
   forceVisible?: boolean;
   onPress: () => void;
   onLongPress: () => void;
@@ -69,9 +70,9 @@ export function StudyTimer({
   totalMs,
   counting,
   epoch,
-  showTime,
+  timeMode,
   blinking,
-  introOnly,
+  ringMode,
   breakMode = false,
   cycleIndex = 1,
   cycleCount = 1,
@@ -189,35 +190,36 @@ export function StudyTimer({
     }
   }, [blinking, blinkOpacity]);
 
-  // 円非表示設定: 計時開始（マウント・再スタート・一時停止からの再開）とゴーストタップ（ピーク）ごとに
-  // INTRO_VISIBLE_MS 表示 → フェードアウト → ゴースト円へ。一時停止・終了中・forceVisible 中は表示を維持する。
-  // 数字ON のときはイントロ自体を出さず最初からゴースト＋数字（開始の合図は数字の出現で足りるし、
-  // 円OFF を選んだ人にパイを見せない）。
-  const fade = useSharedValue(1);
-  const [introDone, setIntroDone] = useState(false);
+  // 「開始時」要素（円 or 残り時間）を、計時開始（マウント・再スタート・一時停止からの再開）と
+  // タップのピークごとに INTRO_VISIBLE_MS 表示 → フェードアウトして隠す共通ウィンドウ。隠れた後は
+  // 円='start'→ゴースト枠線 / 残り時間='start'→非表示。要素の on/off はこのウィンドウと無関係に常時反映。
+  // 休憩中・終了/一時停止中・forceVisible 中はフェードせず表示を維持する（休憩はカードがグレーアウト済みで
+  // クリーンに保つ動機が消え、リングが唯一の残り休憩時間の確認手段になるため）。
+  const transient = useSharedValue(1);
+  const [transientShown, setTransientShown] = useState(true);
   const [peekNonce, setPeekNonce] = useState(0);
+  const hasStartEl = ringMode === 'start' || timeMode === 'start';
   useEffect(() => {
-    cancelAnimation(fade);
-    fade.value = 1;
-    // 休憩中はゴースト（円非表示）設定を無視してフルリング表示: カードはグレーアウト済みで
-    // 「画面をクリーンに保つ」動機が消えており、タップ無効＝ピークも使えないため、
-    // リングが唯一の残り休憩時間の確認手段になる。
-    if (!introOnly || phase !== 'running' || forceVisible || breakMode) {
-      setIntroDone(false);
+    cancelAnimation(transient);
+    transient.value = 1;
+    if (breakMode || phase !== 'running' || forceVisible) {
+      setTransientShown(true);
       return;
     }
-    if (showTime) {
-      setIntroDone(true);
+    // 「開始時」要素が無ければウィンドウは即クローズ（表示は on/off だけで決まる）。
+    if (!hasStartEl) {
+      setTransientShown(false);
       return;
     }
-    setIntroDone(false);
-    fade.value = withDelay(INTRO_VISIBLE_MS, withTiming(0, { duration: INTRO_FADE_MS }));
-    const id = setTimeout(() => setIntroDone(true), INTRO_VISIBLE_MS + INTRO_FADE_MS);
+    setTransientShown(true);
+    transient.value = withDelay(INTRO_VISIBLE_MS, withTiming(0, { duration: INTRO_FADE_MS }));
+    const id = setTimeout(() => setTransientShown(false), INTRO_VISIBLE_MS + INTRO_FADE_MS);
     return () => clearTimeout(id);
-  }, [introOnly, epoch, phase, forceVisible, showTime, peekNonce, breakMode, fade]);
+  }, [ringMode, timeMode, epoch, phase, forceVisible, breakMode, hasStartEl, peekNonce, transient]);
+  const transientStyle = useAnimatedStyle(() => ({ opacity: transient.value }));
 
   const containerStyle = useAnimatedStyle(() => ({
-    opacity: blinkOpacity.value * fade.value,
+    opacity: blinkOpacity.value,
   }));
 
   const paused = phase === 'paused';
@@ -225,90 +227,81 @@ export function StudyTimer({
   // 数字のみ（単位なし）: 1分1秒までは分（floor）、残り1分ちょうどからは秒（60→59→…）
   const timeLabel = String(secondsLeft > 60 ? Math.floor(secondsLeft / 60) : secondsLeft);
 
-  // フェードアウト完了後はゴースト円（薄い枠線のみ）に切り替える（終了時は blink/アラート通知のため再表示される）。
-  // showTime ON なら中央に残り時間を常時表示（＝ミニマル数字タイマー）。背景はカード地なので
-  // パイ上の白文字＋影ではなくテーマ文字色を使う（枠線は 30% アルファで薄く・数字はそれより濃く）。
-  // 数字ON は一時停止中もパイに切り替えず、数字を pause アイコンに置き換えるだけ（このモードで
-  // パイが出るのは長押しメニュー中と終了時だけ、という整理を保つ）。
-  // タップ: 数字OFF＝ピーク再表示（残り時間の確認が目的。計時は継続・約3秒でまたフェードアウト）→
-  // 再タップで一時停止の2段構え。数字ON＝残り時間は常に見えているのでピークを挟まず直接一時停止/再開。
-  // 長押し＝どちらもメニュー（表示中は親が forceVisible を立てるため円が維持される）。
-  const ghostMode =
-    introOnly &&
-    !forceVisible &&
-    !breakMode &&
-    (showTime
-      ? phase === 'running' || phase === 'paused'
-      : introDone && phase === 'running');
-  if (ghostMode) {
-    return (
-      <View style={style}>
-        {startHint}
-        <Pressable
-          onPress={showTime ? onPress : () => setPeekNonce((n) => n + 1)}
-          onLongPress={onLongPress}
-          style={[styles.body, styles.ghost, { borderColor: theme.colors.textTertiary + '4D' }]}
-          hitSlop={6}
-        >
-          {showTime && (
-            <View style={styles.center} pointerEvents="none">
-              {paused ? (
-                <Ionicons name="pause" size={20} color={theme.colors.textSecondary} />
-              ) : (
-                <Text
-                  style={{ fontSize: theme.fontSize.md, fontWeight: '700', color: theme.colors.textSecondary }}
-                  allowFontScaling={false}
-                  numberOfLines={1}
-                >
-                  {timeLabel}
-                </Text>
-              )}
-            </View>
-          )}
-        </Pressable>
-      </View>
-    );
+  // 円（パイ）を出すか: 休憩・終了(blink/アラート)は設定に関係なく常に出す（残り休憩時間の確認・
+  // 時間切れの合図のため）。それ以外は ringMode に従い on=常時 / start=ウィンドウ中のみ / off=出さない（ゴースト枠線）。
+  const showPie =
+    breakMode || phase === 'finished' || ringMode === 'on' || (ringMode === 'start' && transientShown);
+  // ウィンドウ中だけ出るパイ（=フェード対象）。休憩・終了の常時パイはフェードしない。
+  const pieIsTransient = showPie && ringMode === 'start' && !breakMode && phase !== 'finished';
+  // 数字を出すか: on=常時 / start=ウィンドウ中のみ（休憩中は出さない）/ off=出さない。
+  const timeVisible = timeMode === 'on' || (timeMode === 'start' && transientShown && !breakMode);
+  const numberIsTransient = timeVisible && timeMode === 'start';
+  // 数字/pause アイコンの配色: パイの上＝白＋影 / ゴースト（カード地の上）＝テーマ文字色。
+  const onPie = showPie;
+
+  // タップ: 円がゴースト状態（start/off）で、隠れている「開始時」要素があれば1回目はピーク再表示
+  // （残り時間や円の確認が目的。計時は継続・約3秒で再フェード）→ ピーク中の再タップで一時停止の2段構え。
+  // それ以外（円が常時表示 on／開始時要素なし＝両方 on/off）は直接 onPress（一時停止/再開）。
+  // 長押しはどちらもメニュー（表示中は親が forceVisible を立てて表示を維持）。
+  function handlePress() {
+    if (phase === 'running' && !breakMode && ringMode !== 'on' && hasStartEl && !transientShown) {
+      setPeekNonce((n) => n + 1);
+      return;
+    }
+    onPress();
   }
 
   return (
     <Animated.View style={[style, containerStyle]}>
       {breakMode ? breakPill : startHint}
       <Pressable
-        onPress={onPress}
+        onPress={handlePress}
         onLongPress={onLongPress}
-        style={[styles.body, paused && { opacity: 0.5 }]}
+        style={[styles.body, onPie && paused && { opacity: 0.5 }]}
         hitSlop={6}
       >
-        <Svg width={STUDY_TIMER_SIZE} height={STUDY_TIMER_SIZE}>
-          <AnimatedCircle
-            cx={HALF}
-            cy={HALF}
-            r={PIE_RADIUS}
-            stroke={breakMode ? (theme.dark ? BREAK_RING_DARK : BREAK_RING_LIGHT) : themedAccentColor(theme)}
-            strokeWidth={PIE_STROKE}
-            fill="none"
-            strokeDasharray={[PIE_CIRCUMFERENCE, PIE_CIRCUMFERENCE]}
-            animatedProps={animatedProps}
-            rotation={-90}
-            originX={HALF}
-            originY={HALF}
-          />
-        </Svg>
-        {(paused || showTime) && (
+        {showPie ? (
+          <Animated.View style={pieIsTransient ? transientStyle : undefined}>
+            <Svg width={STUDY_TIMER_SIZE} height={STUDY_TIMER_SIZE}>
+              <AnimatedCircle
+                cx={HALF}
+                cy={HALF}
+                r={PIE_RADIUS}
+                stroke={breakMode ? (theme.dark ? BREAK_RING_DARK : BREAK_RING_LIGHT) : themedAccentColor(theme)}
+                strokeWidth={PIE_STROKE}
+                fill="none"
+                strokeDasharray={[PIE_CIRCUMFERENCE, PIE_CIRCUMFERENCE]}
+                animatedProps={animatedProps}
+                rotation={-90}
+                originX={HALF}
+                originY={HALF}
+              />
+            </Svg>
+          </Animated.View>
+        ) : (
+          <View style={[styles.body, styles.ghost, { borderColor: theme.colors.textTertiary + '4D' }]} />
+        )}
+        {(paused || timeVisible) && (
           <View style={styles.center} pointerEvents="none">
             {paused ? (
-              <Ionicons name="pause" size={20} color="#FFF" style={styles.overlayShadow} />
+              <Ionicons
+                name="pause"
+                size={20}
+                color={onPie ? '#FFF' : theme.colors.textSecondary}
+                style={onPie ? styles.overlayShadow : undefined}
+              />
             ) : (
-              <Text
+              <Animated.Text
                 style={[
-                  styles.overlayShadow,
-                  { fontSize: theme.fontSize.md, fontWeight: '700', color: '#FFF' },
+                  numberIsTransient && transientStyle,
+                  onPie ? styles.overlayShadow : undefined,
+                  { fontSize: theme.fontSize.md, fontWeight: '700', color: onPie ? '#FFF' : theme.colors.textSecondary },
                 ]}
                 allowFontScaling={false}
                 numberOfLines={1}
               >
                 {timeLabel}
-              </Text>
+              </Animated.Text>
             )}
           </View>
         )}
@@ -328,8 +321,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // 円非表示設定のフェードアウト後に残すゴースト円: 薄い枠線でタップ位置だけ示す
-  // （不透明度は borderColor のアルファで表現。showTime の数字まで薄くしないため opacity は使わない）
+  // 円が非表示（ring=start のフェード後／ring=off）のとき残すゴースト円: 薄い枠線でタップ位置だけ示す
+  // （不透明度は borderColor のアルファで表現。中央の残り時間の数字まで薄くしないため opacity は使わない）
   ghost: {
     borderWidth: 1,
   },

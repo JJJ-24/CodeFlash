@@ -232,6 +232,9 @@ export default function StudySessionScreen() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showTimerMenu, setShowTimerMenu] = useState(false);
   const [showTimerEndModal, setShowTimerEndModal] = useState(false);
+  // 時間切れ処理（handleTimerFinish＝useCallback）から最新の開閉状態を読むための ref。
+  const showTimerMenuRef = useRef(false);
+  showTimerMenuRef.current = showTimerMenu;
   const [kbHeight, setKbHeight] = useState(0);
 
   // キーボード表示時に paddingBottom を追加してスクロール余白を確保する。
@@ -356,11 +359,19 @@ export default function StudySessionScreen() {
   // 039: 繰り返し2回以上なら学習→休憩→学習…のポモドーロ。遷移はハプティクスで知らせる。
   const studyTimerActive = isPro && studyTimerEnabled;
   const handleTimerFinish = useCallback(() => {
-    if (useSettingsStore.getState().studyTimerEndBehavior === "alert") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // 'blink' はリング自身の点滅表示のみ（タップで解除）
+    if (useSettingsStore.getState().studyTimerEndBehavior !== "alert") return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // 長押しメニュー（ConfirmModal）を開いたまま時間切れになると、終了アラート（別の ConfirmModal）と
+    // RN の <Modal> が2枚同時に visible になり、iOS で present/dismiss が重なって VC が wedged になる
+    // （閉じたあと画面がフリーズ・タイマー円だけ反応する不具合）。メニューが開いていれば先に閉じ、
+    // フェード完了後（~350ms）に終了アラートを出して二重 Modal を構造的に避ける。
+    if (showTimerMenuRef.current) {
+      setShowTimerMenu(false);
+      setTimeout(() => setShowTimerEndModal(true), 350);
+    } else {
       setShowTimerEndModal(true);
     }
-    // 'blink' はリング自身の点滅表示のみ（タップで解除）
   }, []);
   const handleBreakTransition = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});

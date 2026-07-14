@@ -228,7 +228,7 @@ export default function StudySettingsScreen() {
             {/* 時間（1〜60分） */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerMinutes')}
                 </Text>
                 <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -250,7 +250,7 @@ export default function StudySettingsScreen() {
             {/* 繰り返し回数（039 ポモドーロ・1〜12回。1回＝従来の単発タイマー） */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerCycles')}
                 </Text>
                 <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -273,7 +273,7 @@ export default function StudySettingsScreen() {
             {studyTimerCycles >= 2 && (
               <View style={{ gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('settings.studyTimerBreakMinutes')}
                   </Text>
                   <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -298,7 +298,7 @@ export default function StudySettingsScreen() {
 
             {/* 円の表示（常に / 開始時 / オフ） */}
             <View style={{ gap: 6 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyTimerRingVisible')}
               </Text>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
@@ -325,7 +325,7 @@ export default function StudySettingsScreen() {
 
             {/* 残り時間の表示（常に / 開始時 / オフ） */}
             <View style={{ gap: 6 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyTimerShowTime')}
               </Text>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
@@ -352,7 +352,7 @@ export default function StudySettingsScreen() {
 
             {/* 終了時の動作 */}
             <View style={{ gap: 6 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyTimerEndBehavior')}
               </Text>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>

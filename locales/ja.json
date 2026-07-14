@@ -600,7 +600,7 @@
     "featureCustomization": "配色",
     "featureCustomizationDesc": "全10種類の配色プリセットをアンロック × ライト／ダークでカードと画面を彩る",
     "featureTimer": "学習タイマー",
-    "featureTimerDesc": "学習の残り時間をパイ型タイマーで表示（1〜60分）。学習画面でだけ進みデッキをまたいで継続、時間切れで学習完了へ",
+    "featureTimerDesc": "学習画面でだけ進むパイ型タイマー（1〜60分）。デッキをまたいで継続し、繰り返せばポモドーロ（学習→休憩）にも",
     "purchaseButton": "{{price}} で購入",
     "restoreButton": "購入を復元",
     "privacyPolicy": "プライバシーポリシー",

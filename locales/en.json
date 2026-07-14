@@ -600,7 +600,7 @@
     "featureCustomization": "Color Themes",
     "featureCustomizationDesc": "Unlock all 10 color presets × light/dark to color your cards and screen",
     "featureTimer": "Study Timer",
-    "featureTimerDesc": "Show your remaining study time as a pie-style timer (1–60 min). It only counts down while studying, carries over across decks, and wraps up the session when time runs out",
+    "featureTimerDesc": "A pie-style timer (1–60 min) that runs only while studying and carries over across decks — repeat it for Pomodoro (study → break)",
     "purchaseButton": "Buy for {{price}}",
     "restoreButton": "Restore Purchase",
     "privacyPolicy": "Privacy Policy",

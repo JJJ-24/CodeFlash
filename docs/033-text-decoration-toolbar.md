@@ -75,8 +75,8 @@
 - [x] 記法挿入のユーティリティを新設（`lib/editor/applyMarkdown.ts`）
   - [x] 囲みタイプ: `wrapSelection(text, sel, left, right)` — 選択を `left…right` で囲む。未選択時はカーソル位置に挿入して内側へカーソル移動。start/end の逆順・範囲外も正規化
   - [x] 適用後の選択範囲を返し、`TextInput` の `selection` prop を**一時的に**制御して復元（onSelectionChange で制御解放＝以後は非制御に戻す「set then release」方式）
-- [x] 挿入後に **選択が外れない / カーソルが記法の内側に来る** ことを iOS で確認（実装済み・**要実機確認**。Android はツールバー非表示）
-- [x] このアプリの hidden TextInput ＋ `useKeyboardFocus`（フォーカス管理）との干渉確認（**要実機確認**。ツールバーは block TextInput 編集中のみ表示＝hidden 入力は既に blur 済みのため理論上は非干渉）
+- [x] 挿入後に **選択が外れない / カーソルが記法の内側に来る** ことを iOS 実機で確認済み（※この行の「Android は非表示」という前提は Phase 2 当時の `InputAccessoryView` 方式のもの。現行のインラインパレットは Platform ゲート無し＝Android でも表示される）
+- [x] ~~このアプリの hidden TextInput ＋ `useKeyboardFocus`（フォーカス管理）との干渉確認~~ → **確認不要になった**。034 で隠し TextInput と `useKeyboardFocus` を撤去したため、干渉する対象そのものが存在しない
 
 > 実装メモ〔**現行**〕: パレットは `components/editor/MarkdownPalette.tsx`（`MaterialIcons` の format 系アイコン）。`TOOLBAR_BUTTONS` 配列で記法を定義し、ボタン追加は配列に1行足すだけ。`TextBlockItem` がフォーカス中ブロック直下にインライン描画し、`onAction` に各ブロックローカルの `stableApply` を渡す。`ScrollView` の `keyboardShouldPersistTaps="handled"` によりボタンタップでフォーカス・選択を奪わないため、選択 → タップで装飾が当たる。
 > selectionRef はフォーカス時に末尾で初期化（プログラム的フォーカス直後は末尾カーソルの onSelectionChange が発火しないことがあるため）。
@@ -134,7 +134,7 @@
 
 - [x] 記法の設計 ＝ **mark 限定の色プレフィックス方式**を採用。デフォルト（黄）は `==文字==`（**後方互換**）、緑 `==g|文字==`、ピンク `==p|文字==`。`markdown-it-attrs` は不採用（`{..}` を全体解釈するとコード本文の `{ } : ! %` を誤爆させるため）。代わりに `lib/editor/markdownHighlight.ts` の core ルール `markdownItHighlightColor` が **mark トークンだけ**を見て、開き `==` 直後の `g|`/`p|` を `mark_open` の attr `hl` に移し、本文からは除去する（`node.attributes.hl` が render rule に届くのは検証済み）。
 - [x] ツールバー UI ＝ **1ボタンで色を循環**（なし→黄→緑→ピンク→なし。見出しと同じ循環 UX）。`applyMarkdown.ts` の `cycleHighlight()`（`MdAction { kind: 'highlight' }`）。色プレフィックスは常に選択範囲の外側（開き `==` の直後）に置くので、色を変えても選択は中身のまま保たれる。キーボードは `⌘⇧M`。
-- [x] 各色をカードテーマ全種で視認性確認（半透明前提）← **残: 実機確認**（8テーマ × light/dark。特に緑/ピンクが `mint`/`rose`/`sky` テーマ上で沈まないか）。色は `lib/theme` の `HIGHLIGHT_COLORS`（`{ light/dark } × { y/g/p }`）で調整可能。
+- [x] 各色をカードテーマ全種で視認性確認（半透明前提）＝ **実機で確認済み**（8テーマ × light/dark。緑/ピンクが `mint`/`rose`/`sky` テーマ上で沈まないことを含む）。色は `lib/theme` の `HIGHLIGHT_COLORS`（`{ light/dark } × { y/g/p }`）で調整可能。
 - [x] Pro 機能化するかの判断（現状は無料。将来 Pro 候補のまま保留）
 
 > **実装メモ（2026-07-02）:**

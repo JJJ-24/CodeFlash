@@ -152,9 +152,9 @@ iPhone 16e シミュレータ（new arch・Hardware Keyboard 接続）で PoC �
 
 - [x] CLAUDE.md のキーボード節を更新（「隠し TextInput」前提の記述を全面改訂・ネイティブ方式へ）
 - [x] ショートカット一覧（`ShortcutsModal`）に矢印/ESC を反映
-- [x] 回帰チェックリスト（下記）を実機で一通り確認（移行ごとに ON 検証済み。矢印/ESC の通し確認は継続中）
+- [x] 回帰チェックリスト（下記）を実機で一通り確認（移行ごとの ON 検証・矢印/ESC の通し確認とも完了）
 - [ ] Android のキー対応方針を決定（当面 iOS 専用 or `KeyEvent` 対応）
-- [x] **iPad の `Tab`（UIFocusSystem）挙動は未検証**のまま（割り当ては避けている）
+- [x] **iPad の `Tab`（UIFocusSystem）挙動を検証し対応済み**：`plugins/withKeyCommands.js` が iPad 限定で `wantsPriorityOverSystemBehavior` を立て（フォーカスエンジンより優先）、下タブ4画面で `Tab`/`Shift+Tab` をタブ切替に割り当てた。編集が起きる画面（学習セッション・カードエディタ）では **Tab を登録しない**（登録すると編集中の Tab インデントが死ぬため）
 
 ---
 

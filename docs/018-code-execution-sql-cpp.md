@@ -38,7 +38,7 @@ SQL（sql.js WASM SQLite）および C/C++（WASM コンパイラ or 外部 API�
 
 ### UI 拡張
 - [x] SQL 結果テーブル表示コンポーネント（ExecutionOutput.tsx 内 SqlTable）
-- [ ] C/C++ コンパイル中インジケーター
+- [x] C/C++ コンパイル中インジケーター（言語共通の実行中表示で対応：実行ボタンのスピナー＋ヘッダー緑 `CODE_RUNNING_HEADER`。C++ 専用の実装は不要だった）
 
 ---
 

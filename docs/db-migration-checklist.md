@@ -26,9 +26,15 @@
 - [ ] `lib/database/schema.ts` で `ALTER TABLE ... ADD COLUMN` のマイグレーションを書いた
 - [ ] そのカラムは**ユーザーデータか？**（YES → バックアップ対象）
 - [ ] `lib/export.ts` の SELECT 文に新カラムを含めた
+  - **`cards` は要注意**：`card_contents` との JOIN のため**明示列指定**（`SELECT c.id, c.deckId, …`）になっており、新カラムを手で足さないと**エラーにならず黙って漏れる**。`decks`・`tags`・`reviews` は `SELECT *` なので自動で入る
 - [ ] `lib/import.ts` の INSERT 文に新カラムを含めた
   - 旧エクスポートデータ（新カラムが含まれていない）にも対応するため、`(r.newColumn as 型 | undefined) ?? null` の形で吸収
+  - **boolean 列**は SQLite に 0/1 で入る。INSERT 側は `d.newColumn ? 1 : 0`（旧データの `undefined` → 0 に落ちる）、**DB 読み取り側は `!!raw.newColumn` で boolean へ正規化**する（`lib/database/decks.ts` の `toDeck`・`cards.ts` の `toCard` が実例）
+- [ ] TSV（`lib/tsv.ts`）に含めるかを判断した
+  - TSV は Anki 互換の表/裏テキストのみでメタ情報を持たない。含めない判断でよいが、「判断した」ことが要る（`archived` は対象外とした）
 - [ ] 動作確認：旧バージョンでエクスポートしたファイルが新バージョンでも読み込める
+
+> **実例：`archived` 列（032・`decks`/`cards` に追加）** — `decks` は `SELECT *` のため自動、`cards` だけ `c.archived` の明示追加が必要だった。import は `d.archived ? 1 : 0` で旧データを 0 に吸収、読み取りは `!!raw.archived` で boolean 化。TSV は対象外。iCloud 同期は `sync_state` トリガーが列を問わず変更を捕捉するため追加対応不要。
 
 ## ③ 新しい AsyncStorage キーを追加した場合（`store/` 配下）
 

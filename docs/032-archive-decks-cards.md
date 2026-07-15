@@ -37,7 +37,7 @@
   - [x] `ALTER TABLE cards ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;`（card_contents 再作成後でも判定できるよう table_info を取り直して実行）
   - [x] 部分インデックスは見送り（boolean の低カーディナリティで効果薄。除外条件は既存 `idx_cards_deckId` + サブクエリで対応）
 - [x] iCloud 同期は既存の `sync_state` トリガーで自動追跡されるため追加対応不要（実機で動作確認済み）
-- [ ] `docs/db-migration-checklist.md` に追記
+- [x] `docs/db-migration-checklist.md` に追記（②に `cards` の明示列指定・boolean 正規化・TSV 判断の項目を追加し、`archived` を実例として記録）
 
 ### Phase 2 — 型・CRUD ✅
 

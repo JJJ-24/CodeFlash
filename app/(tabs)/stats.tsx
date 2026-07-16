@@ -931,7 +931,10 @@ function isSameItem(a: FocusedItem, b: FocusedItem): boolean {
   return a.idx === (b as { idx: number }).idx;
 }
 
-// セクションタイトル行（行タップで折りたたみトグル・右端に chevron で状態表示）。
+// セクションタイトル行（タイトル＋バッジ と 右端の chevron がそれぞれ折りたたみトグル）。
+// 行の外枠は必ずレスポンダを持たない View にする：横の空白をタップしたとき、祖先の
+// 余白タップ Pressable（styles.content / styles.section）へバブリングさせて J/K フォーカスを
+// 解除するため。ここを Pressable に戻すと空白タップが折りたたみを誤爆する。
 // ⓘ は内側の独立 Pressable（タップ領域分離）。chevron の開閉アイコンは settings/sync.tsx の
 // 既存アコーディオンと同じ（開: chevron-down / 閉: chevron-forward）。
 function CollapsibleSectionTitle({ title, collapsed, onToggle, onInfo, infoLabel, badge, theme }: {
@@ -944,19 +947,23 @@ function CollapsibleSectionTitle({ title, collapsed, onToggle, onInfo, infoLabel
   theme: AppTheme;
 }) {
   return (
-    <Pressable style={styles.proSectionTitle} onPress={onToggle} accessibilityRole="button">
-      <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-        {title}
-      </Text>
-      {badge}
+    <View style={styles.proSectionTitle}>
+      <Pressable style={styles.sectionTitleTap} onPress={onToggle} hitSlop={{ top: 8, bottom: 8 }} accessibilityRole="button">
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {title}
+        </Text>
+        {badge}
+      </Pressable>
       {onInfo && (
         <Pressable onPress={onInfo} hitSlop={8} accessibilityLabel={infoLabel}>
           <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
         </Pressable>
       )}
       <View style={{ flex: 1 }} />
-      <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
-    </Pressable>
+      <Pressable onPress={onToggle} hitSlop={8} accessibilityRole="button">
+        <Ionicons name={collapsed ? 'chevron-forward' : 'chevron-down'} size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
+      </Pressable>
+    </View>
   );
 }
 
@@ -2269,6 +2276,7 @@ const styles = StyleSheet.create({
 
   // Pro section
   proSectionTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  sectionTitleTap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   proBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   proBadgeText: { color: '#fff', fontWeight: '700', letterSpacing: 1 },
   proSubTitle: { fontWeight: '600', marginBottom: 6 },

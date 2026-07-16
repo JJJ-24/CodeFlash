@@ -19,6 +19,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 
+import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
@@ -57,6 +58,7 @@ const HOME_SHORTCUT_SECTIONS = [
       { key: 'U / D',   descKey: 'shortcut.reorderUpDown' },
       { key: 'Return', descKey: 'shortcut.openFocused' },
       { key: 'P',     descKey: 'shortcut.editFocused' },
+      { key: 'E',     descKey: 'shortcut.archiveFocused' },
       { key: 'Delete', descKey: 'shortcut.deleteFocused' },
     ],
   },
@@ -257,6 +259,10 @@ export default function HomeScreen() {
     const next = !deck.archived;
     await setDeckArchived(db, deck.id, next);
     updateDeck({ ...deck, archived: next });
+    // 操作した行にフォーカスを移す（行タップ/編集ボタンと同じ流儀。スワイプだけ例外にしない）。
+    // 「有効」フィルターでは行が消えるが、focusedId は保持されるので「すべて」に戻せば
+    // 青枠が復活する。scrollToIndex で追いかけるのは不可（カード一覧 archiveCard のコメント参照）。
+    setFocusDeckId(deck.id);
   }
 
   async function handleDeleteConfirm() {
@@ -283,6 +289,7 @@ export default function HomeScreen() {
   }
 
   const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, setFocusId: setFocusDeckId, listRef, moveFocus: moveDeckFocus } = useListNavigation(displayedDecks, (deck) => deck.id);
+  const { archivePill, showArchivePill } = useArchivePill();
   // フォーカス effect（deps 空）から最新の一覧を参照するための ref
   const displayedDecksRef = useRef(displayedDecks);
   displayedDecksRef.current = displayedDecks;
@@ -426,6 +433,16 @@ export default function HomeScreen() {
         setShowDeleteModal(true);
       }
     }),
+    // E = フォーカス中デッキのアーカイブ切替（全画面で E に統一）。ホームには選択モードが
+    //   無いため、これがキーボードからアーカイブする唯一の手段。「有効」フィルターでは
+    //   アーカイブすると行が消えるので、ピル通知を添える。
+    { input: 'e', handler: () => {
+      if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
+        const deck = displayedDecks[focusedDeckIndex];
+        toggleDeckArchive(deck);
+        showArchivePill(!deck.archived);
+      }
+    } },
     { input: 'n', handler: () => router.push({ pathname: '/deck/new' }) },
     { input: 'f', handler: () => router.push('/search') },
     // ⌘F = 検索（OS 慣習のエイリアス）
@@ -663,6 +680,7 @@ export default function HomeScreen() {
         onConfirm={handleDeleteConfirm}
         onClose={() => { setShowDeleteModal(false); setPendingDeleteDeck(null); }}
       />
+      <ArchivePill archived={archivePill} />
     </GestureHandlerRootView>
   );
 }

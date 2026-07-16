@@ -41,6 +41,7 @@ import {
   getTodayReviewedCardIdsByDeckId,
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
+import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -281,6 +282,7 @@ export default function DeckDetailScreen() {
   const pendingDeleteActionRef = useRef<(() => Promise<void>) | null>(null);
   const focusedCardIdRef = useRef<string | null>(null);
   const [focusedCardId, setFocusedCardIdState] = useState<string | null>(null);
+  const { archivePill, showArchivePill } = useArchivePill();
   const [descExpanded, setDescExpanded] = useState(false);
   const [descTruncatable, setDescTruncatable] = useState(false);
   const DECK_SHORTCUT_SECTIONS_NORMAL = [
@@ -295,6 +297,7 @@ export default function DeckDetailScreen() {
       { key: 'U / D',     descKey: 'shortcut.reorderUpDown' },
       { key: 'P',         descKey: 'shortcut.editFocusedItem' },
       { key: 'A',         descKey: 'shortcut.toggleCardStats', pro: true },
+      { key: 'E',         descKey: 'shortcut.archiveFocused' },
       { key: 'Delete',    descKey: 'shortcut.deleteFocused' },
     ] },
     { titleKey: 'shortcut.catNavigate', items: [
@@ -452,6 +455,14 @@ export default function DeckDetailScreen() {
   }
 
   async function archiveCard(card: Card) {
+    // 操作した行にフォーカスを移す（行タップ/編集ボタンと同じ流儀。スワイプだけ例外にしない）。
+    // 「すべて」以外のフィルターではアーカイブすると行が消えるが、focusedCardId は保持され、
+    // 「すべて」に戻せば青枠が復活する（focusedCardIndex は displayedCards から毎回導出するため）。
+    // フォーカスまでに留めること：ここから scrollToIndex で追いかけると「遠いオフセットへの
+    // 一足飛び」になり、500枚級・可変高セルでは未測定領域の実測置換でリストが上下に揺れ続ける
+    // （手動スクロールでは順に測定されるので起きない）。実装して revert 済み・再試行禁止。
+    focusedCardIdRef.current = card.id;
+    setFocusedCardIdState(card.id);
     await setCardArchived(db, card.id, !card.archived);
     await loadCards();
   }
@@ -824,7 +835,19 @@ export default function DeckDetailScreen() {
     { input: 'c', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); } },
     // ⌘C = 複製（選択モードのみ・OS 慣習のエイリアス）
     { input: 'c', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleDuplicate(); } },
-    { input: 'e', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode && selectedCardIds.size > 0 && !isProcessing) handleArchiveSelected(); } },
+    // E = アーカイブ切替（全画面で E に統一）。Delete と同じ「選択モード＝選択カード／
+    //   通常モード＝フォーカスカード」の流儀。復習/新規フィルターではアーカイブすると
+    //   その行が消えるため、キー操作にはピル通知を添える（スワイプはボタン表示があるので不要）。
+    { input: 'e', handler: () => {
+      if (showDeckPicker || statsCardId !== null) return;
+      if (selectionMode) {
+        if (selectedCardIds.size > 0 && !isProcessing) handleArchiveSelected();
+      } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+        const card = displayedCards[focusedCardIndex];
+        archiveCard(card);
+        showArchivePill(!card.archived);
+      }
+    } },
     {
       input: 'p',
       handler: () => {
@@ -1457,6 +1480,7 @@ export default function DeckDetailScreen() {
         actions={[{ label: t('common.ok'), onPress: doMove }]}
         onClose={() => setPendingMoveDeck(null)}
       />
+      <ArchivePill archived={archivePill} />
     </GestureHandlerRootView>
   );
 }

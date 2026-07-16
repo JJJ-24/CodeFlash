@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
+import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
@@ -48,6 +49,7 @@ const TAG_CARDS_SHORTCUT_SECTIONS = [
     { key: 'J / K',   descKey: 'shortcut.focusNextPrev' },
     { key: 'P',       descKey: 'shortcut.editFocusedItem' },
     { key: 'A',     descKey: 'shortcut.toggleCardStats', pro: true },
+    { key: 'E',     descKey: 'shortcut.archiveFocused' },
     { key: 'Delete', descKey: 'shortcut.deleteFocused' },
   ] },
   { titleKey: 'shortcut.catNavigate', items: [
@@ -131,6 +133,7 @@ export default function TagCardsScreen() {
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
 
   const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, setFocusId, listRef, moveFocus } = useListNavigation(displayedCards, (c) => c.id);
+  const { archivePill, showArchivePill } = useArchivePill();
   // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
   const pendingFocusCardIdRef = useRef<string | null>(null);
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
@@ -154,6 +157,10 @@ export default function TagCardsScreen() {
 
   async function archiveCard(card: Card) {
     const next = !card.archived;
+    // 操作した行にフォーカスを移す（行タップ/編集ボタンと同じ流儀。スワイプだけ例外にしない）。
+    // 「有効」フィルターでは行が消えるが、focusedId は保持されるので「すべて」に戻せば
+    // 青枠が復活する。scrollToIndex で追いかけるのは不可（カード一覧 archiveCard のコメント参照）。
+    setFocusId(card.id);
     await setCardArchived(db, card.id, next);
     setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, archived: next } : c)));
   }
@@ -286,7 +293,19 @@ export default function TagCardsScreen() {
     // ⌘A = 全選択（選択モードのみ・OS 慣習のエイリアス）
     { input: 'a', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (statsCardId !== null) return; if (selectionMode) toggleSelectAll(); } },
     { input: 't', handler: () => { if (statsCardId !== null) return; if (selectionMode) handleRemoveTagSelected(); } },
-    { input: 'e', handler: () => { if (statsCardId !== null) return; if (selectionMode) handleArchiveSelected(); } },
+    // E = アーカイブ切替（全画面で E に統一）。Delete と同じ「選択モード＝選択カード／
+    //   通常モード＝フォーカスカード」の流儀。「有効」フィルターではアーカイブすると
+    //   その行が消えるため、キー操作にはピル通知を添える（スワイプはボタン表示があるので不要）。
+    { input: 'e', handler: () => {
+      if (statsCardId !== null) return;
+      if (selectionMode) {
+        handleArchiveSelected();
+      } else if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
+        const card = displayedCards[focusedCardIndex];
+        archiveCard(card);
+        showArchivePill(!card.archived);
+      }
+    } },
     { input: 's', handler: () => { if (statsCardId !== null) return; if (selectionMode) exitSelectionMode(); else if (cards.length > 0) enterSelectionMode(); } },
     { input: '1', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('all'); } },
     { input: '2', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('active'); } },
@@ -639,6 +658,7 @@ export default function TagCardsScreen() {
         ]}
         onClose={() => setShowRemoveTagModal(false)}
       />
+      <ArchivePill archived={archivePill} />
     </View>
   );
 }

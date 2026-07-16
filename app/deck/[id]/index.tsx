@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTranslation } from 'react-i18next';
@@ -210,8 +210,6 @@ export default function DeckDetailScreen() {
   const restorationEndTimeRef = useRef(0);
   // 複製で戻ってきた直後にスクロールしたい複製先（A'）の ID。一覧に現れ次第そこへスクロールする。
   const pendingScrollToIdRef = useRef<string | null>(null);
-  const filterOffsetsRef = useRef<Record<FilterKey, number>>({ all: 0, learned: 0, review: 0, new: 0 });
-  const prevFilterRef = useRef<FilterKey>(selectedFilter);
 
   // K の折り返し（先頭→末尾）で遠くへスクロールする間、「末尾へ移動中…」ピルを出して
   // 「フリーズではない・いずれ止まる」ことを伝える。目的カードが可視になったら閉じる。
@@ -423,12 +421,6 @@ export default function DeckDetailScreen() {
       };
     }, [loadCards])
   );
-
-  useEffect(() => {
-    filterOffsetsRef.current[prevFilterRef.current] = scrollOffsetRef.current;
-    prevFilterRef.current = selectedFilter;
-    listRef.current?.scrollToOffset({ offset: filterOffsetsRef.current[selectedFilter] ?? 0, animated: false });
-  }, [selectedFilter]);
 
   // deck が削除された後（編集モーダルから削除時）に自動で戻る
   const mountedRef = useRef(false);
@@ -687,6 +679,26 @@ export default function DeckDetailScreen() {
       : filteredCards,
     [filteredCards, deferredSort],
   );
+
+  // フィルターを切り替えたら先頭へ戻す。
+  //
+  // **即時値（selectedFilter）ではなく deferredFilter で発火させること。** 即時値だと、リストが
+  // まだ古いフィルターの並びを表示したまま先頭へ飛び、「すべての並びが先頭に戻ってから復習の並びに
+  // 変わる」という中間状態が deferred の一拍ぶん（重い切替ほど長い）見えてしまう。deferred 値なら
+  // データ入れ替えと同じタイミングで当たるので、切替前の位置のまま新しい並びの先頭へ移る。
+  // useLayoutEffect なのは、入れ替えのコミットと同じフレームでスクロールを当てて中間フレームを
+  // 見せないため。
+  //
+  // かつてはフィルターごとにスクロール位置を記憶して復元していたが、それは機能していなかった：
+  // 復元先のセルが未測定だと iOS はその時点の「推定」コンテンツ高さでクランプするため、50枚デッキで
+  // 最下部から戻っても10枚ぶん手前で止まる。500枚級ではさらに、着地後もセルの実測が進むたびに
+  // コンテンツ高さが伸びて位置がずれ、見えるセルが変わってまた実測……とリストが上下に揺れ続けた。
+  // フィルター切替は項目の集合ごと入れ替わる＝新しい並びのセル位置は必ず未測定なので、これを毎回踏む
+  // （モーダルから戻るときの位置復元は同じデータのままで測定値が残るため、こちらは問題ない）。
+  // オフセット0は推定に依存しない唯一の位置＝原理的に揺れない。位置の記憶は復活させないこと。
+  useLayoutEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [deferredFilter]);
   // リストの種別（DraggableFlatList/FlatList）とセル内の ScaleDecorator 有無は、
   // 表示中のデータと同じ deferred 値から決める（即時値だとデータ更新前に種別だけ
   // 先に入れ替わり、余計な再マウントが挟まる）。

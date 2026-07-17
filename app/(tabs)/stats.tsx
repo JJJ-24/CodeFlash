@@ -1905,14 +1905,25 @@ export default function StatsScreen() {
 
         {!isSectionCollapsed('pro') && (isPro ? (
           <>
-            {/* 月別学習グラフ */}
-            <Text
-              style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            {/* 月別学習グラフ（タイトル行：ⓘ はタイトルのすぐ右隣＝評価別ランキングと同じ配置） */}
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}
               onLayout={(e) => { sectionOffsets.current.monthly = e.nativeEvent.layout.y; }}
             >
-              {t('stats.monthlyActivity')}
-            </Text>
+              <Text
+                style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {t('stats.monthlyActivity')}
+              </Text>
+              <Pressable
+                onPress={() => setSectionInfoModal({ title: t('stats.monthlyActivity'), message: <InfoContent text={t('stats.monthlyInfoMessage')} /> })}
+                hitSlop={8}
+                accessibilityLabel={t('stats.monthlyInfoLabel')}
+              >
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+              </Pressable>
+            </View>
             <View
               style={[
                 styles.card,
@@ -1941,9 +1952,19 @@ export default function StatsScreen() {
             {/* グレード別ランキング */}
             <View onLayout={(e) => { sectionOffsets.current.ranking = e.nativeEvent.layout.y; }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('stats.gradeRanking')}
-              </Text>
+              {/* 右端は表示切替ボタン群のため、ⓘ はタイトルの隣に置く */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.gradeRanking')}
+                </Text>
+                <Pressable
+                  onPress={() => setSectionInfoModal({ title: t('stats.gradeRanking'), message: <InfoContent text={t('stats.gradeRankingInfoMessage')} /> })}
+                  hitSlop={8}
+                  accessibilityLabel={t('stats.gradeRankingInfoLabel')}
+                >
+                  <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+                </Pressable>
+              </View>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <Pressable
                   onPress={() => setDeckPickerVisible(true)}
@@ -2255,7 +2276,7 @@ export default function StatsScreen() {
       <InfoModal
         visible={showDetailStatsInfo}
         title={t('stats.proSection')}
-        message={<InfoContent text={t('stats.detailStatsInfoMessage') + collapseHint} />}
+        message={<InfoContent text={t('stats.sectionCollapseHint')} />}
         onClose={() => setShowDetailStatsInfo(false)}
       />
       <InfoModal

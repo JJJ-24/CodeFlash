@@ -20,6 +20,8 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   timer: 'timer-outline',
   pencil: 'pencil-sharp',
   analytics: 'analytics-sharp',
+  podium: 'podium-outline',
+  piechart: 'pie-chart-outline',
 };
 
 // {{heatscale}} 用：ヒートマップ（草グラフ）と同じ4段階の緑

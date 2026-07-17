@@ -627,7 +627,7 @@ export async function getGradeAvgResponseTimes(
   return { again: row?.again ?? null, hard: row?.hard ?? null, good: row?.good ?? null, easy: row?.easy ?? null };
 }
 
-export type GradeRankingSortBy = 'count' | 'time';
+export type GradeRankingSortBy = 'count' | 'time' | 'rate';
 
 export async function getTopCardsByGrade(
   db: SQLiteDatabase,
@@ -635,41 +635,55 @@ export async function getTopCardsByGrade(
   limit = 10,
   sortBy: GradeRankingSortBy = 'count',
   since?: string,
-  deckIds?: string[]
-): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null; archived: boolean }[]> {
+  deckIds?: string[],
+  minTotal = 1
+): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; totalCount: number; avgResponseTimeMs: number | null; archived: boolean }[]> {
   // count モード：評価回数の多い順。同数のときは grade 0/1 は時間 DESC（遅い順）、grade 2/3 は時間 ASC（早い順）。
   // time モード：平均回答時間の遅い順（全グレード共通）。同時間のときは評価回数の多い順。NULL は常に末尾。
+  // rate モード：評価率（gradeCount / totalCount）の高い順。同率のときは総回数の多い順（情報量が多い方が上）。
+  //   分母極小のノイズ（1回学習で100%等）を除くため、期間内の総評価回数 < minTotal のカードは除外する。
+  const responseTimeOrder = grade <= 1 ? 'DESC' : 'ASC';
   let orderBy: string;
   if (sortBy === 'time') {
-    orderBy = `AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) DESC, gradeCount DESC`;
+    orderBy = `avgResponseTimeMs IS NULL, avgResponseTimeMs DESC, gradeCount DESC`;
+  } else if (sortBy === 'rate') {
+    orderBy = `(CAST(gradeCount AS REAL) / totalCount) DESC, totalCount DESC, avgResponseTimeMs IS NULL, avgResponseTimeMs ${responseTimeOrder}`;
   } else {
-    const responseTimeOrder = grade <= 1 ? 'DESC' : 'ASC';
-    orderBy = `gradeCount DESC, AVG(gl.responseTimeMs) IS NULL, AVG(gl.responseTimeMs) ${responseTimeOrder}`;
+    orderBy = `gradeCount DESC, avgResponseTimeMs IS NULL, avgResponseTimeMs ${responseTimeOrder}`;
   }
-  const conds: string[] = ['gl.grade = ?'];
-  const params: (string | number)[] = [grade];
+  const conds: string[] = [];
+  const params: (string | number)[] = [grade, grade];
   if (since) { conds.push('gl.reviewedAt >= ?'); params.push(since); }
   if (deckIds && deckIds.length > 0) {
     conds.push(`c.deckId IN (${deckIds.map(() => '?').join(',')})`);
     params.push(...deckIds);
   }
+  const where = conds.length > 0 ? `WHERE ${conds.join(' AND ')}` : '';
+  // rate は分母（totalCount）が必要なため全グレードを条件付き集計で数え、対象グレード0件は
+  // HAVING で除外する（count/time でも旧 `WHERE gl.grade = ?` と同じ結果になる）。
+  const having = sortBy === 'rate'
+    ? 'HAVING gradeCount > 0 AND totalCount >= ?'
+    : 'HAVING gradeCount > 0';
+  if (sortBy === 'rate') params.push(minTotal);
   params.push(limit);
   // 過去実績のためアーカイブ除外はしない（docs/032 の原則）が、UI 側でグレー表示するため
   // 実効アーカイブ（カード自身 or 所属デッキ）を返す。
   const rows = await db.getAllAsync<{
     cardId: string; deckId: string; deckName: string; frontContent: string;
-    gradeCount: number; avgResponseTimeMs: number | null; archived: number;
+    gradeCount: number; totalCount: number; avgResponseTimeMs: number | null; archived: number;
   }>(
     `SELECT c.id AS cardId, c.deckId, d.name AS deckName, cc.frontContent,
-            COUNT(gl.id) AS gradeCount,
-            AVG(gl.responseTimeMs) AS avgResponseTimeMs,
+            SUM(CASE WHEN gl.grade = ? THEN 1 ELSE 0 END) AS gradeCount,
+            COUNT(gl.id) AS totalCount,
+            AVG(CASE WHEN gl.grade = ? THEN gl.responseTimeMs END) AS avgResponseTimeMs,
             (c.archived OR d.archived) AS archived
      FROM grade_logs gl
      JOIN cards c ON gl.cardId = c.id
      JOIN card_contents cc ON c.id = cc.cardId
      JOIN decks d ON c.deckId = d.id
-     WHERE ${conds.join(' AND ')}
+     ${where}
      GROUP BY c.id
+     ${having}
      ORDER BY ${orderBy}
      LIMIT ?`,
     params

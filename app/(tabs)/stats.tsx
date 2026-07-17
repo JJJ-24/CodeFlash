@@ -12,7 +12,7 @@ import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
-import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS } from '@/store/settings';
+import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS, GRADE_RANKING_RATE_MIN_TOTAL } from '@/store/settings';
 import type { InitialFilterPreference, GradeRankingPeriod } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
@@ -36,6 +36,7 @@ import {
   getTodayStudySummary,
   getGradeAvgResponseTimes,
   getTopCardsByGrade,
+  type GradeRankingSortBy,
   getUpcomingSchedule,
 } from '@/lib/database/reviews';
 import { todayLocalRange } from '@/lib/database/utils';
@@ -137,7 +138,7 @@ function masteryColor(pct: number): string {
 type ScheduleItem = { date: string; count: number };
 type MonthlyGradeData = { month: string; again: number; hard: number; good: number; easy: number };
 type MasteryItem = { deckId: string; avgEase: number | null; learnedCount: number; newCount: number };
-type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; avgResponseTimeMs: number | null; archived: boolean };
+type GradeCard = { cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; totalCount: number; avgResponseTimeMs: number | null; archived: boolean };
 type GradeTotals = { again: number; hard: number; good: number; easy: number };
 type GradeAvgTimes = { again: number | null; hard: number | null; good: number | null; easy: number | null };
 type BlockKey = 'streak' | 'learned' | 'due' | 'new';
@@ -972,7 +973,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingByTime, setGradeRankingByTime, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder, statsCollapsedSections, toggleStatsSection } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder, statsCollapsedSections, toggleStatsSection } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のメイン
@@ -1118,8 +1119,9 @@ export default function StatsScreen() {
       monthlyReviewed: fillPast12MonthsByGrade(rawMonthly),
     });
     if (selectedGradeBlockRef.current !== null) {
-      const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
-      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter);
+      const sortBy = useSettingsStore.getState().gradeRankingSortBy;
+      const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
+      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter, minTotal);
       setGradeBlockCards(cards);
     }
   }, [db]);
@@ -1320,28 +1322,30 @@ export default function StatsScreen() {
     pendingFocusRankingRef.current = true;
     setGradeBlockLoading(true);
     // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
-    const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
+    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
     const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
-    const cards = await getTopCardsByGrade(db, grade, 10, sortBy, since, deckIdsFilter);
+    const cards = await getTopCardsByGrade(db, grade, 10, sortBy, since, deckIdsFilter, minTotal);
     setGradeBlockCards(cards);
     setGradeBlockLoading(false);
   }, [db, selectedGradeBlock]);
 
-  // 平均時間ランキングトグル切り替え時：選択中のグレードブロックの TOP10 を再取得
-  const handleToggleRankingByTime = useCallback(async () => {
-    const newValue = !gradeRankingByTime;
-    setGradeRankingByTime(newValue);
+  // ソートモード切替（回数→平均時間→評価率の循環）：選択中のグレードブロックの TOP10 を再取得
+  const handleCycleRankingSort = useCallback(async () => {
+    const next: Record<GradeRankingSortBy, GradeRankingSortBy> = { count: 'time', time: 'rate', rate: 'count' };
+    const newValue = next[gradeRankingSortBy];
+    setGradeRankingSortBy(newValue);
     if (selectedGradeBlockRef.current !== null) {
       setGradeBlockLoading(true);
-      const sortBy = newValue ? 'time' : 'count';
       const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
+      const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
       const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
-      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter);
+      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, newValue, since, deckIdsFilter, minTotal);
       setGradeBlockCards(cards);
       setGradeBlockLoading(false);
     }
-  }, [db, gradeRankingByTime, setGradeRankingByTime]);
+  }, [db, gradeRankingSortBy, setGradeRankingSortBy]);
 
   // 重点復習を開始（選択中グレードの TOP カードでセッション開始）。ボタンと Space キーで共用。
   const startFocusedReview = useCallback(() => {
@@ -1445,7 +1449,7 @@ export default function StatsScreen() {
     },
     { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setPeriodPickerVisible(true); } },
-    { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) handleToggleRankingByTime(); } },
+    { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) handleCycleRankingSort(); } },
     // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約。j/k と同じガードを適用）
     // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（4ブロック切替）。タブ切替は Tab/Shift+Tab。
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
@@ -1496,14 +1500,15 @@ export default function StatsScreen() {
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {
     setGradeRankingPeriod(newPeriod);
     const since = periodToSince(newPeriod);
-    const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
+    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[newPeriod];
     const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
       getGradeLogTotals(db, since, deckIdsFilter),
       getGradeAvgResponseTimes(db, since, deckIdsFilter),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter)
+        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter, minTotal)
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
@@ -1517,14 +1522,15 @@ export default function StatsScreen() {
     const newIds = current.includes(deckId) ? current.filter((id) => id !== deckId) : [...current, deckId];
     setGradeRankingDeckIds(newIds);
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-    const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
+    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
     const deckIdsFilter = newIds.length > 0 ? newIds : undefined;
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
       getGradeLogTotals(db, since, deckIdsFilter),
       getGradeAvgResponseTimes(db, since, deckIdsFilter),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter)
+        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter, minTotal)
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
@@ -1536,13 +1542,14 @@ export default function StatsScreen() {
   const handleDeckClearAll = useCallback(async () => {
     setGradeRankingDeckIds([]);
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-    const sortBy = useSettingsStore.getState().gradeRankingByTime ? 'time' : 'count';
+    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
+    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
       getGradeLogTotals(db, since, undefined),
       getGradeAvgResponseTimes(db, since, undefined),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, undefined)
+        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, undefined, minTotal)
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
@@ -1925,24 +1932,31 @@ export default function StatsScreen() {
                   />
                 </Pressable>
                 <Pressable
-                  onPress={handleToggleRankingByTime}
-                  accessibilityLabel={t(gradeRankingByTime ? 'stats.gradeRankingToggleCount' : 'stats.gradeRankingToggleTime')}
+                  onPress={handleCycleRankingSort}
+                  accessibilityLabel={t(
+                    gradeRankingSortBy === 'count' ? 'stats.gradeRankingToggleTime'
+                    : gradeRankingSortBy === 'time' ? 'stats.gradeRankingToggleRate'
+                    : 'stats.gradeRankingToggleCount'
+                  )}
                   style={[
                     styles.rankingToggleBtn,
-                    { borderColor: gradeRankingByTime ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
-                    gradeRankingByTime && { backgroundColor: theme.colors.primary },
+                    // ソートは絞り込みと違い OFF 状態が無い（常にどれかのモードが有効）ため常時青塗り。
+                    // モードの区別はアイコンが担う。
+                    { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
                   ]}
                 >
                   <Ionicons
-                    name="timer-outline"
+                    name={gradeRankingSortBy === 'rate' ? 'pie-chart-outline' : gradeRankingSortBy === 'time' ? 'timer-outline' : 'podium-outline'}
                     size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
-                    color={gradeRankingByTime ? theme.colors.primaryText : theme.colors.textSecondary}
+                    color={theme.colors.primaryText}
                   />
                 </Pressable>
               </View>
             </View>
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, marginBottom: (gradeRankingPeriod === 'all' && gradeRankingDeckIds.length === 0) ? 8 : 6 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {t(gradeRankingByTime ? 'stats.gradeRankingModeTime' : 'stats.gradeRankingModeCount')}
+              {gradeRankingSortBy === 'time' ? t('stats.gradeRankingModeTime')
+                : gradeRankingSortBy === 'rate' ? t('stats.gradeRankingModeRate', { min: GRADE_RANKING_RATE_MIN_TOTAL[gradeRankingPeriod] })
+                : t('stats.gradeRankingModeCount')}
             </Text>
             {(gradeRankingPeriod !== 'all' || gradeRankingDeckIds.length > 0) && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
@@ -1978,9 +1992,14 @@ export default function StatsScreen() {
                 { grade: 2 as const, labelKey: 'grade.good',  color: GRADE_COLORS.good,  count: gradeTotals.good,  avgMs: gradeAvgTimes.good  },
                 { grade: 3 as const, labelKey: 'grade.easy',  color: GRADE_COLORS.easy,  count: gradeTotals.easy,  avgMs: gradeAvgTimes.easy  },
               ];
-              const displayValues = gradeItems.map(g => gradeRankingByTime
+              // rate モードの4ブロックは「全評価に占める各グレードの割合」を表示する
+              // （% は付けない。time モードの「秒」と同様、単位はキャプション側で示す）
+              const gradeTotalSum = gradeItems.reduce((sum, g) => sum + g.count, 0);
+              const displayValues = gradeItems.map(g => gradeRankingSortBy === 'time'
                 ? (g.avgMs != null ? (g.avgMs / 1000).toFixed(1) : '-')
-                : String(g.count));
+                : gradeRankingSortBy === 'rate'
+                  ? (gradeTotalSum > 0 ? String(Math.round((g.count / gradeTotalSum) * 100)) : '-')
+                  : String(g.count));
               const gradeMaxDigits = Math.max(...displayValues.map(v => v.length));
               const gradeCountFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : gradeMaxDigits);
               // モード切替で高さがブレないよう、最大想定フォント（1桁時）でブロック高さを固定
@@ -2038,7 +2057,9 @@ export default function StatsScreen() {
                 ) : gradeBlockCards.length === 0 ? (
                   <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 20, alignItems: 'center' }]}>
                     <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                      {t('stats.gradeRankingEmpty')}
+                      {gradeRankingSortBy === 'rate'
+                        ? t('stats.gradeRankingEmptyRate', { min: GRADE_RANKING_RATE_MIN_TOTAL[gradeRankingPeriod] })
+                        : t('stats.gradeRankingEmpty')}
                     </Text>
                   </View>
                 ) : (
@@ -2106,9 +2127,11 @@ export default function StatsScreen() {
                         </Pressable>
                         <View style={[styles.lapseBadge, { backgroundColor: badgeColor }]}>
                           <Text style={styles.lapseBadgeText} allowFontScaling={false}>
-                            {gradeRankingByTime
+                            {gradeRankingSortBy === 'time'
                               ? (card.avgResponseTimeMs != null ? `${(card.avgResponseTimeMs / 1000).toFixed(1)}${t('common.sec')}` : '-')
-                              : t('stats.gradeCount', { count: card.gradeCount })}
+                              : gradeRankingSortBy === 'rate'
+                                ? t('stats.gradeRate', { pct: card.totalCount > 0 ? Math.round((card.gradeCount / card.totalCount) * 100) : 0, num: card.gradeCount, total: card.totalCount })
+                                : t('stats.gradeCount', { count: card.gradeCount })}
                           </Text>
                         </View>
                       </Pressable>

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
 import { create } from 'zustand';
 
+import type { GradeRankingSortBy } from '@/lib/database/reviews';
 import i18n from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
@@ -29,6 +30,25 @@ export const GRADE_RANKING_PERIOD_DAYS: Record<GradeRankingPeriod, number | null
   '90d': 90,
   '30d': 30,
   '7d': 7,
+};
+
+// 評価率ランキング（rate モード）の足切り：期間内の総評価回数がこの値未満のカードは除外する。
+// 分母極小のノイズ（1回学習で必ず 0% or 100% になる等）を防ぐ目的なので、統計的厳密さより
+// 「短い期間でも空になりにくい」緩めの値。7日を 1 にしないのは分母1で率が指標として壊れるため。
+export const GRADE_RANKING_RATE_MIN_TOTAL: Record<GradeRankingPeriod, number> = {
+  all: 8,
+  '90d': 5,
+  '30d': 3,
+  '7d': 2,
+};
+
+// 旧 bool 設定（by_time）からの移行つき parse（キーは据え置きで値の意味だけ拡張）。
+// 旧 true（平均時間）→'time' / 旧 false（評価回数）→'count'
+const parseGradeRankingSortBy = (raw: string): GradeRankingSortBy | undefined => {
+  if (raw === 'count' || raw === 'time' || raw === 'rate') return raw;
+  if (raw === 'true') return 'time';
+  if (raw === 'false') return 'count';
+  return undefined;
 };
 
 export type FsrsPreset = 'exam' | 'standard' | 'longTerm';
@@ -138,7 +158,7 @@ interface SettingsValues {
   lastSearchField: string;
   fsrsDesiredRetention: number;
   studyHideEmpty: boolean;
-  gradeRankingByTime: boolean;
+  gradeRankingSortBy: GradeRankingSortBy;
   gradeRankingPeriod: GradeRankingPeriod;
   gradeRankingDeckIds: string[];
   // 統計タブで折りたたみ中のセクションID（'chart'|'heatmap'|'today'|'total'|'mastery'|'pro'）
@@ -219,7 +239,7 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     normalize: clampRetention,
   },
   studyHideEmpty: { key: '@codeflash_study_hide_empty', default: false, parse: asBool },
-  gradeRankingByTime: { key: '@codeflash_grade_ranking_by_time', default: false, parse: asBool },
+  gradeRankingSortBy: { key: '@codeflash_grade_ranking_by_time', default: 'count', parse: parseGradeRankingSortBy },
   gradeRankingPeriod: { key: '@codeflash_grade_ranking_period', default: 'all', parse: oneOf(['all', '90d', '30d', '7d'] as const) },
   gradeRankingDeckIds: {
     key: GRADE_RANKING_DECK_IDS_KEY,
@@ -322,7 +342,7 @@ interface SettingsState extends SettingsValues {
   setLastSearchField: (v: string) => void;
   setFsrsDesiredRetention: (v: number) => void;
   setStudyHideEmpty: (v: boolean) => void;
-  setGradeRankingByTime: (v: boolean) => void;
+  setGradeRankingSortBy: (v: GradeRankingSortBy) => void;
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   setGradeRankingDeckIds: (v: string[]) => void;
   toggleStatsSection: (id: string) => void;
@@ -372,7 +392,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setLastSearchField: makeSetter('lastSearchField'),
     setFsrsDesiredRetention: makeSetter('fsrsDesiredRetention'),
     setStudyHideEmpty: makeSetter('studyHideEmpty'),
-    setGradeRankingByTime: makeSetter('gradeRankingByTime'),
+    setGradeRankingSortBy: makeSetter('gradeRankingSortBy'),
     setGradeRankingPeriod: makeSetter('gradeRankingPeriod'),
     setGradeRankingDeckIds: makeSetter('gradeRankingDeckIds'),
     // 配列へのトグル追加/削除のため個別定義（永続化は DEFS の persist に従う）。

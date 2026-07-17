@@ -923,12 +923,13 @@ type FocusedItem =
   | { kind: 'today' }
   | { kind: 'total' }
   | { kind: 'deck'; idx: number }
+  | { kind: 'monthly' }
   | { kind: 'card'; idx: number };
 
 function isSameItem(a: FocusedItem, b: FocusedItem): boolean {
   if (a === null || b === null) return a === b;
   if (a.kind !== b.kind) return false;
-  if (a.kind === 'heatmap' || a.kind === 'today' || a.kind === 'total') return true;
+  if (a.kind === 'heatmap' || a.kind === 'today' || a.kind === 'total' || a.kind === 'monthly') return true;
   return a.idx === (b as { idx: number }).idx;
 }
 
@@ -990,10 +991,11 @@ export default function StatsScreen() {
     total: number;
     decks: number[];
     proSection: number;
+    monthly: number;
     ranking: number;
     rankingOuter: number;
     rankingInner: number;
-  }>({ heatmap: 0, today: 0, total: 0, decks: [], proSection: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
+  }>({ heatmap: 0, today: 0, total: 0, decks: [], proSection: 0, monthly: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
   const pendingFocusRankingRef = useRef(false);
   const shouldScrollAfterLoadRef = useRef(false);
   const cardLayoutMap = useRef<Map<string, { y: number; h: number }>>(new Map());
@@ -1016,6 +1018,10 @@ export default function StatsScreen() {
   const [periodPickerVisible, setPeriodPickerVisible] = useState(false);
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [monthlySheetData, setMonthlySheetData] = useState<{ dist: GradeDistribution; title: string; extra: ContextTimeStats } | null>(null);
+  // 閉じるスライドアウト（250ms）中に中身が空になって高さが潰れないよう直前内容を保持して渡す
+  //（lastSectionInfoRef と同じパターン。今日/全体シートは state が残るため不要）。
+  const lastMonthlySheetRef = useRef<{ dist: GradeDistribution; title: string; extra: ContextTimeStats } | null>(null);
+  if (monthlySheetData) lastMonthlySheetRef.current = monthlySheetData;
   // ドーナツ（全体/デッキ）に添える文脈別の学習日数・平均時間。
   const [sheetExtra, setSheetExtra] = useState<ContextTimeStats | null>(null);
   // 今日のサマリーシート専用（初学カード数・今日の平均回答時間）
@@ -1154,6 +1160,7 @@ export default function StatsScreen() {
     if (!collapsedSet.has('mastery')) {
       list.push(...sortedDeckMastery.map((_, i) => ({ kind: 'deck' as const, idx: i })));
     }
+    if (!collapsedSet.has('pro') && isPro) list.push({ kind: 'monthly' });
     if (!collapsedSet.has('pro') && isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) {
       gradeBlockCards.forEach((_, i) => list.push({ kind: 'card', idx: i }));
     }
@@ -1202,6 +1209,8 @@ export default function StatsScreen() {
     } else if (item.kind === 'deck') {
       const y = sectionOffsets.current.decks[item.idx] ?? 0;
       scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total + y, animated: true });
+    } else if (item.kind === 'monthly') {
+      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.proSection + sectionOffsets.current.monthly, animated: true });
     } else if (item.kind === 'card') {
       const card = gradeBlockCards[item.idx];
       if (card) scrollToCardIfNeeded(card.cardId);
@@ -1309,6 +1318,29 @@ export default function StatsScreen() {
 
   const closeSheet = useCallback(() => setActiveSheet(null), []);
 
+  // 月別グラフのドーナツシートを開く（バータップと Space/Return キーで共用）。
+  // タップでもセクションにフォーカスを置き、以降の J/K がここから continue できるようにする。
+  const openMonthSheet = useCallback(async (item: MonthlyGradeData, label: string) => {
+    setFocusedItem({ kind: 'monthly' });
+    const extra = await getContextTimeStats(db, { month: item.month });
+    setMonthlySheetData({
+      title: label,
+      dist: { again: item.again, hard: item.hard, normal: item.good, easy: item.easy, unlearned: 0 },
+      extra,
+    });
+  }, [db]);
+
+  // フォーカス時の Space/Return：今月のシートを開く。今月0件はタップ側
+  //（total === 0 のバーは disabled）と同じく no-op。
+  const openCurrentMonthSheet = useCallback(() => {
+    const item = monthlyReviewed[monthlyReviewed.length - 1];
+    if (!item) return;
+    if (item.again + item.hard + item.good + item.easy === 0) return;
+    const monthNum = parseInt(item.month.split('-')[1]);
+    const label = i18n.language.startsWith('ja') ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
+    openMonthSheet(item, label);
+  }, [monthlyReviewed, i18n.language, openMonthSheet]);
+
   const handleGradeBlockTap = useCallback(async (grade: 0 | 1 | 2 | 3) => {
     if (selectedGradeBlock === grade) {
       selectedGradeBlockRef.current = null;
@@ -1382,6 +1414,7 @@ export default function StatsScreen() {
         else if (focusedItem?.kind === 'today') { openSheet('today'); }
         else if (focusedItem?.kind === 'total') { openSheet('total'); }
         else if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); }
+        else if (focusedItem?.kind === 'monthly') { openCurrentMonthSheet(); }
         else if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) { startFocusedReview(); }
       },
     },
@@ -1399,6 +1432,7 @@ export default function StatsScreen() {
         if (focusedItem?.kind === 'today') { openSheet('today'); return; }
         if (focusedItem?.kind === 'total') { openSheet('total'); return; }
         if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); return; }
+        if (focusedItem?.kind === 'monthly') { openCurrentMonthSheet(); return; }
       },
     },
     { input: '1', handler: () => { if (statsCardId !== null || activeSheet !== null) return; setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); } },
@@ -1495,6 +1529,13 @@ export default function StatsScreen() {
       },
     },
   ], showShortcutsModal || showDetailStatsInfo || sectionInfoModal !== null);
+
+  // 月別シート表示中は main キーが active ゲートで解除されるため、閉じる（Space/Return）を専用フックで受ける
+  //（他のドーナツシート＝activeSheet は main キー側の分岐で閉じている。Esc は上の常時フックが担当）。
+  useKeyCommands([
+    { input: ' ', handler: () => setMonthlySheetData(null) },
+    { input: KeyCommand.keyInputEnter, handler: () => setMonthlySheetData(null) },
+  ], monthlySheetData !== null);
 
   // 期間フィルター変更時：4ブロック集計と TOP10 を即時再取得
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {
@@ -1865,21 +1906,24 @@ export default function StatsScreen() {
         {!isSectionCollapsed('pro') && (isPro ? (
           <>
             {/* 月別学習グラフ */}
-            <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            <Text
+              style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              onLayout={(e) => { sectionOffsets.current.monthly = e.nativeEvent.layout.y; }}
+            >
               {t('stats.monthlyActivity')}
             </Text>
-            <View style={[styles.card, { backgroundColor: theme.colors.surface, marginBottom: 12 }]}>
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: theme.colors.surface, marginBottom: 12 },
+                focusedItem?.kind === 'monthly' && { borderWidth: 2, borderColor: theme.colors.primary },
+              ]}
+            >
               <MonthBarChart
                 data={monthlyReviewed}
                 theme={theme}
-                onSelectMonth={async (item, label) => {
-                  const extra = await getContextTimeStats(db, { month: item.month });
-                  setMonthlySheetData({
-                    title: label,
-                    dist: { again: item.again, hard: item.hard, normal: item.good, easy: item.easy, unlearned: 0 },
-                    extra,
-                  });
-                }}
+                onSelectMonth={openMonthSheet}
               />
               {/* グレード凡例 */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', gap: (Platform as any).isPad ? 40 : 12, marginTop: (Platform as any).isPad ? 14 : 8 }}>
@@ -2188,11 +2232,11 @@ export default function StatsScreen() {
       />
       <DonutSheet
         visible={monthlySheetData !== null}
-        title={monthlySheetData?.title ?? ''}
+        title={lastMonthlySheetRef.current?.title ?? ''}
         iconName={null}
         colorHex={null}
-        dist={monthlySheetData?.dist ?? null}
-        extraStats={monthlySheetData?.extra ?? null}
+        dist={lastMonthlySheetRef.current?.dist ?? null}
+        extraStats={lastMonthlySheetRef.current?.extra ?? null}
         onClose={() => setMonthlySheetData(null)}
         theme={theme}
       />

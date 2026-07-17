@@ -40,4 +40,6 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_study_timer_end_behavior',
   '@codeflash_study_timer_break_minutes',
   '@codeflash_study_timer_cycles',
+  // バッジ周回の段階開放（分母 50→80→110）の案内メッセージ既読段階
+  '@codeflash_badge_lap_stage_seen',
 ] as const;

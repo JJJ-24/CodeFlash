@@ -1,5 +1,6 @@
 // 統計：草グラフをタップしたときに出る「学習の記録」ボトムシート。
-// 継続・積み上げ系の指標（最長連続・総学習回数・総学習時間・経過日数）と、20個のバッジ枠を表示する。
+// 継続・積み上げ系の指標（最長連続・総学習回数・総学習時間・経過日数）と、獲得バッジ
+// （連続20＋回数/時間/日数 各10・周回込み110）を表示する。
 // ドーナツグラフ側（正答率/学習日数/平均時間）と重複しない指標に絞っている。無料機能。
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -14,7 +15,7 @@ import { MAX_FONT_MULTIPLIER, FILTER_COLORS, themedFrameBorder, type AppTheme } 
 import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
-import { BADGES, BADGE_SECTIONS, earnedBadgeCount, isBadgeEarned } from '@/lib/stats/badges';
+import { BADGES, BADGE_MAX_LAP, BADGE_SECTIONS, LAP_GOLD, LAP_SILVER, badgeLevel, badgeStage, badgeTotal, earnedBadgeCount } from '@/lib/stats/badges';
 
 interface Props {
   visible: boolean;
@@ -68,6 +69,8 @@ const RECORD_LABEL_MAX_FONT = IS_PAD ? 2 : 1.3;
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const { t } = useTranslation();
   const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
+  const badgeLapStageSeen = useSettingsStore((s) => s.badgeLapStageSeen);
+  const setBadgeLapStageSeen = useSettingsStore((s) => s.setBadgeLapStageSeen);
   const { height: screenHeight } = useWindowDimensions();
   const sheetY = useSharedValue(screenHeight);
   const overlayOpacity = useSharedValue(0);
@@ -91,7 +94,9 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const [showModeInfo, setShowModeInfo] = useState(false);
   // ショートカット一覧（? キー）。シートを閉じたら一緒に閉じる。
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  useEffect(() => { if (visible) setMode('total'); else { setShowModeInfo(false); setShowShortcutsModal(false); } }, [visible]);
+  // 周回の段階開放（分母 50→80→110）の案内。シートを閉じたら一緒に閉じる。
+  const [showUnlockInfo, setShowUnlockInfo] = useState(false);
+  useEffect(() => { if (visible) setMode('total'); else { setShowModeInfo(false); setShowShortcutsModal(false); setShowUnlockInfo(false); } }, [visible]);
 
   // 画面スクロール（U/D・PgUp/PgDn＝段階、⇧U/⇧D・Home/End＝最上部/最下部）用。
   const scrollRef = useRef<ScrollView>(null);
@@ -128,7 +133,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
     { input: KEY_END, handler: scrollToBottom },
     // ?（Shift+/）でショートカット一覧を開く。閉じるは一覧側の ? が担当（一覧表示中は下の gate で解除）。
     { input: '/', modifierFlags: KeyCommand.constants.keyModifierShift, handler: () => setShowShortcutsModal(true) },
-  ], visible && !showModeInfo && !showShortcutsModal);
+  ], visible && !showModeInfo && !showShortcutsModal && !showUnlockInfo);
 
   // 数値＋単位を片に分解する（単位は unit:true）。h があるときのみ h を出す（従来の 1h23m / 45m を踏襲）。
   function formatDuration(ms: number): ValueSegment[] {
@@ -147,6 +152,18 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
 
   const elapsed = stats ? elapsedDaysSince(stats.firstDate) : null;
   const earned = stats ? earnedBadgeCount(stats) : 0;
+  // 周回の段階開放：分母は 50→（どれかが2周目に入ると）80→（3周目で）110。
+  const stage = stats ? badgeStage(stats) : 1;
+  const total = badgeTotal(stage);
+
+  // 段階を初めて跨いだときに一度だけ案内を出す（獲得自体は学習中に起きるため、
+  // シートを開いたときの検出方式。表示と同時に既読段階を保存する）。
+  useEffect(() => {
+    if (visible && stats && stage > badgeLapStageSeen) {
+      setShowUnlockInfo(true);
+      setBadgeLapStageSeen(stage);
+    }
+  }, [visible, stats, stage, badgeLapStageSeen, setBadgeLapStageSeen]);
   // 最長連続セル内のバッジ：現在の連続（今日起点。今日未学習なら 0）と、進行中を除く自己ベスト prevBestStreak
   // の関係で 4 状態を出し分ける。もうすぐ→タイ→達成→更新中 と日ごとに変化する。
   const recordPill = ((): { icon: React.ComponentProps<typeof Ionicons>['name']; iconColor: string; text: string } | null => {
@@ -322,31 +339,51 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               {t('stats.badges')}
             </Text>
             <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('stats.badgeEarnedCount', { earned, total: BADGES.length })}
+              {t('stats.badgeEarnedCount', { earned, total })}
             </Text>
           </View>
 
-          {BADGE_SECTIONS.map((sec) => (
+          {BADGE_SECTIONS.map((sec) => {
+            const secBadges = BADGES.filter((b) => b.kind === sec.kind);
+            const isStreakSec = sec.kind === 'streak';
+            // 連続日数は未獲得を表示しない（白丸を出さず、獲得したメダルだけ並べる）。
+            // 他カテゴリは前半5個のみ表示し、前半を完集（5個目獲得）した時点で後半5個が
+            // 空き枠として現れる（達成＋次の目標の開示が同時に起きる）。
+            const earnedInSec = stats ? secBadges.filter((b) => badgeLevel(b, stats) > 0).length : 0;
+            const visibleBadges = isStreakSec
+              ? secBadges.filter((b) => (stats ? badgeLevel(b, stats) > 0 : false))
+              : earnedInSec >= 5 ? secBadges : secBadges.slice(0, 5);
+            // 見出しの周回表示（2周目から）。現在周回＝最終バッジの獲得周回＋1（全周完了後は3のまま）。
+            const lap = !isStreakSec && stats
+              ? Math.min(badgeLevel(secBadges[secBadges.length - 1], stats) + 1, BADGE_MAX_LAP)
+              : 1;
+            return (
             <View key={sec.kind} style={styles.badgeSection}>
               <Text style={[styles.badgeSectionLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t(sec.labelKey)}
+                {t(sec.labelKey)}{lap >= 2 ? t('stats.badgeSectionLap', { lap }) : ''}
               </Text>
               <View style={[styles.badgeGrid, IS_PAD && { gap: 16 }]}>
-                {/* 連続日数は未獲得を表示しない（白丸を出さず、獲得したメダルだけ並べる）。他カテゴリは全枠表示。 */}
-                {BADGES.filter((b) => b.kind === sec.kind && (b.kind !== 'streak' || (stats ? isBadgeEarned(b, stats) : false))).map((b) => {
-                  const got = stats ? isBadgeEarned(b, stats) : false;
+                {visibleBadges.map((b) => {
+                  const level = stats ? badgeLevel(b, stats) : 0;
+                  const got = level > 0;
                   const isStreak = b.kind === 'streak';
                   // 連続：獲得＝プライマリ背景の丸＋メダル色アイコン＋日数（未獲得は上の filter で除外済み）。
-                  // その他：最初から薄いグレーのアイコン＋文字（獲得で色付き）。
+                  // その他：最初から薄いグレーのアイコン＋文字（獲得で色付き）。周回昇格は連続メダルと
+                  // 同じ視覚言語＝2周目からカテゴリ色のべた塗り背景＋銀（2周目）/金（3周目）アイコン。
                   const showIcon = isStreak ? got : true;
-                  const iconColor = isStreak ? b.color : got ? b.color : theme.colors.iconSubtle;
+                  const iconColor = isStreak ? b.color
+                    : level >= 3 ? LAP_GOLD
+                    : level === 2 ? LAP_SILVER
+                    : got ? b.color : theme.colors.iconSubtle;
                   const circleStyle = isStreak
                     ? got
                       ? { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary }
                       : { borderColor: theme.colors.inputBorder, backgroundColor: 'transparent' }
-                    : got
-                      ? { borderColor: b.color, backgroundColor: b.color + '22' }
-                      : { borderColor: frameBorder, backgroundColor: 'transparent' };
+                    : level >= 2
+                      ? { borderColor: b.color, backgroundColor: b.color }
+                      : got
+                        ? { borderColor: b.color, backgroundColor: b.color + '22' }
+                        : { borderColor: frameBorder, backgroundColor: 'transparent' };
                   const labelHidden = isStreak && !got;
                   return (
                     <View key={b.id} style={[styles.badgeCell, IS_PAD && { width: 76 }]}>
@@ -372,7 +409,8 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                 })}
               </View>
             </View>
-          ))}
+            );
+          })}
         </ScrollView>
       </Animated.View>
 
@@ -397,6 +435,14 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           </View>
         }
         onClose={() => setShowModeInfo(false)}
+      />
+
+      {/* 周回の段階開放の案内（分母 50→80→110 を初めて跨いだときに一度だけ） */}
+      <InfoModal
+        visible={showUnlockInfo}
+        title={t('stats.badgeUnlockTitle')}
+        message={t('stats.badgeUnlockMessage')}
+        onClose={() => setShowUnlockInfo(false)}
       />
 
       {/* ショートカット一覧（? キー）。閉じる/トグルは一覧本体の ? が担当。 */}

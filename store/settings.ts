@@ -174,6 +174,8 @@ interface SettingsValues {
   studyTimerEndBehavior: StudyTimerEndBehavior;
   studyTimerBreakMinutes: number;
   studyTimerCycles: number;
+  // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
+  badgeLapStageSeen: number;
 }
 
 /**
@@ -317,6 +319,11 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     normalize: clampTimerCycles,
     onApply: resetStudyTimerIfActive,
   },
+  badgeLapStageSeen: {
+    key: '@codeflash_badge_lap_stage_seen',
+    default: 1,
+    parse: (r) => { const v = Number(r); return v === 1 || v === 2 || v === 3 ? v : undefined; },
+  },
 };
 
 const SETTING_KEYS = Object.keys(DEFS) as (keyof SettingsValues)[];
@@ -357,6 +364,7 @@ interface SettingsState extends SettingsValues {
   setStudyTimerEndBehavior: (v: StudyTimerEndBehavior) => void;
   setStudyTimerBreakMinutes: (v: number) => void;
   setStudyTimerCycles: (v: number) => void;
+  setBadgeLapStageSeen: (v: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => {
@@ -415,6 +423,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setStudyTimerEndBehavior: makeSetter('studyTimerEndBehavior'),
     setStudyTimerBreakMinutes: makeSetter('studyTimerBreakMinutes'),
     setStudyTimerCycles: makeSetter('studyTimerCycles'),
+    setBadgeLapStageSeen: makeSetter('badgeLapStageSeen'),
   };
 });
 

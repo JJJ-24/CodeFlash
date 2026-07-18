@@ -258,7 +258,7 @@
     "proSection": "詳細統計",
     "detailStatsInfoLabel": "詳細統計の使い方",
     "monthlyInfoLabel": "月別学習枚数の説明",
-    "monthlyInfoMessage": "[タップ]\n  ドーナツグラフ表示",
+    "monthlyInfoMessage": "[タップ]\n  ドーナツグラフ表示\n月ごとの評価内訳を確認できます。",
     "gradeRankingInfoLabel": "評価別ランキングの説明",
     "gradeRankingInfoMessage": "[タップ（評価）]\n  ランキング表示\n[タップ（カード）]\n  編集画面へ移動\n  {{analytics}} カード統計（Pro）\n[重点復習]\n  学習画面へ移動\n\n[表示モード]\n  {{albums}} デッキ絞り込み\n  {{calendar}} 期間変更\n  {{podium}} 評価回数\n  {{timer}} 平均回答時間\n  {{piechart}} 評価率",
     "monthlyActivity": "月別学習枚数",

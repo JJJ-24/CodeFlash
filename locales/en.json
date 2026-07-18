@@ -258,7 +258,7 @@
     "proSection": "Detailed Stats",
     "detailStatsInfoLabel": "How to use Detailed Stats",
     "monthlyInfoLabel": "About monthly study count",
-    "monthlyInfoMessage": "[Tap]\n  Show donut chart",
+    "monthlyInfoMessage": "[Tap]\n  Show donut chart\nSee each month's breakdown by grade.",
     "gradeRankingInfoLabel": "About grade ranking",
     "gradeRankingInfoMessage": "[Tap (grade)]\n  Show ranking\n[Tap (card)]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Focused review]\n  Open study screen\n\n[Display modes]\n  {{albums}} Filter by deck\n  {{calendar}} Change period\n  {{podium}} Review count\n  {{timer}} Average answer time\n  {{piechart}} Grade rate",
     "monthlyActivity": "Monthly Reviews",

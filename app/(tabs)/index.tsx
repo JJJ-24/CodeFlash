@@ -182,6 +182,11 @@ export default function HomeScreen() {
   const scrollsToTopArmed = useSafeScrollsToTop();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeckListInfo, setShowDeckListInfo] = useState(false);
+  // U/D 並べ替え不可時の案内（カード一覧・タグ管理と同方針・文言も card.* を流用）。
+  // 閉じる瞬間にフェード中の中身が空にならないよう直前内容を ref で保持する。
+  const [reorderInfo, setReorderInfo] = useState<React.ReactNode | null>(null);
+  const lastReorderInfoRef = useRef<React.ReactNode | null>(null);
+  if (reorderInfo) lastReorderInfoRef.current = reorderInfo;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteDeck, setPendingDeleteDeck] = useState<Deck | null>(null);
   const scrollOffsetRef = useRef(0);
@@ -295,9 +300,19 @@ export default function HomeScreen() {
   displayedDecksRef.current = displayedDecks;
 
   // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート時のみ。フォーカスは ID 追跡で自動追従。
+  // 並べ替え不可の状態ではカード一覧・タグ管理と同じ案内アラートを出す（無反応だと原因が
+  // 分からないため。2026-07-18 に「静かに無効」から変更）。
   // 非表示（アーカイブ）デッキは元位置に固定したまま表示中だけを並べ替える（onDragEnd と同じ再構築）。
   function moveDeckOrder(dir: 'up' | 'down') {
-    if (!deckDragActive || focusedDeckIndex === null) return;
+    if (deckSortOrder !== 'manual') {
+      setReorderInfo(<InfoContent text={t('card.reorderDisabledMessageSort')} />);
+      return;
+    }
+    if (deckSortLocked) {
+      setReorderInfo(<InfoContent text={t('card.reorderLockedMessage')} />);
+      return;
+    }
+    if (focusedDeckIndex === null) return;
     const to = dir === 'up' ? focusedDeckIndex - 1 : focusedDeckIndex + 1;
     if (to < 0 || to >= displayedDecks.length) return;
     const newDisplayed = [...displayedDecks];
@@ -472,7 +487,7 @@ export default function HomeScreen() {
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
   // アラート（削除確認/情報/ショートカット一覧）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
-  ], !showDeleteModal && !showShortcutsModal && !showDeckListInfo);
+  ], !showDeleteModal && !showShortcutsModal && !showDeckListInfo && !reorderInfo);
 
   // ESC は常時有効：開いているオーバーレイを閉じる → フォーカス解除（ホームはタブなので戻るは無し）。
   // 削除確認は「削除」操作のため Return は割り当てない（タップのみ）。Esc/タップでキャンセル。
@@ -482,6 +497,7 @@ export default function HomeScreen() {
       handler: () => {
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (showDeckListInfo) { setShowDeckListInfo(false); return; }
+        if (reorderInfo) { setReorderInfo(null); return; }
         if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteDeck(null); return; }
         if (focusedDeckIndex !== null) setFocusedDeckIndex(null);
       },
@@ -494,10 +510,11 @@ export default function HomeScreen() {
       input: KeyCommand.keyInputEnter,
       handler: () => {
         if (showDeckListInfo) { setShowDeckListInfo(false); return; }
+        if (reorderInfo) { setReorderInfo(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
       },
     },
-  ], showDeckListInfo || showShortcutsModal);
+  ], showDeckListInfo || showShortcutsModal || Boolean(reorderInfo));
 
   // デッキ行の共通レンダラー（DraggableFlatList / 素の FlatList 両分岐で共用）。
   // ScaleDecorator はドラッグ有効時のみ呼び出し側で被せる。
@@ -668,6 +685,12 @@ export default function HomeScreen() {
         title={t('home.title')}
         message={<InfoContent text={t('home.deckListInfoMessage')} />}
         onClose={() => setShowDeckListInfo(false)}
+      />
+      <InfoModal
+        visible={reorderInfo !== null}
+        title={t('card.reorderDisabledTitle')}
+        message={reorderInfo ?? lastReorderInfoRef.current}
+        onClose={() => setReorderInfo(null)}
       />
       <ShortcutsModal
         visible={showShortcutsModal}

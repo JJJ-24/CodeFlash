@@ -317,6 +317,7 @@ export default function DeckDetailScreen() {
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: 'Space', descKey: 'shortcut.toggleCheck' },
       { key: 'A',     descKey: 'shortcut.selectAll' },
+      { key: 'U / D', descKey: 'shortcut.reorderSelectedUpDown' },
       { key: 'M',     descKey: 'shortcut.moveSelected' },
       { key: 'Delete', descKey: 'shortcut.deleteSelected' },
       { key: 'C',     descKey: 'shortcut.duplicateSelected' },
@@ -565,21 +566,26 @@ export default function DeckDetailScreen() {
     router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id, cardId } });
   }, [router, id]);
 
+  // 選択トグル（タップ / Space 共通）
+  const toggleCardSelected = useCallback((cardId: string) => {
+    setSelectedCardIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cardId)) next.delete(cardId); else next.add(cardId);
+      return next;
+    });
+  }, []);
+
   // CardRow に渡す安定コールバック（ref/stable setState 経由なので依存は最小）。
   const handleRowPress = useCallback((item: Card) => {
     focusedCardIdRef.current = item.id;
     setFocusedCardIdState(item.id);
     if (selectionModeRef.current) {
       // タグ画面と挙動を揃える：タップした項目へカーソル（オレンジ枠）も移動
-      setSelectedCardIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
-        return next;
-      });
+      toggleCardSelected(item.id);
     } else {
       navigateToCardEdit(item.id);
     }
-  }, [navigateToCardEdit]);
+  }, [navigateToCardEdit, toggleCardSelected]);
   const handleRowLongPress = useCallback((item: Card, drag: () => void) => {
     if (selectionModeRef.current) return;
     if (selectedFilterRef.current !== 'all') {
@@ -747,12 +753,7 @@ export default function DeckDetailScreen() {
         if (showDeckPicker || statsCardId !== null) return;
         if (selectionMode) {
           if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) {
-            const cardId = displayedCards[focusedCardIndex].id;
-            setSelectedCardIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(cardId)) next.delete(cardId); else next.add(cardId);
-              return next;
-            });
+            toggleCardSelected(displayedCards[focusedCardIndex].id);
           }
         } else {
           startVisibleStudy();
@@ -774,9 +775,10 @@ export default function DeckDetailScreen() {
     },
     { input: 'j', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('next'); } },
     { input: 'k', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveFocus('prev'); } },
-    // U/D: フォーカス中のカードを手動並べ替え（上へ/下へ）。手動ソート・「すべて」・非選択モード時のみ有効。
-    { input: 'u', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveCardOrder('up'); } },
-    { input: 'd', handler: () => { if (showDeckPicker || statsCardId !== null) return; moveCardOrder('down'); } },
+    // U/D: 通常モード＝フォーカスカードを手動並べ替え／選択モード＝選択カードをまとめ並べ替え（038）。
+    // いずれも手動ソート・「すべて」フィルター時のみ有効。
+    { input: 'u', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode) moveSelectedCards('up'); else moveCardOrder('up'); } },
+    { input: 'd', handler: () => { if (showDeckPicker || statsCardId !== null) return; if (selectionMode) moveSelectedCards('down'); else moveCardOrder('down'); } },
     {
       input: 'a',
       handler: () => {
@@ -1028,6 +1030,47 @@ export default function DeckDetailScreen() {
     reorderCards(newOrder);
     updateCardSortOrders(db, newOrder.map((c) => c.id));
     setTimeout(() => listRef.current?.scrollToIndex({ index: to, viewPosition: 0.5, animated: true }), 50);
+  }
+
+  // 038 Phase1: 選択モードの U/D = 選択カードのまとめ並べ替え。
+  // 選択カード群（表示順のまま）を「U=選択中の最上部カードの1つ上 / D=最下部カードの1つ下」の
+  // 位置へ集約配置する。毎回の押下が移動方向への変化になり、離れた選択は移動方向へ集約、
+  // 隣接ブロックは1つずつ上下移動する（この式の自然な帰結）。端ではクランプ（先頭/末尾に
+  // 集約済みなら無反応）。選択順には一切依存しない＝結果が見た目から完全に予測できる
+  // （2026-07-18 決定。「最初に選択した位置へ集約」案は選択順が画面に見えないため不採用）。
+  // 有効条件・案内アラートは単一並べ替え（moveCardOrder）と同じ。
+  function moveSelectedCards(dir: 'up' | 'down') {
+    if (selectedFilter !== 'all') {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderDisabledMessage')} /> });
+      return;
+    }
+    if (cardSortOrder !== 'manual') {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderDisabledMessageSort')} /> });
+      return;
+    }
+    if (manualSortLocked) {
+      setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderLockedMessage')} /> });
+      return;
+    }
+    const group = displayedCards.filter((c) => selectedCardIds.has(c.id));
+    if (group.length === 0) return;
+    const others = displayedCards.filter((c) => !selectedCardIds.has(c.id));
+    const idxTop = displayedCards.findIndex((c) => selectedCardIds.has(c.id));
+    let idxBottom = -1;
+    for (let i = displayedCards.length - 1; i >= 0; i--) {
+      if (selectedCardIds.has(displayedCards[i].id)) { idxBottom = i; break; }
+    }
+    // 挿入位置 p ＝ 最終配置でのブロック先頭位置（選択カードを除いた others への挿入位置と一致）
+    const p = dir === 'up'
+      ? Math.max(0, idxTop - 1)
+      : Math.min(others.length, idxBottom + 2 - group.length);
+    const newOrder = [...others.slice(0, p), ...group, ...others.slice(p)];
+    if (newOrder.every((c, i) => c.id === displayedCards[i].id)) return; // 端クランプで無変化
+    reorderCards(newOrder);
+    updateCardSortOrders(db, newOrder.map((c) => c.id));
+    // 移動方向の端（上=ブロック先頭 / 下=ブロック末尾）が見える位置へスクロール
+    const scrollIdx = dir === 'up' ? p : Math.min(p + group.length - 1, newOrder.length - 1);
+    setTimeout(() => listRef.current?.scrollToIndex({ index: scrollIdx, viewPosition: 0.5, animated: true }), 50);
   }
 
   // ←/→・,/.・H/L でフィルター（すべて/学習済み/復習/新規）を循環切替（タブ画面と同じ操作軸）。

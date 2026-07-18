@@ -34,6 +34,7 @@ import { BlocksView } from "@/components/study/BlocksView";
 import { FlipCard, type FlipCardRef } from "@/components/study/FlipCard";
 import { LinksSheet } from "@/components/study/LinksSheet";
 import { ShortcutsModal } from "@/components/study/ShortcutsModal";
+import { TagSheet } from "@/components/study/TagSheet";
 import { StudyTimer } from "@/components/study/StudyTimer";
 import { useCodeBlockSelection } from "@/hooks/useCodeBlockSelection";
 import { useStudyTimer } from "@/hooks/useStudyTimer";
@@ -52,12 +53,14 @@ import {
 } from "@/lib/donut";
 import { FlipSuppressContext } from "@/lib/FlipSuppressContext";
 import { getReviewByCardId } from "@/lib/database/reviews";
+import { addTagToCard, createTag, getAllTags, getTagsByCardId, removeTagFromCard } from "@/lib/database/tags";
 import { setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
-import type { Block } from "@/types";
+import type { Block, Tag } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
 import { resolveDeckIconColors } from "@/lib/deckIconColors";
-import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits } from "@/lib/theme";
+import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits, themedFrameBorder, PRIMARY_COLOR } from "@/lib/theme";
+import { resolveTagColor } from "@/lib/tagColors";
 import { useDeckStore } from "@/store/decks";
 import { useProStore } from "@/store/pro";
 import { useReviewStore } from "@/store/reviews";
@@ -99,6 +102,7 @@ const SESSION_SHORTCUT_SECTIONS = [
   ] },
   { titleKey: "shortcut.catAction", items: [
     { key: "1–4", descKey: "shortcut.grade" },
+    { key: "T", descKey: "shortcut.cardTags" },
   ] },
   { titleKey: "shortcut.catOther", items: [
     { key: "ESC", descKey: "shortcut.esc" },
@@ -228,6 +232,10 @@ export default function StudySessionScreen() {
   const [prevGrade, setPrevGrade] = useState<Grade | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
+  const [showTagSheet, setShowTagSheet] = useState(false);
+  // 現在カードのタグ（裏面のタグ行に表示）と、シート用の全タグ（開くたびに DB から取得）
+  const [cardTags, setCardTags] = useState<Tag[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showTimerMenu, setShowTimerMenu] = useState(false);
@@ -547,6 +555,7 @@ export default function StudySessionScreen() {
     swipe.currentIndexSV.value = currentIndex;
     setIsFlipped(false);
     setShowMemo(false);
+    setShowTagSheet(false);
     cbs.reset();
     frontScrollRef.current?.scrollTo({ y: 0, animated: false });
     backScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -560,9 +569,59 @@ export default function StudySessionScreen() {
     });
   }, [currentCard?.id]);
 
-  // フリップ時にメモを隠し、コードブロック選択をリセット
+  // カードが切り替わったら現在カードのタグを取得（裏面のタグ行に表示）
   useEffect(() => {
-    if (!isFlipped) setShowMemo(false);
+    if (!currentCard) { setCardTags([]); return; }
+    getTagsByCardId(db, currentCard.id).then(setCardTags);
+  }, [currentCard?.id]);
+
+  // カード編集モーダルでタグを変更して戻ったとき即反映するため、フォーカス復帰時にも取り直す
+  // （本文の refreshCurrentCard と同じタイミング）。currentCard を deps に入れると
+  // カード切替でも再実行されてしまうため ref 経由で読む。
+  const currentCardIdRef = useRef<string | null>(null);
+  currentCardIdRef.current = currentCard?.id ?? null;
+  useFocusEffect(
+    useCallback(() => {
+      const id = currentCardIdRef.current;
+      if (id) getTagsByCardId(db, id).then(setCardTags);
+    }, [db]),
+  );
+
+  // タグシートの開閉トグル（タグ行タップ / T キー）。開くたびに全タグを取り直す
+  // （タグ管理での作成・改名・並べ替えを反映するため）。
+  const handleToggleTagSheet = useCallback(() => {
+    if (!currentCard) return;
+    if (showTagSheet) { setShowTagSheet(false); return; }
+    Keyboard.dismiss();
+    getAllTags(db).then((rows) => { setAllTags(rows); setShowTagSheet(true); });
+  }, [currentCard, showTagSheet, db]);
+
+  // タグの付け外し（即保存）。書き込み後に取り直して表示とDBを一致させる
+  const handleToggleCardTag = useCallback(async (tagId: string) => {
+    if (!currentCard) return;
+    const has = cardTags.some((tg) => tg.id === tagId);
+    if (has) await removeTagFromCard(db, currentCard.id, tagId);
+    else await addTagToCard(db, currentCard.id, tagId);
+    setCardTags(await getTagsByCardId(db, currentCard.id));
+  }, [currentCard, cardTags, db]);
+
+  // タグシートからのインライン新規作成：既定色（タグ新規画面と同じ青）で作成し、
+  // そのまま現在カードに付与する。重複名はタグ新規画面と同じく作成しない。
+  const handleCreateTag = useCallback(async (name: string): Promise<'ok' | 'duplicate'> => {
+    if (!currentCard) return 'ok';
+    if (allTags.some((tg) => tg.name === name)) return 'duplicate';
+    const tag = await createTag(db, { name, color: PRIMARY_COLOR });
+    await addTagToCard(db, currentCard.id, tag.id);
+    // タグ管理・検索などが使うストアのキャッシュにも反映（このカードに付与済み＝cardCount 1）
+    useTagStore.getState().addTag({ ...tag, cardCount: 1 });
+    setAllTags((prev) => [...prev, tag]);
+    setCardTags(await getTagsByCardId(db, currentCard.id));
+    return 'ok';
+  }, [currentCard, allTags, db]);
+
+  // フリップ時にメモ・タグシートを隠し、コードブロック選択をリセット
+  useEffect(() => {
+    if (!isFlipped) { setShowMemo(false); setShowTagSheet(false); }
     cbs.reset();
   }, [isFlipped]);
 
@@ -606,6 +665,8 @@ export default function StudySessionScreen() {
       swipe.navigateWithSlide("prev");
     } else if (key.toLowerCase() === "m" && isFlipped) {
       setShowMemo((v) => !v);
+    } else if (key.toLowerCase() === "t") {
+      if (isFlipped) handleToggleTagSheet();
     } else if (key.toLowerCase() === "f") {
       setIsFullscreen((v) => !v);
       cbs.setEditTrigger(0);
@@ -713,6 +774,7 @@ export default function StudySessionScreen() {
     { input: "h", handler: () => handleKeyPress(",") },
     { input: "l", handler: () => handleKeyPress(".") },
     { input: "w", handler: () => handleKeyPress("w") },
+    { input: "t", handler: () => handleKeyPress("t") },
     { input: "p", handler: () => handleKeyPress("p") },
     { input: "1", handler: () => handleKeyPress("1") },
     { input: "2", handler: () => handleKeyPress("2") },
@@ -737,10 +799,10 @@ export default function StudySessionScreen() {
     ]) as { input: string; handler: () => void }[]),
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
-  // リンク一覧/終了確認/ショートカット一覧/タイマー系モーダルの表示中は背景のショートカットを解除する
-  // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/専用 Return は別フックが担当）。
+  // リンク一覧/タグシート/終了確認/ショートカット一覧/タイマー系モーダルの表示中は背景のショートカットを解除する
+  // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/TagSheet/専用 Return は別フックが担当）。
   // タイマー終了/メニューは確定操作を含むため Return は割り当てない（タップ/Esc のみ）。
-  ], !showLinksModal && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showTimerMenu);
+  ], !showLinksModal && !showTagSheet && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showTimerMenu);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
   useKeyCommands([
@@ -751,6 +813,8 @@ export default function StudySessionScreen() {
         // コードブロック編集中は編集解除を最優先（実入力欄を blur すると onEditBlur が走る）。
         if (codeEditingRef.current) { Keyboard.dismiss(); return; }
         if (showLinksModal) { setShowLinksModal(false); return; }
+        // タグシートの Esc はシート側が担当（新規作成中=キャンセル/それ以外=閉じる の二段階のため）
+        if (showTagSheet) return;
         if (showFinishModal) { setShowFinishModal(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (showTimerEndModal) { setShowTimerEndModal(false); timer.stop(); return; }
@@ -1220,6 +1284,45 @@ export default function StudySessionScreen() {
     </View>
   );
 
+  // 裏面のタグ行：現在タグをチップで常時表示し、タップ（/ T キー）でタグシートを開く。
+  // onTouchStart={suppress} でカードフリップへの伝播を防ぐ（memoToggle と同じ）。
+  const tagRow = (
+    <Pressable
+      style={styles.tagRow}
+      onPress={handleToggleTagSheet}
+      onTouchStart={suppress}
+      accessibilityLabel={t("study.cardTags")}
+    >
+      <Ionicons name="pricetag-outline" size={16} color={theme.colors.textTertiary} />
+      {cardTags.length === 0 ? (
+        <Text
+          style={{ color: theme.colors.textTertiary }}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+        >
+          {t("study.cardTags")}
+        </Text>
+      ) : (
+        cardTags.map((tg) => {
+          // テーマ追従（__theme__）等のセンチネル色を実色に解決し、背景に溶ける色は枠線で縁取る
+          const tagColor = resolveTagColor(tg.color, theme);
+          const blends = tagColor === theme.colors.background;
+          return (
+            <View key={tg.id} style={[styles.tagChip, { borderColor: theme.colors.inputBorder }]}>
+              <View style={[styles.tagDot, { backgroundColor: tagColor }, blends && { borderWidth: 1, borderColor: themedFrameBorder(theme) }]} />
+              <Text
+                style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
+              >
+                {tg.name}
+              </Text>
+            </View>
+          );
+        })
+      )}
+    </Pressable>
+  );
+
   const gradeRow = (
     <View style={styles.gradeRow}>
       {GRADES.map(({ grade, labelKey, color }) => (
@@ -1467,6 +1570,7 @@ export default function StudySessionScreen() {
                         deckSqlInit={currentDeckSqlInit}
                       />
                       {memoBlock}
+                      {tagRow}
                     </ScrollView>
                   }
                 />
@@ -1545,6 +1649,14 @@ export default function StudySessionScreen() {
           visible={showLinksModal}
           onClose={() => setShowLinksModal(false)}
           links={cardLinks}
+        />
+        <TagSheet
+          visible={showTagSheet}
+          onClose={() => setShowTagSheet(false)}
+          tags={allTags}
+          selectedIds={cardTags.map((tg) => tg.id)}
+          onToggle={handleToggleCardTag}
+          onCreateTag={handleCreateTag}
         />
         {/* 全画面モードでも ? / Q のモーダルを描画する（通常モードの末尾と同一）。
             これが無いと全画面で Q を押しても ConfirmModal が描画されず、
@@ -1785,6 +1897,7 @@ export default function StudySessionScreen() {
                       deckSqlInit={currentDeckSqlInit}
                     />
                     {memoBlock}
+                    {tagRow}
                   </ScrollView>
                 }
               />
@@ -1922,6 +2035,15 @@ export default function StudySessionScreen() {
         links={cardLinks}
       />
 
+      <TagSheet
+        visible={showTagSheet}
+        onClose={() => setShowTagSheet(false)}
+        tags={allTags}
+        selectedIds={cardTags.map((tg) => tg.id)}
+        onToggle={handleToggleCardTag}
+        onCreateTag={handleCreateTag}
+      />
+
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
@@ -1994,6 +2116,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     borderLeftWidth: 3,
+  },
+  tagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 4,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  tagDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   bottom: {
     paddingHorizontal: 20,

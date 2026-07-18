@@ -9,7 +9,8 @@ import { getAllTags } from '@/lib/database/tags';
 import { useTagStore } from '@/store/tags';
 
 // 全角=2、半角=1 としてカウントし、上限14（全角7文字相当）で省略
-function truncateTag(name: string): string {
+// （学習画面の TagSheet でもチップ表示を揃えるため共用）
+export function truncateTag(name: string): string {
   const LIMIT = 14;
   let width = 0;
   let i = 0;

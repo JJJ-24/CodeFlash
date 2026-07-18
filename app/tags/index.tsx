@@ -68,6 +68,7 @@ const TAG_SELECTION_SHORTCUT_SECTIONS = [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'Space', descKey: 'shortcut.toggleCheck' },
     { key: 'A',     descKey: 'shortcut.selectAll' },
+    { key: 'U / D', descKey: 'shortcut.reorderSelectedTagsUpDown' },
     { key: 'C',     descKey: 'shortcut.changeColorSelected' },
     { key: 'Delete', descKey: 'shortcut.deleteSelectedTags' },
   ] },
@@ -122,9 +123,20 @@ export default function TagsScreen() {
   const pendingFocusTagIdRef = useRef<string | null>(null);
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
 
-  // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート（未ロック）・非選択モード時のみ。フォーカスは ID 追跡で自動追従。
+  // キーボードでの手動並べ替え（U=上へ / D=下へ）。手動ソート（未ロック）・非選択モード時のみ。
+  // 並べ替え不可の状態ではカード一覧と同じ案内アラートを出す（無反応だと原因が分からないため。
+  // 2026-07-18 に「静かに無効」から変更）。フォーカスは ID 追跡で自動追従。
   function moveTagOrder(dir: 'up' | 'down') {
-    if (!tagDragActive || selectionMode || focusedTagIndex === null) return;
+    if (selectionMode) return; // 選択モードの U/D は moveSelectedTags が担当
+    if (tagSortOrder !== 'manual') {
+      setReorderInfo(<InfoContent text={t('card.reorderDisabledMessageSort')} />);
+      return;
+    }
+    if (tagSortLocked) {
+      setReorderInfo(<InfoContent text={t('card.reorderLockedMessage')} />);
+      return;
+    }
+    if (focusedTagIndex === null) return;
     const to = dir === 'up' ? focusedTagIndex - 1 : focusedTagIndex + 1;
     if (to < 0 || to >= sortedTags.length) return;
     const newOrder = [...sortedTags];
@@ -133,6 +145,40 @@ export default function TagsScreen() {
     reorderTags(newOrder);
     updateTagSortOrders(db, newOrder.map((tg) => tg.id));
     setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: to, viewPosition: 0.5, animated: true }), 50);
+  }
+
+  // 038 Phase2: 選択モードの U/D = 選択タグのまとめ並べ替え（カード一覧と同じ方向集約モデル）。
+  // 選択タグ群（表示順のまま）を「U=選択中の最上部タグの1つ上 / D=最下部タグの1つ下」の位置へ
+  // 集約配置する。端ではクランプ。選択順には依存しない。有効条件は単一並べ替えと同じ
+  // 「手動ソート＋未ロック」で、無効時は moveTagOrder と同じ案内アラートを出す。
+  function moveSelectedTags(dir: 'up' | 'down') {
+    if (tagSortOrder !== 'manual') {
+      setReorderInfo(<InfoContent text={t('card.reorderDisabledMessageSort')} />);
+      return;
+    }
+    if (tagSortLocked) {
+      setReorderInfo(<InfoContent text={t('card.reorderLockedMessage')} />);
+      return;
+    }
+    const group = sortedTags.filter((tg) => selectedTagIds.has(tg.id));
+    if (group.length === 0) return;
+    const others = sortedTags.filter((tg) => !selectedTagIds.has(tg.id));
+    const idxTop = sortedTags.findIndex((tg) => selectedTagIds.has(tg.id));
+    let idxBottom = -1;
+    for (let i = sortedTags.length - 1; i >= 0; i--) {
+      if (selectedTagIds.has(sortedTags[i].id)) { idxBottom = i; break; }
+    }
+    // 挿入位置 p ＝ 最終配置でのブロック先頭位置（選択タグを除いた others への挿入位置と一致）
+    const p = dir === 'up'
+      ? Math.max(0, idxTop - 1)
+      : Math.min(others.length, idxBottom + 2 - group.length);
+    const newOrder = [...others.slice(0, p), ...group, ...others.slice(p)];
+    if (newOrder.every((tg, i) => tg.id === sortedTags[i].id)) return; // 端クランプで無変化
+    reorderTags(newOrder);
+    updateTagSortOrders(db, newOrder.map((tg) => tg.id));
+    // 移動方向の端（上=ブロック先頭 / 下=ブロック末尾）が見える位置へスクロール
+    const scrollIdx = dir === 'up' ? p : Math.min(p + group.length - 1, newOrder.length - 1);
+    setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: scrollIdx, viewPosition: 0.5, animated: true }), 50);
   }
 
   const selectedCardsCount = useMemo(
@@ -147,6 +193,12 @@ export default function TagsScreen() {
   ];
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showTagListInfo, setShowTagListInfo] = useState(false);
+  // U/D 並べ替え不可時の案内（カード一覧と同方針・文言も card.* を流用）。タグには
+  // フィルター条件が無いため sort/locked の2種のみ。閉じる瞬間にフェード中の中身が
+  // 空にならないよう直前内容を ref で保持する（カード一覧 lastInfoModalRef と同パターン）。
+  const [reorderInfo, setReorderInfo] = useState<React.ReactNode | null>(null);
+  const lastReorderInfoRef = useRef<React.ReactNode | null>(null);
+  if (reorderInfo) lastReorderInfoRef.current = reorderInfo;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteTag, setPendingDeleteTag] = useState<TagWithCount | null>(null);
 
@@ -271,8 +323,9 @@ export default function TagsScreen() {
     { input: 'j', handler: () => { if (showColorPicker) return; moveFocus('next'); } },
     { input: 'k', handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
     // U/D: フォーカス中のタグを手動並べ替え（上へ/下へ）。手動ソート・非選択モード時のみ有効。
-    { input: 'u', handler: () => { if (showColorPicker) return; moveTagOrder('up'); } },
-    { input: 'd', handler: () => { if (showColorPicker) return; moveTagOrder('down'); } },
+    // U/D: 通常モード＝フォーカスタグを手動並べ替え／選択モード＝選択タグをまとめ並べ替え（038）。
+    { input: 'u', handler: () => { if (showColorPicker) return; if (selectionMode) moveSelectedTags('up'); else moveTagOrder('up'); } },
+    { input: 'd', handler: () => { if (showColorPicker) return; if (selectionMode) moveSelectedTags('down'); else moveTagOrder('down'); } },
     {
       input: ' ',
       handler: () => {
@@ -351,7 +404,7 @@ export default function TagsScreen() {
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (showColorPicker) return; setShowShortcutsModal((v) => !v); } },
   // 削除確認/一括削除/情報/ショートカット一覧の表示中は背景ナビを解除（カラーピッカーは C/Shift+C/Return を
   // 使うので除外＝main 有効のまま。各ナビは showColorPicker を個別ガード済み）。
-  ], !showDeleteModal && !showBulkDeleteModal && !showTagListInfo && !showShortcutsModal);
+  ], !showDeleteModal && !showBulkDeleteModal && !showTagListInfo && !showShortcutsModal && !reorderInfo);
 
   // ESC は常時有効：オーバーレイ → 選択モード解除 → 戻る。削除系は Return 非割当（タップのみ）。
   useKeyCommands([
@@ -362,6 +415,7 @@ export default function TagsScreen() {
         if (showBulkDeleteModal) { setShowBulkDeleteModal(false); return; }
         if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteTag(null); return; }
         if (showTagListInfo) { setShowTagListInfo(false); return; }
+        if (reorderInfo) { setReorderInfo(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (selectionMode) { exitSelectionMode(); return; }
         router.back();
@@ -375,10 +429,11 @@ export default function TagsScreen() {
       input: KeyCommand.keyInputEnter,
       handler: () => {
         if (showTagListInfo) { setShowTagListInfo(false); return; }
+        if (reorderInfo) { setReorderInfo(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
       },
     },
-  ], showTagListInfo || showShortcutsModal);
+  ], showTagListInfo || showShortcutsModal || Boolean(reorderInfo));
 
   // タグ行の共通レンダラー（DraggableFlatList / 素の FlatList 両分岐で共用）。
   // ScaleDecorator はドラッグ有効時のみ呼び出し側で被せる。
@@ -702,6 +757,12 @@ export default function TagsScreen() {
         title={t('tag.tagListTitle')}
         message={<InfoContent text={t('tag.tagListInfoMessage')} />}
         onClose={() => setShowTagListInfo(false)}
+      />
+      <InfoModal
+        visible={reorderInfo !== null}
+        title={t('card.reorderDisabledTitle')}
+        message={reorderInfo ?? lastReorderInfoRef.current}
+        onClose={() => setReorderInfo(null)}
       />
       <ShortcutsModal
         visible={showShortcutsModal}

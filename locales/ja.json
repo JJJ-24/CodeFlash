@@ -96,7 +96,7 @@
   "tag": {
     "tagListTitle": "タグ一覧",
     "tagListInfoLabel": "タグ一覧の説明",
-    "tagListInfoMessage": "[タップ]\n  カード一覧へ移動\n  {{pencil}} タグ編集\n[スワイプ]\n  削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習タブにも反映されます。",
+    "tagListInfoMessage": "[タップ]\n  カード一覧へ移動\n  {{pencil}} タグ編集\n[スワイプ]\n  削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n※ 選択モードのU/Dキー＝選択タグをまとめ移動\n並び順は学習タブにも反映されます。",
     "cardListTitle": "タグカード一覧",
     "removeFromCards": "タグを外す",
     "removeFromCardsAction": "外す",
@@ -702,6 +702,7 @@
     "toggleSortLock": "並べ替えロック切替\n※手動ソート時",
     "reorderUpDown": "上/下 移動（フォーカス項目）\n※手動ソート時",
     "reorderSelectedUpDown": "上/下 集約移動（選択カード）\n離れた選択は移動方向へ集約\n※手動ソート時",
+    "reorderSelectedTagsUpDown": "上/下 集約移動（選択タグ）\n離れた選択は移動方向へ集約\n※手動ソート時",
     "search": "カード検索\n[⌘F]でも可",
     "tags": "タグ管理",
     "tabNextPrev": "タブ切替\n（ホーム/学習/統計/設定）",

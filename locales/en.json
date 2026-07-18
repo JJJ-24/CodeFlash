@@ -96,7 +96,7 @@
   "tag": {
     "tagListTitle": "Tags",
     "tagListInfoLabel": "About tag list",
-    "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study tab.",
+    "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\n※ In select mode, U/D moves selected tags together\nOrder also applies to the Study tab.",
     "cardListTitle": "Tag Card List",
     "removeFromCards": "Remove tag",
     "removeFromCardsAction": "Remove",
@@ -703,6 +703,7 @@
     "toggleSortLock": "Toggle reorder lock\nWhen manual sort",
     "reorderUpDown": "Reorder\n(Up/Down, manual sort)",
     "reorderSelectedUpDown": "Reorder selected together\n(gathers toward move direction, manual sort)",
+    "reorderSelectedTagsUpDown": "Reorder selected together\n(gathers toward move direction, manual sort)",
     "search": "Search cards\n[⌘F] also works",
     "tags": "Tag manager",
     "tabNextPrev": "Switch tab\n(Home/Study/Stats/Settings)",

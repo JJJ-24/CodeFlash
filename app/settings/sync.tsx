@@ -443,12 +443,13 @@ export default function SyncSettingsScreen() {
     <SettingsDetail
       title={t("sync.title")}
       overlay={overlay}
-      onBack={() => {
+      onBack={(direct) => {
         if (modal) {
           setModal(null);
           return;
         }
         if (
+          !direct && (
           showTagline ||
           showRestoreSectionInfo ||
           showAdvancedInfo ||
@@ -457,6 +458,7 @@ export default function SyncSettingsScreen() {
           showResetInfo ||
           showRestoreInfo ||
           showMergeInfo
+          )
         ) {
           setShowTagline(false);
           setShowRestoreSectionInfo(false);

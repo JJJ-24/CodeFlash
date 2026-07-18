@@ -116,8 +116,8 @@ export default function StudySettingsScreen() {
   return (
     <SettingsDetail
       title={t('settings.studySettings')}
-      onBack={() => {
-        if (showRetentionInfo || openTimerInfo) { setShowRetentionInfo(false); setOpenTimerInfo(null); return; }
+      onBack={(direct) => {
+        if (!direct && (showRetentionInfo || openTimerInfo)) { setShowRetentionInfo(false); setOpenTimerInfo(null); return; }
         router.back();
       }}
     >

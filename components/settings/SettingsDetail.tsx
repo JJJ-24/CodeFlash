@@ -17,8 +17,12 @@ interface Props {
   children: ReactNode;
   /** ScrollView の外（最前面）に重ねる要素。モーダルやローディングオーバーレイ用。 */
   overlay?: ReactNode;
-  /** 戻る挙動の上書き（モーダルを開いている画面は「先に閉じる」を渡す）。既定は router.back()。 */
-  onBack?: () => void;
+  /**
+   * 戻る挙動の上書き（モーダルを開いている画面は「先に閉じる」を渡す）。既定は router.back()。
+   * direct=true は戻るボタン/FAB/B キー＝インライン info 展開は閉じずに直接戻る（本物のモーダルだけ先に閉じる）。
+   * false は Esc＝階層ディスマス（info 展開も1段として閉じる）。
+   */
+  onBack?: (direct: boolean) => void;
 }
 
 /**
@@ -32,15 +36,20 @@ export function SettingsDetail({ title, children, overlay, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const lockedTopInset = useLockedTopInset();
 
-  // 戻る（Esc / B / 戻るボタン / FAB 共通）。まず最前面のインライン展開（SegmentedCard の info 等）を
-  // 閉じ、無ければ onBack（モーダルを先に閉じる等）または router.back()。
-  const handleBack = () => {
+  // Esc = 階層ディスマス。まず最前面のインライン展開（SegmentedCard の info 等）を閉じ、
+  // 無ければ onBack（モーダル→インライン info→戻る）または router.back()。
+  const handleEsc = () => {
     if (popEscDismiss()) return;
-    if (onBack) onBack(); else router.back();
+    if (onBack) onBack(false); else router.back();
+  };
+  // 戻るボタン / FAB / B = 直接戻る。インライン info 展開は消費しない
+  // （本物のモーダルが開いていれば onBack 側が先に閉じる。ボタンはモーダル表示中タップ不可のため実質 B キー用）。
+  const handleBack = () => {
+    if (onBack) onBack(true); else router.back();
   };
   useKeyCommands([
     { input: 'b', handler: handleBack },
-    { input: KeyCommand.keyInputEscape, handler: handleBack },
+    { input: KeyCommand.keyInputEscape, handler: handleEsc },
   ]);
 
   return (
@@ -79,7 +88,7 @@ export function SettingsDetail({ title, children, overlay, onBack }: Props) {
       {/* 左下フローティング戻るボタン（カード一覧・タグ管理と同パターン） */}
       <Pressable
         style={[fabStyles.fab, { left: 20, bottom: Math.max(insets.bottom, 16) + 16, backgroundColor: theme.colors.primary }]}
-        onPress={() => router.back()}
+        onPress={handleBack}
         hitSlop={6}
       >
         <Ionicons name="chevron-back" size={28} color="#FFF" />

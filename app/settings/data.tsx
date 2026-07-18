@@ -299,10 +299,10 @@ export default function DataSettingsScreen() {
     <SettingsDetail
       title={t('dataManagement.title')}
       overlay={overlay}
-      onBack={() => {
+      onBack={(direct) => {
         if (modal) { setModal(null); return; }
         if (tsvDeckPickerVisible) { setTsvDeckPickerVisible(false); return; }
-        if (showExportInfo || showImportInfo || showTsvExportInfo || showTsvImportInfo) {
+        if (!direct && (showExportInfo || showImportInfo || showTsvExportInfo || showTsvImportInfo)) {
           setShowExportInfo(false); setShowImportInfo(false); setShowTsvExportInfo(false); setShowTsvImportInfo(false);
           return;
         }

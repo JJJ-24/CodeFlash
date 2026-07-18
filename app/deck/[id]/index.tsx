@@ -79,6 +79,8 @@ type CardRowProps = {
   isSelected: boolean;
   isSelMode: boolean;
   isNew: boolean;
+  /** 038: 選択モードのまとめ移動ドラッグ中（isActive）に出す「×N」バッジの枚数。非表示は null。 */
+  bulkDragCount: number | null;
   effectiveArchived: boolean;
   swipeEnabled: boolean;
   isPro: boolean;
@@ -97,7 +99,7 @@ type CardRowProps = {
 
 const CardRow = memo(function CardRow(props: CardRowProps) {
   const {
-    item, drag, isFocused, isSelected, isSelMode, isNew, effectiveArchived, swipeEnabled,
+    item, drag, isFocused, isSelected, isSelMode, isNew, bulkDragCount, effectiveArchived, swipeEnabled,
     isPro, theme, imageLabel, noTextLabel, onPress, onLongPress, onStats, onEdit, onDelete, onArchive, onStudyFromHere,
   } = props;
   const preview = getCardPreview(item.frontContent, imageLabel);
@@ -139,6 +141,12 @@ const CardRow = memo(function CardRow(props: CardRowProps) {
             <Text allowFontScaling={false} style={[styles.newBadgeText, { color: theme.colors.primaryText, fontSize: theme.fontSize.xs }]}>NEW</Text>
           </View>
         )}
+        {/* 038: まとめ移動ドラッグ中の「×N」バッジ（NEW バッジと同スタイル） */}
+        {bulkDragCount != null && (
+          <View style={[styles.newBadge, { backgroundColor: theme.colors.primary }]}>
+            <Text allowFontScaling={false} style={[styles.newBadgeText, { color: theme.colors.primaryText, fontSize: theme.fontSize.xs }]}>{`×${bulkDragCount}`}</Text>
+          </View>
+        )}
         {effectiveArchived && (
           <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
         )}
@@ -163,6 +171,7 @@ const CardRow = memo(function CardRow(props: CardRowProps) {
   prev.isSelected === next.isSelected &&
   prev.isSelMode === next.isSelMode &&
   prev.isNew === next.isNew &&
+  prev.bulkDragCount === next.bulkDragCount &&
   prev.effectiveArchived === next.effectiveArchived &&
   prev.swipeEnabled === next.swipeEnabled &&
   prev.isPro === next.isPro &&
@@ -587,7 +596,7 @@ export default function DeckDetailScreen() {
     }
   }, [navigateToCardEdit, toggleCardSelected]);
   const handleRowLongPress = useCallback((item: Card, drag: () => void) => {
-    if (selectionModeRef.current) return;
+    // 並べ替え不可の案内は通常/選択モード共通（U/D キーと同じ3分岐）。
     if (selectedFilterRef.current !== 'all') {
       setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderDisabledMessage')} /> });
       return;
@@ -600,6 +609,10 @@ export default function DeckDetailScreen() {
       setInfoModal({ title: t('card.reorderDisabledTitle'), message: <InfoContent text={t('card.reorderLockedMessage')} /> });
       return;
     }
+    // 038 Phase3: 選択モードは「選択中カードの長押し」だけまとめ移動のドラッグを開始
+    // （ドロップ時展開方式＝ドラッグ中のデータ変更なし。展開は onDragEnd が行う）。
+    // 未選択カードの長押しは何もしない。
+    if (selectionModeRef.current && !selectedCardIdsRef.current.has(item.id)) return;
     drag();
   }, [t]);
   const handleStatsPress = useCallback((item: Card) => {
@@ -616,9 +629,13 @@ export default function DeckDetailScreen() {
   const handleArchiveRow = useCallback((item: Card) => archiveCardRef.current(item), []);
   const handleStudyFromHere = useCallback((item: Card) => startStudyFromCardRef.current(item.id), []);
 
-  const renderItem = useCallback(({ item, drag }: RenderItemParams<Card>) => {
+  const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<Card>) => {
     const theme = themeRef.current;
     const isSelMode = selectionModeRef.current;
+    // 038: 選択モードのまとめ移動ドラッグ中は、ドラッグ行に「×N」バッジを出す（2枚以上のとき）。
+    const selCount = selectedCardIdsRef.current.size;
+    const bulkDragCount =
+      isActive && isSelMode && selCount > 1 && selectedCardIdsRef.current.has(item.id) ? selCount : null;
     // ScaleDecorator はドラッグ並べ替えが実際に効く「すべて＋手動」のときだけ使う。
     // 済み/復習/新規 では手動ソートでもドラッグ不可（onDragEnd で無効化）＝ScaleDecorator は不要で、
     // その animated ラッパーが横スワイプ（削除/アーカイブ）のジェスチャーを奪ってしまうため外す。
@@ -634,6 +651,7 @@ export default function DeckDetailScreen() {
         isSelected={selectedCardIdsRef.current.has(item.id)}
         isSelMode={isSelMode}
         isNew={recentlyDuplicatedIdsRef.current.has(item.id)}
+        bulkDragCount={bulkDragCount}
         effectiveArchived={item.archived || deckArchivedRef.current}
         swipeEnabled={!isSelMode && !inDraggable}
         isPro={isPro}
@@ -1364,9 +1382,26 @@ export default function DeckDetailScreen() {
             }
             contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
             onScrollToIndexFailed={handleScrollToIndexFailed}
-            onDragEnd={({ data }) => {
-              if (selectionMode) return;
+            onDragEnd={({ data, from, to }) => {
               if (selectedFilter !== 'all' || cardSortOrder !== 'manual') return;
+              if (selectionMode) {
+                // 038 Phase3: まとめ移動（ドロップ時展開方式）。ライブラリはアンカー1枚だけを
+                // from→to に動かした data を返すので、そこから「選択カードを抜き、アンカーの
+                // 落ちた隙間に選択カード群（ドラッグ前の表示順）を挿入」した最終並びを作る。
+                // 動かさず元の位置に落とした場合はキャンセル（散在選択でも集約しない）。
+                if (from === to) return;
+                const sel = selectedCardIdsRef.current;
+                const dragged = data[to];
+                if (!dragged || !sel.has(dragged.id)) return; // 保険（未選択行はドラッグ開始しない）
+                let gap = 0;
+                for (let i = 0; i < to; i++) if (!sel.has(data[i].id)) gap++;
+                const others = data.filter((c) => !sel.has(c.id));
+                const group = displayedCards.filter((c) => sel.has(c.id));
+                const newOrder = [...others.slice(0, gap), ...group, ...others.slice(gap)];
+                reorderCards(newOrder);
+                updateCardSortOrders(db, newOrder.map((c) => c.id));
+                return;
+              }
               reorderCards(data);
               updateCardSortOrders(db, data.map((c) => c.id));
             }}

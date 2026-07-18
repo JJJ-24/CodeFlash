@@ -437,9 +437,11 @@ export default function TagsScreen() {
 
   // タグ行の共通レンダラー（DraggableFlatList / 素の FlatList 両分岐で共用）。
   // ScaleDecorator はドラッグ有効時のみ呼び出し側で被せる。
-  const renderTagRow = (item: TagWithCount, index: number | undefined, drag: (() => void) | null) => {
+  const renderTagRow = (item: TagWithCount, index: number | undefined, drag: (() => void) | null, isActive = false) => {
     const isFocused = focusedTagIndex !== null && index === focusedTagIndex;
     const isSelected = selectedTagIds.has(item.id);
+    // 038 Phase4: 選択モードのまとめ移動ドラッグ中は「×N」バッジを出す（2枚以上のとき）。
+    const bulkDragCount = isActive && selectionMode && isSelected && selectedTagIds.size > 1 ? selectedTagIds.size : null;
     return (
       <SwipeToDeleteRow
                   enabled={!selectionMode && !tagDragActive}
@@ -463,7 +465,21 @@ export default function TagsScreen() {
                       if (idx !== undefined) setFocusedTagIndex(idx);
                       router.push({ pathname: '/tags/[tagId]/cards', params: { tagId: item.id } });
                     }}
-                    onLongPress={!selectionMode && tagDragActive ? drag : undefined}
+                    // 038 Phase4: 選択モードは「選択中タグの長押し」だけまとめ移動のドラッグを開始
+                    //（ドロップ時展開方式。未選択タグの長押しは何もしない）。通常モードは従来どおり。
+                    // 並べ替え不可の状態（手動ソート以外/ロック中）は U/D と同じ案内アラートを出す。
+                    onLongPress={() => {
+                      if (tagSortOrder !== 'manual') {
+                        setReorderInfo(<InfoContent text={t('card.reorderDisabledMessageSort')} />);
+                        return;
+                      }
+                      if (tagSortLocked) {
+                        setReorderInfo(<InfoContent text={t('card.reorderLockedMessage')} />);
+                        return;
+                      }
+                      if (selectionMode && !isSelected) return;
+                      drag?.();
+                    }}
                   >
                     {selectionMode && (
                       <Ionicons
@@ -474,6 +490,12 @@ export default function TagsScreen() {
                     )}
                     <View style={[styles.colorDot, { backgroundColor: resolveTagColor(item.color, theme) }]} />
                     <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
+                    {/* 038: まとめ移動ドラッグ中の「×N」バッジ（枚数バッジと同形状・primary 色） */}
+                    {bulkDragCount != null && (
+                      <View style={[styles.countBadge, { backgroundColor: theme.colors.primary }]}>
+                        <Text allowFontScaling={false} style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{`×${bulkDragCount}`}</Text>
+                      </View>
+                    )}
                     <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
                       <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
                     </View>
@@ -651,15 +673,33 @@ export default function TagsScreen() {
             }
           }}
           onScrollBeginDrag={() => { restorationEndTimeRef.current = 0; }}
-          onDragEnd={({ data }) => {
-            if (selectionMode || !tagDragActive) return;
+          onDragEnd={({ data, from, to }) => {
+            if (!tagDragActive) return;
+            if (selectionMode) {
+              // 038 Phase4: まとめ移動（ドロップ時展開方式・カード一覧と同ロジック）。
+              // アンカー1枚だけ動いた data から「選択タグを抜き、アンカーの落ちた隙間に
+              // 選択タグ群（ドラッグ前の表示順）を挿入」した最終並びを作る。
+              // 動かさず元の位置に落とした場合はキャンセル（散在選択でも集約しない）。
+              if (from === to) return;
+              const sel = selectedTagIds;
+              const dragged = data[to];
+              if (!dragged || !sel.has(dragged.id)) return; // 保険（未選択行はドラッグ開始しない）
+              let gap = 0;
+              for (let i = 0; i < to; i++) if (!sel.has(data[i].id)) gap++;
+              const others = data.filter((tg) => !sel.has(tg.id));
+              const group = sortedTags.filter((tg) => sel.has(tg.id));
+              const newOrder = [...others.slice(0, gap), ...group, ...others.slice(gap)];
+              reorderTags(newOrder);
+              updateTagSortOrders(db, newOrder.map((tg) => tg.id));
+              return;
+            }
             reorderTags(data);
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedTagIndex(null)} />}
-          renderItem={({ item, drag, getIndex }: RenderItemParams<TagWithCount>) => (
+          renderItem={({ item, drag, getIndex, isActive }: RenderItemParams<TagWithCount>) => (
             <ScaleDecorator>
-              {renderTagRow(item, getIndex(), drag)}
+              {renderTagRow(item, getIndex(), drag, isActive)}
             </ScaleDecorator>
           )}
         />

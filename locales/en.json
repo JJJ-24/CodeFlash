@@ -96,7 +96,7 @@
   "tag": {
     "tagListTitle": "Tags",
     "tagListInfoLabel": "About tag list",
-    "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\n※ In select mode, U/D moves selected tags together\nOrder also applies to the Study tab.",
+    "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\n※ In select mode, U/D or long-press dragging a selected tag moves the selection together\nOrder also applies to the Study tab.",
     "cardListTitle": "Tag Card List",
     "removeFromCards": "Remove tag",
     "removeFromCardsAction": "Remove",
@@ -152,7 +152,7 @@
     "archivedPill": "Archived",
     "unarchivedPill": "Unarchived",
     "listInfoLabel": "About card list",
-    "listInfoMessage": "[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Swipe]\n  Left: Archive / Delete\n  Right: Study from here\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\n※ Only when \"All\" is shown\n※ In select mode, U/D moves selected cards together",
+    "listInfoMessage": "[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Swipe]\n  Left: Archive / Delete\n  Right: Study from here\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\n※ Only when \"All\" is shown\n※ In select mode, U/D or long-press dragging a selected card moves the selection together",
     "reorderHintMessage": "To reorder cards, set the filter to \"All\", switch to {{menu}} mode, then long-press a card and drag.",
     "sortDescNewest": "Newest first",
     "sortDescOldest": "Oldest first",

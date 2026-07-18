@@ -96,7 +96,7 @@
   "tag": {
     "tagListTitle": "タグ一覧",
     "tagListInfoLabel": "タグ一覧の説明",
-    "tagListInfoMessage": "[タップ]\n  カード一覧へ移動\n  {{pencil}} タグ編集\n[スワイプ]\n  削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n※ 選択モードのU/Dキー＝選択タグをまとめ移動\n並び順は学習タブにも反映されます。",
+    "tagListInfoMessage": "[タップ]\n  カード一覧へ移動\n  {{pencil}} タグ編集\n[スワイプ]\n  削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n※ 選択モードのU/Dキー・選択タグの長押しドラッグ＝まとめ移動\n並び順は学習タブにも反映されます。",
     "cardListTitle": "タグカード一覧",
     "removeFromCards": "タグを外す",
     "removeFromCardsAction": "外す",
@@ -152,7 +152,7 @@
     "archivedPill": "アーカイブしました",
     "unarchivedPill": "アーカイブを解除しました",
     "listInfoLabel": "カード一覧の説明",
-    "listInfoMessage": "[タップ]\n  編集画面へ移動\n  {{analytics}} カード統計（Pro）\n[スワイプ]\n  左：アーカイブ・削除\n  右：ここから学習\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n[学習開始]\n  学習画面へ移動\n復習対象カード（再学習含む）のみ学習履歴が更新されます。\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{newest}} 新しい順\n  {{oldest}} 古い順\n※「すべて」表示時のみ\n※ 選択モードのU/Dキー＝選択カードをまとめ移動",
+    "listInfoMessage": "[タップ]\n  編集画面へ移動\n  {{analytics}} カード統計（Pro）\n[スワイプ]\n  左：アーカイブ・削除\n  右：ここから学習\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n[学習開始]\n  学習画面へ移動\n復習対象カード（再学習含む）のみ学習履歴が更新されます。\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{newest}} 新しい順\n  {{oldest}} 古い順\n※「すべて」表示時のみ\n※ 選択モードのU/Dキー・選択カードの長押しドラッグ＝まとめ移動",
     "reorderHintMessage": "カードを並べ替えるには、フィルターを「すべて」にし、{{menu}} モードを選んでから、カードを長押ししてドラッグします。",
     "sortDescNewest": "新しい順",
     "sortDescOldest": "古い順",

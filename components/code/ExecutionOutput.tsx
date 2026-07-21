@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 // 編集画面ではドラッグ可能リスト（RNGH 配下）の中に置かれるため、RNGH の ScrollView を使わないと
 // 横スクロールのジェスチャーが外側に奪われてテーブルを横スクロールできない。
@@ -9,6 +9,7 @@ import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handl
 import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
+import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import type { ExecResult, SqlTableResult } from '@/lib/code-execution/types';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -70,16 +71,23 @@ interface Props {
   baseUrl?: string;
   onClear: () => void;
   onMessage: (event: { nativeEvent: { data: string } }) => void;
+  /** Web プレビュー実行中（html / js・ts＋土台）。true のとき WebView を可視プレビューとして描画する */
+  previewMode?: boolean;
+  /** 「ソース」タブに表示する HTML/CSS 土台（案a）。未指定なら空 */
+  previewSource?: string | null;
 }
 
 /**
- * コード実行結果の表示と hidden WebView（実行エンジン）を担う共有コンポーネント。
+ * コード実行結果の表示と WebView（実行エンジン）を担う共有コンポーネント。
+ * console 専用言語では hidden WebView、Web 系（previewMode）では可視プレビュー＋
+ * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
+  const [previewTab, setPreviewTab] = useState<'preview' | 'source'>('preview');
 
   const handleCopy = useCallback(async () => {
     if (!result) return;
@@ -100,7 +108,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
 
   return (
     <>
-      {result && (
+      {result && (!previewMode || result.logs.length > 0 || result.status === 'error' || result.status === 'timeout') && (
         <View
           style={[
             styles.output,
@@ -162,20 +170,60 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
         </View>
       )}
 
-      {/* 非表示 WebView（実行エンジン）— 画面外に配置して確実に読み込ませる */}
-      {htmlSource && (
-        <View style={styles.hiddenWebViewContainer} pointerEvents="none">
-          <WebView
-            style={styles.hiddenWebView}
-            source={{ html: htmlSource, baseUrl: baseUrl ?? 'about:blank' }}
-            onMessage={onMessage}
-            javaScriptEnabled
-            originWhitelist={['*']}
-            scrollEnabled={false}
-            allowsInlineMediaPlayback={false}
-            mixedContentMode="always"
-          />
-        </View>
+      {previewMode ? (
+        // Web プレビュー：WebView を可視で描画（実行エンジン兼表示）。ソースタブでも WebView は
+        // display:none で残し、再実行を避ける（pointerEvents なしで学習画面のスクロールと競合しない）。
+        htmlSource && (
+          <View style={styles.preview}>
+            <View style={styles.previewTabs}>
+              {(['preview', 'source'] as const).map((tab) => (
+                <Pressable key={tab} onPress={() => setPreviewTab(tab)} style={[styles.previewTab, previewTab === tab && styles.previewTabActive]}>
+                  <Text
+                    style={[styles.previewTabText, { fontSize: theme.fontSize.xs }, previewTab === tab && styles.previewTabTextActive]}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                  >
+                    {t(tab === 'preview' ? 'code.preview' : 'code.source')}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={[styles.previewBody, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
+              <WebView
+                style={styles.previewWebView}
+                source={{ html: htmlSource, baseUrl: baseUrl ?? 'about:blank' }}
+                onMessage={onMessage}
+                javaScriptEnabled
+                originWhitelist={['*']}
+                scrollEnabled={false}
+                allowsInlineMediaPlayback={false}
+                mixedContentMode="always"
+              />
+            </View>
+            {previewTab === 'source' && (
+              <ScrollView style={styles.previewSource}>
+                <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+                  <SyntaxHighlightedCode code={previewSource ?? ''} language="html" wrap={false} />
+                </ScrollView>
+              </ScrollView>
+            )}
+          </View>
+        )
+      ) : (
+        // console 専用言語：非表示 WebView（実行エンジン）を画面外に置いて確実に読み込ませる
+        htmlSource && (
+          <View style={styles.hiddenWebViewContainer} pointerEvents="none">
+            <WebView
+              style={styles.hiddenWebView}
+              source={{ html: htmlSource, baseUrl: baseUrl ?? 'about:blank' }}
+              onMessage={onMessage}
+              javaScriptEnabled
+              originWhitelist={['*']}
+              scrollEnabled={false}
+              allowsInlineMediaPlayback={false}
+              mixedContentMode="always"
+            />
+          </View>
+        )
       )}
     </>
   );
@@ -238,6 +286,46 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     color: '#4B5563',
     fontStyle: 'italic',
+  },
+  preview: {
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    backgroundColor: '#0D1117',
+  },
+  previewTabs: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 6,
+  },
+  previewTab: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: '#161B22',
+  },
+  previewTabActive: {
+    backgroundColor: '#1F6FEB',
+  },
+  previewTabText: {
+    color: '#8B949E',
+    fontWeight: '600',
+  },
+  previewTabTextActive: {
+    color: '#FFFFFF',
+  },
+  previewBody: {
+    height: 220,
+    backgroundColor: '#FFFFFF',
+  },
+  previewHidden: {
+    display: 'none',
+  },
+  previewWebView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  previewSource: {
+    maxHeight: 220,
   },
   hiddenWebViewContainer: {
     position: 'absolute',

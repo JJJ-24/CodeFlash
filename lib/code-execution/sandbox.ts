@@ -1,13 +1,20 @@
 /**
  * 言語別のサンドボックス HTML を構築する。
  *
- * @param code     実行するコード（トランスパイル済み）
- * @param language 言語名
- * @param sqlInits SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有の順）。空要素は呼び出し側で除外済みを想定
+ * @param code      実行するコード（トランスパイル済み）
+ * @param language  言語名
+ * @param sqlInits  SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有の順）。空要素は呼び出し側で除外済みを想定
+ * @param htmlInits Web 系（html / js・ts の土台）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有の順）
  */
-export function buildSandboxHtml(code: string, language?: string, sqlInits?: string[]): string {
+export function buildSandboxHtml(code: string, language?: string, sqlInits?: string[], htmlInits?: string[]): string {
   if (language === 'python') return buildPythonSandboxHtml(code);
   if (language === 'sql') return buildSqlSandboxHtml(code, sqlInits);
+  if (language === 'html') return buildWebSandboxHtml('html', code, htmlInits);
+  // js/ts は HTML/CSS 土台がある時だけ Web プレビュー実行（土台なしは従来どおりコンソール実行）
+  const hasStage = (htmlInits ?? []).some((s) => s && s.trim() !== '');
+  if (hasStage && (language === 'javascript' || language === 'typescript')) {
+    return buildWebSandboxHtml('js', code, htmlInits);
+  }
   return buildJsSandboxHtml(code);
 }
 
@@ -229,6 +236,123 @@ function buildJsSandboxHtml(code: string): string {
   })();
 })();
 <\/script></body></html>`;
+}
+
+/**
+ * Web 系（html ブロック本文 / js・ts ＋ HTML/CSS 土台）を可視 WebView で描画・実行する。
+ * - `mode='html'`：本文をそのまま body に描画（本文内の <script> はパース時に実行）
+ * - `mode='js'`：本文（JS）を <script> に入れ、土台の DOM を操作させる
+ * - `htmlInits`（デッキ土台 → ブロック土台）を body の先頭に加算合成する
+ *
+ * ネットワーク遮断・console キャプチャ・後出しログ対応（保留タイマー追跡＋マクロタスク境界での
+ * 完了判定）は console 版 buildJsSandboxHtml と同じ設計。ただしユーザーの <script> はインライン
+ * 実行のため try/catch で包めず、未捕捉例外は window.onerror で拾い、完了判定は DOMContentLoaded
+ * 後に開始する。全体 5 秒上限。
+ */
+function buildWebSandboxHtml(mode: 'html' | 'js', body: string, htmlInits?: string[]): string {
+  const stages = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
+  const markup = mode === 'html' ? body : '';
+  // js モードの本文は <script> に入れる。本文中の </script> のみ無害化（文字列内の \/ は / と等価）。
+  const script = mode === 'js' ? '<script>' + body.replace(/<\/script/gi, '<\\/script') + '</script>' : '';
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function() {
+  window.fetch = undefined;
+  window.XMLHttpRequest = undefined;
+  window.WebSocket = undefined;
+  window.open = undefined;
+
+  var _logs = [];
+  function fmt(args) {
+    return Array.prototype.map.call(args, function(v) {
+      if (v === null) return 'null';
+      if (v === undefined) return 'undefined';
+      if (typeof v === 'object') { try { return JSON.stringify(v); } catch(e) { return String(v); } }
+      return String(v);
+    }).join(' ');
+  }
+  console.log   = function() { _logs.push({ type: 'log',   text: fmt(arguments) }); };
+  console.error = function() { _logs.push({ type: 'error', text: fmt(arguments) }); };
+  console.warn  = function() { _logs.push({ type: 'warn',  text: fmt(arguments) }); };
+
+  var _done = false;
+  var _settled = false;       // DOMContentLoaded 済み（同期スクリプト完了）か
+  var _pending = 0;           // 追跡中タイマーのうち保留中の数
+  var _live = {};             // 追跡中タイマー id -> true
+  var _finishScheduled = false;
+
+  var _origSetTimeout    = window.setTimeout.bind(window);
+  var _origClearTimeout  = window.clearTimeout.bind(window);
+  var _origSetInterval   = window.setInterval.bind(window);
+  var _origClearInterval = window.clearInterval.bind(window);
+
+  var _timer = _origSetTimeout(function() { finish('timeout'); }, 5000);
+
+  function finish(type, msg) {
+    if (_done) return;
+    _done = true;
+    _origClearTimeout(_timer);
+    var payload = { type: type, logs: _logs };
+    if (msg) payload.message = msg;
+    window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+  }
+  // 完了判定はマクロタスク境界まで遅らせ、後出しログ（Promise/タイマー）を取りこぼさない。
+  function scheduleFinishCheck() {
+    if (_done || _finishScheduled) return;
+    _finishScheduled = true;
+    _origSetTimeout(function() {
+      _finishScheduled = false;
+      if (_settled && _pending === 0) finish('success');
+    }, 0);
+  }
+  function untrack(id) {
+    if (_live[id]) { delete _live[id]; _pending--; scheduleFinishCheck(); }
+  }
+  window.setTimeout = function(fn, delay) {
+    if (typeof fn !== 'function') return _origSetTimeout(fn, delay);
+    var extra = Array.prototype.slice.call(arguments, 2);
+    var id = _origSetTimeout(function() {
+      try { fn.apply(null, extra); }
+      catch (e) { finish('error', (e && e.message) ? e.message : String(e)); return; }
+      untrack(id);
+    }, delay);
+    _pending++; _live[id] = true;
+    return id;
+  };
+  window.setInterval = function(fn, delay) {
+    if (typeof fn !== 'function') return _origSetInterval(fn, delay);
+    var extra = Array.prototype.slice.call(arguments, 2);
+    var id = _origSetInterval(function() {
+      try { fn.apply(null, extra); }
+      catch (e) { finish('error', (e && e.message) ? e.message : String(e)); }
+    }, delay);
+    _pending++; _live[id] = true;
+    return id;
+  };
+  window.clearTimeout  = function(id) { untrack(id); return _origClearTimeout(id); };
+  window.clearInterval = function(id) { untrack(id); return _origClearInterval(id); };
+
+  // ユーザーの <script> はインライン実行のため try/catch で包めない。未捕捉例外は onerror で拾う。
+  window.onerror = function(message) { finish('error', message ? String(message) : 'Error'); return true; };
+
+  // 同期スクリプトが走り終える DOMContentLoaded で完了判定を開始する。
+  document.addEventListener('DOMContentLoaded', function() {
+    _settled = true;
+    scheduleFinishCheck();
+  });
+})();
+<\/script>
+</head>
+<body>
+${stages}
+${markup}
+${script}
+</body>
+</html>`;
 }
 
 const SQL_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/';

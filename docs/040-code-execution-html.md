@@ -91,18 +91,19 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 - [x] `lib/import.ts`：`decks` の明示列 INSERT に `htmlInit` を追加（`export.ts` は `SELECT *` で自動・TSV は対象外）＝DB マイグレーションチェックリスト対応
 
 ### Phase 2: 実行系（サンドボックス）
-- [ ] `lib/code-execution/sandbox.ts`：`buildWebSandboxHtml(language, body, deckHtmlInit, blockHtmlInit)` を新設
-  - [ ] `<head>` に**ネットワーク遮断**（fetch/XHR/WebSocket/window.open）＋ **console キャプチャ** ＋ **完了判定機構**（保留タイマー追跡・マクロタスク境界での finish・現行 JS サンドボックス踏襲）＋ **`window.onerror`**（インライン script の未捕捉例外を error として拾う）を設置
-  - [ ] html は `<body>{deck土台}{本文}</body>`、js/ts は `<body>{deck土台}{ブロック土台}<script>{本文}</script></body>` を合成（ts は既存どおり sucrase でトランスパイル）
-  - [ ] 完了判定は `DOMContentLoaded` 後に `_settled=true` → `scheduleFinishCheck`（後出しログ対応・全体 5 秒上限）
-  - [ ] `buildSandboxHtml` に web 系分岐を追加
-- [ ] `hooks/useCodeExecution.ts`：
-  - [ ] `run(content, language, sqlInits?, htmlInits?)` に `htmlInits`（`[deck, block]`）を追加
-  - [ ] **可視モード**：web 系は結果受信後も `htmlSource` を残して可視 WebView を保持（`onClear`/`reset`/再実行で破棄）。console は出力パネルへ
-- [ ] `components/code/ExecutionOutput.tsx`：
-  - [ ] 可視プレビュー領域を追加（固定高＋内部スクロール・`pointerEvents="none"`・**遅延マウント**で WebView 乱立を防ぐ）
-  - [ ] **`[プレビュー | ソース]` トグル**（ソース＝土台の HTML/CSS を `SyntaxHighlightedCode` で表示）
-  - [ ] 既存 hidden WebView（headless）は console 専用言語のためそのまま。web 系のみ可視に切替
+- [x] `lib/code-execution/sandbox.ts`：`buildWebSandboxHtml(mode, body, htmlInits)` を新設
+  - [x] `<head>` に**ネットワーク遮断**（fetch/XHR/WebSocket/window.open）＋ **console キャプチャ** ＋ **完了判定機構**（保留タイマー追跡・マクロタスク境界での finish・現行 JS サンドボックス踏襲）＋ **`window.onerror`**（インライン script の未捕捉例外を error として拾う）を設置
+  - [x] html は `<body>{deck土台}{本文}</body>`、js/ts は `<body>{deck土台}{ブロック土台}<script>{本文}</script></body>` を合成（ts は `useCodeExecution` 側で sucrase 済み・本文中の `</script>` は無害化）
+  - [x] 完了判定は `DOMContentLoaded` 後に `_settled=true` → `scheduleFinishCheck`（後出しログ対応・全体 5 秒上限）
+  - [x] `buildSandboxHtml` に web 系分岐を追加（html は常に／js・ts は土台がある時のみ）
+- [x] `hooks/useCodeExecution.ts`：
+  - [x] `run(content, language, sqlInits?, htmlInits?)` に `htmlInits`（`[deck, block]`）を追加
+  - [x] **可視モード**（`previewMode`）：web 系は結果受信後も `htmlSource` を残して可視 WebView を保持（`clear`/`reset`/再実行で破棄）。console は出力パネルへ。`handleMessage` は `previewModeRef` で stale closure を回避
+- [x] `components/code/ExecutionOutput.tsx`：
+  - [x] 可視プレビュー領域を追加（固定高 220・`pointerEvents="none"`）。WebView は `htmlSource` がある時だけマウント（乱立回避）＝フォーカス連動の本格化は Phase 3/5
+  - [x] **`[プレビュー | ソース]` トグル**（ソース＝土台の HTML/CSS を `SyntaxHighlightedCode language="html"` で表示。案a）。ソースタブでも WebView は `display:none` で残し再実行を防ぐ
+  - [x] 既存 hidden WebView は console 専用言語のためそのまま。web 系のみ可視に切替
+  - [x] i18n：`code.preview` / `code.source`（ja/en）
 
 ### Phase 3: エディタ UI（CodeBlockItem）
 - [ ] html ブロックの実行ボタンを有効化（Pro 時・sql/cpp と同じ実行ゲート）

@@ -59,6 +59,9 @@ export function useCodeExecution(onResult?: () => void) {
   const [result, setResult] = useState<ExecResult | null>(null);
   const [htmlSource, setHtmlSource] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState<string | undefined>(undefined);
+  // Web プレビュー（html / js・ts＋土台）実行中か。true の間は結果受信後も WebView を可視のまま残す。
+  const [previewMode, setPreviewMode] = useState(false);
+  const previewModeRef = useRef(false); // handleMessage の stale closure 回避用
   const cppAbortRef = useRef<AbortController | null>(null);
 
   // 常に最新の onResult を参照するため ref で保持
@@ -161,9 +164,10 @@ export function useCodeExecution(onResult?: () => void) {
   }
 
   /**
-   * @param sqlInits SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外では無視される
+   * @param sqlInits  SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外では無視される
+   * @param htmlInits Web 系（html / js・ts の土台）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）
    */
-  function run(content: string, language: string, sqlInits?: string[]) {
+  function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[]) {
     setStatus('running');
     setResult(null);
 
@@ -186,16 +190,25 @@ export function useCodeExecution(onResult?: () => void) {
       }
     }
 
+    // Web プレビュー実行の判定：html は常に、js/ts は HTML/CSS 土台がある時だけ可視プレビューにする。
+    const hasStage = (htmlInits ?? []).some((s) => s && s.trim() !== '');
+    const isWeb = language === 'html' || (hasStage && (language === 'javascript' || language === 'typescript'));
+    previewModeRef.current = isWeb;
+    setPreviewMode(isWeb);
+
     setBaseUrl(
       language === 'python' ? 'https://cdn.jsdelivr.net' :
       language === 'sql' ? 'https://cdnjs.cloudflare.com' : undefined
     );
-    setHtmlSource(buildSandboxHtml(code, language, sqlInits));
+    setHtmlSource(buildSandboxHtml(code, language, sqlInits, htmlInits));
   }
 
   function clear() {
     setStatus('idle');
     setResult(null);
+    setHtmlSource(null); // Web プレビューの可視 WebView も破棄する
+    setPreviewMode(false);
+    previewModeRef.current = false;
   }
 
   function handleMessage(event: { nativeEvent: { data: string } }) {
@@ -213,7 +226,8 @@ export function useCodeExecution(onResult?: () => void) {
     };
     setStatus(newResult.status);
     setResult(newResult);
-    setHtmlSource(null);
+    // Web プレビューは描画結果を見せ続けるため WebView を残す。console 専用言語のみ破棄する。
+    if (!previewModeRef.current) setHtmlSource(null);
   }
 
   function reset() {
@@ -222,6 +236,8 @@ export function useCodeExecution(onResult?: () => void) {
     setStatus('idle');
     setResult(null);
     setHtmlSource(null);
+    setPreviewMode(false);
+    previewModeRef.current = false;
   }
 
   return {
@@ -229,6 +245,7 @@ export function useCodeExecution(onResult?: () => void) {
     result,
     htmlSource,
     baseUrl,
+    previewMode,
     isRunning: status === 'running',
     run,
     clear,

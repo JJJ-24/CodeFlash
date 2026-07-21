@@ -49,6 +49,8 @@ interface Props {
   onForceKeyboardFocus?: () => void;
   /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
   deckSqlInit?: string | null;
+  /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台。ブロック固有 htmlInit の前に積まれる） */
+  deckHtmlInit?: string | null;
 }
 
 export function CodeRunnerView({
@@ -69,6 +71,7 @@ export function CodeRunnerView({
   anotherBlockEditing,
   onForceKeyboardFocus,
   deckSqlInit,
+  deckHtmlInit,
 }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -77,12 +80,25 @@ export function CodeRunnerView({
     result,
     htmlSource,
     baseUrl,
+    previewMode,
+    runNonce,
     isRunning,
     run,
     clear,
     handleMessage,
     reset,
   } = useCodeExecution(onRunStart);
+  // Web 系（html / js・ts）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
+  // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。
+  const htmlInits = useMemo(
+    () =>
+      block.language === 'html' ? [deckHtmlInit ?? '']
+      : (block.language === 'javascript' || block.language === 'typescript') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
+      : undefined,
+    [block.language, block.htmlInit, deckHtmlInit],
+  );
+  // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
+  const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
   const [isEditing, setIsEditing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [proModalVisible, setProModalVisible] = useState(false);
@@ -203,9 +219,9 @@ export function CodeRunnerView({
     const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
     if (wasThisEditing || anotherWasEditing) {
       // keyboard TextInput の focus 復元を待ってから WebView をマウントする
-      setTimeout(() => run(content, block.language, sqlInits), 300);
+      setTimeout(() => run(content, block.language, sqlInits, htmlInits), 300);
     } else {
-      run(content, block.language, sqlInits);
+      run(content, block.language, sqlInits, htmlInits);
     }
   }, [
     isRunning,
@@ -217,6 +233,7 @@ export function CodeRunnerView({
     block.language,
     block.sqlInit,
     deckSqlInit,
+    htmlInits,
     run,
     onEditBlur,
     onForceKeyboardFocus,
@@ -439,6 +456,10 @@ export function CodeRunnerView({
           result={result}
           htmlSource={htmlSource}
           baseUrl={baseUrl}
+          previewMode={previewMode}
+          previewSource={previewSource}
+          runNonce={runNonce}
+          onInteract={suppress}
           onClear={clear}
           onMessage={handleMessage}
         />

@@ -119,9 +119,11 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 - [x] ショートカットキー割当＝`H`（SQL の `Q` と別キー・両画面・ShortcutsModal 一覧にも追加。`shortcut.htmlInit`）
 
 ### Phase 5: 学習画面（CodeRunnerView）
-- [ ] `deckHtmlInit` prop を追加し、デッキ ID からデッキの `htmlInit` を取得してスレッド
-- [ ] 実行時に `htmlInits` を渡す
-- [ ] プレビュー＋トグルが学習画面のカードスクロール内で正しく表示される（`pointerEvents="none"` で競合回避）ことを確認
+- [x] `CodeRunnerView` に `deckHtmlInit` prop を追加、`htmlInits` を `useMemo` 算出
+- [x] 実行時に `htmlInits` を `run` に渡す（両実行経路）＋ `ExecutionOutput` に `previewMode`/`previewSource`/`runNonce` を伝達（学習側でも再実行スピナー対策を適用）
+- [x] `BlocksView` に `deckHtmlInit` をスレッド、`session.tsx` は `currentDeckHtmlInit`（現在カードのデッキから取得）を全 `BlocksView` に渡す
+- [x] プレビュー領域タッチで `suppress()`（フリップ 300ms 抑制）を呼び、プレビュー/ソースをタップしてもカードが裏返らないようにした（`ExecutionOutput.onInteract`＝コードブロック他ボタンと同方式）
+- [ ] 実機確認：学習カードのスクロール内でプレビュー＋トグルが表示され、タップでフリップしないこと
 
 ### Phase 6: 仕上げ
 - [ ] `locales/ja.json` / `locales/en.json` に文言追加（土台欄ラベル・ヒント・トグル）

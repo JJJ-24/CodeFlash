@@ -77,6 +77,8 @@ interface Props {
   previewSource?: string | null;
   /** 実行ごとに増える連番。WebView の key に使い、同一 HTML の再実行でも強制再マウント（再実行）させる */
   runNonce?: number;
+  /** プレビュー領域をタッチしたときに呼ぶ（学習画面でカードのフリップを抑制する用途）。編集画面では未指定 */
+  onInteract?: () => void;
 }
 
 /**
@@ -85,7 +87,7 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -176,10 +178,10 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
         // Web プレビュー：WebView を可視で描画（実行エンジン兼表示）。ソースタブでも WebView は
         // display:none で残し、再実行を避ける（pointerEvents なしで学習画面のスクロールと競合しない）。
         htmlSource && (
-          <View style={styles.preview}>
+          <View style={styles.preview} onTouchStart={onInteract}>
             <View style={styles.previewTabs}>
               {(['preview', 'source'] as const).map((tab) => (
-                <Pressable key={tab} onPress={() => setPreviewTab(tab)} style={[styles.previewTab, previewTab === tab && styles.previewTabActive]}>
+                <Pressable key={tab} onPress={() => { onInteract?.(); setPreviewTab(tab); }} style={[styles.previewTab, previewTab === tab && styles.previewTabActive]}>
                   <Text
                     style={[styles.previewTabText, { fontSize: theme.fontSize.xs }, previewTab === tab && styles.previewTabTextActive]}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}

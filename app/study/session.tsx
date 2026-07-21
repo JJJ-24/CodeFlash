@@ -206,6 +206,10 @@ export default function StudySessionScreen() {
   const currentDeckSqlInit = currentCard
     ? (decks.find((d) => d.id === currentCard.deckId)?.sqlInit ?? null)
     : null;
+  // 現在のカードが属するデッキの HTML/CSS 共通土台（web 系ブロックのプレビュー土台）
+  const currentDeckHtmlInit = currentCard
+    ? (decks.find((d) => d.id === currentCard.deckId)?.htmlInit ?? null)
+    : null;
   const sessionTitle = isFocusedReview
     ? t("study.focusedReviewTitle")
     : deckId
@@ -1277,7 +1281,7 @@ export default function StudySessionScreen() {
             exitAllEditTrigger={memoExitAllEditTrigger}
             scrollRef={backScrollRef}
             scrollBaseYRef={memoScrollBaseYRef}
-            deckSqlInit={currentDeckSqlInit}
+            deckSqlInit={currentDeckSqlInit} deckHtmlInit={currentDeckHtmlInit}
           />
         </View>
       )}
@@ -1518,7 +1522,7 @@ export default function StudySessionScreen() {
                         }
                         onCodeRunStart={handleCodeRunComplete}
                         scrollRef={frontScrollRef}
-                        deckSqlInit={currentDeckSqlInit}
+                        deckSqlInit={currentDeckSqlInit} deckHtmlInit={currentDeckHtmlInit}
                       />
                     </ScrollView>
                   }
@@ -1567,7 +1571,7 @@ export default function StudySessionScreen() {
                         onCodeRunStart={handleCodeRunComplete}
                         exitAllEditTrigger={backExitAllEditTrigger}
                         scrollRef={backScrollRef}
-                        deckSqlInit={currentDeckSqlInit}
+                        deckSqlInit={currentDeckSqlInit} deckHtmlInit={currentDeckHtmlInit}
                       />
                       {memoBlock}
                       {tagRow}
@@ -1845,7 +1849,7 @@ export default function StudySessionScreen() {
                       }
                       onCodeRunStart={handleCodeRunComplete}
                       scrollRef={frontScrollRef}
-                      deckSqlInit={currentDeckSqlInit}
+                      deckSqlInit={currentDeckSqlInit} deckHtmlInit={currentDeckHtmlInit}
                     />
                   </ScrollView>
                 }
@@ -1894,7 +1898,7 @@ export default function StudySessionScreen() {
                       onCodeRunStart={handleCodeRunComplete}
                       exitAllEditTrigger={backExitAllEditTrigger}
                       scrollRef={backScrollRef}
-                      deckSqlInit={currentDeckSqlInit}
+                      deckSqlInit={currentDeckSqlInit} deckHtmlInit={currentDeckHtmlInit}
                     />
                     {memoBlock}
                     {tagRow}

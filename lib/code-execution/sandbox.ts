@@ -113,6 +113,14 @@ function buildPythonSandboxHtml(code: string): string {
 <\/script></body></html>`;
 }
 
+/**
+ * JavaScript（TypeScript はトランスパイル済み）を WebView 内で実行する。
+ * - console.log/error/warn を _logs にキャプチャして結果パネルへ渡す
+ * - 完了通知は「同期部分」だけでなく非同期の後始末（await / Promise チェーン /
+ *   setTimeout・setInterval）が片付くまで遅らせる。これにより
+ *   `setTimeout(() => console.log(...), 500)` のような後出しログも拾える。
+ * - すべて全体 5 秒の上限内。setInterval を clear せず回し続けると上限で timeout になる。
+ */
 function buildJsSandboxHtml(code: string): string {
   const escaped = JSON.stringify(code);
   return `<!DOCTYPE html>
@@ -138,26 +146,87 @@ function buildJsSandboxHtml(code: string): string {
   console.warn  = function() { _logs.push({ type: 'warn',  text: fmt(arguments) }); };
 
   var _done = false;
-  var _timer = setTimeout(function() {
+  var _settled = false;   // 同期＋Promise（await・マイクロタスク）部分が完了したか
+  var _pending = 0;       // 追跡中タイマーのうち保留中の数
+  var _live = {};         // 追跡中タイマー id -> true
+
+  // ラップ前のオリジナルを退避（内部の待機・破棄用。これらは追跡しない）
+  var _origSetTimeout    = window.setTimeout.bind(window);
+  var _origClearTimeout  = window.clearTimeout.bind(window);
+  var _origSetInterval   = window.setInterval.bind(window);
+  var _origClearInterval = window.clearInterval.bind(window);
+
+  // 全体 5 秒の上限
+  var _timer = _origSetTimeout(function() { finish('timeout'); }, 5000);
+
+  function finish(type, msg) {
     if (_done) return;
     _done = true;
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'timeout', logs: _logs }));
-  }, 5000);
-
-  try {
-    (new Function(${escaped}))();
-    if (!_done) {
-      _done = true;
-      clearTimeout(_timer);
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'success', logs: _logs }));
-    }
-  } catch(e) {
-    if (!_done) {
-      _done = true;
-      clearTimeout(_timer);
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.message, logs: _logs }));
-    }
+    _origClearTimeout(_timer);
+    var payload = { type: type, logs: _logs };
+    if (msg) payload.message = msg;
+    window.ReactNativeWebView.postMessage(JSON.stringify(payload));
   }
+
+  // 完了判定はマクロタスク境界まで遅らせる。タイマーのコールバックが Promise を
+  // resolve すると、その await 継続は「マイクロタスク」として後から走る（console.log は
+  // まだ出ていない）。ここで即 finish すると出力を取りこぼすため、setTimeout(0) を1回
+  // 挟んで全マイクロタスクを流し切ってから _pending を再確認する。
+  var _finishScheduled = false;
+  function scheduleFinishCheck() {
+    if (_done || _finishScheduled) return;
+    _finishScheduled = true;
+    _origSetTimeout(function() {
+      _finishScheduled = false;
+      if (_settled && _pending === 0) finish('success');
+    }, 0);
+  }
+
+  function untrack(id) {
+    if (_live[id]) { delete _live[id]; _pending--; scheduleFinishCheck(); }
+  }
+
+  // setTimeout: 1 回発火したら完了（保留から外す）
+  window.setTimeout = function(fn, delay) {
+    if (typeof fn !== 'function') return _origSetTimeout(fn, delay);
+    var extra = Array.prototype.slice.call(arguments, 2);
+    var id = _origSetTimeout(function() {
+      try { fn.apply(null, extra); }
+      catch (e) { finish('error', (e && e.message) ? e.message : String(e)); return; }
+      untrack(id);
+    }, delay);
+    _pending++; _live[id] = true;
+    return id;
+  };
+
+  // setInterval: 繰り返すので発火では外さない（clear されるか 5 秒上限まで保留のまま）
+  window.setInterval = function(fn, delay) {
+    if (typeof fn !== 'function') return _origSetInterval(fn, delay);
+    var extra = Array.prototype.slice.call(arguments, 2);
+    var id = _origSetInterval(function() {
+      try { fn.apply(null, extra); }
+      catch (e) { finish('error', (e && e.message) ? e.message : String(e)); }
+    }, delay);
+    _pending++; _live[id] = true;
+    return id;
+  };
+
+  window.clearTimeout  = function(id) { untrack(id); return _origClearTimeout(id); };
+  window.clearInterval = function(id) { untrack(id); return _origClearInterval(id); };
+
+  (async function() {
+    try {
+      // new Function 相当の安全なコード注入。AsyncFunction にすることで、
+      // 戻り値の Promise やトップレベル await も待てる。
+      var _AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+      await (new _AsyncFunction(${escaped}))();
+    } catch (e) {
+      finish('error', (e && e.message) ? e.message : String(e));
+      return;
+    }
+    _settled = true;
+    scheduleFinishCheck();
+  })();
 })();
 <\/script></body></html>`;
 }

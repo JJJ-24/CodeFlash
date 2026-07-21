@@ -223,6 +223,7 @@ export default function EditCardScreen() {
           deckIconName={decks.find((d) => d.id === id)?.iconName}
           deckColorHex={decks.find((d) => d.id === id)?.colorHex}
           deckSqlInit={decks.find((d) => d.id === id)?.sqlInit}
+          deckHtmlInit={decks.find((d) => d.id === id)?.htmlInit}
           onSave={handleSave}
           onFrontEmptyChange={setFrontEmpty}
           saving={saving}

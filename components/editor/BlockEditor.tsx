@@ -100,6 +100,8 @@ interface Props {
   deckColorHex?: string | null;
   /** デッキ共通の SQL 初期化（SQL コードブロックのプレビュー実行時に本体の前へ流す） */
   deckSqlInit?: string | null;
+  /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
+  deckHtmlInit?: string | null;
   onSave: (data: BlockEditorData) => Promise<void>;
   onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
@@ -130,6 +132,7 @@ export function BlockEditor({
   deckIconName,
   deckColorHex,
   deckSqlInit,
+  deckHtmlInit,
   onSave,
   onFrontEmptyChange,
   saving: _saving,
@@ -1226,6 +1229,7 @@ export function BlockEditor({
                   block={block as CodeBlock}
                   isPreview={isPreview}
                   deckSqlInit={deckSqlInit}
+                  deckHtmlInit={deckHtmlInit}
                   onChange={(patch) =>
                     updateBlock(activeTab, block._key, patch)
                   }

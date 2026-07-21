@@ -54,9 +54,11 @@ interface Props {
   blurTrigger?: number;
   /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
   deckSqlInit?: string | null;
+  /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台。ブロック固有 htmlInit の前に積まれる） */
+  deckHtmlInit?: string | null;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit, deckHtmlInit }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -64,13 +66,15 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [proModalVisible, setProModalVisible] = useState(false);
   const isPro = useProStore(s => s.isPro);
   const { width } = useWindowDimensions();
-  const { result, htmlSource, baseUrl, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
+  const { result, htmlSource, baseUrl, previewMode, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
   const codeInputRef = useRef<TextInput>(null);
   const initSqlInputRef = useRef<TextInput>(null);
+  const initHtmlInputRef = useRef<TextInput>(null);
   const [initSqlFocused, setInitSqlFocused] = useState(false);
+  const [initHtmlFocused, setInitHtmlFocused] = useState(false);
   // 言語選択モーダルを開いたとき、選択中の言語までスクロールするための ref
   const langScrollRef = useRef<ScrollView>(null);
   const selectedLangYRef = useRef(0);
@@ -83,12 +87,23 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const skipEditBlurRef = useRef(false);
   // SQL ブロック固有の初期化SQL欄の開閉（内容があれば初期展開）
   const [showInitSql, setShowInitSql] = useState(!!block.sqlInit);
+  // js/ts ブロック固有の HTML/CSS 土台欄の開閉（内容があれば初期展開）
+  const [showInitHtml, setShowInitHtml] = useState(!!block.htmlInit);
 
   const contentRef = useRef(block.content);
   contentRef.current = block.content;
 
   // SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外は undefined
   const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
+
+  // Web 系（html / js・ts）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
+  // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。それ以外の言語は undefined。
+  const htmlInits =
+    block.language === 'html' ? [deckHtmlInit ?? '']
+    : (block.language === 'javascript' || block.language === 'typescript') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
+    : undefined;
+  // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
+  const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
 
   const enterEditMode = useCallback(() => {
     setFocused(true);
@@ -112,7 +127,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   }, [editTrigger]);
 
   useEffect(() => {
-    if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); }
+    if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); initHtmlInputRef.current?.blur(); }
   }, [blurTrigger]);
 
   // 言語選択モーダルを開いたら選択中の言語が見える位置までスクロールする
@@ -130,7 +145,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         setProModalVisible(true);
         return;
       }
-      run(block.content, block.language, sqlInits);
+      run(block.content, block.language, sqlInits, htmlInits);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runTrigger]);
@@ -175,7 +190,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         isEmpty={isEmpty}
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
-        onHeaderPress={(focused || initSqlFocused) ? () => { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); } : undefined}
+        onHeaderPress={(focused || initSqlFocused || initHtmlFocused) ? () => { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); initHtmlInputRef.current?.blur(); } : undefined}
         hideDelete={isPreview}
         style={{ backgroundColor: isRunning ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].running : focused ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].editing : isFocused ? CODE_STATE_HEADERS[theme.dark ? 'dark' : 'light'].focus : (theme.dark ? '#333333' : '#2D2D2D') }}
       >
@@ -218,7 +233,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   setFocused(false);
                 }
                 onRunButtonPress?.();
-                run(block.content, block.language, sqlInits);
+                run(block.content, block.language, sqlInits, htmlInits);
               }}
               disabled={isRunning}
             >
@@ -344,10 +359,60 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
+          {/* js/ts ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後に積む）。Pro 機能のため非Proでは非表示 */}
+          {(block.language === 'javascript' || block.language === 'typescript') && isPro && (
+            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
+              <Pressable style={styles.initSqlHeader} onPress={() => setShowInitHtml((v) => !v)} hitSlop={6}>
+                <Ionicons name={showInitHtml ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />
+                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('editor.htmlInitLabel')}
+                </Text>
+                {!!block.htmlInit && !showInitHtml && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
+              </Pressable>
+              {showInitHtml && (
+                isPreview ? (
+                  block.htmlInit ? (
+                    <GHScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <SyntaxHighlightedCode code={block.htmlInit} language="html" wrap={false} />
+                    </GHScrollView>
+                  ) : (
+                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('editor.htmlInitEmpty')}
+                    </Text>
+                  )
+                ) : (
+                  <>
+                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('editor.htmlInitHint')}
+                    </Text>
+                    <TextInput
+                      ref={initHtmlInputRef}
+                      style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
+                      value={block.htmlInit ?? ''}
+                      onChangeText={(v) => onChange({ htmlInit: v })}
+                      onFocus={() => { setInitHtmlFocused(true); onFocusInput?.(); }}
+                      onBlur={() => { setInitHtmlFocused(false); onEditBlur?.(); }}
+                      multiline
+                      placeholder={t('editor.htmlInitPlaceholder')}
+                      placeholderTextColor="#6B7280"
+                      textAlignVertical="top"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                    />
+                  </>
+                )
+              )}
+            </View>
+          )}
+
           <ExecutionOutput
             result={result}
             htmlSource={htmlSource}
             baseUrl={baseUrl}
+            previewMode={previewMode}
+            previewSource={previewSource}
             onClear={clear}
             onMessage={handleMessage}
           />

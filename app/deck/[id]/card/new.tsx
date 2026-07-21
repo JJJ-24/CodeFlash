@@ -135,7 +135,7 @@ export default function NewCardScreen() {
           onTitlePress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
           titleMaxWidth={screenWidth * 0.5}
         />
-        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} deckSqlInit={currentDeck?.sqlInit} onCancel={handleClose} onShowShortcuts={() => setShowShortcutsModal((v) => !v)} onModeChange={setEditorMode} suspendKeys={blockingModalOpen} />
+        <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} deckSqlInit={currentDeck?.sqlInit} deckHtmlInit={currentDeck?.htmlInit} onCancel={handleClose} onShowShortcuts={() => setShowShortcutsModal((v) => !v)} onModeChange={setEditorMode} suspendKeys={blockingModalOpen} />
         <FormBottomBar onSave={() => editorRef.current?.save()} saveDisabled={saving || frontEmpty} horizontalPadding={16} />
       </View>
       <ShortcutsModal

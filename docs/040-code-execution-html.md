@@ -106,11 +106,12 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
   - [x] i18n：`code.preview` / `code.source`（ja/en）
 
 ### Phase 3: エディタ UI（CodeBlockItem）
-- [ ] html ブロックの実行ボタンを有効化（Pro 時・sql/cpp と同じ実行ゲート）
-- [ ] js/ts ブロックに「HTML/CSS 土台」折りたたみ入力欄（ブロック土台 `htmlInit`・Pro 時のみ・SQL 初期化欄の踏襲）
-- [ ] デッキの `htmlInit` を `CodeBlockItem` までスレッド（`deckSqlInit` と同経路で `deckHtmlInit` を追加）
-- [ ] 実行時に `htmlInits = [deckHtmlInit ?? '', block.htmlInit ?? '']` を `run` に渡す
-- [ ] **実行前プレビュー**：js/ts で土台があれば初期状態を描画／html は実行で描画
+- [x] html ブロックの実行ボタンを有効化（Pro 時・sql/cpp と同じ実行ゲート＝Phase 1 の constants ＋本 Phase の htmlInits 配線で完了）
+- [x] js/ts ブロックに「HTML/CSS 土台」折りたたみ入力欄（ブロック土台 `htmlInit`・Pro 時のみ・SQL 初期化欄の踏襲）＋ i18n `editor.htmlInit*`（ja/en）
+- [x] デッキの `htmlInit` を `CodeBlockItem` までスレッド（`BlockEditor` に `deckHtmlInit` prop 追加、`card/new`・`card/[cardId]/edit` から `currentDeck?.htmlInit` を渡す）
+- [x] 実行時に `htmlInits = [deckHtmlInit ?? '', block.htmlInit ?? '']`（html はデッキ土台のみ）を `run` に渡す
+- [x] `ExecutionOutput` に `previewMode` / `previewSource`（土台テキスト）を渡す＝実行後にプレビュー＋ソースが出る
+- [ ] **実行前プレビュー**（土台の初期状態を実行前に描画）＝後回し。土台のみを描画する専用レンダー経路が要るため、挙動（自動表示 or 「土台を表示」ボタン）を確認してから別ステップで実装
 
 ### Phase 4: デッキ土台入力（デッキ編集／新規）
 - [ ] 「HTML/CSS 共通土台」入力欄（任意・**Pro 時のみ表示**）

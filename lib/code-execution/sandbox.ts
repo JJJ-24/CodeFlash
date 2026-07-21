@@ -123,7 +123,6 @@ function buildJsSandboxHtml(code: string): string {
   window.XMLHttpRequest = undefined;
   window.WebSocket = undefined;
   window.open = undefined;
-  window.alert = undefined;
 
   var _logs = [];
   function fmt(args) {

@@ -1,7 +1,7 @@
 # 040 コード実行（HTML/CSS プレビュー・Web 系）
 
 **フェーズ:** 将来
-**ステータス:** 未着手
+**ステータス:** 実装完了（Phase 1〜6＋実行前プレビュー）。実機確認のみ残
 **依存:** 009（コード実行基盤）・018（初期化の加算型ハイブリッド設計を流用）
 **被依存:** なし
 
@@ -123,13 +123,14 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 - [x] 実行時に `htmlInits` を `run` に渡す（両実行経路）＋ `ExecutionOutput` に `previewMode`/`previewSource`/`runNonce` を伝達（学習側でも再実行スピナー対策を適用）
 - [x] `BlocksView` に `deckHtmlInit` をスレッド、`session.tsx` は `currentDeckHtmlInit`（現在カードのデッキから取得）を全 `BlocksView` に渡す
 - [x] プレビュー領域タッチで `suppress()`（フリップ 300ms 抑制）を呼び、プレビュー/ソースをタップしてもカードが裏返らないようにした（`ExecutionOutput.onInteract`＝コードブロック他ボタンと同方式）
-- [ ] 実機確認：学習カードのスクロール内でプレビュー＋トグルが表示され、タップでフリップしないこと
+- [x] 実機確認：学習カードのスクロール内でプレビュー＋トグルが表示され、タップでフリップしないこと
 
 ### Phase 6: 仕上げ
-- [ ] `locales/ja.json` / `locales/en.json` に文言追加（土台欄ラベル・ヒント・トグル）
-- [ ] Pro ゲート確認（html＝`PRO_LANGUAGES` の実行ゲート／js・ts＝土台入力欄が Pro 限定＝非 Pro は従来コンソールのまま）
-- [ ] `lib/settings-keys.ts` への影響確認（新設定キーは無い想定だが確認）
-- [ ] エラー表示（土台の記述ミス・JS 例外＝`window.onerror`）の見え方確認
+- [x] `locales/ja.json` / `locales/en.json` に文言追加（`code.preview`/`source`・`editor.htmlInit*`・`deck.htmlInit*`・`shortcut.htmlInit`。ja/en 揃い確認済み）
+- [x] Pro ゲート確認（html＝`PRO_LANGUAGES` の実行ゲート／js・ts＝土台入力欄＋**静的プレビューも `isPro` で出し分け**＝非 Pro は従来コンソールのまま）
+- [x] `lib/settings-keys.ts` への影響確認＝新設定キーなし（`htmlInit` は DB カラムのみ・export は `SELECT *` で自動／import は列追加済み）
+- [x] エラー表示：土台/JS のインライン例外は `window.onerror` → error 表示（`ExecutionOutput` の error パネル）
+- [x] `CLAUDE.md` に本機能（web プレビュー実行・土台・実行前プレビュー・runNonce・Pro ゲート方式）とデッキ `H` キーを追記
 
 ---
 

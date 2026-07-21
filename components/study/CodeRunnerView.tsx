@@ -459,7 +459,7 @@ export function CodeRunnerView({
           previewMode={previewMode}
           previewSource={previewSource}
           runNonce={runNonce}
-          staticPreview={block.language === 'javascript' || block.language === 'typescript'}
+          staticPreview={isPro && (block.language === 'javascript' || block.language === 'typescript')}
           onInteract={suppress}
           onClear={clear}
           onMessage={handleMessage}

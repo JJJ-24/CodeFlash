@@ -45,8 +45,8 @@ lib/
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
 │   └── reviews.ts       # レビューデータ操作（FSRS永続化）+ 統計集計（due/習熟度/ランキング/ヒートマップ）
 ├── code-execution/      # コード実行サンドボックス
-│   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成
-│   ├── constants.ts     # LANGUAGES・LANG_LABELS・EXECUTABLE_LANGUAGES・PRO_LANGUAGES（sql/cpp は Pro 限定）
+│   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成。buildWebSandboxHtml（html/js＋HTML土台の可視プレビュー実行）・buildStaticPreviewHtml（実行前プレビュー＝土台のみ表示）も
+│   ├── constants.ts     # LANGUAGES・LANG_LABELS・EXECUTABLE_LANGUAGES・PRO_LANGUAGES（sql/cpp/html は Pro 限定）
 │   └── types.ts         # ExecResult・ExecStatus・LogEntry
 ├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: en）
 ├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors・AppFontSize 型定義
@@ -174,7 +174,9 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 `useCodeExecution(onResult?)` フックが状態管理を担う。`run()` が `buildSandboxHtml()` で HTML を生成し、`ExecutionOutput` 内の `WebView` で実行する。WebView からの `postMessage` を `handleMessage()` で受け取り `result` を更新する。`onResult` コールバックは `result` がセットされた直後（50ms 遅延）に呼ばれるため、実行完了後のスクロールなどに使える。Python は Pyodide（CDN）を利用するため `baseUrl` が設定される。
 
-実行できる言語は `EXECUTABLE_LANGUAGES`（`javascript`・`typescript`・`python`・`sql`・`cpp`）で、うち `PRO_LANGUAGES`（`sql`・`cpp`）は Pro 限定。**C++ だけは WebView サンドボックスを使わない例外**で、`runCppViaWandbox()` が Wandbox の公開 API（`https://wandbox.org/api/compile.json`・gcc-13.2.0 / `-std=c++17`）に POST して結果を受け取る。ネットワーク実行のため固有の事情がある：全体30秒の `AbortController` タイムアウト（超過で `status: 'timeout'`）、公開インスタンスの混雑（`WANDBOX_TRANSIENT_PATTERN` に一致する一時障害）は 800ms→1600ms のバックオフで自動リトライし、それでも復旧しなければコードの誤りと区別して `code.serverBusy` を案内する。コンパイルエラー（`compiler_error` に `error:` を含む）はユーザーのコードの問題なのでリトライ対象にしない。
+実行できる言語は `EXECUTABLE_LANGUAGES`（`javascript`・`typescript`・`python`・`sql`・`cpp`・`html`）で、うち `PRO_LANGUAGES`（`sql`・`cpp`・`html`）は Pro 限定。**C++ だけは WebView サンドボックスを使わない例外**で、`runCppViaWandbox()` が Wandbox の公開 API（`https://wandbox.org/api/compile.json`・gcc-13.2.0 / `-std=c++17`）に POST して結果を受け取る。ネットワーク実行のため固有の事情がある：全体30秒の `AbortController` タイムアウト（超過で `status: 'timeout'`）、公開インスタンスの混雑（`WANDBOX_TRANSIENT_PATTERN` に一致する一時障害）は 800ms→1600ms のバックオフで自動リトライし、それでも復旧しなければコードの誤りと区別して `code.serverBusy` を案内する。コンパイルエラー（`compiler_error` に `error:` を含む）はユーザーのコードの問題なのでリトライ対象にしない。
+
+**HTML/CSS プレビュー実行（040・Pro 限定）**：`html` ブロックは本文（HTML/CSS/JS）をそのまま描画、`javascript`/`typescript` ブロックは **HTML/CSS 土台**（`Deck.htmlInit`＝デッキ共通 ＋ `CodeBlock.htmlInit`＝ブロック固有）を JS で操作する。土台は SQL 初期化と同じ加算型（デッキ→ブロック）。実行系は `buildWebSandboxHtml()`＝`<head>` にネットワーク遮断・console キャプチャ・保留タイマー追跡を置き、インライン `<script>` の未捕捉例外は `window.onerror`、完了判定は `DOMContentLoaded` 後（後出しログはマクロタスク境界まで待つ・全体5秒上限）。`ExecutionOutput` は web 系のとき **可視 WebView**（`pointerEvents="none"`・`onInteract` で学習画面のタップ時に `suppress()` してフリップ抑止）で描画し `[プレビュー | ソース]` トグル（ソース＝土台テキスト）を出す。未実行の js/ts＋土台は `buildStaticPreviewHtml()`（土台のみ・表示専用・postMessage しない）の**実行前プレビュー**を自動表示（土台編集は400msデバウンス）、実行結果表示中は右端の⟲リセットで初期状態へ戻す。同一コードの再実行で完了メッセージが来ず固着するのを防ぐため、WebView は `runNonce` を key にして毎回再マウントする。Pro ゲートは言語で方式が異なる：html は `PRO_LANGUAGES`（実行ゲート）、js/ts は土台入力欄・静的プレビューを `isPro` で出し分け（非 Pro は従来コンソールのみ）。
 
 ### 実装上の注意点
 
@@ -262,8 +264,8 @@ iPadOS は**ハードキーボードの「修飾なし矢印」と Tab を OS �
 - **タグカード一覧キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択、T = タグを外す、E = アーカイブ切替、S = 選択モード終了
 - **カード編集・新規作成キー（編集モード）**: J/K = フォーカス移動（ヌルサイクル）、Return / E = フォーカスブロックを編集開始（TextInput にカーソル移動）、Delete = フォーカスブロックを削除（フォーカスなし時は編集画面のみカード削除）、M = モード切替（編集→並べ替え→プレビュー→編集）、`,`/`.`・H/L = タブ切替（表面/裏面/メモ）、1/2/3 = タブ直接選択（表/裏/メモ）、U/D・PgUp/PgDn = 画面スクロール、Home/End・Shift+U/D = 最上部/最下部（Home/End 無しキーボード向け）、A = ブロック追加メニュー開閉、R = フォーカスコードブロック実行（executable のみ）、T = タグ選択エリアへスクロール、C = カード複製（**カード編集時のみ**＝現在内容を保存してコピーを作成し A' の編集画面へ遷移。新規作成画面では無効。全モード共通で発火）、E（フォーカスなし時）/ ⇧E = アーカイブ切替（**カード編集時のみ**＝末尾のアーカイブトグルを反転）。E は Delete と同じ「フォーカスあり＝ブロック単位／なし＝カード単位」の流儀で、フォーカス中は「フォーカスブロック編集」・フォーカスなしでアーカイブ。⇧E はフォーカスの有無に関わらず常時アーカイブ（フォーカス中でも編集に邪魔されずアーカイブしたいとき用）。いずれもトグルが見える編集/並び替えモードのみ有効・プレビューと新規作成では無効。S = 保存/作成、X = キャンセル（未保存確認あり）。**モード切替は `M`（コード/ShortcutsModal とも一致。旧ドキュメントの `Q` は誤り）**
 - **カード編集・新規作成キー（並び替えモード）**: J/K = フォーカス移動、U = フォーカスブロックを上に移動、D = フォーカスブロックを下に移動（※並べ替えモードのみ U/D は移動。編集/プレビューでは U/D はスクロール）、PgUp/PgDn・Home/End = 画面スクロール、M = モード切替（並べ替え→プレビュー→編集→並べ替え）
-- **デッキ新規作成キー**: N = デッキ名にカーソル、M = 説明欄にカーソル（Memo/Message。N と隣接）、C = カラー順送り（青→プリセット→テーマ色→白黒の循環。Shift+C で逆順）、I = アイコン選択を開く、Q = SQL共通初期化を開く（Pro時）、U/D・PgUp/PgDn = 画面スクロール（上/下・段階）、Home/End = 最上部/最下部、S = 保存、X = 閉じる、Esc = 編集中→カーソル解除／非編集→閉じる。デッキ名 Return で説明欄へ移動。Tab/矢印は不使用（iPad フォーカスエンジン対策＝文字キー＋住み分けで完結）
-- **デッキ編集キー**: 新規作成と同じ（N/M/C/I/Q/U/D/PgUp/PgDn/Home/End/S/X/Esc）＋ **E = アーカイブ切替**・**Delete = デッキ削除**（確認あり）。アーカイブは全画面で `E`、説明欄は `M`（スクロールの `U/D` と衝突回避のため `D`→`M`）。削除は全画面共通の Delete キー
+- **デッキ新規作成キー**: N = デッキ名にカーソル、M = 説明欄にカーソル（Memo/Message。N と隣接）、C = カラー順送り（青→プリセット→テーマ色→白黒の循環。Shift+C で逆順）、I = アイコン選択を開く、Q = SQL共通初期化を開く（Pro時）、H = HTML/CSS共通土台を開く（Pro時）、U/D・PgUp/PgDn = 画面スクロール（上/下・段階）、Home/End = 最上部/最下部、S = 保存、X = 閉じる、Esc = 編集中→カーソル解除／非編集→閉じる。デッキ名 Return で説明欄へ移動。Tab/矢印は不使用（iPad フォーカスエンジン対策＝文字キー＋住み分けで完結）
+- **デッキ編集キー**: 新規作成と同じ（N/M/C/I/Q/H/U/D/PgUp/PgDn/Home/End/S/X/Esc）＋ **E = アーカイブ切替**・**Delete = デッキ削除**（確認あり）。アーカイブは全画面で `E`、説明欄は `M`（スクロールの `U/D` と衝突回避のため `D`→`M`）。削除は全画面共通の Delete キー
 - **タグ新規作成キー**: N = タグ名にカーソル、C = カラー順送り（青→プリセット→テーマ色→白黒の循環。Shift+C で逆順）、U/D・PgUp/PgDn = スクロール、Home/End = 端へ、S = 保存、X = 閉じる、Esc = 編集解除/閉じる
 - **タグ編集キー**: 新規作成と同じ（N/C/U/D/PgUp/PgDn/Home/End/S/X/Esc）＋ **Delete = タグ削除**（確認あり・全画面共通の Delete キー）。タグには説明/アイコン/SQL/アーカイブが無い
 - **検索画面キー**（`app/search.tsx`・カーソル無し時）: D = デッキ選択、T = タグ選択、`,`/`.`（iPhoneは←/→）= フィールド切替（すべて/表面/裏面/メモ）、J/K（iPhoneは↑/↓）= 結果フォーカス移動、A = カード統計トグル（Pro・表示中の A/Esc で閉じる）、P/Return = フォーカスカード編集、Delete = 検索文字クリア＆入力欄へカーソル、B = 戻る（ホーム。`overlayOpen()`/編集中は無効。入力欄フォーカス中は TextInput が消費するため自然と「カーソル無し時のみ」発火）、Esc = 情報→閉じる/統計→閉じる/ピッカー表示中は委譲/編集中→カーソル解除/それ以外→戻る。検索欄は Return でもカーソル解除（onSubmitEditing で blur）

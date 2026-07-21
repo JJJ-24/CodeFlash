@@ -414,7 +414,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             previewMode={previewMode}
             previewSource={previewSource}
             runNonce={runNonce}
-            staticPreview={block.language === 'javascript' || block.language === 'typescript'}
+            staticPreview={isPro && (block.language === 'javascript' || block.language === 'typescript')}
             onClear={clear}
             onMessage={handleMessage}
           />

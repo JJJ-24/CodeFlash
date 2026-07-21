@@ -47,7 +47,12 @@
     "sqlInitHint": "Schema and seed data (CREATE TABLE / INSERT, etc.) run before every SQL card in this deck. Rebuilt fresh on each query run.",
     "sqlInitPlaceholder": "CREATE TABLE users (id INTEGER, name TEXT);\nINSERT INTO users VALUES (1, 'Alice'), (2, 'Bob');",
     "sqlInitSet": "Configured",
-    "sqlInitNone": "Not set (optional)"
+    "sqlInitNone": "Not set (optional)",
+    "htmlInitLabel": "Shared HTML/CSS stage",
+    "htmlInitHint": "Shared HTML/CSS injected at the top of <body> before every web card (HTML / JS) in this deck runs. Loaded fresh on each run.",
+    "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
+    "htmlInitSet": "Configured",
+    "htmlInitNone": "Not set (optional)"
   },
   "study": {
     "title": "Study",
@@ -737,6 +742,7 @@
     "cycleColor": "Cycle color",
     "pickIcon": "Pick icon",
     "sqlInit": "SQL init",
+    "htmlInit": "Open shared HTML/CSS stage",
     "toggleArchive": "Toggle archive",
     "deleteDeck": "Delete deck",
     "deleteTag": "Delete tag",

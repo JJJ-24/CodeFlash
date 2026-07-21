@@ -46,6 +46,7 @@ const DECK_EDIT_SHORTCUT_SECTIONS = [
     { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
     { key: 'I', descKey: 'shortcut.pickIcon' },
     { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+    { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
     { key: 'E', descKey: 'shortcut.toggleArchive' },
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'Delete', descKey: 'shortcut.deleteDeck' },
@@ -78,6 +79,8 @@ export default function EditDeckScreen() {
   const [colorHex, setColorHex] = useState<string | null>(deck?.colorHex ?? null);
   const [sqlInit, setSqlInit] = useState(deck?.sqlInit ?? '');
   const [showSqlInitModal, setShowSqlInitModal] = useState(false);
+  const [htmlInit, setHtmlInit] = useState(deck?.htmlInit ?? '');
+  const [showHtmlInitModal, setShowHtmlInitModal] = useState(false);
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
@@ -104,7 +107,7 @@ export default function EditDeckScreen() {
   // 034: ハードキーボードショートカット（フック規約上、早期 return より前で呼ぶ。
   // ハンドラが後方定義の値を参照するのはクロージャなので可＝キー押下時には初期化済み）。
   // サブモーダル（アイコン/SQL/削除確認/破棄確認）は RN Modal。開いている間は親のキーを無効化する。
-  const subModalOpen = () => showIconPicker || showSqlInitModal || showDeleteModal || showDiscardModal;
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showDeleteModal || showDiscardModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
@@ -115,6 +118,7 @@ export default function EditDeckScreen() {
     { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
     { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
     { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
+    { input: 'h', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowHtmlInitModal(true); } } },
     { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setArchived((v) => !v); } }, // アーカイブ切替（全画面で E に統一）
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
@@ -144,11 +148,12 @@ export default function EditDeckScreen() {
     setSaving(true);
     try {
       const normalizedSqlInit = sqlInit.trim() || null;
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit });
+      const normalizedHtmlInit = htmlInit.trim() || null;
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
-      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, archived });
+      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -174,6 +179,7 @@ export default function EditDeckScreen() {
     || iconName !== (deck.iconName ?? null)
     || colorHex !== (deck.colorHex ?? null)
     || (sqlInit.trim() || null) !== (deck.sqlInit ?? null)
+    || (htmlInit.trim() || null) !== (deck.htmlInit ?? null)
     || archived !== deck.archived;
 
   function handleClose() {
@@ -345,6 +351,26 @@ export default function EditDeckScreen() {
             </View>
           )}
 
+          {isPro && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.htmlInitLabel')}
+              </Text>
+              <Pressable
+                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
+                onPress={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: htmlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name={htmlInit.trim() ? 'globe' : 'globe-outline'} size={20} color={htmlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                </View>
+                <Text style={{ color: htmlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {htmlInit.trim() ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+
           <View style={styles.field}>
             <View style={[styles.archiveRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
               <View style={{ flex: 1, gap: 4 }}>
@@ -378,6 +404,15 @@ export default function EditDeckScreen() {
         value={sqlInit}
         onChangeText={setSqlInit}
         onClose={() => setShowSqlInitModal(false)}
+      />
+      <SqlInitModal
+        visible={showHtmlInitModal}
+        value={htmlInit}
+        onChangeText={setHtmlInit}
+        onClose={() => setShowHtmlInitModal(false)}
+        title={t('deck.htmlInitLabel')}
+        hint={t('deck.htmlInitHint')}
+        placeholder={t('deck.htmlInitPlaceholder')}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

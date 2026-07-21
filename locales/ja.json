@@ -47,7 +47,12 @@
     "sqlInitHint": "このデッキの SQL カードを実行する前に毎回流すスキーマ・初期データ（CREATE TABLE / INSERT など）。各カードのクエリ実行のたびに作り直されます。",
     "sqlInitPlaceholder": "CREATE TABLE users (id INTEGER, name TEXT);\nINSERT INTO users VALUES (1, 'Alice'), (2, 'Bob');",
     "sqlInitSet": "設定済み",
-    "sqlInitNone": "未設定（任意）"
+    "sqlInitNone": "未設定（任意）",
+    "htmlInitLabel": "HTML/CSS 共通土台",
+    "htmlInitHint": "このデッキの web 系カード（HTML / JS）を実行する前に body の先頭へ流す共通の HTML/CSS。各カードの実行のたびに読み込まれます。",
+    "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
+    "htmlInitSet": "設定済み",
+    "htmlInitNone": "未設定（任意）"
   },
   "study": {
     "title": "学習",
@@ -736,6 +741,7 @@
     "cycleColor": "カラー切替",
     "pickIcon": "アイコン選択",
     "sqlInit": "SQL共通初期化",
+    "htmlInit": "HTML/CSS 共通土台を開く",
     "toggleArchive": "アーカイブ切替",
     "deleteDeck": "デッキ削除",
     "deleteTag": "タグ削除",

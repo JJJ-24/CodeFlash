@@ -25,14 +25,18 @@ interface Props {
   value: string;
   onChangeText: (value: string) => void;
   onClose: () => void;
+  /** タイトル/ヒント/プレースホルダ。省略時は SQL 用。HTML/CSS 共通土台など他用途で再利用するとき指定する */
+  title?: string;
+  hint?: string;
+  placeholder?: string;
 }
 
 /**
- * デッキ共通の SQL 初期化を編集するボトムシートモーダル。
+ * デッキ共通の初期化（SQL / HTML 土台など）を編集するボトムシートモーダル。
  * 名前・説明欄と同じく入力は即時に親 state へ反映し（ライブ）、確定はデッキ編集画面の保存で行う。
- * モーダルは項目を広く編集するための拡大入力面という位置づけ。
+ * モーダルは項目を広く編集するための拡大入力面という位置づけ。文言は props で差し替え可能。
  */
-export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
+export function SqlInitModal({ visible, value, onChangeText, onClose, title, hint, placeholder }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -96,7 +100,7 @@ export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
                 style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
-                {t('deck.sqlInitLabel')}
+                {title ?? t('deck.sqlInitLabel')}
               </Text>
               <Pressable onPress={onClose} hitSlop={8} style={styles.doneBtn}>
                 <Ionicons name="checkmark-sharp" size={26} color={theme.colors.primary} />
@@ -106,11 +110,11 @@ export function SqlInitModal({ visible, value, onChangeText, onClose }: Props) {
               style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             >
-              {t('deck.sqlInitHint')}
+              {hint ?? t('deck.sqlInitHint')}
             </Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.md }]}
-              placeholder={t('deck.sqlInitPlaceholder')}
+              placeholder={placeholder ?? t('deck.sqlInitPlaceholder')}
               placeholderTextColor={theme.colors.textTertiary}
               value={value}
               onChangeText={onChangeText}

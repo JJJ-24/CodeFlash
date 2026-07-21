@@ -45,6 +45,7 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
     { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
     { key: 'I', descKey: 'shortcut.pickIcon' },
     { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+    { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'X', descKey: 'shortcut.close' },
   ] },
@@ -73,6 +74,8 @@ export default function NewDeckScreen() {
   const [colorHex, setColorHex] = useState<string | null>(PRIMARY_COLOR);
   const [sqlInit, setSqlInit] = useState('');
   const [showSqlInitModal, setShowSqlInitModal] = useState(false);
+  const [htmlInit, setHtmlInit] = useState('');
+  const [showHtmlInitModal, setShowHtmlInitModal] = useState(false);
   const language = 'ja';
   const [saving, setSaving] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -97,6 +100,7 @@ export default function NewDeckScreen() {
         iconName,
         colorHex,
         sqlInit: sqlInit.trim() || null,
+        htmlInit: htmlInit.trim() || null,
       });
       addDeck(deck);
       // 一覧へ戻ったとき、作成したデッキへフォーカスを移す
@@ -108,7 +112,7 @@ export default function NewDeckScreen() {
   }
 
   const canSave = !!name.trim() && !saving;
-  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || sqlInit.trim() !== '';
+  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || sqlInit.trim() !== '' || htmlInit.trim() !== '';
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
@@ -130,7 +134,7 @@ export default function NewDeckScreen() {
   // サブモーダル（アイコン/SQL/破棄確認）は RN Modal。開いている間はそのモーダル側が
   // キーを処理するため、親画面のショートカットは無効化する（キーコマンドは AppDelegate に
   // 付くため開いていても発火しうる＝明示ガードが必要）。
-  const subModalOpen = () => showIconPicker || showSqlInitModal || showDiscardModal || showShortcutsModal;
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showDiscardModal || showShortcutsModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
@@ -141,6 +145,7 @@ export default function NewDeckScreen() {
     { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
     { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
     { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
+    { input: 'h', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowHtmlInitModal(true); } } },
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
     ...scrollKeySpecs({ scrollRef, scrollYRef, guard: subModalOpen }),
     // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
@@ -331,6 +336,26 @@ export default function NewDeckScreen() {
             </View>
           )}
 
+          {isPro && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.htmlInitLabel')}
+              </Text>
+              <Pressable
+                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
+                onPress={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: htmlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name={htmlInit.trim() ? 'globe' : 'globe-outline'} size={20} color={htmlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                </View>
+                <Text style={{ color: htmlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {htmlInit.trim() ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+
         </ScrollView>
         <FormBottomBar onSave={handleCreate} saveDisabled={!canSave} />
       </View>
@@ -346,6 +371,15 @@ export default function NewDeckScreen() {
         value={sqlInit}
         onChangeText={setSqlInit}
         onClose={() => setShowSqlInitModal(false)}
+      />
+      <SqlInitModal
+        visible={showHtmlInitModal}
+        value={htmlInit}
+        onChangeText={setHtmlInit}
+        onClose={() => setShowHtmlInitModal(false)}
+        title={t('deck.htmlInitLabel')}
+        hint={t('deck.htmlInitHint')}
+        placeholder={t('deck.htmlInitPlaceholder')}
       />
       <DiscardConfirmModal
         visible={showDiscardModal}

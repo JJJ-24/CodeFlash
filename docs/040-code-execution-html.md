@@ -114,9 +114,9 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 - [ ] **実行前プレビュー**（土台の初期状態を実行前に描画）＝後回し。土台のみを描画する専用レンダー経路が要るため、挙動（自動表示 or 「土台を表示」ボタン）を確認してから別ステップで実装
 
 ### Phase 4: デッキ土台入力（デッキ編集／新規）
-- [ ] 「HTML/CSS 共通土台」入力欄（任意・**Pro 時のみ表示**）
-- [ ] `SqlInitModal` を踏襲した `HtmlInitModal`（全面テキストエディタ）を新設、またはインライン欄
-- [ ] ショートカットキー割当（SQL 初期化の `Q` と衝突しない別キー・要検討）
+- [x] 「HTML/CSS 共通土台」入力欄（任意・**Pro 時のみ表示**）＝デッキ編集・新規の両画面
+- [x] `SqlInitModal` を汎用化（`title`/`hint`/`placeholder` を任意 props 化）して再利用＝HTML 土台編集も同モーダル。i18n `deck.htmlInit*`（ja/en）
+- [x] ショートカットキー割当＝`H`（SQL の `Q` と別キー・両画面・ShortcutsModal 一覧にも追加。`shortcut.htmlInit`）
 
 ### Phase 5: 学習画面（CodeRunnerView）
 - [ ] `deckHtmlInit` prop を追加し、デッキ ID からデッキの `htmlInit` を取得してスレッド

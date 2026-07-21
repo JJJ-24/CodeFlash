@@ -29,7 +29,7 @@ export async function setDeckArchived(db: SQLiteDatabase, id: string, archived: 
 export async function createDeck(
   db: SQLiteDatabase,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit'>>
 ): Promise<Deck> {
   const now = new Date().toISOString();
   const id = generateId();
@@ -38,9 +38,10 @@ export async function createDeck(
   const iconName = data.iconName ?? null;
   const colorHex = data.colorHex ?? null;
   const sqlInit = data.sqlInit ?? null;
+  const htmlInit = data.htmlInit ?? null;
   await db.runAsync(
-    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)',
-    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, now, now]
+    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, htmlInit, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)',
+    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, htmlInit, now, now]
   );
   return {
     id,
@@ -51,6 +52,7 @@ export async function createDeck(
     iconName,
     colorHex,
     sqlInit,
+    htmlInit,
     archived: false,
     name: data.name,
     description: data.description,
@@ -62,12 +64,12 @@ export async function updateDeck(
   db: SQLiteDatabase,
   id: string,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit'>>
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.runAsync(
-    'UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, updatedAt = ? WHERE id = ?',
-    [data.name, data.description, data.language, data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, now, id]
+    'UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, htmlInit = ?, updatedAt = ? WHERE id = ?',
+    [data.name, data.description, data.language, data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, data.htmlInit ?? null, now, id]
   );
 }
 

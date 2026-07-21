@@ -180,6 +180,14 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN sqlInit TEXT;`);
   }
 
+  // === 040: HTML/CSS 共通土台（decks に htmlInit カラム）===
+  // web 系ブロック（html / js・ts の土台）のプレビュー用にデッキ全カードで共有する HTML/CSS。
+  // 既存デッキは NULL のまま（土台なし）で動作する。
+  const deckColsHtmlInit = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!deckColsHtmlInit.some((c) => c.name === 'htmlInit')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN htmlInit TEXT;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

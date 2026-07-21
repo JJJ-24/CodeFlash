@@ -83,11 +83,12 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 ## Todo
 
 ### Phase 1: データ基盤
-- [ ] `types/index.ts`：`Deck.htmlInit: string | null`、`CodeBlock.htmlInit?: string` を追加
-- [ ] `lib/database/schema.ts`：`decks` に `htmlInit TEXT`（nullable）を `ALTER TABLE` で追加（`sqlInit` と同型）。ブロック土台は `card_contents` の JSON に含まれる＝マイグレーション不要
-- [ ] `lib/database/decks.ts`：`createDeck`/`updateDeck`/`toDeck` に `htmlInit` を通す
-- [ ] `store/decks.ts`：`htmlInit` を保持（型追従）
-- [ ] `lib/code-execution/constants.ts`：`html` を `EXECUTABLE_LANGUAGES` と `PRO_LANGUAGES` に追加（`LANGUAGES`/`LANG_LABELS` は既存の html を流用）
+- [x] `types/index.ts`：`Deck.htmlInit: string | null`、`CodeBlock.htmlInit?: string` を追加
+- [x] `lib/database/schema.ts`：`decks` に `htmlInit TEXT`（nullable）を `ALTER TABLE` で追加（`sqlInit` と同型）。ブロック土台は `card_contents` の JSON に含まれる＝マイグレーション不要
+- [x] `lib/database/decks.ts`：`createDeck`/`updateDeck` に `htmlInit` を通す（`toDeck` は `SELECT *` のため自動）
+- [x] `store/decks.ts`：`htmlInit` を保持（型追従のみ・コード変更不要）
+- [x] `lib/code-execution/constants.ts`：`html` を `EXECUTABLE_LANGUAGES` と `PRO_LANGUAGES` に追加（`LANGUAGES`/`LANG_LABELS` は既存の html を流用）
+- [x] `lib/import.ts`：`decks` の明示列 INSERT に `htmlInit` を追加（`export.ts` は `SELECT *` で自動・TSV は対象外）＝DB マイグレーションチェックリスト対応
 
 ### Phase 2: 実行系（サンドボックス）
 - [ ] `lib/code-execution/sandbox.ts`：`buildWebSandboxHtml(language, body, deckHtmlInit, blockHtmlInit)` を新設

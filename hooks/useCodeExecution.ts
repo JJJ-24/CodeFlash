@@ -62,6 +62,10 @@ export function useCodeExecution(onResult?: () => void) {
   // Web プレビュー（html / js・ts＋土台）実行中か。true の間は結果受信後も WebView を可視のまま残す。
   const [previewMode, setPreviewMode] = useState(false);
   const previewModeRef = useRef(false); // handleMessage の stale closure 回避用
+  // 実行のたびに増える連番。可視プレビューは実行後も WebView を残すため、同じコードの再実行では
+  // source（html）が不変で再読込されない → 完了メッセージが来ず running のまま固着する。これを
+  // WebView の key に使って毎回強制再マウント（＝再実行）させる。
+  const [runNonce, setRunNonce] = useState(0);
   const cppAbortRef = useRef<AbortController | null>(null);
 
   // 常に最新の onResult を参照するため ref で保持
@@ -170,6 +174,7 @@ export function useCodeExecution(onResult?: () => void) {
   function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[]) {
     setStatus('running');
     setResult(null);
+    setRunNonce((n) => n + 1); // 可視プレビューの WebView を再実行ごとに強制再マウントするための key
 
     if (language === 'cpp') {
       void runCppViaWandbox(content);
@@ -246,6 +251,7 @@ export function useCodeExecution(onResult?: () => void) {
     htmlSource,
     baseUrl,
     previewMode,
+    runNonce,
     isRunning: status === 'running',
     run,
     clear,

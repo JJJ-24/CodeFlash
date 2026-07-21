@@ -75,6 +75,8 @@ interface Props {
   previewMode?: boolean;
   /** 「ソース」タブに表示する HTML/CSS 土台（案a）。未指定なら空 */
   previewSource?: string | null;
+  /** 実行ごとに増える連番。WebView の key に使い、同一 HTML の再実行でも強制再マウント（再実行）させる */
+  runNonce?: number;
 }
 
 /**
@@ -83,7 +85,7 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -189,6 +191,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
             </View>
             <View style={[styles.previewBody, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
               <WebView
+                key={runNonce}
                 style={styles.previewWebView}
                 source={{ html: htmlSource, baseUrl: baseUrl ?? 'about:blank' }}
                 onMessage={onMessage}
@@ -213,6 +216,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
         htmlSource && (
           <View style={styles.hiddenWebViewContainer} pointerEvents="none">
             <WebView
+              key={runNonce}
               style={styles.hiddenWebView}
               source={{ html: htmlSource, baseUrl: baseUrl ?? 'about:blank' }}
               onMessage={onMessage}

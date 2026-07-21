@@ -66,7 +66,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [proModalVisible, setProModalVisible] = useState(false);
   const isPro = useProStore(s => s.isPro);
   const { width } = useWindowDimensions();
-  const { result, htmlSource, baseUrl, previewMode, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
+  const { result, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
@@ -413,6 +413,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             baseUrl={baseUrl}
             previewMode={previewMode}
             previewSource={previewSource}
+            runNonce={runNonce}
             onClear={clear}
             onMessage={handleMessage}
           />

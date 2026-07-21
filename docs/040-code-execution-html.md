@@ -111,7 +111,7 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 - [x] デッキの `htmlInit` を `CodeBlockItem` までスレッド（`BlockEditor` に `deckHtmlInit` prop 追加、`card/new`・`card/[cardId]/edit` から `currentDeck?.htmlInit` を渡す）
 - [x] 実行時に `htmlInits = [deckHtmlInit ?? '', block.htmlInit ?? '']`（html はデッキ土台のみ）を `run` に渡す
 - [x] `ExecutionOutput` に `previewMode` / `previewSource`（土台テキスト）を渡す＝実行後にプレビュー＋ソースが出る
-- [ ] **実行前プレビュー**（土台の初期状態を実行前に描画）＝後回し。土台のみを描画する専用レンダー経路が要るため、挙動（自動表示 or 「土台を表示」ボタン）を確認してから別ステップで実装
+- [x] **実行前プレビュー（自動表示）**：js/ts で土台があれば未実行でも土台の初期状態を自動描画。`buildStaticPreviewHtml()`（表示専用・postMessage しない）を新設し、`ExecutionOutput` が未実行時は静的プレビュー・実行後は実行結果を表示（`activeHtml` で出し分け・key で再マウント）。土台編集の毎キーストローク再読込は 400ms デバウンス。html は対象外（本文＝内容のため実行で描画）
 
 ### Phase 4: デッキ土台入力（デッキ編集／新規）
 - [x] 「HTML/CSS 共通土台」入力欄（任意・**Pro 時のみ表示**）＝デッキ編集・新規の両画面

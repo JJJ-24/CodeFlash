@@ -355,6 +355,31 @@ ${script}
 </html>`;
 }
 
+/**
+ * 実行前プレビュー用：HTML/CSS 土台だけを描画する表示専用ドキュメント（本文 JS は含めない）。
+ * console キャプチャや完了メッセージは持たない（postMessage しない）。安全のためネットワークのみ遮断する。
+ * 土台に含まれる `<script>`（ステージ初期化）はそのまま実行される。
+ */
+export function buildStaticPreviewHtml(htmlInits?: string[]): string {
+  const stages = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  window.fetch = undefined;
+  window.XMLHttpRequest = undefined;
+  window.WebSocket = undefined;
+  window.open = undefined;
+<\/script>
+</head>
+<body>
+${stages}
+</body>
+</html>`;
+}
+
 const SQL_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/';
 
 /**

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 // 編集画面ではドラッグ可能リスト（RNGH 配下）の中に置かれるため、RNGH の ScrollView を使わないと
@@ -10,6 +10,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
+import { buildStaticPreviewHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, SqlTableResult } from '@/lib/code-execution/types';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -79,6 +80,8 @@ interface Props {
   runNonce?: number;
   /** プレビュー領域をタッチしたときに呼ぶ（学習画面でカードのフリップを抑制する用途）。編集画面では未指定 */
   onInteract?: () => void;
+  /** true のとき、未実行でも土台（previewSource）を「実行前プレビュー」として自動描画する（js/ts 用） */
+  staticPreview?: boolean;
 }
 
 /**
@@ -87,11 +90,28 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
   const [previewTab, setPreviewTab] = useState<'preview' | 'source'>('preview');
+
+  // 実行前プレビュー：未実行のとき土台（previewSource）だけを描画する表示専用 HTML。
+  const staticHtml = useMemo(
+    () => (staticPreview && previewSource && previewSource.trim() !== '' ? buildStaticPreviewHtml([previewSource]) : null),
+    [staticPreview, previewSource],
+  );
+  // 土台の編集（エディタ）で毎キーストローク再読込するのを避けるため 400ms デバウンスする。
+  // 学習画面では土台は不変なのでデバウンスは実質無効（初回は即時表示）。
+  const [debouncedStatic, setDebouncedStatic] = useState(staticHtml);
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedStatic(staticHtml), 400);
+    return () => clearTimeout(id);
+  }, [staticHtml]);
+
+  // 実行中/実行後（web 系）は実行 WebView を可視表示。それ以外で土台があれば静的プレビューを出す。
+  const execActive = previewMode && !!htmlSource;
+  const activeHtml = execActive ? htmlSource : debouncedStatic;
 
   const handleCopy = useCallback(async () => {
     if (!result) return;
@@ -174,12 +194,13 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
         </View>
       )}
 
-      {previewMode ? (
-        // Web プレビュー：WebView を可視で描画（実行エンジン兼表示）。ソースタブでも WebView は
-        // display:none で残し、再実行を避ける（pointerEvents なしで学習画面のスクロールと競合しない）。
-        htmlSource && (
-          <View style={styles.preview} onTouchStart={onInteract}>
-            <View style={styles.previewTabs}>
+      {activeHtml ? (
+        // 可視プレビュー：実行中/実行後は実行結果（execActive）、未実行時は土台の静的プレビュー。
+        // ソースタブでも WebView は display:none で残し再実行を避ける。pointerEvents なしで
+        // 学習画面のスクロール/フリップと競合しない。
+        <View style={styles.preview} onTouchStart={onInteract}>
+          <View style={styles.previewTabs}>
+            <View style={styles.previewTabsLeft}>
               {(['preview', 'source'] as const).map((tab) => (
                 <Pressable key={tab} onPress={() => { onInteract?.(); setPreviewTab(tab); }} style={[styles.previewTab, previewTab === tab && styles.previewTabActive]}>
                   <Text
@@ -191,31 +212,37 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
                 </Pressable>
               ))}
             </View>
-            <View style={[styles.previewBody, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
-              <WebView
-                key={runNonce}
-                style={styles.previewWebView}
-                source={{ html: htmlSource, baseUrl: baseUrl ?? 'about:blank' }}
-                onMessage={onMessage}
-                javaScriptEnabled
-                originWhitelist={['*']}
-                scrollEnabled={false}
-                allowsInlineMediaPlayback={false}
-                mixedContentMode="always"
-              />
-            </View>
-            {previewTab === 'source' && (
-              <ScrollView style={styles.previewSource}>
-                <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
-                  <SyntaxHighlightedCode code={previewSource ?? ''} language="html" wrap={false} />
-                </ScrollView>
-              </ScrollView>
+            {/* 実行結果を表示中のときだけ「リセット」＝土台の初期状態（静的プレビュー）に戻す */}
+            {execActive && (
+              <Pressable onPress={() => { onInteract?.(); onClear(); }} hitSlop={8} style={styles.previewReset}>
+                <Ionicons name="refresh" size={Math.round(theme.fontSize.md)} color="#8B949E" />
+              </Pressable>
             )}
           </View>
-        )
+          <View style={[styles.previewBody, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
+            <WebView
+              key={execActive ? `exec-${runNonce}` : 'static'}
+              style={styles.previewWebView}
+              source={{ html: activeHtml, baseUrl: baseUrl ?? 'about:blank' }}
+              onMessage={execActive ? onMessage : undefined}
+              javaScriptEnabled
+              originWhitelist={['*']}
+              scrollEnabled={false}
+              allowsInlineMediaPlayback={false}
+              mixedContentMode="always"
+            />
+          </View>
+          {previewTab === 'source' && (
+            <ScrollView style={styles.previewSource}>
+              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+                <SyntaxHighlightedCode code={previewSource ?? ''} language="html" wrap={false} />
+              </ScrollView>
+            </ScrollView>
+          )}
+        </View>
       ) : (
-        // console 専用言語：非表示 WebView（実行エンジン）を画面外に置いて確実に読み込ませる
-        htmlSource && (
+        // console 専用言語（実行中）：非表示 WebView（実行エンジン）を画面外に置いて確実に読み込ませる
+        htmlSource && !previewMode && (
           <View style={styles.hiddenWebViewContainer} pointerEvents="none">
             <WebView
               key={runNonce}
@@ -300,8 +327,17 @@ const styles = StyleSheet.create({
   },
   previewTabs: {
     flexDirection: 'row',
-    gap: 4,
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 6,
+  },
+  previewTabsLeft: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  previewReset: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   previewTab: {
     paddingVertical: 4,

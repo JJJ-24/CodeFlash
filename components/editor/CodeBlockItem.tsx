@@ -182,6 +182,21 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     setTimeout(() => setCodeCopied(false), 1000);
   }
 
+  const [sqlInitCopied, setSqlInitCopied] = useState(false);
+  const [htmlInitCopied, setHtmlInitCopied] = useState(false);
+  async function handleSqlInitCopy() {
+    if (!block.sqlInit?.trim()) return;
+    await Clipboard.setStringAsync(block.sqlInit);
+    setSqlInitCopied(true);
+    setTimeout(() => setSqlInitCopied(false), 1000);
+  }
+  async function handleHtmlInitCopy() {
+    if (!block.htmlInit?.trim()) return;
+    await Clipboard.setStringAsync(block.htmlInit);
+    setHtmlInitCopied(true);
+    setTimeout(() => setHtmlInitCopied(false), 1000);
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.codeBackground, borderColor: isRunning ? '#43A047' : flashTrigger > 0 ? theme.colors.primary : focused ? '#FB8C00' : isFocused ? theme.colors.primary : (theme.dark ? '#3A3A3A' : '#333'), borderWidth: (isRunning || focused || isFocused) ? 2 : 1 }]}>
       <BlockItemHeader
@@ -320,6 +335,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   {t('editor.sqlInitLabel')}
                 </Text>
                 {!!block.sqlInit && !showInitSql && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
+                {!!block.sqlInit?.trim() && (
+                  <>
+                    <View style={{ flex: 1 }} />
+                    <Pressable onPress={handleSqlInitCopy} hitSlop={8} style={styles.initCopyBtn}>
+                      <Ionicons name={sqlInitCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
+                    </Pressable>
+                  </>
+                )}
               </Pressable>
               {showInitSql && (
                 isPreview ? (
@@ -368,6 +391,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   {t('editor.htmlInitLabel')}
                 </Text>
                 {!!block.htmlInit && !showInitHtml && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
+                {!!block.htmlInit?.trim() && (
+                  <>
+                    <View style={{ flex: 1 }} />
+                    <Pressable onPress={handleHtmlInitCopy} hitSlop={8} style={styles.initCopyBtn}>
+                      <Ionicons name={htmlInitCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
+                    </Pressable>
+                  </>
+                )}
               </Pressable>
               {showInitHtml && (
                 isPreview ? (
@@ -533,6 +564,10 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     height: 6,
     borderRadius: 3,
     marginLeft: 2,
+  },
+  initCopyBtn: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   initSqlInput: {
     fontFamily: 'monospace',

@@ -94,6 +94,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
+  const [sourceCopied, setSourceCopied] = useState(false);
   const [previewTab, setPreviewTab] = useState<'preview' | 'source'>('preview');
 
   // 実行前プレビュー：未実行のとき土台（previewSource）だけを描画する表示専用 HTML。
@@ -119,6 +120,14 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
     setCopied(true);
     setTimeout(() => setCopied(false), 1000);
   }, [result]);
+
+  // ソースタブの土台テキストは読み取り専用（選択できない）ためコピーボタンを用意する。
+  const handleCopySource = useCallback(async () => {
+    if (!previewSource) return;
+    await Clipboard.setStringAsync(previewSource);
+    setSourceCopied(true);
+    setTimeout(() => setSourceCopied(false), 1000);
+  }, [previewSource]);
 
   const clearGesture = useMemo(
     () => Gesture.Tap().maxDistance(10).hitSlop(8).onEnd(() => runOnJS(onClear)()),
@@ -212,12 +221,20 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
                 </Pressable>
               ))}
             </View>
-            {/* 実行結果を表示中のときだけ「リセット」＝土台の初期状態（静的プレビュー）に戻す */}
-            {execActive && (
-              <Pressable onPress={() => { onInteract?.(); onClear(); }} hitSlop={8} style={styles.previewReset}>
-                <Ionicons name="refresh" size={Math.round(theme.fontSize.md)} color="#8B949E" />
-              </Pressable>
-            )}
+            <View style={styles.previewTabsRight}>
+              {/* ソースタブ表示中は土台テキストをコピーできる（読み取り専用で選択できないため） */}
+              {previewTab === 'source' && !!previewSource && (
+                <Pressable onPress={() => { onInteract?.(); handleCopySource(); }} hitSlop={8} style={styles.previewReset}>
+                  <Ionicons name={sourceCopied ? 'checkmark-sharp' : 'copy-outline'} size={Math.round(theme.fontSize.md)} color="#8B949E" />
+                </Pressable>
+              )}
+              {/* 実行結果を表示中のときだけ「リセット」＝土台の初期状態（静的プレビュー）に戻す */}
+              {execActive && (
+                <Pressable onPress={() => { onInteract?.(); onClear(); }} hitSlop={8} style={styles.previewReset}>
+                  <Ionicons name="refresh" size={Math.round(theme.fontSize.md)} color="#8B949E" />
+                </Pressable>
+              )}
+            </View>
           </View>
           <View style={[styles.previewBody, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
             <WebView
@@ -334,6 +351,11 @@ const styles = StyleSheet.create({
   previewTabsLeft: {
     flexDirection: 'row',
     gap: 4,
+  },
+  previewTabsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   previewReset: {
     paddingHorizontal: 6,

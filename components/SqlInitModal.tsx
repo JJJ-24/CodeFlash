@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
+import { useCallback, useEffect, useState } from 'react';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 import {
@@ -41,6 +42,13 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { height: winHeight } = useWindowDimensions();
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(async () => {
+    if (!value.trim()) return;
+    await Clipboard.setStringAsync(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1000);
+  }, [value]);
   // iPad ではモーダルが画面下端まで覆い切らず、背後のデッキ画面の保存ボタンが下にのぞくことがある
   // （キーボードバー絡みの表示問題・別途調査中）。完全に覆う対処が難しいため、シートを保存ボタン
   // 領域の分だけ持ち上げて、ボタンが上部欠けせず丸ごと見えるようにする（デッキ画面の bottomBar 高さに合わせる）。
@@ -102,9 +110,16 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
               >
                 {title ?? t('deck.sqlInitLabel')}
               </Text>
-              <Pressable onPress={onClose} hitSlop={8} style={styles.doneBtn}>
-                <Ionicons name="checkmark-sharp" size={26} color={theme.colors.primary} />
-              </Pressable>
+              <View style={styles.headerRight}>
+                {!!value.trim() && (
+                  <Pressable onPress={handleCopy} hitSlop={8} style={styles.copyBtn}>
+                    <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={22} color={theme.colors.textSecondary} />
+                  </Pressable>
+                )}
+                <Pressable onPress={onClose} hitSlop={8} style={styles.doneBtn}>
+                  <Ionicons name="checkmark-sharp" size={26} color={theme.colors.primary} />
+                </Pressable>
+              </View>
             </View>
             <Text
               style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
@@ -154,6 +169,14 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: { fontWeight: '700' },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  copyBtn: {
+    paddingHorizontal: 4,
+  },
   doneBtn: {
     paddingHorizontal: 4,
   },

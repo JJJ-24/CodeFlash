@@ -448,10 +448,16 @@ export function BlockEditor({
   function deleteFocusedBlockOrCard(blocks: EditBlock[], idx: number | null, tab: Tab) {
     if (idx !== null && blocks[idx]) {
       const block = blocks[idx];
+      // 削除確認の空判定：コードブロックは本文だけでなくブロック固有の初期化SQL / HTML 土台も見る
+      // （土台のみ入力済みでも確認アラートを出す。保存ゲート isFrontEmpty は本文のみで別基準）。
       const isEmpty =
         block.type === "image"
           ? !(block as ImageBlock).uri
-          : (block as TextBlock | CodeBlock).content.trim() === "";
+          : block.type === "code"
+            ? (block as CodeBlock).content.trim() === "" &&
+              !(block as CodeBlock).sqlInit?.trim() &&
+              !(block as CodeBlock).htmlInit?.trim()
+            : (block as TextBlock).content.trim() === "";
       if (isEmpty) {
         deleteBlock(tab, block._key);
         setFocusedBlockIndex(null);

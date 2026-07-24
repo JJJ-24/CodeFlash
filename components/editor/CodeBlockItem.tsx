@@ -68,6 +68,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const { width } = useWindowDimensions();
   const { result, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
+  // 削除確認（✕）の空判定は本文だけでなくブロック固有の初期化SQL / HTML 土台も見る。
+  // 土台のみ入力済みのブロックを ✕ で消すとき確認アラートを出すため。
+  // （本文のみで判定するカード保存ゲート＝isFrontEmpty は従来どおりで別基準）
+  const isEmptyForDelete = isEmpty && !block.sqlInit?.trim() && !block.htmlInit?.trim();
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
   const codeInputRef = useRef<TextInput>(null);
@@ -202,7 +206,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       <BlockItemHeader
         onDelete={onDelete}
         collapsed={collapsed}
-        isEmpty={isEmpty}
+        isEmpty={isEmptyForDelete}
         onMoveUp={onMoveUp}
         onMoveDown={onMoveDown}
         onHeaderPress={(focused || initSqlFocused || initHtmlFocused) ? () => { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); initHtmlInputRef.current?.blur(); } : undefined}

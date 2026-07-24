@@ -122,6 +122,24 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     [enterEditMode],
   );
 
+  // 土台欄（初期化SQL / HTML 土台）も本文と同じく、フォーカス外はハイライト表示・タップで編集復帰にする。
+  const enterInitSqlEdit = useCallback(() => {
+    setInitSqlFocused(true);
+    setTimeout(() => initSqlInputRef.current?.focus(), 50);
+  }, []);
+  const initSqlTapGesture = useMemo(
+    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterInitSqlEdit)(); }),
+    [enterInitSqlEdit],
+  );
+  const enterInitHtmlEdit = useCallback(() => {
+    setInitHtmlFocused(true);
+    setTimeout(() => initHtmlInputRef.current?.focus(), 50);
+  }, []);
+  const initHtmlTapGesture = useMemo(
+    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterInitHtmlEdit)(); }),
+    [enterInitHtmlEdit],
+  );
+
   useEffect(() => {
     if (autoFocus) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); onAutoFocused?.(); }
   }, []);
@@ -359,7 +377,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       {t('editor.sqlInitEmpty')}
                     </Text>
                   )
-                ) : (
+                ) : initSqlFocused ? (
                   <>
                     <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {t('editor.sqlInitHint')}
@@ -372,6 +390,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       onFocus={() => { setInitSqlFocused(true); onFocusInput?.(); }}
                       onBlur={() => { setInitSqlFocused(false); onEditBlur?.(); }}
                       multiline
+                      scrollEnabled={false}
                       placeholder={t('editor.sqlInitPlaceholder')}
                       placeholderTextColor="#6B7280"
                       textAlignVertical="top"
@@ -381,6 +400,19 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                     />
                   </>
+                ) : (
+                  // フォーカス外：本文と同じく折り返し・横スクロールなしのハイライト表示（タップで編集）。空欄はタップ可能なプレースホルダ。
+                  <GestureDetector gesture={initSqlTapGesture}>
+                    <View style={[styles.initSqlDisplay, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}>
+                      {block.sqlInit?.trim() ? (
+                        <SyntaxHighlightedCode code={block.sqlInit} language="sql" />
+                      ) : (
+                        <Text style={{ color: '#6B7280', fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                          {t('editor.sqlInitPlaceholder')}
+                        </Text>
+                      )}
+                    </View>
+                  </GestureDetector>
                 )
               )}
             </View>
@@ -415,7 +447,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       {t('editor.htmlInitEmpty')}
                     </Text>
                   )
-                ) : (
+                ) : initHtmlFocused ? (
                   <>
                     <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {t('editor.htmlInitHint')}
@@ -428,6 +460,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       onFocus={() => { setInitHtmlFocused(true); onFocusInput?.(); }}
                       onBlur={() => { setInitHtmlFocused(false); onEditBlur?.(); }}
                       multiline
+                      scrollEnabled={false}
                       placeholder={t('editor.htmlInitPlaceholder')}
                       placeholderTextColor="#6B7280"
                       textAlignVertical="top"
@@ -437,6 +470,19 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                     />
                   </>
+                ) : (
+                  // フォーカス外：本文と同じく折り返し・横スクロールなしのハイライト表示（タップで編集）。空欄はタップ可能なプレースホルダ。
+                  <GestureDetector gesture={initHtmlTapGesture}>
+                    <View style={[styles.initSqlDisplay, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}>
+                      {block.htmlInit?.trim() ? (
+                        <SyntaxHighlightedCode code={block.htmlInit} language="html" />
+                      ) : (
+                        <Text style={{ color: '#6B7280', fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                          {t('editor.htmlInitPlaceholder')}
+                        </Text>
+                      )}
+                    </View>
+                  </GestureDetector>
                 )
               )}
             </View>
@@ -581,6 +627,14 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     paddingVertical: 8,
     minHeight: 70,
     lineHeight: 20,
+  },
+  // 土台のフォーカス外ハイライト表示（入力欄と同じ枠。タップで編集に入る。内容は上詰め）
+  initSqlDisplay: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minHeight: 70,
   },
   overlay: {
     flex: 1,

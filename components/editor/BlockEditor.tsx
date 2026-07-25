@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
   type Dispatch,
@@ -31,6 +32,7 @@ import { DeckIcon } from "@/components/DeckIcon";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
+import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
@@ -233,6 +235,9 @@ export function BlockEditor({
     {},
   );
   const [pendingDeleteBlock, setPendingDeleteBlock] = useState<{ tab: Tab; key: string } | null>(null);
+  // 041: コードブロックの全画面インタラクティブプレビュー表示中は編集キー（main＋Esc）を解除する（suspendKeys と同じ扱い）。
+  const [interactivePreviewOpen, setInteractivePreviewOpen] = useState(false);
+  const interactivePreviewCtx = useMemo(() => ({ setOpen: setInteractivePreviewOpen }), []);
 
   const blocksByTab: Record<Tab, EditBlock[]> = {
     front: frontBlocks,
@@ -1022,8 +1027,8 @@ export function BlockEditor({
       { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
       { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
     ]) as { input: string; handler: () => void }[]),
-  // ブロック削除確認中・親モーダル（カード削除/破棄確認）表示中はナビ系を解除（背景キー抑止）。
-  ], !suspendKeys && pendingDeleteBlock === null);
+  // ブロック削除確認中・親モーダル（カード削除/破棄確認）・全画面プレビュー表示中はナビ系を解除（背景キー抑止）。
+  ], !suspendKeys && pendingDeleteBlock === null && !interactivePreviewOpen);
 
   // ESC は編集中も含めて常時有効（編集中ブロックを抜ける／削除確認を閉じる／キャンセル）。
   // ただし親モーダル表示中は親側が Esc を処理するため解除する。
@@ -1048,9 +1053,10 @@ export function BlockEditor({
         onCancel?.();
       },
     },
-  ], !suspendKeys);
+  ], !suspendKeys && !interactivePreviewOpen);
 
   return (
+    <InteractivePreviewContext.Provider value={interactivePreviewCtx}>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1307,6 +1313,7 @@ export function BlockEditor({
       />
       <ArchivePill archived={archivePill} />
     </KeyboardAvoidingView>
+    </InteractivePreviewContext.Provider>
   );
 }
 

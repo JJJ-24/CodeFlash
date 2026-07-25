@@ -1,7 +1,7 @@
 # 041 コード実行（全画面インタラクティブプレビュー）
 
 **フェーズ:** 将来
-**ステータス:** 実装中（第1増分＝タッチ完動：両画面で全画面プレビュー＋ライブ console。第2増分＝キーボード背後抑止・仕上げが残り）
+**ステータス:** 実装完了（第1増分＝タッチ完動／第2増分＝キーボード背後抑止・仕上げ）。実機確認のみ残
 **依存:** 040（Web プレビュー実行・HTML/CSS 土台・`buildWebSandboxHtml`）・009（コード実行基盤）
 **被依存:** なし
 
@@ -95,21 +95,21 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 
 ### Phase 4: 学習画面（CodeRunnerView）
 - [x] `CodeRunnerView`：`ExecutionOutput` に `onExpand` を渡し、`InteractivePreviewModal` を描画。開くとき `suppress()`（フリップ抑制）＋ `isPro` かつ Web プレビュー対象のときのみボタン表示（第1増分）
-- [ ] `lib/InteractivePreviewContext.ts` を新設（`{ isOpen, setOpen }`・`FlipSuppressContext` と同型）＝第2増分
-- [ ] `session.tsx` に Provider を設置。main `useKeyCommands` を `active=!interactivePreviewOpen`（他 overlay ゲートと合成）で解除＝第2増分
-- [ ] 実機確認：カード内スクロール中に全画面ボタンが押せ、モーダルでボタン/入力/チェック/スクロールが動くこと（タッチ＝確認済）。背後のカードが誤フリップ/誤採点しないこと（BT キーボード）＝第2増分
+- [x] `lib/InteractivePreviewContext.ts` を新設（`{ setOpen }`・`FlipSuppressContext` と同型・単一 bool で足りる）＝第2増分
+- [x] `session.tsx` に Provider（両 `FlipSuppressContext.Provider` に併設）。main `useKeyCommands` の active に `&& !interactivePreviewOpen`、常時 Esc ハンドラ先頭に `if (interactivePreviewOpen) return;`（safeBack 暴発防止・閉じるはモーダル自身の Esc）。`CodeRunnerView` は開閉で `setOpen` を呼ぶ＝第2増分
+- [ ] 実機確認：カード内スクロール中に全画面ボタンが押せ、モーダルでボタン/入力/チェック/スクロールが動くこと（タッチ＝確認済）。背後のカードが誤フリップ/誤採点しないこと・Esc でモーダルだけ閉じてセッションは残ること（BT キーボード）
 
 ### Phase 5: 編集画面（CodeBlockItem / BlockEditor）
-- [x] `CodeBlockItem`：`ExecutionOutput` に `onExpand` を渡し、`InteractivePreviewModal` を描画（`isPro` の時のみ）（第1増分）
-- [ ] `BlockEditor` に Provider を設置し、`isOpen` を `suspendKeys` に合流（親モーダル/ブロック削除確認と同様に main＋ESC を解除）＝第2増分
-- [ ] 実機確認：編集の並べ替えリスト内でも全画面が開け、操作でき、閉じると編集キーが復帰すること＝第2増分
+- [x] `CodeBlockItem`：`ExecutionOutput` に `onExpand` を渡し、`InteractivePreviewModal` を描画（`isPro` の時のみ）。開閉で `setOpen` を呼ぶ（第2増分）
+- [x] `BlockEditor` に Provider を設置し、main（`!suspendKeys && pendingDeleteBlock===null`）と Esc（`!suspendKeys`）の両 active に `&& !interactivePreviewOpen` を合流（`suspendKeys` は main＋Esc を切るため safeBack 問題は構造的に不発）＝第2増分
+- [ ] 実機確認：編集の並べ替えリスト内でも全画面が開け、操作でき、閉じると編集キーが復帰すること
 
 ### Phase 6: 仕上げ
-- [ ] Pro ゲート確認（全画面ボタンは `isPro` かつ Web プレビュー対象言語のときのみ）
-- [ ] `locales/ja.json` / `locales/en.json` の文言（ja/en 揃い）
-- [ ] `lib/settings-keys.ts` への影響なし確認（新設定キーなし想定）
-- [ ] `CLAUDE.md` に本機能（全画面インタラクティブ・`buildInteractiveWebSandboxHtml`・`InteractivePreviewContext`・キー抑止）と、学習/編集のショートカット（全画面を開く/閉じるキー）を追記
-- [ ] `docs/040` の「将来拡張＝インタラクティブ」を本チケットで実装した旨、必要なら追記
+- [x] Pro ゲート確認（全画面ボタンは `isPro` かつ Web プレビュー対象言語＝html／js・ts＋土台 のときのみ）
+- [x] `locales/ja.json` / `locales/en.json` の文言（`code.interactHint`・ja/en 揃い）
+- [x] `lib/settings-keys.ts` への影響なし確認（新設定キーなし）
+- [x] `CLAUDE.md` に本機能（全画面インタラクティブ・`buildInteractiveWebSandboxHtml`・`InteractivePreviewContext`・キー抑止）を追記。開くのは ⛶ ボタン（タッチ）、閉じるは Esc／✕（開くキーは割り当てない）
+- [x] `docs/040` の「将来拡張＝インタラクティブ」は本チケット 041 で実装（下記メモ参照）
 
 ---
 

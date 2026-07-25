@@ -163,5 +163,5 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 
 - **css の実行**：css ブロックをデッキの HTML 土台に当てて描画（`css` を `EXECUTABLE`＋`PRO` に昇格）。
 - **ソース＝案b**：実行後の結果 HTML（JS 適用後の DOM）を表示するモード。
-- **インタラクティブ**：可視 WebView を操作可能にし、ボタンの `onclick` 等を動かす（ScrollView とのジェスチャー競合対策が必要）。
+- **インタラクティブ**：可視 WebView を操作可能にし、ボタンの `onclick` 等を動かす（ScrollView とのジェスチャー競合対策が必要）。→ **041 で実装済み**（全画面モーダル＝別 VC に隔離してジェスチャー競合を回避・ライブ console 付き）。
 - **プレビュー高さ自動調整**：`document.body.scrollHeight` を postMessage で受けて高さを合わせる。

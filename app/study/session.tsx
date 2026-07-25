@@ -52,6 +52,7 @@ import {
   donutArcPath,
 } from "@/lib/donut";
 import { FlipSuppressContext } from "@/lib/FlipSuppressContext";
+import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import { getReviewByCardId } from "@/lib/database/reviews";
 import { addTagToCard, createTag, getAllTags, getTagsByCardId, removeTagFromCard } from "@/lib/database/tags";
 import { setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
@@ -244,6 +245,9 @@ export default function StudySessionScreen() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showTimerMenu, setShowTimerMenu] = useState(false);
   const [showTimerEndModal, setShowTimerEndModal] = useState(false);
+  // 041: コードブロックの全画面インタラクティブプレビュー表示中は背後キー（フリップ/採点/カード送り/戻る）を抑止する。
+  const [interactivePreviewOpen, setInteractivePreviewOpen] = useState(false);
+  const interactivePreviewCtx = useMemo(() => ({ setOpen: setInteractivePreviewOpen }), []);
   // 時間切れ処理（handleTimerFinish＝useCallback）から最新の開閉状態を読むための ref。
   const showTimerMenuRef = useRef(false);
   showTimerMenuRef.current = showTimerMenu;
@@ -806,13 +810,16 @@ export default function StudySessionScreen() {
   // リンク一覧/タグシート/終了確認/ショートカット一覧/タイマー系モーダルの表示中は背景のショートカットを解除する
   // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/TagSheet/専用 Return は別フックが担当）。
   // タイマー終了/メニューは確定操作を含むため Return は割り当てない（タップ/Esc のみ）。
-  ], !showLinksModal && !showTagSheet && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showTimerMenu);
+  ], !showLinksModal && !showTagSheet && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showTimerMenu && !interactivePreviewOpen);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
+        // 041: 全画面インタラクティブプレビュー表示中はモーダル自身の Esc が閉じる担当。
+        // ここで処理を進めると最後に safeBack() が走り学習セッションごと抜けてしまうため最優先で return。
+        if (interactivePreviewOpen) return;
         if (completed) { safeBack(); return; }
         // コードブロック編集中は編集解除を最優先（実入力欄を blur すると onEditBlur が走る）。
         if (codeEditingRef.current) { Keyboard.dismiss(); return; }
@@ -1476,7 +1483,7 @@ export default function StudySessionScreen() {
           {/* コンテンツエリア */}
           <GestureDetector gesture={swipe.panGesture}>
             <Animated.View style={[{ flex: 1 }, swipe.cardAnimStyle]}>
-              <FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
+              <InteractivePreviewContext.Provider value={interactivePreviewCtx}><FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
                 <FlipCard
                   ref={flipCardRef}
                   isFlipped={isFlipped}
@@ -1578,7 +1585,7 @@ export default function StudySessionScreen() {
                     </ScrollView>
                   }
                 />
-              </FlipSuppressContext.Provider>
+              </FlipSuppressContext.Provider></InteractivePreviewContext.Provider>
             </Animated.View>
           </GestureDetector>
 
@@ -1812,7 +1819,7 @@ export default function StudySessionScreen() {
         {/* カード */}
         <GestureDetector gesture={swipe.panGesture}>
           <Animated.View style={[styles.cardArea, swipe.cardAnimStyle]}>
-            <FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
+            <InteractivePreviewContext.Provider value={interactivePreviewCtx}><FlipSuppressContext.Provider value={{ suppress, suppressedRef }}>
               <FlipCard
                 ref={flipCardRef}
                 isFlipped={isFlipped}
@@ -1905,7 +1912,7 @@ export default function StudySessionScreen() {
                   </ScrollView>
                 }
               />
-            </FlipSuppressContext.Provider>
+            </FlipSuppressContext.Provider></InteractivePreviewContext.Provider>
           </Animated.View>
         </GestureDetector>
 

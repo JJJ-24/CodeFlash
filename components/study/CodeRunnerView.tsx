@@ -26,6 +26,7 @@ import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS, PRO_LANGUAGES } from "@/lib/code-execution/constants";
 import { useProStore } from "@/store/pro";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
+import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from "@/lib/theme";
 import type { CodeBlock } from "@/types";
 
@@ -77,6 +78,7 @@ export function CodeRunnerView({
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
+  const { setOpen: setPreviewOpen } = useInteractivePreview();
   const {
     result,
     htmlSource,
@@ -471,12 +473,12 @@ export function CodeRunnerView({
           onInteract={suppress}
           onClear={clear}
           onMessage={handleMessage}
-          onExpand={canExpand ? () => setExpandVisible(true) : undefined}
+          onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
         />
       )}
       <InteractivePreviewModal
         visible={expandVisible}
-        onClose={() => setExpandVisible(false)}
+        onClose={() => { setExpandVisible(false); setPreviewOpen(false); }}
         language={block.language}
         body={editable && editedContent !== undefined ? editedContent : block.content}
         stages={stages}

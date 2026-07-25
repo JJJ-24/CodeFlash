@@ -27,6 +27,7 @@ import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { InfoModal } from '@/components/InfoModal';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
+import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from '@/lib/theme';
@@ -66,6 +67,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [codeCopied, setCodeCopied] = useState(false);
   const [proModalVisible, setProModalVisible] = useState(false);
   const [expandVisible, setExpandVisible] = useState(false);
+  const { setOpen: setPreviewOpen } = useInteractivePreview();
   const isPro = useProStore(s => s.isPro);
   const { width } = useWindowDimensions();
   const { result, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
@@ -506,14 +508,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             staticPreview={isPro && (block.language === 'javascript' || block.language === 'typescript')}
             onClear={clear}
             onMessage={handleMessage}
-            onExpand={canExpand ? () => setExpandVisible(true) : undefined}
+            onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
           />
         </>
       )}
 
       <InteractivePreviewModal
         visible={expandVisible}
-        onClose={() => setExpandVisible(false)}
+        onClose={() => { setExpandVisible(false); setPreviewOpen(false); }}
         language={block.language}
         body={block.content}
         stages={stages}

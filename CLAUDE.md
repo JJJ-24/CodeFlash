@@ -45,7 +45,7 @@ lib/
 │   ├── tags.ts          # Tag CRUD + card_tags 操作
 │   └── reviews.ts       # レビューデータ操作（FSRS永続化）+ 統計集計（due/習熟度/ランキング/ヒートマップ）
 ├── code-execution/      # コード実行サンドボックス
-│   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成。buildWebSandboxHtml（html/js＋HTML土台の可視プレビュー実行）・buildStaticPreviewHtml（実行前プレビュー＝土台のみ表示）も
+│   ├── sandbox.ts       # buildSandboxHtml()：言語別 HTML サンドボックス生成。buildWebSandboxHtml（html/js＋HTML土台の可視プレビュー実行）・buildStaticPreviewHtml（実行前プレビュー＝土台のみ表示）・buildInteractiveWebSandboxHtml（041・全画面インタラクティブ＝生きたまま実行しconsoleを逐次ストリーム）も
 │   ├── constants.ts     # LANGUAGES・LANG_LABELS・EXECUTABLE_LANGUAGES・PRO_LANGUAGES（sql/cpp/html は Pro 限定）
 │   └── types.ts         # ExecResult・ExecStatus・LogEntry
 ├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: en）
@@ -53,6 +53,7 @@ lib/
 ├── image.ts             # resolveImageUri()：画像パス解決
 ├── syntax-highlight.ts  # シンタックスハイライト（Token/TokenType）。学習画面の SyntaxHighlightedCode が使用
 ├── FlipSuppressContext.ts  # コードブロックのボタンタップ時にカードフリップを一時抑制する Context
+├── InteractivePreviewContext.ts  # 041・全画面インタラクティブプレビューの開閉を子（CodeRunnerView/CodeBlockItem）から親（session/BlockEditor）のキー抑止へ伝える Context（setOpen のみ）
 ├── export.ts            # 全テーブル（review_logs 含む）を JSON エクスポート
 ├── import.ts            # merge（INSERT OR IGNORE）/ replace（全削除後挿入）の2モードでインポート
 ├── tsv.ts               # TSV形式でのデッキエクスポート/インポート（Anki互換）
@@ -177,6 +178,8 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 実行できる言語は `EXECUTABLE_LANGUAGES`（`javascript`・`typescript`・`python`・`sql`・`cpp`・`html`）で、うち `PRO_LANGUAGES`（`sql`・`cpp`・`html`）は Pro 限定。**C++ だけは WebView サンドボックスを使わない例外**で、`runCppViaWandbox()` が Wandbox の公開 API（`https://wandbox.org/api/compile.json`・gcc-13.2.0 / `-std=c++17`）に POST して結果を受け取る。ネットワーク実行のため固有の事情がある：全体30秒の `AbortController` タイムアウト（超過で `status: 'timeout'`）、公開インスタンスの混雑（`WANDBOX_TRANSIENT_PATTERN` に一致する一時障害）は 800ms→1600ms のバックオフで自動リトライし、それでも復旧しなければコードの誤りと区別して `code.serverBusy` を案内する。コンパイルエラー（`compiler_error` に `error:` を含む）はユーザーのコードの問題なのでリトライ対象にしない。
 
 **HTML/CSS プレビュー実行（040・Pro 限定）**：`html` ブロックは本文（HTML/CSS/JS）をそのまま描画、`javascript`/`typescript` ブロックは **HTML/CSS 土台**（`Deck.htmlInit`＝デッキ共通 ＋ `CodeBlock.htmlInit`＝ブロック固有）を JS で操作する。土台は SQL 初期化と同じ加算型（デッキ→ブロック）。実行系は `buildWebSandboxHtml()`＝`<head>` にネットワーク遮断・console キャプチャ・保留タイマー追跡を置き、インライン `<script>` の未捕捉例外は `window.onerror`、完了判定は `DOMContentLoaded` 後（後出しログはマクロタスク境界まで待つ・全体5秒上限）。`ExecutionOutput` は web 系のとき **可視 WebView**（`pointerEvents="none"`・`onInteract` で学習画面のタップ時に `suppress()` してフリップ抑止）で描画し `[プレビュー | ソース]` トグル（ソース＝土台テキスト）を出す。未実行の js/ts＋土台は `buildStaticPreviewHtml()`（土台のみ・表示専用・postMessage しない）の**実行前プレビュー**を自動表示（土台編集は400msデバウンス）、実行結果表示中は右端の⟲リセットで初期状態へ戻す。同一コードの再実行で完了メッセージが来ず固着するのを防ぐため、WebView は `runNonce` を key にして毎回再マウントする。Pro ゲートは言語で方式が異なる：html は `PRO_LANGUAGES`（実行ゲート）、js/ts は土台入力欄・静的プレビューを `isPro` で出し分け（非 Pro は従来コンソールのみ）。
+
+**全画面インタラクティブプレビュー（041・Pro 限定）**：040 のインライン可視 WebView は `pointerEvents="none"` の表示専用で `addEventListener` が発火しない。041 は `ExecutionOutput` のプレビューバーに ⛶ ボタン（`onExpand`）を出し、`InteractivePreviewModal`（`components/code/`）＝ **`presentation="fullScreen"` の RN Modal（別ネイティブ VC）** で操作可能な WebView を開く。別 VC ゆえカードの ScrollView/FlipCard・編集の `NestableDraggableFlatList` と**ジェスチャー競合しない**（これがインライン操作化を採らずモーダルにした理由）。実行系は `buildInteractiveWebSandboxHtml()`＝完了判定・5秒タイムアウトを持たず生きたまま動き、console・未捕捉例外を**1行ずつ逐次 postMessage**（イベントで出たログをライブ表示）。モーダルは下部にライブ console＋✕/⟲（リセット再実行＝`nonce` 再マウント）。TS はモーダル内で sucrase 変換。学習/編集の両画面（`CodeRunnerView`/`CodeBlockItem`）で描画し、`isPro` かつ Web プレビュー対象（html／js・ts＋土台）のときのみボタン表示。**背後キー抑止**：モーダルは別 VC でもアプリの `UIKeyCommand` は生きるため、`InteractivePreviewContext`（`setOpen`）で開閉を親へ伝え、学習は `session.tsx` の main キー active に `&& !interactivePreviewOpen`＋常時 Esc ハンドラ先頭で `if (interactivePreviewOpen) return;`（**Esc→safeBack でセッションごと抜ける暴発を防止**・閉じるはモーダル自身の Esc）、編集は `BlockEditor` の main/Esc 両 active に `&& !interactivePreviewOpen`（`suspendKeys` と同型で main＋Esc を一括解除）。開くのは ⛶ タッチのみ（開くキーは未割当）、閉じるは Esc／✕。
 
 ### 実装上の注意点
 

@@ -407,6 +407,24 @@ export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js', body: string
     var r = e && e.reason;
     post('error', [r && r.message ? String(r.message) : String(r)]);
   });
+
+  // 全画面プレビューで、要素をタップ後に Space（や矢印/PageUp 等）を押すとページの既定スクロールが
+  // 走り、短い土台では画面が上下に揺れる。これらスクロール系キーの「既定動作だけ」を止める。
+  // preventDefault は既定スクロールを消すだけでユーザーの addEventListener は普通に発火する。
+  // 除外はテキスト入力・contenteditable のみ（Space/矢印が文字入力・カーソル移動に必要なため）。
+  // チェックボックス/ボタン等にフォーカスがあっても Space のスクロールを確実に止める（キーボードでの
+  // トグル/クリックは効かなくなるがタップで代替でき、「動かない」を優先）。
+  var SCROLL_KEYS = { ' ': 1, 'Spacebar': 1, 'PageUp': 1, 'PageDown': 1, 'Home': 1, 'End': 1, 'ArrowUp': 1, 'ArrowDown': 1, 'ArrowLeft': 1, 'ArrowRight': 1 };
+  var TEXT_INPUT_TYPES = { text: 1, search: 1, url: 1, tel: 1, password: 1, email: 1, number: 1, '': 1 };
+  window.addEventListener('keydown', function(e) {
+    var t = e.target || document.activeElement;
+    var tag = (t && t.tagName) ? String(t.tagName).toUpperCase() : '';
+    var type = (t && t.type) ? String(t.type).toLowerCase() : '';
+    var isTextField = tag === 'TEXTAREA' || (tag === 'INPUT' && TEXT_INPUT_TYPES[type]) || (t && t.isContentEditable);
+    var key = e.key;
+    if ((key === undefined || key === null) && e.keyCode === 32) key = ' ';
+    if (!isTextField && SCROLL_KEYS[key]) { e.preventDefault(); }
+  }, false);
 })();
 <\/script>
 </head>

@@ -22,6 +22,7 @@ import { runOnJS } from 'react-native-reanimated';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
+import { InteractivePreviewModal } from '@/components/code/InteractivePreviewModal';
 import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { InfoModal } from '@/components/InfoModal';
@@ -64,6 +65,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [focused, setFocused] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [proModalVisible, setProModalVisible] = useState(false);
+  const [expandVisible, setExpandVisible] = useState(false);
   const isPro = useProStore(s => s.isPro);
   const { width } = useWindowDimensions();
   const { result, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
@@ -108,6 +110,12 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     : undefined;
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
+  // 041: 全画面インタラクティブプレビューの土台配列と、開ける条件（html は常に／js・ts は土台あり時。Pro 限定）。
+  const stages = (htmlInits ?? []).filter((s) => s && s.trim() !== '');
+  const canExpand =
+    isPro &&
+    (block.language === 'html' ||
+      ((block.language === 'javascript' || block.language === 'typescript') && previewSource.trim() !== ''));
 
   const enterEditMode = useCallback(() => {
     setFocused(true);
@@ -498,9 +506,18 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             staticPreview={isPro && (block.language === 'javascript' || block.language === 'typescript')}
             onClear={clear}
             onMessage={handleMessage}
+            onExpand={canExpand ? () => setExpandVisible(true) : undefined}
           />
         </>
       )}
+
+      <InteractivePreviewModal
+        visible={expandVisible}
+        onClose={() => setExpandVisible(false)}
+        language={block.language}
+        body={block.content}
+        stages={stages}
+      />
 
       {/* 言語選択モーダル */}
       <Modal visible={langModalVisible} transparent animationType="fade">

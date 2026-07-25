@@ -356,6 +356,69 @@ ${script}
 }
 
 /**
+ * 全画面インタラクティブプレビュー用（041）：Web 系（html / js・ts＋土台）を
+ * 「生きたまま」実行する。040 の `buildWebSandboxHtml`（一発完了＋5秒タイムアウト＋
+ * 保留タイマー追跡）とは harness が異なる別物で、こちらは：
+ * - 完了判定・タイムアウトを持たない（ユーザーが閉じるまで動き続ける＝onclick/scroll/input 等を体験できる）
+ * - console.log/warn/error を **1 行ごとに逐次 postMessage** する（イベントで出たログをライブ表示するため）
+ * - 未捕捉例外（window.onerror）・未処理 rejection も逐次 error として送る
+ * - ネットワーク遮断は 040 と同じ
+ *
+ * 合成（土台＋本文/script）は `buildWebSandboxHtml` と同一。
+ *   - `mode='html'`：本文をそのまま body に描画（本文内の <script> はパース時に実行）
+ *   - `mode='js'`：本文（JS）を <script> に入れ、土台の DOM を操作させる
+ */
+export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js', body: string, htmlInits?: string[]): string {
+  const stages = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
+  const markup = mode === 'html' ? body : '';
+  // js モードの本文は <script> に入れる。本文中の </script> のみ無害化（文字列内の \/ は / と等価）。
+  const script = mode === 'js' ? '<script>' + body.replace(/<\/script/gi, '<\\/script') + '</script>' : '';
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function() {
+  window.fetch = undefined;
+  window.XMLHttpRequest = undefined;
+  window.WebSocket = undefined;
+  window.open = undefined;
+
+  // console は 1 行ごとに逐次ポストする（貯めない）。イベントで出た後出しログをライブ表示するため。
+  function post(entryType, args) {
+    var text = Array.prototype.map.call(args, function(v) {
+      if (v === null) return 'null';
+      if (v === undefined) return 'undefined';
+      if (typeof v === 'object') { try { return JSON.stringify(v); } catch(e) { return String(v); } }
+      return String(v);
+    }).join(' ');
+    try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', entry: { type: entryType, text: text } })); } catch(e) {}
+  }
+  console.log   = function() { post('log',   arguments); };
+  console.info  = function() { post('log',   arguments); };
+  console.error = function() { post('error', arguments); };
+  console.warn  = function() { post('warn',  arguments); };
+
+  // ユーザーの <script> はインライン実行のため try/catch で包めない。未捕捉例外・未処理 rejection は
+  // 逐次 error として送る（finish して打ち切らない＝生きたまま操作を続けられる）。
+  window.onerror = function(message) { post('error', [message ? String(message) : 'Error']); return true; };
+  window.addEventListener('unhandledrejection', function(e) {
+    var r = e && e.reason;
+    post('error', [r && r.message ? String(r.message) : String(r)]);
+  });
+})();
+<\/script>
+</head>
+<body>
+${stages}
+${markup}
+${script}
+</body>
+</html>`;
+}
+
+/**
  * 実行前プレビュー用：HTML/CSS 土台だけを描画する表示専用ドキュメント（本文 JS は含めない）。
  * console キャプチャや完了メッセージは持たない（postMessage しない）。安全のためネットワークのみ遮断する。
  * 土台に含まれる `<script>`（ステージ初期化）はそのまま実行される。

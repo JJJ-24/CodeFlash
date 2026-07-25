@@ -325,6 +325,7 @@
     "empty": "(no output)",
     "preview": "Preview",
     "source": "Source",
+    "interactHint": "Interact with the preview to see logs here",
     "pyodideLoading": "Preparing Python (first run may take a while)",
     "pyodideLoadError": "Failed to load Pyodide (check your internet connection)",
     "proTitle": "Pro Feature",

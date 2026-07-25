@@ -82,6 +82,8 @@ interface Props {
   onInteract?: () => void;
   /** true のとき、未実行でも土台（previewSource）を「実行前プレビュー」として自動描画する（js/ts 用） */
   staticPreview?: boolean;
+  /** 指定時、プレビューバーに「全画面」ボタンを出す（041・全画面インタラクティブプレビューを開く）。 */
+  onExpand?: () => void;
 }
 
 /**
@@ -90,7 +92,7 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, onExpand }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -222,6 +224,12 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
               ))}
             </View>
             <View style={styles.previewTabsRight}>
+              {/* 全画面インタラクティブプレビューを開く（041）。操作可能な WebView ＋ ライブ console。 */}
+              {onExpand && (
+                <Pressable onPress={() => { onInteract?.(); onExpand(); }} hitSlop={8} style={styles.previewReset}>
+                  <Ionicons name="expand" size={Math.round(theme.fontSize.md)} color="#8B949E" />
+                </Pressable>
+              )}
               {/* ソースタブ表示中は土台テキストをコピーできる（読み取り専用で選択できないため） */}
               {previewTab === 'source' && !!previewSource && (
                 <Pressable onPress={() => { onInteract?.(); handleCopySource(); }} hitSlop={8} style={styles.previewReset}>

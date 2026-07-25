@@ -17,6 +17,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
 import { ExecutionOutput } from "@/components/code/ExecutionOutput";
+import { InteractivePreviewModal } from "@/components/code/InteractivePreviewModal";
 import { SymbolPalette } from "@/components/code/SymbolPalette";
 import { SyntaxHighlightedCode } from "@/components/study/SyntaxHighlightedCode";
 import { InfoModal } from "@/components/InfoModal";
@@ -102,7 +103,14 @@ export function CodeRunnerView({
   const [isEditing, setIsEditing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [proModalVisible, setProModalVisible] = useState(false);
+  const [expandVisible, setExpandVisible] = useState(false);
   const isPro = useProStore(s => s.isPro);
+  // 041: 全画面インタラクティブプレビューを開ける条件。html は常に、js/ts は土台がある時のみ（＝Web プレビュー対象）。Pro 限定。
+  const canExpand =
+    isPro &&
+    (block.language === 'html' ||
+      ((block.language === 'javascript' || block.language === 'typescript') && previewSource.trim() !== ''));
+  const stages = useMemo(() => (htmlInits ?? []).filter((s) => s && s.trim() !== ''), [htmlInits]);
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
   const intentionalExitRef = useRef(false);
@@ -463,8 +471,16 @@ export function CodeRunnerView({
           onInteract={suppress}
           onClear={clear}
           onMessage={handleMessage}
+          onExpand={canExpand ? () => setExpandVisible(true) : undefined}
         />
       )}
+      <InteractivePreviewModal
+        visible={expandVisible}
+        onClose={() => setExpandVisible(false)}
+        language={block.language}
+        body={editable && editedContent !== undefined ? editedContent : block.content}
+        stages={stages}
+      />
       <InfoModal
         visible={proModalVisible}
         title={t('code.proTitle')}

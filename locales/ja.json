@@ -501,6 +501,8 @@
     "title": "アーカイブ",
     "decks": "デッキ",
     "cards": "カード",
+    "deckListTitle": "デッキ一覧",
+    "cardListTitle": "カード一覧",
     "noDecks": "アーカイブしたデッキはありません",
     "noDecksSub": "デッキ編集や左スワイプで\nアーカイブできます",
     "noCards": "アーカイブしたカードはありません",

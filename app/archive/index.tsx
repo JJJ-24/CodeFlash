@@ -14,6 +14,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -93,6 +94,7 @@ export default function ArchiveScreen() {
   useRestoreStatusBar();
   const scrollsToTopArmed = useSafeScrollsToTop();
   const lastFocusTimeRef = useRef(0);
+  const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { decks, setDecks, updateDeck, removeDeck } = useDeckStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
@@ -477,6 +479,17 @@ export default function ArchiveScreen() {
           {renderTabBlock('cards', archivedCards.length, t('archive.cards'))}
         </Pressable>
 
+        {/* セクションタイトル（カード一覧・タグカード一覧と同じ慣習）。タブブロックと一覧の境目を示す */}
+        <Pressable style={styles.sectionTitleRow} onPress={() => setFocusedIndex(null)}>
+          <Text
+            style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          >
+            {tab === 'decks' ? t('archive.deckListTitle') : t('archive.cardListTitle')}
+          </Text>
+        </Pressable>
+
         {items.length === 0 ? (
           <Pressable style={styles.empty} onPress={() => setFocusedIndex(null)}>
             <EmptyState
@@ -504,6 +517,18 @@ export default function ArchiveScreen() {
           />
         )}
       </View>
+
+      {/* 左下フローティング戻るボタン（設定サブ画面・カード一覧・タグ管理と同パターン）。
+          選択モードでは下部バーが出るので隠す。 */}
+      {!selectionMode && (
+        <Pressable
+          style={[styles.fab, { left: 20, bottom: Math.max(insets.bottom, 16) + 16, backgroundColor: theme.colors.primary }]}
+          onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
+          hitSlop={6}
+        >
+          <Ionicons name="chevron-back" size={28} color="#FFF" />
+        </Pressable>
+      )}
 
       {selectionMode && (
         <View style={[styles.selectionBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
@@ -558,8 +583,23 @@ export default function ArchiveScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  list: { paddingTop: 16, paddingBottom: 96 },
+  list: { paddingBottom: 96 },
   tabRow: { flexDirection: 'row', gap: 4, marginHorizontal: 18, paddingTop: 16, paddingBottom: 4 },
+  sectionTitleRow: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 },
+  sectionTitle: { fontWeight: '700' },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   statItem: {
     borderRadius: 12,
     padding: 16,

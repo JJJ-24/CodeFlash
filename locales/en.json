@@ -501,6 +501,8 @@
     "title": "Archive",
     "decks": "Decks",
     "cards": "Cards",
+    "deckListTitle": "Deck List",
+    "cardListTitle": "Card List",
     "noDecks": "No archived decks",
     "noDecksSub": "Archive from deck edit\nor by swiping left",
     "noCards": "No archived cards",

@@ -113,17 +113,22 @@ const SESSION_SHORTCUT_SECTIONS = [
 ];
 
 export default function StudySessionScreen() {
-  const { deckId, tagId, filter, shuffle, order, mode } = useLocalSearchParams<{
+  const { deckId, tagId, filter, shuffle, order, mode, browse } = useLocalSearchParams<{
     deckId?: string;
     tagId?: string;
     filter?: "all" | "today" | "due" | "unlearned";
     shuffle?: string;
     order?: string;
     mode?: string;
+    browse?: string;
   }>();
   // order='1' のとき、順序を厳守する cardIds はストア経由で受け取る（巨大IDをURLに載せない）。
   const cardIdsList = order === '1' ? (useReviewStore.getState().studyCardIds ?? undefined) : undefined;
   const isFocusedReview = mode === 'focused';
+  // 閲覧モード（アーカイブ中デッキをカード一覧の2択から開いたときだけ立つ）。
+  // 記録を残さない＝グレードボタンを出さず submitGrade を一切呼ばないので、reviews /
+  // review_logs / grade_logs のどれにも書き込みが起きない（FSRS も動かない）。
+  const browseMode = browse === '1';
   const router = useRouter();
   const navigation = useNavigation();
   function safeBack() {
@@ -557,6 +562,14 @@ export default function StudySessionScreen() {
     }
   }, [completed]);
 
+  // 閲覧モードは評価も記録も無いため集計画面に出すものが無い。最後まで送った／Q で終えた時点で
+  // カード一覧へ戻すだけにする（completed の集計画面は描画しない）。
+  useEffect(() => {
+    if (browseMode && completed) safeBack();
+    // safeBack は毎レンダー再生成される単純な関数なので deps から除く
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [browseMode, completed]);
+
   // 新しいカードに移ったらフリップ・メモをリセット、スライドイン開始
   useEffect(() => {
     swipe.applySlideIn(screenWidth);
@@ -699,14 +712,16 @@ export default function StudySessionScreen() {
       const ref = isFlipped ? backScrollRef : frontScrollRef;
       ref.current?.scrollToEnd({ animated: true });
     } else if (key.toLowerCase() === "q") {
-      handleFinishSession();
+      // 閲覧モードは集計画面が無いので「終了＝戻る」（確認も不要＝スキップする評価が無い）
+      if (browseMode) safeBack();
+      else handleFinishSession();
     } else if (key.toLowerCase() === "b") {
       safeBack();
     } else if (key.toLowerCase() === "w") {
       if (cardLinks.length > 0) { Keyboard.dismiss(); setShowLinksModal((v) => !v); }
     } else if (key.toLowerCase() === "p") {
       openCardEdit();
-    } else if (isFlipped && !grading) {
+    } else if (isFlipped && !grading && !browseMode) {
       if (key === "1") handleGradeWithSlide(0);
       else if (key === "2") handleGradeWithSlide(1);
       else if (key === "3") handleGradeWithSlide(2);
@@ -717,6 +732,12 @@ export default function StudySessionScreen() {
   function handleFinishSession() {
     setShowFinishModal(true);
   }
+
+  // 閲覧モードでは 1–4（グレード）が無いので一覧からも落とす（他キーは同じ）
+  const shortcutSections = SESSION_SHORTCUT_SECTIONS.map((s) => ({
+    title: t(s.titleKey),
+    items: browseMode ? s.items.filter((it) => it.descKey !== "shortcut.grade") : s.items,
+  })).filter((s) => s.items.length > 0);
 
   async function handleGrade(grade: Grade) {
     if (grading) return;
@@ -869,6 +890,15 @@ export default function StudySessionScreen() {
             paddingHorizontal: 56, gap: 4,
           }}
         >
+          {/* 閲覧モード（記録なし）の目印。グレードボタンが出ないことと合わせて状態を示す */}
+          {browseMode && (
+            <Ionicons
+              name="eye-outline"
+              size={20}
+              color={theme.colors.textSecondary}
+              accessibilityLabel={t("study.browseMode")}
+            />
+          )}
           {sessionDeck?.iconName && (
             <Ionicons
               name={sessionDeck.iconName as any}
@@ -908,13 +938,16 @@ export default function StudySessionScreen() {
             >
               <Ionicons name="pencil-sharp" size={26} color={theme.colors.primary} />
             </Pressable>
-            <Pressable
-              onPress={handleFinishSession}
-              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-              hitSlop={4}
-            >
-              <Ionicons name="checkmark-done-outline" size={26} color={theme.colors.primary} />
-            </Pressable>
+            {/* 閲覧モードは集計画面が無く「終了＝戻る」なので、戻るボタンと重複する ✓ は出さない */}
+            {!browseMode && (
+              <Pressable
+                onPress={handleFinishSession}
+                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+                hitSlop={4}
+              >
+                <Ionicons name="checkmark-done-outline" size={26} color={theme.colors.primary} />
+              </Pressable>
+            )}
           </>
         )}
       </View>
@@ -929,6 +962,18 @@ export default function StudySessionScreen() {
         <View style={[styles.center, { backgroundColor: theme.baseBackground }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
+      </>
+    );
+  }
+
+  // 閲覧モードの完了：集計画面を持たないので、戻る（上の effect）までヘッダーだけ出しておく。
+  // null を返すと 1 フレーム白く抜けるため loading と同じ形にする。
+  if (completed && browseMode) {
+    return (
+      <>
+        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
+        {iPhoneHeader}
+        <View style={[styles.center, { backgroundColor: theme.baseBackground }]} />
       </>
     );
   }
@@ -1619,10 +1664,11 @@ export default function StudySessionScreen() {
             />
           )}
 
-          {isFlipped && <View style={styles.bottom}>{gradeRow}</View>}
+          {isFlipped && !browseMode && <View style={styles.bottom}>{gradeRow}</View>}
 
-          {/* 表面のみ：下部左右隅にフローティングの前後送りボタン（通常モードと同形状・配色） */}
-          {!isFlipped && (
+          {/* 表面のみ：下部左右隅にフローティングの前後送りボタン（通常モードと同形状・配色）。
+              閲覧モードは評価が無いので裏面でも前後送りを出したままにする。 */}
+          {(!isFlipped || browseMode) && (
             <>
               <Pressable
                 style={[styles.navFab, styles.navFabFloating, { left: 20, bottom: insets.bottom + 16, backgroundColor: theme.cardTheme.background, borderColor: theme.cardTheme.border }]}
@@ -1675,7 +1721,7 @@ export default function StudySessionScreen() {
         <ShortcutsModal
           visible={showShortcutsModal}
           onClose={() => setShowShortcutsModal(false)}
-          sections={SESSION_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+          sections={shortcutSections}
         />
         <ConfirmModal
           visible={showFinishModal}
@@ -1727,6 +1773,15 @@ export default function StudySessionScreen() {
                 gap: 4,
               }}
             >
+              {/* 閲覧モード（記録なし）の目印。iPhone ヘッダーと同じ扱い */}
+              {browseMode && (
+                <Ionicons
+                  name="eye-outline"
+                  size={20}
+                  color={theme.colors.textSecondary}
+                  accessibilityLabel={t("study.browseMode")}
+                />
+              )}
               {sessionDeck?.iconName && (
                 <Ionicons
                   name={sessionDeck.iconName as any}
@@ -1760,13 +1815,16 @@ export default function StudySessionScreen() {
             >
               <Ionicons name="pencil-sharp" size={26} color={theme.colors.primary} />
             </Pressable>
-            <Pressable
-              onPress={handleFinishSession}
-              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-              hitSlop={4}
-            >
-              <Ionicons name="checkmark-done-outline" size={26} color={theme.colors.primary} />
-            </Pressable>
+            {/* 閲覧モードは集計画面が無く「終了＝戻る」なので ✓ は出さない（iPhone と同じ） */}
+            {!browseMode && (
+              <Pressable
+                onPress={handleFinishSession}
+                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+                hitSlop={4}
+              >
+                <Ionicons name="checkmark-done-outline" size={26} color={theme.colors.primary} />
+              </Pressable>
+            )}
           </View>
         </View>
       ) : iPhoneHeader}
@@ -1978,9 +2036,9 @@ export default function StudySessionScreen() {
           />
         )}
 
-        {/* ヒント or 自己評価ボタン */}
+        {/* ヒント or 自己評価ボタン（閲覧モードは評価が無いので常にヒント＋前後送り） */}
         <View style={styles.bottom}>
-          {!isFlipped ? (
+          {!isFlipped || browseMode ? (
             <View style={styles.frontNavRow}>
               {/* 左: 前カードへ。先頭カードではセッションを抜けて戻る（配色を変えて区別） */}
               <Pressable
@@ -2005,7 +2063,7 @@ export default function StudySessionScreen() {
                   styles.flipHint,
                   { flex: 1, backgroundColor: theme.cardTheme.background },
                 ]}
-                onPress={() => setIsFlipped(true)}
+                onPress={() => setIsFlipped((v) => !v)}
               >
                 <Ionicons
                   name="sync-outline"
@@ -2058,7 +2116,7 @@ export default function StudySessionScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={SESSION_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={shortcutSections}
       />
       <ConfirmModal
         visible={showFinishModal}

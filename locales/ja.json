@@ -52,7 +52,11 @@
     "htmlInitHint": "このデッキの web 系カード（HTML / JS）を実行する前に body の先頭へ流す共通の HTML/CSS。各カードの実行のたびに読み込まれます。",
     "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
     "htmlInitSet": "設定済み",
-    "htmlInitNone": "未設定（任意）"
+    "htmlInitNone": "未設定（任意）",
+    "archivedStudyTitle": "アーカイブ中のデッキ",
+    "archivedStudyMessage": "このデッキはアーカイブ中のため、学習の記録は残りません。",
+    "archivedStudyUnarchive": "アーカイブを解除して学習",
+    "archivedStudyBrowse": "閲覧のみ（記録なし）"
   },
   "study": {
     "title": "学習",
@@ -60,6 +64,7 @@
     "selectDeck": "デッキ",
     "noDecks": "デッキがありません",
     "tapToFlip": "タップで裏返す",
+    "browseMode": "閲覧モード（記録なし）",
     "hideMemo": "メモを隠す",
     "complete": "学習完了！",
     "reviewedCount": "{{count}} 枚学習しました",

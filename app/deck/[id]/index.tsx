@@ -54,7 +54,7 @@ import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
-import { createDeck } from '@/lib/database/decks';
+import { createDeck, setDeckArchived } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
 import { usePendingFocusStore } from '@/store/pendingFocus';
@@ -82,6 +82,8 @@ type CardRowProps = {
   /** 038: 選択モードのまとめ移動ドラッグ中（isActive）に出す「×N」バッジの枚数。非表示は null。 */
   bulkDragCount: number | null;
   effectiveArchived: boolean;
+  /** 右スワイプ「ここから学習」を出すか（アーカイブ済みカード＝学習対象外の行では出さない）。 */
+  canStudyFromHere: boolean;
   swipeEnabled: boolean;
   isPro: boolean;
   theme: AppTheme;
@@ -99,7 +101,7 @@ type CardRowProps = {
 
 const CardRow = memo(function CardRow(props: CardRowProps) {
   const {
-    item, drag, isFocused, isSelected, isSelMode, isNew, bulkDragCount, effectiveArchived, swipeEnabled,
+    item, drag, isFocused, isSelected, isSelMode, isNew, bulkDragCount, effectiveArchived, canStudyFromHere, swipeEnabled,
     isPro, theme, imageLabel, noTextLabel, onPress, onLongPress, onStats, onEdit, onDelete, onArchive, onStudyFromHere,
   } = props;
   const preview = getCardPreview(item.frontContent, imageLabel);
@@ -109,7 +111,8 @@ const CardRow = memo(function CardRow(props: CardRowProps) {
       onDelete={() => onDelete(item)}
       onArchive={() => onArchive(item)}
       // 右スワイプ「ここから学習」。選択モードでは出さない（swipeEnabled が false なので実質不要だが明示）。
-      onStudyFromHere={isSelMode ? undefined : () => onStudyFromHere(item)}
+      // アーカイブ済みカードでも出さない（学習対象外＝押しても次のカードから始まってしまうため）。
+      onStudyFromHere={isSelMode || !canStudyFromHere ? undefined : () => onStudyFromHere(item)}
       archived={item.archived}
       containerStyle={styles.cardRowSpacing}
     >
@@ -286,6 +289,9 @@ export default function DeckDetailScreen() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
+  // アーカイブ中デッキで学習を開始しようとしたときの2択ダイアログ（startId=「ここから学習」の起点）
+  const [archivedStudyPrompt, setArchivedStudyPrompt] = useState<{ startId: string | null } | null>(null);
+  const promptHasUnarchiveRef = useRef(false);
   const pendingDeleteActionRef = useRef<(() => Promise<void>) | null>(null);
   const focusedCardIdRef = useRef<string | null>(null);
   const [focusedCardId, setFocusedCardIdState] = useState<string | null>(null);
@@ -653,6 +659,9 @@ export default function DeckDetailScreen() {
         isNew={recentlyDuplicatedIdsRef.current.has(item.id)}
         bulkDragCount={bulkDragCount}
         effectiveArchived={item.archived || deckArchivedRef.current}
+        // デッキごとアーカイブ中は全行がグレーだが、ここは「デッキ単位の2択ダイアログ」への
+        // 入口として残す（隠すのはカード個別アーカイブのときだけ）。
+        canStudyFromHere={deckArchivedRef.current || !item.archived}
         swipeEnabled={!isSelMode && !inDraggable}
         isPro={isPro}
         theme={theme}
@@ -675,8 +684,8 @@ export default function DeckDetailScreen() {
   // 再描画されちらつくため、選択状態・フォーカス・テーマが変わったときだけ identity を変える。
   // theme はオブジェクトで毎回 identity が変わるため、テーマ変化を表すプリミティブを deps にする。
   const listExtraData = useMemo(
-    () => ({ selectionMode, selectedCardIds, focusedCardId, dark: theme.dark, fontScale: theme.fontScale, bg: theme.colors.background }),
-    [selectionMode, selectedCardIds, focusedCardId, theme.dark, theme.fontScale, theme.colors.background],
+    () => ({ selectionMode, selectedCardIds, focusedCardId, deckArchived: !!deck?.archived, dark: theme.dark, fontScale: theme.fontScale, bg: theme.colors.background }),
+    [selectionMode, selectedCardIds, focusedCardId, deck?.archived, theme.dark, theme.fontScale, theme.colors.background],
   );
 
   // フィルター/ソート切替の体感レスポンス改善（500枚級デッキ対策）:
@@ -918,7 +927,7 @@ export default function DeckDetailScreen() {
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; setShowShortcutsModal((v) => !v); } },
   // 削除確認/移動確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
   // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
-  ], !showDeckPicker && !showDeleteModal && !pendingMoveDeck && !infoModal && !showShortcutsModal);
+  ], !showDeckPicker && !showDeleteModal && !pendingMoveDeck && !infoModal && !showShortcutsModal && !archivedStudyPrompt);
 
   // ESC は常時有効：デッキ選択はピッカー側へ委譲、以降オーバーレイ → 選択モード解除 → 戻る。削除系は Return 非割当。
   useKeyCommands([
@@ -928,6 +937,7 @@ export default function DeckDetailScreen() {
         if (showDeckPicker) return; // DeckPickerModal 側の Esc が閉じる
         if (statsCardId !== null) { setStatsCardId(null); return; }
         if (showDeleteModal) { setShowDeleteModal(false); return; }
+        if (archivedStudyPrompt) { setArchivedStudyPrompt(null); return; }
         if (pendingMoveDeck) { setPendingMoveDeck(null); return; }
         if (infoModal) { setInfoModal(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
@@ -957,35 +967,71 @@ export default function DeckDetailScreen() {
   const selectedCardsList = deckCards.filter((c) => selectedCardIds.has(c.id));
   const allSelectedArchived = selectedCardsList.length > 0 && selectedCardsList.every((c) => c.archived);
 
-  // 学習開始：画面に見えている並び順（フィルタ済み・ソート済み）そのままで学習する。
+  // 学習開始の対象カード列：画面に見えている並び順（フィルタ済み・ソート済み）そのまま。
   // セッション側で並びを再計算すると createdAt 同値の tie-break 差で見た目とズレるため、
-  // 表示中のカード ID 列を明示的に渡して順序を厳守させる。アーカイブ済み（カード自身 or
-  // デッキ）は学習対象外なので除外する。
-  const startVisibleStudy = () => {
-    const cardIds = displayedCards
-      .filter((c) => !c.archived && !deck.archived)
-      .map((c) => c.id);
+  // 表示中のカード ID 列を明示的に渡して順序を厳守させる。startId を渡すと「ここから学習」＝
+  // そのカードから一覧末尾まで（全体開始の部分集合）になる。
+  const studySliceFrom = (startId?: string | null): Card[] => {
+    if (!startId) return displayedCards;
+    const startIdx = displayedCards.findIndex((c) => c.id === startId);
+    return startIdx === -1 ? [] : displayedCards.slice(startIdx);
+  };
+
+  const pushStudySession = (cardIds: string[], browse: boolean) => {
     if (cardIds.length === 0) return;
     // 巨大IDをURLパラメータに載せると（数万枚デッキで）ルート状態のシリアライズに
     // 数秒かかるため、ストア経由で渡し params は order フラグだけにする。
     setStudyCardIds(cardIds);
-    router.push({ pathname: '/study/session', params: { deckId: id, order: '1' } });
+    router.push({
+      pathname: '/study/session',
+      params: { deckId: id, order: '1', ...(browse ? { browse: '1' } : {}) },
+    });
   };
 
-  // フォーカス/右スワイプの「ここから学習」：指定カードから一覧末尾までを、一覧順で学習する
-  // （startVisibleStudy の部分集合＝先頭を startId に切り詰めただけ）。アーカイブは同様に除外。
-  const startStudyFromCard = (startId: string) => {
-    const startIdx = displayedCards.findIndex((c) => c.id === startId);
-    if (startIdx === -1) return;
-    const cardIds = displayedCards
-      .slice(startIdx)
-      .filter((c) => !c.archived && !deck.archived)
-      .map((c) => c.id);
-    if (cardIds.length === 0) return;
-    setStudyCardIds(cardIds);
-    router.push({ pathname: '/study/session', params: { deckId: id, order: '1' } });
+  // 学習開始の入口（学習ボタン・Space・⇧Space・右スワイプ「ここから学習」で共用）。
+  // デッキがアーカイブ中のときだけ2択ダイアログを挟む（解除して学習／閲覧のみ）。
+  // 通常デッキではアーカイブ済みカードだけを黙って除外して開始する（032 の方針どおり）。
+  const requestStudy = (startId?: string) => {
+    const slice = studySliceFrom(startId);
+    if (slice.length === 0) return;
+    if (deck.archived) {
+      setArchivedStudyPrompt({ startId: startId ?? null });
+      return;
+    }
+    pushStudySession(slice.filter((c) => !c.archived).map((c) => c.id), false);
   };
+
+  // 学習ボタンの活性。通常デッキ＝学習可能カード（非アーカイブ）が1枚以上あるとき。
+  // アーカイブ中デッキ＝一覧に1枚でもあれば押せる（押すと2択ダイアログ）。
+  // ※「押せるのに無反応」を作らないため、開始できない条件はここに集約する。
+  const canStartStudy = deck.archived ? displayedCards.length > 0 : displayedCards.some((c) => !c.archived);
+
+  const startVisibleStudy = () => requestStudy();
+  const startStudyFromCard = (startId: string) => requestStudy(startId);
   startStudyFromCardRef.current = startStudyFromCard;
+
+  // アーカイブ中デッキの2択。
+  // ・解除して学習＝デッキの archived だけを戻す（個別アーカイブのカードは戻さない＝非可逆な
+  //   一括復活を避ける）ので、対象は通常学習と同じ「非アーカイブカードのみ」。
+  // ・閲覧のみ＝記録を残さないので学習対象の概念が無く、一覧に見えているカードをそのまま送る
+  //   （アーカイブ済みカードも含む＝「ここから」が指したカードから確実に始まる）。
+  const promptSlice = archivedStudyPrompt ? studySliceFrom(archivedStudyPrompt.startId) : [];
+  const promptStudyIds = promptSlice.filter((c) => !c.archived).map((c) => c.id);
+  // 閉じる瞬間（フェード中）にボタンが2→1へ減って見えないよう、直前の選択肢構成を保持する
+  // （InfoModal の lastInfoModalRef と同じ流儀）。
+  if (archivedStudyPrompt) promptHasUnarchiveRef.current = promptStudyIds.length > 0;
+
+  const unarchiveAndStudy = async () => {
+    setArchivedStudyPrompt(null);
+    await setDeckArchived(db, deck.id, false);
+    updateDeck({ ...deck, archived: false });
+    pushStudySession(promptStudyIds, false);
+  };
+
+  const browseArchivedDeck = () => {
+    setArchivedStudyPrompt(null);
+    pushStudySession(promptSlice.map((c) => c.id), true);
+  };
 
   const FILTER_KEY_MAP: Record<string, FilterKey> = { '1': 'all', '2': 'learned', '3': 'review', '4': 'new' };
 
@@ -1257,9 +1303,9 @@ export default function DeckDetailScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, (selectionMode || (filtersReady && displayedCards.length === 0)) && { opacity: 0.5 }]}
+          style={[styles.studyBtn, { backgroundColor: theme.colors.primary }, (selectionMode || (filtersReady && !canStartStudy)) && { opacity: 0.5 }]}
           activeOpacity={0.8}
-          disabled={selectionMode || displayedCards.length === 0}
+          disabled={selectionMode || !canStartStudy}
           onPress={startVisibleStudy}
         >
           <Ionicons name="play" size={20} color="#FFF" />
@@ -1556,6 +1602,20 @@ export default function DeckDetailScreen() {
         message={deleteModalMessage}
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
+      />
+      {/* アーカイブ中デッキで学習開始したときの2択（選択式なので Return は割り当てない＝タップ/Esc）。
+          解除して学習は「解除後に学習できるカードがある」ときだけ出す。 */}
+      <ConfirmModal
+        visible={!!archivedStudyPrompt}
+        title={t('deck.archivedStudyTitle')}
+        message={t('deck.archivedStudyMessage')}
+        actions={[
+          ...(promptHasUnarchiveRef.current
+            ? [{ label: t('deck.archivedStudyUnarchive'), onPress: unarchiveAndStudy }]
+            : []),
+          { label: t('deck.archivedStudyBrowse'), onPress: browseArchivedDeck },
+        ]}
+        onClose={() => setArchivedStudyPrompt(null)}
       />
       <InfoModal
         visible={!!infoModal}

@@ -52,7 +52,11 @@
     "htmlInitHint": "Shared HTML/CSS injected at the top of <body> before every web card (HTML / JS) in this deck runs. Loaded fresh on each run.",
     "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
     "htmlInitSet": "Configured",
-    "htmlInitNone": "Not set (optional)"
+    "htmlInitNone": "Not set (optional)",
+    "archivedStudyTitle": "Archived Deck",
+    "archivedStudyMessage": "This deck is archived, so your study progress will not be recorded.",
+    "archivedStudyUnarchive": "Unarchive and study",
+    "archivedStudyBrowse": "Browse only (not recorded)"
   },
   "study": {
     "title": "Study",
@@ -60,6 +64,7 @@
     "selectDeck": "Decks",
     "noDecks": "No decks yet",
     "tapToFlip": "Tap to flip",
+    "browseMode": "Browse only (not recorded)",
     "hideMemo": "Hide Memo",
     "complete": "Session Complete!",
     "reviewedCount": "Reviewed {{count}} cards",

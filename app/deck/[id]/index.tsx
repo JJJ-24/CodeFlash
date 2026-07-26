@@ -208,9 +208,14 @@ export default function DeckDetailScreen() {
   const [todayReviewed, setTodayReviewed] = useState<number | null>(null);
   const [dueCount, setDueCount] = useState<number | null>(null);
   const [unlearnedCount, setUnlearnedCount] = useState<number | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<FilterKey>(
-    () => preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter,
-  );
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>(() => {
+    // アーカイブ済みデッキは activeCardCond（カード＋所属デッキとも非アーカイブ）により
+    // 「学習済み/復習/新規」が構造的に常に 0 件になる。中身が存在し得ないフィルターで開いても
+    // 空リスト＋学習ボタン無効（＝2択ダイアログにも到達できない）になるだけなので、
+    // 初期表示だけ「すべて」に倒す。設定値そのもの（通常デッキ向けの指定）は書き換えない。
+    if (decks.find((d) => d.id === id)?.archived) return 'all';
+    return preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter;
+  });
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
   // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 はポップ遷移終了時に
   // scrollsToTop を誤発火させる（下へスクロールした状態で push 画面から戻ると一瞬ちらつく）ため、

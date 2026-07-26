@@ -49,6 +49,18 @@ function toCard(raw: RawCard): Card {
   };
 }
 
+/** 個別にアーカイブされたカードを全デッキ横断で取得する（042 アーカイブ一覧のカードタブ）。
+ *  アーカイブ済みデッキ配下の「実効アーカイブ」カードは含めない（デッキはデッキタブで扱う）。
+ *  所属デッキ名は useDeckStore から引くので JOIN しない。 */
+export async function getArchivedCards(db: SQLiteDatabase): Promise<Card[]> {
+  const rows = await db.getAllAsync<RawCard>(
+    `${CARD_SELECT}
+     WHERE c.archived = 1
+     ORDER BY c.updatedAt DESC`
+  );
+  return rows.map(toCard);
+}
+
 export async function getCardsByTagId(db: SQLiteDatabase, tagId: string): Promise<Card[]> {
   const rows = await db.getAllAsync<RawCard>(
     `${CARD_SELECT}
@@ -472,6 +484,7 @@ export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string)
   await db.runAsync('DELETE FROM card_tags WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM reviews WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM review_logs WHERE cardId = ?', [id]);
+  await db.runAsync('DELETE FROM grade_logs WHERE cardId = ?', [id]);
   await db.runAsync('DELETE FROM cards WHERE id = ?', [id]);
   const now = new Date().toISOString();
   await db.runAsync(
@@ -480,12 +493,16 @@ export async function deleteCard(db: SQLiteDatabase, id: string, deckId: string)
   );
 }
 
+/** カードを一括削除する。
+ *  `deckIds` は cardCount を数え直す対象デッキ。カード一覧からは単一デッキ、
+ *  アーカイブ一覧（042）のように複数デッキのカードが混ざる場合は配列で渡す。 */
 export async function deleteCardsBulk(
   db: SQLiteDatabase,
   cardIds: string[],
-  deckId: string
+  deckIds: string | string[]
 ): Promise<void> {
   if (cardIds.length === 0) return;
+  const targetDeckIds = Array.from(new Set(typeof deckIds === 'string' ? [deckIds] : deckIds));
   const cards = await getCardsByIds(db, cardIds);
   await Promise.all(
     cards.map((card) => {
@@ -503,11 +520,14 @@ export async function deleteCardsBulk(
       await db.runAsync(`DELETE FROM card_tags WHERE cardId IN (${placeholders})`, chunk);
       await db.runAsync(`DELETE FROM reviews WHERE cardId IN (${placeholders})`, chunk);
       await db.runAsync(`DELETE FROM review_logs WHERE cardId IN (${placeholders})`, chunk);
+      await db.runAsync(`DELETE FROM grade_logs WHERE cardId IN (${placeholders})`, chunk);
       await db.runAsync(`DELETE FROM cards WHERE id IN (${placeholders})`, chunk);
     }
-    await db.runAsync(
-      'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
-      [deckId, now, deckId]
-    );
+    for (const deckId of targetDeckIds) {
+      await db.runAsync(
+        'UPDATE decks SET cardCount = (SELECT COUNT(*) FROM cards WHERE deckId = ?), updatedAt = ? WHERE id = ?',
+        [deckId, now, deckId]
+      );
+    }
   });
 }

@@ -59,6 +59,7 @@ export default function SettingsScreen() {
     { key: 'notifications', label: t('notification.title'), icon: 'notifications-outline', onPress: () => router.push('/settings/notifications') },
     { key: 'study', label: t('settings.studySettings'), icon: 'school-outline', locked: !isPro, onPress: () => router.push(isPro ? '/settings/study' : '/paywall') },
     { key: 'sync', label: t('sync.title'), icon: 'cloud-outline', locked: !isPro, onPress: () => router.push(isPro ? '/settings/sync' : '/paywall') },
+    { key: 'archive', label: t('archive.title'), icon: 'archive-outline', onPress: () => router.push('/archive') },
     { key: 'data', label: t('dataManagement.title'), icon: 'folder-outline', onPress: () => router.push('/settings/data') },
     { key: 'about', label: t('about.title'), icon: 'information-circle-outline', onPress: () => router.push('/about') },
   ];

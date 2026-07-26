@@ -497,6 +497,16 @@
     "deleteSchedule": "削除",
     "deleteScheduleConfirm": "このスケジュールを削除しますか？"
   },
+  "archive": {
+    "title": "アーカイブ",
+    "decks": "デッキ",
+    "cards": "カード",
+    "noDecks": "アーカイブしたデッキはありません",
+    "noDecksSub": "デッキ編集や左スワイプで\nアーカイブできます",
+    "noCards": "アーカイブしたカードはありません",
+    "noCardsSub": "カード編集や左スワイプで\nアーカイブできます",
+    "deleteDecksConfirm": "{{count}}件のデッキを削除します。\n紐づくカード合計：{{cardCount}}枚と学習履歴もすべて削除されます。"
+  },
   "dataManagement": {
     "title": "データ管理",
     "exportTitle": "バックアップ",
@@ -687,6 +697,10 @@
     "archiveSelected": "アーカイブ切替\n（選択カード）",
     "archiveFocused": "アーカイブ切替\n（フォーカス項目）",
     "archiveUnfocused": "アーカイブ（未フォーカス）",
+    "unarchiveFocused": "アーカイブ解除\n（フォーカス項目）",
+    "unarchiveSelected": "アーカイブ解除\n（選択項目）",
+    "deleteSelectedItems": "削除（選択項目）",
+    "switchArchiveTab": "表示切替\n（デッキ/カード）\n[H/L][,/.]でも可",
     "archiveToggle": "アーカイブ切替",
     "decoBold": "太字",
     "decoItalic": "斜体",

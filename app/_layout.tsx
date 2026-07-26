@@ -164,6 +164,7 @@ function RootStack() {
       <Stack.Screen name="settings/sync" options={{ headerShown: false }} />
       <Stack.Screen name="settings/sync-merge" options={{ headerShown: false }} />
       <Stack.Screen name="settings/data" options={{ headerShown: false }} />
+      <Stack.Screen name="archive/index" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
     </Stack>
     </ThemeProvider>

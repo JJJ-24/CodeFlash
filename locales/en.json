@@ -497,6 +497,16 @@
     "deleteSchedule": "Delete",
     "deleteScheduleConfirm": "Delete this schedule?"
   },
+  "archive": {
+    "title": "Archive",
+    "decks": "Decks",
+    "cards": "Cards",
+    "noDecks": "No archived decks",
+    "noDecksSub": "Archive from deck edit\nor by swiping left",
+    "noCards": "No archived cards",
+    "noCardsSub": "Archive from card edit\nor by swiping left",
+    "deleteDecksConfirm": "Delete {{count}} decks.\nTheir {{cardCount}} cards and study history will also be deleted."
+  },
   "dataManagement": {
     "title": "Data Management",
     "exportTitle": "Backup",
@@ -688,6 +698,10 @@
     "archiveSelected": "Toggle archive selected",
     "archiveFocused": "Toggle archive focused item",
     "archiveUnfocused": "Archive (no focus)",
+    "unarchiveFocused": "Unarchive focused item",
+    "unarchiveSelected": "Unarchive selected",
+    "deleteSelectedItems": "Delete selected",
+    "switchArchiveTab": "Switch view\n(Decks / Cards)\n[H/L] [,/.] also work",
     "archiveToggle": "Toggle archive",
     "decoBold": "Bold",
     "decoItalic": "Italic",

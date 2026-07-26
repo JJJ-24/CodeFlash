@@ -29,6 +29,7 @@ npm run lint
 app/                     # Expo Router ルート（ファイル = 画面）
 ├── _layout.tsx          # ルートレイアウト: SQLiteProvider + Stack 登録
 ├── search.tsx           # カード全文検索画面（全デッキ横断、フィールド別検索: all/front/back/memo）
+├── archive/index.tsx    # アーカイブ一覧（042・設定タブから push）。[デッキ|カード]2タブ＋選択モードで一括解除/削除
 └── (tabs)/              # タブグループ（URLに影響しない透過グループ）
     ├── _layout.tsx      # タブバー定義（ホーム / 学習 / 統計 / 設定）
     ├── index.tsx        # ホーム画面（デッキ一覧）
@@ -136,7 +137,8 @@ Stack (_layout.tsx)
 ├── tags/new, tags/[tagId]/edit         — モーダル（タグ作成・編集）
 ├── tags/[tagId]/cards                  — タグ別カード一覧
 ├── study/session                       — 学習セッション
-└── search                              — カード全文検索（ホーム画面ヘッダーの検索アイコンから遷移）
+├── search                              — カード全文検索（ホーム画面ヘッダーの検索アイコンから遷移）
+└── archive/index                       — アーカイブ一覧（設定タブの「アーカイブ」行から遷移）
 ```
 
 ### カスタムヘッダーパターン
@@ -190,6 +192,9 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **`lib/database/utils.ts`**: `generateId()`・`todayISO()`・`todayLocalRange()`・`localDateStr(d: Date)` をエクスポート。DB ファイルだけでなく UI コンポーネントからも import して使用する。日付範囲クエリ（当日作成・当日学習済み判定など）は `todayLocalRange()` が返す `{ start, end }` を使う（`toISOString()` は UTC を返すためローカル日付がずれる）。
 - **`foreign_keys` pragma は未設定** → `deleteCard` / `deleteTag` / `deleteDeck` では関連行（`card_contents` / `card_tags` / `reviews` / `review_logs` / `grade_logs`）を明示的に先に削除する
 - **アーカイブ（学習対象からの除外）**: `decks` / `cards` の `archived` 列。`lib/database/utils.ts` の `activeCardCond(alias)`（カード自身が非アーカイブ **かつ** 所属デッキが非アーカイブ）を「将来指標」系クエリ（due・新規・未学習・習熟度・当日対象・学習キュー・バッジ）に適用して除外する。`review_logs`/`grade_logs` ベースの過去実績（ヒートマップ・ストリーク・正答率）には**適用しない**（消さない）。一覧の生取得（`getCardsByDeckId`/`searchCards` 等）も除外しない（UI 側でグレー表示）。詳細は `docs/032`。
+- **アーカイブ一覧画面（042）**: 設定タブ →「アーカイブ」→ `app/archive/index.tsx`（push・カスタムヘッダー）。上部 [デッキ N][カード M] の2タブで、**デッキタブ＝`decks.archived`（ストアから取得＝クエリ不要）／カードタブ＝`getArchivedCards()`＝`cards.archived = 1` のみ**（アーカイブ済みデッキ配下の実効アーカイブカードは含めない＝それはデッキタブの対象）。選択モード（`S`・`Space`・`A`）で一括解除（`setDecksArchived`/`setCardsArchived`）と一括削除（`deleteDecksBulk`/`deleteCardsBulk`）。**解除は可逆なので確認なし＋`ArchivePill` 通知、削除は件数明示の `ConfirmDeleteModal`**。全行がアーカイブ済みなので一覧慣習のグレー（`opacity: 0.55`）は使わず `archive` アイコンのみで示す。タブ切替時は選択とフォーカスを必ずリセットする。詳細は `docs/042`。
+- **アーカイブ済みデッキのカード一覧は初期フィルター「すべて」**: `app/deck/[id]/index.tsx` の `selectedFilter` 初期値は、デッキがアーカイブ中なら設定（`initialFilterPreference`/`lastDeckDetailFilter`）に関わらず `'all'`。理由はアーカイブ済みデッキだと `activeCardCond` により学習済み/復習/新規が**構造的に常に0件**で、空リスト＋学習ボタン無効（＝2択ダイアログにも到達できない）になるため。**`setLastDeckDetailFilter` は呼ばない**（「直近」設定の記憶値を潰さない）。
+- **削除時の後始末（042 で修正）**: `deleteDeck` は `deleteDecksBulk(db, [id])` に委譲し、**`grade_logs` の削除と画像ファイルの削除**を含む（旧実装は両方とも取りこぼして孤児データが溜まっていた）。`deleteCard`/`deleteCardsBulk` も `grade_logs` を削除する。`deleteCardsBulk` の第3引数は `deckId | deckIds[]` で、複数デッキのカードを混ぜて削除しても `cardCount` を全対象デッキ分数え直す。**カード削除系を追加するときは `card_contents`/`card_tags`/`reviews`/`review_logs`/`grade_logs`＋画像の6点セットを必ず消すこと**（`foreign_keys` pragma 未設定のため）。
 - **アーカイブ中デッキからの学習＝2択ダイアログ（閲覧モード）**: アーカイブ中デッキのカード一覧で学習を始めようとすると（学習ボタン・Space・⇧Space・右スワイプ「ここから学習」）、`ConfirmModal` で「アーカイブを解除して学習」／「閲覧のみ（記録なし）」を選ばせる。かつては無反応（`cardIds.length === 0` で return）だったのを解消したもの。**解除するのは `decks.archived` だけ**で、個別アーカイブのカードは戻さない（どれを個別アーカイブしていたかの記録が無く非可逆なため）＝解除後の対象は通常学習と同じ「非アーカイブカードのみ」。解除後に0枚になるときは解除の選択肢自体を出さない。**閲覧モード**は `/study/session` に `browse=1` を渡す＝グレードボタンを出さず `submitGrade` を一切呼ばないので `reviews`/`review_logs`/`grade_logs` に書き込みが起きず FSRS も動かない（バッジ・ヒートマップにも無影響）。裏面でも前後送り（`,`/`.`・FAB）のままで、`Q` と完了は集計画面を出さず即戻る。ヘッダーに 👁 アイコン。閲覧の対象は「一覧に見えているカードそのまま」＝個別アーカイブのカードも含む（記録しないので学習対象の概念が無く、「ここから」が指したカードから確実に始められる）。**混在デッキ（デッキは通常・一部カードだけアーカイブ）ではダイアログを出さない**（残りのカードで学習が成立するため黙って除外）。カード一覧の右スワイプ「ここから学習」はアーカイブ済みカード行では出さない（デッキごとアーカイブ中は全行で出す＝ダイアログへの入口）。
 - **グレード対応**: `grade 0` = 再考(again), `1` = 苦手(hard), `2` = 正解(good), `3` = 即答(easy)（`locales/ja.json` の `grade.*` が定義元。旧名称「もう一度/うろ覚え/わかった/バッチリ」はドキュメント上の残骸なので使わない）。型は `lib/sm2.ts` の `Grade = 0 | 1 | 2 | 3`。実際の次回復習日計算は `lib/fsrs.ts` の `calculateNextReviewFSRS()` が `ts-fsrs` ライブラリを使って行う（SM-2 ではなく FSRS アルゴリズム）。
 - **`getDeckMasteryList` の戻り値**: `avgEase: number | null`（未学習デッキは NULL）・`learnedCount: number`・`newCount: number`（未学習枚数）を返す。`LEFT JOIN` で未学習デッキも含む。`masteryPercent()` は `avgEase == null` のとき 0 を返す。統計画面の `MasteryItem` 型も `avgEase: number | null` で定義。
@@ -261,6 +266,8 @@ iPadOS は**ハードキーボードの「修飾なし矢印」と Tab を OS �
 - **統計タブキー**: 1–4 = 上部ブロック直接選択、`,`/`.`・`←`/`→`・H/L = 上部4ブロック切替（連続/学習済み/復習/新規）、J/K（↑/↓）= フォーカス移動、Return = フォーカスデッキのグラフ開閉（シート表示中は Return で閉じる）、6–9/0 = 評価別ランキング選択/解除（Pro・横移動の循環には含めない）、Tab/Shift+Tab = タブ切替
 - **設定タブキー**: J/K（↑/↓）= フォーカス移動（Proカード＋各カテゴリ・青枠・自動スクロール）、Return = フォーカス項目を開く、Esc = フォーカス解除、Tab/Shift+Tab = タブ切替（フィルターが無いため `,`/`.`・`←`/`→` は不使用）。値の変更はタップ限定（誤操作防止）でキーはナビのみ
 - **設定サブ画面キー**（display/study/notifications/sync/data/sync-merge/about/paywall）: Esc / B = 戻る（モーダルを開いていれば先に閉じる）。共通シェル `components/settings/SettingsDetail.tsx` に Esc/B＝戻るを集約し、モーダルを持つ画面は `onBack` prop で「先に閉じる」を渡す。SettingsDetail 非使用の about/paywall は各画面で `useKeyCommands` を直接持つ
+- **アーカイブ一覧キー（042・通常モード）**: J/K（↑/↓）= フォーカス移動、Return = 開く（デッキ→カード一覧／カード→編集）、E = アーカイブ解除、Delete = 削除（確認あり）、S = 選択モード開始、1/2・`,`/`.`・H/L・←/→ = タブ切替（デッキ/カード）、B / Esc = 戻る
+- **アーカイブ一覧キー（042・選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A（⌘A）= 全選択、E = 一括解除、Delete = 一括削除（確認あり）、S = 選択モード終了
 - **学習画面キー**: `,`/`.`・H/L（iPhoneは←/→も） = 前/次カード（iPad は矢印未登録のため H/L が左右ナビを担う）、Space = 表裏反転、1–4 = グレード、J/K = コードブロック次/前フォーカス、E / Return = フォーカス中のコードブロックを編集、U/D・PgUp/PgDn = 画面スクロール、Home/End・Shift+U/D = 最上部/最下部（Home/End 無しキーボード向け）、M = メモ開閉、F = 全画面、P = カード編集、W = リンク一覧（旧 L。H/L をカード送りに使うため移動）、Q = セッション終了（残カードをスキップして集計画面へ、確認ダイアログあり）
 - **カード一覧キー（通常モード）**: Space = 学習開始、Return / P = フォーカスカード編集、1–4 = フィルター直接選択、`,`/`.`・`←`/`→`・H/L = フィルター切替（すべて/学習済み/復習/新規）、J/K（↑/↓）= カードフォーカス次/前、M = ソート切替（「すべて」のみ）、⌘L = 並べ替えロック切替（手動ソート時のみ）、U/D = フォーカスカードを手動並べ替え（上へ/下へ・手動ソート＋「すべて」＋未ロック時のみ）、N = 新規カード、S = 選択モード開始、Delete = フォーカス中のカードを削除、B = 戻る
 - **カード一覧キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、Delete = 削除、C = 複製、E = アーカイブ切替、S = 選択モード終了
@@ -328,7 +335,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2/FSRS・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・ヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示・枠なし横幅フル表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）・シャッフル学習（学習タブのトグルボタン、Fisher-Yates）・統計画面改善（全体学習率セクション・デッキ別習熟度に新規枚数追加・草グラフ右端余白）・学習タブをカードスタイルに変更・学習タブの行アイコンを `play` に変更・TSV エクスポート/インポート・FSRS アルゴリズム移行・カスタムヘッダー統一（push 遷移全画面）・学習セッション終了ボタン（ヘッダー右端 + Q キー）を追加実装。さらに、タグ管理選択モード（一括削除・一括色変更・キーボードショートカット対応）・カード一覧/タグ管理の選択モード UX 統一（モード別ショートカット表示・ヘッダータイトル切替・フォーカス挙動修正）・ホーム画面カスタムヘッダー高さを `getDefaultHeaderHeight` で算出・Development Build 環境整備（`expo-dev-client` 導入）を実施。
 
-さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018（SQL 実行＝`buildSqlSandboxHtml`／C++ 実行＝Wandbox API。ともに Pro 限定）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整・**034（キーボードショートカットのネイティブ化＝`UIKeyCommand`/`react-native-key-command`）の Phase 0〜3：全画面で隠し TextInput を撤去し `lib/useKeyCommands.ts` へ移行、`HiddenKeyboardInput`/`useKeyboardFocus` を削除。これによりショートカット ON 時のタップ食われ・復帰フリーズが構造的に解消**。
+さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018（SQL 実行＝`buildSqlSandboxHtml`／C++ 実行＝Wandbox API。ともに Pro 限定）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整・**034（キーボードショートカットのネイティブ化＝`UIKeyCommand`/`react-native-key-command`）の Phase 0〜3：全画面で隠し TextInput を撤去し `lib/useKeyCommands.ts` へ移行、`HiddenKeyboardInput`/`useKeyboardFocus` を削除。これによりショートカット ON 時のタップ食われ・復帰フリーズが構造的に解消**・**042（アーカイブ一覧画面＝設定タブから push・デッキ/カードの2タブ・一括解除/一括削除。あわせて `deleteDeck`/`deleteCard` の `grade_logs`・画像の削除漏れを修正）**。
 
 未着手（または部分実装）: 015（Web版）・016（買い切り課金、`useProStore` で Pro ゲートのみ存在）・017（App Store申請）・019（マーケットプレイス）・020（AI生成）・026（デッキ共有リンク）・027（ウィジェット）・029（デッキ統合/復元）・031（高度な通知、`notification_schedules` テーブルは存在）
 

@@ -3,11 +3,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { EXECUTABLE_LANGUAGES, LANGUAGES } from '@/lib/code-execution/constants';
 import { getCardsByDeckId, updateCard } from '@/lib/database/cards';
 import { generateId } from '@/lib/database/utils';
 import { createTag, getTagRowsByDeckId } from '@/lib/database/tags';
 import { TAG_PRESET_COLORS } from '@/lib/theme';
-import type { Block, TextBlock } from '@/types';
+import type { Block } from '@/types';
 
 function escape(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\t/g, '\\t').replace(/\n/g, '\\n');
@@ -72,13 +73,118 @@ function parseTsvRows(raw: string): string[][] {
   return rows;
 }
 
+/**
+ * コードブロックを囲むフェンスを決める。CommonMark と同じ規則で「中身に現れる最長の
+ * バッククォート連続より1つ長い」フェンスを使い、本文に ``` を含むコード（マークダウンの
+ * 説明カードなど）でも閉じ位置を誤らないようにする。最短は ```。
+ */
+function fenceFor(content: string): string {
+  const runs = content.match(/`+/g);
+  const longest = runs ? runs.reduce((m, r) => Math.max(m, r.length), 0) : 0;
+  return '`'.repeat(Math.max(3, longest + 1));
+}
+
+/**
+ * ブロック配列を TSV の1フィールド分のテキストにする。
+ * コードブロックはマークダウンのフェンス（```言語）で囲み、インポート時に
+ * テキストブロックと区別して復元できるようにする（textToBlocks と対称）。
+ * 画像は本文を持たないため `[image]` のままで、往復しても画像は戻らない。
+ */
 function blocksToText(blocks: Block[]): string {
   return blocks
     .map((b) => {
-      if (b.type === 'text' || b.type === 'code') return b.content;
+      if (b.type === 'code') {
+        const fence = fenceFor(b.content);
+        return `${fence}${b.language}\n${b.content}\n${fence}`;
+      }
+      if (b.type === 'text') return b.content;
       return '[image]';
     })
     .join('\n');
+}
+
+// 開始フェンス（```言語）と終了フェンス（```）。言語名は英数と +#_-（c++ / objective-c 等）を許す
+const FENCE_OPEN_RE = /^(`{3,})[ \t]*([A-Za-z0-9+#_.-]*)[ \t]*$/;
+const FENCE_CLOSE_RE = /^(`{3,})[ \t]*$/;
+
+// 手書き TSV でよく使われる略記を正規の言語 ID へ寄せる（LANGUAGES に無いものは 'text'）
+const LANGUAGE_ALIASES: Record<string, string> = {
+  js: 'javascript',
+  jsx: 'javascript',
+  ts: 'typescript',
+  tsx: 'typescript',
+  py: 'python',
+  'c++': 'cpp',
+  cc: 'cpp',
+  sh: 'bash',
+  shell: 'bash',
+  zsh: 'bash',
+  htm: 'html',
+  plain: 'text',
+  '': 'text',
+};
+
+function normalizeLanguage(raw: string): string {
+  const lower = raw.trim().toLowerCase();
+  const aliased = LANGUAGE_ALIASES[lower] ?? lower;
+  return LANGUAGES.includes(aliased) ? aliased : 'text';
+}
+
+/**
+ * TSV の1フィールドをブロック配列に戻す（blocksToText と対称）。
+ * ```言語 …  ``` のフェンスをコードブロック、それ以外をテキストブロックにする。
+ * フェンスを含まない従来の TSV は全体がテキストブロック1個になる（後方互換）。
+ * 閉じフェンスが見つからない開始フェンスは、ただの本文として扱う（壊れた入力で
+ * 残り全部がコードに飲み込まれるのを防ぐ）。
+ *
+ * 既知の非対称: 本文にフェンスを書いた「テキストブロック」は、往復するとその部分が
+ * コードブロックに変換される（マークダウンと同じ解釈になる）。書き手の意図としては
+ * それが自然なので許容する。厳密に保存したい場合は JSON エクスポートを使う。
+ */
+function textToBlocks(text: string): Block[] {
+  // U+2028 / U+2029 はスプレッドシート由来の不可視改行。クォート付きセル経由でも混入する
+  const normalized = text.replace(/[\u2028\u2029]/g, '\n');
+  if (!normalized) return [];
+
+  const lines = normalized.split('\n');
+  const blocks: Block[] = [];
+  let buf: string[] = [];
+
+  const flushText = () => {
+    // ブロック境界に生じる前後の空行だけ落とす（インデントは保つため trim は使わない）
+    const content = buf.join('\n').replace(/^\n+|\n+$/g, '');
+    if (content) blocks.push({ type: 'text', content });
+    buf = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const open = FENCE_OPEN_RE.exec(lines[i]);
+    if (!open) {
+      buf.push(lines[i]);
+      continue;
+    }
+    // 開始フェンスと同じ長さ以上の閉じフェンスを探す
+    let close = -1;
+    for (let j = i + 1; j < lines.length; j++) {
+      const c = FENCE_CLOSE_RE.exec(lines[j]);
+      if (c && c[1].length >= open[1].length) { close = j; break; }
+    }
+    if (close === -1) {
+      buf.push(lines[i]);
+      continue;
+    }
+    flushText();
+    const language = normalizeLanguage(open[2]);
+    blocks.push({
+      type: 'code',
+      language,
+      content: lines.slice(i + 1, close).join('\n'),
+      executable: EXECUTABLE_LANGUAGES.includes(language),
+    });
+    i = close;
+  }
+  flushText();
+  return blocks;
 }
 
 function parseTagNames(raw: string): string[] {
@@ -237,9 +343,9 @@ export async function importTsv(db: SQLiteDatabase, fileUri: string, deckId: str
   }
 
   // --- フェーズ1: 全行をJSでパース（DB呼び出しゼロ） ---
-  // U+2028 / U+2029 はクォート付きセル経由でも混入するため、ここでも \n に正規化する
-  const toBlocks = (text: string): TextBlock[] =>
-    text ? [{ type: 'text', content: text.replace(/[\u2028\u2029]/g, '\n') }] : [];
+  // フェンス（```言語）はコードブロックへ、それ以外はテキストブロックへ復元する。
+  // フェンスを含まない従来の TSV は全体がテキストブロック1個になる（後方互換）。
+  const toBlocks = textToBlocks;
 
   const parsedCards: ParsedCard[] = [];
   for (let i = start; i < rows.length; i++) {

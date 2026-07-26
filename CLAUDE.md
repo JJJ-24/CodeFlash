@@ -57,7 +57,7 @@ lib/
 ├── InteractivePreviewContext.ts  # 041・全画面インタラクティブプレビューの開閉を子（CodeRunnerView/CodeBlockItem）から親（session/BlockEditor）のキー抑止へ伝える Context（setOpen のみ）
 ├── export.ts            # 全テーブル（review_logs 含む）を JSON エクスポート
 ├── import.ts            # merge（INSERT OR IGNORE）/ replace（全削除後挿入）の2モードでインポート
-├── tsv.ts               # TSV形式でのデッキエクスポート/インポート（Anki互換）
+├── tsv.ts               # TSV形式でのデッキエクスポート/インポート（Anki互換）。コードブロックは ```言語 フェンスで往復（blocksToText ⇄ textToBlocks）
 ├── notifications.ts     # requestPermission()・scheduleDailyReminder()・updateBadgeCount(db)
 ├── fsrs.ts              # FSRS スケジューリングエンジン（ts-fsrs ライブラリのラッパー）。実際の次回復習日計算はここ
 ├── sm2.ts               # Grade 型（0〜3）の定義元。アルゴリズム本体は fsrs.ts に移行済み
@@ -200,6 +200,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 - **`getDeckMasteryList` の戻り値**: `avgEase: number | null`（未学習デッキは NULL）・`learnedCount: number`・`newCount: number`（未学習枚数）を返す。`LEFT JOIN` で未学習デッキも含む。`masteryPercent()` は `avgEase == null` のとき 0 を返す。統計画面の `MasteryItem` 型も `avgEase: number | null` で定義。
 - **「新規」フィルターの意味**: 学習タブ・カード一覧・統計タブの「新規」ブロックは「今日作成したカード数」を表す。学習してもカウントは減らず、翌日に 0 にリセットされる。実際のクエリは `getTodayCreatedCardIdsByDeckId` を使う。**アーカイブの扱いは画面で異なる**：統計タブ（`getTodayCreatedCount`）は作成実績なので除外しない（「過去7日間の新規作成」グラフと一致させる）。学習タブ・カード一覧（`getTodayCreatedCountPerDeck/PerTag` 等）は学習対象数なので `activeCardCond` で除外する。
 - **エクスポート/インポート**: `lib/export.ts` と `lib/import.ts` が JSON 形式、`lib/tsv.ts` が TSV 形式（Anki互換・表/裏テキストのみ）を担当。JSON は全テーブル（`review_logs`・`grade_logs` 含む）＋ AsyncStorage 設定 ＋（任意で）画像 base64 をエクスポートし、`archived` も保持する。インポートは `merge`（`INSERT OR IGNORE`）と `replace`（全削除後に挿入）の2モード。TSV は `archived` を含まない。
+- **TSV のコードブロック（フェンス往復）**: `blocksToText`（エクスポート）と `textToBlocks`（インポート）が対称。コードブロックは ` ```言語 ` で囲んで出力し、インポート時に言語・`executable`（`EXECUTABLE_LANGUAGES` で判定）付きのコードブロックへ戻す。フェンス長は CommonMark 同様「中身の最長バッククォート連続＋1」に自動拡張するので、本文に ``` を含むコードも壊れない。言語は `js`/`py`/`c++` などの略記を `LANGUAGE_ALIASES` で正規化し、`LANGUAGES` に無いものは `text`。**フェンスの無い旧 TSV は従来どおりテキストブロック1個**（後方互換）、閉じフェンスが無い開始フェンスはただの本文として扱う。往復で戻らないのは画像（`[image]` 文字列）と `sqlInit`/`htmlInit`＝忠実な保存は JSON エクスポートの役目。テキストブロック内にフェンスを書いた場合は往復でコードブロックに変わる（マークダウンと同じ解釈・許容）。
 - **カード全文検索**: `app/search.tsx` はホーム画面ヘッダーの検索アイコンから遷移。`searchCards(db, query, field)` が指定フィールド（`SearchField = 'all' | 'front' | 'back' | 'memo'`）を LIKE 検索（JSON文字列のまま LIKE 可能）し `ORDER BY updatedAt DESC LIMIT 100`。選択中フィールドは `useSettingsStore` の `lastSearchField` に AsyncStorage 永続化。クエリ変更ごとにリアルタイム検索。結果タップで `/deck/[id]/card/[cardId]/edit` へ遷移。
 - **カード複製**: `lib/database/cards.ts` の `duplicateCard(db, cardId)` が元カードの内容・タグを複製して新カードを作成。カード一覧の選択モードバーの複製ボタン（`copy-outline`）から呼び出す。
 

@@ -97,7 +97,7 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 - [x] `CodeRunnerView`：`ExecutionOutput` に `onExpand` を渡し、`InteractivePreviewModal` を描画。開くとき `suppress()`（フリップ抑制）＋ `isPro` かつ Web プレビュー対象のときのみボタン表示（第1増分）
 - [x] `lib/InteractivePreviewContext.ts` を新設（`{ setOpen }`・`FlipSuppressContext` と同型・単一 bool で足りる）＝第2増分
 - [x] `session.tsx` に Provider（両 `FlipSuppressContext.Provider` に併設）。main `useKeyCommands` の active に `&& !interactivePreviewOpen`、常時 Esc ハンドラ先頭に `if (interactivePreviewOpen) return;`（safeBack 暴発防止・閉じるはモーダル自身の Esc）。`CodeRunnerView` は開閉で `setOpen` を呼ぶ＝第2増分
-- [ ] 実機確認：カード内スクロール中に全画面ボタンが押せ、モーダルでボタン/入力/チェック/スクロールが動くこと（タッチ＝確認済）。背後のカードが誤フリップ/誤採点しないこと・Esc でモーダルだけ閉じてセッションは残ること（BT キーボード）
+- [x] 実機確認：カード内スクロール中に全画面ボタンが押せ、モーダルでボタン/入力/チェック/スクロールが動くこと（タッチ＝確認済）。背後のカードが誤フリップ/誤採点しないこと・Esc でモーダルだけ閉じてセッションは残ること（BT キーボード）
 
 ### Phase 5: 編集画面（CodeBlockItem / BlockEditor）
 - [x] `CodeBlockItem`：`ExecutionOutput` に `onExpand` を渡し、`InteractivePreviewModal` を描画（`isPro` の時のみ）。開閉で `setOpen` を呼ぶ（第2増分）

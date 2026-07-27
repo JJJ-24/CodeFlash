@@ -216,11 +216,6 @@ export default function DeckDetailScreen() {
     if (decks.find((d) => d.id === id)?.archived) return 'all';
     return preferenceToFilter(initialFilterPreference) ?? lastDeckDetailFilter;
   });
-  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
-  // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 はポップ遷移終了時に
-  // scrollsToTop を誤発火させる（下へスクロールした状態で push 画面から戻ると一瞬ちらつく）ため、
-  // フォーカス直後 800ms も無効のままにする（詳細は lib/useSafeScrollsToTop.ts）。
-  const scrollsToTopArmed = useSafeScrollsToTop();
   const lastFocusTimeRef = useRef(0);
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
@@ -269,6 +264,12 @@ export default function DeckDetailScreen() {
   const listRef = useRef<FlatList<Card>>(null);
 
   const [selectionMode, setSelectionMode] = useState(false);
+  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
+  // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 は scrollsToTop を
+  // タップ無しで誤発火させる（ポップ遷移で戻ると一瞬ちらつく／iPad で選択モードを切り替えると
+  // 最下部から先頭へ飛ぶ）。selectionMode を渡して、選択モードを切り替えたらこの画面にいる
+  // あいだは二度と武装しないようにする（詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop(selectionMode);
   const selectionModeRef = useRef(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const selectedCardIdsRef = useRef<Set<string>>(new Set());

@@ -88,11 +88,6 @@ export default function TagCardsScreen() {
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
-  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
-  // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 はポップ遷移終了時に
-  // scrollsToTop を誤発火させる（下へスクロールした状態で push 画面から戻ると一瞬ちらつく）ため、
-  // フォーカス直後 800ms も無効のままにする（詳細は lib/useSafeScrollsToTop.ts）。
-  const scrollsToTopArmed = useSafeScrollsToTop();
   const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
@@ -110,6 +105,12 @@ export default function TagCardsScreen() {
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
   const [pendingDeleteCard, setPendingDeleteCard] = useState<Card | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
+  // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
+  // （有効候補が複数あると iOS が機能を無効化するため）。さらに iPadOS 26 は scrollsToTop を
+  // タップ無しで誤発火させる（ポップ遷移で戻ると一瞬ちらつく／iPad で選択モードを切り替えると
+  // 最下部から先頭へ飛ぶ）。selectionMode を渡して、選択モードを切り替えたらこの画面にいる
+  // あいだは二度と武装しないようにする（詳細は lib/useSafeScrollsToTop.ts）。
+  const scrollsToTopArmed = useSafeScrollsToTop(selectionMode);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRemoveTagModal, setShowRemoveTagModal] = useState(false);

@@ -92,7 +92,6 @@ export default function ArchiveScreen() {
   const theme = useTheme();
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
-  const scrollsToTopArmed = useSafeScrollsToTop();
   const lastFocusTimeRef = useRef(0);
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -103,6 +102,9 @@ export default function ArchiveScreen() {
   const [tab, setTab] = useState<ArchiveTab>('decks');
   const [archivedCards, setArchivedCards] = useState<Card[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  // iPadOS 26 は scrollsToTop をタップ無しで誤発火させる（iPad で選択モードを切り替えると
+  // 最下部から先頭へ飛ぶ）。selectionMode を渡して切替後は再武装しない。
+  const scrollsToTopArmed = useSafeScrollsToTop(selectionMode);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);

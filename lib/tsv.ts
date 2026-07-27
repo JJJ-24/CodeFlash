@@ -8,7 +8,7 @@ import { getCardsByDeckId, updateCard } from '@/lib/database/cards';
 import { generateId } from '@/lib/database/utils';
 import { createTag, getTagRowsByDeckId } from '@/lib/database/tags';
 import { TAG_PRESET_COLORS } from '@/lib/theme';
-import type { Block } from '@/types';
+import type { Block, Deck } from '@/types';
 
 function escape(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\t/g, '\\t').replace(/\n/g, '\\n');
@@ -212,6 +212,48 @@ async function resolveOrCreateTag(
   const tag = await createTag(db, { name, color: assignTagColor(name) });
   cache.set(name, tag.id);
   return tag.id;
+}
+
+/**
+ * TSV に載せられない内容（エクスポートで失われるもの）の内訳。
+ * TSV は `id/front/back/memo/tags` の5列＝カードの本文テキストしか運べないため、
+ * デッキ設定の初期化SQL・HTML土台、ブロック固有の初期化、画像は落ちる。
+ * 完全な保存は JSON バックアップ（lib/export.ts）の役目。
+ */
+export type TsvExportLoss = {
+  deckSqlInit: boolean;
+  deckHtmlInit: boolean;
+  blockSqlInit: number;
+  blockHtmlInit: number;
+  images: number;
+};
+
+/** エクスポート前の検査。該当が無ければ警告を出さずそのまま書き出す（通常デッキで操作を増やさない） */
+export async function inspectTsvExport(db: SQLiteDatabase, deck: Deck): Promise<TsvExportLoss> {
+  const cards = await getCardsByDeckId(db, deck.id);
+  let blockSqlInit = 0;
+  let blockHtmlInit = 0;
+  let images = 0;
+  for (const card of cards) {
+    for (const b of [...card.frontContent, ...card.backContent, ...card.memoContent]) {
+      if (b.type === 'image') images++;
+      else if (b.type === 'code') {
+        if (b.sqlInit?.trim()) blockSqlInit++;
+        if (b.htmlInit?.trim()) blockHtmlInit++;
+      }
+    }
+  }
+  return {
+    deckSqlInit: !!deck.sqlInit?.trim(),
+    deckHtmlInit: !!deck.htmlInit?.trim(),
+    blockSqlInit,
+    blockHtmlInit,
+    images,
+  };
+}
+
+export function hasTsvExportLoss(loss: TsvExportLoss): boolean {
+  return loss.deckSqlInit || loss.deckHtmlInit || loss.blockSqlInit > 0 || loss.blockHtmlInit > 0 || loss.images > 0;
 }
 
 export async function exportDeckToTsv(db: SQLiteDatabase, deckId: string, deckName: string): Promise<void> {

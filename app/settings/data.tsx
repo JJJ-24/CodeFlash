@@ -18,7 +18,7 @@ import { createDeck, getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
 import { estimateExportSize, exportDatabase } from '@/lib/export';
 import { importDatabase } from '@/lib/import';
-import { exportDeckToTsv, importTsv, inspectTsvImport, pickTsvFile } from '@/lib/tsv';
+import { exportDeckToTsv, hasTsvExportLoss, importTsv, inspectTsvExport, inspectTsvImport, pickTsvFile, type TsvExportLoss } from '@/lib/tsv';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
@@ -170,20 +170,52 @@ export default function DataSettingsScreen() {
     }
   }
 
+  async function doTsvExport(deck: Deck) {
+    if (tsvProcessingRef.current) return;
+    tsvProcessingRef.current = true;
+    try {
+      setLoading(true);
+      await exportDeckToTsv(db, deck.id, deck.name);
+    } catch {
+      setModal({ kind: 'info', message: t('dataManagement.exportError') });
+    } finally {
+      setLoading(false);
+      tsvProcessingRef.current = false;
+    }
+  }
+
+  /** TSV に載らない内容（デッキ/ブロックの初期化SQL・HTML土台・画像）を列挙した確認文を作る */
+  function tsvLossMessage(loss: TsvExportLoss): string {
+    const items: string[] = [];
+    if (loss.deckSqlInit) items.push(t('dataManagement.tsvLossDeckSqlInit'));
+    if (loss.deckHtmlInit) items.push(t('dataManagement.tsvLossDeckHtmlInit'));
+    if (loss.blockSqlInit > 0) items.push(t('dataManagement.tsvLossBlockSqlInit', { count: loss.blockSqlInit }));
+    if (loss.blockHtmlInit > 0) items.push(t('dataManagement.tsvLossBlockHtmlInit', { count: loss.blockHtmlInit }));
+    if (loss.images > 0) items.push(t('dataManagement.tsvLossImages', { count: loss.images }));
+    return t('dataManagement.tsvExportLossMessage', { items: items.map((i) => `・${i}`).join('\n') });
+  }
+
   async function handleTsvDeckSelected(deck: Deck) {
     setTsvDeckPickerVisible(false);
     if (tsvAction === 'export') {
-      if (tsvProcessingRef.current) return;
-      tsvProcessingRef.current = true;
+      // TSV は本文テキストしか運べない。落ちるものが実際にあるデッキだけ確認を挟む
+      // （該当が無ければ従来どおり無確認でシェアシートへ進む＝通常デッキで操作を増やさない）。
+      let loss: TsvExportLoss | null = null;
       try {
-        setLoading(true);
-        await exportDeckToTsv(db, deck.id, deck.name);
+        loss = await inspectTsvExport(db, deck);
       } catch {
-        setModal({ kind: 'info', message: t('dataManagement.exportError') });
-      } finally {
-        setLoading(false);
-        tsvProcessingRef.current = false;
+        loss = null; // 検査に失敗してもエクスポート自体は妨げない
       }
+      if (loss && hasTsvExportLoss(loss)) {
+        setModal({
+          kind: 'confirm',
+          title: t('dataManagement.tsvExportLossTitle'),
+          message: tsvLossMessage(loss),
+          actions: [{ label: t('dataManagement.tsvExportAnyway'), onPress: () => { setModal(null); doTsvExport(deck); } }],
+        });
+        return;
+      }
+      await doTsvExport(deck);
     } else if (tsvAction === 'import') {
       await runTsvImport(deck.id);
     }

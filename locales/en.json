@@ -53,6 +53,7 @@
     "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
     "htmlInitSet": "Configured",
     "htmlInitNone": "Not set (optional)",
+    "selectHint": "Tap decks to select",
     "archivedStudyTitle": "Archived Deck",
     "archivedStudyMessage": "This deck is archived, so your study progress will not be recorded.",
     "archivedStudyUnarchive": "Unarchive and study",

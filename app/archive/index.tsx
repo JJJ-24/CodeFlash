@@ -481,14 +481,17 @@ export default function ArchiveScreen() {
           {renderTabBlock('cards', archivedCards.length, t('archive.cards'))}
         </Pressable>
 
-        {/* セクションタイトル（カード一覧・タグカード一覧と同じ慣習）。タブブロックと一覧の境目を示す */}
+        {/* セクションタイトル（カード一覧・タグカード一覧と同じ慣習）。タブブロックと一覧の境目を示す。
+            選択モードでは操作案内に差し替える（対象がデッキかカードかでも文言を変える）。 */}
         <Pressable style={styles.sectionTitleRow} onPress={() => setFocusedIndex(null)}>
           <Text
             style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}
             numberOfLines={1}
             maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
           >
-            {tab === 'decks' ? t('archive.deckListTitle') : t('archive.cardListTitle')}
+            {selectionMode
+              ? (tab === 'decks' ? t('deck.selectHint') : t('card.selectHint'))
+              : (tab === 'decks' ? t('archive.deckListTitle') : t('archive.cardListTitle'))}
           </Text>
         </Pressable>
 

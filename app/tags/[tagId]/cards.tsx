@@ -486,13 +486,17 @@ export default function TagCardsScreen() {
           automaticallyAdjustsScrollIndicatorInsets={false}
           scrollsToTop={scrollsToTopArmed}
           ListHeaderComponent={
+            // 選択モードでは操作案内に差し替える（カード一覧・タグ管理と同じ流儀）。
+            // 説明アイコンは選択操作と関係ないので出さない。
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, marginHorizontal: 20 }}>
               <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0, marginHorizontal: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('tag.cardListTitle')}
+                {selectionMode ? t('card.selectHint') : t('tag.cardListTitle')}
               </Text>
-              <Pressable onPress={() => setShowTagCardsInfo(true)} hitSlop={8} accessibilityLabel={t('tag.cardListInfoLabel')}>
-                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-              </Pressable>
+              {!selectionMode && (
+                <Pressable onPress={() => setShowTagCardsInfo(true)} hitSlop={8} accessibilityLabel={t('tag.cardListInfoLabel')}>
+                  <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+                </Pressable>
+              )}
             </View>
           }
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedCardIndex(null)} />}

@@ -188,6 +188,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN htmlInit TEXT;`);
   }
 
+  // === 043: HTML 画像ライブラリ（decks に htmlImages カラム）===
+  // HTML から `img://{name}` で参照する画像の一覧（DeckImage[] の JSON 文字列）。画像本体は
+  // 画像ブロックと同じ images/ にファイルとして置き、ここには参照名とパスだけを持つ。
+  // 既存デッキは NULL のまま（ライブラリなし）で動作する。
+  const deckColsHtmlImages = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!deckColsHtmlImages.some((c) => c.name === 'htmlImages')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN htmlImages TEXT;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

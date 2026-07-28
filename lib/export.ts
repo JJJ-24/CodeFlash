@@ -3,6 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { parseDeckImages } from './image';
 import { SETTINGS_ASYNC_STORAGE_KEYS } from './settings-keys';
 
 const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
@@ -21,19 +22,29 @@ export type ExportData = {
   imageData?: Record<string, string>; // key: ファイル名, value: base64
 };
 
-function extractImageFilenames(cards: Record<string, unknown>[]): string[] {
+/** エクスポートに同梱する画像ファイル名を集める。参照元は2系統：
+ *  ①カード本文の image ブロック、②デッキの HTML 画像ライブラリ（043・`decks.htmlImages`）。
+ *  `lib/image.ts` の `getReferencedImageFilenames()` と対になる集計なので、片方だけ直さないこと。 */
+function extractImageFilenames(
+  cards: Record<string, unknown>[],
+  decks: Record<string, unknown>[] = [],
+): string[] {
   const filenames = new Set<string>();
+  const addUri = (uri?: string) => {
+    if (uri?.startsWith('local://images/')) filenames.add(uri.slice('local://images/'.length));
+  };
   for (const card of cards) {
     for (const field of ['frontContent', 'backContent', 'memoContent']) {
       try {
         const blocks = JSON.parse((card[field] as string) ?? '[]') as { type: string; uri?: string }[];
         for (const block of blocks) {
-          if (block.type === 'image' && block.uri?.startsWith('local://images/')) {
-            filenames.add(block.uri.slice('local://images/'.length));
-          }
+          if (block.type === 'image') addUri(block.uri);
         }
       } catch {}
     }
+  }
+  for (const deck of decks) {
+    for (const image of parseDeckImages(deck.htmlImages as string | null)) addUri(image.uri);
   }
   return Array.from(filenames);
 }
@@ -69,7 +80,8 @@ export async function estimateExportSize(db: SQLiteDatabase, includeImages: bool
   const cards = await db.getAllAsync<Record<string, unknown>>(
     'SELECT frontContent, backContent, memoContent FROM card_contents'
   );
-  const filenames = extractImageFilenames(cards);
+  const deckImageRows = await db.getAllAsync<Record<string, unknown>>('SELECT htmlImages FROM decks');
+  const filenames = extractImageFilenames(cards, deckImageRows);
   let rawImageBytes = 0;
   for (const filename of filenames) {
     const info = await FileSystem.getInfoAsync(IMAGE_DIR + filename);
@@ -122,7 +134,7 @@ export async function exportDatabase(db: SQLiteDatabase, includeImages = false):
   };
 
   if (includeImages) {
-    const filenames = extractImageFilenames(cards);
+    const filenames = extractImageFilenames(cards, decks);
     const imageData: Record<string, string> = {};
     for (const filename of filenames) {
       const uri = IMAGE_DIR + filename;

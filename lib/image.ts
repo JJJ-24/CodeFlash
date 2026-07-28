@@ -3,6 +3,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { DeckImage } from '@/types';
+
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 
 /** 画像ブロックの表示サイズ（最大幅 px プリセット）。実際の表示幅は min(この値, 利用可能幅) で
@@ -91,28 +93,73 @@ export async function deleteImagesInBlocks(blocks: { type: string; uri?: string 
   );
 }
 
-/** DB 上の全カードから参照されている画像ファイル名（`local://images/` の後ろ）を収集する。
- *  `from` に `'bkimg.card_contents'` 等を渡すと ATTACH したバックアップDBの参照も集計できる（029）。 */
+/** `decks.htmlImages`（JSON文字列）を `DeckImage[]` へ正規化する（043）。
+ *  NULL・壊れた JSON・非配列・欠けた要素はすべて捨てて `[]` に倒す（表示側で例外を出さないため）。 */
+export function parseDeckImages(raw: string | null | undefined): DeckImage[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (v): v is DeckImage =>
+        !!v && typeof (v as DeckImage).name === 'string' && typeof (v as DeckImage).uri === 'string'
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** `DeckImage[]` を DB 保存用の JSON 文字列にする（043）。空配列は NULL（既存デッキと同じ形）。 */
+export function serializeDeckImages(images: DeckImage[] | null | undefined): string | null {
+  if (!images || images.length === 0) return null;
+  return JSON.stringify(images.map(({ name, uri }) => ({ name, uri })));
+}
+
+/** DB 上のユーザーデータから参照されている画像ファイル名（`local://images/` の後ろ）を収集する。
+ *
+ *  **参照元は2系統ある（043 で追加）**：
+ *  1. `card_contents` の image ブロック（画像ブロック）
+ *  2. `decks.htmlImages` の HTML 画像ライブラリ
+ *
+ *  この集合に入らないファイルは `cleanupOrphanImages` に削除され、iCloud 同期の対象にもならない
+ *  （`lib/sync/syncEngine.ts` の上り/下り/リモート整理が本関数を使う）。**新しい画像の持ち方を
+ *  増やしたら必ずここに足すこと。**
+ *
+ *  `schema` に `'bkimg.'` を渡すと ATTACH したバックアップDBの参照も集計できる（029）。 */
 export async function getReferencedImageFilenames(
   db: SQLiteDatabase,
-  from = 'card_contents',
+  schema = '',
 ): Promise<Set<string>> {
-  const rows = await db.getAllAsync<{ frontContent: string; backContent: string; memoContent: string }>(
-    `SELECT frontContent, backContent, memoContent FROM ${from}`
-  );
   const referencedFilenames = new Set<string>();
+  const addUri = (uri?: string) => {
+    if (uri?.startsWith('local://images/')) referencedFilenames.add(uri.slice('local://images/'.length));
+  };
+
+  const rows = await db.getAllAsync<{ frontContent: string; backContent: string; memoContent: string }>(
+    `SELECT frontContent, backContent, memoContent FROM ${schema}card_contents`
+  );
   for (const row of rows) {
     for (const json of [row.frontContent, row.backContent, row.memoContent]) {
       try {
         const blocks = JSON.parse(json) as { type: string; uri?: string }[];
         for (const block of blocks) {
-          if (block.type === 'image' && block.uri?.startsWith('local://images/')) {
-            referencedFilenames.add(block.uri.slice('local://images/'.length));
-          }
+          if (block.type === 'image') addUri(block.uri);
         }
       } catch {}
     }
   }
+
+  // HTML 画像ライブラリ（043）。古いバックアップDBには htmlImages 列が無く SELECT が落ちるため、
+  // ここだけ握り潰してカード側の集計は活かす（列が無い＝ライブラリ未使用の世代なので取りこぼしも無い）。
+  try {
+    const deckRows = await db.getAllAsync<{ htmlImages: string | null }>(
+      `SELECT htmlImages FROM ${schema}decks`
+    );
+    for (const row of deckRows) {
+      for (const image of parseDeckImages(row.htmlImages)) addUri(image.uri);
+    }
+  } catch {}
+
   return referencedFilenames;
 }
 
@@ -130,7 +177,7 @@ async function getBackupReferencedImageFilenames(
     try {
       await db.execAsync(`ATTACH DATABASE '${escaped}' AS bkimg;`);
       try {
-        const refs = await getReferencedImageFilenames(db, 'bkimg.card_contents');
+        const refs = await getReferencedImageFilenames(db, 'bkimg.');
         refs.forEach((f) => all.add(f));
       } finally {
         await db.execAsync('DETACH DATABASE bkimg;');

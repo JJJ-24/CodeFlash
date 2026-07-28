@@ -28,6 +28,16 @@ export type Block = TextBlock | CodeBlock | ImageBlock;
 
 // ---- Domain types ----
 
+/** デッキに登録した HTML 画像ライブラリの 1 枚（043）。
+ *  HTML ブロック／HTML 土台から `img://{name}` で参照し、実行時に data URI へ置換される。
+ *  画像本体は画像ブロックと同じ `images/` に置く（同期・孤児掃除・エクスポートに自動で乗る）。 */
+export interface DeckImage {
+  /** 参照名（デッキ内で一意・`[A-Za-z0-9_-]+`） */
+  name: string;
+  /** `local://images/xxx.jpg` 形式 */
+  uri: string;
+}
+
 export interface Deck {
   id: string;
   name: string;
@@ -43,6 +53,8 @@ export interface Deck {
   sqlInit: string | null;
   /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台）。未設定は null */
   htmlInit: string | null;
+  /** HTML 画像ライブラリ（043）。DB には JSON 文字列で保存し、読み取り時に配列へ正規化する。未登録は [] */
+  htmlImages: DeckImage[];
   /** アーカイブ済み（学習サイクル・将来指標から除外）。配下カードも含めて除外される */
   archived: boolean;
 }

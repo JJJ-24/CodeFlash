@@ -1,14 +1,14 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { deleteImagesInBlocks } from '@/lib/image';
+import { deleteImagesInBlocks, parseDeckImages, serializeDeckImages } from '@/lib/image';
 import type { Deck } from '@/types';
 import { generateId } from './utils';
 
-// SQLite は archived を 0/1 の数値で返すため boolean へ正規化する
-type RawDeck = Omit<Deck, 'archived'> & { archived: number };
+// SQLite は archived を 0/1 の数値で、htmlImages を JSON 文字列で返すため型を分けて正規化する
+type RawDeck = Omit<Deck, 'archived' | 'htmlImages'> & { archived: number; htmlImages: string | null };
 
 function toDeck(raw: RawDeck): Deck {
-  return { ...raw, archived: !!raw.archived };
+  return { ...raw, archived: !!raw.archived, htmlImages: parseDeckImages(raw.htmlImages) };
 }
 
 export async function getAllDecks(db: SQLiteDatabase): Promise<Deck[]> {
@@ -49,7 +49,7 @@ export async function setDecksArchived(db: SQLiteDatabase, ids: string[], archiv
 export async function createDeck(
   db: SQLiteDatabase,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages'>>
 ): Promise<Deck> {
   const now = new Date().toISOString();
   const id = generateId();
@@ -59,9 +59,10 @@ export async function createDeck(
   const colorHex = data.colorHex ?? null;
   const sqlInit = data.sqlInit ?? null;
   const htmlInit = data.htmlInit ?? null;
+  const htmlImages = data.htmlImages ?? [];
   await db.runAsync(
-    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, htmlInit, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)',
-    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, htmlInit, now, now]
+    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, htmlInit, htmlImages, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, htmlInit, serializeDeckImages(htmlImages), now, now]
   );
   return {
     id,
@@ -73,6 +74,7 @@ export async function createDeck(
     colorHex,
     sqlInit,
     htmlInit,
+    htmlImages,
     archived: false,
     name: data.name,
     description: data.description,
@@ -84,12 +86,21 @@ export async function updateDeck(
   db: SQLiteDatabase,
   id: string,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages'>>
 ): Promise<void> {
   const now = new Date().toISOString();
+  // htmlImages は「渡されたときだけ」更新する（他の任意項目と扱いが違う点に注意）。
+  // 画像ライブラリはフォームの入力欄と1対1ではないため、渡さない呼び出し（他画面からの
+  // デッキ更新）で無条件に上書きすると、登録済みライブラリが黙って消える。
+  const updatesImages = data.htmlImages !== undefined;
   await db.runAsync(
-    'UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, htmlInit = ?, updatedAt = ? WHERE id = ?',
-    [data.name, data.description, data.language, data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, data.htmlInit ?? null, now, id]
+    `UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, htmlInit = ?${updatesImages ? ', htmlImages = ?' : ''}, updatedAt = ? WHERE id = ?`,
+    [
+      data.name, data.description, data.language,
+      data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, data.htmlInit ?? null,
+      ...(updatesImages ? [serializeDeckImages(data.htmlImages)] : []),
+      now, id,
+    ]
   );
 }
 
@@ -104,9 +115,10 @@ export async function updateDeckSortOrders(db: SQLiteDatabase, orderedIds: strin
   await db.execAsync(sql);
 }
 
-/** 削除対象デッキ配下のカードが持つ画像ファイルを消す（本文 JSON から image ブロックを拾う）。
+/** 削除対象デッキが持つ画像ファイルを消す。対象は2系統：
+ *  ①配下カードの本文 JSON の image ブロック、②デッキの HTML 画像ライブラリ（043）。
  *  カード削除（deleteCard / deleteCardsBulk）と同じ後始末をデッキ削除にも揃えるためのもの。
- *  失敗しても DB の削除は続行する（画像が残るだけで整合性は壊れない）。 */
+ *  失敗しても DB の削除は続行する（画像が残るだけで整合性は壊れない＝孤児掃除が後で回収する）。 */
 async function deleteImagesOfDecks(db: SQLiteDatabase, inList: string): Promise<void> {
   const rows = await db.getAllAsync<{ frontContent: string | null; backContent: string | null; memoContent: string | null }>(
     `SELECT frontContent, backContent, memoContent FROM card_contents
@@ -122,6 +134,13 @@ async function deleteImagesOfDecks(db: SQLiteDatabase, inList: string): Promise<
         // 壊れた JSON は無視（画像が残るだけ）
       }
     }
+  }
+  // HTML 画像ライブラリ（043）は image ブロックと同じ形に均して同じ経路で消す
+  const deckRows = await db.getAllAsync<{ htmlImages: string | null }>(
+    `SELECT htmlImages FROM decks WHERE id IN (${inList})`
+  );
+  for (const row of deckRows) {
+    for (const image of parseDeckImages(row.htmlImages)) blocks.push({ type: 'image', uri: image.uri });
   }
   if (blocks.length > 0) await deleteImagesInBlocks(blocks).catch(() => {});
 }

@@ -1,7 +1,7 @@
 # 043 HTML 画像ライブラリ（デッキに登録した写真を `<img>` で参照）
 
 **フェーズ:** 将来
-**ステータス:** 未着手（仕様確定）
+**ステータス:** Phase 1 実装完了（2026-07-29）／Phase 2 以降 未着手
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・009（コード実行基盤）
 **被依存:** なし
 
@@ -89,17 +89,22 @@ WebView
 
 ## Todo
 
-### Phase 1: データ基盤（※ 参照集計の拡張まで一気にやる）
-- [ ] `types/index.ts`：`DeckImage = { name: string; uri: string }`（`uri` は `local://images/xxx`）と `Deck.htmlImages: DeckImage[]` を追加
-- [ ] `lib/database/schema.ts`：`decks` に `htmlImages TEXT`（nullable・JSON文字列）を `PRAGMA table_info` 確認つき `ALTER TABLE` で追加（`htmlInit`（schema.ts:183〜）と同型）
-- [ ] `lib/database/decks.ts`：`createDeck`/`updateDeck` に `htmlImages` を通す。`toDeck` で `JSON.parse` して配列へ正規化（パース失敗・NULL は `[]`）
-- [ ] `lib/image.ts`：**`getReferencedImageFilenames()` を `decks.htmlImages` も走査するよう拡張**
-  - [ ] 引数 `from = 'card_contents'` は ATTACH 済みバックアップDB（`'bkimg.card_contents'`）でも使われているため、**スキーマ接頭辞を受ける形へ変更**（例：`schema = ''` → `${schema}card_contents` と `${schema}decks` の2本を走査）。呼び出し3種（`cleanupOrphanImages`・`getBackupReferencedImageFilenames`・`syncEngine`）を追従させる
-  - [ ] 動作確認：デッキに画像を登録 → アプリ再起動 → **消えていないこと**（この確認を Phase 1 の完了条件にする）
-- [ ] `lib/import.ts`：`decks` の明示列 INSERT（import.ts:59）に `htmlImages` を追加。旧データは `(d.htmlImages as string | null) ?? null` で吸収
-- [ ] `lib/export.ts`：`decks` は `SELECT *` なので列自体は自動。**`extractImageFilenames()`（export.ts:24）にデッキ側の参照を追加**しないと画像本体がエクスポートに含まれないので対応する。`estimateExportSize()` の画像サイズ集計も同じ集合を使うよう合わせる
-- [ ] TSV（`lib/tsv.ts`）：**対象外とする**（Anki互換の表/裏テキストのみ・`sqlInit`/`htmlInit` と同じ扱い）＝判断済みとして記録
-- [ ] iCloud 同期：`sync_state` トリガーは列を問わず `decks` の変更を捕捉するため**追加対応なし**（032 の `archived` と同じ）。画像ファイル本体は上記 `getReferencedImageFilenames()` の拡張で自動的に同期対象に入る
+### Phase 1: データ基盤（※ 参照集計の拡張まで一気にやる）＝**実装完了（2026-07-29）**
+- [x] `types/index.ts`：`DeckImage = { name: string; uri: string }`（`uri` は `local://images/xxx`）と `Deck.htmlImages: DeckImage[]` を追加
+- [x] `lib/database/schema.ts`：`decks` に `htmlImages TEXT`（nullable・JSON文字列）を `PRAGMA table_info` 確認つき `ALTER TABLE` で追加（`htmlInit` と同型。`CREATE TABLE decks` は最小定義のままで新規インストールも同じ ALTER 経路を通る）
+- [x] `lib/database/decks.ts`：`createDeck`/`updateDeck` に `htmlImages` を通す。`RawDeck` を `htmlImages: string | null` に分け、`toDeck` で配列へ正規化
+  - [x] **`updateDeck` は `data.htmlImages !== undefined` のときだけ列を更新する**（他の任意項目と扱いが違う）。画像ライブラリはフォームの入力欄と1対1ではないため、渡さない呼び出し（他画面からのデッキ更新）で無条件に `?? null` すると登録済みライブラリが黙って消える
+  - [x] `deleteImagesOfDecks()`：デッキ削除時にライブラリの画像ファイルも消す（image ブロックと同じ形に均して同経路へ）
+- [x] `lib/image.ts`：**`getReferencedImageFilenames()` を `decks.htmlImages` も走査するよう拡張**
+  - [x] 引数を `from = 'card_contents'` → **スキーマ接頭辞 `schema = ''`** へ変更し、`${schema}card_contents` と `${schema}decks` の2本を走査。呼び出し3種（`cleanupOrphanImages`・`getBackupReferencedImageFilenames`（`'bkimg.'` へ修正）・`syncEngine` の3箇所＝既定引数のまま）を追従
+  - [x] `decks` の SELECT だけ try/catch で握り潰す（**旧スキーマのバックアップDBには `htmlImages` 列が無く落ちる**。ここで全体を諦めるとカード側の参照まで失って復元素材を消すため）
+  - [x] `parseDeckImages()` / `serializeDeckImages()` を新設し、DB層・エクスポート・削除処理で共用
+  - [ ] 動作確認：デッキに画像を登録 → アプリ再起動 → **消えていないこと**（※ 登録UIが Phase 5 のため**実機確認は Phase 5 まで持ち越し**。コード上は全経路が上記1関数に集約されていることを確認済み）
+- [x] `lib/import.ts`：`decks` の明示列 INSERT に `htmlImages` を追加。旧データは `(d.htmlImages as string | null) ?? null` で吸収
+- [x] `lib/export.ts`：`decks` は `SELECT *` なので列自体は自動。`extractImageFilenames(cards, decks)` にデッキ側の参照を追加（**ここが漏れると画像本体がエクスポートに入らない**）。`estimateExportSize()` も `SELECT htmlImages FROM decks` を足して同じ集合で見積もる
+- [x] TSV（`lib/tsv.ts`）：**対象外とする**（Anki互換の表/裏テキストのみ・`sqlInit`/`htmlInit` と同じ扱い）＝判断済みとして記録
+- [x] iCloud 同期：`sync_state` トリガーは列を問わず `decks` の変更を捕捉するため**追加対応なし**（032 の `archived` と同じ）。画像ファイル本体は上記 `getReferencedImageFilenames()` の拡張で自動的に同期対象に入る
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
 ### Phase 2: 画像の登録・縮小
 - [ ] `expo-image-manipulator` を追加（`npx expo install`）

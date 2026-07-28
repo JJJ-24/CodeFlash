@@ -116,9 +116,33 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 ## 技術メモ / 注意点
 - **ジェスチャー競合の回避が本チケットの肝**：インラインを操作可能化しない。全画面（別 VC）に隔離することで、CLAUDE.md/メモリに記録された `pressable-wrapper-scroll-freeze`・FlipCard/ScrollView 共存・`NestableDraggableFlatList` の競合を**そもそも踏まない**。
 - **キーボードイベント**：モーダル内 `<input>` フォーカス時の keydown/input は動く。document 全体への修飾なし keydown（グローバルショートカット）は iOS の WKWebView が first responder でないと届かない場合があり**ベストエフォート**（主要ニーズ＝クリック/入力/チェック/スクロールは影響なし）。
-- **セキュリティ**：ネットワーク API は 040 同様に無効化。`<img>`/`<link>`/`<iframe>` の取得は 040 と同じく当面許容。
+- **セキュリティ**：ネットワーク API（fetch/XHR/WebSocket）は 040 同様に無効化。`<img>`/`<link>`/`<iframe>` の取得は 040 と同じく当面許容（**実測で外部 https 画像が表示されることを確認済み**＝下記）。
 - **オフライン**：CDN 依存なし（html/js/ts はローカル完結）。
 - **既存不変**：040 の `buildWebSandboxHtml`・`buildStaticPreviewHtml`・`ExecutionOutput` のインライン表示・一発完了/タイムアウトには手を入れない（追加のみ）。
+
+---
+
+## サンドボックスの実測制約（2026-07-28 確認）
+
+**全画面でも「HTML の書ける範囲」は 040 と同じ。** `buildInteractiveWebSandboxHtml` も土台とブロック本文を `<body>` 直下へ連結し `<head>` は固定、`baseUrl='about:blank'`（opaque origin・`isSecureContext === false`）も同一だからである。**一覧は `docs/040` の「サンドボックスの実測制約」を唯一の定義元とする**（重複記載しない）。要点：
+
+- **head 系タグは全部 body 送りで効かない**（`<meta charset>`/`description`/`<title>`/`<link rel=icon>` 等）。ただし `<html lang>`/`<body style>` の属性はマージされて効く。**041 のヘッダーは言語ラベル固定なので `<title>` の表示先はここにも無い**。
+- **画像は data URI／インライン SVG なら確実**。相対パス・ローカル画像は不可。外部 https は実測で表示されるがオフラインで壊れるため非推奨。
+- **セキュアコンテキスト限定 API は不可**（clipboard・crypto.subtle・randomUUID・SW・通知・カメラ・位置）。`crypto.getRandomValues` は可。`history.pushState` はハッシュ変更のみ可。
+- Storage 系（localStorage 等）は SecurityError、cookie は保存されない。
+
+### 041 で「解消するもの」と「それでも無意味なもの」
+
+| | 040 インライン | 041 全画面 |
+|---|---|---|
+| クリック/入力/チェック/`addEventListener` | ✕（`pointerEvents="none"`） | **○** |
+| スクロール・はみ出し | ✕（220pt 固定・`scrollEnabled={false}`） | **○**（`100vh` も画面基準） |
+| `confirm()`/`prompt()` の同期ブロック | 5 秒タイムアウトに掛かりうる | **上限なしで待てる** |
+| 後出しログ（イベント発火時の console） | 完了後は届かない | **逐次 postMessage でライブ表示** |
+| `:hover`/`:focus-visible` | ✕ | **✕**（指にホバーが無い＝全画面でも無意味） |
+| `<noscript>`・`target="_blank"`・`<base target>` | ✕ | **✕** |
+| `<video>`/`<audio>` | ✕ | **✕**（`allowsInlineMediaPlayback={false}`＋要ユーザー操作＋ソースが無い） |
+| リンクのタップ | 押せない | **遷移してしまう**（`onShouldStartLoadWithRequest` ガード無し・⟲ で復帰） |
 
 ---
 

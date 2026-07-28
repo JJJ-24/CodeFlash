@@ -153,9 +153,63 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
   - console 上書き・ネットワーク遮断・完了判定機構は**必ず `<head>`（本文より先）に置く**。
   - ユーザー script を try/catch で包めないので、未捕捉例外は **`window.onerror`** で拾って error 表示する。
   - 完了トリガは **`DOMContentLoaded`**（画像等の subresource を待たない）後に起動し、以後は後出しログ用の「保留タイマー追跡＋マクロタスク境界 finish」を流用する。
-- **セキュリティ**：ネットワーク API は無効化。ただし土台/本文の `<img src>`/`<link>`/`<iframe>` は取得しうる。v1 は許容し、必要なら CSP メタで制限（後続検討）。
+- **セキュリティ**：ネットワーク API（fetch/XHR/WebSocket）は無効化。ただし土台/本文の `<img src>`/`<link>`/`<iframe>` は**実測で取得できることを確認済み**（下記「サンドボックスの実測制約」）。v1 は許容し、必要なら CSP メタで制限（後続検討）。
 - **合成順**：デッキ土台 → ブロック土台 →（js/ts は）本文 script。html は デッキ土台 → 本文。
 - **オフライン**：CDN 依存なし（HTML/CSS/JS はローカル完結）。
+
+---
+
+## サンドボックスの実測制約（2026-07-28 確認・041 と共通）
+
+**「HTML はどこまで書けるのか」の結論。** 041 全画面プレビューでも土台/合成/オリジンは同じなので共通（041 固有の差分は `docs/041` 参照）。
+
+### 構造：ユーザーの HTML は必ず `<body>` 直下
+
+`buildWebSandboxHtml` / `buildInteractiveWebSandboxHtml` / `buildStaticPreviewHtml` はいずれも **土台（`${stages}`）とブロック本文（`${markup}`）を `<body>` 直下に文字列連結**し、`<head>` は固定（charset・viewport・遮断スクリプト）。**ユーザーが `<head>` に足す手段は無い**。head 系タグは「無視される」のではなく「置き場所が悪くて効果がない」。
+
+| 書いたもの | 結果 |
+|---|---|
+| `<meta charset>` | 無効果（エンコーディング確定済み＋head で宣言済み） |
+| `<meta name="description">`・`og:*`・`keywords`・`robots`・`theme-color` | 無効果（クローラ/ブラウザ UI 向け） |
+| `<title>` | 見た目に無効果（表示先が無い。041 ヘッダーは言語ラベル固定）。`document.title` では読める |
+| `<link rel="icon"/"manifest"/"canonical"/"preconnect">` | 無効果 |
+| `<!DOCTYPE>`・`<head>` 開始タグ | 本文中では無視される（外側で宣言済みなので標準モードで動作） |
+| `<meta name="viewport">` | head で指定済み。後勝ちで効く可能性があるので**書かない** |
+| **`<html lang>` / `<body style>` の属性** | ⚠️ **既存要素にマージされて実際に効く**（HTML 仕様の挙動） |
+
+→ **フル HTML ドキュメントを丸ごと貼っても「head の中身が body に落ちるだけ」でだいたい動く。**
+
+### 画像
+
+- **`<img src="data:...">`・インライン `<svg>`・CSS `url(data:...)` は通信もオリジンも不要で確実に使える**（教材ではこれを推奨）。
+- 相対パス・ローカルファイル・**アプリ内の画像ブロックの画像は不可**（`baseUrl='about:blank'`＋`allowFileAccess` 未設定）。
+- **外部 https の `<img>` は実測で表示された**（CSP 無し・`originWhitelist={['*']}`）＝`<script src>`/`<link rel=stylesheet>`/`<iframe src>` も同経路で通る。ただし**オフラインで無音で壊れる**ため非推奨。`@font-face` の Web フォントのみ CORS 必須（オリジンが opaque ＝ `Origin: null` を許す CDN のみ通る）。
+
+### オリジン起因（`about:blank` ＝ opaque origin・`isSecureContext === false`）
+
+- Storage 系（`localStorage`/`sessionStorage`/`indexedDB`）は SecurityError、`document.cookie` は例外なしで保存されない。
+- **セキュアコンテキスト限定 API は一律不可**：`navigator.clipboard`・`crypto.subtle`・`crypto.randomUUID`（`undefined`）・Service Worker 登録・`Notification`・`getUserMedia`・Geolocation。**乱数は `crypto.getRandomValues()` が使える**（限定対象外）。
+- **`history.pushState` はハッシュ変更（`'#x'`）なら通る**（実測 OK）。相対パス解決ができないためパス変更は落ちる想定＝SPA ルーティングのデモは不可。
+
+### 両プレビューで等しく無意味なもの
+
+`:hover`/`:focus-visible`（指にホバーが無い）・`<noscript>`（JS 常時有効）・`target="_blank"`（`window.open` 無効で別窓を開けない）・`<base target>`・`<video>`/`<audio>`（`allowsInlineMediaPlayback={false}` ＋要ユーザー操作 ＋ ソースが無い＝実質使えない）。
+
+### 040 インライン特有（041 では解消）
+
+固定高 220pt・`scrollEnabled={false}`・`pointerEvents="none"` のため、**はみ出しは切れる／`100vh`=220pt／操作不可**。また `confirm()`/`prompt()` は同期ブロックのため 5 秒タイムアウトに掛かりうる（`alert()` はネイティブダイアログで動作）。**土台の `<script>` 内の `console.log` は静的プレビュー（未実行時）では console キャプチャが無いのでどこにも出ない**（実行後は出る）。
+
+### 検証に使ったカード
+
+```html
+<img src="https://placehold.co/60" onerror="document.body.append('img:NG')" onload="document.body.append('img:OK')">
+<script>
+  try { history.pushState({}, '', '#x'); console.log('pushState:OK'); } catch(e) { console.log('pushState:NG ' + e.name); }
+  console.log('secure:' + window.isSecureContext, 'clipboard:' + !!navigator.clipboard, 'randomUUID:' + !!crypto.randomUUID);
+</script>
+```
+
+結果：`img:OK` ／ `pushState:OK secure:false clipboard:false randomUUID:false`
 
 ---
 

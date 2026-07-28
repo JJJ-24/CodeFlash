@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
@@ -20,9 +21,23 @@ export const imageMaxWidth = (size?: ImageSizeKey): number => {
   return table[size ?? DEFAULT_IMAGE_SIZE];
 };
 
+/** HTML 画像ライブラリ（043）に登録する画像の長辺上限 px。これを超える画像だけ縮小する。
+ *  実行時に base64 化して WebView へ渡すため、原寸のままだと毎回数MBの文字列を運ぶことになる。 */
+export const IMAGE_LIBRARY_MAX_DIMENSION = 1024;
+
+/** 縮小後もこのバイト数を超えたら登録時に警告する（登録自体はブロックしない）。 */
+export const IMAGE_LIBRARY_WARN_BYTES = 1024 * 1024;
+
 export type PickAndSaveImageResult =
-  | { uri: string }
+  | { uri: string; bytes: number }
   | { error: 'tooLarge' };
+
+export type PickAndSaveImageOptions = {
+  /** 指定すると、長辺がこの px を超える画像を縮小してから保存する（**拡大はしない**）。
+   *  あわせて形式を正規化する（元が PNG なら PNG のまま＝透過を保つ／それ以外は JPEG）。
+   *  HTML 画像ライブラリ（043）用。未指定なら従来どおり元ファイルをそのままコピーする。 */
+  maxDimension?: number;
+};
 
 /** ローカル画像の保存ディレクトリ（`local://images/xxx` の実体）。iCloud 同期も参照する。 */
 export const IMAGE_DIR = FileSystem.documentDirectory + 'images/';
@@ -36,8 +51,12 @@ export async function ensureImageDir() {
 }
 
 /** フォトライブラリから画像を選択してアプリストレージにコピーする。
- *  戻り値: 成功時 `{ uri }`（`local://images/{uuid}.{ext}` 形式）、サイズ超過時 `{ error: 'tooLarge' }`、キャンセル/権限なしは null。 */
-export async function pickAndSaveImage(): Promise<PickAndSaveImageResult | null> {
+ *  戻り値: 成功時 `{ uri, bytes }`（`local://images/{uuid}.{ext}` 形式と保存後のバイト数）、
+ *  サイズ超過時 `{ error: 'tooLarge' }`、キャンセル/権限なしは null。
+ *  `options.maxDimension` を渡すと縮小＋形式正規化を挟む（043 の画像ライブラリ用）。 */
+export async function pickAndSaveImage(
+  options?: PickAndSaveImageOptions,
+): Promise<PickAndSaveImageResult | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) return null;
 
@@ -51,18 +70,52 @@ export async function pickAndSaveImage(): Promise<PickAndSaveImageResult | null>
 
   const asset = result.assets[0];
 
+  // 上限判定は「縮小前の元ファイル」に対して行う（巨大な原本を読み込む前に弾くのが目的）
   if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
     return { error: 'tooLarge' };
   }
 
-  const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  let sourceUri = asset.uri;
+  let ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+
+  // 043: ライブラリ登録時は縮小と形式正規化を通す。長辺が上限以下でも通すのは、HEIC 等を
+  // JPEG に揃えて拡張子→MIME の対応を単純化するため（参照解決側が png/jpg だけを見ればよくなる）。
+  if (options?.maxDimension) {
+    const isPng = ext === 'png';
+    const context = ImageManipulator.manipulate(asset.uri);
+    const longest = Math.max(asset.width ?? 0, asset.height ?? 0);
+    if (longest > options.maxDimension) {
+      // 長辺だけ指定すればもう片方は比率を保って自動計算される（拡大はしない＝この分岐のみ）
+      context.resize(
+        (asset.width ?? 0) >= (asset.height ?? 0)
+          ? { width: options.maxDimension }
+          : { height: options.maxDimension }
+      );
+    }
+    const rendered = await context.renderAsync();
+    const saved = await rendered.saveAsync({
+      format: isPng ? SaveFormat.PNG : SaveFormat.JPEG,
+      compress: 0.8,
+    });
+    sourceUri = saved.uri;
+    ext = isPng ? 'png' : 'jpg';
+  }
+
   const uuid = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const filename = `${uuid}.${ext}`;
 
   await ensureImageDir();
-  await FileSystem.copyAsync({ from: asset.uri, to: IMAGE_DIR + filename });
+  await FileSystem.copyAsync({ from: sourceUri, to: IMAGE_DIR + filename });
 
-  return { uri: `local://images/${filename}` };
+  // 変換後の中間ファイル（キャッシュ領域）は不要なので片付ける。失敗しても実害はない。
+  if (sourceUri !== asset.uri) {
+    await FileSystem.deleteAsync(sourceUri, { idempotent: true }).catch(() => {});
+  }
+
+  const info = await FileSystem.getInfoAsync(IMAGE_DIR + filename);
+  const bytes = info.exists && 'size' in info ? ((info.size as number) ?? 0) : 0;
+
+  return { uri: `local://images/${filename}`, bytes };
 }
 
 /** `local://images/xxx.jpg` → 実際のファイルシステム URI に変換する */

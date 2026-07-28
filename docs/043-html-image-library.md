@@ -1,7 +1,8 @@
 # 043 HTML 画像ライブラリ（デッキに登録した写真を `<img>` で参照）
 
 **フェーズ:** 将来
-**ステータス:** Phase 1 実装完了（2026-07-29）／Phase 2 以降 未着手
+**ステータス:** Phase 1・2 実装完了（2026-07-29）／Phase 3 以降 未着手
+**要ネイティブ再ビルド:** `expo-image-manipulator` 追加のため dev client を1回作り直すこと
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・009（コード実行基盤）
 **被依存:** なし
 
@@ -106,13 +107,17 @@ WebView
 - [x] iCloud 同期：`sync_state` トリガーは列を問わず `decks` の変更を捕捉するため**追加対応なし**（032 の `archived` と同じ）。画像ファイル本体は上記 `getReferencedImageFilenames()` の拡張で自動的に同期対象に入る
 - [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
-### Phase 2: 画像の登録・縮小
-- [ ] `expo-image-manipulator` を追加（`npx expo install`）
-- [ ] `lib/image.ts`：`pickAndSaveImage()` を**縮小オプション付きに拡張**（既存の呼び出し＝画像ブロックの挙動は変えない）
-  - [ ] `pickAndSaveImage({ maxDimension: 1024 })` のように任意引数。指定時のみ `ImageManipulator` で長辺1024へ縮小してから `images/` へ保存
-  - [ ] フォーマットは**元が png なら png、それ以外は jpeg**（透過を潰さない）。HEIC は jpeg に正規化される＝WebView での確実性も上がる
-  - [ ] 既存の 5MB 上限チェックは縮小前の判定として維持
-- [ ] 縮小後も 1MB を超える場合は登録時に警告（`InfoModal`）。ブロックはしない
+### Phase 2: 画像の登録・縮小 ＝**実装完了（2026-07-29）**
+- [x] `expo-image-manipulator`（`~14.0.8`）を追加（`npx expo install`）。**ネイティブ依存のため dev client の再ビルドが1回必要**
+- [x] `lib/image.ts`：`pickAndSaveImage(options?)` を**縮小オプション付きに拡張**（引数なしの既存呼び出し＝画像ブロックの挙動は不変）
+  - [x] `pickAndSaveImage({ maxDimension: IMAGE_LIBRARY_MAX_DIMENSION })`。**長辺が上限を超えるときだけ** `resize`（拡大はしない・長辺だけ指定して比率は自動）
+  - [x] 形式は**元が png なら png、それ以外は jpeg**（透過を保つ）。**長辺が上限以下でも変換は通す**＝HEIC 等を JPEG に揃え、Phase 3 の拡張子→MIME 対応を png/jpg の2択に単純化するため
+  - [x] 既存の 5MB 上限チェックは**縮小前の元ファイル**に対する判定として維持（巨大な原本を読む前に弾く）
+  - [x] 変換の中間ファイル（キャッシュ領域）は保存後に削除（best-effort）
+  - [x] 新 API（`ImageManipulator.manipulate()` → `renderAsync()` → `saveAsync()`）を使用。`manipulateAsync` は deprecated のため不使用
+- [x] 戻り値に `bytes`（保存後のサイズ）を追加し、`IMAGE_LIBRARY_WARN_BYTES`（1MB）を公開
+  - [ ] 縮小後も 1MB を超える場合の警告 `InfoModal` 表示（**UI 側なので Phase 5 で実装**。判定材料はここで揃えた）
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
 ### Phase 3: 参照解決（新規モジュール）
 - [ ] `lib/htmlImages.ts` を新設

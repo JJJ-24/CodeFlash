@@ -12,7 +12,9 @@ import { WebView } from 'react-native-webview';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { buildStaticPreviewHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, SqlTableResult } from '@/lib/code-execution/types';
+import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import type { DeckImage } from '@/types';
 
 function buildCopyText(result: ExecResult): string {
   const lines: string[] = [];
@@ -84,6 +86,8 @@ interface Props {
   staticPreview?: boolean;
   /** 指定時、プレビューバーに「全画面」ボタンを出す（041・全画面インタラクティブプレビューを開く）。 */
   onExpand?: () => void;
+  /** デッキの HTML 画像ライブラリ（043）。実行前プレビューの `img://name` を data URI へ解決するのに使う。 */
+  deckImages?: DeckImage[];
 }
 
 /**
@@ -92,7 +96,7 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, onExpand }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, onExpand, deckImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -112,9 +116,25 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
     return () => clearTimeout(id);
   }, [staticHtml]);
 
+  // 043: 土台に `img://name` があればデバウンス後に data URI へ解決する（デバウンス前だと
+  // 打鍵のたびにファイルを読むことになる）。参照が無ければ解決を挟まず従来どおり同期のまま。
+  const needsImages = !!debouncedStatic && hasImageRefs(debouncedStatic);
+  const [resolvedStatic, setResolvedStatic] = useState<string | null>(null);
+  useEffect(() => {
+    if (!needsImages || !debouncedStatic) {
+      setResolvedStatic(null);
+      return;
+    }
+    let cancelled = false;
+    void resolveHtmlImageRefs(debouncedStatic, deckImages ?? []).then((resolved) => {
+      if (!cancelled) setResolvedStatic(resolved);
+    });
+    return () => { cancelled = true; };
+  }, [debouncedStatic, needsImages, deckImages]);
+
   // 実行中/実行後（web 系）は実行 WebView を可視表示。それ以外で土台があれば静的プレビューを出す。
   const execActive = previewMode && !!htmlSource;
-  const activeHtml = execActive ? htmlSource : debouncedStatic;
+  const activeHtml = execActive ? htmlSource : needsImages ? resolvedStatic : debouncedStatic;
 
   const handleCopy = useCallback(async () => {
     if (!result) return;

@@ -36,7 +36,7 @@ import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
-import type { Block, CodeBlock, ImageBlock, TextBlock } from "@/types";
+import type { Block, CodeBlock, DeckImage, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
 import { ImageBlockItem } from "./ImageBlockItem";
 import { TagSelector } from "./TagSelector";
@@ -104,6 +104,8 @@ interface Props {
   deckSqlInit?: string | null;
   /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
   deckHtmlInit?: string | null;
+  /** デッキの HTML 画像ライブラリ（043）。CodeBlockItem へ素通しする */
+  deckHtmlImages?: DeckImage[];
   onSave: (data: BlockEditorData) => Promise<void>;
   onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
@@ -135,6 +137,7 @@ export function BlockEditor({
   deckColorHex,
   deckSqlInit,
   deckHtmlInit,
+  deckHtmlImages,
   onSave,
   onFrontEmptyChange,
   saving: _saving,
@@ -1242,6 +1245,7 @@ export function BlockEditor({
                   isPreview={isPreview}
                   deckSqlInit={deckSqlInit}
                   deckHtmlInit={deckHtmlInit}
+                  deckHtmlImages={deckHtmlImages}
                   onChange={(patch) =>
                     updateBlock(activeTab, block._key, patch)
                   }

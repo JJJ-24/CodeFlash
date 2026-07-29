@@ -11,8 +11,10 @@ import { WebView } from 'react-native-webview';
 import { LANG_LABELS } from '@/lib/code-execution/constants';
 import { buildInteractiveWebSandboxHtml } from '@/lib/code-execution/sandbox';
 import type { LogEntry } from '@/lib/code-execution/types';
+import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
+import type { DeckImage } from '@/types';
 
 const KEY_ESCAPE = (KeyCommand.constants?.keyInputEscape as string) ?? '';
 // console 氾濫（setInterval 連打等）でメモリが膨らまないよう直近 N 件に丸める。
@@ -27,6 +29,8 @@ interface Props {
   body: string;
   /** HTML/CSS 土台（[deck, block] の非空要素）。 */
   stages: string[];
+  /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決するのに使う。 */
+  deckImages?: DeckImage[];
 }
 
 /**
@@ -35,7 +39,7 @@ interface Props {
  * addEventListener（クリック/入力/チェック/スクロール等）を発火させ、下部のライブ console に
  * イベントで出た console.log を逐次表示する。
  */
-export function InteractivePreviewModal({ visible, onClose, language, body, stages }: Props) {
+export function InteractivePreviewModal({ visible, onClose, language, body, stages, deckImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -47,7 +51,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
   const mode: 'html' | 'js' = language === 'html' ? 'html' : 'js';
 
   // TS はここで変換。失敗時は土台だけ描画し、変換エラーを console に出す。
-  const { html, transpileError } = useMemo(() => {
+  const { html: baseHtml, transpileError } = useMemo(() => {
     let src = body;
     let err: string | null = null;
     if (language === 'typescript') {
@@ -62,6 +66,25 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
       transpileError: err,
     };
   }, [body, language, mode, stages]);
+
+  // 043: `img://name` があれば data URI へ解決してから WebView に渡す。参照が無ければ
+  // 同期のまま（`baseHtml` をそのまま使う）＝従来の挙動と1フレームも変わらない。
+  const needsImages = hasImageRefs(baseHtml);
+  const [resolvedHtml, setResolvedHtml] = useState<string | null>(null);
+  useEffect(() => {
+    if (!needsImages) {
+      setResolvedHtml(null);
+      return;
+    }
+    let cancelled = false;
+    void resolveHtmlImageRefs(baseHtml, deckImages ?? []).then((resolved) => {
+      if (!cancelled) setResolvedHtml(resolved);
+    });
+    return () => { cancelled = true; };
+  }, [baseHtml, needsImages, deckImages]);
+  // 解決待ちの間は null＝WebView を出さない（未解決の HTML を一瞬描画してから
+  // 差し替わると、二重読み込みになりスクリプトが2回走る）。
+  const html = needsImages ? resolvedHtml : baseHtml;
 
   // 開くたびに console と WebView をリセット（土台の初期状態から＝反復学習の冪等性）。
   useEffect(() => {
@@ -120,7 +143,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
 
         {/* 操作可能な WebView（別 VC のためカードの ScrollView/FlipCard と競合しない） */}
         <View style={styles.webviewWrap}>
-          {visible && (
+          {visible && html !== null && (
             <WebView
               key={nonce}
               style={styles.webview}

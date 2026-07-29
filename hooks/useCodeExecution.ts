@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import { buildSandboxHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, ExecStatus, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
+import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import i18n from '@/lib/i18n';
+import type { DeckImage } from '@/types';
 
 export type { ExecResult, ExecStatus, LogEntry, SqlTableResult };
 
@@ -67,6 +69,10 @@ export function useCodeExecution(onResult?: () => void) {
   // WebView の key に使って毎回強制再マウント（＝再実行）させる。
   const [runNonce, setRunNonce] = useState(0);
   const cppAbortRef = useRef<AbortController | null>(null);
+  // 043: 画像参照の解決（ファイル読み込み）を挟むと run が非同期になるため、
+  // 「解決を待っている間に次の実行・clear が走った」場合に古い結果で上書きしないための通し番号。
+  // runNonce は関数更新なので同期に値を読めない＝別に ref で持つ。
+  const runSeqRef = useRef(0);
 
   // 常に最新の onResult を参照するため ref で保持
   const onResultRef = useRef(onResult);
@@ -170,11 +176,13 @@ export function useCodeExecution(onResult?: () => void) {
   /**
    * @param sqlInits  SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外では無視される
    * @param htmlInits Web 系（html / js・ts の土台）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）
+   * @param deckImages デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決するのに使う
    */
-  function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[]) {
+  function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[], deckImages?: DeckImage[]) {
     setStatus('running');
     setResult(null);
     setRunNonce((n) => n + 1); // 可視プレビューの WebView を再実行ごとに強制再マウントするための key
+    const seq = ++runSeqRef.current;
 
     if (language === 'cpp') {
       void runCppViaWandbox(content);
@@ -205,7 +213,19 @@ export function useCodeExecution(onResult?: () => void) {
       language === 'python' ? 'https://cdn.jsdelivr.net' :
       language === 'sql' ? 'https://cdnjs.cloudflare.com' : undefined
     );
-    setHtmlSource(buildSandboxHtml(code, language, sqlInits, htmlInits));
+    const html = buildSandboxHtml(code, language, sqlInits, htmlInits);
+
+    // 043: web 系で `img://name` を含むときだけ、ファイル読み込みを挟んで data URI に解決する。
+    // 含まないとき（＝ほとんどのカード）は従来どおり同期でセットする＝挙動も速度も不変。
+    // web 系に限るのは、python/sql の本文に現れた `img://` を書き換えないため。
+    if (isWeb && hasImageRefs(html)) {
+      void resolveHtmlImageRefs(html, deckImages ?? []).then((resolved) => {
+        if (runSeqRef.current !== seq) return; // 解決中に次の実行/clear が走った＝この結果は捨てる
+        setHtmlSource(resolved);
+      });
+      return;
+    }
+    setHtmlSource(html);
   }
 
   function clear() {
@@ -214,6 +234,7 @@ export function useCodeExecution(onResult?: () => void) {
     setHtmlSource(null); // Web プレビューの可視 WebView も破棄する
     setPreviewMode(false);
     previewModeRef.current = false;
+    runSeqRef.current++; // 解決待ちの画像参照が後から htmlSource を蘇らせないように無効化する
   }
 
   function handleMessage(event: { nativeEvent: { data: string } }) {
@@ -243,6 +264,7 @@ export function useCodeExecution(onResult?: () => void) {
     setHtmlSource(null);
     setPreviewMode(false);
     previewModeRef.current = false;
+    runSeqRef.current++; // clear と同じく、解決待ちの結果を無効化する
   }
 
   return {

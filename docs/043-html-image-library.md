@@ -1,7 +1,7 @@
 # 043 HTML 画像ライブラリ（デッキに登録した写真を `<img>` で参照）
 
 **フェーズ:** 将来
-**ステータス:** Phase 1・2 実装完了（2026-07-29）／Phase 3 以降 未着手
+**ステータス:** Phase 1〜4 実装完了（2026-07-29）／Phase 5 以降 未着手
 **要ネイティブ再ビルド:** `expo-image-manipulator` 追加のため dev client を1回作り直すこと
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・009（コード実行基盤）
 **被依存:** なし
@@ -119,27 +119,37 @@ WebView
   - [ ] 縮小後も 1MB を超える場合の警告 `InfoModal` 表示（**UI 側なので Phase 5 で実装**。判定材料はここで揃えた）
 - [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
-### Phase 3: 参照解決（新規モジュール）
-- [ ] `lib/htmlImages.ts` を新設
-  - [ ] `resolveHtmlImageRefs(html: string, images: DeckImage[]): Promise<string>`
-    - [ ] `/img:\/\/([A-Za-z0-9_-]+)/g` で走査 → 名前で引いて `data:{mime};base64,…` に置換
-    - [ ] 未解決名は**プレースホルダSVG**（グレー地＋名前）の data URI に置換
-    - [ ] 参照が無ければ**ファイルを一切読まずに即 return**（通常のカードに余計なI/Oを増やさない）
-  - [ ] **メモリキャッシュ**（`Map<filename, dataUri>`）。実行前プレビューは土台編集の400msデバウンスごとに再構築されるため、毎回 `readAsStringAsync` すると重い
-  - [ ] キャッシュ無効化：画像の削除・差し替え時（登録は新ファイル名なので不要）
-  - [ ] 拡張子 → MIME 判定（jpg/jpeg・png・gif・webp。不明は jpeg 扱い）
+### Phase 3: 参照解決（新規モジュール）＝**実装完了（2026-07-29）**
+- [x] `lib/htmlImages.ts` を新設
+  - [x] `resolveHtmlImageRefs(html: string, images: DeckImage[]): Promise<string>`
+    - [x] `/img:\/\/([A-Za-z0-9_-]+)/g` で走査 → 名前で引いて `data:{mime};base64,…` に置換
+    - [x] 未解決名は**プレースホルダSVG**（グレー地の破線枠＋`img://name` を等幅で描画）の data URI に置換。`encodeURIComponent` で包むので `"`・`#` を含まず、属性値でも `url()` でも壊れない
+    - [x] 参照が無ければ**ファイルを一切読まずに即 return**（通常のカードに余計なI/Oを増やさない）
+  - [x] **メモリキャッシュ**（`Map<localUri, dataUri>`）。実行前プレビューは土台編集の400msデバウンスごとに再構築されるため、毎回 `readAsStringAsync` すると重い
+    - [x] 上限12枚（1枚最大1.4MB程度になりうるため、挿入順で古いものから捨てる）
+  - [x] `invalidateHtmlImageCache(localUri?)` を公開（画像の削除・差し替え時に呼ぶ。引数省略で全消し）
+  - [x] 拡張子 → MIME 判定（png/gif/webp/svg、既定は jpeg）
+  - [x] `isValidImageName()` / `buildImageRef()` / `buildImageTag()` を公開＝**参照構文の定義元をこのモジュールに集約**（Phase 5 の入力バリデーションとコピー機能が同じ定義を使う）
+- [x] 正規表現の境界を確認：`src="img://x"` / `src='img://x'` / `url(img://x-1)` のいずれでも**閉じ引用符・閉じ括弧を巻き込まない**。`img://`（名前なし）は非マッチ
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
-### Phase 4: 実行系の配線
-- [ ] `hooks/useCodeExecution.ts`：`run()` の web 系経路を**非同期化**（`resolveHtmlImageRefs` の await が入る）
-  - [ ] `run(content, language, sqlInits?, htmlInits?, deckImages?)` に画像配列を追加
-  - [ ] await 後に `setHtmlSource` するため、**遅れて解決した実行結果が新しい実行を上書きしないよう `runNonce` で自分の実行が最新か確認**してから反映する（C++ の `AbortController` と同じ思想）
-  - [ ] console 専用言語（js/ts/python/sql/cpp）は従来どおり同期のまま＝影響なし
-- [ ] `components/code/ExecutionOutput.tsx`：静的プレビュー（`buildStaticPreviewHtml`）も解決後のHTMLを受け取る形にする（`staticPreview` prop の生成元を非同期化）
-- [ ] `components/code/InteractivePreviewModal.tsx`（041）：モーダル内でHTMLを組み立てているため、**ここでも同じ解決を通す**
-- [ ] `deckHtmlInit` を流している既存経路に `deckHtmlImages` を併走させる
-  - [ ] 編集：`card/new`・`card/[cardId]/edit` → `BlockEditor` → `CodeBlockItem`
-  - [ ] 学習：`session.tsx` → `BlocksView` → `CodeRunnerView`
-- [ ] `[プレビュー | ソース]` の**ソース表示は置換前**（`img://logo` のまま）を出す。巨大なbase64を表示しても読めないため
+### Phase 4: 実行系の配線 ＝**実装完了（2026-07-29）**
+- [x] **解決は「合成後の最終HTML」に対して1回だけ行う**方式にした（土台と本文を別々に解決しない）。`img://` は土台にも本文にも書けるため、最終形に対して1回かければ両方まとめて拾える＝差し込み口が3つで済む
+- [x] `hooks/useCodeExecution.ts`：`run(content, language, sqlInits?, htmlInits?, deckImages?)` に画像配列を追加
+  - [x] **`img://` を含むときだけ**非同期解決に入る（`hasImageRefs()` の同期判定）。含まなければ従来どおり同期で `setHtmlSource`＝**既存カードは挙動も速度も不変**
+  - [x] **web 系（`isWeb`）に限定**。python/sql の本文にたまたま現れた `img://` を書き換えないため
+  - [x] 解決待ちの間に次の実行・`clear`・`reset` が走った場合に古い結果で上書きしないよう `runSeqRef` の通し番号で判定（`runNonce` は関数更新で同期に値を読めないため別 ref）。`clear`/`reset` 側も番号を進めて**解決待ちが後から `htmlSource` を蘇らせない**ようにした
+- [x] `components/code/ExecutionOutput.tsx`：静的プレビューに `deckImages` prop を追加し、**400msデバウンスの「後」で解決**する（前だと打鍵のたびにファイルを読む）
+- [x] `components/code/InteractivePreviewModal.tsx`（041）：同じ解決を通す。**解決待ちの間は WebView を出さない**（未解決HTMLを一瞬描画してから差し替えるとスクリプトが2回走るため）
+- [x] `deckHtmlInit` を流している既存経路に `deckHtmlImages` を併走させた
+  - [x] 編集：`card/new`・`card/[cardId]/edit` → `BlockEditor` → `CodeBlockItem`
+  - [x] 学習：`session.tsx`（`currentDeckHtmlImages`・5箇所）→ `BlocksView` → `CodeRunnerView`
+- [x] `[プレビュー | ソース]` の**ソース表示は置換前**（`previewSource` は土台の生テキストなので元から置換対象外＝変更不要だった）
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
+
+> **疎通確認：2026-07-29 実機で OK**。登録UI（Phase 5）が無い状態で、デッキの HTML/CSS 土台に
+> `<img src="img://test">` と書き、**破線枠のプレースホルダ**が描画されることを確認した。
+> ＝「本文/土台 → 解決 → サンドボックス → WebView」が最後まで通っている。
 
 ### Phase 5: デッキ編集 UI（画像ライブラリ）
 - [ ] `components/SqlInitModal.tsx` に `footer?: React.ReactNode` を追加（テキストエリア専用の汎用性を壊さず、デッキ編集側から画像ライブラリUIを差し込む）

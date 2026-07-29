@@ -28,7 +28,7 @@ import { useProStore } from "@/store/pro";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from "@/lib/theme";
-import type { CodeBlock } from "@/types";
+import type { CodeBlock, DeckImage } from "@/types";
 
 interface Props {
   block: CodeBlock;
@@ -53,6 +53,8 @@ interface Props {
   deckSqlInit?: string | null;
   /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台。ブロック固有 htmlInit の前に積まれる） */
   deckHtmlInit?: string | null;
+  /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決する */
+  deckHtmlImages?: DeckImage[];
 }
 
 export function CodeRunnerView({
@@ -74,6 +76,7 @@ export function CodeRunnerView({
   onForceKeyboardFocus,
   deckSqlInit,
   deckHtmlInit,
+  deckHtmlImages,
 }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -229,9 +232,9 @@ export function CodeRunnerView({
     const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
     if (wasThisEditing || anotherWasEditing) {
       // keyboard TextInput の focus 復元を待ってから WebView をマウントする
-      setTimeout(() => run(content, block.language, sqlInits, htmlInits), 300);
+      setTimeout(() => run(content, block.language, sqlInits, htmlInits, deckHtmlImages), 300);
     } else {
-      run(content, block.language, sqlInits, htmlInits);
+      run(content, block.language, sqlInits, htmlInits, deckHtmlImages);
     }
   }, [
     isRunning,
@@ -244,6 +247,7 @@ export function CodeRunnerView({
     block.sqlInit,
     deckSqlInit,
     htmlInits,
+    deckHtmlImages,
     run,
     onEditBlur,
     onForceKeyboardFocus,
@@ -474,6 +478,7 @@ export function CodeRunnerView({
           onClear={clear}
           onMessage={handleMessage}
           onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
+          deckImages={deckHtmlImages}
         />
       )}
       <InteractivePreviewModal
@@ -482,6 +487,7 @@ export function CodeRunnerView({
         language={block.language}
         body={editable && editedContent !== undefined ? editedContent : block.content}
         stages={stages}
+        deckImages={deckHtmlImages}
       />
       <InfoModal
         visible={proModalVisible}

@@ -33,7 +33,7 @@ import { useInsertPair } from '@/hooks/useInsertPair';
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
-import type { CodeBlock } from '@/types';
+import type { CodeBlock, DeckImage } from '@/types';
 
 interface Props {
   block: CodeBlock;
@@ -58,9 +58,11 @@ interface Props {
   deckSqlInit?: string | null;
   /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台。ブロック固有 htmlInit の前に積まれる） */
   deckHtmlInit?: string | null;
+  /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決する */
+  deckHtmlImages?: DeckImage[];
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit, deckHtmlInit }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit, deckHtmlInit, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -177,7 +179,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         setProModalVisible(true);
         return;
       }
-      run(block.content, block.language, sqlInits, htmlInits);
+      run(block.content, block.language, sqlInits, htmlInits, deckHtmlImages);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runTrigger]);
@@ -280,7 +282,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   setFocused(false);
                 }
                 onRunButtonPress?.();
-                run(block.content, block.language, sqlInits, htmlInits);
+                run(block.content, block.language, sqlInits, htmlInits, deckHtmlImages);
               }}
               disabled={isRunning}
             >
@@ -509,6 +511,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             onClear={clear}
             onMessage={handleMessage}
             onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
+            deckImages={deckHtmlImages}
           />
         </>
       )}
@@ -519,6 +522,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         language={block.language}
         body={block.content}
         stages={stages}
+        deckImages={deckHtmlImages}
       />
 
       {/* 言語選択モーダル */}

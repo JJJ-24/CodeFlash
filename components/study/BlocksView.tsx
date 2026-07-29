@@ -14,7 +14,7 @@ import { resolveImageUri, imageMaxWidth } from '@/lib/image';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
-import type { Block, CodeBlock, ImageBlock, TextBlock } from '@/types';
+import type { Block, CodeBlock, DeckImage, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
 
@@ -60,9 +60,11 @@ interface Props {
   deckSqlInit?: string | null;
   /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
   deckHtmlInit?: string | null;
+  /** デッキの HTML 画像ライブラリ（043）。CodeRunnerView へ素通しする */
+  deckHtmlImages?: DeckImage[];
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlInit, deckHtmlInit }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlInit, deckHtmlInit, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -304,6 +306,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 onForceKeyboardFocus={onForceKeyboardFocus}
                 deckSqlInit={deckSqlInit}
                 deckHtmlInit={deckHtmlInit}
+                deckHtmlImages={deckHtmlImages}
                 exitEditTrigger={exitEditTriggers[i]}
                 runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}
                 editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}

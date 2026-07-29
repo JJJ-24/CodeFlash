@@ -86,8 +86,13 @@ const TS_TYPES = new Set([
 ]);
 
 // Returns tokens for HTML/CSS which need special handling
+/** `<script>` / `<style>` は「生テキスト要素」で、中身は HTML ではなく JS / CSS。
+ *  閉じタグ探索を大文字小文字を無視して行うため、小文字化した複製を1回だけ作って使い回す。 */
+const RAW_TEXT_TAGS: Record<string, string> = { script: 'javascript', style: 'css' };
+
 function tokenizeHtml(code: string): Token[] {
   const tokens: Token[] = [];
+  const lower = code.toLowerCase();
   let i = 0;
   while (i < code.length) {
     // Comment <!-- ... -->
@@ -107,22 +112,28 @@ function tokenizeHtml(code: string): Token[] {
       tokens.push({ text: '<', type: 'punctuation' });
       i++;
       // 閉じタグのスラッシュ
+      let isClosing = false;
       if (i < code.length && code[i] === '/') {
         tokens.push({ text: '/', type: 'punctuation' });
         i++;
+        isClosing = true;
       }
       // タグ名
+      let tagName = '';
       let j = i;
       while (j < code.length && /[a-zA-Z0-9\-]/.test(code[j])) j++;
       if (j > i) {
+        tagName = lower.slice(i, j);
         tokens.push({ text: code.slice(i, j), type: 'keyword' });
         i = j;
       }
       // 属性部分（> が来るまで）
+      let selfClosed = false;
       while (i < code.length && code[i] !== '>') {
         if (code[i] === '/' && code[i + 1] === '>') {
           // 自己閉じスラッシュ
           tokens.push({ text: '/', type: 'punctuation' });
+          selfClosed = true;
           i++;
         } else if (code[i] === '=') {
           tokens.push({ text: '=', type: 'punctuation' });
@@ -152,6 +163,17 @@ function tokenizeHtml(code: string): Token[] {
       if (i < code.length && code[i] === '>') {
         tokens.push({ text: '>', type: 'punctuation' });
         i++;
+      }
+      // 生テキスト要素（script / style）の中身は本文テキストではなく JS / CSS として色付けする。
+      // 閉じタグ自体はループの次の周回で通常のタグとして処理させる（i は閉じタグの手前で止める）。
+      // 閉じタグが無ければ末尾まで。JS の文字列内に `</script>` があるとそこで切れるが、
+      // 実際の HTML パーサも同じ挙動（だから `<\/script` とエスケープする）なので許容する。
+      const rawLang = !isClosing && !selfClosed ? RAW_TEXT_TAGS[tagName] : undefined;
+      if (rawLang) {
+        const closeIdx = lower.indexOf(`</${tagName}`, i);
+        const end = closeIdx === -1 ? code.length : closeIdx;
+        if (end > i) tokens.push(...tokenize(code.slice(i, end), rawLang));
+        i = end;
       }
     // テキストコンテンツ
     } else {

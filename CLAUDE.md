@@ -53,7 +53,7 @@ lib/
 ├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors・AppFontSize 型定義
 ├── image.ts             # resolveImageUri()：画像パス解決。pickAndSaveImage()（maxDimension 指定で縮小＋png/jpg正規化）・getReferencedImageFilenames()（**card_contents と decks.htmlImages の2系統**を走査）・parseDeckImages/serializeDeckImages
 ├── htmlImages.ts        # 043：HTML 画像ライブラリの参照解決。`img://name` を実行直前に data URI へ置換（resolveHtmlImageRefs）。hasImageRefs で同期判定・メモリキャッシュ12枚・未解決はプレースホルダSVG・isValidImageName/buildImageTag で構文の定義元を集約
-├── syntax-highlight.ts  # シンタックスハイライト（Token/TokenType）。学習画面の SyntaxHighlightedCode が使用
+├── syntax-highlight.ts  # シンタックスハイライト（Token/TokenType）。学習画面の SyntaxHighlightedCode が使用。**html は `<script>`/`<style>` の中身を生テキスト要素として検出し、`tokenize(inner,'javascript'|'css')` に投げ直して色付けする**（閉じタグ探索は大小無視・自己閉じは対象外・閉じタグ無しは末尾まで）
 ├── FlipSuppressContext.ts  # コードブロックのボタンタップ時にカードフリップを一時抑制する Context
 ├── InteractivePreviewContext.ts  # 041・全画面インタラクティブプレビューの開閉を子（CodeRunnerView/CodeBlockItem）から親（session/BlockEditor）のキー抑止へ伝える Context（setOpen のみ）
 ├── export.ts            # 全テーブル（review_logs 含む）を JSON エクスポート

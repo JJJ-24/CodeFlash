@@ -126,7 +126,7 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 
 **全画面でも「HTML の書ける範囲」は 040 と同じ。** `buildInteractiveWebSandboxHtml` も土台とブロック本文を `<body>` 直下へ連結し `<head>` は固定、`baseUrl='about:blank'`（opaque origin・`isSecureContext === false`）も同一だからである。**一覧は `docs/040` の「サンドボックスの実測制約」を唯一の定義元とする**（重複記載しない）。要点：
 
-- **head 系タグは全部 body 送りで効かない**（`<meta charset>`/`description`/`<title>`/`<link rel=icon>` 等）。ただし `<html lang>`/`<body style>` の属性はマージされて効く。**041 のヘッダーは言語ラベル固定なので `<title>` の表示先はここにも無い**。
+- **head 系タグは全部 body 送りで効かない**（`<meta charset>`/`description`/`<link rel=icon>` 等）。ただし `<html lang>`/`<body style>` の属性はマージされて効く。**`<title>` だけは例外で、041 のヘッダーに表示される**（下記）。
 - **画像は data URI／インライン SVG なら確実**。相対パス・ローカル画像は不可。外部 https は実測で表示されるがオフラインで壊れるため非推奨。
 - **セキュアコンテキスト限定 API は不可**（clipboard・crypto.subtle・randomUUID・SW・通知・カメラ・位置）。`crypto.getRandomValues` は可。`history.pushState` はハッシュ変更のみ可。
 - Storage 系（localStorage 等）は SecurityError、cookie は保存されない。
@@ -144,6 +144,26 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 | `<noscript>`・`target="_blank"`・`<base target>` | ✕ | **✕** |
 | `<video>`/`<audio>` | ✕ | **✕**（`allowsInlineMediaPlayback={false}`＋要ユーザー操作＋ソースが無い） |
 | リンクのタップ | 押せない | **遷移してしまう**（`onShouldStartLoadWithRequest` ガード無し・⟲ で復帰） |
+
+---
+
+## ヘッダーに `<title>` を出す（2026-07-29 追加）
+
+`<title>` は「書いても効かない head 系タグ」の一つだったが、**全画面モーダルはアプリの中で最も
+「ブラウザの窓」に近い場所**で、ヘッダーはブラウザがタブ名を出す位置にあたる。ここに出すのは
+比喩として正確なので、`<title>` に表示先を与えた。
+
+- サンドボックス（`buildInteractiveWebSandboxHtml`）が `DOMContentLoaded` と `load` の2回、
+  `{ type:'title', title: document.title }` を postMessage する。**load でも送るので
+  `document.title = '...'`（js/ts）の書き換えも反映される。**
+- モーダルのヘッダーは `pageTitle || LANG_LABELS[language]`＝**無ければ従来どおり言語ラベル**。
+  開き直し・⟲ でリセットされる。
+- **body に落ちた `<title>` を `document.title` が拾うことを実機で確認済み**（HTML 仕様どおり
+  「文書内で最初の title 要素」＝ head 限定ではない）。
+- **インラインのプレビュー枠には出さない**：ブラウザは `<title>` をページ内に描画しないので、
+  枠の中に出すと「本文に表示される要素」だと誤って覚えてしまう。
+- 「他の言語と揃わない」問題は起きない：**全画面モーダルは web 系（html/css/js・ts）でしか
+  開けない**（`canExpand`）ため、python/sql/cpp と比較される場面が無い。
 
 ---
 

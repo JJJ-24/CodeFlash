@@ -171,7 +171,7 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 |---|---|
 | `<meta charset>` | 無効果（エンコーディング確定済み＋head で宣言済み） |
 | `<meta name="description">`・`og:*`・`keywords`・`robots`・`theme-color` | 無効果（クローラ/ブラウザ UI 向け） |
-| `<title>` | 見た目に無効果（表示先が無い。041 ヘッダーは言語ラベル固定）。`document.title` では読める |
+| `<title>` | **041 の全画面ヘッダーに表示される**（2026-07-29 追加）。body に落ちても `document.title` が拾うことを実測確認済み。インラインのプレビュー枠には出さない（ブラウザもページ内に描画しないため） |
 | `<link rel="icon"/"manifest"/"canonical"/"preconnect">` | 無効果 |
 | `<!DOCTYPE>`・`<head>` 開始タグ | 本文中では無視される（外側で宣言済みなので標準モードで動作） |
 | `<meta name="viewport">` | head で指定済み。後勝ちで効く可能性があるので**書かない** |

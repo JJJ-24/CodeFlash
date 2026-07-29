@@ -467,6 +467,17 @@ export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js' | 'css', body
     post('error', [r && r.message ? String(r.message) : String(r)]);
   });
 
+  // 全画面モーダルのヘッダーに出す <title>（ブラウザがタブ名を出す位置＝比喩として正確な置き場所）。
+  // ユーザーの <title> は body に落ちるが、document.title は「文書内で最初の title 要素」を指す仕様なので拾える。
+  // load 時にも送るので、js/ts が document.title = ... で書き換えた結果も反映される。
+  function postTitle() {
+    try {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'title', title: document.title || '' }));
+    } catch (e) {}
+  }
+  document.addEventListener('DOMContentLoaded', postTitle);
+  window.addEventListener('load', postTitle);
+
   // 全画面プレビューで、要素をタップ後に Space（や矢印/PageUp 等）を押すとページの既定スクロールが
   // 走り、短い土台では画面が上下に揺れる。これらスクロール系キーの「既定動作だけ」を止める。
   // preventDefault は既定スクロールを消すだけでユーザーの addEventListener は普通に発火する。

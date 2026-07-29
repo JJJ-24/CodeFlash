@@ -46,6 +46,8 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [nonce, setNonce] = useState(0);
   const [copied, setCopied] = useState(false);
+  // ページの <title>（あればヘッダーに出す。無ければ言語ラベル）
+  const [pageTitle, setPageTitle] = useState<string | null>(null);
   const consoleRef = useRef<ScrollView>(null);
 
   const mode: 'html' | 'js' | 'css' = language === 'html' ? 'html' : language === 'css' ? 'css' : 'js';
@@ -90,6 +92,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
   useEffect(() => {
     if (visible) {
       setLogs(transpileError ? [{ type: 'error', text: transpileError }] : []);
+      setPageTitle(null);
       setNonce((n) => n + 1);
     }
     // transpileError は本文が同じ間は不変。visible の立ち上がりで初期化するのが目的。
@@ -98,7 +101,11 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
 
   const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
     try {
-      const data = JSON.parse(event.nativeEvent.data) as { type?: string; entry?: LogEntry };
+      const data = JSON.parse(event.nativeEvent.data) as { type?: string; entry?: LogEntry; title?: string };
+      if (data.type === 'title') {
+        setPageTitle(typeof data.title === 'string' ? data.title.trim() : '');
+        return;
+      }
       if (data.type === 'log' && data.entry) {
         setLogs((prev) => {
           const next = [...prev, data.entry as LogEntry];
@@ -112,6 +119,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
 
   const reload = useCallback(() => {
     setLogs(transpileError ? [{ type: 'error', text: transpileError }] : []);
+    setPageTitle(null);
     setNonce((n) => n + 1);
   }, [transpileError]);
 
@@ -134,7 +142,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
             <Ionicons name="close" size={Math.round(theme.fontSize.xxl)} color="#E5E7EB" />
           </Pressable>
           <Text style={[styles.headerTitle, { fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {LANG_LABELS[language] ?? language}
+            {pageTitle || LANG_LABELS[language] || language}
           </Text>
           <Pressable onPress={reload} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="refresh" size={Math.round(theme.fontSize.xl)} color="#E5E7EB" />

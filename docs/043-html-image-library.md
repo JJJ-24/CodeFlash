@@ -1,7 +1,7 @@
 # 043 HTML 画像ライブラリ（デッキに登録した写真を `<img>` で参照）
 
 **フェーズ:** 将来
-**ステータス:** Phase 1〜5 実装完了（2026-07-29）／Phase 6・7 未着手
+**ステータス:** **実装完了（2026-07-29）**。全 Phase（1〜7・実機確認含む）完了
 **要ネイティブ再ビルド:** `expo-image-manipulator` 追加のため dev client を1回作り直すこと
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・009（コード実行基盤）
 **被依存:** なし
@@ -100,7 +100,7 @@ WebView
   - [x] 引数を `from = 'card_contents'` → **スキーマ接頭辞 `schema = ''`** へ変更し、`${schema}card_contents` と `${schema}decks` の2本を走査。呼び出し3種（`cleanupOrphanImages`・`getBackupReferencedImageFilenames`（`'bkimg.'` へ修正）・`syncEngine` の3箇所＝既定引数のまま）を追従
   - [x] `decks` の SELECT だけ try/catch で握り潰す（**旧スキーマのバックアップDBには `htmlImages` 列が無く落ちる**。ここで全体を諦めるとカード側の参照まで失って復元素材を消すため）
   - [x] `parseDeckImages()` / `serializeDeckImages()` を新設し、DB層・エクスポート・削除処理で共用
-  - [ ] 動作確認：デッキに画像を登録 → アプリ再起動 → **消えていないこと**（※ 登録UIが Phase 5 のため**実機確認は Phase 5 まで持ち越し**。コード上は全経路が上記1関数に集約されていることを確認済み）
+  - [x] 動作確認：デッキに画像を登録 → アプリ再起動 → **消えていないこと**（登録UIが Phase 5 のため持ち越していた分。**Phase 7 の実機確認で OK**）
 - [x] `lib/import.ts`：`decks` の明示列 INSERT に `htmlImages` を追加。旧データは `(d.htmlImages as string | null) ?? null` で吸収
 - [x] `lib/export.ts`：`decks` は `SELECT *` なので列自体は自動。`extractImageFilenames(cards, decks)` にデッキ側の参照を追加（**ここが漏れると画像本体がエクスポートに入らない**）。`estimateExportSize()` も `SELECT htmlImages FROM decks` を足して同じ集合で見積もる
 - [x] TSV（`lib/tsv.ts`）：**対象外とする**（Anki互換の表/裏テキストのみ・`sqlInit`/`htmlInit` と同じ扱い）＝判断済みとして記録
@@ -116,7 +116,7 @@ WebView
   - [x] 変換の中間ファイル（キャッシュ領域）は保存後に削除（best-effort）
   - [x] 新 API（`ImageManipulator.manipulate()` → `renderAsync()` → `saveAsync()`）を使用。`manipulateAsync` は deprecated のため不使用
 - [x] 戻り値に `bytes`（保存後のサイズ）を追加し、`IMAGE_LIBRARY_WARN_BYTES`（1MB）を公開
-  - [ ] 縮小後も 1MB を超える場合の警告 `InfoModal` 表示（**UI 側なので Phase 5 で実装**。判定材料はここで揃えた）
+  - [x] 縮小後も 1MB を超える場合の警告 `InfoModal` 表示（判定材料をここで揃え、**表示は Phase 5 で実装済み**＝`deck.htmlImagesLarge*`）
 - [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
 ### Phase 3: 参照解決（新規モジュール）＝**実装完了（2026-07-29）**
@@ -168,22 +168,33 @@ WebView
 - [x] i18n：`deck.htmlImages*` 6キーを ja/en に追加（既存 JSON の整形を崩さないようテキスト挿入で追記）
 - [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
-### Phase 6: 仕上げ
-- [ ] `locales/ja.json` / `locales/en.json`（`deck.htmlImages*`・`code.imageNotFound` 等・ja/en 揃い確認）
-- [ ] Pro ゲート確認（非 Pro は土台入力欄ごと非表示＝ライブラリにも到達しない）
-- [ ] `lib/settings-keys.ts` への影響なし確認（新しい AsyncStorage キーなし）
-- [ ] `docs/db-migration-checklist.md` の②「既存テーブルに新カラム」を上から通す
-- [ ] `CLAUDE.md` に追記（`decks.htmlImages`・`img://` 構文・`lib/htmlImages.ts`・`getReferencedImageFilenames` が **card_contents と decks の両方**を見ること）
-- [ ] `docs/040` の「サンドボックスの実測制約 > 画像」に「デッキ画像ライブラリ（043）を使えばローカル画像を参照できる」を追記
+### Phase 6: 仕上げ ＝**実装完了（2026-07-29）**
+- [x] `locales/ja.json` / `locales/en.json`（`deck.htmlImages*` 6キー・ja/en 揃い確認済み）＝Phase 5 で実施。プレースホルダは画像内に `img://name` を描くだけなので `code.imageNotFound` のような文言キーは不要だった（言語非依存）
+- [x] Pro ゲート確認（土台の行が `{isPro && ...}` の中＝非 Pro は行・モーダル・ライブラリのどれにも到達しない）
+- [x] `lib/settings-keys.ts` への影響なし確認（新しい AsyncStorage キーなし＝`store/` にも変更なし）
+- [x] `docs/db-migration-checklist.md` の②「既存テーブルに新カラム」を上から通した
+  - [x] `ALTER TABLE` を書いた／ユーザーデータ＝バックアップ対象
+  - [x] `lib/export.ts`：`decks` は `SELECT *` なので列は自動。**画像本体**は `extractImageFilenames()` に `decks` を渡して同梱（`estimateExportSize()` も同じ集合）
+  - [x] `lib/import.ts`：INSERT 列に追加。旧エクスポート（列なし）は `?? null` で吸収
+  - [x] boolean 列ではないので 0/1 正規化は N/A（JSON 文字列 → `parseDeckImages` で配列化）
+  - [x] TSV：**対象外と判断**（Anki 互換の表/裏テキストのみ・`sqlInit`/`htmlInit` と同じ扱い）
+  - [x] iCloud 同期：`decks` は `SYNC_TRACKED_TABLES` にあり、トリガーは列を問わない `AFTER UPDATE ON decks` なので**追加対応なし**
+- [x] `CLAUDE.md` に追記
+  - [x] ディレクトリ構成に `lib/htmlImages.ts` と `components/deck/HtmlImageLibrary.tsx`
+  - [x] コード実行アーキテクチャに「HTML 画像ライブラリ（043）」の段落（保存形式・解決の差し込み口3つ・同期判定・web 系限定・runSeq・削除の扱い）
+  - [x] 「HTML ブロック／HTML 土台で書けるもの」のローカル画像不可の記述に **043 なら可**の逃げ道を明記
+  - [x] **`getReferencedImageFilenames()` が画像参照集計の唯一の定義元**であること（返さない＝消される／同期されない・参照元2系統・スキーマ接頭辞・旧バックアップの握り潰し・`extractImageFilenames` は別実装）を「DB・データ操作」に追記
+  - [x] デッキ削除がライブラリ画像も消すことを削除の後始末に追記
+- [x] `docs/040` の「サンドボックスの実測制約 > 画像」に 043 への導線を追記
 
-### Phase 7: 実機確認
-- [ ] 写真アプリから登録 → `<img src="img://name">` でプレビューに表示される（HTMLブロック・土台の両方）
-- [ ] **アプリ再起動後も画像が残っている**（＝孤児掃除に消されない）
-- [ ] iCloud 同期：別端末で同じデッキのプレビューに画像が出る
-- [ ] JSON エクスポート（画像を含む）→ 別端末で `replace` インポート → 表示される
-- [ ] 画像を削除 → 参照側がプレースホルダになる（壊れた画像アイコンにならない）
-- [ ] 041 全画面プレビューでも表示される
-- [ ] 通常のカード（`img://` を含まないカード）の実行速度が変わっていないこと
+### Phase 7: 実機確認 ＝**全項目 OK（2026-07-29）**
+- [x] 写真アプリから登録 → `<img src="img://name">` でプレビューに表示される（HTMLブロック・土台の両方）
+- [x] **アプリ再起動後も画像が残っている**（＝孤児掃除に消されない）
+- [x] iCloud 同期：別端末で同じデッキのプレビューに画像が出る
+- [x] JSON エクスポート（画像を含む）→ 別端末で `replace` インポート → 表示される
+- [x] 画像を削除 → 参照側がプレースホルダになる（壊れた画像アイコンにならない）
+- [x] 041 全画面プレビューでも表示される
+- [x] 通常のカード（`img://` を含まないカード）の実行速度が変わっていないこと
 
 ---
 

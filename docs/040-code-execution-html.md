@@ -183,6 +183,7 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 
 - **`<img src="data:...">`・インライン `<svg>`・CSS `url(data:...)` は通信もオリジンも不要で確実に使える**（教材ではこれを推奨）。
 - 相対パス・ローカルファイル・**アプリ内の画像ブロックの画像は不可**（`baseUrl='about:blank'`＋`allowFileAccess` 未設定）。
+  - → **端末内の写真を使いたいときは 043 の画像ライブラリ**（デッキに登録して `<img src="img://名前">`）。実行の直前に data URI へ置換されるため、この制約に触れずにローカル画像を表示できる。詳細は `docs/043`。
 - **外部 https の `<img>` は実測で表示された**（CSP 無し・`originWhitelist={['*']}`）＝`<script src>`/`<link rel=stylesheet>`/`<iframe src>` も同経路で通る。ただし**オフラインで無音で壊れる**ため非推奨。`@font-face` の Web フォントのみ CORS 必須（オリジンが opaque ＝ `Origin: null` を許す CDN のみ通る）。
 
 ### オリジン起因（`about:blank` ＝ opaque origin・`isSecureContext === false`）

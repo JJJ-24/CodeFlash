@@ -330,6 +330,22 @@ function buildWebSandboxHtml(mode: 'html' | 'js', body: string, htmlInits?: stri
     if (_done) return;
     _done = true;
     _origClearTimeout(_timer);
+    // 「ソース」タブ用に実行後の DOM を送る（＝プレビューと同じ瞬間の姿）。
+    // - body の outerHTML：head のサンドボックス harness は見せず、かつ
+    //   document.body.style.background = ... のような body 属性への変更も拾える。
+    // - 043 の画像は data URI に置換済みで base64 が巨大なので中身を省略する（読む対象でもない）。
+    // - **1行が極端に長い場合も省略する**：JS が生成した長文テキスト（textContent への追記ループ等）は
+    //   改行を含まない数千文字の1行になりうる。ソースタブは折り返さない（wrap={false}）ので、
+    //   そのまま渡すと iOS のテキストレイアウトが破綻して**領域が真っ白になる**。
+    // - 全体長にも上限を設ける（ブリッジ転送とハイライト描画のコスト対策）。
+    try {
+      var _src = document.body.outerHTML.replace(/(data:[^;"']*;base64,)[A-Za-z0-9+/=]+/g, '$1…');
+      _src = _src.split('\\n').map(function(_line) {
+        return _line.length > 500 ? _line.slice(0, 500) + '… (+' + (_line.length - 500) + ' chars)' : _line;
+      }).join('\\n');
+      if (_src.length > 100000) _src = _src.slice(0, 100000) + '\\n… (truncated)';
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'resultSource', html: _src }));
+    } catch (e) {}
     var payload = { type: type, logs: _logs };
     if (msg) payload.message = msg;
     window.ReactNativeWebView.postMessage(JSON.stringify(payload));

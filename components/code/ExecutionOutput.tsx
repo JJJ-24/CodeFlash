@@ -155,9 +155,29 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
     Math.round(windowHeight * MAX_PREVIEW_HEIGHT_RATIO),
   );
 
+  // 「ソース」タブに出す実行後の DOM（サンドボックスが finish 時に送る）。
+  // ⟲（onClear）や再実行で捨てる＝土台テキスト表示に戻る。プレビュー側の
+  // 「実行前＝土台／実行後＝結果」と同じ軸で動くので、⟲ が両タブをまとめて初期状態へ戻す。
+  const [resultSource, setResultSource] = useState<string | null>(null);
+
   // 実行中/実行後（web 系）は実行 WebView を可視表示。それ以外で土台があれば静的プレビューを出す。
   const execActive = previewMode && !!htmlSource;
   const activeHtml = execActive ? htmlSource : needsImages ? resolvedStatic : debouncedStatic;
+
+  useEffect(() => {
+    if (!execActive) setResultSource(null);
+  }, [execActive]);
+  // 再実行のたびに前回の結果ソースを捨てる（新しい結果が届くまで土台テキストを見せる）
+  useEffect(() => {
+    setResultSource(null);
+  }, [runNonce]);
+
+  // ソースタブの中身：実行後は結果 DOM、それ以外は土台テキスト。どちらも無ければタブ自体を出さない
+  // （html で土台が無いカードは「見せるものが無い」ので空の箱を出さない）。
+  const sourceText = execActive && resultSource ? resultSource : (previewSource ?? '');
+  const hasSource = sourceText.trim() !== '';
+  // 表示できるソースが無くなったら強制的にプレビュー側へ戻す（state は保持したまま）
+  const activeTab = hasSource ? previewTab : 'preview';
 
   const handleCopy = useCallback(async () => {
     if (!result) return;
@@ -168,25 +188,29 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
 
   // ソースタブの土台テキストは読み取り専用（選択できない）ためコピーボタンを用意する。
   const handleCopySource = useCallback(async () => {
-    if (!previewSource) return;
-    await Clipboard.setStringAsync(previewSource);
+    if (!sourceText) return;
+    await Clipboard.setStringAsync(sourceText);
     setSourceCopied(true);
     setTimeout(() => setSourceCopied(false), 1000);
-  }, [previewSource]);
+  }, [sourceText]);
 
   // WebView からのメッセージ振り分け。高さ通知はここで吸収し、実行結果ハンドラには渡さない
   // （`useCodeExecution.handleMessage` は type を ExecStatus として扱うため、渡すと状態が壊れる）。
   // 静的プレビューは高さ以外を送らないので、非実行中の他メッセージは捨てる。
   const handleWebViewMessage = useCallback((event: { nativeEvent: { data: string } }) => {
-    let data: { type?: string; height?: number } | null = null;
+    let data: { type?: string; height?: number; html?: string } | null = null;
     try {
-      data = JSON.parse(event.nativeEvent.data) as { type?: string; height?: number };
+      data = JSON.parse(event.nativeEvent.data) as { type?: string; height?: number; html?: string };
     } catch {
       data = null;
     }
     if (data?.type === 'previewHeight') {
       const h = Number(data.height);
       if (Number.isFinite(h) && h > 0) setContentHeight(Math.ceil(h));
+      return;
+    }
+    if (data?.type === 'resultSource') {
+      if (typeof data.html === 'string') setResultSource(data.html);
       return;
     }
     if (execActive) onMessage(event);
@@ -273,10 +297,10 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
         <View style={styles.preview} onTouchStart={onInteract}>
           <View style={styles.previewTabs}>
             <View style={styles.previewTabsLeft}>
-              {(['preview', 'source'] as const).map((tab) => (
-                <Pressable key={tab} onPress={() => { onInteract?.(); setPreviewTab(tab); }} style={[styles.previewTab, previewTab === tab && styles.previewTabActive]}>
+              {(hasSource ? (['preview', 'source'] as const) : (['preview'] as const)).map((tab) => (
+                <Pressable key={tab} onPress={() => { onInteract?.(); setPreviewTab(tab); }} style={[styles.previewTab, activeTab === tab && styles.previewTabActive]}>
                   <Text
-                    style={[styles.previewTabText, { fontSize: theme.fontSize.xs }, previewTab === tab && styles.previewTabTextActive]}
+                    style={[styles.previewTabText, { fontSize: theme.fontSize.xs }, activeTab === tab && styles.previewTabTextActive]}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {t(tab === 'preview' ? 'code.preview' : 'code.source')}
@@ -292,7 +316,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
                 </Pressable>
               )}
               {/* ソースタブ表示中は土台テキストをコピーできる（読み取り専用で選択できないため） */}
-              {previewTab === 'source' && !!previewSource && (
+              {activeTab === 'source' && hasSource && (
                 <Pressable onPress={() => { onInteract?.(); handleCopySource(); }} hitSlop={8} style={styles.previewReset}>
                   <Ionicons name={sourceCopied ? 'checkmark-sharp' : 'copy-outline'} size={Math.round(theme.fontSize.md)} color="#8B949E" />
                 </Pressable>
@@ -305,7 +329,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
               )}
             </View>
           </View>
-          <View style={[styles.previewBody, { height: previewHeight }, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
+          <View style={[styles.previewBody, { height: previewHeight }, activeTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
             <WebView
               key={execActive ? `exec-${runNonce}` : 'static'}
               style={styles.previewWebView}
@@ -318,10 +342,10 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
               mixedContentMode="always"
             />
           </View>
-          {previewTab === 'source' && (
+          {activeTab === 'source' && (
             <ScrollView style={[styles.previewSource, { maxHeight: previewHeight }]}>
               <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
-                <SyntaxHighlightedCode code={previewSource ?? ''} language="html" wrap={false} />
+                <SyntaxHighlightedCode code={sourceText} language="html" wrap={false} />
               </ScrollView>
             </ScrollView>
           )}
@@ -452,7 +476,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   previewHidden: {
-    display: 'none',
+    // ソースタブ表示中も WebView は残す（再実行を避けるため）が、**display:'none' にしてはいけない**。
+    // WKWebView がビュー階層から外れて JS が走らず、実行が完了しない（ソースを開いたまま実行すると
+    // スピナーが止まらない）。console 専用言語で実績のある「画面外へ逃がす」方式（hiddenWebViewContainer
+    // と同型）にして、見えないまま確実に実行させる。高さは描画側のインライン指定がそのまま効く。
+    position: 'absolute',
+    top: -10000,
+    left: 0,
+    right: 0,
+    opacity: 0,
   },
   previewWebView: {
     flex: 1,

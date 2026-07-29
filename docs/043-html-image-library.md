@@ -1,7 +1,7 @@
 # 043 HTML 画像ライブラリ（デッキに登録した写真を `<img>` で参照）
 
 **フェーズ:** 将来
-**ステータス:** Phase 1〜4 実装完了（2026-07-29）／Phase 5 以降 未着手
+**ステータス:** Phase 1〜5 実装完了（2026-07-29）／Phase 6・7 未着手
 **要ネイティブ再ビルド:** `expo-image-manipulator` 追加のため dev client を1回作り直すこと
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・009（コード実行基盤）
 **被依存:** なし
@@ -151,16 +151,22 @@ WebView
 > `<img src="img://test">` と書き、**破線枠のプレースホルダ**が描画されることを確認した。
 > ＝「本文/土台 → 解決 → サンドボックス → WebView」が最後まで通っている。
 
-### Phase 5: デッキ編集 UI（画像ライブラリ）
-- [ ] `components/SqlInitModal.tsx` に `footer?: React.ReactNode` を追加（テキストエリア専用の汎用性を壊さず、デッキ編集側から画像ライブラリUIを差し込む）
-- [ ] 画像ライブラリUI（`components/deck/HtmlImageLibrary.tsx` を新設）
-  - [ ] `[写真から追加]` ボタン → `pickAndSaveImage({ maxDimension: 1024 })`
-  - [ ] 一覧行：サムネイル（`expo-image`）｜名前（インライン編集可・`[A-Za-z0-9_-]+` バリデーション・重複不可）｜`<img src="img://name">` をコピー｜削除
-  - [ ] 削除は `ConfirmDeleteModal`（カードから参照中でも消せる＝未解決はプレースホルダで気づける）
-  - [ ] 空状態は `EmptyState`（使い方1行＋`img://` の書式例）
-- [ ] デッキ新規（`app/deck/new.tsx`）・デッキ編集（`app/deck/[id]/edit.tsx`）の「HTML/CSS 共通土台」モーダルに組み込み（**Pro 時のみ**・`htmlInit` 入力欄と同じ出し分け）
-- [ ] 保存は既存のデッキ保存に相乗り（土台テキストと同じくライブ反映 → 画面の保存で確定）
-- [ ] **新規キーは割り当てない**（追加はタップのみ。`I` はアイコン選択で使用済み・土台モーダル内は Esc で閉じる既存挙動のまま）
+### Phase 5: デッキ編集 UI（画像ライブラリ）＝**実装完了（2026-07-29）**
+- [x] `components/SqlInitModal.tsx` に `footer?: React.ReactNode` を追加（テキストエリア専用の汎用性を壊さず、デッキ編集側から画像ライブラリUIを差し込む）
+- [x] 画像ライブラリUI（`components/deck/HtmlImageLibrary.tsx` を新設）
+  - [x] **既定は折りたたみ**（ヘッダー行のみ）。土台モーダルは `autoFocus` でキーボードが出るため、リストを常時展開すると入力欄が潰れる。追加した直後だけ自動展開する
+  - [x] `+` ボタン → `pickAndSaveImage({ maxDimension: IMAGE_LIBRARY_MAX_DIMENSION })`。5MB超は既存の `card.imageSizeError*` を再利用、縮小後1MB超は `deck.htmlImagesLarge*` で警告（登録はブロックしない＝Phase 2 からの持ち越し分を回収）
+  - [x] 一覧行：サムネイル（`expo-image`）｜名前（インライン編集）｜`<img src="img://name">` をコピー｜削除。リストは `maxHeight: 168` ＋スクロール
+  - [x] 名前は**編集中テキストを別 state（`nameDrafts`・key は uri）に持ち、確定時だけ配列へ書く**。不正（形式NG・重複）な間は枠を赤くし、blur で破棄＝元の名前に戻る。これで不正な名前が保存されることがない
+  - [x] 削除は `ConfirmDeleteModal`（参照中でも消せる＝未解決はプレースホルダで気づける）。**配列から外すだけでファイルは消さない**（保存前にキャンセルされたら参照が生き残るため。孤児は起動時掃除が回収）。あわせて `invalidateHtmlImageCache(uri)` を呼ぶ（同名で登録し直したとき古い絵が出るのを防ぐ）
+  - [x] 空状態は1行テキスト（`EmptyState` はアイコン64pxで折りたたみ内には大きすぎるため不採用）
+  - [x] **タップで本文へ挿入はしない**（コピーのみ）。制御された `TextInput` に `selection` を当てて挿入する方式は、カーソル行き過ぎの既知問題（`textblock-toolbar-cursor-overshoot`・再試行禁止）と同じ形になるため避けた
+- [x] デッキ新規（`app/deck/new.tsx`）・デッキ編集（`app/deck/[id]/edit.tsx`）の「HTML/CSS 共通土台」モーダルに組み込み。**Pro ゲートは追加コード不要**（行自体が `{isPro && ...}` の中にあり、非 Pro は行→モーダル→ライブラリのどれにも到達しない）
+- [x] 保存は既存のデッキ保存に相乗り（土台テキストと同じくライブ反映 → 画面の保存で確定）。未保存判定（`isDirty`/`hasChanges`）にも画像を追加
+- [x] 行の「設定済み」表示を `htmlConfigured = 土台テキスト or 画像あり` に変更（行が両方への入口なので、画像だけ登録した状態を「未設定」と見せない）
+- [x] **新規キーは割り当てない**（追加はタップのみ。`I` はアイコン選択で使用済み・土台モーダル内は Esc で閉じる既存挙動のまま）
+- [x] i18n：`deck.htmlImages*` 6キーを ja/en に追加（既存 JSON の整形を崩さないようテキスト挿入で追記）
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
 ### Phase 6: 仕上げ
 - [ ] `locales/ja.json` / `locales/en.json`（`deck.htmlImages*`・`code.imageNotFound` 等・ja/en 揃い確認）

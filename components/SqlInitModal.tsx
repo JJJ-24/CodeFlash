@@ -30,6 +30,9 @@ interface Props {
   title?: string;
   hint?: string;
   placeholder?: string;
+  /** 入力欄の下に差し込む追加UI（043 の HTML 画像ライブラリ）。テキスト以外の付随データを
+   *  同じ面で扱うための拡張点。SQL 用途では未指定＝従来どおりテキスト欄だけになる。 */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -37,7 +40,7 @@ interface Props {
  * 名前・説明欄と同じく入力は即時に親 state へ反映し（ライブ）、確定はデッキ編集画面の保存で行う。
  * モーダルは項目を広く編集するための拡大入力面という位置づけ。文言は props で差し替え可能。
  */
-export function SqlInitModal({ visible, value, onChangeText, onClose, title, hint, placeholder }: Props) {
+export function SqlInitModal({ visible, value, onChangeText, onClose, title, hint, placeholder, footer }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -141,6 +144,7 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
               textAlignVertical="top"
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
+            {footer}
         </View>
       </View>
     </Modal>

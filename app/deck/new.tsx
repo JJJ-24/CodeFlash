@@ -23,8 +23,10 @@ import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { IconPickerModal } from '@/components/IconPickerModal';
+import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
 import { SqlInitModal } from '@/components/SqlInitModal';
 import type { DeckIconName } from '@/lib/deckIcons';
+import type { DeckImage } from '@/types';
 import { createDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
@@ -75,7 +77,13 @@ export default function NewDeckScreen() {
   const [sqlInit, setSqlInit] = useState('');
   const [showSqlInitModal, setShowSqlInitModal] = useState(false);
   const [htmlInit, setHtmlInit] = useState('');
+  // 043: HTML 画像ライブラリ。土台と同じくライブ編集し、確定は画面の保存で行う。
+  const [htmlImages, setHtmlImages] = useState<DeckImage[]>([]);
   const [showHtmlInitModal, setShowHtmlInitModal] = useState(false);
+  // 043: 行の「設定済み」表示は土台テキストと画像ライブラリのどちらかがあれば点灯させる
+  // （行が両方への入口なので、画像だけ登録した状態を「未設定」と見せないため）。
+  const htmlConfigured = htmlInit.trim() !== '' || htmlImages.length > 0;
+
   const language = 'ja';
   const [saving, setSaving] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -101,6 +109,7 @@ export default function NewDeckScreen() {
         colorHex,
         sqlInit: sqlInit.trim() || null,
         htmlInit: htmlInit.trim() || null,
+        htmlImages,
       });
       addDeck(deck);
       // 一覧へ戻ったとき、作成したデッキへフォーカスを移す
@@ -112,7 +121,7 @@ export default function NewDeckScreen() {
   }
 
   const canSave = !!name.trim() && !saving;
-  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || sqlInit.trim() !== '' || htmlInit.trim() !== '';
+  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || sqlInit.trim() !== '' || htmlInit.trim() !== '' || htmlImages.length > 0;
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
@@ -345,11 +354,11 @@ export default function NewDeckScreen() {
                 style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
                 onPress={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}
               >
-                <View style={[styles.iconCircle, { backgroundColor: htmlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
-                  <Ionicons name={htmlInit.trim() ? 'globe' : 'globe-outline'} size={20} color={htmlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                <View style={[styles.iconCircle, { backgroundColor: htmlConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name={htmlConfigured ? 'globe' : 'globe-outline'} size={20} color={htmlConfigured ? theme.colors.primary : theme.colors.textSecondary} />
                 </View>
-                <Text style={{ color: htmlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {htmlInit.trim() ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
+                <Text style={{ color: htmlConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {htmlConfigured ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>
@@ -380,6 +389,7 @@ export default function NewDeckScreen() {
         title={t('deck.htmlInitLabel')}
         hint={t('deck.htmlInitHint')}
         placeholder={t('deck.htmlInitPlaceholder')}
+        footer={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
       />
       <DiscardConfirmModal
         visible={showDiscardModal}

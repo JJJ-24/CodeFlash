@@ -7,6 +7,7 @@ import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { IconPickerModal } from '@/components/IconPickerModal';
+import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
 import { SqlInitModal } from '@/components/SqlInitModal';
 import { useTranslation } from 'react-i18next';
 import {
@@ -27,6 +28,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import type { DeckIconName } from '@/lib/deckIcons';
+import type { DeckImage } from '@/types';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { deleteKeySpecs, scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
@@ -80,7 +82,13 @@ export default function EditDeckScreen() {
   const [sqlInit, setSqlInit] = useState(deck?.sqlInit ?? '');
   const [showSqlInitModal, setShowSqlInitModal] = useState(false);
   const [htmlInit, setHtmlInit] = useState(deck?.htmlInit ?? '');
+  // 043: HTML 画像ライブラリ。土台と同じくライブ編集し、確定は画面の保存で行う。
+  const [htmlImages, setHtmlImages] = useState<DeckImage[]>(deck?.htmlImages ?? []);
   const [showHtmlInitModal, setShowHtmlInitModal] = useState(false);
+  // 043: 行の「設定済み」表示は土台テキストと画像ライブラリのどちらかがあれば点灯させる
+  // （行が両方への入口なので、画像だけ登録した状態を「未設定」と見せないため）。
+  const htmlConfigured = htmlInit.trim() !== '' || htmlImages.length > 0;
+
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
@@ -149,11 +157,11 @@ export default function EditDeckScreen() {
     try {
       const normalizedSqlInit = sqlInit.trim() || null;
       const normalizedHtmlInit = htmlInit.trim() || null;
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit });
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, htmlImages });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
-      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, archived });
+      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, htmlImages, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -180,6 +188,7 @@ export default function EditDeckScreen() {
     || colorHex !== (deck.colorHex ?? null)
     || (sqlInit.trim() || null) !== (deck.sqlInit ?? null)
     || (htmlInit.trim() || null) !== (deck.htmlInit ?? null)
+    || JSON.stringify(htmlImages) !== JSON.stringify(deck.htmlImages ?? [])
     || archived !== deck.archived;
 
   function handleClose() {
@@ -360,11 +369,11 @@ export default function EditDeckScreen() {
                 style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
                 onPress={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}
               >
-                <View style={[styles.iconCircle, { backgroundColor: htmlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
-                  <Ionicons name={htmlInit.trim() ? 'globe' : 'globe-outline'} size={20} color={htmlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                <View style={[styles.iconCircle, { backgroundColor: htmlConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name={htmlConfigured ? 'globe' : 'globe-outline'} size={20} color={htmlConfigured ? theme.colors.primary : theme.colors.textSecondary} />
                 </View>
-                <Text style={{ color: htmlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {htmlInit.trim() ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
+                <Text style={{ color: htmlConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {htmlConfigured ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>
@@ -413,6 +422,7 @@ export default function EditDeckScreen() {
         title={t('deck.htmlInitLabel')}
         hint={t('deck.htmlInitHint')}
         placeholder={t('deck.htmlInitPlaceholder')}
+        footer={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

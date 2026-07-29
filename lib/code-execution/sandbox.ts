@@ -18,6 +18,39 @@ export function buildSandboxHtml(code: string, language?: string, sqlInits?: str
   return buildJsSandboxHtml(code);
 }
 
+/**
+ * インラインプレビューの高さ自動調整：中身の実高さを親（`ExecutionOutput`）へ通知する。
+ *
+ * インラインの可視 WebView は `pointerEvents="none"` の表示専用（タッチを取ると学習カードの
+ * ScrollView/FlipCard・編集の NestableDraggableFlatList とジェスチャーが競合する＝041 を
+ * 全画面モーダルにした理由）。**内側でスクロールできないまま「全部見える」を成立させる唯一の手段**が
+ * 箱の高さを中身に合わせることなので、ここで高さだけを送る。
+ *
+ * - 連続追従（ResizeObserver）はしない：編集画面のドラッグリストで高さが動き続けると
+ *   下のブロックの `onLayout` がずれる（CLAUDE.md の BlockEditor 注意点）。
+ * - 送るのは DOMContentLoaded / load / load+300ms の3回だけ。
+ * - **この断片は harness より先に置く**。`buildWebSandboxHtml` の harness は `window.setTimeout` を
+ *   ラップして「保留タイマー」として数えるため、後に置くと 300ms の追い撃ちが完了判定を遅らせる。
+ *   先に置いて生の `setTimeout` を捕まえておけば、完了判定にも 5 秒上限にも影響しない。
+ */
+const HEIGHT_REPORT_SCRIPT = `
+(function() {
+  var _rawSetTimeout = window.setTimeout.bind(window);
+  function reportHeight() {
+    try {
+      var d = document;
+      var h = Math.max(
+        d.body ? d.body.scrollHeight : 0,
+        d.documentElement ? d.documentElement.scrollHeight : 0
+      );
+      if (h > 0) window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'previewHeight', height: h }));
+    } catch (e) {}
+  }
+  document.addEventListener('DOMContentLoaded', reportHeight);
+  window.addEventListener('load', function() { reportHeight(); _rawSetTimeout(reportHeight, 300); });
+})();
+`;
+
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
 
 /**
@@ -259,6 +292,7 @@ function buildWebSandboxHtml(mode: 'html' | 'js', body: string, htmlInits?: stri
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>${HEIGHT_REPORT_SCRIPT}<\/script>
 <script>
 (function() {
   window.fetch = undefined;
@@ -438,8 +472,10 @@ ${script}
 
 /**
  * 実行前プレビュー用：HTML/CSS 土台だけを描画する表示専用ドキュメント（本文 JS は含めない）。
- * console キャプチャや完了メッセージは持たない（postMessage しない）。安全のためネットワークのみ遮断する。
+ * console キャプチャや完了メッセージは持たない。安全のためネットワークのみ遮断する。
  * 土台に含まれる `<script>`（ステージ初期化）はそのまま実行される。
+ * **postMessage の唯一の例外が高さ通知**（`HEIGHT_REPORT_SCRIPT`）＝実行前プレビューも
+ * 中身の高さに合わせるために必要。ログや実行結果は依然として一切送らない。
  */
 export function buildStaticPreviewHtml(htmlInits?: string[]): string {
   const stages = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
@@ -448,6 +484,7 @@ export function buildStaticPreviewHtml(htmlInits?: string[]): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>${HEIGHT_REPORT_SCRIPT}<\/script>
 <script>
   window.fetch = undefined;
   window.XMLHttpRequest = undefined;

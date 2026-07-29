@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 // 編集画面ではドラッグ可能リスト（RNGH 配下）の中に置かれるため、RNGH の ScrollView を使わないと
 // 横スクロールのジェスチャーが外側に奪われてテーブルを横スクロールできない。
@@ -15,6 +15,11 @@ import type { ExecResult, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { DeckImage } from '@/types';
+
+/** インラインプレビューの高さ（下限）。中身がこれより低くても箱は縮めない。 */
+const MIN_PREVIEW_HEIGHT = 220;
+/** 同（上限）＝画面高に対する比率。長いページでカードが埋まらないように頭打ちにする。 */
+const MAX_PREVIEW_HEIGHT_RATIO = 0.6;
 
 function buildCopyText(result: ExecResult): string {
   const lines: string[] = [];
@@ -132,6 +137,18 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
     return () => { cancelled = true; };
   }, [debouncedStatic, needsImages, deckImages]);
 
+  // インラインプレビューの高さ自動調整：中身の実高さを WebView から受け取り、箱をそれに合わせる。
+  // インラインは `pointerEvents="none"` の表示専用でスクロールできないため、高さを合わせることが
+  // 「全部見える」を成立させる唯一の手段（内側をスクロール可能にするとカード/編集リストと
+  // ジェスチャーが競合する＝041 を全画面モーダルにした理由）。はみ出す分は外側のカードの
+  // ScrollView で読める。
+  const { height: windowHeight } = useWindowDimensions();
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const previewHeight = Math.min(
+    Math.max(contentHeight ?? MIN_PREVIEW_HEIGHT, MIN_PREVIEW_HEIGHT),
+    Math.round(windowHeight * MAX_PREVIEW_HEIGHT_RATIO),
+  );
+
   // 実行中/実行後（web 系）は実行 WebView を可視表示。それ以外で土台があれば静的プレビューを出す。
   const execActive = previewMode && !!htmlSource;
   const activeHtml = execActive ? htmlSource : needsImages ? resolvedStatic : debouncedStatic;
@@ -150,6 +167,24 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
     setSourceCopied(true);
     setTimeout(() => setSourceCopied(false), 1000);
   }, [previewSource]);
+
+  // WebView からのメッセージ振り分け。高さ通知はここで吸収し、実行結果ハンドラには渡さない
+  // （`useCodeExecution.handleMessage` は type を ExecStatus として扱うため、渡すと状態が壊れる）。
+  // 静的プレビューは高さ以外を送らないので、非実行中の他メッセージは捨てる。
+  const handleWebViewMessage = useCallback((event: { nativeEvent: { data: string } }) => {
+    let data: { type?: string; height?: number } | null = null;
+    try {
+      data = JSON.parse(event.nativeEvent.data) as { type?: string; height?: number };
+    } catch {
+      data = null;
+    }
+    if (data?.type === 'previewHeight') {
+      const h = Number(data.height);
+      if (Number.isFinite(h) && h > 0) setContentHeight(Math.ceil(h));
+      return;
+    }
+    if (execActive) onMessage(event);
+  }, [execActive, onMessage]);
 
   const clearGesture = useMemo(
     () => Gesture.Tap().maxDistance(10).hitSlop(8).onEnd(() => runOnJS(onClear)()),
@@ -264,12 +299,12 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
               )}
             </View>
           </View>
-          <View style={[styles.previewBody, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
+          <View style={[styles.previewBody, { height: previewHeight }, previewTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
             <WebView
               key={execActive ? `exec-${runNonce}` : 'static'}
               style={styles.previewWebView}
               source={{ html: activeHtml, baseUrl: baseUrl ?? 'about:blank' }}
-              onMessage={execActive ? onMessage : undefined}
+              onMessage={handleWebViewMessage}
               javaScriptEnabled
               originWhitelist={['*']}
               scrollEnabled={false}
@@ -278,7 +313,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
             />
           </View>
           {previewTab === 'source' && (
-            <ScrollView style={styles.previewSource}>
+            <ScrollView style={[styles.previewSource, { maxHeight: previewHeight }]}>
               <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
                 <SyntaxHighlightedCode code={previewSource ?? ''} language="html" wrap={false} />
               </ScrollView>
@@ -406,7 +441,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   previewBody: {
-    height: 220,
+    // 高さは中身に合わせて可変（MIN_PREVIEW_HEIGHT〜画面高の MAX_PREVIEW_HEIGHT_RATIO）。
+    // 実値は描画側でインライン指定する。
     backgroundColor: '#FFFFFF',
   },
   previewHidden: {
@@ -417,7 +453,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   previewSource: {
-    maxHeight: 220,
+    // 上限はプレビューと同じ可変値を描画側で渡す（タブ切替で箱の高さが飛ばないように）
   },
   hiddenWebViewContainer: {
     position: 'absolute',

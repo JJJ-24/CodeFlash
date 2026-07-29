@@ -136,7 +136,8 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 | | 040 インライン | 041 全画面 |
 |---|---|---|
 | クリック/入力/チェック/`addEventListener` | ✕（`pointerEvents="none"`） | **○** |
-| スクロール・はみ出し | ✕（220pt 固定・`scrollEnabled={false}`） | **○**（`100vh` も画面基準） |
+| 縦のはみ出し | △（高さ自動追従で解消。ただし画面高6割で頭打ち） | **○** |
+| 横のはみ出し・スクロール | ✕（タッチを取らないため不可） | **○** |
 | `confirm()`/`prompt()` の同期ブロック | 5 秒タイムアウトに掛かりうる | **上限なしで待てる** |
 | 後出しログ（イベント発火時の console） | 完了後は届かない | **逐次 postMessage でライブ表示** |
 | `:hover`/`:focus-visible` | ✕ | **✕**（指にホバーが無い＝全画面でも無意味） |
@@ -148,5 +149,4 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 
 ## 将来拡張（本チケット対象外）
 - グローバル keydown を確実に拾う（WebView を first responder 化する明示処理）。
-- プレビュー高さ自動調整（`document.body.scrollHeight` の受信）。
 - インライン領域自体の操作可能化（ジェスチャー調整を伴うため当面見送り）。

@@ -198,7 +198,33 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 
 ### 040 インライン特有（041 では解消）
 
-固定高 220pt・`scrollEnabled={false}`・`pointerEvents="none"` のため、**はみ出しは切れる／`100vh`=220pt／操作不可**。また `confirm()`/`prompt()` は同期ブロックのため 5 秒タイムアウトに掛かりうる（`alert()` はネイティブダイアログで動作）。**土台の `<script>` 内の `console.log` は静的プレビュー（未実行時）では console キャプチャが無いのでどこにも出ない**（実行後は出る）。
+`scrollEnabled={false}`・`pointerEvents="none"` のため**操作不可**、`100vh` はプレビュー箱の高さ基準になる。
+**縦は中身の高さに自動追従する**（下記「高さ自動調整」）ので「はみ出して切れる」は解消済み。
+ただし**横方向は切れたまま**（横スクロールにはタッチが要るため。全画面か「ソース」で見る）。
+
+### 高さ自動調整（2026-07-29 実装）
+
+**なぜ「内側をスクロールさせる」ではなく「箱を伸ばす」なのか**：インラインの可視 WebView を
+スクロール可能にするにはタッチを受け付ける必要があり、学習カードの ScrollView/FlipCard・編集の
+`NestableDraggableFlatList` とジェスチャーを奪い合う。**それを避けるために 041 を全画面モーダル
+（別 VC）にした**のだから、インラインでタッチを取り戻すのは本末転倒になる。箱の高さを中身に
+合わせれば、はみ出した分は**外側のカードの ScrollView**で読めるので、新しいジェスチャーを
+1つも足さずに「全部見える」が成立する。
+
+- サンドボックス側：`HEIGHT_REPORT_SCRIPT`（`sandbox.ts`）が
+  `{ type: 'previewHeight', height }` を postMessage する。`buildWebSandboxHtml` と
+  `buildStaticPreviewHtml` の両方に入れる（**静的プレビューが postMessage する唯一の例外**）。
+- **harness より前に置く**：`buildWebSandboxHtml` の harness は `window.setTimeout` をラップして
+  「保留タイマー」として数えるため、後ろに置くと 300ms の追い撃ちが**完了判定を遅らせる**。
+  先に置いて生の `setTimeout` を捕まえておけば完了判定にも5秒上限にも影響しない。
+- **連続追従（ResizeObserver）はしない**。送るのは `DOMContentLoaded` / `load` / `load+300ms` の
+  3回だけ。編集画面のドラッグリストで高さが動き続けると下ブロックの `onLayout` がずれるため。
+- RN 側：`ExecutionOutput` が `previewHeight` を**実行結果ハンドラに渡す前に横取り**する
+  （`useCodeExecution.handleMessage` は `type` を `ExecStatus` として扱うので、渡すと状態が壊れる）。
+- 範囲は `MIN_PREVIEW_HEIGHT`(220) 〜 画面高の `MAX_PREVIEW_HEIGHT_RATIO`(0.6)。
+  `100vh` 等のビューポート基準コンテンツは「箱が伸びる→再計測でさらに伸びる」形になりうるが、
+  **通知が1ドキュメントにつき3回きり＋上限クランプ**で必ず収束する（無限ループにならない）。
+- 「ソース」タブの高さ上限も同じ値にして、タブ切替で箱が飛び跳ねないようにしている。また `confirm()`/`prompt()` は同期ブロックのため 5 秒タイムアウトに掛かりうる（`alert()` はネイティブダイアログで動作）。**土台の `<script>` 内の `console.log` は静的プレビュー（未実行時）では console キャプチャが無いのでどこにも出ない**（実行後は出る）。
 
 ### 検証に使ったカード
 
@@ -219,4 +245,3 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 - **css の実行**：css ブロックをデッキの HTML 土台に当てて描画（`css` を `EXECUTABLE`＋`PRO` に昇格）。
 - **ソース＝案b**：実行後の結果 HTML（JS 適用後の DOM）を表示するモード。
 - **インタラクティブ**：可視 WebView を操作可能にし、ボタンの `onclick` 等を動かす（ScrollView とのジェスチャー競合対策が必要）。→ **041 で実装済み**（全画面モーダル＝別 VC に隔離してジェスチャー競合を回避・ライブ console 付き）。
-- **プレビュー高さ自動調整**：`document.body.scrollHeight` を postMessage で受けて高さを合わせる。

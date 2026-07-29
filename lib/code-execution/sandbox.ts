@@ -10,6 +10,9 @@ export function buildSandboxHtml(code: string, language?: string, sqlInits?: str
   if (language === 'python') return buildPythonSandboxHtml(code);
   if (language === 'sql') return buildSqlSandboxHtml(code, sqlInits);
   if (language === 'html') return buildWebSandboxHtml('html', code, htmlInits);
+  // css は土台が無くても常に web 実行（装飾対象が無ければ空白が出るだけ＝html と同じ扱い）。
+  // js/ts と違い「コンソール実行」という落とし先が無いため、土台の有無で分岐しない。
+  if (language === 'css') return buildWebSandboxHtml('css', code, htmlInits);
   // js/ts は HTML/CSS 土台がある時だけ Web プレビュー実行（土台なしは従来どおりコンソール実行）
   const hasStage = (htmlInits ?? []).some((s) => s && s.trim() !== '');
   if (hasStage && (language === 'javascript' || language === 'typescript')) {
@@ -275,6 +278,7 @@ function buildJsSandboxHtml(code: string): string {
  * Web 系（html ブロック本文 / js・ts ＋ HTML/CSS 土台）を可視 WebView で描画・実行する。
  * - `mode='html'`：本文をそのまま body に描画（本文内の <script> はパース時に実行）
  * - `mode='js'`：本文（JS）を <script> に入れ、土台の DOM を操作させる
+ * - `mode='css'`：本文（CSS）を <style> に入れ、土台の DOM を装飾させる
  * - `htmlInits`（デッキ土台 → ブロック土台）を body の先頭に加算合成する
  *
  * ネットワーク遮断・console キャプチャ・後出しログ対応（保留タイマー追跡＋マクロタスク境界での
@@ -282,11 +286,13 @@ function buildJsSandboxHtml(code: string): string {
  * 実行のため try/catch で包めず、未捕捉例外は window.onerror で拾い、完了判定は DOMContentLoaded
  * 後に開始する。全体 5 秒上限。
  */
-function buildWebSandboxHtml(mode: 'html' | 'js', body: string, htmlInits?: string[]): string {
+function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInits?: string[]): string {
   const stages = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
   const markup = mode === 'html' ? body : '';
   // js モードの本文は <script> に入れる。本文中の </script> のみ無害化（文字列内の \/ は / と等価）。
   const script = mode === 'js' ? '<script>' + body.replace(/<\/script/gi, '<\\/script') + '</script>' : '';
+  // css モードの本文は <style> に入れる（同様に </style> のみ無害化）。
+  const style = mode === 'css' ? '<style>' + body.replace(/<\/style/gi, '<\\/style') + '</style>' : '';
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -401,6 +407,7 @@ function buildWebSandboxHtml(mode: 'html' | 'js', body: string, htmlInits?: stri
 ${stages}
 ${markup}
 ${script}
+${style}
 </body>
 </html>`;
 }
@@ -418,11 +425,13 @@ ${script}
  *   - `mode='html'`：本文をそのまま body に描画（本文内の <script> はパース時に実行）
  *   - `mode='js'`：本文（JS）を <script> に入れ、土台の DOM を操作させる
  */
-export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js', body: string, htmlInits?: string[]): string {
+export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInits?: string[]): string {
   const stages = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
   const markup = mode === 'html' ? body : '';
   // js モードの本文は <script> に入れる。本文中の </script> のみ無害化（文字列内の \/ は / と等価）。
   const script = mode === 'js' ? '<script>' + body.replace(/<\/script/gi, '<\\/script') + '</script>' : '';
+  // css モードの本文は <style> に入れる（同様に </style> のみ無害化）。
+  const style = mode === 'css' ? '<style>' + body.replace(/<\/style/gi, '<\\/style') + '</style>' : '';
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -482,6 +491,7 @@ export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js', body: string
 ${stages}
 ${markup}
 ${script}
+${style}
 </body>
 </html>`;
 }

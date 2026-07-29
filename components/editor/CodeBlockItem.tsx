@@ -110,7 +110,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。それ以外の言語は undefined。
   const htmlInits =
     block.language === 'html' ? [deckHtmlInit ?? '']
-    : (block.language === 'javascript' || block.language === 'typescript') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
+    : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
     : undefined;
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
@@ -119,6 +119,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const canExpand =
     isPro &&
     (block.language === 'html' ||
+      // css は土台が無くても web プレビュー（＝全画面で開ける）。js/ts だけが土台必須。
+      block.language === 'css' ||
       ((block.language === 'javascript' || block.language === 'typescript') && previewSource.trim() !== ''));
 
   // 実行前プレビュー（土台の初期状態）を出す対象。**html も含める**：土台に追記して完成させる
@@ -129,7 +131,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // 土台が空なら previewSource も空になり枠自体が出ないので、土台を使わないカードは従来どおり。
   const canStaticPreview =
     isPro &&
-    (block.language === 'javascript' || block.language === 'typescript' || block.language === 'html');
+    (block.language === 'javascript' || block.language === 'typescript' || block.language === 'html' || block.language === 'css');
 
   // 実行前プレビューで土台の後ろに描く本文。html で `previewInit` が ON のときだけ。
   // js/ts では渡さない（本文は JS なので実行前に走らせてはいけない）。
@@ -445,8 +447,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
-          {/* js/ts ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後に積む）。Pro 機能のため非Proでは非表示 */}
-          {(block.language === 'javascript' || block.language === 'typescript') && isPro && (
+          {/* js/ts・css ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後に積む）。Pro 機能のため非Proでは非表示 */}
+          {(block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') && isPro && (
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
               <Pressable style={styles.initSqlHeader} onPress={() => setShowInitHtml((v) => !v)} hitSlop={6}>
                 <Ionicons name={showInitHtml ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />

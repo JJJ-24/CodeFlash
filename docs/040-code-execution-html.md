@@ -28,10 +28,11 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 |---|---|---|---|---|
 | **html** | ○（今回追加） | HTML/CSS（＋任意で `<script>`） | デッキ土台（共通・任意） | 本文をそのまま描画 |
 | **javascript / typescript** | ○（土台がある時） | JS | デッキ土台 ＋ ブロック土台 | 土台を描画 → 実行で JS が変化 |
-| **css** | ✕（当面ハイライトのみ） | — | — | 将来：デッキ HTML 土台に当てて描画 |
+| **css** | ○（2026-07-29 追加） | CSS（セレクタとプロパティ） | デッキ土台 ＋ ブロック土台 | 土台を描画 → 実行で装飾が当たる |
 
 - **html ブロック**：HTML/CSS だけでも実行してプレビュー可（JS 不要）。`<script>` を入れれば JS も動く。
 - **js/ts ブロック**：本文は JS。デッキ＋ブロックの HTML/CSS 土台を操作する（暗記カードの「一文書いて答え合わせ」用）。土台が無い js/ts は**従来どおりコンソール実行のみ**。
+- **css ブロック**：本文は CSS。土台の DOM を装飾する。**土台が無くても実行可能**（装飾対象が無ければ空白＝html と同じ扱い）。
 - すべて **Pro 限定・一度描画のみ（v1）**。
 
 ### プレビュー／ソース切り替え
@@ -137,7 +138,7 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 
 - **型**：`Deck.htmlInit: string | null`、`CodeBlock.htmlInit?: string`（js/ts のブロック土台）。
 - **DB**：`decks` に `htmlInit TEXT`（nullable）を追加。ブロック土台は `card_contents` の JSON に含まれる（マイグレーション不要）。→ `docs/db-migration-checklist.md` に沿う。
-- **言語**：既存の `html` を `EXECUTABLE_LANGUAGES`＋`PRO_LANGUAGES` に昇格。`css` は当面据え置き（将来デッキ HTML 土台に当てる形で実行対応）。
+- **言語**：既存の `html` を `EXECUTABLE_LANGUAGES`＋`PRO_LANGUAGES` に昇格。**`css` も 2026-07-29 に昇格**（下記「css の実行」）。
 - **可視 WebView**：web 系では実行用 WebView をそのまま**表示**して DOM を見せる（headless の使い捨てではなく結果受信後も残す）。v1 は `pointerEvents="none"` の表示専用＝タッチ競合なし。重い WebView の乱立を避けるため**遅延マウント**（表示中／操作中ブロックのみ）。
 - **Pro ゲート（言語で方式が異なる点に注意）**：
   - **html**：`PRO_LANGUAGES` により**実行ボタンが Pro 限定**（非 Pro は従来どおりハイライトのみ）。
@@ -328,7 +329,72 @@ A と B はどちらも html カードとして自然なので、**ブロック�
 
 ---
 
+## css の実行（2026-07-29 追加）
+
+将来拡張だった「css をデッキの HTML 土台に当てて描画」を実装した。**構造は js/ts と同じ**で、
+合成先が `<script>` から `<style>` に変わるだけ。
+
+```html
+<body>
+  [Deck.htmlInit]         ← デッキ共通の土台
+  [CodeBlock.htmlInit]    ← ブロック固有の土台
+  <style>[本文=CSS]</style>   ← 上の DOM を装飾する
+</body>
+```
+
+実行前プレビュー（素の土台）→ 実行（装飾後）の対比がそのまま答え合わせになるため、
+**3言語のなかで土台モデルに最も素直に嵌まる**。
+
+### js/ts と意味が変わる点（設計判断）
+
+- **土台の有無で分岐しない（案A・常に実行可能）**：js/ts は土台が無ければ「コンソール実行」に
+  落ちるが、**css にはその落とし先が無い**（`console.log` が無い）。土台が無ければ空白が出るだけ
+  ＝ html と同じ扱いにした。`useCodeExecution` の `isWeb` と `buildSandboxHtml` の両方で
+  `html` と並べて分岐する。
+- **Pro ゲートは `PRO_LANGUAGES` 方式**：上と同じ理由で「非 Pro はコンソールのみ」に落とせないため、
+  html/sql/cpp と同じく**実行ボタンごと Pro 限定**にした（js/ts の「土台入力欄だけ Pro」方式ではない）。
+- **エラーが出ない**：CSS の構文ミスはブラウザが黙って無視する。`background: crimsom` と打ち間違えても
+  無反応で、出力パネル（console）も常に空。**「実行したのに何も起きない＝どこか間違っている」**という
+  読み方になる。仕様として受け入れる。
+- **ソースタブ（案b＝実行後の DOM）の価値は薄い**：CSS は DOM を変えないので実行前後で差がほぼ出ない。
+  学習価値があるのは computed style だが、それは別機能。CSS では「ソース＝土台」で足りる。
+- **`:hover` はインライン・全画面とも効かない**（指にホバーが無い）。`:active`/`:focus`/`:checked` は
+  **全画面（⛶）でならタップで効く**ので、擬似クラス教材は全画面前提になる。
+- 043 の画像ライブラリは効く（`background-image: url(img://logo)`）。置換は合成後の最終 HTML に
+  掛かるため言語を問わない。
+
+### 土台を書くときの指針（重要）
+
+**土台では `style` 属性を使わず `<style>` にまとめる。**
+
+```html
+<!-- NG：css ブロックから background を上書きできない -->
+<div id="light" style="width:80px;height:80px;border-radius:50%;background:#333"></div>
+
+<!-- OK：同じ詳細度なので css ブロックが自然に勝つ -->
+<style>
+  #light { width:80px; height:80px; border-radius:50%; background:#333 }
+</style>
+<div id="light"></div>
+```
+
+`style` 属性は詳細度 1,0,0,0 で **`#id` セレクタより強い**ため、そのプロパティは css ブロックから
+`!important` なしでは上書きできない。しかも **CSS はエラーを出さない**ので、学習者には
+「実行しても何も起きない」としか見えず原因に辿り着けない（実際に踏んだ）。
+
+js/ts ブロックは `element.style.x = ...` がインラインを直接書き換えるため影響を受けない＝
+**css ブロック特有の注意点**。
+
+### 変更点
+
+`constants.ts`（`EXECUTABLE_LANGUAGES`＋`PRO_LANGUAGES` に追加）・`sandbox.ts`（`mode:'css'` を
+`buildWebSandboxHtml`/`buildInteractiveWebSandboxHtml` に追加・本文中の `</style>` は無害化）・
+`useCodeExecution`（`isWeb`）・`CodeRunnerView`/`CodeBlockItem`（`htmlInits`・`canExpand`・
+`canStaticPreview`・ブロック土台入力欄の言語条件）。i18n の追加は不要（土台欄の文言は
+「HTML/CSS 土台」で共通）。
+
+---
+
 ## 将来拡張（v1 では対象外）
 
-- **css の実行**：css ブロックをデッキの HTML 土台に当てて描画（`css` を `EXECUTABLE`＋`PRO` に昇格）。
 - **インタラクティブ**：可視 WebView を操作可能にし、ボタンの `onclick` 等を動かす（ScrollView とのジェスチャー競合対策が必要）。→ **041 で実装済み**（全画面モーダル＝別 VC に隔離してジェスチャー競合を回避・ライブ console 付き）。

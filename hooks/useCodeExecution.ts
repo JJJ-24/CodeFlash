@@ -203,9 +203,13 @@ export function useCodeExecution(onResult?: () => void) {
       }
     }
 
-    // Web プレビュー実行の判定：html は常に、js/ts は HTML/CSS 土台がある時だけ可視プレビューにする。
+    // Web プレビュー実行の判定：html / css は常に、js/ts は HTML/CSS 土台がある時だけ可視プレビューにする
+    // （js/ts は土台が無ければコンソール実行に落ちるが、css にはその落とし先が無いため常に web 実行）。
     const hasStage = (htmlInits ?? []).some((s) => s && s.trim() !== '');
-    const isWeb = language === 'html' || (hasStage && (language === 'javascript' || language === 'typescript'));
+    const isWeb =
+      language === 'html' ||
+      language === 'css' ||
+      (hasStage && (language === 'javascript' || language === 'typescript'));
     previewModeRef.current = isWeb;
     setPreviewMode(isWeb);
 

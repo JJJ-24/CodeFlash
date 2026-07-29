@@ -1,8 +1,8 @@
 // 言語を追加する際はここだけ更新する
-export const EXECUTABLE_LANGUAGES: string[] = ['javascript', 'typescript', 'python', 'sql', 'cpp', 'html'];
+export const EXECUTABLE_LANGUAGES: string[] = ['javascript', 'typescript', 'python', 'sql', 'cpp', 'html', 'css'];
 
 /** 実行に Pro プランが必要な言語。チケット016（課金）実装時に isPro チェックと連動させる */
-export const PRO_LANGUAGES: string[] = ['sql', 'cpp', 'html'];
+export const PRO_LANGUAGES: string[] = ['sql', 'cpp', 'html', 'css'];
 
 export const LANGUAGES = [
   'javascript', 'typescript', 'python', 'sql',

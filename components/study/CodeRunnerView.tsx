@@ -99,7 +99,7 @@ export function CodeRunnerView({
   const htmlInits = useMemo(
     () =>
       block.language === 'html' ? [deckHtmlInit ?? '']
-      : (block.language === 'javascript' || block.language === 'typescript') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
+      : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
       : undefined,
     [block.language, block.htmlInit, deckHtmlInit],
   );
@@ -114,6 +114,8 @@ export function CodeRunnerView({
   const canExpand =
     isPro &&
     (block.language === 'html' ||
+      // css は土台が無くても web プレビュー（＝全画面で開ける）。js/ts だけが土台必須。
+      block.language === 'css' ||
       ((block.language === 'javascript' || block.language === 'typescript') && previewSource.trim() !== ''));
 
   // 実行前プレビュー（土台の初期状態）を出す対象。**html も含める**：土台に追記して完成させる
@@ -124,7 +126,7 @@ export function CodeRunnerView({
   // 土台が空なら previewSource も空になり枠自体が出ないので、土台を使わないカードは従来どおり。
   const canStaticPreview =
     isPro &&
-    (block.language === 'javascript' || block.language === 'typescript' || block.language === 'html');
+    (block.language === 'javascript' || block.language === 'typescript' || block.language === 'html' || block.language === 'css');
 
   // 実行前プレビューで土台の後ろに描く本文。html で `previewInit` が ON のときだけ。
   // js/ts では渡さない（本文は JS なので実行前に走らせてはいけない）。

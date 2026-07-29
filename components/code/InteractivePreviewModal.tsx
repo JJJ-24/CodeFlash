@@ -23,7 +23,7 @@ const MAX_LOGS = 500;
 interface Props {
   visible: boolean;
   onClose: () => void;
-  /** 言語（html / javascript / typescript）。html は本文をそのまま描画、js/ts は本文＝JS で土台を操作。 */
+  /** 言語（html / css / javascript / typescript）。html は本文をそのまま描画、js/ts は本文＝JS で土台を操作、css は本文＝CSS で土台を装飾。 */
   language: string;
   /** 本文（html は HTML/CSS＋任意 script、js/ts は JS/TS ソース。ts はこの中で変換する）。 */
   body: string;
@@ -48,7 +48,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, stag
   const [copied, setCopied] = useState(false);
   const consoleRef = useRef<ScrollView>(null);
 
-  const mode: 'html' | 'js' = language === 'html' ? 'html' : 'js';
+  const mode: 'html' | 'js' | 'css' = language === 'html' ? 'html' : language === 'css' ? 'css' : 'js';
 
   // TS はここで変換。失敗時は土台だけ描画し、変換エラーを console に出す。
   const { html: baseHtml, transpileError } = useMemo(() => {

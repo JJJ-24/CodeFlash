@@ -87,8 +87,11 @@ interface Props {
   runNonce?: number;
   /** プレビュー領域をタッチしたときに呼ぶ（学習画面でカードのフリップを抑制する用途）。編集画面では未指定 */
   onInteract?: () => void;
-  /** true のとき、未実行でも土台（previewSource）を「実行前プレビュー」として自動描画する（js/ts 用） */
+  /** true のとき、未実行でも土台（previewSource）を「実行前プレビュー」として自動描画する（js/ts・html） */
   staticPreview?: boolean;
+  /** 実行前プレビューで土台の後ろに描画する本文（html ブロックで `previewInit` が ON のときだけ渡す）。
+   *  js/ts では**渡さない**：本文は JS なので実行前に走らせてはいけない。 */
+  staticBody?: string | null;
   /** 指定時、プレビューバーに「全画面」ボタンを出す（041・全画面インタラクティブプレビューを開く）。 */
   onExpand?: () => void;
   /** デッキの HTML 画像ライブラリ（043）。実行前プレビューの `img://name` を data URI へ解決するのに使う。 */
@@ -101,18 +104,21 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, onExpand, deckImages }: Props) {
+export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
   const [sourceCopied, setSourceCopied] = useState(false);
   const [previewTab, setPreviewTab] = useState<'preview' | 'source'>('preview');
 
-  // 実行前プレビュー：未実行のとき土台（previewSource）だけを描画する表示専用 HTML。
-  const staticHtml = useMemo(
-    () => (staticPreview && previewSource && previewSource.trim() !== '' ? buildStaticPreviewHtml([previewSource]) : null),
-    [staticPreview, previewSource],
-  );
+  // 実行前プレビュー：未実行のときに描画する表示専用 HTML。
+  // 中身は「土台（previewSource）＋ 本文（staticBody・html で previewInit が ON のときのみ）」＝
+  // カードに書かれている初期状態。どちらも空なら枠自体を出さない。
+  const staticHtml = useMemo(() => {
+    if (!staticPreview) return null;
+    const parts = [previewSource ?? '', staticBody ?? ''].filter((s) => s.trim() !== '');
+    return parts.length > 0 ? buildStaticPreviewHtml(parts) : null;
+  }, [staticPreview, previewSource, staticBody]);
   // 土台の編集（エディタ）で毎キーストローク再読込するのを避けるため 400ms デバウンスする。
   // 学習画面では土台は不変なのでデバウンスは実質無効（初回は即時表示）。
   const [debouncedStatic, setDebouncedStatic] = useState(staticHtml);

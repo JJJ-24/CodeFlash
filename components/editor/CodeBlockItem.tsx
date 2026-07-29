@@ -121,6 +121,21 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     (block.language === 'html' ||
       ((block.language === 'javascript' || block.language === 'typescript') && previewSource.trim() !== ''));
 
+  // 実行前プレビュー（土台の初期状態）を出す対象。**html も含める**：土台に追記して完成させる
+  // 出題（土台を見てから本文を書く）で「実行前に土台が見えている」ことに意味があるため。
+  // 040 当初は html を対象外にしていたが、その用途が出てきたので方針変更（docs/040 参照）。
+  // 表示されるのはどの言語でもデッキ/ブロックの土台だけで、本文は実行するまで描画されない
+  // （本文まで追従描画すると答えが書きながら見えてしまい、カードの「書いて→実行して答え合わせ」と衝突する）。
+  // 土台が空なら previewSource も空になり枠自体が出ないので、土台を使わないカードは従来どおり。
+  const canStaticPreview =
+    isPro &&
+    (block.language === 'javascript' || block.language === 'typescript' || block.language === 'html');
+
+  // 実行前プレビューで土台の後ろに描く本文。html で `previewInit` が ON のときだけ。
+  // js/ts では渡さない（本文は JS なので実行前に走らせてはいけない）。
+  const staticBody = block.language === 'html' && block.previewInit ? block.content : undefined;
+
+
   const enterEditMode = useCallback(() => {
     setFocused(true);
     const lastNewline = contentRef.current.lastIndexOf('\n');
@@ -500,6 +515,30 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
+
+          {/* html ブロック：実行前プレビューに本文も描画するか（土台に書き足して完成させる出題向け）。
+              既定 OFF＝「表示結果を予想させる」出題の答えを先に見せない。Pro 機能のため非Proでは非表示 */}
+          {block.language === 'html' && isPro && (
+            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
+              <View style={styles.initSqlHeader}>
+                <Ionicons name={block.previewInit ? 'eye' : 'eye-off-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
+                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('editor.previewInitLabel')}
+                </Text>
+                <Switch
+                  value={!!block.previewInit}
+                  onValueChange={(v) => onChange({ previewInit: v })}
+                  trackColor={{ true: '#1976D2' }}
+                  thumbColor="#FFF"
+                  style={styles.execSwitch}
+                />
+              </View>
+              <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('editor.previewInitHint')}
+              </Text>
+            </View>
+          )}
+
           <ExecutionOutput
             result={result}
             htmlSource={htmlSource}
@@ -507,7 +546,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             previewMode={previewMode}
             previewSource={previewSource}
             runNonce={runNonce}
-            staticPreview={isPro && (block.language === 'javascript' || block.language === 'typescript')}
+            staticPreview={canStaticPreview}
+            staticBody={staticBody}
             onClear={clear}
             onMessage={handleMessage}
             onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}

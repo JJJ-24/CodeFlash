@@ -387,6 +387,8 @@
     "htmlInitHint": "HTML/CSS that this block's JS manipulates. Stacked after the deck's shared stage.",
     "htmlInitPlaceholder": "<div id=\"box\">Hello</div>\n<style>#box{ padding:20px }</style>",
     "htmlInitEmpty": "(none)",
+    "previewInitLabel": "Preview before running",
+    "previewInitHint": "Renders this block's HTML without running it. Useful when the task is to add to a base. Leave it off for cards that ask the learner to predict the output.",
     "imageNoSelection": "(no image selected)",
     "imageSizeS": "S",
     "imageSizeM": "M",

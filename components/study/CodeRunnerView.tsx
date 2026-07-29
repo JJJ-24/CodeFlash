@@ -115,6 +115,21 @@ export function CodeRunnerView({
     isPro &&
     (block.language === 'html' ||
       ((block.language === 'javascript' || block.language === 'typescript') && previewSource.trim() !== ''));
+
+  // 実行前プレビュー（土台の初期状態）を出す対象。**html も含める**：土台に追記して完成させる
+  // 出題（土台を見てから本文を書く）で「実行前に土台が見えている」ことに意味があるため。
+  // 040 当初は html を対象外にしていたが、その用途が出てきたので方針変更（docs/040 参照）。
+  // 表示されるのはどの言語でもデッキ/ブロックの土台だけで、本文は実行するまで描画されない
+  // （本文まで追従描画すると答えが書きながら見えてしまい、カードの「書いて→実行して答え合わせ」と衝突する）。
+  // 土台が空なら previewSource も空になり枠自体が出ないので、土台を使わないカードは従来どおり。
+  const canStaticPreview =
+    isPro &&
+    (block.language === 'javascript' || block.language === 'typescript' || block.language === 'html');
+
+  // 実行前プレビューで土台の後ろに描く本文。html で `previewInit` が ON のときだけ。
+  // js/ts では渡さない（本文は JS なので実行前に走らせてはいけない）。
+  const staticBody = block.language === 'html' && block.previewInit ? block.content : undefined;
+
   const stages = useMemo(() => (htmlInits ?? []).filter((s) => s && s.trim() !== ''), [htmlInits]);
   const codeInputRef = useRef<TextInput>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
@@ -473,7 +488,8 @@ export function CodeRunnerView({
           previewMode={previewMode}
           previewSource={previewSource}
           runNonce={runNonce}
-          staticPreview={isPro && (block.language === 'javascript' || block.language === 'typescript')}
+          staticPreview={canStaticPreview}
+          staticBody={staticBody}
           onInteract={suppress}
           onClear={clear}
           onMessage={handleMessage}

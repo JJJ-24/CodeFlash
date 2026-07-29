@@ -14,6 +14,9 @@ export interface CodeBlock {
   sqlInit?: string;
   /** js/ts ブロック固有の HTML/CSS 土台（デッキ共通の後に積む）。web 系プレビューの土台として使う */
   htmlInit?: string;
+  /** html ブロック：実行前プレビューに**本文も**描画する（土台に書き足して完成させる出題向け）。
+   *  既定 false＝実行するまで本文は描画しない（「表示結果を予想させる」出題の答えを先に見せないため）。 */
+  previewInit?: boolean;
 }
 
 export interface ImageBlock {

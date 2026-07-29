@@ -111,7 +111,7 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 - [x] デッキの `htmlInit` を `CodeBlockItem` までスレッド（`BlockEditor` に `deckHtmlInit` prop 追加、`card/new`・`card/[cardId]/edit` から `currentDeck?.htmlInit` を渡す）
 - [x] 実行時に `htmlInits = [deckHtmlInit ?? '', block.htmlInit ?? '']`（html はデッキ土台のみ）を `run` に渡す
 - [x] `ExecutionOutput` に `previewMode` / `previewSource`（土台テキスト）を渡す＝実行後にプレビュー＋ソースが出る
-- [x] **実行前プレビュー（自動表示）**：js/ts で土台があれば未実行でも土台の初期状態を自動描画。`buildStaticPreviewHtml()`（表示専用・postMessage しない）を新設し、`ExecutionOutput` が未実行時は静的プレビュー・実行後は実行結果を表示（`activeHtml` で出し分け・key で再マウント）。土台編集の毎キーストローク再読込は 400ms デバウンス。html は対象外（本文＝内容のため実行で描画）
+- [x] **実行前プレビュー（自動表示）**：js/ts で土台があれば未実行でも土台の初期状態を自動描画。`buildStaticPreviewHtml()`（表示専用・postMessage しない）を新設し、`ExecutionOutput` が未実行時は静的プレビュー・実行後は実行結果を表示（`activeHtml` で出し分け・key で再マウント）。土台編集の毎キーストローク再読込は 400ms デバウンス。~~html は対象外（本文＝内容のため実行で描画）~~ → **2026-07-29 に html も対象へ変更**（下記「実行前プレビューを html にも出す」）
 
 ### Phase 4: デッキ土台入力（デッキ編集／新規）
 - [x] 「HTML/CSS 共通土台」入力欄（任意・**Pro 時のみ表示**）＝デッキ編集・新規の両画面
@@ -237,6 +237,49 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 ```
 
 結果：`img:OK` ／ `pushState:OK secure:false clipboard:false randomUUID:false`
+
+---
+
+## 実行前プレビューを html にも出す（2026-07-29 方針変更）
+
+当初は「html は本文＝内容だから実行で描画すればよい」として実行前プレビューの対象外にしていた。
+その後、**土台に追記して完成させる出題**（土台の初期状態を見る → 本文に HTML を書き足す →
+実行して答え合わせ）という用途が出てきたため、html も対象に含めた。
+
+### 第1段：土台を実行前に見せる
+
+- `staticPreview` の条件に html を追加（`CodeRunnerView` / `CodeBlockItem` の `canStaticPreview`）。
+- **副次的な改善**：これまで html ブロックで ⟲（リセット）を押すとプレビュー枠ごと消えていた
+  （静的プレビューが無いため）。実行前プレビューが入ったことで「土台の初期状態に戻る」という
+  本来の意味になった。
+- **デッキ土台が無い html カードは見た目が変わらない**（描くものが無ければ枠自体が出ない）。
+
+### 第2段：本文も実行前に描く（`CodeBlock.previewInit` トグル）
+
+「土台が無く、**表面に部分HTMLを書いておいて**、それを見ながら完成させる」出題も作りたい、という
+要望への対応。ただし**常時ONにはできない**：
+
+| 出題パターン | 実行前プレビュー |
+|---|---|
+| A：部分HTMLを見ながら完成させる | 欲しい |
+| B：**この HTML はどう表示される？** と予想させる | **困る**（答えが最初から見える） |
+
+A と B はどちらも html カードとして自然なので、**ブロック単位のスイッチ**にした。
+`CodeBlock` は `card_contents` の JSON に入っているため **`previewInit?: boolean` の追加は
+マイグレーション不要**。既定 false ＝ B のカードは無傷。
+
+- ON のとき `ExecutionOutput` に `staticBody`（＝`block.content`）を渡し、
+  `buildStaticPreviewHtml([土台, 本文])` で描く。ルールは **「実行前プレビュー ＝ 土台 ＋ 本文」**
+  （＝カードに書かれている初期状態）の1本になる。
+- **js/ts には `staticBody` を渡さない**：本文が JS なので実行前に走らせてはいけない。
+- **学習画面は `block.content`（保存値）を使い、学習者がその場で編集した内容は反映しない**。
+  これにより「実行前プレビュー＝問題の初期状態／実行＝自分の書き足しを反映」という区別が保たれ、
+  実行ボタンが無意味にならない。
+- **編集画面では打鍵に追従する**（`block.content` がライブ値・400msデバウンス）。作者自身が書いて
+  いる場面ではネタバレの概念が無く、オーサリング支援として有用なので許容。
+- TSV：`previewInit` は往復しない（`sqlInit`/`htmlInit` と同じ）。既定 OFF に戻るだけの表示設定なので
+  **エクスポート前の内訳表示（`inspectTsvExport`）には加えない**と判断した。JSON エクスポートは
+  `card_contents` を丸ごと出すので保持される。
 
 ---
 

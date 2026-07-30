@@ -144,6 +144,12 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // js/ts では渡さない（本文は JS なので実行前に走らせてはいけない）。
   const staticBody = block.language === 'html' && block.previewInit ? block.content : undefined;
 
+  // ⛶ 全画面（041）はインラインの「実行前＝土台だけ／実行後＝結果」と**同じ軸**に乗る。
+  // 開いた時点のインラインの状態（execActive）で実行前/実行後が決まり、モーダル内の ▶/⟲ で往復できる。
+  // 未実行から本文を走らせると 040 の「実行するまで本文の結果は見せない（答えを先に見せない）」原則が
+  // 全画面だけ素通しになるため、実行前に描くのは土台＋staticBody（html の previewInit が ON のときだけ）。
+  const execActive = previewMode && !!htmlSource;
+
 
   const enterEditMode = useCallback(() => {
     setFocused(true);
@@ -594,6 +600,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         onClose={() => { setExpandVisible(false); setPreviewOpen(false); }}
         language={block.language}
         body={block.content}
+        previewBody={staticBody ?? ''}
+        initialRan={execActive}
         stages={stages}
         deckImages={deckHtmlImages}
       />

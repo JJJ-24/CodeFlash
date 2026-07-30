@@ -338,6 +338,7 @@
     "preview": "プレビュー",
     "source": "ソース",
     "interactHint": "プレビューを操作するとログがここに表示されます",
+    "beforeRunHint": "実行前の表示です（▶ で実行できます）",
     "pyodideLoading": "Python を準備中（初回は時間がかかります）",
     "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）",
     "proTitle": "Pro 機能",

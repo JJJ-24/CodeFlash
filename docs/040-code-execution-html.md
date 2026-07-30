@@ -395,6 +395,45 @@ js/ts ブロックは `element.style.x = ...` がインラインを直接書き�
 
 ---
 
+## ブロック単位でデッキ土台を切る（`CodeBlock.noDeckHtmlInit`・2026-07-30 追加）
+
+デッキに共通土台があると、**そのデッキの js/ts ブロックは必ず Web プレビュー実行になる**
+（`useCodeExecution` の `hasStage` 判定）。そのため「このカードは `console.log` を見るだけ」という
+出題でも、実行前プレビューの枠と実行結果のプレビュー枠が出る（ログ自体は下に併記されるので
+壊れてはいないが、土台と無関係なカードには邪魔）。これをブロック単位で切れるようにした。
+
+### 仕様
+
+- `CodeBlock.noDeckHtmlInit?: boolean`（JSON の任意フラグ・**マイグレーション不要**・既定 false＝積む）。
+  否定形で持つので**既存カードは無変更**。`previewInit` と同じ流儀。
+- 対象は **web 系4言語すべて**（html / css / js / ts）。html・css も「このブロックはデッキ土台を
+  混ぜずに単独で描きたい」という要求があり得るため、js/ts に絞らず対称にした。
+- ON にするとそのブロックでは `Deck.htmlInit` を積まない（**ブロック固有の `htmlInit` は残る**）。
+  - **js/ts**：土台が全部空になると `hasStage` が false ＝ **コンソール実行に戻る**。
+    実行前プレビューも ⛶（全画面）も出なくなる＝狙いどおり。
+  - **html/css**：Web 実行のまま、ブロック固有土台（＋本文）だけで描画する。
+- **カード単位ではなくブロック単位**にした理由：①保存先が `CodeBlock` の JSON に既にあり
+  `cards` の列追加が不要 ②1枚のカードに「コンソールだけのブロック」と「DOM 操作ブロック」を
+  混在させられる ③土台を消費しているのはブロックなので概念が一致する。
+
+### UI
+
+`CodeBlockItem` に `previewInit` と同型のトグル行（`layers`/`layers-outline` アイコン＋Switch＋説明）。
+ラベルは肯定形「デッキ共通の土台を使う」＝**既定 ON**（保存値は否定形）。
+表示条件は **web 系ブロック かつ Pro かつデッキに共通土台がある**とき（土台が無ければ切る対象が無い）。
+ブロック固有土台の欄は折りたたみ既定で見つけにくいため、**この行は独立セクションとして常時表示**する
+（4言語で同じ位置に出る＝html にはブロック土台欄が無いことによる不揃いも起きない）。
+
+### 変更点
+
+`types/index.ts`（フラグ1つ）・`CodeRunnerView`/`CodeBlockItem` の `htmlInits` 組み立て2箇所
+（`deckStage` を挟むだけ）・`CodeBlockItem` の UI ＋ i18n（`editor.useDeckHtmlInit*`）。
+`previewSource`・`stages`・`canExpand`・`canStaticPreview`・`run()`・`ExecutionOutput`・041 モーダルは
+すべて `htmlInits` から派生しているので**自動で追従**（サンドボックス側は無改造）。
+なお **TSV 往復ではこのフラグは落ちる**（`previewInit` と同じ・JSON エクスポートは保持する）。
+
+---
+
 ## 将来拡張（v1 では対象外）
 
 - **インタラクティブ**：可視 WebView を操作可能にし、ボタンの `onclick` 等を動かす（ScrollView とのジェスチャー競合対策が必要）。→ **041 で実装済み**（全画面モーダル＝別 VC に隔離してジェスチャー競合を回避・ライブ console 付き）。

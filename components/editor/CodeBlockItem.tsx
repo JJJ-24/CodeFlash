@@ -106,11 +106,18 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外は undefined
   const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
 
+  // 土台（HTML/CSS）を積む web 系ブロックか。デッキ共通土台の ON/OFF トグルの表示条件に使う。
+  const isWebLang =
+    block.language === 'html' || block.language === 'javascript' || block.language === 'typescript' || block.language === 'css';
+
   // Web 系（html / js・ts）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
   // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。それ以外の言語は undefined。
+  // `noDeckHtmlInit` のブロックはデッキ共通の土台を積まない（土台が無関係なブロックで
+  // 無関係なプレビューを出さないため。js/ts は土台が空になるのでコンソール実行に戻る）。
+  const deckStage = block.noDeckHtmlInit ? '' : (deckHtmlInit ?? '');
   const htmlInits =
-    block.language === 'html' ? [deckHtmlInit ?? '']
-    : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
+    block.language === 'html' ? [deckStage]
+    : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckStage, block.htmlInit ?? '']
     : undefined;
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
@@ -444,6 +451,30 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   </GestureDetector>
                 )
               )}
+            </View>
+          )}
+
+          {/* web 系ブロック：デッキ共通の HTML/CSS 土台を積むか（既定 ON）。
+              OFF＝このブロックだけ土台を切る（コンソール出力だけのカードで無関係なプレビューを消す）。
+              デッキに共通土台が無ければ切る対象が無いので出さない。Pro 機能のため非Proでは非表示 */}
+          {isWebLang && isPro && !!deckHtmlInit?.trim() && (
+            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
+              <View style={styles.initSqlHeader}>
+                <Ionicons name={block.noDeckHtmlInit ? 'layers-outline' : 'layers'} size={theme.fontSize.sm} color="#C9C9C9" />
+                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('editor.useDeckHtmlInitLabel')}
+                </Text>
+                <Switch
+                  value={!block.noDeckHtmlInit}
+                  onValueChange={(v) => onChange({ noDeckHtmlInit: !v })}
+                  trackColor={{ true: '#1976D2' }}
+                  thumbColor="#FFF"
+                  style={styles.execSwitch}
+                />
+              </View>
+              <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('editor.useDeckHtmlInitHint')}
+              </Text>
             </View>
           )}
 

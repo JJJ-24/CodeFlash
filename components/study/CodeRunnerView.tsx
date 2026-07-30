@@ -96,12 +96,16 @@ export function CodeRunnerView({
   } = useCodeExecution(onRunStart);
   // Web 系（html / js・ts）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
   // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。
+  // `noDeckHtmlInit` のブロックはデッキ共通の土台を積まない（土台が無関係なブロックで
+  // 無関係なプレビューを出さないため。js/ts は土台が空になるのでコンソール実行に戻る）。
   const htmlInits = useMemo(
-    () =>
-      block.language === 'html' ? [deckHtmlInit ?? '']
-      : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckHtmlInit ?? '', block.htmlInit ?? '']
-      : undefined,
-    [block.language, block.htmlInit, deckHtmlInit],
+    () => {
+      const deckStage = block.noDeckHtmlInit ? '' : (deckHtmlInit ?? '');
+      return block.language === 'html' ? [deckStage]
+        : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckStage, block.htmlInit ?? '']
+        : undefined;
+    },
+    [block.language, block.htmlInit, block.noDeckHtmlInit, deckHtmlInit],
   );
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');

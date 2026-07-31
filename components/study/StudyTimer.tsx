@@ -27,6 +27,12 @@ const HALF = STUDY_TIMER_SIZE / 2;
 const PIE_RADIUS = STUDY_TIMER_SIZE / 4;
 const PIE_STROKE = STUDY_TIMER_SIZE / 2;
 const PIE_CIRCUMFERENCE = 2 * Math.PI * PIE_RADIUS;
+// 扇が細くなりすぎて「終了より前に消えた」ように見えるのを防ぐ表示角の下限（1/90 周＝4°）。
+// 扇の幅は 1° あたり外周で約 0.5pt しかないため、素直に角度＝残り割合にすると、
+// 残り 1〜2°（30分タイマーなら 5〜10秒）で視認できなくなり、そこから通知までの数秒が
+// 「消えたのに終わらない」空白に見える（ズレは残り割合基準なのでタイマーが長いほど長くなる）。
+// 残りがある限り最低これだけの扇を残し、0 になった瞬間＝通知と同時に消す。
+const PIE_MIN_FRAC = 1 / 90;
 // 円非表示設定時: 開始時だけ表示し、フェードアウトして消える
 const INTRO_VISIBLE_MS = 3000;
 const INTRO_FADE_MS = 800;
@@ -172,13 +178,20 @@ export function StudyTimer({
   // （標準の C*(1-fraction) だと反時計回りに欠けてしまう）。
   //
   // パイは連続（スムーズ）に欠けさせる: 開始「60」は正円で、1秒かけて6°（1分設定時）
-  // 欠けたところで「59」になる＝数字の変わり目とパイの欠け量が一致する。終端は残り「1」の間に
-  // 1/60 の細い扇がスムーズに消えて 0 でちょうど空になる（細くてほぼ見えないのは連続式の宿命・許容）。
+  // 欠けたところで「59」になる＝数字の変わり目とパイの欠け量が一致する。
   // ※「残り秒の切り上げで1秒＝1目盛りの段階欠け（ceil ステップ）」は実機でカクついて見えるため
   //   不採用（2026-07-13 試行済み・再試行しない）。
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: PIE_CIRCUMFERENCE * (1 + progress.value),
-  }));
+  //
+  // 表示角には下限（PIE_MIN_FRAC）を敷き、[0,1] を [PIE_MIN_FRAC,1] へ線形に写す。残りがある間は
+  // 必ず見える太さの扇が残り、progress がちょうど 0 になった瞬間（＝tick が時間切れを検出して
+  // 通知を出すのと同じ壁時計上の点）に消える＝「消えた瞬間が終了」になる。
+  // 床を張る（Math.max(p, min)）方式にしないのは、最後の 1/90 で扇が停滞して見えるため。
+  // 線形マップなら速度は (1-min) 倍でほぼ変わらず、最後に 4° ぶんが一瞬で消えるだけで済む。
+  const animatedProps = useAnimatedProps(() => {
+    const p = progress.value;
+    const shown = p > 0 ? PIE_MIN_FRAC + (1 - PIE_MIN_FRAC) * p : 0;
+    return { strokeDashoffset: PIE_CIRCUMFERENCE * (1 + shown) };
+  });
 
   const blinkOpacity = useSharedValue(1);
   useEffect(() => {

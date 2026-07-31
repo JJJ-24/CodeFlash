@@ -183,8 +183,11 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
                 <Ionicons name="refresh" size={Math.round(theme.fontSize.xl)} color="#E5E7EB" />
               </Pressable>
             )}
-            <Pressable onPress={runNow} hitSlop={10} style={styles.headerBtn}>
-              <Ionicons name="caret-forward" size={Math.round(theme.fontSize.xl)} color="#E5E7EB" />
+            {/* 実行前は ▶ を塗りボタン（コードブロックの実行ボタンと同じ青）にして「押せば動く」と読ませる。
+                実行前は無反応な土台だけが出るため、状態表示より次の行動が伝わる形を優先した。
+                実行後はゴースト（アイコンのみ）＝控えめな再実行ボタンに戻す。 */}
+            <Pressable onPress={runNow} hitSlop={10} style={[styles.headerBtn, !ran && styles.headerRunBtnFilled]}>
+              <Ionicons name="caret-forward" size={Math.round(theme.fontSize.xl)} color={ran ? '#E5E7EB' : '#FFFFFF'} />
             </Pressable>
           </View>
         </View>
@@ -282,6 +285,12 @@ const styles = StyleSheet.create({
   },
   headerSideRight: {
     justifyContent: 'flex-end',
+  },
+  headerRunBtnFilled: {
+    // コードブロックのヘッダーの ▶ と同じ青。幅は headerBtn のままなのでタイトルの中央はずれない
+    backgroundColor: '#1976D2',
+    borderRadius: 8,
+    paddingVertical: 6,
   },
   headerTitle: {
     flex: 1,

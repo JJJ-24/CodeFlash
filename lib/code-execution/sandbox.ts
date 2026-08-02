@@ -54,6 +54,44 @@ const HEIGHT_REPORT_SCRIPT = `
 })();
 `;
 
+/** 実行の既定の締切（何も予約しないコードは実質これで判定される）。 */
+const EXEC_TIMEOUT_BASE_MS = 5000;
+/** 実行開始からの絶対上限。setTimeout をいくら重ねてもここで打ち切る（Python・C++ と同じ 30 秒）。 */
+export const EXEC_TIMEOUT_MAX_MS = 30000;
+/** タイマー発火後の後始末（コールバック内のログ・マイクロタスク）ぶんの余白。 */
+const EXEC_TIMEOUT_MARGIN_MS = 300;
+
+/**
+ * 実行の締切を管理する共通スクリプト（`buildJsSandboxHtml` / `buildWebSandboxHtml` に注入）。
+ *
+ * 既定は 5 秒だが、ユーザーコードが `setTimeout(fn, 8000)` のように先の発火を予約したら、
+ * その発火予定＋余白まで締切を押し出す（実行開始から 30 秒が絶対上限）。固定 5 秒だと
+ * `setTimeout` の学習カードが必ず「タイムアウト」になってしまうため。
+ *
+ * - `setInterval` では延長しない（終わりが無いので、clear しなければ上限で打ち切りのまま）
+ * - 再帰的な `setTimeout` で無限に延びないよう、上限は**実行開始時刻**を基準にする
+ * - 何も予約しないコードの体感は不変（5 秒のまま）
+ * - `finish` に `_limitMs`（実際に適用した上限）を持たせ、UI が「N秒を超えたため中断」と出せるようにする
+ *
+ * 前提: 呼び出し側に `_origSetTimeout` / `_origClearTimeout` と関数宣言の `finish` があること。
+ */
+const DEADLINE_SCRIPT = `
+  var _startedAt = Date.now();
+  var _limitMs = ${EXEC_TIMEOUT_BASE_MS};
+  var _timer = _origSetTimeout(function() { finish('timeout'); }, _limitMs);
+  function extendDeadline(delay) {
+    if (_done) return;
+    var d = Number(delay);
+    if (!isFinite(d) || d < 0) d = 0;
+    var want = (Date.now() - _startedAt) + d + ${EXEC_TIMEOUT_MARGIN_MS};
+    if (want > ${EXEC_TIMEOUT_MAX_MS}) want = ${EXEC_TIMEOUT_MAX_MS};
+    if (want <= _limitMs) return;
+    _limitMs = want;
+    _origClearTimeout(_timer);
+    _timer = _origSetTimeout(function() { finish('timeout'); }, _startedAt + _limitMs - Date.now());
+  }
+`;
+
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
 
 /**
@@ -79,8 +117,8 @@ function buildPythonSandboxHtml(code: string): string {
   var _totalTimer = setTimeout(function() {
     if (_done) return;
     _done = true;
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'timeout', logs: _logs }));
-  }, 30000);
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'timeout', logs: _logs, limitMs: ${EXEC_TIMEOUT_MAX_MS} }));
+  }, ${EXEC_TIMEOUT_MAX_MS});
 
   function finish(type, msg) {
     if (_done) return;
@@ -199,15 +237,15 @@ function buildJsSandboxHtml(code: string): string {
   var _origSetInterval   = window.setInterval.bind(window);
   var _origClearInterval = window.clearInterval.bind(window);
 
-  // 全体 5 秒の上限
-  var _timer = _origSetTimeout(function() { finish('timeout'); }, 5000);
-
+  // 全体の締切（既定5秒・setTimeout の予約に応じて最大30秒まで延長）
+${DEADLINE_SCRIPT}
   function finish(type, msg) {
     if (_done) return;
     _done = true;
     _origClearTimeout(_timer);
     var payload = { type: type, logs: _logs };
     if (msg) payload.message = msg;
+    if (type === 'timeout') payload.limitMs = _limitMs;
     window.ReactNativeWebView.postMessage(JSON.stringify(payload));
   }
 
@@ -229,9 +267,10 @@ function buildJsSandboxHtml(code: string): string {
     if (_live[id]) { delete _live[id]; _pending--; scheduleFinishCheck(); }
   }
 
-  // setTimeout: 1 回発火したら完了（保留から外す）
+  // setTimeout: 1 回発火したら完了（保留から外す）。発火予定に合わせて締切も延ばす。
   window.setTimeout = function(fn, delay) {
     if (typeof fn !== 'function') return _origSetTimeout(fn, delay);
+    extendDeadline(delay);
     var extra = Array.prototype.slice.call(arguments, 2);
     var id = _origSetTimeout(function() {
       try { fn.apply(null, extra); }
@@ -330,8 +369,8 @@ function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInit
   var _origSetInterval   = window.setInterval.bind(window);
   var _origClearInterval = window.clearInterval.bind(window);
 
-  var _timer = _origSetTimeout(function() { finish('timeout'); }, 5000);
-
+  // 全体の締切（既定5秒・setTimeout の予約に応じて最大30秒まで延長）
+${DEADLINE_SCRIPT}
   function finish(type, msg) {
     if (_done) return;
     _done = true;
@@ -354,6 +393,7 @@ function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInit
     } catch (e) {}
     var payload = { type: type, logs: _logs };
     if (msg) payload.message = msg;
+    if (type === 'timeout') payload.limitMs = _limitMs;
     window.ReactNativeWebView.postMessage(JSON.stringify(payload));
   }
   // 完了判定はマクロタスク境界まで遅らせ、後出しログ（Promise/タイマー）を取りこぼさない。
@@ -370,6 +410,7 @@ function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInit
   }
   window.setTimeout = function(fn, delay) {
     if (typeof fn !== 'function') return _origSetTimeout(fn, delay);
+    extendDeadline(delay);
     var extra = Array.prototype.slice.call(arguments, 2);
     var id = _origSetTimeout(function() {
       try { fn.apply(null, extra); }
@@ -563,8 +604,8 @@ function buildSqlSandboxHtml(code: string, sqlInits?: string[]): string {
   var _timer = setTimeout(function() {
     if (_done) return;
     _done = true;
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'timeout', logs: _logs, tables: _tables }));
-  }, 30000);
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'timeout', logs: _logs, tables: _tables, limitMs: ${EXEC_TIMEOUT_MAX_MS} }));
+  }, ${EXEC_TIMEOUT_MAX_MS});
 
   function finish(type, msg) {
     if (_done) return;

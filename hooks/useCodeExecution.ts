@@ -1,7 +1,7 @@
 import { transform } from 'sucrase';
 import { useEffect, useRef, useState } from 'react';
 
-import { buildSandboxHtml } from '@/lib/code-execution/sandbox';
+import { buildSandboxHtml, EXEC_TIMEOUT_MAX_MS } from '@/lib/code-execution/sandbox';
 import type { ExecResult, ExecStatus, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import i18n from '@/lib/i18n';
@@ -34,6 +34,9 @@ function isWandboxTransient(data: WandboxData): boolean {
 
 // 自動リトライの待機（初回失敗後 → 800ms、次 → 1600ms）。
 const WANDBOX_RETRY_BACKOFFS = [800, 1600];
+
+/** Wandbox（C++）の全リトライ込みの全体タイムアウト。WebView 実行系の絶対上限と揃えてある。 */
+const WANDBOX_TIMEOUT_MS = EXEC_TIMEOUT_MAX_MS;
 
 /** abort で即座にキャンセルできる待機。abort 時は name='AbortError' の Error で reject する。 */
 function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
@@ -86,7 +89,7 @@ export function useCodeExecution(onResult?: () => void) {
     const controller = new AbortController();
     cppAbortRef.current = controller;
     // 全リトライ込みの全体タイムアウト（30秒）。これを超えたら timeout 扱いで打ち切る。
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), WANDBOX_TIMEOUT_MS);
 
     // 初回 + リトライ。混雑（一時障害）やネットワーク失敗のときだけ再試行する。
     const maxAttempts = WANDBOX_RETRY_BACKOFFS.length + 1;
@@ -164,7 +167,7 @@ export function useCodeExecution(onResult?: () => void) {
       cppAbortRef.current = null;
       if (e instanceof Error && e.name === 'AbortError') {
         setStatus('timeout');
-        setResult({ status: 'timeout', logs: [] });
+        setResult({ status: 'timeout', logs: [], limitMs: WANDBOX_TIMEOUT_MS });
       } else {
         const msg = e instanceof Error ? e.message : String(e);
         setStatus('error');
@@ -247,12 +250,14 @@ export function useCodeExecution(onResult?: () => void) {
       logs?: LogEntry[];
       message?: string;
       tables?: SqlTableResult[];
+      limitMs?: number;
     };
     const newResult: ExecResult = {
       status: data.type as ExecStatus,
       logs: data.logs ?? [],
       errorMessage: data.message,
       tables: data.tables,
+      limitMs: data.limitMs,
     };
     setStatus(newResult.status);
     setResult(newResult);

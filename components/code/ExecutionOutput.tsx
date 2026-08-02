@@ -111,6 +111,10 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
   const [sourceCopied, setSourceCopied] = useState(false);
   const [previewTab, setPreviewTab] = useState<'preview' | 'source'>('preview');
 
+  // タイムアウト表示の秒数。JS/Web は setTimeout の予約に応じて締切が伸びる（既定5秒→最大30秒）ので、
+  // サンドボックスが実際に適用した上限（limitMs）を表示する。未指定なら既定の5秒。
+  const timeoutSeconds = Math.round((result?.limitMs ?? 5000) / 1000);
+
   // 実行前プレビュー：未実行のときに描画する表示専用 HTML。
   // 中身は「土台（previewSource）＋ 本文（staticBody・html で previewInit が ON のときのみ）」＝
   // カードに書かれている初期状態。どちらも空なら枠自体を出さない。
@@ -237,7 +241,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
         >
           <View style={styles.outputHeader}>
             <Text style={[styles.outputTitle, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {result.status === 'timeout' ? t('code.timeout') :
+              {result.status === 'timeout' ? t('code.timeout', { seconds: timeoutSeconds }) :
                result.status === 'error'   ? t('code.error') : t('code.output')}
             </Text>
             <GestureDetector gesture={clearGesture}>
@@ -250,7 +254,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
             {(result.status === 'error' && result.errorMessage) || result.status === 'timeout' ? (
               <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
                 <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {result.status === 'timeout' ? t('code.timeoutMessage') : result.errorMessage}
+                  {result.status === 'timeout' ? t('code.timeoutMessage', { seconds: timeoutSeconds }) : result.errorMessage}
                 </Text>
               </ScrollView>
             ) : null}

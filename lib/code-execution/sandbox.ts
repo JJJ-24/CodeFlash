@@ -188,6 +188,139 @@ const DIALOG_SCRIPT = `
   });
 `;
 
+/** インライン要素を1行に畳むときの上限。これを超えたら普通に改行して積む。 */
+const HTML_FORMAT_INLINE_MAX = 200;
+
+/**
+ * 040 の「ソース」タブ用に、実行後の body を**整形して**文字列化する（`buildWebSandboxHtml` に注入）。
+ *
+ * `document.body.outerHTML` は「書いたときの改行をそのまま返す」だけで自分では整形しないため、
+ * ①`<script>` の中身が開始タグと同じ行から始まって閉じタグまで詰まる ②`appendChild` で JS が
+ * 作った要素は改行を含むテキストノードが存在せず全部1行に連なる、という読みにくさが出る。
+ * ここでは DOM を歩いてインデント付きで組み立て直す。**表示専用**（再実行しない）なので、
+ * 整形で空白の扱いが変わっても実行結果には影響しない。
+ *
+ * ルール:
+ * - 空白だけのテキストノードは捨てる（元 HTML のインデント由来の空白が二重に増えるのを防ぐ）
+ * - 子がすべてインライン要素/テキストなら**1行に畳む**（`<p>foo <b>bar</b></p>`）。
+ *   ただし長くなりすぎる場合（`HTML_FORMAT_INLINE_MAX`）は畳まない
+ * - `<script>` / `<style>` は開始タグ・中身・終了タグを別行にし、**中身は原文のまま**
+ *   （インデントを足すとテンプレートリテラルの中身が変わって見えるため）
+ * - `<pre>` / `<textarea>` と `white-space: pre*` の要素は中身に一切触らない（空白が意味を持つ）
+ * - 空要素（`<br>` `<img>` など）は1行、属性は `node.attributes` から組み直してエスケープ
+ */
+const HTML_FORMAT_SCRIPT = `
+  var _VOID_TAGS = { area:1, base:1, br:1, col:1, embed:1, hr:1, img:1, input:1, link:1, meta:1, param:1, source:1, track:1, wbr:1 };
+  var _RAW_TAGS  = { script:1, style:1 };
+  var _PRE_TAGS  = { pre:1, textarea:1 };
+  var _INLINE_TAGS = {
+    a:1, abbr:1, b:1, bdi:1, bdo:1, br:1, button:1, cite:1, code:1, data:1, dfn:1, em:1, i:1,
+    img:1, input:1, kbd:1, label:1, mark:1, q:1, s:1, samp:1, select:1, small:1, span:1,
+    strong:1, sub:1, sup:1, time:1, u:1, 'var':1, wbr:1
+  };
+  function _esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // 属性値の < > は HTML 的には生でも valid だが、ソースタブのハイライトがタグ開始と誤認するので escape する
+  function _escAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function _tagOf(el) { return el.tagName ? el.tagName.toLowerCase() : ''; }
+  function _openTag(el) {
+    var s = '<' + _tagOf(el);
+    var attrs = el.attributes;
+    for (var i = 0; i < (attrs ? attrs.length : 0); i++) {
+      s += ' ' + attrs[i].name + '="' + _escAttr(attrs[i].value) + '"';
+    }
+    return s + '>';
+  }
+  function _isPreLike(el) {
+    if (_PRE_TAGS[_tagOf(el)]) return true;
+    try {
+      var ws = window.getComputedStyle(el).whiteSpace || '';
+      return ws.indexOf('pre') === 0 || ws === 'break-spaces';
+    } catch (e) { return false; }
+  }
+  // 1行に畳めるか（子がテキストとインライン要素だけ。コメント・raw・pre は畳まない）
+  function _allInline(el) {
+    var cs = el.childNodes;
+    for (var i = 0; i < cs.length; i++) {
+      var n = cs[i];
+      if (n.nodeType === 3) continue;
+      if (n.nodeType !== 1) return false;
+      var t = _tagOf(n);
+      if (!_INLINE_TAGS[t] || _RAW_TAGS[t] || _PRE_TAGS[t]) return false;
+      if (!_allInline(n)) return false;
+    }
+    return true;
+  }
+  // 畳んだ1行を作る。テキストの連続空白は1個に潰す（属性値には触れない）
+  function _inlineStr(node) {
+    if (node.nodeType === 3) return _esc(String(node.nodeValue).replace(/\\s+/g, ' '));
+    if (node.nodeType === 8) return '<!--' + String(node.nodeValue) + '-->';
+    if (node.nodeType !== 1) return '';
+    var t = _tagOf(node);
+    if (_VOID_TAGS[t]) return _openTag(node);
+    var s = _openTag(node);
+    var cs = node.childNodes;
+    for (var i = 0; i < cs.length; i++) s += _inlineStr(cs[i]);
+    return s + '</' + t + '>';
+  }
+  // script/style の中身を「最小共通インデントを外してから pad の位置へ揃え直す」。
+  // 相対的な段差は保たれるので、土台にどう字下げして書いてあってもタグの1段下に収まる。
+  function _reindent(raw, pad) {
+    var lines = raw.split('\\n');
+    var min = Infinity;
+    for (var i = 0; i < lines.length; i++) {
+      if (!/\\S/.test(lines[i])) continue;               // 空行は基準に含めない
+      var m = lines[i].match(/^[ \\t]*/)[0].length;
+      if (m < min) min = m;
+    }
+    if (min === Infinity) min = 0;
+    for (var j = 0; j < lines.length; j++) {
+      lines[j] = /\\S/.test(lines[j]) ? pad + lines[j].slice(min) : '';
+    }
+    return lines.join('\\n');
+  }
+  function _walkHtml(node, depth, out) {
+    var pad = new Array(depth + 1).join('  ');
+    if (node.nodeType === 3) {
+      var text = String(node.nodeValue);
+      if (!/\\S/.test(text)) return;                      // 空白だけの行は捨てる
+      out.push(pad + _esc(text.replace(/\\s+/g, ' ').replace(/^ | $/g, '')));
+      return;
+    }
+    if (node.nodeType === 8) { out.push(pad + '<!--' + String(node.nodeValue) + '-->'); return; }
+    if (node.nodeType !== 1) return;
+    var tag = _tagOf(node);
+    if (_VOID_TAGS[tag]) { out.push(pad + _openTag(node)); return; }
+    if (_RAW_TAGS[tag]) {
+      var raw = String(node.textContent == null ? '' : node.textContent).replace(/^\\s*\\n/, '').replace(/\\s+$/, '');
+      out.push(pad + _openTag(node));
+      if (raw !== '') out.push(_reindent(raw, pad + '  '));
+      out.push(pad + '</' + tag + '>');
+      return;
+    }
+    if (_isPreLike(node)) {
+      out.push(pad + _openTag(node) + (node.innerHTML == null ? '' : node.innerHTML) + '</' + tag + '>');
+      return;
+    }
+    var cs = node.childNodes;
+    if (cs.length === 0) { out.push(pad + _openTag(node) + '</' + tag + '>'); return; }
+    if (_allInline(node)) {
+      var one = '';
+      for (var i = 0; i < cs.length; i++) one += _inlineStr(cs[i]);
+      one = one.replace(/^ +| +$/g, '');
+      var line = pad + _openTag(node) + one + '</' + tag + '>';
+      if (line.length <= ${HTML_FORMAT_INLINE_MAX}) { out.push(line); return; }
+    }
+    out.push(pad + _openTag(node));
+    for (var j = 0; j < cs.length; j++) _walkHtml(cs[j], depth + 1, out);
+    out.push(pad + '</' + tag + '>');
+  }
+  function formatBodyHtml() {
+    var out = [];
+    _walkHtml(document.body, 0, out);
+    return out.join('\\n');
+  }
+`;
+
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
 
 /**
@@ -477,20 +610,24 @@ ${LOG_STREAM_SCRIPT}
 ${DEADLINE_SCRIPT}
   // alert/confirm/prompt はスレッドを止めるので、直前のログを吐き出し操作待ちを締切から除く
 ${DIALOG_SCRIPT}
+  // 「ソース」タブ用の整形シリアライザ（formatBodyHtml）
+${HTML_FORMAT_SCRIPT}
   function finish(type, msg) {
     if (_done) return;
     _done = true;
     _origClearTimeout(_timer);
     // 「ソース」タブ用に実行後の DOM を送る（＝プレビューと同じ瞬間の姿）。
-    // - body の outerHTML：head のサンドボックス harness は見せず、かつ
-    //   document.body.style.background = ... のような body 属性への変更も拾える。
+    // - body 以下だけを formatBodyHtml() で整形して出す：head のサンドボックス harness は見せず、
+    //   かつ document.body.style.background = ... のような body 属性への変更も拾える。
+    //   outerHTML をそのまま使うと、<script> の中身がタグと同じ行に詰まり、JS が appendChild で
+    //   作った要素は全部1行に連なる（改行を含むテキストノードが無いため）＝読めないので整形する。
     // - 043 の画像は data URI に置換済みで base64 が巨大なので中身を省略する（読む対象でもない）。
     // - **1行が極端に長い場合も省略する**：JS が生成した長文テキスト（textContent への追記ループ等）は
     //   改行を含まない数千文字の1行になりうる。ソースタブは折り返さない（wrap={false}）ので、
     //   そのまま渡すと iOS のテキストレイアウトが破綻して**領域が真っ白になる**。
     // - 全体長にも上限を設ける（ブリッジ転送とハイライト描画のコスト対策）。
     try {
-      var _src = document.body.outerHTML.replace(/(data:[^;"']*;base64,)[A-Za-z0-9+/=]+/g, '$1…');
+      var _src = formatBodyHtml().replace(/(data:[^;"']*;base64,)[A-Za-z0-9+/=]+/g, '$1…');
       _src = _src.split('\\n').map(function(_line) {
         return _line.length > 500 ? _line.slice(0, 500) + '… (+' + (_line.length - 500) + ' chars)' : _line;
       }).join('\\n');

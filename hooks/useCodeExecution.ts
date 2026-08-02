@@ -62,6 +62,10 @@ function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
 export function useCodeExecution(onResult?: () => void) {
   const [status, setStatus] = useState<ExecStatus>('idle');
   const [result, setResult] = useState<ExecResult | null>(null);
+  // 実行中に届いた途中経過のログ（サンドボックスが 100ms ごとに送る `{type:'logs'}`）。
+  // result には入れない：result の変化は onResult（学習画面の結果へのスクロール）を呼ぶので、
+  // ログが届くたびに画面が動いてしまう。完了時に result.logs へ全量が入るのでここは捨てる。
+  const [liveLogs, setLiveLogs] = useState<LogEntry[]>([]);
   const [htmlSource, setHtmlSource] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState<string | undefined>(undefined);
   // Web プレビュー（html / js・ts＋土台）実行中か。true の間は結果受信後も WebView を可視のまま残す。
@@ -184,6 +188,7 @@ export function useCodeExecution(onResult?: () => void) {
   function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[], deckImages?: DeckImage[]) {
     setStatus('running');
     setResult(null);
+    setLiveLogs([]);
     setRunNonce((n) => n + 1); // 可視プレビューの WebView を再実行ごとに強制再マウントするための key
     const seq = ++runSeqRef.current;
 
@@ -238,6 +243,7 @@ export function useCodeExecution(onResult?: () => void) {
   function clear() {
     setStatus('idle');
     setResult(null);
+    setLiveLogs([]);
     setHtmlSource(null); // Web プレビューの可視 WebView も破棄する
     setPreviewMode(false);
     previewModeRef.current = false;
@@ -248,10 +254,16 @@ export function useCodeExecution(onResult?: () => void) {
     const data = JSON.parse(event.nativeEvent.data) as {
       type: string;
       logs?: LogEntry[];
+      entries?: LogEntry[];
       message?: string;
       tables?: SqlTableResult[];
       limitMs?: number;
     };
+    // 実行中の途中経過。結果ではないので status / result には触らない。
+    if (data.type === 'logs') {
+      if (data.entries?.length) setLiveLogs((prev) => [...prev, ...data.entries!]);
+      return;
+    }
     const newResult: ExecResult = {
       status: data.type as ExecStatus,
       logs: data.logs ?? [],
@@ -270,6 +282,7 @@ export function useCodeExecution(onResult?: () => void) {
     cppAbortRef.current = null;
     setStatus('idle');
     setResult(null);
+    setLiveLogs([]);
     setHtmlSource(null);
     setPreviewMode(false);
     previewModeRef.current = false;
@@ -279,6 +292,7 @@ export function useCodeExecution(onResult?: () => void) {
   return {
     status,
     result,
+    liveLogs,
     htmlSource,
     baseUrl,
     previewMode,

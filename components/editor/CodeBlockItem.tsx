@@ -72,7 +72,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const { setOpen: setPreviewOpen } = useInteractivePreview();
   const isPro = useProStore(s => s.isPro);
   const { width } = useWindowDimensions();
-  const { result, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
+  const { result, liveLogs, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
   // 削除確認（✕）の空判定は本文だけでなくブロック固有の初期化SQL / HTML 土台も見る。
   // 土台のみ入力済みのブロックを ✕ で消すとき確認アラートを出すため。
@@ -580,6 +580,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
           <ExecutionOutput
             result={result}
+            liveLogs={liveLogs}
             htmlSource={htmlSource}
             baseUrl={baseUrl}
             previewMode={previewMode}

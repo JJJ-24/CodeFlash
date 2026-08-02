@@ -84,6 +84,7 @@ export function CodeRunnerView({
   const { setOpen: setPreviewOpen } = useInteractivePreview();
   const {
     result,
+    liveLogs,
     htmlSource,
     baseUrl,
     previewMode,
@@ -497,6 +498,7 @@ export function CodeRunnerView({
       {!isEditing && (
         <ExecutionOutput
           result={result}
+          liveLogs={liveLogs}
           htmlSource={htmlSource}
           baseUrl={baseUrl}
           previewMode={previewMode}

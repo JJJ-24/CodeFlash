@@ -54,6 +54,50 @@ const HEIGHT_REPORT_SCRIPT = `
 })();
 `;
 
+/** 実行中に逐次送信するログの上限件数（超えた分は終了時の1通にまとめて届く）。 */
+const LOG_STREAM_MAX = 200;
+/** 逐次送信をまとめる間隔。1件ずつ送るとログの多いコードでブリッジが詰まる。 */
+const LOG_STREAM_FLUSH_MS = 100;
+
+/**
+ * 実行中のログを逐次 RN 側へ送る共通スクリプト（`buildJsSandboxHtml` / `buildWebSandboxHtml` に注入）。
+ *
+ * 本来ログは終了時（finish）に1通でまとめて送るが、それだと `setInterval(fn, 1000)` のような
+ * 「時間をかけて出力するコード」の途中経過が一切見えない（締切に達してから一気に5件出る）。
+ * ここでは `console.*` のたびにキューへ積み、100ms ごとに `{type:'logs'}` でまとめて送る。
+ *
+ * - **送信は `_origSetTimeout`（ラップ前）で予約する**。ラップ後だと保留タイマーに数えられ、
+ *   完了判定が遅れるうえ締切まで延ばしてしまう
+ * - 逐次送信は `LOG_STREAM_MAX` 件まで。暴走コードで実行中パネルが膨れ上がるのを防ぐだけで、
+ *   **全量は従来どおり終了時の1通に入る**ので最終的な表示内容は変わらない
+ * - 終了後（`_done`）は送らない（最終結果で置き換わるため）
+ *
+ * 前提: 呼び出し側に `_logs` / `_done` / `_origSetTimeout` があること。
+ */
+const LOG_STREAM_SCRIPT = `
+  var _streamed = 0;
+  var _streamQueue = [];
+  var _streamTimer = null;
+  function flushLogs() {
+    _streamTimer = null;
+    if (_done || _streamQueue.length === 0) return;
+    var batch = _streamQueue;
+    _streamQueue = [];
+    try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'logs', entries: batch })); } catch (e) {}
+  }
+  function streamLog(entry) {
+    if (_done || _streamed >= ${LOG_STREAM_MAX}) return;
+    _streamed++;
+    _streamQueue.push(entry);
+    if (_streamTimer === null) _streamTimer = _origSetTimeout(flushLogs, ${LOG_STREAM_FLUSH_MS});
+  }
+  function pushLog(type, args) {
+    var entry = { type: type, text: fmt(args) };
+    _logs.push(entry);
+    streamLog(entry);
+  }
+`;
+
 /** 実行の既定の締切（何も予約しないコードは実質これで判定される）。 */
 const EXEC_TIMEOUT_BASE_MS = 5000;
 /** 実行開始からの絶対上限。setTimeout をいくら重ねてもここで打ち切る（Python・C++ と同じ 30 秒）。 */
@@ -222,9 +266,10 @@ function buildJsSandboxHtml(code: string): string {
       return String(v);
     }).join(' ');
   }
-  console.log   = function() { _logs.push({ type: 'log',   text: fmt(arguments) }); };
-  console.error = function() { _logs.push({ type: 'error', text: fmt(arguments) }); };
-  console.warn  = function() { _logs.push({ type: 'warn',  text: fmt(arguments) }); };
+  // 本体は pushLog（LOG_STREAM_SCRIPT）。_logs へ積むのと同時に実行中の逐次送信も行う。
+  console.log   = function() { pushLog('log',   arguments); };
+  console.error = function() { pushLog('error', arguments); };
+  console.warn  = function() { pushLog('warn',  arguments); };
 
   var _done = false;
   var _settled = false;   // 同期＋Promise（await・マイクロタスク）部分が完了したか
@@ -237,6 +282,8 @@ function buildJsSandboxHtml(code: string): string {
   var _origSetInterval   = window.setInterval.bind(window);
   var _origClearInterval = window.clearInterval.bind(window);
 
+  // 実行中のログ逐次送信（100ms ごとにまとめて送る）
+${LOG_STREAM_SCRIPT}
   // 全体の締切（既定5秒・setTimeout の予約に応じて最大30秒まで延長）
 ${DEADLINE_SCRIPT}
   function finish(type, msg) {
@@ -354,9 +401,10 @@ function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInit
       return String(v);
     }).join(' ');
   }
-  console.log   = function() { _logs.push({ type: 'log',   text: fmt(arguments) }); };
-  console.error = function() { _logs.push({ type: 'error', text: fmt(arguments) }); };
-  console.warn  = function() { _logs.push({ type: 'warn',  text: fmt(arguments) }); };
+  // 本体は pushLog（LOG_STREAM_SCRIPT）。_logs へ積むのと同時に実行中の逐次送信も行う。
+  console.log   = function() { pushLog('log',   arguments); };
+  console.error = function() { pushLog('error', arguments); };
+  console.warn  = function() { pushLog('warn',  arguments); };
 
   var _done = false;
   var _settled = false;       // DOMContentLoaded 済み（同期スクリプト完了）か
@@ -369,6 +417,8 @@ function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInit
   var _origSetInterval   = window.setInterval.bind(window);
   var _origClearInterval = window.clearInterval.bind(window);
 
+  // 実行中のログ逐次送信（100ms ごとにまとめて送る）
+${LOG_STREAM_SCRIPT}
   // 全体の締切（既定5秒・setTimeout の予約に応じて最大30秒まで延長）
 ${DEADLINE_SCRIPT}
   function finish(type, msg) {

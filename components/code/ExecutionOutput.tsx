@@ -11,7 +11,7 @@ import { WebView } from 'react-native-webview';
 
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { buildStaticPreviewHtml } from '@/lib/code-execution/sandbox';
-import type { ExecResult, SqlTableResult } from '@/lib/code-execution/types';
+import type { ExecResult, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { DeckImage } from '@/types';
@@ -73,8 +73,35 @@ function SqlTable({ table }: { table: SqlTableResult }) {
   );
 }
 
+/** ログ一覧（実行中の途中経過・実行結果で共用）。各行は折り返さず、最長行に合わせて横スクロールする。 */
+function LogLines({ logs }: { logs: LogEntry[] }) {
+  const theme = useTheme();
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+      <View>
+        {logs.map((log, i) => (
+          <Text
+            key={i}
+            style={[
+              styles.logLine,
+              { fontSize: theme.fontSize.md },
+              log.type === 'error' && styles.logError,
+              log.type === 'warn'  && styles.logWarn,
+            ]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+          >
+            {log.text}
+          </Text>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
 interface Props {
   result: ExecResult | null;
+  /** 実行中に届いた途中経過のログ（`useCodeExecution.liveLogs`）。完了後は result.logs に置き換わる */
+  liveLogs?: LogEntry[];
   htmlSource: string | null;
   baseUrl?: string;
   onClear: () => void;
@@ -104,7 +131,7 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages }: Props) {
+export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -232,6 +259,27 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
 
   return (
     <>
+      {/* 実行中の途中経過。setInterval のように時間をかけて出力するコードで、終わるまで何も
+          見えないのを解消する。**最初のログが届いてから枠を出す**ので、ログを出さないカード
+          （プレビューだけの html/css 等）の実行中の見た目は従来どおり変わらない。
+          完了メッセージが届いたら下の result 側（全量）に置き換わる＝二重表示にはならない。 */}
+      {!result && (liveLogs?.length ?? 0) > 0 && (
+        <View style={styles.output}>
+          <View style={styles.outputHeader}>
+            <Text style={[styles.outputTitle, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('code.output')}
+            </Text>
+            <GestureDetector gesture={clearGesture}>
+              <View style={styles.clearBtnWrapper}>
+                <Text style={styles.clearBtn} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>✕</Text>
+              </View>
+            </GestureDetector>
+          </View>
+          <View style={styles.outputContent}>
+            <LogLines logs={liveLogs ?? []} />
+          </View>
+        </View>
+      )}
       {result && (!previewMode || result.logs.length > 0 || result.status === 'error' || result.status === 'timeout') && (
         <View
           style={[
@@ -264,27 +312,7 @@ export function ExecutionOutput({ result, htmlSource, baseUrl, onClear, onMessag
             {result.logs.length === 0 && result.status === 'success' && !result.tables?.length && (
               <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.empty')}</Text>
             )}
-            {result.logs.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
-                {/* 各行を折り返さず縦積みし、最長行に合わせて横スクロールできるようにする */}
-                <View>
-                  {result.logs.map((log, i) => (
-                    <Text
-                      key={i}
-                      style={[
-                        styles.logLine,
-                        { fontSize: theme.fontSize.md },
-                        log.type === 'error' && styles.logError,
-                        log.type === 'warn'  && styles.logWarn,
-                      ]}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                    >
-                      {log.text}
-                    </Text>
-                  ))}
-                </View>
-              </ScrollView>
-            )}
+            {result.logs.length > 0 && <LogLines logs={result.logs} />}
             <GestureDetector gesture={copyGesture}>
               <View style={styles.copyBtn}>
                 <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />

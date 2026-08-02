@@ -64,7 +64,13 @@ const LOG_STREAM_FLUSH_MS = 100;
  *
  * 本来ログは終了時（finish）に1通でまとめて送るが、それだと `setInterval(fn, 1000)` のような
  * 「時間をかけて出力するコード」の途中経過が一切見えない（締切に達してから一気に5件出る）。
- * ここでは `console.*` のたびにキューへ積み、100ms ごとに `{type:'logs'}` でまとめて送る。
+ * ここでは `console.*` のたびに **溜まっていなければ即送信し、連続するぶんだけ 100ms でまとめる**
+ * （リーディングエッジ＋トレーリングのスロットリング）。
+ *
+ * 先頭を即送りするのは、**JS スレッドが止まる状況でも「止まる前に出したログ」を届けるため**。
+ * `setTimeout(() => alert('x'), 0); console.log('a');` は console.log が先に走るのに、
+ * トレーリングだけだと 100ms の送信予約が走る前に `alert` がスレッドを止めてしまい、
+ * OK を押すまで何も出ない（＝同期実行に見える）。同期無限ループの直前のログも同じ理由で出ない。
  *
  * - **送信は `_origSetTimeout`（ラップ前）で予約する**。ラップ後だと保留タイマーに数えられ、
  *   完了判定が遅れるうえ締切まで延ばしてしまう
@@ -78,9 +84,11 @@ const LOG_STREAM_SCRIPT = `
   var _streamed = 0;
   var _streamQueue = [];
   var _streamTimer = null;
+  var _lastFlushAt = 0;
   function flushLogs() {
     _streamTimer = null;
     if (_done || _streamQueue.length === 0) return;
+    _lastFlushAt = Date.now();
     var batch = _streamQueue;
     _streamQueue = [];
     try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'logs', entries: batch })); } catch (e) {}
@@ -89,7 +97,10 @@ const LOG_STREAM_SCRIPT = `
     if (_done || _streamed >= ${LOG_STREAM_MAX}) return;
     _streamed++;
     _streamQueue.push(entry);
-    if (_streamTimer === null) _streamTimer = _origSetTimeout(flushLogs, ${LOG_STREAM_FLUSH_MS});
+    if (_streamTimer !== null) return;           // 送信予約済み（次のフラッシュに載る）
+    var since = Date.now() - _lastFlushAt;
+    if (since >= ${LOG_STREAM_FLUSH_MS}) { flushLogs(); return; }  // 先頭は即送る
+    _streamTimer = _origSetTimeout(flushLogs, ${LOG_STREAM_FLUSH_MS} - since);
   }
   function pushLog(type, args) {
     var entry = { type: type, text: fmt(args) };
@@ -116,6 +127,7 @@ const EXEC_TIMEOUT_MARGIN_MS = 300;
  * - 再帰的な `setTimeout` で無限に延びないよう、上限は**実行開始時刻**を基準にする
  * - 何も予約しないコードの体感は不変（5 秒のまま）
  * - `finish` に `_limitMs`（実際に適用した上限）を持たせ、UI が「N秒を超えたため中断」と出せるようにする
+ * - `skipDeadline(ms)` は「コードの実行ではない待ち時間」を締切から差し引く（`DIALOG_SCRIPT` 用）
  *
  * 前提: 呼び出し側に `_origSetTimeout` / `_origClearTimeout` と関数宣言の `finish` があること。
  */
@@ -123,6 +135,11 @@ const DEADLINE_SCRIPT = `
   var _startedAt = Date.now();
   var _limitMs = ${EXEC_TIMEOUT_BASE_MS};
   var _timer = _origSetTimeout(function() { finish('timeout'); }, _limitMs);
+  function armDeadline() {
+    _origClearTimeout(_timer);
+    var remain = _startedAt + _limitMs - Date.now();
+    _timer = _origSetTimeout(function() { finish('timeout'); }, remain > 0 ? remain : 0);
+  }
   function extendDeadline(delay) {
     if (_done) return;
     var d = Number(delay);
@@ -131,9 +148,44 @@ const DEADLINE_SCRIPT = `
     if (want > ${EXEC_TIMEOUT_MAX_MS}) want = ${EXEC_TIMEOUT_MAX_MS};
     if (want <= _limitMs) return;
     _limitMs = want;
-    _origClearTimeout(_timer);
-    _timer = _origSetTimeout(function() { finish('timeout'); }, _startedAt + _limitMs - Date.now());
+    armDeadline();
   }
+  // 実行ではない待ち時間（ダイアログの操作待ち）を締切から差し引く。開始時刻ごと後ろへずらすので
+  // 30秒の絶対上限も同じだけ後ろへ動く＝「アラートを閉じるのが遅いとタイムアウト」を防ぐ。
+  function skipDeadline(blockedMs) {
+    if (_done || !(blockedMs > 0)) return;
+    _startedAt += blockedMs;
+    armDeadline();
+  }
+`;
+
+/**
+ * `alert` / `confirm` / `prompt` をラップする共通スクリプト（`buildJsSandboxHtml` / `buildWebSandboxHtml`）。
+ *
+ * これらはネイティブのダイアログとして動作し、**閉じるまで WebView の JS スレッドを止める**。
+ * そのため素のままだと2つの問題が出る：
+ * 1. 直前の `console.log` が送信されないまま止まる → OK を押すまで何も出ず、同期実行に見える
+ * 2. 操作待ちの時間が実行時間として締切に算入される → 悩んでいるだけでタイムアウトになる
+ *
+ * 表示直前に溜まったログを吐き出し、閉じた後に止まっていた時間を締切から差し引くことで両方を防ぐ。
+ * 戻り値（`confirm`/`prompt`）はそのまま返す。
+ *
+ * 前提: 呼び出し側に `flushLogs`（LOG_STREAM_SCRIPT）と `skipDeadline`（DEADLINE_SCRIPT）があること。
+ */
+const DIALOG_SCRIPT = `
+  ['alert', 'confirm', 'prompt'].forEach(function(name) {
+    var orig = window[name];
+    if (typeof orig !== 'function') return;
+    window[name] = function() {
+      flushLogs();
+      var t0 = Date.now();
+      try {
+        return orig.apply(window, arguments);
+      } finally {
+        skipDeadline(Date.now() - t0);
+      }
+    };
+  });
 `;
 
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
@@ -286,6 +338,8 @@ function buildJsSandboxHtml(code: string): string {
 ${LOG_STREAM_SCRIPT}
   // 全体の締切（既定5秒・setTimeout の予約に応じて最大30秒まで延長）
 ${DEADLINE_SCRIPT}
+  // alert/confirm/prompt はスレッドを止めるので、直前のログを吐き出し操作待ちを締切から除く
+${DIALOG_SCRIPT}
   function finish(type, msg) {
     if (_done) return;
     _done = true;
@@ -421,6 +475,8 @@ function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInit
 ${LOG_STREAM_SCRIPT}
   // 全体の締切（既定5秒・setTimeout の予約に応じて最大30秒まで延長）
 ${DEADLINE_SCRIPT}
+  // alert/confirm/prompt はスレッドを止めるので、直前のログを吐き出し操作待ちを締切から除く
+${DIALOG_SCRIPT}
   function finish(type, msg) {
     if (_done) return;
     _done = true;

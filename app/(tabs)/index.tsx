@@ -27,6 +27,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
+import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
@@ -285,6 +286,10 @@ export default function HomeScreen() {
   );
   // 手動ソート かつ 未ロックのときだけドラッグ並べ替えが有効。ロック中はドラッグを止めてスワイプ可にする。
   const deckDragActive = deckSortOrder === 'manual' && !deckSortLocked;
+  // リストの種別はロックでは変えない（手動ソートなら常に DraggableFlatList）。
+  // ロックで種別を切り替えると再マウントでスクロール位置が先頭に戻るため。ロック中の
+  // 「ドラッグしないリスト」は activationDistance でコンテナ Pan を殺して作る（lib/dragLock.ts）。
+  const deckListDraggable = deckSortOrder === 'manual';
 
   function cycleSortOrder(dir = 1) {
     const n = SORT_OPTIONS.length;
@@ -579,12 +584,14 @@ export default function HomeScreen() {
             <EmptyState icon="archive-outline" title={t('home.noActiveDecks')} subtitle={t('home.noActiveDecksSub')} />
           </View>
         ) : (
-        // ドラッグ並べ替えが実際に効く「手動＋未ロック」のときだけ DraggableFlatList を使う。
+        // 手動ソートのときだけ DraggableFlatList を使う（ロックでは切り替えない＝再マウントさせない）。
         // それ以外は素の FlatList。DraggableFlatList はリスト全体を RNGH のパンで包むため、
         // 慣性スクロール整定直後のスワイプを取りこぼす（1〜2回空振り）ことがある（カード一覧と同じ対策）。
-        deckDragActive ? (
+        deckListDraggable ? (
           <DraggableFlatList
             ref={listRef as any}
+            // ロック中はコンテナ Pan を成立させない＝素の FlatList と同じ当たり方にする。
+            activationDistance={deckDragActive ? undefined : DRAG_LOCK_ACTIVATION_DISTANCE}
             // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
             // コンテンツ全体高さになり、ドラッグ中の端でのオートスクロールが正しく働かない
             // （カード一覧と同じ対策）。
@@ -626,11 +633,17 @@ export default function HomeScreen() {
               updateDeckSortOrders(db, full.map((d) => d.id));
             }}
             ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedDeckIndex(null)} />}
-            renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) => (
-              <ScaleDecorator>
-                {renderDeckRow(item, getIndex(), drag)}
-              </ScaleDecorator>
-            )}
+            // ScaleDecorator はドラッグが実際に効くときだけ被せる（ロック中は素の行＝
+            // カード一覧と同じ流儀。ロック中の行を今までと同じ構造に保つ）。
+            renderItem={({ item, drag, getIndex }: RenderItemParams<Deck>) =>
+              deckDragActive ? (
+                <ScaleDecorator>
+                  {renderDeckRow(item, getIndex(), drag)}
+                </ScaleDecorator>
+              ) : (
+                renderDeckRow(item, getIndex(), drag)
+              )
+            }
           />
         ) : (
           <FlatList

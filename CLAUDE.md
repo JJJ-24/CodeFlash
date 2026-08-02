@@ -327,6 +327,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 - **worklet 内でインライン closure を作らない**: `runOnJS(() => { setA(x); setB(y); })()` はクラッシュする。必ず外で名前付き関数として定義する。
 - **ジェスチャーオブジェクトの安定化**: 複数の `GestureDetector` が入れ子になる場合、内側が外側に優先されるには両方のジェスチャーオブジェクトが安定している必要がある。ハンドラは `useCallback`、ジェスチャーオブジェクトは `useMemo` でメモ化する。
 - **ScrollView と FlipCard の共存**: `FlipCard` の tap ジェスチャーを RNGH の `GestureDetector + Tap` にすることで、ScrollView の縦スクロールと競合しなくなる（旧来の `Pressable` では ScrollView のスクロールが阻害される）。
+- **手動並べ替えロック中のリスト（ホーム/カード一覧/タグ管理）**: ロックの ON/OFF で `DraggableFlatList` ↔ 素の `FlatList` を**入れ替えてはいけない**（リスト再マウント＝スクロール位置が先頭に戻る。復元しようとしてもセル未描画のぶん数回に分けて歩くことになり、50枚程度でもパラパラ動いて見える＝この方式は不採用）。リスト種別は**ソート種別/フィルターだけ**で決め（手動ソートなら常に `DraggableFlatList`）、ロック中は `activationDistance={DRAG_LOCK_ACTIVATION_DISTANCE}`（`lib/dragLock.ts`）でコンテナ Pan を成立不能にしてスワイプを通す。ライブラリは `activationDistance` を `panGesture.activeOffsetY([-d, d])` に流すだけで、既定 0 ＝活性化条件なし＝指が動いた瞬間に活性化してスワイプ/タップを奪う（＝ロック機能が必要だった理由そのもの）。行側（`drag` を渡すか・`SwipeToDeleteRow enabled`・`ScaleDecorator` の有無・長押しでの `drag()` 呼び出し）は従来どおり「手動＋未ロック」で判定する。**カード一覧は `listExtraData` に `manualSortLocked` を含めること**（`CellRenderer` は PureComponent で、リストを作り直さなくなった今はこれが無いとロック切替にセルが追従しない）。
 
 ### 主要な設定
 

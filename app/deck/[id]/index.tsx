@@ -22,6 +22,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
+import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, type AppTheme } from '@/lib/theme';
 import {
   deleteCard,
@@ -652,8 +653,9 @@ export default function DeckDetailScreen() {
     // 済み/復習/新規 では手動ソートでもドラッグ不可（onDragEnd で無効化）＝ScaleDecorator は不要で、
     // その animated ラッパーが横スワイプ（削除/アーカイブ）のジェスチャーを奪ってしまうため外す。
     // （DraggableFlatList 内でも ScaleDecorator 無しのセル描画は問題ない）
-    // ロック中はドラッグ並べ替えを止め、素の FlatList にしてスワイプ（ここから学習/削除/アーカイブ）を効かせる。
-    // ※リスト種別の分岐と同じ deferred 由来の値（listIsDraggableRef）を参照する。
+    // ロック中はドラッグ並べ替えを止め、素の行＋スワイプ（ここから学習/削除/アーカイブ）を効かせる
+    // （リスト自体は DraggableFlatList のままで、コンテナ Pan だけ殺してある）。
+    // ※データと同じ deferred 由来の値（listIsDraggableRef）を参照する。
     const inDraggable = listIsDraggableRef.current;
     const row = (
       <CardRow
@@ -689,9 +691,12 @@ export default function DeckDetailScreen() {
   // FlatList の再描画トリガー。毎レンダー新オブジェクトだと並べ替えのたびに全セルが
   // 再描画されちらつくため、選択状態・フォーカス・テーマが変わったときだけ identity を変える。
   // theme はオブジェクトで毎回 identity が変わるため、テーマ変化を表すプリミティブを deps にする。
+  // ※ manualSortLocked を含めるのは必須。ロック切替でリスト種別を入れ替えなくなった（＝再マウントで
+  // 全セルが作り直されない）ため、これが無いとセルが PureComponent のまま据え置かれ、
+  // swipeEnabled / ScaleDecorator の有無がロック切替に追従しない。
   const listExtraData = useMemo(
-    () => ({ selectionMode, selectedCardIds, focusedCardId, deckArchived: !!deck?.archived, dark: theme.dark, fontScale: theme.fontScale, bg: theme.colors.background }),
-    [selectionMode, selectedCardIds, focusedCardId, deck?.archived, theme.dark, theme.fontScale, theme.colors.background],
+    () => ({ selectionMode, selectedCardIds, focusedCardId, deckArchived: !!deck?.archived, manualSortLocked, dark: theme.dark, fontScale: theme.fontScale, bg: theme.colors.background }),
+    [selectionMode, selectedCardIds, focusedCardId, deck?.archived, manualSortLocked, theme.dark, theme.fontScale, theme.colors.background],
   );
 
   // フィルター/ソート切替の体感レスポンス改善（500枚級デッキ対策）:
@@ -738,12 +743,15 @@ export default function DeckDetailScreen() {
   useLayoutEffect(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [deferredFilter]);
-  // リストの種別（DraggableFlatList/FlatList）とセル内の ScaleDecorator 有無は、
-  // 表示中のデータと同じ deferred 値から決める（即時値だとデータ更新前に種別だけ
-  // 先に入れ替わり、余計な再マウントが挟まる）。
+  // ドラッグ並べ替えが実際に効く状態か（セル内の ScaleDecorator 有無・スワイプ可否の判定）。
+  // 表示中のデータと同じ deferred 値から決める（即時値だとデータ更新前に判定だけ先に入れ替わる）。
   const listIsDraggable = deferredSort === 'manual' && deferredFilter === 'all' && !manualSortLocked;
   const listIsDraggableRef = useRef(listIsDraggable);
   listIsDraggableRef.current = listIsDraggable;
+  // リストの種別（DraggableFlatList/FlatList）はロックでは変えない。ロックで種別を切り替えると
+  // 再マウントでスクロール位置が先頭に戻るため。ロック中の「ドラッグしないリスト」は
+  // activationDistance でコンテナ Pan を殺して作る（lib/dragLock.ts）。
+  const listUsesDraggable = deferredSort === 'manual' && deferredFilter === 'all';
 
   // 複製で戻ってきた直後、複製先（A'）が一覧に現れたらそこへスクロールする。
   useEffect(() => {
@@ -1385,15 +1393,19 @@ export default function DeckDetailScreen() {
       {/* 余白タップ解除はリスト内フッター（ListFooterComponent）が担う。ここを Pressable にすると
           押せる要素のない場所からのドラッグでスクロールが始まらない不具合がある（統計参照）。 */}
       <View style={{ flex: 1 }}>
-        {/* DraggableFlatList は「ドラッグ並べ替えが実際に効く＝すべて＋手動」のときだけ使う。
-            それ以外（新しい/古い順、または手動でも 済み/復習/新規 フィルター）は素の FlatList。
-            理由: DraggableFlatList はセルのジェスチャー処理が横スワイプ（削除/アーカイブ）を奪うため、
-            ドラッグ不可の画面では素の FlatList にしてスワイプを効かせる。all↔他フィルターの切替で
-            list 種別が変わり再マウントするが、手動ソート時に限られるため許容。
-            分岐はデータと同じ deferred 由来の listIsDraggable で判定する（体感レスポンス改善）。 */}
-        {listIsDraggable ? (
+        {/* DraggableFlatList は「すべて＋手動」のときだけ使う。それ以外（新しい/古い順、または
+            手動でも 済み/復習/新規 フィルター）は素の FlatList。
+            理由: DraggableFlatList はリスト全体を RNGH のパンで包み、横スワイプ（削除/アーカイブ）を
+            奪うため、ドラッグ不可の画面では素の FlatList にしてスワイプを効かせる。all↔他フィルターの
+            切替で list 種別が変わり再マウントするが、手動ソート時に限られるため許容。
+            ※ロックは種別に含めない（切替のたびに再マウント＝スクロール位置が先頭に戻るため）。
+            ロック中は activationDistance でコンテナ Pan を成立させずスワイプを通す。
+            分岐はデータと同じ deferred 由来の listUsesDraggable で判定する（体感レスポンス改善）。 */}
+        {listUsesDraggable ? (
           <DraggableFlatList
             ref={listRef as any}
+            // ロック中はコンテナ Pan を成立させない＝素の FlatList と同じ当たり方にする。
+            activationDistance={listIsDraggable ? undefined : DRAG_LOCK_ACTIVATION_DISTANCE}
             // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いと containerSize が
             // コンテンツ全体高さになり、下方向 autoscroll の移動先 min(.., scrollViewSize-containerSize)
             // が 0 に潰れて下方向にスクロールできない（上方向は containerSize 非依存なので動く）。
@@ -1435,7 +1447,7 @@ export default function DeckDetailScreen() {
             contentContainerStyle={[styles.container, selectionMode && { paddingBottom: 160 }]}
             onScrollToIndexFailed={handleScrollToIndexFailed}
             onDragEnd={({ data, from, to }) => {
-              if (selectedFilter !== 'all' || cardSortOrder !== 'manual') return;
+              if (selectedFilter !== 'all' || cardSortOrder !== 'manual' || manualSortLocked) return;
               if (selectionMode) {
                 // 038 Phase3: まとめ移動（ドロップ時展開方式）。ライブラリはアンカー1枚だけを
                 // from→to に動かした data を返すので、そこから「選択カードを抜き、アンカーの

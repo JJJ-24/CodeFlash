@@ -25,6 +25,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
@@ -118,6 +119,10 @@ export default function TagsScreen() {
 
   // 手動ソート かつ 未ロックのときだけドラッグ並べ替えが有効。ロック中はドラッグを止めてスワイプ可にする（ホームと同方式）。
   const tagDragActive = tagSortOrder === 'manual' && !tagSortLocked;
+  // リストの種別はロックでは変えない（手動ソートなら常に DraggableFlatList）。
+  // ロックで種別を切り替えると再マウントでスクロール位置が先頭に戻るため。ロック中の
+  // 「ドラッグしないリスト」は activationDistance でコンテナ Pan を殺して作る（lib/dragLock.ts）。
+  const tagListDraggable = tagSortOrder === 'manual';
 
   const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, setFocusId, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
   // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
@@ -636,12 +641,14 @@ export default function TagsScreen() {
         <View style={[styles.empty, { backgroundColor: theme.colors.background }]}>
           <EmptyState icon="pricetags-outline" title={t('tag.empty')} subtitle={t('tag.emptySub')} />
         </View>
-      ) : tagDragActive ? (
-        // ドラッグ並べ替えが実際に効く「手動＋未ロック」のときだけ DraggableFlatList を使う。
+      ) : tagListDraggable ? (
+        // 手動ソートのときだけ DraggableFlatList を使う（ロックでは切り替えない＝再マウントさせない）。
         // それ以外は素の FlatList。DraggableFlatList はリスト全体を RNGH のパンで包むため、
         // 慣性スクロール整定直後のスワイプを取りこぼす（1〜2回空振り）ことがある（カード一覧と同じ対策）。
         <DraggableFlatList
           ref={listRef as any}
+          // ロック中はコンテナ Pan を成立させない＝素の FlatList と同じ当たり方にする。
+          activationDistance={tagDragActive ? undefined : DRAG_LOCK_ACTIVATION_DISTANCE}
           style={{ backgroundColor: theme.colors.background }}
           // 外側コンテナを flex:1 でビューポート高さに制約する。これが無いとコンテナが
           // コンテンツ高さになり、下方向ドラッグ時の autoscroll（containerSize 基準）が
@@ -698,11 +705,17 @@ export default function TagsScreen() {
             updateTagSortOrders(db, data.map((t) => t.id));
           }}
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedTagIndex(null)} />}
-          renderItem={({ item, drag, getIndex, isActive }: RenderItemParams<TagWithCount>) => (
-            <ScaleDecorator>
-              {renderTagRow(item, getIndex(), drag, isActive)}
-            </ScaleDecorator>
-          )}
+          // ScaleDecorator はドラッグが実際に効くときだけ被せる（ロック中は素の行＝
+          // カード一覧と同じ流儀。ロック中の行を今までと同じ構造に保つ）。
+          renderItem={({ item, drag, getIndex, isActive }: RenderItemParams<TagWithCount>) =>
+            tagDragActive ? (
+              <ScaleDecorator>
+                {renderTagRow(item, getIndex(), drag, isActive)}
+              </ScaleDecorator>
+            ) : (
+              renderTagRow(item, getIndex(), drag, isActive)
+            )
+          }
         />
       ) : (
         <FlatList<TagWithCount>

@@ -413,7 +413,10 @@
       "heading": "Heading",
       "bulletList": "Bullet list",
       "quote": "Quote"
-    }
+    },
+    "mdHelpTitle": "Markdown guide",
+    "mdHelpBody": "@@Basics\nHeading\n\t# Heading 1\n\t## Heading 2\nList\n\t- item\nNumbered list\n\t1. item\nQuote\n\t> quoted text\nDivider\n\t---\n//A single line break is kept as-is. Use a blank line to start a new paragraph.\n@@Text styles\nBold\n\t**text**\nItalic\n\t*text*\nUnderline\n\t++text++\nStrikethrough\n\t~~text~~\nMarker\n\t==yellow== ==g|green== ==p|pink==\nInline code\n\t`text`\n@@Blocks\nCode block\n\t```js\n\tconst a = 1;\n\t```\n//Add a language name after the opening fence to color the code (optional).\n//js / ts / python / html / css / sql / cpp / java / swift / bash / json\nLink\n\t[Apple](https://apple.com)\n//Long-press a link in the study screen to open it. Start with https:// (apple.com alone is not linked).\nTable\n\t| Name | Age |\n\t| --- | --- |\n\t| a | 20 |\n\t| b | 30 |\n//The first row is the header, the second is the separator. A single - also works instead of ---.\nColumn alignment\n\t| --- | :---: | ---: |\n//Colons in the separator row align a column left / center / right.",
+    "mdHelpLabel": "Markdown guide"
   },
   "settings": {
     "display": "Display",
@@ -505,7 +508,15 @@
     "weekdayEvery": "Every day",
     "weekdayWeekdays": "Weekdays (Mon–Fri)",
     "weekdayWeekend": "Weekend (Sat & Sun)",
-    "weekdayShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+    "weekdayShort": [
+      "Su",
+      "Mo",
+      "Tu",
+      "We",
+      "Th",
+      "Fr",
+      "Sa"
+    ],
     "deleteSchedule": "Delete",
     "deleteScheduleConfirm": "Delete this schedule?"
   },

@@ -11,6 +11,7 @@ import markdownItMark from 'markdown-it-mark';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { MarkdownPalette } from './MarkdownPalette';
+import { MarkdownHelpModal } from './MarkdownHelpModal';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
@@ -59,6 +60,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showMdHelp, setShowMdHelp] = useState(false);
 
   async function handleCopy() {
     await Clipboard.setStringAsync(block.content);
@@ -288,7 +290,13 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
             borderBottomColor: theme.colors.border,
           }}
         >
-          <Text style={[styles.typeLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>T</Text>
+          <View style={styles.typeRow}>
+            <Text style={[styles.typeLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>T</Text>
+            {/* マークダウン記法の早見表。書きながら確認できるようにブロックのヘッダーに置く */}
+            <Pressable onPress={() => setShowMdHelp(true)} hitSlop={10} accessibilityLabel={t('editor.mdHelpLabel')}>
+              <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+            </Pressable>
+          </View>
         </BlockItemHeader>
       )}
 
@@ -370,6 +378,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}
         pointerEvents="none"
       />
+
+      <MarkdownHelpModal visible={showMdHelp} onClose={() => setShowMdHelp(false)} />
     </View>
   );
 }
@@ -380,6 +390,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
+  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   typeLabel: { fontWeight: '700' },
   input: {
     paddingHorizontal: 14,

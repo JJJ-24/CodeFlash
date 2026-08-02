@@ -13,6 +13,7 @@ import { isRemoteKeyboardEvent } from '@/lib/keyboardEvent';
 import { resolveImageUri, imageMaxWidth } from '@/lib/image';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
+import { markdownFenceRule } from '@/lib/editor/markdownFenceRule';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
 import type { Block, CodeBlock, DeckImage, ImageBlock, TextBlock } from '@/types';
@@ -263,7 +264,9 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
     ins: (node: any, children: any) => (
       <Text key={node.key} style={{ textDecorationLine: 'underline' }}>{children}</Text>
     ),
-  }), [suppress, theme.fontSize.lg, theme.dark]);
+    // コードフェンス（```js …）を言語に応じてハイライトする（下の fence スタイルの代わり）
+    ...markdownFenceRule({ background: theme.cardTheme.codeBackground, fontSize: theme.fontSize.md }),
+  }), [suppress, theme.fontSize.lg, theme.fontSize.md, theme.dark, theme.cardTheme.codeBackground]);
 
   if (blocks.length === 0) {
     return <Text style={[styles.empty, { color: theme.colors.iconSubtle, fontSize: theme.fontSize.sm }]}>{t('card.noContent')}</Text>;

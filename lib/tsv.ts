@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { EXECUTABLE_LANGUAGES, LANGUAGES } from '@/lib/code-execution/constants';
+import { EXECUTABLE_LANGUAGES, normalizeLanguage } from '@/lib/code-execution/constants';
 import { getCardsByDeckId, updateCard } from '@/lib/database/cards';
 import { generateId } from '@/lib/database/utils';
 import { createTag, getTagRowsByDeckId } from '@/lib/database/tags';
@@ -106,29 +106,6 @@ function blocksToText(blocks: Block[]): string {
 // 開始フェンス（```言語）と終了フェンス（```）。言語名は英数と +#_-（c++ / objective-c 等）を許す
 const FENCE_OPEN_RE = /^(`{3,})[ \t]*([A-Za-z0-9+#_.-]*)[ \t]*$/;
 const FENCE_CLOSE_RE = /^(`{3,})[ \t]*$/;
-
-// 手書き TSV でよく使われる略記を正規の言語 ID へ寄せる（LANGUAGES に無いものは 'text'）
-const LANGUAGE_ALIASES: Record<string, string> = {
-  js: 'javascript',
-  jsx: 'javascript',
-  ts: 'typescript',
-  tsx: 'typescript',
-  py: 'python',
-  'c++': 'cpp',
-  cc: 'cpp',
-  sh: 'bash',
-  shell: 'bash',
-  zsh: 'bash',
-  htm: 'html',
-  plain: 'text',
-  '': 'text',
-};
-
-function normalizeLanguage(raw: string): string {
-  const lower = raw.trim().toLowerCase();
-  const aliased = LANGUAGE_ALIASES[lower] ?? lower;
-  return LANGUAGES.includes(aliased) ? aliased : 'text';
-}
 
 /**
  * TSV の1フィールドをブロック配列に戻す（blocksToText と対称）。

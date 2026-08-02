@@ -14,6 +14,7 @@ import { MarkdownPalette } from './MarkdownPalette';
 import { MarkdownHelpModal } from './MarkdownHelpModal';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
+import { markdownFenceRule } from '@/lib/editor/markdownFenceRule';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
 
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化 /
@@ -264,7 +265,10 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     ins: (node: any, children: any) => (
       <Text key={node.key} style={{ textDecorationLine: 'underline' }}>{children}</Text>
     ),
-  }), [highlightColors]);
+    // コードフェンス（```js …）を言語に応じてハイライトする（下の fence スタイルの代わり）。
+    // 文字サイズは markdownStyles の fence と揃える（プレビューは md・編集中は sm）。
+    ...markdownFenceRule({ background: '#1E1E1E', fontSize: isPreview ? theme.fontSize.md : theme.fontSize.sm }),
+  }), [highlightColors, isPreview, theme.fontSize.md, theme.fontSize.sm]);
 
   return (
     <View style={[

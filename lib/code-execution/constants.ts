@@ -14,6 +14,31 @@ export const LANGUAGES = [
   'text',
 ];
 
+// 手書きのフェンス（```js など）でよく使われる略記を正規の言語 ID へ寄せる。
+// TSV のインポートと、テキストブロック内マークダウンのコードフェンスのハイライトで共用する。
+export const LANGUAGE_ALIASES: Record<string, string> = {
+  js: 'javascript',
+  jsx: 'javascript',
+  ts: 'typescript',
+  tsx: 'typescript',
+  py: 'python',
+  'c++': 'cpp',
+  cc: 'cpp',
+  sh: 'bash',
+  shell: 'bash',
+  zsh: 'bash',
+  htm: 'html',
+  plain: 'text',
+  '': 'text',
+};
+
+/** フェンスの言語名を正規の言語 ID へ正規化する（LANGUAGES に無いものは 'text'）。 */
+export function normalizeLanguage(raw: string): string {
+  const lower = raw.trim().toLowerCase();
+  const aliased = LANGUAGE_ALIASES[lower] ?? lower;
+  return LANGUAGES.includes(aliased) ? aliased : 'text';
+}
+
 export const LANG_LABELS: Record<string, string> = {
   javascript: 'JavaScript',
   typescript: 'TypeScript',

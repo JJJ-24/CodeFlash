@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
+import type { StyleProp, TextStyle } from 'react-native';
 
 import { tokenize, type TokenType } from '@/lib/syntax-highlight';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -25,14 +26,19 @@ interface Props {
    * false: \u6298\u308a\u8fd4\u3055\u305a\u4e00\u884c\u306b\u4f38\u3070\u3059\uff08\u6a2a\u30b9\u30af\u30ed\u30fc\u30eb\u53ef\u80fd\u306a ScrollView \u5185\u3067\u4f7f\u3046\u60f3\u5b9a\uff09\u3002
    */
   wrap?: boolean;
+  /**
+   * 既定の文字サイズ・余白を上書きする（最後に重なる）。テキストブロック内マークダウンの
+   * コードフェンスのように、外側の箱が余白を持つ場所で使う。
+   */
+  style?: StyleProp<TextStyle>;
 }
 
-export function SyntaxHighlightedCode({ code, language, wrap = true }: Props) {
+export function SyntaxHighlightedCode({ code, language, wrap = true, style }: Props) {
   const theme = useTheme();
   const tokens = useMemo(() => tokenize(code.replace(/[\u2028\u2029]/g, '\n'), language), [code, language]);
 
   return (
-    <Text style={[styles.base, wrap && styles.wrap, { fontSize: theme.fontSize.lg, lineHeight: theme.fontSize.lg * 1.5 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+    <Text style={[styles.base, wrap && styles.wrap, { fontSize: theme.fontSize.lg, lineHeight: theme.fontSize.lg * 1.5 }, style]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
       {tokens.map((token, idx) => (
         <Text key={idx} style={{ color: TOKEN_COLORS[token.type] }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {token.text}

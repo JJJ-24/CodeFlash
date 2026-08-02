@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
-index 7c88afc..172df12 100644
+index 7c88afc..bde28e0 100644
 --- a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
 +++ b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
 @@ -11,6 +11,7 @@ import {
@@ -10,7 +10,29 @@ index 7c88afc..172df12 100644
  } from "react-native";
  import {
    FlatList,
-@@ -374,9 +375,9 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+@@ -231,6 +232,21 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+       onDragEnd?.({ from, to, data: newData });
+ 
+       setActiveKey(null);
++
++      // patched: ドラッグ終了時に必ず状態を初期化する。
++      // 本家は「データの並び順が変わったとき」（dataHasChanged）にしか reset() を呼ばないため、
++      // 同じ位置に戻して離した場合や、呼び出し側が並べ替えを無視した場合は activeIndexAnim が
++      // 0 以上のまま残る。すると useAutoScroll の「ドラッグ開始」検知（activeIndexAnim が
++      // -1 → 0以上 になる瞬間）が二度と発火せず、scrollTarget が古い値のまま固定される。
++      // その結果 hasScrolledToTarget が false になり、以後のドラッグでオートスクロールが
++      // 効かなくなる（スクロール位置を変えたあとほど顕著）。
++      // データが変わった場合と同じタイミング（runAfterInteractions）でリセットする。
++      // 二重に呼ばれても同じ値を入れるだけなので無害。
++      InteractionManager.runAfterInteractions(() => {
++        // 直後に次のドラッグが始まっていたら、その状態を壊さないよう何もしない
++        if (isTouchActiveNative.value) return;
++        reset();
++      });
+     }
+   );
+ 
+@@ -374,9 +390,9 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
        layoutAnimationDisabled={layoutAnimationDisabled}
      >
        <GestureDetector gesture={panGesture}>
@@ -22,7 +44,7 @@ index 7c88afc..172df12 100644
            onLayout={onContainerLayout}
          >
            {props.renderPlaceholder && (
-@@ -404,7 +405,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+@@ -404,7 +420,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
                scrollOffset={scrollOffset}
              />
            )}

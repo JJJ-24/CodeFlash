@@ -13,10 +13,15 @@ import { BlockItemHeader } from './BlockItemHeader';
 import { MarkdownPalette } from './MarkdownPalette';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
+import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
 
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化 /
 // markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（複数色ハイライト）
 const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor).use(markdownItIns);
+// linkify の fuzzyLink（スキーマ無しの「それっぽい文字列」を自動リンク化）は切る。
+// `.id` `.io` `.co` `.dev` などは実在の TLD なので、`dataset.id` のようなコード片が
+// ドメインと誤判定されてリンクになってしまうため。https:// 付きの URL は従来どおりリンク化される。
+markdownItLinkify.linkify.set({ fuzzyLink: false });
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_STATE_HEADERS } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
@@ -203,6 +208,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           paddingVertical: 4,
           marginVertical: 4,
         },
+        ...markdownTableStyles(theme),
       };
     }
     return {
@@ -232,6 +238,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         paddingVertical: 4,
         marginVertical: 4,
       },
+      ...markdownTableStyles(theme),
     };
   }, [theme, isPreview]);
 

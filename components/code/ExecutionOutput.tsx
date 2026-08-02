@@ -21,8 +21,16 @@ const MIN_PREVIEW_HEIGHT = 220;
 /** 同（上限）＝画面高に対する比率。長いページでカードが埋まらないように頭打ちにする。 */
 const MAX_PREVIEW_HEIGHT_RATIO = 0.6;
 
-function buildCopyText(result: ExecResult): string {
+/**
+ * コピー用のテキスト。画面に出ている本文（見出しは含めない＝エラー時に「エラー」を入れないのと同じ流儀）。
+ *
+ * @param timeoutMessage タイムアウト時の文言。これは結果データ（`result`）ではなく表示時に i18n で
+ *   作っている（実際に適用された上限秒数を差し込むため）ので、呼び出し側から渡してもらう。
+ *   渡し忘れるとタイムアウトのカードだけコピーが空になる。
+ */
+function buildCopyText(result: ExecResult, timeoutMessage: string): string {
   const lines: string[] = [];
+  if (result.status === 'timeout') lines.push(timeoutMessage);
   if (result.errorMessage) lines.push(result.errorMessage);
   result.tables?.forEach(t => {
     lines.push(t.columns.join('\t'));
@@ -212,10 +220,10 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
 
   const handleCopy = useCallback(async () => {
     if (!result) return;
-    await Clipboard.setStringAsync(buildCopyText(result));
+    await Clipboard.setStringAsync(buildCopyText(result, t('code.timeoutMessage', { seconds: timeoutSeconds })));
     setCopied(true);
     setTimeout(() => setCopied(false), 1000);
-  }, [result]);
+  }, [result, t, timeoutSeconds]);
 
   // ソースタブの土台テキストは読み取り専用（選択できない）ためコピーボタンを用意する。
   const handleCopySource = useCallback(async () => {

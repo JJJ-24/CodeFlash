@@ -1,3 +1,31 @@
+diff --git a/node_modules/react-native-key-command/ios/HardwareShortcut.m b/node_modules/react-native-key-command/ios/HardwareShortcut.m
+index 2b4a4f1..7fdb60c 100644
+--- a/node_modules/react-native-key-command/ios/HardwareShortcut.m
++++ b/node_modules/react-native-key-command/ios/HardwareShortcut.m
+@@ -18,14 +18,21 @@ - (id)copyWithZone:(__unused NSZone *)zone
+   return self;
+ }
+ 
++// 文字列は必ず値で比較する（== はポインタ比較なのでバグ）。
++// 短い ASCII 文字列（"j" や "\r" 等）は tagged pointer になり値が等しければポインタも等しく
++// なるため == でも動いてしまうが、UIKeyInputUpArrow（@"UIKeyInputUpArrow"）のような長い定数は
++// ヒープに確保され、JS から渡し直すたびに別インスタンスになる。その結果
++// unregisterKeyCommand が対象を見つけられず登録が残り続け（＝矢印がプロセスの寿命まで
++// キーを奪い続ける）、handleKeyCommand: の照合も外れてハンドラが発火しない
++// ＝「矢印/PageUp/Home/Esc だけが無反応になり、アプリを再起動するまで直らない」になる。
+ - (BOOL)matchesInput:(NSString *)input modifierFlags:(UIKeyModifierFlags)modifierFlags
+ {
+-  return _input == input && _modifierFlags == modifierFlags;
++  return [_input isEqualToString:input] && _modifierFlags == modifierFlags;
+ }
+ 
+ - (BOOL)matchesInput:(UIKeyCommand *)keyCommand
+ {
+-  return _input == keyCommand.input && _modifierFlags == keyCommand.modifierFlags;
++  return [_input isEqualToString:keyCommand.input] && _modifierFlags == keyCommand.modifierFlags;
+ }
+ 
+ @end
 diff --git a/node_modules/react-native-key-command/ios/KeyCommand.h b/node_modules/react-native-key-command/ios/KeyCommand.h
 index 150be7b..712272d 100644
 --- a/node_modules/react-native-key-command/ios/KeyCommand.h

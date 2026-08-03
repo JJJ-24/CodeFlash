@@ -342,7 +342,7 @@
     "pyodideLoading": "Python を準備中（初回は時間がかかります）",
     "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）",
     "proTitle": "Pro 機能",
-    "proMessage": "SQL・C++ の実行は Pro プランの機能です。"
+    "proMessage": "SQL・C++・HTML・CSS の実行は Pro プランの機能です。"
   },
   "common": {
     "save": "保存",
@@ -667,6 +667,8 @@
     "featureICloudDesc": "同じ Apple ID の iPhone・iPad でデッキ・カード・学習履歴・画像を同期。機種変更時も自動で復元",
     "featureSQL": "SQL / C++ 実行",
     "featureSQLDesc": "SQL・C++ のコードブロックをその場で実行",
+    "featureWebPreview": "HTML / CSS プレビュー",
+    "featureWebPreviewDesc": "HTML・CSS・JavaScript の実行結果を見た目で確認。全画面なら実際に操作でき、デッキに登録した画像も HTML から使えます",
     "featureWidget": "ホームウィジェット",
     "featureWidgetDesc": "学習統計・本日の残カード数をホーム画面に表示（予定）",
     "featureCustomization": "配色",

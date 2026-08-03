@@ -61,6 +61,11 @@ const CURRENT_FEATURES: Feature[] = [
     titleKey: 'pro.featureSQL',
     descKey:  'pro.featureSQLDesc',
   },
+  {
+    icon: 'browsers-outline',
+    titleKey: 'pro.featureWebPreview',
+    descKey:  'pro.featureWebPreviewDesc',
+  },
 ];
 
 export default function PaywallScreen() {

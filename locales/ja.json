@@ -342,7 +342,8 @@
     "pyodideLoading": "Python を準備中（初回は時間がかかります）",
     "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）",
     "proTitle": "Pro 機能",
-    "proMessage": "SQL・C++・HTML・CSS の実行は Pro プランの機能です。"
+    "proMessage": "SQL・C++・HTML・CSS の実行は Pro プランの機能です。",
+    "proStageHint": "HTML/CSS 土台を使うプレビューは Pro 機能です。このブロックは土台なしで実行しました。"
   },
   "common": {
     "save": "保存",

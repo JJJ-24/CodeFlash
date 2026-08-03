@@ -95,18 +95,24 @@ export function CodeRunnerView({
     handleMessage,
     reset,
   } = useCodeExecution(onRunStart);
+  const isPro = useProStore(s => s.isPro);
   // Web 系（html / js・ts）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
   // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。
   // `noDeckHtmlInit` のブロックはデッキ共通の土台を積まない（土台が無関係なブロックで
   // 無関係なプレビューを出さないため。js/ts は土台が空になるのでコンソール実行に戻る）。
+  // 土台は Pro 機能なので**非 Pro では積まない**（体験終了後や配布デッキで、土台つきの
+  // js/ts を実行すると可視プレビューが出てしまい html/css の実行ゲートが素通しになる）。
+  // 積まなければ js/ts は hasStage=false でコンソール実行に落ち、実行前プレビュー・
+  // ソースタブ・⛶ も previewSource が空になるので自動的に消える。
   const htmlInits = useMemo(
     () => {
-      const deckStage = block.noDeckHtmlInit ? '' : (deckHtmlInit ?? '');
+      const deckStage = (!isPro || block.noDeckHtmlInit) ? '' : (deckHtmlInit ?? '');
+      const blockStage = isPro ? (block.htmlInit ?? '') : '';
       return block.language === 'html' ? [deckStage]
-        : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckStage, block.htmlInit ?? '']
+        : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckStage, blockStage]
         : undefined;
     },
-    [block.language, block.htmlInit, block.noDeckHtmlInit, deckHtmlInit],
+    [block.language, block.htmlInit, block.noDeckHtmlInit, deckHtmlInit, isPro],
   );
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
@@ -114,7 +120,14 @@ export function CodeRunnerView({
   const [codeCopied, setCodeCopied] = useState(false);
   const [proModalVisible, setProModalVisible] = useState(false);
   const [expandVisible, setExpandVisible] = useState(false);
-  const isPro = useProStore(s => s.isPro);
+  // 非 Pro のため土台を落として実行した js/ts か（＝Pro なら土台を積んだはずのブロック）。
+  // 実行はブロックしない：JS 実行は無料機能で、デッキ共通土台は既定 ON かつ切る手段（noDeckHtmlInit）が
+  // Pro 限定のため、止めると「土台のあるデッキでは console.log すら実行できない」逃げ場のない状態になる。
+  // 代わりに結果パネルへ理由を1行出す（DOM を触るコードはそこで null 参照エラーになる）。
+  const stageDroppedByPro =
+    !isPro &&
+    (block.language === 'javascript' || block.language === 'typescript') &&
+    ((!block.noDeckHtmlInit && !!deckHtmlInit?.trim()) || !!block.htmlInit?.trim());
   // 041: 全画面インタラクティブプレビューを開ける条件。html は常に、js/ts は土台がある時のみ（＝Web プレビュー対象）。Pro 限定。
   const canExpand =
     isPro &&
@@ -511,6 +524,7 @@ export function CodeRunnerView({
           onMessage={handleMessage}
           onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
           deckImages={deckHtmlImages}
+          proStageHint={stageDroppedByPro}
         />
       )}
       <InteractivePreviewModal

@@ -342,7 +342,8 @@
     "pyodideLoading": "Preparing Python (first run may take a while)",
     "pyodideLoadError": "Failed to load Pyodide (check your internet connection)",
     "proTitle": "Pro Feature",
-    "proMessage": "Running SQL, C++, HTML, and CSS requires a Pro plan."
+    "proMessage": "Running SQL, C++, HTML, and CSS requires a Pro plan.",
+    "proStageHint": "Previewing on an HTML/CSS stage is a Pro feature. This block ran without the stage."
   },
   "common": {
     "save": "Save",

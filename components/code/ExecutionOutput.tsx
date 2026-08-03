@@ -131,6 +131,9 @@ interface Props {
   onExpand?: () => void;
   /** デッキの HTML 画像ライブラリ（043）。実行前プレビューの `img://name` を data URI へ解決するのに使う。 */
   deckImages?: DeckImage[];
+  /** 非 Pro のため HTML/CSS 土台を積まずに実行したブロック。結果パネルの末尾に理由を1行出す
+   *  （実行自体は止めない＝コンソール出力だけのカードは無料でもそのまま動く）。 */
+  proStageHint?: boolean;
 }
 
 /**
@@ -139,7 +142,7 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages }: Props) {
+export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages, proStageHint }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -321,6 +324,13 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
               <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.empty')}</Text>
             )}
             {result.logs.length > 0 && <LogLines logs={result.logs} />}
+            {/* 非 Pro で土台を落として実行したブロック。DOM を触るコードはここで null 参照エラーに
+                なるので、「壊れた」ではなく Pro 機能だと分かるよう理由を1行添える（実行は止めない）。 */}
+            {proStageHint && (
+              <Text style={[styles.proStageHint, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                {t('code.proStageHint')}
+              </Text>
+            )}
             <GestureDetector gesture={copyGesture}>
               <View style={styles.copyBtn}>
                 <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
@@ -469,6 +479,11 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     color: '#4B5563',
     fontStyle: 'italic',
+  },
+  proStageHint: {
+    color: '#8B949E',
+    marginTop: 8,
+    lineHeight: 16,
   },
   preview: {
     borderTopWidth: 1,

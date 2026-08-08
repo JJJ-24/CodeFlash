@@ -386,7 +386,7 @@
     "sqlInitPlaceholder": "CREATE TABLE orders (id INTEGER, userId INTEGER);",
     "sqlInitEmpty": "(none)",
     "htmlInitLabel": "HTML/CSS stage (optional)",
-    "htmlInitHint": "HTML/CSS that this block's JS manipulates. Stacked after the deck's shared stage.",
+    "htmlInitHint": "A stage for this block only, shown before you run it. Stacked after the deck's shared stage and before the block body (additive — later styles win). To replace the shared stage instead of adding to it, turn off \"Use the deck's shared stage\".",
     "htmlInitPlaceholder": "<div id=\"box\">Hello</div>\n<style>#box{ padding:20px }</style>",
     "htmlInitEmpty": "(none)",
     "useDeckHtmlInitLabel": "Use the deck's shared stage",

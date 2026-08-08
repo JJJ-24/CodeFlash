@@ -386,7 +386,7 @@
     "sqlInitPlaceholder": "CREATE TABLE orders (id INTEGER, userId INTEGER);",
     "sqlInitEmpty": "（未設定）",
     "htmlInitLabel": "HTML/CSS 土台（任意）",
-    "htmlInitHint": "このブロックの JS が操作する土台の HTML/CSS。デッキ共通の土台の後に積まれます。",
+    "htmlInitHint": "実行前から表示されるこのブロック専用の土台。デッキ共通の土台の後、本文の前に積まれます（追記＝スタイルは後勝ち）。土台の要素を差し替えたいときは「デッキ共通の土台を使う」をオフにしてください。",
     "htmlInitPlaceholder": "<div id=\"box\">Hello</div>\n<style>#box{ padding:20px }</style>",
     "htmlInitEmpty": "（未設定）",
     "useDeckHtmlInitLabel": "デッキ共通の土台を使う",

@@ -110,18 +110,16 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const isWebLang =
     block.language === 'html' || block.language === 'javascript' || block.language === 'typescript' || block.language === 'css';
 
-  // Web 系（html / js・ts）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
-  // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。それ以外の言語は undefined。
+  // Web 系4言語（html / js・ts / css）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
+  // html も 2026-08-08 からブロック土台を持つ（カード単位の「出題の前提」を置けるようにするため。
+  // 土台＝実行前から見える前提／本文＝実行して初めて出る答え、という軸は 4 言語で共通）。それ以外の言語は undefined。
   // `noDeckHtmlInit` のブロックはデッキ共通の土台を積まない（土台が無関係なブロックで
   // 無関係なプレビューを出さないため。js/ts は土台が空になるのでコンソール実行に戻る）。
   // 土台は Pro 機能なので**非 Pro では積まない**（体験終了後や配布デッキで、土台つきの
   // js/ts を実行すると可視プレビューが出てしまい html/css の実行ゲートが素通しになる）。
   const deckStage = (!isPro || block.noDeckHtmlInit) ? '' : (deckHtmlInit ?? '');
   const blockStage = isPro ? (block.htmlInit ?? '') : '';
-  const htmlInits =
-    block.language === 'html' ? [deckStage]
-    : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckStage, blockStage]
-    : undefined;
+  const htmlInits = isWebLang ? [deckStage, blockStage] : undefined;
   // 非 Pro のため土台を落として実行した js/ts か（＝Pro なら土台を積んだはずのブロック）。
   // 実行はブロックしない：JS 実行は無料機能で、デッキ共通土台は既定 ON かつ切る手段（noDeckHtmlInit）が
   // Pro 限定のため、止めると「土台のあるデッキでは console.log すら実行できない」逃げ場のない状態になる。
@@ -495,8 +493,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
-          {/* js/ts・css ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後に積む）。Pro 機能のため非Proでは非表示 */}
-          {(block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') && isPro && (
+          {/* web 系ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後・本文の前に積む）。Pro 機能のため非Proでは非表示 */}
+          {isWebLang && isPro && (
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
               <Pressable style={styles.initSqlHeader} onPress={() => setShowInitHtml((v) => !v)} hitSlop={6}>
                 <Ionicons name={showInitHtml ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />

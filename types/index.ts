@@ -12,7 +12,8 @@ export interface CodeBlock {
   executable: boolean;
   /** SQL ブロック固有の初期化SQL（このブロックの実行前にデッキ共通の後に流す）。SQL 言語時のみ意味を持つ */
   sqlInit?: string;
-  /** js/ts ブロック固有の HTML/CSS 土台（デッキ共通の後に積む）。web 系プレビューの土台として使う */
+  /** web 系ブロック（html / js・ts / css）固有の HTML/CSS 土台。デッキ共通の後・本文の前に積む（加算）。
+   *  実行前から見える「出題の前提」で、本文＝実行して初めて出る「答え」と対になる */
   htmlInit?: string;
   /** web 系ブロック：このブロックではデッキ共通の HTML/CSS 土台を積まない（既定 false＝積む）。
    *  「このカードはコンソール出力だけ」のように土台が無関係なブロックで、無関係なプレビューを消すため。

@@ -96,8 +96,9 @@ export function CodeRunnerView({
     reset,
   } = useCodeExecution(onRunStart);
   const isPro = useProStore(s => s.isPro);
-  // Web 系（html / js・ts）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
-  // html はブロック土台を持たない（本文が主役）ためデッキ土台のみ。
+  // Web 系4言語（html / js・ts / css）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
+  // html も 2026-08-08 からブロック土台を持つ（カード単位の「出題の前提」を置けるようにするため。
+  // 土台＝実行前から見える前提／本文＝実行して初めて出る答え、という軸は 4 言語で共通）。
   // `noDeckHtmlInit` のブロックはデッキ共通の土台を積まない（土台が無関係なブロックで
   // 無関係なプレビューを出さないため。js/ts は土台が空になるのでコンソール実行に戻る）。
   // 土台は Pro 機能なので**非 Pro では積まない**（体験終了後や配布デッキで、土台つきの
@@ -108,8 +109,8 @@ export function CodeRunnerView({
     () => {
       const deckStage = (!isPro || block.noDeckHtmlInit) ? '' : (deckHtmlInit ?? '');
       const blockStage = isPro ? (block.htmlInit ?? '') : '';
-      return block.language === 'html' ? [deckStage]
-        : (block.language === 'javascript' || block.language === 'typescript' || block.language === 'css') ? [deckStage, blockStage]
+      return (block.language === 'html' || block.language === 'javascript' || block.language === 'typescript' || block.language === 'css')
+        ? [deckStage, blockStage]
         : undefined;
     },
     [block.language, block.htmlInit, block.noDeckHtmlInit, deckHtmlInit, isPro],

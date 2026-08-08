@@ -36,7 +36,7 @@ import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useSettingsStore } from "@/store/settings";
-import type { Block, CodeBlock, DeckImage, ImageBlock, TextBlock } from "@/types";
+import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
 import { ImageBlockItem } from "./ImageBlockItem";
 import { TagSelector } from "./TagSelector";
@@ -103,7 +103,7 @@ interface Props {
   /** デッキ共通の SQL 初期化（SQL コードブロックのプレビュー実行時に本体の前へ流す） */
   deckSqlInit?: string | null;
   /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
-  deckHtmlInit?: string | null;
+  deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。CodeBlockItem へ素通しする */
   deckHtmlImages?: DeckImage[];
   onSave: (data: BlockEditorData) => Promise<void>;
@@ -136,7 +136,7 @@ export function BlockEditor({
   deckIconName,
   deckColorHex,
   deckSqlInit,
-  deckHtmlInit,
+  deckHtmlStages,
   deckHtmlImages,
   onSave,
   onFrontEmptyChange,
@@ -1244,7 +1244,7 @@ export function BlockEditor({
                   block={block as CodeBlock}
                   isPreview={isPreview}
                   deckSqlInit={deckSqlInit}
-                  deckHtmlInit={deckHtmlInit}
+                  deckHtmlStages={deckHtmlStages}
                   deckHtmlImages={deckHtmlImages}
                   onChange={(patch) =>
                     updateBlock(activeTab, block._key, patch)

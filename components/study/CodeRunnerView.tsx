@@ -25,10 +25,11 @@ import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS, PRO_LANGUAGES } from "@/lib/code-execution/constants";
 import { useProStore } from "@/store/pro";
+import { resolveDeckStageHtml } from "@/lib/deckStages";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from "@/lib/theme";
-import type { CodeBlock, DeckImage } from "@/types";
+import type { CodeBlock, DeckImage, DeckStage } from "@/types";
 
 interface Props {
   block: CodeBlock;
@@ -51,8 +52,8 @@ interface Props {
   onForceKeyboardFocus?: () => void;
   /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
   deckSqlInit?: string | null;
-  /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台。ブロック固有 htmlInit の前に積まれる） */
-  deckHtmlInit?: string | null;
+  /** 044: デッキの HTML/CSS 土台の一覧。ブロックは deckStageId で1つを選ぶ（未指定＝先頭） */
+  deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決する */
   deckHtmlImages?: DeckImage[];
 }
@@ -75,7 +76,7 @@ export function CodeRunnerView({
   anotherBlockEditing,
   onForceKeyboardFocus,
   deckSqlInit,
-  deckHtmlInit,
+  deckHtmlStages,
   deckHtmlImages,
 }: Props) {
   const { t } = useTranslation();
@@ -96,7 +97,8 @@ export function CodeRunnerView({
     reset,
   } = useCodeExecution(onRunStart);
   const isPro = useProStore(s => s.isPro);
-  // Web 系4言語（html / js・ts / css）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
+  // Web 系4言語（html / js・ts / css）で body 先頭に加算する HTML/CSS 土台（デッキ土台 → ブロック固有）。
+  // 044: デッキ側はブロックの deckStageId で選ばれた1つ（未指定＝先頭・削除済み参照は積まない）。
   // html も 2026-08-08 からブロック土台を持つ（カード単位の「出題の前提」を置けるようにするため。
   // 土台＝実行前から見える前提／本文＝実行して初めて出る答え、という軸は 4 言語で共通）。
   // `noDeckHtmlInit` のブロックはデッキ共通の土台を積まない（土台が無関係なブロックで
@@ -107,13 +109,16 @@ export function CodeRunnerView({
   // ソースタブ・⛶ も previewSource が空になるので自動的に消える。
   const htmlInits = useMemo(
     () => {
-      const deckStage = (!isPro || block.noDeckHtmlInit) ? '' : (deckHtmlInit ?? '');
+      // block 丸ごとではなく必要な2フィールドだけ渡す（useMemo の依存を最小に保つため）
+      const deckStage = isPro
+        ? resolveDeckStageHtml(deckHtmlStages, { deckStageId: block.deckStageId, noDeckHtmlInit: block.noDeckHtmlInit })
+        : '';
       const blockStage = isPro ? (block.htmlInit ?? '') : '';
       return (block.language === 'html' || block.language === 'javascript' || block.language === 'typescript' || block.language === 'css')
         ? [deckStage, blockStage]
         : undefined;
     },
-    [block.language, block.htmlInit, block.noDeckHtmlInit, deckHtmlInit, isPro],
+    [block.language, block.htmlInit, block.noDeckHtmlInit, block.deckStageId, deckHtmlStages, isPro],
   );
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
@@ -128,7 +133,7 @@ export function CodeRunnerView({
   const stageDroppedByPro =
     !isPro &&
     (block.language === 'javascript' || block.language === 'typescript') &&
-    ((!block.noDeckHtmlInit && !!deckHtmlInit?.trim()) || !!block.htmlInit?.trim());
+    (resolveDeckStageHtml(deckHtmlStages, block).trim() !== '' || !!block.htmlInit?.trim());
   // 041: 全画面インタラクティブプレビューを開ける条件。html は常に、js/ts は土台がある時のみ（＝Web プレビュー対象）。Pro 限定。
   const canExpand =
     isPro &&

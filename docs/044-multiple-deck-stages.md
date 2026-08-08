@@ -1,7 +1,7 @@
 # 044 デッキ土台の複数持ち（名前付き土台ライブラリ）
 
 **フェーズ:** 将来
-**ステータス:** **Phase 1（データ基盤）・Phase 2（デッキ編集 UI）完了（2026-08-08）**。Phase 3 以降は未着手
+**ステータス:** **Phase 1〜4 完了（2026-08-08）**＝機能として通しで動く。残りは Phase 5（i18n/ショートカット見直し）・Phase 6（検証）・Phase 7（SQL 追随）
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・043（`decks` への JSON 列追加の前例）
 **被依存:** なし
@@ -225,16 +225,28 @@ iCloud 同期は **DB ファイル丸ごと**を LWW で往復させるため、
 一覧シートの VC から提示されて正しく重なる。043 の `HtmlImageLibrary`（`SqlInitModal` の
 `footer` ＝ Modal の中に描画され、さらにその中に確認モーダルを持つ）が最初から正しい形だった。
 
-### Phase 3: ブロック側の選択 UI と土台解決
-- [ ] `CodeRunnerView` / `CodeBlockItem` の `htmlInits` 組み立てを `deckStageId` 解決に対応（上記ルール）
-- [ ] `CodeBlockItem`：土台2個以上でチップピッカー、0〜1個は現行トグルのまま
-- [ ] `stageDroppedByPro`（非Pro時の1行ヒント）の判定を新ロジックに追従
-- [ ] 削除済み土台を指すブロックが**土台なし**に落ちること
+### Phase 3: ブロック側の選択 UI と土台解決 ＝**実装完了（2026-08-08）**
+- [x] `lib/deckStages.ts` に **`resolveDeckStageHtml(stages, block)`** を追加（`noDeckHtmlInit`→空／未指定→先頭／解決不能→空）。Pro ゲートは呼び出し側の責任
+- [x] `CodeRunnerView` / `CodeBlockItem` の `htmlInits` 組み立てを解決関数に差し替え
+  - [x] `CodeRunnerView` の `useMemo` には **`block` 丸ごとではなく必要な2フィールドだけ**渡す（依存配列を最小に保つ＝exhaustive-deps 警告も増やさない）
+- [x] `CodeBlockItem`：**土台1個は従来の ON/OFF トグルのまま**、2個以上のときだけ「使わない＋各土台」のチップ選択に切り替え
+  - [x] 選択中は `noDeckHtmlInit ? null : (deckStageId ?? 先頭)` を解決した id。**削除済みの id を指しているときは「使わない」をハイライト**（効果としてそうなっているため。stale な id が残っても解決不能＝常に土台なしなので害はない）
+  - [x] 土台名が空なら「土台N」で表示（`DeckStagesModal` と同じ規則）
+- [x] `stageDroppedByPro`（非Pro時の1行ヒント）の判定も解決関数ベースに追従
+- [x] i18n（`editor.deckStagePickerLabel`/`deckStagePickerHint`/`deckStageNone`・ja/en）
+- [x] **トグル表示のバグ修正**（実機確認で発覚）：土台2つ→片方を削除して1つに戻ると、ブロックは
+  削除済み `deckStageId` を指したままトグル branch に戻る。トグルの `value` が `!noDeckHtmlInit`
+  だったため、**実態は「土台なし」なのに ON と表示**され「ONなのにプレビューが出ない」状態になっていた。
+  `value={activeStageId !== null}`（解決結果を見る）に修正し、**ON に戻す操作で `deckStageId` も
+  クリア**（＝未指定＝先頭に復帰）するようにして復帰経路を作った。
+  この修正が無いと、トグルを触っても死んだ参照が残り続けて土台が積まれない
 
-### Phase 4: 配線の差し替え
-- [ ] `deckHtmlInit?: string | null` → `deckHtmlStages?: DeckStage[]` に置換
-  - [ ] `app/study/session.tsx`（5箇所）→ `BlocksView` → `CodeRunnerView`
-  - [ ] `app/deck/[id]/card/new.tsx`・`app/deck/[id]/card/[cardId]/edit.tsx` → `BlockEditor` → `CodeBlockItem`
+### Phase 4: 配線の差し替え ＝**実装完了（2026-08-08）**
+- [x] `deckHtmlInit?: string | null` → `deckHtmlStages?: DeckStage[]` に置換
+  - [x] `app/study/session.tsx`（`currentDeckHtmlInit` → `currentDeckHtmlStages`・受け渡し5箇所）→ `BlocksView` → `CodeRunnerView`
+  - [x] `app/deck/[id]/card/new.tsx`・`app/deck/[id]/card/[cardId]/edit.tsx` → `BlockEditor` → `CodeBlockItem`
+- [x] **画面から `deck.htmlInit` を読む箇所が無くなったことを確認**（残っているのは DB 層のミラー書き・import の列・ショートカットの i18n キー名だけ）
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし（警告48件は変更前と同数）
 
 ### Phase 5: i18n・ショートカット
 - [ ] `locales/ja.json` / `en.json`（土台リスト・ピッカー・削除確認の文言）。**ja/en セットで**

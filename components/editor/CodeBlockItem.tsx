@@ -27,13 +27,14 @@ import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { InfoModal } from '@/components/InfoModal';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
+import { resolveDeckStageHtml } from '@/lib/deckStages';
 import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
-import type { CodeBlock, DeckImage } from '@/types';
+import type { CodeBlock, DeckImage, DeckStage } from '@/types';
 
 interface Props {
   block: CodeBlock;
@@ -56,13 +57,13 @@ interface Props {
   blurTrigger?: number;
   /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
   deckSqlInit?: string | null;
-  /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台。ブロック固有 htmlInit の前に積まれる） */
-  deckHtmlInit?: string | null;
+  /** 044: デッキの HTML/CSS 土台の一覧。ブロックは deckStageId で1つを選ぶ（未指定＝先頭） */
+  deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決する */
   deckHtmlImages?: DeckImage[];
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit, deckHtmlInit, deckHtmlImages }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit, deckHtmlStages, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -117,9 +118,17 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // 無関係なプレビューを出さないため。js/ts は土台が空になるのでコンソール実行に戻る）。
   // 土台は Pro 機能なので**非 Pro では積まない**（体験終了後や配布デッキで、土台つきの
   // js/ts を実行すると可視プレビューが出てしまい html/css の実行ゲートが素通しになる）。
-  const deckStage = (!isPro || block.noDeckHtmlInit) ? '' : (deckHtmlInit ?? '');
+  // 044: デッキ側は deckStageId で選ばれた1つ（未指定＝先頭・削除済み参照は積まない）。
+  const deckStage = isPro ? resolveDeckStageHtml(deckHtmlStages, block) : '';
   const blockStage = isPro ? (block.htmlInit ?? '') : '';
   const htmlInits = isWebLang ? [deckStage, blockStage] : undefined;
+  // 044: デッキ土台の選択 UI 用。土台が1つだけなら従来の ON/OFF トグル、2つ以上でチップの選択になる。
+  const deckStages = deckHtmlStages ?? [];
+  // 選択中の土台。deckStageId 未指定なら先頭。**削除済みの id を指しているときは null**
+  // （＝効果としては「使わない」なので、そのようにハイライトする）。
+  const activeStageId = block.noDeckHtmlInit
+    ? null
+    : (deckStages.find((st) => st.id === (block.deckStageId ?? deckStages[0]?.id))?.id ?? null);
   // 非 Pro のため土台を落として実行した js/ts か（＝Pro なら土台を積んだはずのブロック）。
   // 実行はブロックしない：JS 実行は無料機能で、デッキ共通土台は既定 ON かつ切る手段（noDeckHtmlInit）が
   // Pro 限定のため、止めると「土台のあるデッキでは console.log すら実行できない」逃げ場のない状態になる。
@@ -127,7 +136,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const stageDroppedByPro =
     !isPro &&
     (block.language === 'javascript' || block.language === 'typescript') &&
-    ((!block.noDeckHtmlInit && !!deckHtmlInit?.trim()) || !!block.htmlInit?.trim());
+    (resolveDeckStageHtml(deckHtmlStages, block).trim() !== '' || !!block.htmlInit?.trim());
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
   // 041: 全画面インタラクティブプレビューの土台配列と、開ける条件（html は常に／js・ts は土台あり時。Pro 限定）。
@@ -469,26 +478,60 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
-          {/* web 系ブロック：デッキ共通の HTML/CSS 土台を積むか（既定 ON）。
-              OFF＝このブロックだけ土台を切る（コンソール出力だけのカードで無関係なプレビューを消す）。
-              デッキに共通土台が無ければ切る対象が無いので出さない。Pro 機能のため非Proでは非表示 */}
-          {isWebLang && isPro && !!deckHtmlInit?.trim() && (
+          {/* web 系ブロック：どのデッキ土台を積むか。デッキに土台が無ければ選ぶ対象が無いので出さない。
+              **土台が1つのデッキでは従来どおり ON/OFF トグル**（044 以前と見た目・操作が変わらない）、
+              2つ以上あるときだけ「使わない＋各土台」のチップ選択に変わる。Pro 機能のため非Proでは非表示 */}
+          {isWebLang && isPro && deckStages.length > 0 && (
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
               <View style={styles.initSqlHeader}>
-                <Ionicons name={block.noDeckHtmlInit ? 'layers-outline' : 'layers'} size={theme.fontSize.sm} color="#C9C9C9" />
+                <Ionicons name={activeStageId ? 'layers' : 'layers-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
                 <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('editor.useDeckHtmlInitLabel')}
+                  {deckStages.length > 1 ? t('editor.deckStagePickerLabel') : t('editor.useDeckHtmlInitLabel')}
                 </Text>
-                <Switch
-                  value={!block.noDeckHtmlInit}
-                  onValueChange={(v) => onChange({ noDeckHtmlInit: !v })}
-                  trackColor={{ true: '#1976D2' }}
-                  thumbColor="#FFF"
-                  style={styles.execSwitch}
-                />
+                {deckStages.length === 1 && (
+                  <Switch
+                    // `!noDeckHtmlInit` ではなく**解決結果**を見る。削除された土台を指したままの
+                    // ブロック（土台2つ→片方を削除、の後）は実態が「土台なし」なので、
+                    // ここで ON と表示すると「ONなのにプレビューが出ない」食い違いになる。
+                    value={activeStageId !== null}
+                    // ON に戻すときは宙に浮いた deckStageId も消す（＝未指定＝先頭の土台に復帰）。
+                    // これが無いと、トグルを操作しても死んだ参照が残って土台が積まれない。
+                    onValueChange={(v) => onChange(v ? { noDeckHtmlInit: false, deckStageId: undefined } : { noDeckHtmlInit: true })}
+                    trackColor={{ true: '#1976D2' }}
+                    thumbColor="#FFF"
+                    style={styles.execSwitch}
+                  />
+                )}
               </View>
+              {deckStages.length > 1 && (
+                <View style={styles.stageChips}>
+                  {/* 「使わない」＝ noDeckHtmlInit。土台を選ぶと同時に false へ戻す */}
+                  <Pressable
+                    onPress={() => onChange({ noDeckHtmlInit: true })}
+                    style={[styles.stageChip, { borderColor: activeStageId === null ? '#1976D2' : '#3A3A3A', backgroundColor: activeStageId === null ? '#1976D233' : 'transparent' }]}
+                  >
+                    <Text style={{ color: activeStageId === null ? '#7FB3E8' : '#9CA3AF', fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('editor.deckStageNone')}
+                    </Text>
+                  </Pressable>
+                  {deckStages.map((st, i) => {
+                    const selected = activeStageId === st.id;
+                    return (
+                      <Pressable
+                        key={st.id}
+                        onPress={() => onChange({ noDeckHtmlInit: false, deckStageId: st.id })}
+                        style={[styles.stageChip, { borderColor: selected ? '#1976D2' : '#3A3A3A', backgroundColor: selected ? '#1976D233' : 'transparent' }]}
+                      >
+                        <Text style={{ color: selected ? '#7FB3E8' : '#9CA3AF', fontSize: theme.fontSize.xs }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                          {st.name.trim() || t('deck.stageDefaultName', { n: i + 1 })}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
               <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('editor.useDeckHtmlInitHint')}
+                {deckStages.length > 1 ? t('editor.deckStagePickerHint') : t('editor.useDeckHtmlInitHint')}
               </Text>
             </View>
           )}
@@ -679,6 +722,9 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   langChevron: { color: '#9CDCFE' },
   headerRight: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   execLabel: { color: '#9E9E9E' },
+  // 044: デッキ土台の選択チップ（土台が2つ以上のときだけ出る）
+  stageChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
+  stageChip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, maxWidth: 160 },
   execSwitch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }], alignSelf: 'center' },
   runBtn: {
     backgroundColor: '#1976D2',

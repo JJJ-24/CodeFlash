@@ -16,7 +16,7 @@ import { markdownItIns } from '@/lib/editor/markdownItIns';
 import { markdownFenceRule } from '@/lib/editor/markdownFenceRule';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
-import type { Block, CodeBlock, DeckImage, ImageBlock, TextBlock } from '@/types';
+import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from '@/types';
 import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
 
@@ -65,12 +65,12 @@ interface Props {
   /** デッキ共通の SQL 初期化（SQL コードブロック実行時に本体の前に流す） */
   deckSqlInit?: string | null;
   /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
-  deckHtmlInit?: string | null;
+  deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。CodeRunnerView へ素通しする */
   deckHtmlImages?: DeckImage[];
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlInit, deckHtmlInit, deckHtmlImages }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlInit, deckHtmlStages, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -314,7 +314,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 onRunRequest={() => handleRunRequest(i)}
                 onForceKeyboardFocus={onForceKeyboardFocus}
                 deckSqlInit={deckSqlInit}
-                deckHtmlInit={deckHtmlInit}
+                deckHtmlStages={deckHtmlStages}
                 deckHtmlImages={deckHtmlImages}
                 exitEditTrigger={exitEditTriggers[i]}
                 runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}

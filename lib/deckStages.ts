@@ -53,6 +53,27 @@ export function normalizeDeckStages(
   return [];
 }
 
+/** コードブロックが使うデッキ土台の HTML を解決する（044）。
+ *
+ * - `noDeckHtmlInit` が true → 積まない
+ * - `deckStageId` 未指定 → **先頭の土台**（＝044 以前のカードの挙動）
+ * - `deckStageId` が解決できない（土台が削除された）→ **積まない**
+ *
+ * 解決できないときに先頭へフォールバックしないのは、**別の土台が黙って適用されて出題の前提が
+ * 変わる**のを避けるため。土台なしなら js/ts はコンソール実行に戻り html は本文だけになるので、
+ * 作者が「土台が外れている」ことに気づける。
+ *
+ * Pro ゲートは呼び出し側の責任（非 Pro では本関数を呼ばずに空文字を使う）。 */
+export function resolveDeckStageHtml(
+  stages: DeckStage[] | null | undefined,
+  block: { deckStageId?: string; noDeckHtmlInit?: boolean }
+): string {
+  if (block.noDeckHtmlInit) return '';
+  const list = stages ?? [];
+  if (block.deckStageId === undefined) return list[0]?.html ?? '';
+  return list.find((s) => s.id === block.deckStageId)?.html ?? '';
+}
+
 /** 旧 `decks.htmlInit` へ書き戻すミラー値（＝先頭土台の HTML）。
  *  **旧バージョンのアプリはこの列しか読まない**ので、先頭土台だけは今までどおり動く。
  *  iCloud 同期は DB ファイルごと往復するため、この書き戻しを外すと旧端末で土台が消えて見える。 */

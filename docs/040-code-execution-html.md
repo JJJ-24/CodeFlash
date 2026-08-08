@@ -194,7 +194,19 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 
 ### 両プレビューで等しく無意味なもの
 
-`:hover`/`:focus-visible`（指にホバーが無い）・`<noscript>`（JS 常時有効）・`target="_blank"`（`window.open` 無効で別窓を開けない）・`<base target>`・`<video>`/`<audio>`（`allowsInlineMediaPlayback={false}` ＋要ユーザー操作 ＋ ソースが無い＝実質使えない）。
+`:hover`/`:focus-visible`（指にホバーが無い）・**`title` 属性のツールチップ**（下記）・`<noscript>`（JS 常時有効）・`target="_blank"`（`window.open` 無効で別窓を開けない）・`<base target>`・`<video>`/`<audio>`（`allowsInlineMediaPlayback={false}` ＋要ユーザー操作 ＋ ソースが無い＝実質使えない）。
+
+#### `title` 属性のツールチップは出ない（2026-08-08 追記）
+
+`<abbr title="HyperText Markup Language">HTML</abbr>` をホバー/タップしても何も出ない。原因は
+**iOS/iPadOS の WebKit がツールチップ UI 自体を実装していない**こと（ホバー前提の macOS 専用機能）で、
+**041 全画面でも同じ**。サンドボックスは `markup = body` を素通しするだけで属性を落としておらず、
+`document.querySelector('abbr').title` で値は取れる＝**原因を DOM 側や合成処理に探さないこと**。
+
+教材で見せたいときは **`content: attr(title)` で自作する**。トリガは `:hover` の代わりに
+`:active`/`:focus`（**全画面ならタップで効く**）を使う。`abbr` は既定でフォーカスを受けないので
+`tabindex="0"` が要る。常時見せるだけなら `abbr[title]::after { content: " (" attr(title) ")" }` で足りる。
+このスタイルをブロック固有土台に置けば「本文には `<abbr>` のマークアップだけ書かせる」出題になる。
 
 ### 040 インライン特有（041 では解消）
 

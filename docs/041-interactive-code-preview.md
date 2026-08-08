@@ -141,6 +141,7 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 | `confirm()`/`prompt()` の同期ブロック | 5 秒タイムアウトに掛かりうる | **上限なしで待てる** |
 | 後出しログ（イベント発火時の console） | 完了後は届かない | **逐次 postMessage でライブ表示** |
 | `:hover`/`:focus-visible` | ✕ | **✕**（指にホバーが無い＝全画面でも無意味） |
+| `title` 属性のツールチップ（`<abbr title>` 等） | ✕ | **✕**（iOS/iPadOS の WebKit がツールチップ UI 自体を持たない。属性は生きているので `content: attr(title)` ＋ `:active`/`:focus` で自作する＝docs/040） |
 | `<noscript>`・`target="_blank"`・`<base target>` | ✕ | **✕** |
 | `<video>`/`<audio>` | ✕ | **✕**（`allowsInlineMediaPlayback={false}`＋要ユーザー操作＋ソースが無い） |
 | リンクのタップ | 押せない | **遷移してしまう**（`onShouldStartLoadWithRequest` ガード無し・⟲ で復帰） |

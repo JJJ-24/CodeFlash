@@ -7,7 +7,7 @@ import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { IconPickerModal } from '@/components/IconPickerModal';
-import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
+import { DeckStagesModal } from '@/components/deck/DeckStagesModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
 import { useTranslation } from 'react-i18next';
 import {
@@ -27,9 +27,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
-import { normalizeDeckStages } from '@/lib/deckStages';
+import { legacyHtmlInitMirror } from '@/lib/deckStages';
 import type { DeckIconName } from '@/lib/deckIcons';
-import type { DeckImage } from '@/types';
+import type { DeckImage, DeckStage } from '@/types';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { deleteKeySpecs, scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
@@ -82,13 +82,15 @@ export default function EditDeckScreen() {
   const [colorHex, setColorHex] = useState<string | null>(deck?.colorHex ?? null);
   const [sqlInit, setSqlInit] = useState(deck?.sqlInit ?? '');
   const [showSqlInitModal, setShowSqlInitModal] = useState(false);
-  const [htmlInit, setHtmlInit] = useState(deck?.htmlInit ?? '');
+  // 044: 名前付き土台のリスト。土台テキストと同じくライブ編集し、確定は画面の保存で行う。
+  const [htmlStages, setHtmlStages] = useState<DeckStage[]>(deck?.htmlStages ?? []);
   // 043: HTML 画像ライブラリ。土台と同じくライブ編集し、確定は画面の保存で行う。
   const [htmlImages, setHtmlImages] = useState<DeckImage[]>(deck?.htmlImages ?? []);
   const [showHtmlInitModal, setShowHtmlInitModal] = useState(false);
-  // 043: 行の「設定済み」表示は土台テキストと画像ライブラリのどちらかがあれば点灯させる
+  // 043/044: 行の「設定済み」表示は土台と画像ライブラリのどちらかがあれば点灯させる
   // （行が両方への入口なので、画像だけ登録した状態を「未設定」と見せないため）。
-  const htmlConfigured = htmlInit.trim() !== '' || htmlImages.length > 0;
+  const filledStages = htmlStages.filter((s) => s.html.trim() !== '').length;
+  const htmlConfigured = filledStages > 0 || htmlImages.length > 0;
 
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
@@ -157,16 +159,14 @@ export default function EditDeckScreen() {
     setSaving(true);
     try {
       const normalizedSqlInit = sqlInit.trim() || null;
-      const normalizedHtmlInit = htmlInit.trim() || null;
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, htmlImages });
+      // 044: 中身が空の土台は保存しない（名前だけ作って離脱した行が残らないように）
+      const normalizedStages = htmlStages.filter((s) => s.html.trim() !== '');
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlStages: normalizedStages, htmlImages });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
-      // 044 Phase 1: この画面はまだ旧 htmlInit を編集するため、ストアの htmlStages も
-      // toDeck と同じ規則で作り直す（そうしないと再読み込みまで古い土台が残る）。
-      // htmlStages 列は書いていない＝この画面で編集したデッキの土台は常に1件なので合成でよい。
-      // Phase 2 でこの画面が土台リストを直接編集するようになったら、この行ごと置き換える。
-      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, htmlStages: normalizeDeckStages(null, normalizedHtmlInit), htmlImages, archived });
+      // 044: htmlInit は互換用ミラー。DB 側（updateDeck）と同じ値をストアにも入れて食い違わせない。
+      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: legacyHtmlInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -192,7 +192,7 @@ export default function EditDeckScreen() {
     || iconName !== (deck.iconName ?? null)
     || colorHex !== (deck.colorHex ?? null)
     || (sqlInit.trim() || null) !== (deck.sqlInit ?? null)
-    || (htmlInit.trim() || null) !== (deck.htmlInit ?? null)
+    || JSON.stringify(htmlStages.filter((s) => s.html.trim() !== '')) !== JSON.stringify(deck.htmlStages ?? [])
     || JSON.stringify(htmlImages) !== JSON.stringify(deck.htmlImages ?? [])
     || archived !== deck.archived;
 
@@ -378,7 +378,7 @@ export default function EditDeckScreen() {
                   <Ionicons name={htmlConfigured ? 'globe' : 'globe-outline'} size={20} color={htmlConfigured ? theme.colors.primary : theme.colors.textSecondary} />
                 </View>
                 <Text style={{ color: htmlConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {htmlConfigured ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
+                  {filledStages > 0 ? t('deck.htmlStagesSet', { count: filledStages }) : htmlConfigured ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>
@@ -419,15 +419,13 @@ export default function EditDeckScreen() {
         onChangeText={setSqlInit}
         onClose={() => setShowSqlInitModal(false)}
       />
-      <SqlInitModal
+      <DeckStagesModal
         visible={showHtmlInitModal}
-        value={htmlInit}
-        onChangeText={setHtmlInit}
+        stages={htmlStages}
+        onChange={setHtmlStages}
         onClose={() => setShowHtmlInitModal(false)}
-        title={t('deck.htmlInitLabel')}
-        hint={t('deck.htmlInitHint')}
-        placeholder={t('deck.htmlInitPlaceholder')}
-        footer={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
+        images={htmlImages}
+        onImagesChange={setHtmlImages}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

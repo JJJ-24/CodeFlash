@@ -30,6 +30,11 @@ interface Props {
   title?: string;
   hint?: string;
   placeholder?: string;
+  /** 指定するとタイトルが編集可能になる（044・土台の名前をここで付ける）。
+   *  リスト側に名前入力を置くとリストにもキーボード追従が要るため、名前は編集面で扱う。 */
+  onTitleChange?: (value: string) => void;
+  /** 名前が空のときに出す既定表示（「土台1」など）。`onTitleChange` 指定時のみ意味を持つ */
+  titlePlaceholder?: string;
   /** 入力欄の下に差し込む追加UI（043 の HTML 画像ライブラリ）。テキスト以外の付随データを
    *  同じ面で扱うための拡張点。SQL 用途では未指定＝従来どおりテキスト欄だけになる。 */
   footer?: React.ReactNode;
@@ -40,7 +45,7 @@ interface Props {
  * 名前・説明欄と同じく入力は即時に親 state へ反映し（ライブ）、確定はデッキ編集画面の保存で行う。
  * モーダルは項目を広く編集するための拡大入力面という位置づけ。文言は props で差し替え可能。
  */
-export function SqlInitModal({ visible, value, onChangeText, onClose, title, hint, placeholder, footer }: Props) {
+export function SqlInitModal({ visible, value, onChangeText, onClose, title, hint, placeholder, onTitleChange, titlePlaceholder, footer }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -107,12 +112,24 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
         <Pressable style={styles.closeArea} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.colors.surface, marginBottom: sheetLift, maxHeight: sheetMaxHeight }]}>
             <View style={styles.header}>
-              <Text
-                style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-              >
-                {title ?? t('deck.sqlInitLabel')}
-              </Text>
+              {onTitleChange ? (
+                <TextInput
+                  style={[styles.title, styles.titleInput, { color: theme.colors.text, fontSize: theme.fontSize.lg, borderColor: theme.colors.inputBorder }]}
+                  value={title ?? ''}
+                  onChangeText={onTitleChange}
+                  placeholder={titlePlaceholder}
+                  placeholderTextColor={theme.colors.textTertiary}
+                  returnKeyType="done"
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                />
+              ) : (
+                <Text
+                  style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {title ?? t('deck.sqlInitLabel')}
+                </Text>
+              )}
               <View style={styles.headerRight}>
                 {!!value.trim() && (
                   <Pressable onPress={handleCopy} hitSlop={8} style={styles.copyBtn}>
@@ -173,6 +190,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: { fontWeight: '700' },
+  // 名前編集時（044）：見出しの見た目を保ちつつ入力欄と分かる程度の枠だけ足す
+  titleInput: { flex: 1, borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 8 },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',

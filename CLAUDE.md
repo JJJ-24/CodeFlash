@@ -239,6 +239,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 #### ナビゲーション・状態管理
 
+- **RN `Modal` を2枚重ねるときは必ず入れ子にする（兄弟にしない・重要）**: モーダルの上にさらにモーダル（編集面・確認ダイアログ等）を出すときは、2枚目を**1枚目の `<Modal>` の children の中**に置く。兄弟に並べると **iOS は「すでに modal を提示している VC」からもう1枚を提示できず、2枚目の presentation が黙って失敗する**。症状は「2枚目が開かない」だけでなく、**提示状態が固着して1枚目を閉じた後も親画面がタップを一切受け付けなくなる**（ヘッダーのボタンなど一部だけ効くので原因を見誤りやすい）。044 の `DeckStagesModal` で実際に踏んだ。正しい形の実例は 043 の `HtmlImageLibrary`（`SqlInitModal` の `footer` として **Modal の中**に描画され、その中に `ConfirmDeleteModal`/`InfoModal` を持つ）。
 - **モーダルから戻った後のデータ更新**: モーダルを閉じた後に最新データが必要な画面では `useFocusEffect` で DB を再読み込みする（`deck/[id]/index.tsx`・`study/session.tsx` が実例）。
 - **フィルターキーの統一**: 全画面でフィルターキーは `'all' | 'learned' | 'review' | 'new'` に統一。`DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>` で型を派生させている（`store/settings.ts`）。
 - **初期フィルター「保持」の挙動**: 学習・統計タブはタブがアンマウントされないため React state が残る。カード一覧（stack screen）は `lastDeckDetailFilter`（AsyncStorage 永続化）で最後のフィルターを復元する。

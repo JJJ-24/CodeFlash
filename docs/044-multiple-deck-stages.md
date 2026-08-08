@@ -1,7 +1,7 @@
 # 044 デッキ土台の複数持ち（名前付き土台ライブラリ）
 
 **フェーズ:** 将来
-**ステータス:** **Phase 1（データ基盤）完了（2026-08-08）**。Phase 2 以降は未着手
+**ステータス:** **Phase 1（データ基盤）・Phase 2（デッキ編集 UI）完了（2026-08-08）**。Phase 3 以降は未着手
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・043（`decks` への JSON 列追加の前例）
 **被依存:** なし
@@ -192,13 +192,38 @@ iCloud 同期は **DB ファイル丸ごと**を LWW で往復させるため、
 > `htmlInit` を編集するため、これが無いと**再読み込みまでストアの `htmlStages` が古いまま**になる。
 > Phase 2 でこの画面が土台リストを直接編集するようになったら行ごと置き換えること。
 
-### Phase 2: デッキ編集の土台リスト UI
-- [ ] `components/deck/DeckStageList.tsx`（仮）：一覧＋追加/リネーム/削除。`HtmlImageLibrary` の作りを踏襲
-- [ ] 各土台の編集は既存 `SqlInitModal` を流用（`title` に土台名）
-- [ ] 先頭に「既定」バッジ、削除時の確認（先頭 / 2番目以降で文言を分ける）
-- [ ] `deck/new`・`deck/[id]/edit` の `H` キーと「HTML/CSS 共通土台」行をリストに接続
-- [ ] `isDirty` 判定に `htmlStages` を追加（破棄確認が効くこと）
-- [ ] 043 の画像ライブラリ（`footer`）と同居して崩れないこと
+### Phase 2: デッキ編集の土台リスト UI ＝**実装完了（2026-08-08）**
+- [x] **`components/deck/DeckStagesModal.tsx`** を新設：一覧シート（追加/削除）＋ 行タップで編集面が開く2段構成
+- [x] 各土台の編集は既存 `SqlInitModal` を流用。**`onTitleChange`/`titlePlaceholder` を追加してタイトルを入力欄にし、名前の編集は編集面で行う**
+  - **リストに名前入力を置かなかった理由**：リスト側にもキーボード追従（`SqlInitModal` が持っている持ち上げロジック）が必要になる。一覧は「見て・選んで・消す」だけに絞った
+- [x] 先頭に「既定」バッジ。削除確認は**先頭（かつ残りがある）だけ文言を分ける**（既定が次の土台にずれる旨）
+- [x] 一覧の各行に**最初の非空行を1行プレビュー**（開かずに見分けるため）。空の土台は「（空）」
+- [x] `deck/new`・`deck/[id]/edit` の `H` キーと「HTML/CSS 共通土台」行を接続（状態を `htmlInit: string` → `htmlStages: DeckStage[]` に置換）
+- [x] **中身が空の土台は保存しない**（名前だけ作って離脱した行が残らないように）＝`isDirty` も同じ基準で比較
+- [x] 行の要約表示を `土台 {{count}}件`（`deck.htmlStagesSet`）に。土台が無く画像だけあるときは従来の「設定済み」
+- [x] `updateStore` の `htmlInit` は `legacyHtmlInitMirror(stages)` にして DB 側と食い違わせない（Phase 1 の暫定処理は撤去）
+- [x] 043 の画像ライブラリは**編集面の `footer` のまま**（デッキ単位のデータなのでどの土台を編集していても同じものが出る＝土台を書きながら参照名が見える 043 の狙いを維持）
+- [x] i18n（`deck.stagesHint`/`stagesEmpty`/`stageDefaultName`/`stageDefaultBadge`/`stageEmptyBody`/`stageDelete*Confirm`/`htmlStagesSet`・ja/en）
+- [x] Esc は階層ディスマス（削除確認 → 編集面は自前の Esc → 一覧を閉じる）。親画面は `subModalOpen()` で従来どおり抑止
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
+
+> **Phase 3/4 が入るまでの制限**：土台を2つ以上作れるようになったが、コードブロック側はまだ
+> `deckHtmlInit`（＝先頭土台のミラー）を読んでいるため、**2つ目以降の土台はまだカードに効かない**。
+
+#### 踏んだ落とし穴：RN `Modal` を兄弟に並べると2枚目が開かない（再発防止）
+
+最初の実装は `DeckStagesModal` が「一覧の `<Modal>`」と「編集面の `<SqlInitModal>`」「削除確認の
+`<ConfirmDeleteModal>`」を**フラグメント直下の兄弟**として並べていた。結果、
+
+- 行をタップしても**編集面が開かない**（`setEditingId` は走っているのに何も出ない）
+- 🗑 を押しても**削除確認が開かない**
+- ✓ で一覧を閉じた後、**デッキ編集画面がタップを一切受け付けなくなる**（ヘッダーの ×/✓ だけ効く）
+
+原因は **iOS が「すでに modal を提示している VC」からもう1枚を提示できない**こと。RN の `Modal` は
+ルート VC から提示するため、兄弟に並べると2枚目の `presentViewController` が黙って失敗し、
+提示状態も固着する。**2枚目は1枚目の `<Modal>` の children の中に置く**のが正解で、そうすると
+一覧シートの VC から提示されて正しく重なる。043 の `HtmlImageLibrary`（`SqlInitModal` の
+`footer` ＝ Modal の中に描画され、さらにその中に確認モーダルを持つ）が最初から正しい形だった。
 
 ### Phase 3: ブロック側の選択 UI と土台解決
 - [ ] `CodeRunnerView` / `CodeBlockItem` の `htmlInits` 組み立てを `deckStageId` 解決に対応（上記ルール）

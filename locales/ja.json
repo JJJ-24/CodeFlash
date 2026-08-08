@@ -566,7 +566,7 @@
     "tsvExportLossMessage": "TSV には次の内容を保存できません。\n\n{{items}}\n\nすべて残すには「バックアップ」（JSON）をお使いください。",
     "tsvExportAnyway": "このままエクスポート",
     "tsvLossDeckSqlInit": "SQL共通初期化（デッキ設定）",
-    "tsvLossDeckHtmlInit": "HTML/CSS共通土台（デッキ設定）",
+    "tsvLossDeckHtmlStages": "HTML/CSS共通土台（デッキ設定）{{count}}件",
     "tsvLossBlockSqlInit": "ブロック固有の初期化SQL {{count}}件",
     "tsvLossBlockHtmlInit": "ブロック固有のHTML土台 {{count}}件",
     "tsvLossImages": "画像 {{count}}枚",

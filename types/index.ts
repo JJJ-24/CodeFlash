@@ -15,6 +15,10 @@ export interface CodeBlock {
   /** web 系ブロック（html / js・ts / css）固有の HTML/CSS 土台。デッキ共通の後・本文の前に積む（加算）。
    *  実行前から見える「出題の前提」で、本文＝実行して初めて出る「答え」と対になる */
   htmlInit?: string;
+  /** 044：このブロックが使うデッキ土台（`Deck.htmlStages` の `id`）。
+   *  **未指定＝先頭の土台**（＝044 以前のカードの挙動）。`noDeckHtmlInit` が true ならこの値は無視される。
+   *  解決できない id（土台が削除された）は「土台なし」に落とす＝先頭にフォールバックしない */
+  deckStageId?: string;
   /** web 系ブロック：このブロックではデッキ共通の HTML/CSS 土台を積まない（既定 false＝積む）。
    *  「このカードはコンソール出力だけ」のように土台が無関係なブロックで、無関係なプレビューを消すため。
    *  js/ts は土台が空になるとコンソール実行に戻る（＝実行前プレビューも出なくなる）。 */
@@ -46,6 +50,17 @@ export interface DeckImage {
   uri: string;
 }
 
+/** 044：デッキが持つ名前付きの HTML/CSS 土台。コードブロックは `CodeBlock.deckStageId` で1つを選ぶ。 */
+export interface DeckStage {
+  /** 参照キー。名前ではなく id で参照するのでリネームしても参照が壊れない */
+  id: string;
+  /** 表示名。**空文字を許容**し、そのときは UI が「土台N」（並び順ベース）で表示する
+   *  （旧 `htmlInit` から合成した土台は DB 層で名前を付けられないため空になる） */
+  name: string;
+  /** 土台の HTML/CSS */
+  html: string;
+}
+
 export interface Deck {
   id: string;
   name: string;
@@ -59,8 +74,12 @@ export interface Deck {
   colorHex: string | null;
   /** デッキ共通の SQL 初期化（SQL ブロック実行時に毎回最初に流すスキーマ＋初期データ）。未設定は null */
   sqlInit: string | null;
-  /** デッキ共通の HTML/CSS 土台（web 系ブロックのプレビュー土台）。未設定は null */
+  /** 【044 以降は互換用ミラー】デッキ共通の HTML/CSS 土台（先頭土台の写し）。
+   *  **読み取りには使わない**（`htmlStages` が正）。旧バージョンのアプリと旧エクスポートのために残している */
   htmlInit: string | null;
+  /** 044：名前付き HTML/CSS 土台の一覧。DB には JSON 文字列で保存し、読み取り時に配列へ正規化する。
+   *  旧 `htmlInit` しか無いデッキは `toDeck` が1件の土台に合成するので、**画面はこの配列だけを見ればよい**。未設定は [] */
+  htmlStages: DeckStage[];
   /** HTML 画像ライブラリ（043）。DB には JSON 文字列で保存し、読み取り時に配列へ正規化する。未登録は [] */
   htmlImages: DeckImage[];
   /** アーカイブ済み（学習サイクル・将来指標から除外）。配下カードも含めて除外される */

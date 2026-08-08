@@ -197,6 +197,16 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN htmlImages TEXT;`);
   }
 
+  // === 044: 名前付き HTML/CSS 土台（decks に htmlStages カラム）===
+  // デッキが複数の土台を持てるようにするための DeckStage[] の JSON 文字列。
+  // **正となる持ち方はこの列**で、040 の htmlInit は「先頭土台のミラー」として残す
+  // （旧バージョンのアプリは htmlInit しか読まないため。iCloud はDBファイルごと往復する）。
+  // 既存デッキは NULL のままで、読み取り時に htmlInit から1件の土台へ合成される（normalizeDeckStages）。
+  const deckColsHtmlStages = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!deckColsHtmlStages.some((c) => c.name === 'htmlStages')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN htmlStages TEXT;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

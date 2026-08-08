@@ -1,7 +1,7 @@
 # 044 デッキ土台の複数持ち（名前付き土台ライブラリ）
 
 **フェーズ:** 将来
-**ステータス:** 未着手（設計合意済み・2026-08-08）
+**ステータス:** **Phase 1（データ基盤）完了（2026-08-08）**。Phase 2 以降は未着手
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・043（`decks` への JSON 列追加の前例）
 **被依存:** なし
@@ -168,20 +168,29 @@ iCloud 同期は **DB ファイル丸ごと**を LWW で往復させるため、
 
 ## Todo
 
-### Phase 1: データ基盤
-- [ ] `types/index.ts`：`DeckStage` を追加、`Deck.htmlStages: DeckStage[]`、`CodeBlock.deckStageId?: string`
-- [ ] `lib/database/schema.ts`：`decks` に `htmlStages TEXT`（nullable・JSON文字列）を `PRAGMA table_info` 確認つき `ALTER TABLE` で追加（`htmlImages` と同型）
-- [ ] `lib/database/decks.ts`
-  - [ ] `parseDeckStages()` / `serializeDeckStages()`（043 の `parseDeckImages` と同型）
-  - [ ] **`toDeck` で正規化**（`htmlStages` 空 → `htmlInit` から1件合成）＝下流に旧列を見せない
-  - [ ] `createDeck`/`updateDeck` で `htmlStages` を通し、**`htmlInit` に先頭土台をミラー書き**
-  - [ ] `updateDeck` は **`data.htmlStages !== undefined` のときだけ**列を更新する（043 の `htmlImages` と同じ落とし穴＝渡さない呼び出しで無条件 `?? null` すると土台が黙って消える）
-- [ ] `lib/import.ts`：`decks` の明示列 INSERT に `htmlStages` を追加（**漏れるとエラーにならず黙って消える**）。旧データは `?? null` で吸収
-- [ ] `lib/export.ts`：`decks` は `SELECT *` なので自動。**確認だけする**
-- [ ] `lib/tsv.ts`：`inspectTsvExport` の `deckHtmlInit`（bool）を**土台の件数**に対応させる。TSV 往復対象外は据え置き（判断として記録）
-- [ ] iCloud 同期：`sync_state` トリガーは列を問わず捕捉するため**追加対応なし**（032/043 と同じ）＝確認のみ
-- [ ] `docs/db-migration-checklist.md` の②を一通り消化
-- [ ] `npx tsc --noEmit` / `npm run lint`
+### Phase 1: データ基盤 ＝**実装完了（2026-08-08）**
+- [x] `types/index.ts`：`DeckStage` を追加、`Deck.htmlStages: DeckStage[]`、`CodeBlock.deckStageId?: string`
+  - [x] `DeckStage.name` は**空文字を許容**する（旧 `htmlInit` から合成した土台は DB 層で名前を付けられないため）。空のときは UI が「土台N」で表示する
+- [x] `lib/database/schema.ts`：`decks` に `htmlStages TEXT`（nullable・JSON文字列）を `PRAGMA table_info` 確認つき `ALTER TABLE` で追加（`htmlImages` と同型）
+- [x] **`lib/deckStages.ts` を新設**（`parseDeckStages` / `serializeDeckStages` / `normalizeDeckStages` / `legacyHtmlInitMirror` / `LEGACY_STAGE_ID`）。Phase 3 の土台解決もここに置く
+  - [x] 旧 `htmlInit` から合成する土台の id は**定数 `LEGACY_STAGE_ID`**（読むたびに `generateId()` すると `deckStageId` の照合や React の key が揺れる）
+- [x] `lib/database/decks.ts`
+  - [x] **`toDeck` で正規化**（`htmlStages` 空 → `htmlInit` から1件合成）＝下流に旧列を見せない
+  - [x] `createDeck`/`updateDeck` で `htmlStages` を通し、**`htmlInit` に先頭土台をミラー書き**（`legacyHtmlInitMirror`）
+  - [x] `updateDeck` は **`data.htmlStages !== undefined` のときだけ**列を更新する（043 の `htmlImages` と同じ落とし穴＝渡さない呼び出しで無条件 `?? null` すると土台が黙って消える）
+  - [x] `createDeck` の戻り値も `normalizeDeckStages` を通す（読み直したときと同じ形にそろえる）
+- [x] `lib/import.ts`：`decks` の明示列 INSERT に `htmlStages` を追加（**漏れるとエラーにならず黙って消える**）。旧データは `?? null` で吸収
+- [x] `lib/export.ts`：`decks` は `SELECT *` なので自動＝**確認のみで変更なし**
+- [x] `lib/tsv.ts`：`TsvExportLoss.deckHtmlInit`（bool）→ **`deckHtmlStages`（件数）** に変更。`hasTsvExportLoss` と `app/settings/data.tsx` の文言組み立て、i18n（`tsvLossDeckHtmlStages` に `{{count}}` 追加・ja/en）も追従。TSV 往復対象外は据え置き（判断として記録）
+- [x] iCloud 同期：トリガーは `AFTER UPDATE ON decks`（列指定なし）＝**追加対応なし**（032/043 と同じ）＝確認のみ
+- [x] `docs/db-migration-checklist.md` の②を消化（旧エクスポートの読み込み確認だけ Phase 6 へ持ち越し）
+- [x] **Phase 1 は挙動不変**：土台を読むのは引き続き `deckHtmlInit`（＝ミラー）経路なので、画面の見た目・動作は変わらない
+- [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし（警告48件は変更前と同数）
+
+> **Phase 2 で消す暫定処理**：`app/deck/[id]/edit.tsx` の保存で、ストア更新に
+> `htmlStages: normalizeDeckStages(null, normalizedHtmlInit)` を足してある。この画面はまだ旧
+> `htmlInit` を編集するため、これが無いと**再読み込みまでストアの `htmlStages` が古いまま**になる。
+> Phase 2 でこの画面が土台リストを直接編集するようになったら行ごと置き換えること。
 
 ### Phase 2: デッキ編集の土台リスト UI
 - [ ] `components/deck/DeckStageList.tsx`（仮）：一覧＋追加/リネーム/削除。`HtmlImageLibrary` の作りを踏襲

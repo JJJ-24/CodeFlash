@@ -199,7 +199,8 @@ async function resolveOrCreateTag(
  */
 export type TsvExportLoss = {
   deckSqlInit: boolean;
-  deckHtmlInit: boolean;
+  /** 044: デッキが持つ HTML/CSS 土台の件数（旧 `deckHtmlInit` の bool から件数に変更） */
+  deckHtmlStages: number;
   blockSqlInit: number;
   blockHtmlInit: number;
   images: number;
@@ -222,7 +223,8 @@ export async function inspectTsvExport(db: SQLiteDatabase, deck: Deck): Promise<
   }
   return {
     deckSqlInit: !!deck.sqlInit?.trim(),
-    deckHtmlInit: !!deck.htmlInit?.trim(),
+    // 044: htmlStages は toDeck で正規化済み（旧 htmlInit のデッキも1件として数えられる）
+    deckHtmlStages: deck.htmlStages.filter((s) => s.html.trim() !== '').length,
     blockSqlInit,
     blockHtmlInit,
     images,
@@ -230,7 +232,7 @@ export async function inspectTsvExport(db: SQLiteDatabase, deck: Deck): Promise<
 }
 
 export function hasTsvExportLoss(loss: TsvExportLoss): boolean {
-  return loss.deckSqlInit || loss.deckHtmlInit || loss.blockSqlInit > 0 || loss.blockHtmlInit > 0 || loss.images > 0;
+  return loss.deckSqlInit || loss.deckHtmlStages > 0 || loss.blockSqlInit > 0 || loss.blockHtmlInit > 0 || loss.images > 0;
 }
 
 export async function exportDeckToTsv(db: SQLiteDatabase, deckId: string, deckName: string): Promise<void> {

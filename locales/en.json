@@ -566,7 +566,7 @@
     "tsvExportLossMessage": "TSV cannot store the following:\n\n{{items}}\n\nUse Backup (JSON) to keep everything.",
     "tsvExportAnyway": "Export anyway",
     "tsvLossDeckSqlInit": "SQL setup (deck setting)",
-    "tsvLossDeckHtmlInit": "HTML/CSS base (deck setting)",
+    "tsvLossDeckHtmlStages": "HTML/CSS base, deck setting ({{count}})",
     "tsvLossBlockSqlInit": "Block-specific SQL setup ({{count}})",
     "tsvLossBlockHtmlInit": "Block-specific HTML base ({{count}})",
     "tsvLossImages": "Images ({{count}})",

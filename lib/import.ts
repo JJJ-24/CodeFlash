@@ -56,7 +56,7 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
 
     await bulkInsert(
       db,
-      'INSERT OR REPLACE INTO decks (id,name,description,language,cardCount,sortOrder,iconName,colorHex,sqlInit,htmlInit,htmlImages,archived,createdAt,updatedAt) VALUES',
+      'INSERT OR REPLACE INTO decks (id,name,description,language,cardCount,sortOrder,iconName,colorHex,sqlInit,htmlInit,htmlImages,htmlStages,archived,createdAt,updatedAt) VALUES',
       data.decks.map((d) => [
         d.id as string,
         d.name as string,
@@ -70,6 +70,9 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
         (d.htmlInit as string | null) ?? null,
         // 043: エクスポートは decks を SELECT * で出すため JSON 文字列のまま往復する
         (d.htmlImages as string | null) ?? null,
+        // 044: 同上（土台の JSON）。044 以前のエクスポートには無いので null に吸収され、
+        // 読み取り時に htmlInit から1件の土台へ合成される
+        (d.htmlStages as string | null) ?? null,
         d.archived ? 1 : 0,
         d.createdAt as string,
         d.updatedAt as string,

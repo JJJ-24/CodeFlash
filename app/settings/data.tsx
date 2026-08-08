@@ -188,7 +188,7 @@ export default function DataSettingsScreen() {
   function tsvLossMessage(loss: TsvExportLoss): string {
     const items: string[] = [];
     if (loss.deckSqlInit) items.push(t('dataManagement.tsvLossDeckSqlInit'));
-    if (loss.deckHtmlInit) items.push(t('dataManagement.tsvLossDeckHtmlInit'));
+    if (loss.deckHtmlStages > 0) items.push(t('dataManagement.tsvLossDeckHtmlStages', { count: loss.deckHtmlStages }));
     if (loss.blockSqlInit > 0) items.push(t('dataManagement.tsvLossBlockSqlInit', { count: loss.blockSqlInit }));
     if (loss.blockHtmlInit > 0) items.push(t('dataManagement.tsvLossBlockHtmlInit', { count: loss.blockHtmlInit }));
     if (loss.images > 0) items.push(t('dataManagement.tsvLossImages', { count: loss.images }));

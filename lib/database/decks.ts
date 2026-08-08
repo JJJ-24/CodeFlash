@@ -1,14 +1,26 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { legacyHtmlInitMirror, normalizeDeckStages, serializeDeckStages } from '@/lib/deckStages';
 import { deleteImagesInBlocks, parseDeckImages, serializeDeckImages } from '@/lib/image';
 import type { Deck } from '@/types';
 import { generateId } from './utils';
 
-// SQLite は archived を 0/1 の数値で、htmlImages を JSON 文字列で返すため型を分けて正規化する
-type RawDeck = Omit<Deck, 'archived' | 'htmlImages'> & { archived: number; htmlImages: string | null };
+// SQLite は archived を 0/1 の数値で、htmlImages / htmlStages を JSON 文字列で返すため型を分けて正規化する
+type RawDeck = Omit<Deck, 'archived' | 'htmlImages' | 'htmlStages'> & {
+  archived: number;
+  htmlImages: string | null;
+  htmlStages: string | null;
+};
 
+/** DB 行を `Deck` に正規化する。**044 の旧データ吸収（htmlInit → htmlStages）はここに閉じる**ので、
+ *  画面・コンポーネントは `htmlStages` だけを見ればよい（旧列フォールバックを各所に散らさない）。 */
 function toDeck(raw: RawDeck): Deck {
-  return { ...raw, archived: !!raw.archived, htmlImages: parseDeckImages(raw.htmlImages) };
+  return {
+    ...raw,
+    archived: !!raw.archived,
+    htmlImages: parseDeckImages(raw.htmlImages),
+    htmlStages: normalizeDeckStages(raw.htmlStages, raw.htmlInit),
+  };
 }
 
 export async function getAllDecks(db: SQLiteDatabase): Promise<Deck[]> {
@@ -49,7 +61,7 @@ export async function setDecksArchived(db: SQLiteDatabase, ids: string[], archiv
 export async function createDeck(
   db: SQLiteDatabase,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages' | 'htmlStages'>>
 ): Promise<Deck> {
   const now = new Date().toISOString();
   const id = generateId();
@@ -58,11 +70,14 @@ export async function createDeck(
   const iconName = data.iconName ?? null;
   const colorHex = data.colorHex ?? null;
   const sqlInit = data.sqlInit ?? null;
-  const htmlInit = data.htmlInit ?? null;
   const htmlImages = data.htmlImages ?? [];
+  // 044: htmlStages を渡されたらそれが正で、htmlInit は先頭土台のミラーになる。
+  // 渡されないとき（044 以前の呼び出し）は従来どおり htmlInit をそのまま書く。
+  const htmlStages = data.htmlStages;
+  const htmlInit = htmlStages !== undefined ? legacyHtmlInitMirror(htmlStages) : (data.htmlInit ?? null);
   await db.runAsync(
-    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, htmlInit, htmlImages, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, htmlInit, serializeDeckImages(htmlImages), now, now]
+    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, htmlInit, htmlImages, htmlStages, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, htmlInit, serializeDeckImages(htmlImages), serializeDeckStages(htmlStages), now, now]
   );
   return {
     id,
@@ -75,6 +90,8 @@ export async function createDeck(
     sqlInit,
     htmlInit,
     htmlImages,
+    // 読み直したときと同じ形にそろえる（htmlStages 未指定でも htmlInit から合成される）
+    htmlStages: normalizeDeckStages(serializeDeckStages(htmlStages), htmlInit),
     archived: false,
     name: data.name,
     description: data.description,
@@ -86,19 +103,24 @@ export async function updateDeck(
   db: SQLiteDatabase,
   id: string,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages' | 'htmlStages'>>
 ): Promise<void> {
   const now = new Date().toISOString();
-  // htmlImages は「渡されたときだけ」更新する（他の任意項目と扱いが違う点に注意）。
-  // 画像ライブラリはフォームの入力欄と1対1ではないため、渡さない呼び出し（他画面からの
-  // デッキ更新）で無条件に上書きすると、登録済みライブラリが黙って消える。
+  // htmlImages / htmlStages は「渡されたときだけ」更新する（他の任意項目と扱いが違う点に注意）。
+  // どちらもフォームの入力欄と1対1ではないため、渡さない呼び出し（他画面からの
+  // デッキ更新）で無条件に上書きすると、登録済みライブラリ／土台が黙って消える。
   const updatesImages = data.htmlImages !== undefined;
+  const updatesStages = data.htmlStages !== undefined;
+  // 044: 土台を更新するときは htmlInit を先頭土台のミラーで上書きする（旧バージョン互換）。
+  // 更新しないときは従来どおり渡された htmlInit をそのまま書く。
+  const htmlInit = updatesStages ? legacyHtmlInitMirror(data.htmlStages) : (data.htmlInit ?? null);
   await db.runAsync(
-    `UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, htmlInit = ?${updatesImages ? ', htmlImages = ?' : ''}, updatedAt = ? WHERE id = ?`,
+    `UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, htmlInit = ?${updatesImages ? ', htmlImages = ?' : ''}${updatesStages ? ', htmlStages = ?' : ''}, updatedAt = ? WHERE id = ?`,
     [
       data.name, data.description, data.language,
-      data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, data.htmlInit ?? null,
+      data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, htmlInit,
       ...(updatesImages ? [serializeDeckImages(data.htmlImages)] : []),
+      ...(updatesStages ? [serializeDeckStages(data.htmlStages)] : []),
       now, id,
     ]
   );

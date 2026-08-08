@@ -27,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
+import { normalizeDeckStages } from '@/lib/deckStages';
 import type { DeckIconName } from '@/lib/deckIcons';
 import type { DeckImage } from '@/types';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
@@ -161,7 +162,11 @@ export default function EditDeckScreen() {
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
-      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, htmlImages, archived });
+      // 044 Phase 1: この画面はまだ旧 htmlInit を編集するため、ストアの htmlStages も
+      // toDeck と同じ規則で作り直す（そうしないと再読み込みまで古い土台が残る）。
+      // htmlStages 列は書いていない＝この画面で編集したデッキの土台は常に1件なので合成でよい。
+      // Phase 2 でこの画面が土台リストを直接編集するようになったら、この行ごと置き換える。
+      updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex, sqlInit: normalizedSqlInit, htmlInit: normalizedHtmlInit, htmlStages: normalizeDeckStages(null, normalizedHtmlInit), htmlImages, archived });
       router.back();
     } finally {
       setSaving(false);

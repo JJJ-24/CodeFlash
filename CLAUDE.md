@@ -15,9 +15,12 @@ npm run web
 
 # リント（コードチェック）
 npm run lint
+
+# DB ロジックの検証ハーネス（044 のデッキ土台まわり）
+npm run verify:db
 ```
 
-テストフレームワークはまだ設定されていません。
+**テストフレームワークは未導入**。代わりに `scripts/db-harness.ts` が「Node 上でアプリの DB 層をそのまま実行する」土台を提供する：`node:sqlite`（同期）を **expo-sqlite 互換の非同期 API** でくるみ、`Module._resolveFilename` を差し替えて expo/RN モジュールをスタブし `@/` を解決する。これで `migrateDbIfNeeded`・`lib/database/*`・`lib/export.ts`・`lib/import.ts`・`lib/tsv.ts` を**本物のまま**呼べるので、カラム追加マイグレーション・旧DBの正規化・旧エクスポートの読み込み・エクスポート/インポート往復（`docs/db-migration-checklist.md` の確認項目）を実機なしで検証できる。実例は `scripts/verify-044-deck-stages.ts`（044 の Phase 6・42 アサーション）。**新しい検証を書くときの注意**：①アプリのモジュールは `import` ではなく **`require()`** で読む（`import` は先頭へ巻き上げられ、スタブを入れる前に expo モジュールが解決されて落ちる）②旧スキーマの再現には `makeDb().raw`（生の同期 DB）で `ALTER TABLE ... DROP COLUMN` を使う。RN コンポーネントは描画できないので UI は対象外。
 
 ## アーキテクチャ
 

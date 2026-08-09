@@ -1,7 +1,8 @@
 # 044 デッキ土台の複数持ち（名前付き土台ライブラリ）
 
 **フェーズ:** 将来
-**ステータス:** **Phase 1〜5 完了（2026-08-08）**＝機能として通しで動く。残りは Phase 6（検証）・Phase 7（SQL 追随）
+**ステータス:** **Phase 1〜5 完了（2026-08-08）＋ Phase 6 の机上検証まで完了（2026-08-09）**＝機能として通しで動く。
+残りは Phase 6 の**実機目視**（2項目）・Phase 7（SQL 追随）
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・043（`decks` への JSON 列追加の前例）
 **被依存:** なし
@@ -264,13 +265,49 @@ iCloud 同期は **DB ファイル丸ごと**を LWW で往復させるため、
 - [x] `ShortcutsModal` は `descKey` 参照のみ＝文字列差し替えで自動追従（構造変更なし）
 - [x] `npx tsc --noEmit` / `npm run lint` ともにエラーなし
 
-### Phase 6: 検証
-- [ ] **旧DBで起動**して既存デッキの土台が「土台1」として見えること（`toDeck` 正規化）
-- [ ] JSON エクスポート → `replace` インポートで `htmlStages` と `deckStageId` が復元されること
-- [ ] **旧バージョンのエクスポートファイル**を新バージョンで読めること
-- [ ] 非 Pro：土台が積まれないこと（`isPro` ゲートが新経路でも効く）
-- [ ] 土台を削除 → 参照カードが土台なしに落ちること
-- [ ] 実行前プレビュー・ソースタブ・⛶ 全画面・`img://`（043）が選択した土台で動くこと
+### Phase 6: 検証 ＝**机上検証は完了（2026-08-09）／実機の目視確認だけ残**
+
+データ層・分岐ロジックは **`node:sqlite` 上で実コードを直接呼ぶハーネス**（`npm run verify:db`）で
+確認した（42 アサーション全通過）。RN コンポーネントは node で描画できないため、UI の見え方だけ実機に残る。
+
+- [x] **旧DBで起動**して既存デッキの土台が「土台1」として見えること（`toDeck` 正規化）
+  - 実 `migrateDbIfNeeded` を通し、`ALTER TABLE decks DROP COLUMN htmlStages` で 044 以前の DB に
+    戻してから再マイグレーション → `getAllDecks` が `[{id: LEGACY_STAGE_ID, name: '', html: 旧htmlInit}]`
+    を返すこと、再読込で id が揺れないこと、土台なしデッキが `[]` になることを確認
+  - `parseDeckStages` が壊れた JSON／形の違う要素を空・除外に倒すことも確認（デッキ読込を殺さない）
+- [x] JSON エクスポート → `replace` インポートで `htmlStages` と `deckStageId` が復元されること
+  - 実 `exportDatabase`／`importDatabase`（FileSystem だけスタブ）で往復。`merge` も同じく復元
+  - エクスポート JSON の `decks[].htmlStages` と `card_contents` 内の `"deckStageId"` を実物で確認
+- [x] **旧バージョンのエクスポートファイル**を新バージョンで読めること
+  - 出力 JSON から `htmlStages`/`htmlImages`/`grade_logs` を削って読み込み → `htmlInit` から
+    土台1件に合成されること、その土台が未指定ブロックに積まれることを確認
+- [x] 非 Pro：土台が積まれないこと（`isPro` ゲートが新経路でも効く）
+  - コード確認：`CodeRunnerView` / `CodeBlockItem` の**両方**で `deckStage = isPro ? resolve… : ''`。
+    下流（`previewSource`・`stages`・`canExpand`・`run()` の `hasStage`）は全部 `htmlInits` 派生なので
+    044 で新しい抜け道は増えていない。`canStaticPreview`・`canExpand`・選択 UI にも `isPro` が別途ある
+- [x] 土台を削除 → 参照カードが土台なしに落ちること
+  - `updateDeck` で土台を消して再読込 → `resolveDeckStageHtml` が `''`（**先頭にフォールバックしない**）。
+    未指定ブロックは残った先頭を使う／先頭を消すと既定が次にずれる、も確認
+- [x] 保存経路の互換（`htmlInit` ミラー）
+  - `createDeck`/`updateDeck` が先頭土台を `htmlInit` にミラー書きし、先頭が変われば追従すること
+  - **`htmlStages` を渡さない更新で土台が消えない**こと（他画面からのデッキ更新）
+  - **旧バージョンの `UPDATE`（`htmlStages` を知らない）の後も列が残る**こと＝新バージョンで復帰する
+- [x] iCloud 同期：土台だけの変更で `sync_state.localVersion` が進むこと（列指定なしトリガー）
+- [x] TSV：`inspectTsvExport` の `deckHtmlStages` が件数（旧 `htmlInit` デッキも1件）・土台なしは警告なし
+- [x] i18n：044 で追加/変更したキーが ja/en 両方に存在すること
+- [ ] **実機の目視確認（残）**：実行前プレビュー・ソースタブ・⛶ 全画面・`img://`（043）が
+      **選択した土台**で描画されること。※合成 HTML は `htmlInits` から作られ 043 の解決は最終 HTML に
+      1回かかる構造なので、**044 が変えたのは `htmlInits[0]` に入る文字列だけ**＝経路自体は 040/041/043 のまま
+- [ ] **実機の目視確認（残）**：土台1つ＝従来のトグル／2つ以上＝チップ選択の切り替わり、「既定」バッジ、
+      削除確認の文言分け（先頭 vs それ以外）
+
+> **検証ハーネスについて**：本リポジトリにはテストフレームワークが無いため、`node:sqlite` を
+> expo-sqlite 互換の薄いシムでくるみ、`Module._resolveFilename` を差し替えて expo/RN モジュールを
+> スタブする方式で実施した（`sucrase-node` で TS を直接実行）。**リポジトリに残してある**：
+> 土台部分が `scripts/db-harness.ts`、044 のテストが `scripts/verify-044-deck-stages.ts`（`npm run verify:db`）。
+> 同じ土台は `docs/db-migration-checklist.md` の確認（列追加・旧エクスポート読み込み・往復）に流用できる。
+> ⚠️ ハーネス側でアプリのモジュールを読むときは **`import` ではなく `require()`**（`import` は巻き上げられ、
+> スタブを入れる前に expo モジュールが解決されて落ちる）。
 
 ### Phase 7: SQL 初期化への追随（HTML 完成後）
 - [ ] `decks.sqlStages` を同じ形で追加、`CodeBlock.deckSqlStageId`

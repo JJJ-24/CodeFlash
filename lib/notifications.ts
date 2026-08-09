@@ -25,13 +25,34 @@ export function setStudyTimerUiVisible(v: boolean) {
   studyTimerUiVisible = v;
 }
 
+/** 046: 未達成リマインダーの identifier 接頭辞。当日分だけを狙ってキャンセルするため
+ *  `goal-{scheduleId}-{YYYY-MM-DD}` の形にする。 */
+const GOAL_REMINDER_PREFIX = 'goal-';
+
+// 046: 学習セッションを操作中か（学習画面がフォーカス中かつ完了画面でない）。
+// 未達成リマインダーのフォアグラウンド表示判定に使う：**学習している最中に
+// 「目標が残っています」と出すのは明確に誤り**なので、そのときだけ抑制する。
+// タイマー用の studyTimerUiVisible とは今のところ同じ値だが、意味が違うので別に持つ
+// （片方の条件を変えたときにもう片方が巻き添えにならないようにする）。session.tsx が更新する。
+let studySessionActive = false;
+export function setStudySessionActive(v: boolean) {
+  studySessionActive = v;
+}
+
 // フォアグラウンド受信時の表示制御（039）。ハンドラ未登録時の既定はフォアグラウンド非表示なので、
 // 休憩終了通知（タイマーUIが見えていないときのみ）だけ表示を許可し、デイリーリマインダー等の
 // 他の通知は従来どおり false を返して非表示を維持する。
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
+    const id = notification.request.identifier;
+    // 046: 未達成リマインダーは**学習セッション中以外なら表示する**。
+    // 通知は発火した時点でその日ぶんを消費し再送されないため、非表示にすると
+    // 「たまたまアプリを開いていた日はリマインダーが黙って消える」＝機能の目的
+    // （うっかり途切れるのを防ぐ）と噛み合わない。デイリーリマインダー（無条件・毎日来る）と
+    // 挙動が違うのは意図的で、こちらは**その日限りの条件つき**だから。
     const show =
-      notification.request.identifier === BREAK_END_IDENTIFIER && !studyTimerUiVisible;
+      (id === BREAK_END_IDENTIFIER && !studyTimerUiVisible) ||
+      (id.startsWith(GOAL_REMINDER_PREFIX) && !studySessionActive);
     return {
       shouldShowBanner: show,
       shouldShowList: show,
@@ -63,10 +84,6 @@ export async function requestPermission(): Promise<boolean> {
   const { status } = await Notifications.requestPermissionsAsync();
   return status === 'granted';
 }
-
-/** 046: 未達成リマインダーの identifier 接頭辞。当日分だけを狙ってキャンセルするため
- *  `goal-{scheduleId}-{YYYY-MM-DD}` の形にする。 */
-const GOAL_REMINDER_PREFIX = 'goal-';
 
 /** 046: 未達成リマインダーの通知文。**枚数は入れない**（予約時点の値しか焼き込めず、
  *  発火時にはズレているため）。 */

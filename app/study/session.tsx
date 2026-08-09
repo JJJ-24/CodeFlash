@@ -56,7 +56,7 @@ import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import { getReviewByCardId, getTodayReviewedCount } from "@/lib/database/reviews";
 import { shouldFireStudyGoal } from "@/lib/studyGoal";
 import { addTagToCard, createTag, getAllTags, getTagsByCardId, removeTagFromCard } from "@/lib/database/tags";
-import { cancelTodayGoalReminders, scheduleFromDb, setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
+import { cancelTodayGoalReminders, scheduleFromDb, setStudySessionActive, setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
 import type { Block, Tag } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
@@ -393,7 +393,10 @@ export default function StudySessionScreen() {
   const timerUiVisible = isScreenFocused && !completed;
   useEffect(() => {
     setStudyTimerUiVisible(timerUiVisible);
-    return () => setStudyTimerUiVisible(false);
+    // 046: 未達成リマインダーは学習中だけ抑制する（学習している最中に「目標が残っています」と
+    // 出すのは誤りのため）。完了画面・他画面ではバナーを出す。
+    setStudySessionActive(timerUiVisible);
+    return () => { setStudyTimerUiVisible(false); setStudySessionActive(false); };
   }, [timerUiVisible]);
 
   // 学習タイマー（036）: isPro && studyTimerEnabled ならセッション開始と同時に自動スタート。

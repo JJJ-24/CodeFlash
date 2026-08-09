@@ -28,6 +28,7 @@ import { resolveTagColor } from '@/lib/tagColors';
 import {
   getDueCountPerDeck,
   getDueCountPerTag,
+  getTodayReviewedCount,
   getTodayReviewedCountPerDeck,
   getTodayReviewedCountPerTag,
   getTotalCardCountPerTag,
@@ -82,7 +83,9 @@ export default function StudyScreen() {
   const iconGlyphSize = Math.round(18 * theme.fontScale);
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
-  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder, studyHideEmpty: hideEmpty, setStudyHideEmpty } = useSettingsStore();
+  const { initialFilterPreference, shuffleEnabled, setShuffleEnabled, keyboardShortcutsEnabled, deckSortOrder, tagSortOrder, studyHideEmpty: hideEmpty, setStudyHideEmpty, studyGoalEnabled, studyGoalCount } = useSettingsStore();
+  // 046: 今日学習した実カード枚数（目標の進捗表示に使う）
+  const [todayReviewedTotal, setTodayReviewedTotal] = useState(0);
 
   const [infoModal, setInfoModal] = useState<{ title?: string; message: React.ReactNode } | null>(null);
   // 閉じる（null）瞬間にフェード中の中身が空にならないよう、直前の内容を保持する。
@@ -175,6 +178,7 @@ export default function StudyScreen() {
       loadedDecks, deckCounts, loadedTags, tagCounts,
       todayDeck, todayTag,
       createdDeck, createdTag, totalTag,
+      todayTotal,
     ] = await Promise.all([
       getAllDecks(db),
       getDueCountPerDeck(db),
@@ -185,6 +189,9 @@ export default function StudyScreen() {
       getUnlearnedCountPerDeck(db),
       getUnlearnedCountPerTag(db),
       getTotalCardCountPerTag(db),
+      // 046: 今日の目標の進捗。デッキ/タグ別の集計とは別に全体の枚数が要る
+      // （同じカードを何度評価しても1枚＝達成アラート・リマインダーと同じ数え方）。
+      getTodayReviewedCount(db),
     ]);
     setDecks(loadedDecks);
     setDueCounts(deckCounts);
@@ -195,6 +202,7 @@ export default function StudyScreen() {
     setTodayCreatedPerDeck(createdDeck);
     setTodayCreatedPerTag(createdTag);
     setTotalPerTag(totalTag);
+    setTodayReviewedTotal(todayTotal);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db]);
 
@@ -436,6 +444,10 @@ export default function StudyScreen() {
           押せる要素のない場所からのドラッグでスクロールが始まらない不具合があるため、
           固定部（ここ）とリスト内フッターに分けて配置する（統計参照）。 */}
       <Pressable style={styles.filterSection} onPress={clearFocus}>
+        {/* フィルターブロックと目標の進捗は「画面上部の今日のサマリー」という1つのまとまり。
+            親の gap: 24 はこのグループとリスト見出しの間だけに効かせる（負のマージンで
+            親の gap と喧嘩させない）。 */}
+        <View style={styles.summaryGroup}>
         <View style={styles.summaryRow}>
           {filterBlocks.map((block) => {
             const selected = activeFilter === block.key;
@@ -454,6 +466,55 @@ export default function StudyScreen() {
               </Pressable>
             );
           })}
+        </View>
+        {/* 046: 今日の目標の進捗。**目標 OFF なら行ごと出さない**ので、設定していない人の
+            レイアウトは 046 以前とまったく同じ。フィルターブロックの「下」に置くのは、
+            上に置くとアプリを開いた瞬間に目標が主役になり、目標を使わない人にとっての
+            主役（デッキごとの枚数）を押し下げてしまうため。
+            バーを添えるのは、学習前に見る情報としては正確な数より「あと少し／まだまだ」の
+            把握が先に来るから（数字を読まずに残量が分かる）。 */}
+        {studyGoalEnabled && (() => {
+          const done = Math.min(todayReviewedTotal, studyGoalCount);
+          const achieved = todayReviewedTotal >= studyGoalCount;
+          const ratio = studyGoalCount > 0 ? done / studyGoalCount : 0;
+          const barColor = achieved ? FILTER_COLORS.learned : theme.colors.primary;
+          return (
+            <View style={styles.goalBlock}>
+              <View style={styles.goalRow}>
+                <Ionicons
+                  name={achieved ? 'flag' : 'flag-outline'}
+                  size={theme.fontSize.md}
+                  color={achieved ? FILTER_COLORS.learned : theme.colors.textSecondary}
+                />
+                <Text
+                  style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {t('study.goalRowTitle')}
+                </Text>
+                <Text
+                  style={{ color: theme.colors.text, fontSize: theme.fontSize.sm }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {todayReviewedTotal} / {studyGoalCount}
+                </Text>
+                <View style={{ flex: 1 }} />
+                <Text
+                  style={{ color: achieved ? FILTER_COLORS.learned : theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {achieved
+                    ? t('study.goalRowDone')
+                    : t('study.goalRowRemaining', { count: studyGoalCount - todayReviewedTotal })}
+                </Text>
+              </View>
+              <View style={[styles.goalBarTrack, { backgroundColor: theme.colors.progressBg }]}>
+                <View style={[styles.goalBarFill, { width: `${Math.round(ratio * 100)}%`, backgroundColor: barColor }]} />
+              </View>
+            </View>
+          );
+        })()}
         </View>
         <View style={styles.listTitleRow}>
           <View style={styles.listTitleBlock}>
@@ -694,6 +755,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   filterSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 24 },
+  summaryGroup: { gap: 12 },
   summaryRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },
   summaryCard: {
     flex: 1,
@@ -708,6 +770,12 @@ const styles = StyleSheet.create({
   summaryLabel: { marginTop: 2, textAlign: 'center', fontWeight: '600' },
   sectionTitle: { fontWeight: '700' },
   listTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  // 046: 今日の目標の進捗（フィルターブロックとリスト見出しの間）。
+  // filterSection の gap: 24 に対して、この2つは1つのまとまりなので内側は詰める。
+  goalBlock: { gap: 6 },
+  goalRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  goalBarTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  goalBarFill: { height: '100%', borderRadius: 3 },
   listTitleBlock: { flex: 1, gap: 2 },
   shuffleBtn: {
     borderRadius: 6,

@@ -550,6 +550,8 @@
     "maxSchedules": "スケジュールは最大 5 件まで追加できます",
     "label": "ラベル（任意）",
     "labelPlaceholder": "例：朝の通学",
+    "inactiveMaster": "通知がオフのため、下のスケジュールは動作しません",
+    "inactivePermission": "端末の設定で通知が許可されていないため、下のスケジュールは動作しません。タップして設定を開く",
     "onlyIfGoalUnmet": "目標が未達成のときだけ通知",
     "goalBadge": "未達成通知",
     "goalBadgeNoGoal": "未達成通知（目標オフ）",

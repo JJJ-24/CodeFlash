@@ -550,6 +550,8 @@
     "maxSchedules": "You can add up to 5 schedules",
     "label": "Label (optional)",
     "labelPlaceholder": "e.g. Morning commute",
+    "inactiveMaster": "Reminders are off, so the schedules below will not fire.",
+    "inactivePermission": "Notifications are not allowed in your device settings, so the schedules below will not fire. Tap to open Settings.",
     "onlyIfGoalUnmet": "Only when the goal is unmet",
     "goalBadge": "If unmet",
     "goalBadgeNoGoal": "If unmet (no goal)",

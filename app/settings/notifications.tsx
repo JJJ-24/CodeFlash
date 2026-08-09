@@ -5,7 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
+  Linking, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
@@ -23,7 +23,7 @@ import {
   toggleScheduleEnabled, updateSchedule,
 } from '@/lib/database/notifications';
 import {
-  cancelAllScheduledNotifications, requestPermission, scheduleFromDb,
+  cancelAllScheduledNotifications, isPermissionGranted, requestPermission, scheduleFromDb,
 } from '@/lib/notifications';
 import { useTheme, MAX_FONT_MULTIPLIER, themedFrameBorder } from '@/lib/theme';
 import { useKeyCommands } from '@/lib/useKeyCommands';
@@ -253,6 +253,10 @@ export default function NotificationSettingsScreen() {
   const [editLabel, setEditLabel] = useState('');
   // 046: このスケジュールを「目標が未達成のときだけ」鳴らすか
   const [editOnlyIfGoalUnmet, setEditOnlyIfGoalUnmet] = useState(false);
+  // OS の通知許可。null = 未確認（確認できるまで注意行を出さない）。
+  // アプリ内でオンにした後に OS 設定側で取り消されると、notificationEnabled は true のまま
+  // 一切鳴らなくなる＝アプリからは分からない沈黙になるので、画面を開くたびに確認する。
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
   // 権限拒否情報（OK のみ）表示中は Return=OK で閉じる。スケジュール編集モーダルは入力欄が消費、
   // 削除確認は確定操作のため Return 非割当。Esc/B は SettingsDetail の onBack が閉じる。
@@ -278,12 +282,15 @@ export default function NotificationSettingsScreen() {
 
   useFocusEffect(useCallback(() => {
     loadSchedules();
+    // OS 設定アプリで許可を変えて戻ってきた場合も拾えるよう、フォーカスのたびに確認する
+    isPermissionGranted().then(setPermissionGranted).catch(() => setPermissionGranted(null));
   }, [loadSchedules]));
 
   // グローバルトグル
   async function handleGlobalToggle(value: boolean) {
     if (value) {
       const granted = await requestPermission();
+      setPermissionGranted(granted);   // 注意行の出し分けに反映する
       if (!granted) { setPermissionDenied(true); return; }
       setNotificationEnabled(true);
       scheduleFromDb(db).catch(() => {});
@@ -292,6 +299,13 @@ export default function NotificationSettingsScreen() {
       cancelAllScheduledNotifications().catch(() => {});
     }
   }
+
+  // スケジュールが実際には鳴らない理由（null = 正常に動作する）。
+  // 'master'     … アプリ内の大元トグルが OFF
+  // 'permission' … OS 側で通知が許可されていない（アプリ内は ON のまま＝より気づきにくい）
+  // 大元 OFF を優先する（OS 許可も無い場合、まず直すべきはアプリ内のトグルのため）。
+  const inactiveReason: 'master' | 'permission' | null =
+    !notificationEnabled ? 'master' : permissionGranted === false ? 'permission' : null;
 
   // スケジュール行の enabled トグル
   async function handleToggleEnabled(id: string, enabled: boolean) {
@@ -442,6 +456,28 @@ export default function NotificationSettingsScreen() {
             trackColor={{ true: theme.colors.primary }}
           />
         </View>
+        {/* 「スケジュールのトグルは ON なのに鳴らない」を防ぐ注意行。
+            **状態ではなく結果を書く**（「オフです」ではなく「下のスケジュールは動作しません」）＝
+            ユーザーが知りたいのは「なぜ来ないか」だから。
+            大元 OFF と OS 未許可は原因が違う（後者はアプリ外なので設定アプリへ誘導する）。 */}
+        {inactiveReason && (
+          <Pressable
+            style={[localStyles.inactiveNotice, { backgroundColor: theme.colors.background }]}
+            onPress={inactiveReason === 'permission' ? () => Linking.openSettings().catch(() => {}) : undefined}
+            disabled={inactiveReason !== 'permission'}
+          >
+            <Ionicons name="alert-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.danger} />
+            <Text
+              style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flex: 1, lineHeight: 18 }}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            >
+              {t(inactiveReason === 'permission' ? 'notification.inactivePermission' : 'notification.inactiveMaster')}
+            </Text>
+            {inactiveReason === 'permission' && (
+              <Ionicons name="chevron-forward" size={theme.fontSize.md} color={theme.colors.textTertiary} />
+            )}
+          </Pressable>
+        )}
       </View>
 
       {/* スケジュール一覧 */}
@@ -449,6 +485,10 @@ export default function NotificationSettingsScreen() {
         {t('notification.schedules')}
       </Text>
 
+      {/* 鳴らない状態のときは一覧を淡くする。**操作は妨げない**（通知をオンにする前に
+          スケジュールを準備できるようにするため）。opacity 0.55 はアーカイブ済みの
+          デッキ/カード一覧と同じ値＝「データはあるが今は効いていない」の既存表現。 */}
+      <View style={{ opacity: inactiveReason ? 0.55 : 1 }}>
       {schedules.length === 0 ? (
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, textAlign: 'center', paddingVertical: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -532,6 +572,8 @@ export default function NotificationSettingsScreen() {
         ))
       )}
 
+      </View>
+
       {/* 追加ボタン */}
       {schedules.length < MAX_SCHEDULES && (
         <Pressable
@@ -609,6 +651,7 @@ const sheetStyles = StyleSheet.create({
 });
 
 const localStyles = StyleSheet.create({
+  inactiveNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginTop: 4 },
   sectionTitle: {
     fontWeight: '600',
     marginTop: 4,

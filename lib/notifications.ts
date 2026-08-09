@@ -85,6 +85,15 @@ export async function requestPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
+/** 現在の通知許可の状態を**要求せずに**確認する。
+ *  アプリ内で通知をオンにした後に **OS 設定側で許可を取り消される**ことがあり、その場合
+ *  `notificationEnabled` は true のままなのに一切鳴らない（アプリからは分からない沈黙）。
+ *  設定画面はこれを見て「許可されていない」旨を出す。 */
+export async function isPermissionGranted(): Promise<boolean> {
+  const { status } = await Notifications.getPermissionsAsync();
+  return status === 'granted';
+}
+
 /** 046: 未達成リマインダーの通知文。**枚数は入れない**（予約時点の値しか焼き込めず、
  *  発火時にはズレているため）。 */
 function getGoalUnmetBody(): { title: string; body: string } {

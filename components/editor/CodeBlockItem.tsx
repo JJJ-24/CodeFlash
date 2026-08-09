@@ -27,7 +27,8 @@ import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { InfoModal } from '@/components/InfoModal';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
-import { resolveDeckStageHtml } from '@/lib/deckStages';
+import { DeckStagePicker } from '@/components/editor/DeckStagePicker';
+import { resolveDeckStageHtml, resolveDeckStageSql } from '@/lib/deckStages';
 import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
@@ -55,15 +56,16 @@ interface Props {
   runTrigger?: number;
   onAutoFocused?: () => void;
   blurTrigger?: number;
-  /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
-  deckSqlInit?: string | null;
+  /** 045: デッキの SQL 初期化の一覧。ブロックは deckSqlStageId で1つを選ぶ（未指定＝先頭）。
+   *  ブロック固有 sqlInit の前に積まれる */
+  deckSqlStages?: DeckStage[];
   /** 044: デッキの HTML/CSS 土台の一覧。ブロックは deckStageId で1つを選ぶ（未指定＝先頭） */
   deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決する */
   deckHtmlImages?: DeckImage[];
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlInit, deckHtmlStages, deckHtmlImages }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -105,7 +107,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   contentRef.current = block.content;
 
   // SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外は undefined
-  const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
+  // 045: デッキ側は deckSqlStageId で選ばれた1つ（未指定＝先頭・削除済み参照は積まない）。
+  // SQL は言語自体が Pro 限定（実行ゲート）なので、HTML 側と違いここに Pro 判定は要らない。
+  const sqlInits = block.language === 'sql' ? [resolveDeckStageSql(deckSqlStages, block), block.sqlInit ?? ''] : undefined;
+  const sqlStages = deckSqlStages ?? [];
+  // 選択中の SQL 土台。deckSqlStageId 未指定なら先頭。**削除済みの id を指しているときは null**
+  const activeSqlStageId = block.noDeckSqlInit
+    ? null
+    : (sqlStages.find((st) => st.id === (block.deckSqlStageId ?? sqlStages[0]?.id))?.id ?? null);
 
   // 土台（HTML/CSS）を積む web 系ブロックか。デッキ共通土台の ON/OFF トグルの表示条件に使う。
   const isWebLang =
@@ -478,62 +487,30 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
-          {/* web 系ブロック：どのデッキ土台を積むか。デッキに土台が無ければ選ぶ対象が無いので出さない。
-              **土台が1つのデッキでは従来どおり ON/OFF トグル**（044 以前と見た目・操作が変わらない）、
-              2つ以上あるときだけ「使わない＋各土台」のチップ選択に変わる。Pro 機能のため非Proでは非表示 */}
+          {/* web 系ブロック：どのデッキ HTML/CSS 土台を積むか。デッキに土台が無ければ選ぶ対象が
+              無いので出さない。Pro 機能のため非Proでは非表示（土台自体も積まれない） */}
           {isWebLang && isPro && deckStages.length > 0 && (
-            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
-              <View style={styles.initSqlHeader}>
-                <Ionicons name={activeStageId ? 'layers' : 'layers-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
-                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {deckStages.length > 1 ? t('editor.deckStagePickerLabel') : t('editor.useDeckHtmlInitLabel')}
-                </Text>
-                {deckStages.length === 1 && (
-                  <Switch
-                    // `!noDeckHtmlInit` ではなく**解決結果**を見る。削除された土台を指したままの
-                    // ブロック（土台2つ→片方を削除、の後）は実態が「土台なし」なので、
-                    // ここで ON と表示すると「ONなのにプレビューが出ない」食い違いになる。
-                    value={activeStageId !== null}
-                    // ON に戻すときは宙に浮いた deckStageId も消す（＝未指定＝先頭の土台に復帰）。
-                    // これが無いと、トグルを操作しても死んだ参照が残って土台が積まれない。
-                    onValueChange={(v) => onChange(v ? { noDeckHtmlInit: false, deckStageId: undefined } : { noDeckHtmlInit: true })}
-                    trackColor={{ true: '#1976D2' }}
-                    thumbColor="#FFF"
-                    style={styles.execSwitch}
-                  />
-                )}
-              </View>
-              {deckStages.length > 1 && (
-                <View style={styles.stageChips}>
-                  {/* 「使わない」＝ noDeckHtmlInit。土台を選ぶと同時に false へ戻す */}
-                  <Pressable
-                    onPress={() => onChange({ noDeckHtmlInit: true })}
-                    style={[styles.stageChip, { borderColor: activeStageId === null ? '#1976D2' : '#3A3A3A', backgroundColor: activeStageId === null ? '#1976D233' : 'transparent' }]}
-                  >
-                    <Text style={{ color: activeStageId === null ? '#7FB3E8' : '#9CA3AF', fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('editor.deckStageNone')}
-                    </Text>
-                  </Pressable>
-                  {deckStages.map((st, i) => {
-                    const selected = activeStageId === st.id;
-                    return (
-                      <Pressable
-                        key={st.id}
-                        onPress={() => onChange({ noDeckHtmlInit: false, deckStageId: st.id })}
-                        style={[styles.stageChip, { borderColor: selected ? '#1976D2' : '#3A3A3A', backgroundColor: selected ? '#1976D233' : 'transparent' }]}
-                      >
-                        <Text style={{ color: selected ? '#7FB3E8' : '#9CA3AF', fontSize: theme.fontSize.xs }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                          {st.name.trim() || t('deck.stageDefaultName', { n: i + 1 })}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-              <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {deckStages.length > 1 ? t('editor.deckStagePickerHint') : t('editor.useDeckHtmlInitHint')}
-              </Text>
-            </View>
+            <DeckStagePicker
+              kind="html"
+              stages={deckStages}
+              activeStageId={activeStageId}
+              onPickNone={() => onChange({ noDeckHtmlInit: true })}
+              onPickStage={(id) => onChange({ noDeckHtmlInit: false, deckStageId: id })}
+              onPickDefault={() => onChange({ noDeckHtmlInit: false, deckStageId: undefined })}
+            />
+          )}
+
+          {/* SQL ブロック：どのデッキ初期化SQLを流すか（045）。HTML と同じ部品・同じ規則。
+              SQL は言語自体が Pro 限定なので、表示条件も Pro のみで揃えてある */}
+          {block.language === 'sql' && isPro && sqlStages.length > 0 && (
+            <DeckStagePicker
+              kind="sql"
+              stages={sqlStages}
+              activeStageId={activeSqlStageId}
+              onPickNone={() => onChange({ noDeckSqlInit: true })}
+              onPickStage={(id) => onChange({ noDeckSqlInit: false, deckSqlStageId: id })}
+              onPickDefault={() => onChange({ noDeckSqlInit: false, deckSqlStageId: undefined })}
+            />
           )}
 
           {/* web 系ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後・本文の前に積む）。Pro 機能のため非Proでは非表示 */}

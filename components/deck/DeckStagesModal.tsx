@@ -7,25 +7,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
-import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
 import { generateId } from '@/lib/database/utils';
+import { DECK_STAGE_KEYS, type DeckStageKind } from '@/lib/deckStageLabels';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import type { DeckImage, DeckStage } from '@/types';
+import type { DeckStage } from '@/types';
 
 interface Props {
   visible: boolean;
   stages: DeckStage[];
   onChange: (stages: DeckStage[]) => void;
   onClose: () => void;
-  /** 043 の画像ライブラリ。デッキ単位のデータなので、どの土台を編集していても同じものを出す */
-  images: DeckImage[];
-  onImagesChange: (images: DeckImage[]) => void;
+  /** 何の土台の一覧か（044: HTML/CSS 土台 ／ 045: SQL 初期化）。文言だけが変わる */
+  kind: DeckStageKind;
+  /** 編集面の入力欄の下に差し込む追加UI（HTML では 043 の画像ライブラリ）。
+   *  デッキ単位のデータなので、どの土台を編集していても同じものが出る */
+  editorFooter?: React.ReactNode;
 }
 
 /**
- * 044: デッキの HTML/CSS 土台の一覧モーダル。デッキ編集/新規作成の「HTML/CSS 共通土台」行と
- * `H` キーから開く。行をタップすると `SqlInitModal`（テキスト編集面）が上に開く2段構成。
+ * 044/045: デッキの土台の一覧モーダル。**HTML/CSS 土台と SQL 初期化で共用**する
+ * （持ち方も操作も同じで、違うのは `kind` で切り替わる文言と編集面の footer だけ）。
+ * デッキ編集/新規作成の該当行と `H`（HTML）/`Q`（SQL）キーから開く。
+ * 行をタップすると `SqlInitModal`（テキスト編集面）が上に開く2段構成。
  *
  * **名前の編集は編集面のヘッダーで行う**（リストに入力欄を置くとリスト側にもキーボード追従の
  * 面倒を持ち込むため）。一覧は「見て・選んで・消す」だけに絞ってある。
@@ -34,7 +38,8 @@ interface Props {
  * ときに使われるのが先頭だからで、**先頭を削除すると既定が次の土台にずれる**ため削除確認の
  * 文言も分けている。
  */
-export function DeckStagesModal({ visible, stages, onChange, onClose, images, onImagesChange }: Props) {
+export function DeckStagesModal({ visible, stages, onChange, onClose, kind, editorFooter }: Props) {
+  const keys = DECK_STAGE_KEYS[kind];
   const theme = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -45,19 +50,19 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, images, on
   const editingIndex = stages.findIndex((s) => s.id === editingId);
   const editingStage = editingIndex >= 0 ? stages[editingIndex] : null;
 
-  /** 名前は空を許容するので、表示は「土台N」で埋める（旧 htmlInit から合成した土台も名前が空）。 */
+  /** 名前は空を許容するので、表示は「土台N」/「初期化N」で埋める（旧列から合成した土台も名前が空）。 */
   function displayName(stage: DeckStage, index: number): string {
-    return stage.name.trim() || t('deck.stageDefaultName', { n: index + 1 });
+    return stage.name.trim() || t(keys.defaultName, { n: index + 1 });
   }
 
   /** 一覧に出す1行プレビュー（最初の非空行）。土台の中身を開かずに見分けるためのもの。 */
   function previewLine(stage: DeckStage): string {
-    const line = stage.html.split('\n').find((l) => l.trim() !== '');
+    const line = stage.content.split('\n').find((l) => l.trim() !== '');
     return line ? line.trim() : '';
   }
 
   function handleAdd() {
-    const stage: DeckStage = { id: generateId(), name: '', html: '' };
+    const stage: DeckStage = { id: generateId(), name: '', content: '' };
     onChange([...stages, stage]);
     // 追加した直後は中身が空＝一覧に戻す意味がないので、そのまま編集面を開く
     setEditingId(stage.id);
@@ -97,8 +102,8 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, images, on
     // 先頭を消すと「既定」が次の土台にずれる＝土台を選んでいないカードの見え方が変わる。
     // 残りが無いなら単に土台なしになるので通常文言でよい。
     return index === 0 && stages.length > 1
-      ? t('deck.stageDeleteFirstConfirm', { name })
-      : t('deck.stageDeleteConfirm', { name });
+      ? t(keys.deleteFirstConfirm, { name })
+      : t(keys.deleteConfirm, { name });
   })();
 
   return (
@@ -111,7 +116,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, images, on
                 style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
-                {t('deck.htmlInitLabel')}
+                {t(keys.title)}
               </Text>
               <View style={styles.headerRight}>
                 <Pressable onPress={handleAdd} hitSlop={8} style={styles.headerBtn}>
@@ -127,7 +132,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, images, on
               style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             >
-              {t('deck.stagesHint')}
+              {t(keys.listHint)}
             </Text>
 
             {stages.length === 0 ? (
@@ -135,7 +140,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, images, on
                 style={[styles.empty, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
-                {t('deck.stagesEmpty')}
+                {t(keys.listEmpty)}
               </Text>
             ) : (
               <ScrollView keyboardShouldPersistTaps="handled">
@@ -195,15 +200,15 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, images, on
         {/* 土台1つ分のテキスト編集面。名前もここで編集する（タイトルが入力欄になる） */}
         <SqlInitModal
           visible={editingStage !== null}
-          value={editingStage?.html ?? ''}
-          onChangeText={(v) => editingStage && updateStage(editingStage.id, { html: v })}
+          value={editingStage?.content ?? ''}
+          onChangeText={(v) => editingStage && updateStage(editingStage.id, { content: v })}
           onClose={() => setEditingId(null)}
           title={editingStage?.name ?? ''}
           onTitleChange={(v) => editingStage && updateStage(editingStage.id, { name: v })}
-          titlePlaceholder={editingStage ? t('deck.stageDefaultName', { n: editingIndex + 1 }) : undefined}
-          hint={t('deck.htmlInitHint')}
-          placeholder={t('deck.htmlInitPlaceholder')}
-          footer={<HtmlImageLibrary images={images} onChange={onImagesChange} />}
+          titlePlaceholder={editingStage ? t(keys.defaultName, { n: editingIndex + 1 }) : undefined}
+          hint={t(keys.editorHint)}
+          placeholder={t(keys.editorPlaceholder)}
+          footer={editorFooter}
         />
 
         <ConfirmDeleteModal

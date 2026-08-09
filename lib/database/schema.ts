@@ -207,6 +207,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN htmlStages TEXT;`);
   }
 
+  // === 045: 名前付き SQL 初期化（decks に sqlStages カラム）===
+  // 044 の htmlStages とまったく同じ形（DeckStage[] の JSON 文字列）。**正となる持ち方はこの列**で、
+  // 018 の sqlInit は「先頭土台のミラー」として残す（旧バージョンのアプリは sqlInit しか読まないため）。
+  // 既存デッキは NULL のままで、読み取り時に sqlInit から1件の土台へ合成される（normalizeDeckStages）。
+  const deckColsSqlStages = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!deckColsSqlStages.some((c) => c.name === 'sqlStages')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN sqlStages TEXT;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

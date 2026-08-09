@@ -187,7 +187,7 @@ export default function DataSettingsScreen() {
   /** TSV に載らない内容（デッキ/ブロックの初期化SQL・HTML土台・画像）を列挙した確認文を作る */
   function tsvLossMessage(loss: TsvExportLoss): string {
     const items: string[] = [];
-    if (loss.deckSqlInit) items.push(t('dataManagement.tsvLossDeckSqlInit'));
+    if (loss.deckSqlStages > 0) items.push(t('dataManagement.tsvLossDeckSqlStages', { count: loss.deckSqlStages }));
     if (loss.deckHtmlStages > 0) items.push(t('dataManagement.tsvLossDeckHtmlStages', { count: loss.deckHtmlStages }));
     if (loss.blockSqlInit > 0) items.push(t('dataManagement.tsvLossBlockSqlInit', { count: loss.blockSqlInit }));
     if (loss.blockHtmlInit > 0) items.push(t('dataManagement.tsvLossBlockHtmlInit', { count: loss.blockHtmlInit }));

@@ -1,5 +1,6 @@
 /**
- * 044（デッキ土台の複数持ち）の検証。`docs/044-multiple-deck-stages.md` の Phase 6 に対応する。
+ * デッキ土台の複数持ちの検証（044: HTML/CSS 土台 ／ 045: SQL 初期化）。
+ * `docs/044-multiple-deck-stages.md` の Phase 6・Phase 7 に対応する。
  *
  * 実行: `npm run verify:db`
  *
@@ -19,7 +20,7 @@ installModuleStubs({
 
 const { migrateDbIfNeeded } = require('@/lib/database/schema');
 const { createDeck, updateDeck, getAllDecks, getDeckById } = require('@/lib/database/decks');
-const { LEGACY_STAGE_ID, resolveDeckStageHtml, legacyHtmlInitMirror, normalizeDeckStages, parseDeckStages } =
+const { LEGACY_STAGE_ID, resolveDeckStageHtml, resolveDeckStageSql, legacyInitMirror, normalizeDeckStages, parseDeckStages } =
   require('@/lib/deckStages');
 const { exportDatabase } = require('@/lib/export');
 const { importDatabase } = require('@/lib/import');
@@ -28,8 +29,8 @@ const { inspectTsvExport, hasTsvExportLoss } = require('@/lib/tsv');
 const { check, eq, report } = createAsserts();
 
 const STAGES = [
-  { id: 's1', name: 'フレックス', html: '<div class="row">A</div>' },
-  { id: 's2', name: 'グリッド', html: '<div class="grid">B</div>' },
+  { id: 's1', name: 'フレックス', content: '<div class="row">A</div>' },
+  { id: 's2', name: 'グリッド', content: '<div class="grid">B</div>' },
 ];
 
 async function main() {
@@ -52,7 +53,7 @@ async function main() {
   check('マイグレーションで htmlStages 列が追加される', cols1.some((c: { name: string }) => c.name === 'htmlStages'));
   const [oldDeck] = await getAllDecks(db1);
   eq('toDeck が htmlInit から土台1件を合成', oldDeck.htmlStages, [
-    { id: LEGACY_STAGE_ID, name: '', html: '<div id="box"></div>' },
+    { id: LEGACY_STAGE_ID, name: '', content: '<div id="box"></div>' },
   ]);
   check(
     '合成した土台の id は固定（LEGACY_STAGE_ID）＝再読込で揺れない',
@@ -66,8 +67,8 @@ async function main() {
   eq('土台の無い旧デッキは空配列', (await getDeckById(db1, 'd-none')).htmlStages, []);
   eq('空白だけの htmlInit も空配列', normalizeDeckStages(null, '   '), []);
   eq('壊れた JSON は空配列に倒れる（デッキ読込を殺さない）', parseDeckStages('{壊れ'), []);
-  eq('形の違う要素は捨てる', parseDeckStages('[{"id":"a"},{"id":"b","name":"n","html":"h"}]'), [
-    { id: 'b', name: 'n', html: 'h' },
+  eq('形の違う要素は捨てる', parseDeckStages('[{"id":"a"},{"id":"b","name":"n","content":"h"}]'), [
+    { id: 'b', name: 'n', content: 'h' },
   ]);
 
   // ===========================================================================
@@ -77,15 +78,15 @@ async function main() {
   await migrateDbIfNeeded(db2);
   const created = await createDeck(db2, { name: 'HTML入門', description: '', language: 'ja', htmlStages: STAGES });
   eq('createDeck の戻り値の htmlStages', created.htmlStages, STAGES);
-  eq('createDeck が htmlInit に先頭土台をミラー書き', created.htmlInit, STAGES[0].html);
+  eq('createDeck が htmlInit に先頭土台をミラー書き', created.htmlInit, STAGES[0].content);
   const rowA = await db2.getFirstAsync('SELECT htmlInit, htmlStages FROM decks WHERE id = ?', [created.id]);
-  eq('DB の htmlInit も先頭土台', rowA.htmlInit, STAGES[0].html);
+  eq('DB の htmlInit も先頭土台', rowA.htmlInit, STAGES[0].content);
   eq('DB の htmlStages は JSON', JSON.parse(rowA.htmlStages), STAGES);
 
   // 並びを入れ替えたら（＝先頭が変わったら）ミラーも追従する
   await updateDeck(db2, created.id, { name: 'HTML入門', description: '', language: 'ja', htmlStages: [STAGES[1], STAGES[0]] });
   const rowB = await db2.getFirstAsync('SELECT htmlInit FROM decks WHERE id = ?', [created.id]);
-  eq('先頭が変わればミラーも追従', rowB.htmlInit, STAGES[1].html);
+  eq('先頭が変わればミラーも追従', rowB.htmlInit, STAGES[1].content);
   await updateDeck(db2, created.id, { name: 'HTML入門', description: '', language: 'ja', htmlStages: STAGES });
 
   // htmlStages を渡さない更新（他画面からのデッキ更新）で土台が消えないこと
@@ -95,8 +96,8 @@ async function main() {
   // 旧バージョンのアプリによる UPDATE（htmlStages 列を知らない）を模す
   await db2.runAsync('UPDATE decks SET name = ?, htmlInit = ? WHERE id = ?', ['旧アプリ更新', '<div id="box"></div>', created.id]);
   eq('旧バージョンが更新しても htmlStages 列は残る（＝新バージョンで復帰）', (await getDeckById(db2, created.id)).htmlStages, STAGES);
-  eq('legacyHtmlInitMirror: 空土台なら NULL', legacyHtmlInitMirror([{ id: 'x', name: '', html: '  ' }]), null);
-  eq('legacyHtmlInitMirror: 空配列なら NULL', legacyHtmlInitMirror([]), null);
+  eq('legacyInitMirror: 空土台なら NULL', legacyInitMirror([{ id: 'x', name: '', content: '  ' }]), null);
+  eq('legacyInitMirror: 空配列なら NULL', legacyInitMirror([]), null);
 
   // ===========================================================================
   console.log('\n[T3] JSON エクスポート → replace インポートで htmlStages / deckStageId が復元される');
@@ -129,11 +130,11 @@ async function main() {
   await importDatabase(db3b, exportedUri, 'replace');
   const imported = await getDeckById(db3b, deck3.id);
   eq('replace インポートで htmlStages が復元', imported.htmlStages, STAGES);
-  eq('replace インポートで htmlInit ミラーも復元', imported.htmlInit, STAGES[0].html);
+  eq('replace インポートで htmlInit ミラーも復元', imported.htmlInit, STAGES[0].content);
   const importedContent = await db3b.getFirstAsync('SELECT backContent FROM card_contents WHERE cardId = ?', ['c1']);
   const importedBlocks = JSON.parse(importedContent.backContent);
   eq('deckStageId が復元', importedBlocks.map((b: { deckStageId?: string }) => b.deckStageId), ['s2', undefined, undefined]);
-  eq('復元した参照が土台を解決できる', resolveDeckStageHtml(imported.htmlStages, importedBlocks[0]), STAGES[1].html);
+  eq('復元した参照が土台を解決できる', resolveDeckStageHtml(imported.htmlStages, importedBlocks[0]), STAGES[1].content);
 
   const db3c = makeDb();
   await migrateDbIfNeeded(db3c);
@@ -157,7 +158,7 @@ async function main() {
   await importDatabase(db4, legacyUri, 'replace');
   const legacyImported = await getDeckById(db4, deck3.id);
   eq('旧エクスポートは htmlInit から土台1件に合成される', legacyImported.htmlStages, [
-    { id: LEGACY_STAGE_ID, name: '', html: '<div id="legacy"></div>' },
+    { id: LEGACY_STAGE_ID, name: '', content: '<div id="legacy"></div>' },
   ]);
   eq('旧デッキ＋未指定ブロック → 合成された土台が積まれる', resolveDeckStageHtml(legacyImported.htmlStages, {}), '<div id="legacy"></div>');
   eq('旧デッキ＋死んだ deckStageId → 土台なし', resolveDeckStageHtml(legacyImported.htmlStages, { deckStageId: 's2' }), '');
@@ -169,12 +170,12 @@ async function main() {
   await migrateDbIfNeeded(db5);
   const deck5 = await createDeck(db5, { name: 'D', description: '', language: 'ja', htmlStages: STAGES });
   const blockRefS2 = { deckStageId: 's2' };
-  eq('削除前: s2 を指すブロックは s2 の土台', resolveDeckStageHtml((await getDeckById(db5, deck5.id)).htmlStages, blockRefS2), STAGES[1].html);
+  eq('削除前: s2 を指すブロックは s2 の土台', resolveDeckStageHtml((await getDeckById(db5, deck5.id)).htmlStages, blockRefS2), STAGES[1].content);
   await updateDeck(db5, deck5.id, { name: 'D', description: '', language: 'ja', htmlStages: [STAGES[0]] });
   const after5 = await getDeckById(db5, deck5.id);
   eq('削除後: 参照は解決できず土台なし（先頭に落ちない）', resolveDeckStageHtml(after5.htmlStages, blockRefS2), '');
-  eq('未指定のブロックは残った先頭土台を使う', resolveDeckStageHtml(after5.htmlStages, {}), STAGES[0].html);
-  eq('先頭土台を削除すると既定が次にずれる', resolveDeckStageHtml([STAGES[1]], {}), STAGES[1].html);
+  eq('未指定のブロックは残った先頭土台を使う', resolveDeckStageHtml(after5.htmlStages, {}), STAGES[0].content);
+  eq('先頭土台を削除すると既定が次にずれる', resolveDeckStageHtml([STAGES[1]], {}), STAGES[1].content);
 
   // resolveDeckStageHtml の残りの分岐
   eq('noDeckHtmlInit が最優先（deckStageId があっても積まない）', resolveDeckStageHtml(STAGES, { noDeckHtmlInit: true, deckStageId: 's2' }), '');
@@ -189,6 +190,7 @@ async function main() {
   check('TSV 損失あり判定', hasTsvExportLoss(loss));
   const lossNone = await inspectTsvExport(db1, await getDeckById(db1, 'd-none'));
   eq('土台なしデッキは 0 件', lossNone.deckHtmlStages, 0);
+  eq('SQL 初期化の件数も数える', loss.deckSqlStages, 0);
   check('土台なしデッキは警告を出さない', !hasTsvExportLoss(lossNone));
   const lossLegacy = await inspectTsvExport(db1, await getDeckById(db1, 'd-old'));
   eq('旧 htmlInit のデッキも1件として数える（合成後）', lossLegacy.deckHtmlStages, 1);
@@ -203,6 +205,114 @@ async function main() {
   await updateDeck(db7, deck7.id, { name: 'D', description: '', language: 'ja', htmlStages: STAGES });
   const v1 = await db7.getFirstAsync('SELECT localVersion FROM sync_state WHERE id = 1');
   check('土台の追加で localVersion が進む', v1.localVersion > v0.localVersion, { before: v0.localVersion, after: v1.localVersion });
+
+  // ===========================================================================
+  console.log('\n[T8] 045・SQL 初期化：旧DB（sqlStages 列なし）→ sqlInit から1件に正規化される');
+  // ===========================================================================
+  const db8 = makeDb();
+  await migrateDbIfNeeded(db8);
+  db8.raw.exec('ALTER TABLE decks DROP COLUMN sqlStages');
+  await db8.runAsync(
+    `INSERT INTO decks (id,name,description,language,cardCount,sortOrder,sqlInit,createdAt,updatedAt)
+     VALUES ('d-sql','旧SQLデッキ','','ja',0,1,'CREATE TABLE users(id);','2026-01-01','2026-01-01')`
+  );
+  await migrateDbIfNeeded(db8);
+  const sqlLegacyDeck = await getDeckById(db8, 'd-sql');
+  eq('toDeck が sqlInit から SQL 土台1件を合成', sqlLegacyDeck.sqlStages, [
+    { id: LEGACY_STAGE_ID, name: '', content: 'CREATE TABLE users(id);' },
+  ]);
+  eq('HTML 側は空のまま（互いに独立）', sqlLegacyDeck.htmlStages, []);
+
+  // ===========================================================================
+  console.log('\n[T9] 045・SQL 初期化：保存経路と互換ミラー');
+  // ===========================================================================
+  const SQL_STAGES = [
+    { id: 'q1', name: 'users テーブル', content: 'CREATE TABLE users(id INTEGER, name TEXT);' },
+    { id: 'q2', name: 'orders テーブル', content: 'CREATE TABLE orders(id INTEGER, userId INTEGER);' },
+  ];
+  const db9 = makeDb();
+  await migrateDbIfNeeded(db9);
+  const deck9 = await createDeck(db9, { name: 'SQL入門', description: '', language: 'ja', sqlStages: SQL_STAGES, htmlStages: STAGES });
+  eq('createDeck の戻り値の sqlStages', deck9.sqlStages, SQL_STAGES);
+  eq('createDeck が sqlInit に先頭土台をミラー書き', deck9.sqlInit, SQL_STAGES[0].content);
+  eq('HTML と SQL が同じデッキで共存する', deck9.htmlStages, STAGES);
+
+  await updateDeck(db9, deck9.id, { name: 'SQL入門', description: '', language: 'ja', sqlStages: [SQL_STAGES[1]] });
+  const after9 = await getDeckById(db9, deck9.id);
+  eq('sqlStages 更新でミラーも追従', after9.sqlInit, SQL_STAGES[1].content);
+  eq('sqlStages を渡しても htmlStages は消えない', after9.htmlStages, STAGES);
+  await updateDeck(db9, deck9.id, { name: 'SQL入門', description: '', language: 'ja' });
+  const untouched9 = await getDeckById(db9, deck9.id);
+  eq('どちらも渡さない更新で両方残る', untouched9.sqlStages, [SQL_STAGES[1]]);
+  // 土台を渡さない更新で**互換ミラーだけ NULL になる**と、新バージョンでは気づけないまま
+  // 旧バージョン／旧エクスポートから土台が消える。旧列も「渡されたときだけ」書く実装になっていること。
+  eq('土台を渡さない更新でも sqlInit ミラーが残る', untouched9.sqlInit, SQL_STAGES[1].content);
+  eq('土台を渡さない更新でも htmlInit ミラーが残る', untouched9.htmlInit, STAGES[0].content);
+
+  // ===========================================================================
+  console.log('\n[T10] 045・SQL 初期化：解決規則（HTML と同一）');
+  // ===========================================================================
+  eq('未指定 → 先頭', resolveDeckStageSql(SQL_STAGES, {}), SQL_STAGES[0].content);
+  eq('id 指定 → その土台', resolveDeckStageSql(SQL_STAGES, { deckSqlStageId: 'q2' }), SQL_STAGES[1].content);
+  eq('削除済み id → 積まない（先頭に落ちない）', resolveDeckStageSql(SQL_STAGES, { deckSqlStageId: 'gone' }), '');
+  eq('noDeckSqlInit が最優先', resolveDeckStageSql(SQL_STAGES, { noDeckSqlInit: true, deckSqlStageId: 'q2' }), '');
+  eq('0件 → 空', resolveDeckStageSql([], {}), '');
+  // HTML 側のフラグは SQL の解決に影響しない（フィールドが独立していること）
+  eq('noDeckHtmlInit は SQL に影響しない', resolveDeckStageSql(SQL_STAGES, { noDeckHtmlInit: true } as never), SQL_STAGES[0].content);
+  eq('noDeckSqlInit は HTML に影響しない', resolveDeckStageHtml(STAGES, { noDeckSqlInit: true } as never), STAGES[0].content);
+
+  // ===========================================================================
+  console.log('\n[T11] 045・SQL 初期化：エクスポート → インポート往復');
+  // ===========================================================================
+  await db9.runAsync(
+    `INSERT INTO cards (id,deckId,sortOrder,archived,createdAt,updatedAt) VALUES ('c9',?,0,0,'2026-01-01','2026-01-01')`,
+    [deck9.id]
+  );
+  await db9.runAsync(`INSERT INTO card_contents (cardId,frontContent,backContent,memoContent) VALUES ('c9','[]',?,'[]')`, [
+    JSON.stringify([{ id: 'sb1', type: 'code', language: 'sql', content: 'SELECT 1', executable: true, deckSqlStageId: 'q2' }]),
+  ]);
+  for (const k of Object.keys(fsFiles)) if (k.endsWith('.json')) delete fsFiles[k];
+  await exportDatabase(db9, false);
+  const sqlExportUri = Object.keys(fsFiles).find((k) => k.endsWith('.json'))!;
+  const db11 = makeDb();
+  await migrateDbIfNeeded(db11);
+  await importDatabase(db11, sqlExportUri, 'replace');
+  eq('replace インポートで sqlStages が復元', (await getDeckById(db11, deck9.id)).sqlStages, [SQL_STAGES[1]]);
+  const sqlContent = await db11.getFirstAsync('SELECT backContent FROM card_contents WHERE cardId = ?', ['c9']);
+  eq('deckSqlStageId が復元', JSON.parse(sqlContent.backContent)[0].deckSqlStageId, 'q2');
+
+  // 045 以前のエクスポート（sqlStages キーなし）
+  const oldSqlExport = JSON.parse(fsFiles[sqlExportUri]);
+  for (const d of oldSqlExport.decks) delete d.sqlStages;
+  fsFiles['/cache/old_sql.json'] = JSON.stringify(oldSqlExport);
+  const db11b = makeDb();
+  await migrateDbIfNeeded(db11b);
+  await importDatabase(db11b, '/cache/old_sql.json', 'replace');
+  eq('045 以前のエクスポートは sqlInit から1件に合成', (await getDeckById(db11b, deck9.id)).sqlStages, [
+    { id: LEGACY_STAGE_ID, name: '', content: SQL_STAGES[1].content },
+  ]);
+
+  // ===========================================================================
+  console.log('\n[T12] 044 初期実装の旧キー `html` を読める（045 の content へのリネーム互換）');
+  // ===========================================================================
+  eq('旧キー html を content として読む', parseDeckStages('[{"id":"a","name":"旧","html":"<b>x</b>"}]'), [
+    { id: 'a', name: '旧', content: '<b>x</b>' },
+  ]);
+  eq('content と html が両方あれば content 優先', parseDeckStages('[{"id":"a","name":"n","content":"new","html":"old"}]'), [
+    { id: 'a', name: 'n', content: 'new' },
+  ]);
+  const db12 = makeDb();
+  await migrateDbIfNeeded(db12);
+  await db12.runAsync(
+    `INSERT INTO decks (id,name,description,language,cardCount,sortOrder,htmlStages,createdAt,updatedAt)
+     VALUES ('d-oldkey','旧キー','','ja',0,1,?,'2026-01-01','2026-01-01')`,
+    [JSON.stringify([{ id: 'x1', name: '土台A', html: '<div>A</div>' }])]
+  );
+  const oldKeyDeck = await getDeckById(db12, 'd-oldkey');
+  eq('旧キーで保存済みのデッキがそのまま読める', oldKeyDeck.htmlStages, [{ id: 'x1', name: '土台A', content: '<div>A</div>' }]);
+  await updateDeck(db12, 'd-oldkey', { name: '旧キー', description: '', language: 'ja', htmlStages: oldKeyDeck.htmlStages });
+  const rewritten = await db12.getFirstAsync('SELECT htmlStages FROM decks WHERE id = ?', ['d-oldkey']);
+  check('保存し直すと新キー content で書き戻される', rewritten.htmlStages.includes('"content"') && !rewritten.htmlStages.includes('"html"'));
 
   report();
 }

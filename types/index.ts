@@ -12,6 +12,12 @@ export interface CodeBlock {
   executable: boolean;
   /** SQL ブロック固有の初期化SQL（このブロックの実行前にデッキ共通の後に流す）。SQL 言語時のみ意味を持つ */
   sqlInit?: string;
+  /** 045：このブロックが使うデッキ SQL 土台（`Deck.sqlStages` の `id`）。
+   *  規則は `deckStageId` と同一（未指定＝先頭／解決不能＝積まない／`noDeckSqlInit` が true なら無視）。 */
+  deckSqlStageId?: string;
+  /** 045：このブロックではデッキ共通の SQL 初期化を流さない（既定 false＝流す）。
+   *  044 の `noDeckHtmlInit` と同型。「このカードだけ別スキーマ」「初期化なしの素の DB を見せる」出題向け。 */
+  noDeckSqlInit?: boolean;
   /** web 系ブロック（html / js・ts / css）固有の HTML/CSS 土台。デッキ共通の後・本文の前に積む（加算）。
    *  実行前から見える「出題の前提」で、本文＝実行して初めて出る「答え」と対になる */
   htmlInit?: string;
@@ -50,15 +56,19 @@ export interface DeckImage {
   uri: string;
 }
 
-/** 044：デッキが持つ名前付きの HTML/CSS 土台。コードブロックは `CodeBlock.deckStageId` で1つを選ぶ。 */
+/** 044：デッキが持つ名前付きの土台。**HTML/CSS 土台（`Deck.htmlStages`）と SQL 初期化（`Deck.sqlStages`）で
+ *  同じ型を使う**（持ち方・一覧 UI・選択 UI・解決規則がまったく同じもので、違うのは中身の言語だけ）。
+ *  コードブロックは `CodeBlock.deckStageId` / `deckSqlStageId` で1つを選ぶ。 */
 export interface DeckStage {
   /** 参照キー。名前ではなく id で参照するのでリネームしても参照が壊れない */
   id: string;
   /** 表示名。**空文字を許容**し、そのときは UI が「土台N」（並び順ベース）で表示する
-   *  （旧 `htmlInit` から合成した土台は DB 層で名前を付けられないため空になる） */
+   *  （旧 `htmlInit`/`sqlInit` から合成した土台は DB 層で名前を付けられないため空になる） */
   name: string;
-  /** 土台の HTML/CSS */
-  html: string;
+  /** 土台の中身（HTML/CSS 土台なら HTML、SQL 土台なら SQL）。
+   *  ⚠️ 044 初期実装ではこのキーが `html` だった。DB に残っている旧キーは
+   *  `parseDeckStages` が吸収するので、**新しく書くコードは `content` だけを見ればよい** */
+  content: string;
 }
 
 export interface Deck {
@@ -72,8 +82,12 @@ export interface Deck {
   sortOrder: number;
   iconName: string | null;
   colorHex: string | null;
-  /** デッキ共通の SQL 初期化（SQL ブロック実行時に毎回最初に流すスキーマ＋初期データ）。未設定は null */
+  /** 【045 以降は互換用ミラー】デッキ共通の SQL 初期化（先頭土台の写し）。
+   *  **読み取りには使わない**（`sqlStages` が正）。旧バージョンのアプリと旧エクスポートのために残している */
   sqlInit: string | null;
+  /** 045：名前付き SQL 初期化の一覧。`htmlStages` と同じ持ち方（DB には JSON 文字列）。
+   *  旧 `sqlInit` しか無いデッキは `toDeck` が1件の土台に合成するので、**画面はこの配列だけを見ればよい**。未設定は [] */
+  sqlStages: DeckStage[];
   /** 【044 以降は互換用ミラー】デッキ共通の HTML/CSS 土台（先頭土台の写し）。
    *  **読み取りには使わない**（`htmlStages` が正）。旧バージョンのアプリと旧エクスポートのために残している */
   htmlInit: string | null;

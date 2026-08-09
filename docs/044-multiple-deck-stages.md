@@ -1,8 +1,8 @@
 # 044 デッキ土台の複数持ち（名前付き土台ライブラリ）
 
 **フェーズ:** 将来
-**ステータス:** **Phase 1〜5 完了（2026-08-08）＋ Phase 6 の机上検証まで完了（2026-08-09）**＝機能として通しで動く。
-残りは Phase 6 の**実機目視**（2項目）・Phase 7（SQL 追随）
+**ステータス:** **Phase 1〜6 完了（HTML・2026-08-09 実機確認済み）＋ Phase 7 実装完了（SQL・2026-08-09）**。
+残りは Phase 7 の**実機目視**のみ
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** 040（HTML/CSS プレビュー実行・デッキ土台）・043（`decks` への JSON 列追加の前例）
 **被依存:** なし
@@ -295,10 +295,10 @@ iCloud 同期は **DB ファイル丸ごと**を LWW で往復させるため、
 - [x] iCloud 同期：土台だけの変更で `sync_state.localVersion` が進むこと（列指定なしトリガー）
 - [x] TSV：`inspectTsvExport` の `deckHtmlStages` が件数（旧 `htmlInit` デッキも1件）・土台なしは警告なし
 - [x] i18n：044 で追加/変更したキーが ja/en 両方に存在すること
-- [ ] **実機の目視確認（残）**：実行前プレビュー・ソースタブ・⛶ 全画面・`img://`（043）が
+- [x] **実機の目視確認（2026-08-09・OK）**：実行前プレビュー・ソースタブ・⛶ 全画面・`img://`（043）が
       **選択した土台**で描画されること。※合成 HTML は `htmlInits` から作られ 043 の解決は最終 HTML に
       1回かかる構造なので、**044 が変えたのは `htmlInits[0]` に入る文字列だけ**＝経路自体は 040/041/043 のまま
-- [ ] **実機の目視確認（残）**：土台1つ＝従来のトグル／2つ以上＝チップ選択の切り替わり、「既定」バッジ、
+- [x] **実機の目視確認（2026-08-09・OK）**：土台1つ＝従来のトグル／2つ以上＝チップ選択の切り替わり、「既定」バッジ、
       削除確認の文言分け（先頭 vs それ以外）
 
 > **検証ハーネスについて**：本リポジトリにはテストフレームワークが無いため、`node:sqlite` を
@@ -309,10 +309,55 @@ iCloud 同期は **DB ファイル丸ごと**を LWW で往復させるため、
 > ⚠️ ハーネス側でアプリのモジュールを読むときは **`import` ではなく `require()`**（`import` は巻き上げられ、
 > スタブを入れる前に expo モジュールが解決されて落ちる）。
 
-### Phase 7: SQL 初期化への追随（HTML 完成後）
-- [ ] `decks.sqlStages` を同じ形で追加、`CodeBlock.deckSqlStageId`
-- [ ] **`noDeckSqlInit` を新設**（現状 SQL には「デッキ共通を使わない」が無い＝`sqlInits` は常に `[deck, block]`）
-- [ ] UI は HTML と同型（Phase 2・3 の部品を共用できるはず）
+### Phase 7: SQL 初期化への追随（045）＝**実装完了（2026-08-09）／実機確認だけ残**
+
+**部品は HTML と共用**した（並行実装＝別ファイルにコピーは不採用）。土台の持ち方・一覧 UI・
+選択 UI・解決規則が HTML と SQL で完全に同じで、重複させると約400行が二重化し、
+「土台の並べ替え（v1 不採用＝あとで足す）」のような仕様追加が毎回2箇所になるため。
+
+- [x] **`DeckStage.html` → `DeckStage.content` にリネーム**（HTML/SQL 共通の型にするため）。
+  044 初期実装で書かれた JSON の旧キー `html` は **`parseDeckStages` が読み取り時に吸収**する
+  （保存し直すと新キーに移るのでデータ移行の操作は不要。吸収は約3行で、この関数がキー名を知る唯一の場所）
+- [x] `lib/deckStages.ts` を HTML/SQL 共通に：解決の本体を `resolveStage()` に切り出し、
+  `resolveDeckStageHtml`（`deckStageId`/`noDeckHtmlInit`）と **`resolveDeckStageSql`**（`deckSqlStageId`/`noDeckSqlInit`）は薄いラッパー。
+  `legacyHtmlInitMirror` → **`legacyInitMirror`**（旧列がどちらでも使える名前に）
+- [x] `types/index.ts`：`Deck.sqlStages: DeckStage[]`、`CodeBlock.deckSqlStageId?`、**`CodeBlock.noDeckSqlInit?` を新設**
+  （044 以前の SQL には「デッキ共通を使わない」が無く `sqlInits` は常に `[deck, block]` だった）
+- [x] `lib/database/schema.ts`：`decks.sqlStages TEXT` を `PRAGMA table_info` 確認つき `ALTER TABLE` で追加
+- [x] `lib/database/decks.ts`：`toDeck` で `sqlInit` → `sqlStages` を正規化、`createDeck`/`updateDeck` で
+  `sqlInit` に先頭土台をミラー書き。`sqlStages` も **「渡されたときだけ」更新**
+- [x] `lib/import.ts` に `sqlStages` 列を追加（`lib/export.ts` は `SELECT *` なので自動）
+- [x] `lib/tsv.ts`：`TsvExportLoss.deckSqlInit`（bool）→ **`deckSqlStages`（件数）**。`app/settings/data.tsx` と i18n も追従
+- [x] **`lib/deckStageLabels.ts` を新設**＝共通部品が引く文言キーの対応表。
+  **呼び名は分けた**（HTML＝「土台」／SQL＝「初期化」）。実物の語彙が既に違うので片方に寄せると画面ごとに食い違うため
+- [x] `DeckStagesModal` を共用化：`kind: 'html' | 'sql'` で文言を切り替え、043 の画像ライブラリは
+  `editorFooter` prop で外から差す（SQL では渡さない）。**`deck/new`・`deck/[id]/edit` の SQL 行と `Q` キーがこのモーダルを開く**
+- [x] **`components/editor/DeckStagePicker.tsx` を新設**＝ブロック側の選択 UI を `CodeBlockItem` から抽出して共用
+  （土台1つ＝ON/OFF トグル／2つ以上＝チップ。トグルの `value` が解決結果を見る 044 Phase 3 の修正もそのまま両方に効く）
+- [x] 配線：`deckSqlInit?: string | null` → **`deckSqlStages?: DeckStage[]`**（`session.tsx`・`card/new`・
+  `card/[cardId]/edit` → `BlockEditor`/`BlocksView` → `CodeBlockItem`/`CodeRunnerView`）
+- [x] i18n（`deck.sqlStages*`/`sqlStageDe*`・`editor.useDeckSqlInit*`/`deckSqlStagePicker*`・
+  `dataManagement.tsvLossDeckSqlStages`・ja/en）。`deck.sqlInitLabel`・`shortcut.sqlInit` から「共通」を外した
+- [x] 検証：`npm run verify:db` を SQL まで拡張（**67 アサーション全通過**）。スクリプト名は `scripts/verify-deck-stages.ts` へ
+- [x] `npx tsc --noEmit` エラーなし／`npm run lint` 0 errors・48 warnings（変更前と同数）
+- [ ] **実機の目視確認（残）**：デッキ編集の SQL 行→一覧→編集面、SQL ブロックのトグル/チップ、
+      「使わない」で初期化なしの素の DB になること
+
+> **Pro ゲートは HTML と非対称でよい**：HTML は「非 Pro なら土台を積まない」処理が要る（JS 実行が無料なので、
+> 土台を積むと可視プレビューが漏れる）。**SQL は言語自体が `PRO_LANGUAGES`＝実行ゲートで止まる**ので、
+> `sqlInits` の組み立てに `isPro` は要らない（044 以前からそうなっており、045 でも変えていない）。
+
+#### 見つけて直した穴：`updateDeck` が互換ミラーを黙って NULL にしていた
+
+`updateDeck` は `htmlStages`/`sqlStages` を「渡されたときだけ」更新する一方、**旧列（`htmlInit`/`sqlInit`）は
+無条件に `data.htmlInit ?? null` で書いていた**。そのため土台を渡さない更新をすると、土台の JSON は残るのに
+**ミラーだけが NULL になる**。新バージョンは `htmlStages`/`sqlStages` を読むので画面は正常に見えるが、
+**旧バージョンの端末（iCloud 経由）と旧エクスポートからは土台が消える**という、最も気づきにくい壊れ方をする。
+
+現在の呼び出し元は `deck/[id]/edit.tsx` の1箇所だけで両方を渡しているため実害は出ていなかったが、
+045 の検証（土台を渡さない更新のあとにエクスポート→インポート）で顕在化した。**旧列も「渡されたときだけ」
+書く**ように修正済み（`updatesHtmlInit` / `updatesSqlInit`）。ミラーは土台と同じデータの一部なので、
+更新条件も土台に揃えるのが正しい。
 
 ---
 

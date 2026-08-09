@@ -208,10 +208,11 @@ export default function StudySessionScreen() {
   const { decks } = useDeckStore();
   const { tags } = useTagStore();
   const sessionDeck = deckId ? decks.find((d) => d.id === deckId) : null;
-  // 現在のカードが属するデッキの SQL 共通初期化（タグ学習ではカードごとにデッキが異なりうる）
-  const currentDeckSqlInit = currentCard
-    ? (decks.find((d) => d.id === currentCard.deckId)?.sqlInit ?? null)
-    : null;
+  // 現在のカードが属するデッキの SQL 初期化の一覧（045・ブロックが deckSqlStageId で1つを選ぶ）。
+  // タグ学習ではカードごとにデッキが異なりうるので、カードごとに引き直す。
+  const currentDeckSqlStages = currentCard
+    ? (decks.find((d) => d.id === currentCard.deckId)?.sqlStages ?? [])
+    : [];
   // 現在のカードが属するデッキの HTML/CSS 土台の一覧（044・ブロックが deckStageId で1つを選ぶ）
   const currentDeckHtmlStages = currentCard
     ? (decks.find((d) => d.id === currentCard.deckId)?.htmlStages ?? [])
@@ -1337,7 +1338,7 @@ export default function StudySessionScreen() {
             exitAllEditTrigger={memoExitAllEditTrigger}
             scrollRef={backScrollRef}
             scrollBaseYRef={memoScrollBaseYRef}
-            deckSqlInit={currentDeckSqlInit} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
+            deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
           />
         </View>
       )}
@@ -1578,7 +1579,7 @@ export default function StudySessionScreen() {
                         }
                         onCodeRunStart={handleCodeRunComplete}
                         scrollRef={frontScrollRef}
-                        deckSqlInit={currentDeckSqlInit} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
+                        deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                       />
                     </ScrollView>
                   }
@@ -1627,7 +1628,7 @@ export default function StudySessionScreen() {
                         onCodeRunStart={handleCodeRunComplete}
                         exitAllEditTrigger={backExitAllEditTrigger}
                         scrollRef={backScrollRef}
-                        deckSqlInit={currentDeckSqlInit} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
+                        deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                       />
                       {memoBlock}
                       {tagRow}
@@ -1918,7 +1919,7 @@ export default function StudySessionScreen() {
                       }
                       onCodeRunStart={handleCodeRunComplete}
                       scrollRef={frontScrollRef}
-                      deckSqlInit={currentDeckSqlInit} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
+                      deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                     />
                   </ScrollView>
                 }
@@ -1967,7 +1968,7 @@ export default function StudySessionScreen() {
                       onCodeRunStart={handleCodeRunComplete}
                       exitAllEditTrigger={backExitAllEditTrigger}
                       scrollRef={backScrollRef}
-                      deckSqlInit={currentDeckSqlInit} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
+                      deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                     />
                     {memoBlock}
                     {tagRow}

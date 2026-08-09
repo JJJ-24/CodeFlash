@@ -1,25 +1,27 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { legacyHtmlInitMirror, normalizeDeckStages, serializeDeckStages } from '@/lib/deckStages';
+import { legacyInitMirror, normalizeDeckStages, serializeDeckStages } from '@/lib/deckStages';
 import { deleteImagesInBlocks, parseDeckImages, serializeDeckImages } from '@/lib/image';
 import type { Deck } from '@/types';
 import { generateId } from './utils';
 
-// SQLite は archived を 0/1 の数値で、htmlImages / htmlStages を JSON 文字列で返すため型を分けて正規化する
-type RawDeck = Omit<Deck, 'archived' | 'htmlImages' | 'htmlStages'> & {
+// SQLite は archived を 0/1 の数値で、htmlImages / htmlStages / sqlStages を JSON 文字列で返すため型を分けて正規化する
+type RawDeck = Omit<Deck, 'archived' | 'htmlImages' | 'htmlStages' | 'sqlStages'> & {
   archived: number;
   htmlImages: string | null;
   htmlStages: string | null;
+  sqlStages: string | null;
 };
 
-/** DB 行を `Deck` に正規化する。**044 の旧データ吸収（htmlInit → htmlStages）はここに閉じる**ので、
- *  画面・コンポーネントは `htmlStages` だけを見ればよい（旧列フォールバックを各所に散らさない）。 */
+/** DB 行を `Deck` に正規化する。**旧データの吸収（044: htmlInit → htmlStages／045: sqlInit → sqlStages）は
+ *  ここに閉じる**ので、画面・コンポーネントは配列だけを見ればよい（旧列フォールバックを各所に散らさない）。 */
 function toDeck(raw: RawDeck): Deck {
   return {
     ...raw,
     archived: !!raw.archived,
     htmlImages: parseDeckImages(raw.htmlImages),
     htmlStages: normalizeDeckStages(raw.htmlStages, raw.htmlInit),
+    sqlStages: normalizeDeckStages(raw.sqlStages, raw.sqlInit),
   };
 }
 
@@ -61,7 +63,7 @@ export async function setDecksArchived(db: SQLiteDatabase, ids: string[], archiv
 export async function createDeck(
   db: SQLiteDatabase,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages' | 'htmlStages'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'sqlStages' | 'htmlInit' | 'htmlImages' | 'htmlStages'>>
 ): Promise<Deck> {
   const now = new Date().toISOString();
   const id = generateId();
@@ -69,15 +71,16 @@ export async function createDeck(
   const sortOrder = (row?.maxOrder ?? 0) + 1;
   const iconName = data.iconName ?? null;
   const colorHex = data.colorHex ?? null;
-  const sqlInit = data.sqlInit ?? null;
   const htmlImages = data.htmlImages ?? [];
-  // 044: htmlStages を渡されたらそれが正で、htmlInit は先頭土台のミラーになる。
-  // 渡されないとき（044 以前の呼び出し）は従来どおり htmlInit をそのまま書く。
+  // 044/045: 土台の配列を渡されたらそれが正で、旧列（htmlInit / sqlInit）は先頭土台のミラーになる。
+  // 渡されないとき（044/045 以前の呼び出し）は従来どおり旧列をそのまま書く。
   const htmlStages = data.htmlStages;
-  const htmlInit = htmlStages !== undefined ? legacyHtmlInitMirror(htmlStages) : (data.htmlInit ?? null);
+  const htmlInit = htmlStages !== undefined ? legacyInitMirror(htmlStages) : (data.htmlInit ?? null);
+  const sqlStages = data.sqlStages;
+  const sqlInit = sqlStages !== undefined ? legacyInitMirror(sqlStages) : (data.sqlInit ?? null);
   await db.runAsync(
-    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, htmlInit, htmlImages, htmlStages, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, htmlInit, serializeDeckImages(htmlImages), serializeDeckStages(htmlStages), now, now]
+    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, sqlStages, htmlInit, htmlImages, htmlStages, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, serializeDeckStages(sqlStages), htmlInit, serializeDeckImages(htmlImages), serializeDeckStages(htmlStages), now, now]
   );
   return {
     id,
@@ -90,8 +93,9 @@ export async function createDeck(
     sqlInit,
     htmlInit,
     htmlImages,
-    // 読み直したときと同じ形にそろえる（htmlStages 未指定でも htmlInit から合成される）
+    // 読み直したときと同じ形にそろえる（配列未指定でも旧列から合成される）
     htmlStages: normalizeDeckStages(serializeDeckStages(htmlStages), htmlInit),
+    sqlStages: normalizeDeckStages(serializeDeckStages(sqlStages), sqlInit),
     archived: false,
     name: data.name,
     description: data.description,
@@ -103,24 +107,33 @@ export async function updateDeck(
   db: SQLiteDatabase,
   id: string,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'htmlInit' | 'htmlImages' | 'htmlStages'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'sqlStages' | 'htmlInit' | 'htmlImages' | 'htmlStages'>>
 ): Promise<void> {
   const now = new Date().toISOString();
-  // htmlImages / htmlStages は「渡されたときだけ」更新する（他の任意項目と扱いが違う点に注意）。
-  // どちらもフォームの入力欄と1対1ではないため、渡さない呼び出し（他画面からの
+  // htmlImages / htmlStages / sqlStages は「渡されたときだけ」更新する（他の任意項目と扱いが違う点に注意）。
+  // いずれもフォームの入力欄と1対1ではないため、渡さない呼び出し（他画面からの
   // デッキ更新）で無条件に上書きすると、登録済みライブラリ／土台が黙って消える。
   const updatesImages = data.htmlImages !== undefined;
   const updatesStages = data.htmlStages !== undefined;
-  // 044: 土台を更新するときは htmlInit を先頭土台のミラーで上書きする（旧バージョン互換）。
-  // 更新しないときは従来どおり渡された htmlInit をそのまま書く。
-  const htmlInit = updatesStages ? legacyHtmlInitMirror(data.htmlStages) : (data.htmlInit ?? null);
+  const updatesSqlStages = data.sqlStages !== undefined;
+  // 044/045: 土台を更新するときは旧列（htmlInit / sqlInit）を先頭土台のミラーで上書きする（旧バージョン互換）。
+  // **旧列も「渡されたときだけ」更新する**：無条件に `?? null` で書くと、土台を渡さない呼び出しで
+  // ミラーだけが NULL になり、新バージョンでは気づけないまま**旧バージョン／旧エクスポートから土台が
+  // 消える**（新バージョンは htmlStages/sqlStages を読むので画面上は正常に見えてしまう）。
+  const updatesHtmlInit = updatesStages || data.htmlInit !== undefined;
+  const updatesSqlInit = updatesSqlStages || data.sqlInit !== undefined;
+  const htmlInit = updatesStages ? legacyInitMirror(data.htmlStages) : (data.htmlInit ?? null);
+  const sqlInit = updatesSqlStages ? legacyInitMirror(data.sqlStages) : (data.sqlInit ?? null);
   await db.runAsync(
-    `UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?, sqlInit = ?, htmlInit = ?${updatesImages ? ', htmlImages = ?' : ''}${updatesStages ? ', htmlStages = ?' : ''}, updatedAt = ? WHERE id = ?`,
+    `UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?${updatesSqlInit ? ', sqlInit = ?' : ''}${updatesHtmlInit ? ', htmlInit = ?' : ''}${updatesImages ? ', htmlImages = ?' : ''}${updatesStages ? ', htmlStages = ?' : ''}${updatesSqlStages ? ', sqlStages = ?' : ''}, updatedAt = ? WHERE id = ?`,
     [
       data.name, data.description, data.language,
-      data.iconName ?? null, data.colorHex ?? null, data.sqlInit ?? null, htmlInit,
+      data.iconName ?? null, data.colorHex ?? null,
+      ...(updatesSqlInit ? [sqlInit] : []),
+      ...(updatesHtmlInit ? [htmlInit] : []),
       ...(updatesImages ? [serializeDeckImages(data.htmlImages)] : []),
       ...(updatesStages ? [serializeDeckStages(data.htmlStages)] : []),
+      ...(updatesSqlStages ? [serializeDeckStages(data.sqlStages)] : []),
       now, id,
     ]
   );

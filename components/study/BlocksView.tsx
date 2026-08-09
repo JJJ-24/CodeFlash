@@ -63,14 +63,14 @@ interface Props {
   scrollRef?: RefObject<ScrollView | null>;
   scrollBaseYRef?: RefObject<number>;
   /** デッキ共通の SQL 初期化（SQL コードブロック実行時に本体の前に流す） */
-  deckSqlInit?: string | null;
+  deckSqlStages?: DeckStage[];
   /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
   deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。CodeRunnerView へ素通しする */
   deckHtmlImages?: DeckImage[];
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlInit, deckHtmlStages, deckHtmlImages }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -313,7 +313,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 onSelectRequest={() => onSelectCodeBlock?.(codeBlockIndexMap[i])}
                 onRunRequest={() => handleRunRequest(i)}
                 onForceKeyboardFocus={onForceKeyboardFocus}
-                deckSqlInit={deckSqlInit}
+                deckSqlStages={deckSqlStages}
                 deckHtmlStages={deckHtmlStages}
                 deckHtmlImages={deckHtmlImages}
                 exitEditTrigger={exitEditTriggers[i]}

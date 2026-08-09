@@ -24,7 +24,7 @@ import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { IconPickerModal } from '@/components/IconPickerModal';
 import { DeckStagesModal } from '@/components/deck/DeckStagesModal';
-import { SqlInitModal } from '@/components/SqlInitModal';
+import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
 import type { DeckIconName } from '@/lib/deckIcons';
 import type { DeckImage, DeckStage } from '@/types';
 import { createDeck } from '@/lib/database/decks';
@@ -74,7 +74,8 @@ export default function NewDeckScreen() {
   const [description, setDescription] = useState('');
   const [iconName, setIconName] = useState<DeckIconName | null>(null);
   const [colorHex, setColorHex] = useState<string | null>(PRIMARY_COLOR);
-  const [sqlInit, setSqlInit] = useState('');
+  // 045: 名前付き初期化SQLのリスト（044 の htmlStages と同じ持ち方）
+  const [sqlStages, setSqlStages] = useState<DeckStage[]>([]);
   const [showSqlInitModal, setShowSqlInitModal] = useState(false);
   // 044: 名前付き土台のリスト（作成時はまだ DB に無いのでローカル state のみ）
   const [htmlStages, setHtmlStages] = useState<DeckStage[]>([]);
@@ -83,8 +84,9 @@ export default function NewDeckScreen() {
   const [showHtmlInitModal, setShowHtmlInitModal] = useState(false);
   // 043: 行の「設定済み」表示は土台テキストと画像ライブラリのどちらかがあれば点灯させる
   // （行が両方への入口なので、画像だけ登録した状態を「未設定」と見せないため）。
-  const filledStages = htmlStages.filter((s) => s.html.trim() !== '').length;
+  const filledStages = htmlStages.filter((s) => s.content.trim() !== '').length;
   const htmlConfigured = filledStages > 0 || htmlImages.length > 0;
+  const filledSqlStages = sqlStages.filter((s) => s.content.trim() !== '').length;
 
   const language = 'ja';
   const [saving, setSaving] = useState(false);
@@ -109,9 +111,9 @@ export default function NewDeckScreen() {
         language,
         iconName,
         colorHex,
-        sqlInit: sqlInit.trim() || null,
-        // 044: 中身が空の土台は保存しない（名前だけ作って離脱した行が残らないように）
-        htmlStages: htmlStages.filter((s) => s.html.trim() !== ''),
+        // 044/045: 中身が空の土台は保存しない（名前だけ作って離脱した行が残らないように）
+        sqlStages: sqlStages.filter((s) => s.content.trim() !== ''),
+        htmlStages: htmlStages.filter((s) => s.content.trim() !== ''),
         htmlImages,
       });
       addDeck(deck);
@@ -124,7 +126,7 @@ export default function NewDeckScreen() {
   }
 
   const canSave = !!name.trim() && !saving;
-  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || sqlInit.trim() !== '' || filledStages > 0 || htmlImages.length > 0;
+  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || filledSqlStages > 0 || filledStages > 0 || htmlImages.length > 0;
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
@@ -337,11 +339,11 @@ export default function NewDeckScreen() {
                 style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
                 onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
               >
-                <View style={[styles.iconCircle, { backgroundColor: sqlInit.trim() ? theme.colors.primaryLight : theme.colors.background }]}>
-                  <Ionicons name={sqlInit.trim() ? 'server' : 'server-outline'} size={20} color={sqlInit.trim() ? theme.colors.primary : theme.colors.textSecondary} />
+                <View style={[styles.iconCircle, { backgroundColor: filledSqlStages > 0 ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name={filledSqlStages > 0 ? 'server' : 'server-outline'} size={20} color={filledSqlStages > 0 ? theme.colors.primary : theme.colors.textSecondary} />
                 </View>
-                <Text style={{ color: sqlInit.trim() ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {sqlInit.trim() ? t('deck.sqlInitSet') : t('deck.sqlInitNone')}
+                <Text style={{ color: filledSqlStages > 0 ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {filledSqlStages > 0 ? t('deck.sqlStagesSet', { count: filledSqlStages }) : t('deck.sqlInitNone')}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>
@@ -378,19 +380,20 @@ export default function NewDeckScreen() {
         onSelect={setIconName}
         onClose={() => setShowIconPicker(false)}
       />
-      <SqlInitModal
+      <DeckStagesModal
         visible={showSqlInitModal}
-        value={sqlInit}
-        onChangeText={setSqlInit}
+        kind="sql"
+        stages={sqlStages}
+        onChange={setSqlStages}
         onClose={() => setShowSqlInitModal(false)}
       />
       <DeckStagesModal
         visible={showHtmlInitModal}
+        kind="html"
         stages={htmlStages}
         onChange={setHtmlStages}
         onClose={() => setShowHtmlInitModal(false)}
-        images={htmlImages}
-        onImagesChange={setHtmlImages}
+        editorFooter={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
       />
       <DiscardConfirmModal
         visible={showDiscardModal}

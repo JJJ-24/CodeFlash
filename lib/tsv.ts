@@ -198,7 +198,8 @@ async function resolveOrCreateTag(
  * 完全な保存は JSON バックアップ（lib/export.ts）の役目。
  */
 export type TsvExportLoss = {
-  deckSqlInit: boolean;
+  /** 045: デッキが持つ SQL 初期化の件数（旧 `deckSqlInit` の bool から件数に変更） */
+  deckSqlStages: number;
   /** 044: デッキが持つ HTML/CSS 土台の件数（旧 `deckHtmlInit` の bool から件数に変更） */
   deckHtmlStages: number;
   blockSqlInit: number;
@@ -222,9 +223,9 @@ export async function inspectTsvExport(db: SQLiteDatabase, deck: Deck): Promise<
     }
   }
   return {
-    deckSqlInit: !!deck.sqlInit?.trim(),
-    // 044: htmlStages は toDeck で正規化済み（旧 htmlInit のデッキも1件として数えられる）
-    deckHtmlStages: deck.htmlStages.filter((s) => s.html.trim() !== '').length,
+    // 044/045: 土台は toDeck で正規化済み（旧 sqlInit / htmlInit のデッキも1件として数えられる）
+    deckSqlStages: deck.sqlStages.filter((s) => s.content.trim() !== '').length,
+    deckHtmlStages: deck.htmlStages.filter((s) => s.content.trim() !== '').length,
     blockSqlInit,
     blockHtmlInit,
     images,
@@ -232,7 +233,7 @@ export async function inspectTsvExport(db: SQLiteDatabase, deck: Deck): Promise<
 }
 
 export function hasTsvExportLoss(loss: TsvExportLoss): boolean {
-  return loss.deckSqlInit || loss.deckHtmlStages > 0 || loss.blockSqlInit > 0 || loss.blockHtmlInit > 0 || loss.images > 0;
+  return loss.deckSqlStages > 0 || loss.deckHtmlStages > 0 || loss.blockSqlInit > 0 || loss.blockHtmlInit > 0 || loss.images > 0;
 }
 
 export async function exportDeckToTsv(db: SQLiteDatabase, deckId: string, deckName: string): Promise<void> {

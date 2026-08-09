@@ -25,7 +25,7 @@ import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS, PRO_LANGUAGES } from "@/lib/code-execution/constants";
 import { useProStore } from "@/store/pro";
-import { resolveDeckStageHtml } from "@/lib/deckStages";
+import { resolveDeckStageHtml, resolveDeckStageSql } from "@/lib/deckStages";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from "@/lib/theme";
@@ -51,7 +51,7 @@ interface Props {
   /** 実行ボタン経由での編集終了時にキーボードフォーカスを強制復元するコールバック */
   onForceKeyboardFocus?: () => void;
   /** デッキ共通の SQL 初期化（SQL ブロック実行時に本体の前に流す。ブロック固有 sqlInit の前に積まれる） */
-  deckSqlInit?: string | null;
+  deckSqlStages?: DeckStage[];
   /** 044: デッキの HTML/CSS 土台の一覧。ブロックは deckStageId で1つを選ぶ（未指定＝先頭） */
   deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決する */
@@ -75,7 +75,7 @@ export function CodeRunnerView({
   onRunStart,
   anotherBlockEditing,
   onForceKeyboardFocus,
-  deckSqlInit,
+  deckSqlStages,
   deckHtmlStages,
   deckHtmlImages,
 }: Props) {
@@ -278,7 +278,15 @@ export function CodeRunnerView({
     onSelectRequest?.();
     const content =
       editable && editedContent !== undefined ? editedContent : block.content;
-    const sqlInits = block.language === 'sql' ? [deckSqlInit ?? '', block.sqlInit ?? ''] : undefined;
+    // 045: デッキ側は deckSqlStageId で選ばれた1つ（未指定＝先頭・削除済み参照は積まない）。
+    // htmlInits と同じく **block 丸ごとではなく必要な2フィールドだけ**渡す（依存配列を最小に保つ）
+    const sqlInits =
+      block.language === 'sql'
+        ? [
+            resolveDeckStageSql(deckSqlStages, { deckSqlStageId: block.deckSqlStageId, noDeckSqlInit: block.noDeckSqlInit }),
+            block.sqlInit ?? '',
+          ]
+        : undefined;
     if (wasThisEditing || anotherWasEditing) {
       // keyboard TextInput の focus 復元を待ってから WebView をマウントする
       setTimeout(() => run(content, block.language, sqlInits, htmlInits, deckHtmlImages), 300);
@@ -294,7 +302,9 @@ export function CodeRunnerView({
     block.content,
     block.language,
     block.sqlInit,
-    deckSqlInit,
+    block.deckSqlStageId,
+    block.noDeckSqlInit,
+    deckSqlStages,
     htmlInits,
     deckHtmlImages,
     run,

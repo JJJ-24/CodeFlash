@@ -101,7 +101,7 @@ interface Props {
   deckIconName?: string | null;
   deckColorHex?: string | null;
   /** デッキ共通の SQL 初期化（SQL コードブロックのプレビュー実行時に本体の前へ流す） */
-  deckSqlInit?: string | null;
+  deckSqlStages?: DeckStage[];
   /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
   deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。CodeBlockItem へ素通しする */
@@ -135,7 +135,7 @@ export function BlockEditor({
   deckName,
   deckIconName,
   deckColorHex,
-  deckSqlInit,
+  deckSqlStages,
   deckHtmlStages,
   deckHtmlImages,
   onSave,
@@ -1243,7 +1243,7 @@ export function BlockEditor({
                 <CodeBlockItem
                   block={block as CodeBlock}
                   isPreview={isPreview}
-                  deckSqlInit={deckSqlInit}
+                  deckSqlStages={deckSqlStages}
                   deckHtmlStages={deckHtmlStages}
                   deckHtmlImages={deckHtmlImages}
                   onChange={(patch) =>

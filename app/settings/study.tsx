@@ -20,6 +20,8 @@ import {
   STUDY_TIMER_CYCLES_MAX,
   STUDY_TIMER_CYCLES_MIN,
   STUDY_TIMER_ELEMENT_MODES,
+  STUDY_GOAL_COUNT_MIN,
+  STUDY_GOAL_SLIDER_MAX,
   STUDY_TIMER_MINUTES_MAX,
   STUDY_TIMER_MINUTES_MIN,
   useSettingsStore,
@@ -42,9 +44,11 @@ export default function StudySettingsScreen() {
     studyTimerEndBehavior, setStudyTimerEndBehavior,
     studyTimerBreakMinutes, setStudyTimerBreakMinutes,
     studyTimerCycles, setStudyTimerCycles,
+    studyGoalEnabled, setStudyGoalEnabled,
+    studyGoalCount, setStudyGoalCount,
   } = useSettingsStore();
   const [showRetentionInfo, setShowRetentionInfo] = useState(false);
-  // 学習タイマー各設定の情報 i アイコン。開くのは1つずつ（キー: general/cycles/break/ring/time/end）。
+  // 学習タイマー・目標枚数の情報 i アイコン。開くのは1つずつ（キー: general/cycles/break/ring/time/end/goal）。
   const [openTimerInfo, setOpenTimerInfo] = useState<string | null>(null);
 
   function handleFsrsPresetSelect(preset: FsrsPreset) {
@@ -86,10 +90,77 @@ export default function StudySettingsScreen() {
       </View>
     ) : null;
 
+  // 1日の目標枚数（046）。タイマー＝時間で区切る／こちら＝量で区切る、という対の関係。
+  // **1日単位**なので、複数セッションに分けても今日の累計で判定する。
+  // **無料機能**なので Pro ロック時の画面にも出す＝JSX を変数に切り出して両方の分岐から描画する
+  // （FSRS・学習タイマーは Pro のまま）。
+  const goalCard = (
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Pressable
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          onPress={() => toggleTimerInfo('goal')}
+          hitSlop={6}
+        >
+          <Text
+            style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+          >
+            {t('settings.studyGoal')}
+          </Text>
+          {timerInfoIcon('goal')}
+        </Pressable>
+        {timerInfoBox('goal', 'settings.studyGoalInfo')}
+        <View style={styles.notificationRow}>
+          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.studyGoalEnable')}
+          </Text>
+          <Switch
+            value={studyGoalEnabled}
+            onValueChange={setStudyGoalEnabled}
+            trackColor={{ true: theme.colors.primary }}
+          />
+        </View>
+
+        {studyGoalEnabled && (
+          <View style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.studyGoalCount')}
+              </Text>
+              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('settings.studyGoalCountValue', { n: studyGoalCount })}
+              </Text>
+            </View>
+            {/* スライダーは実用域（1〜100枚）だけを覆う。100 超は上限 999 まで設定値としては
+                保持できるが、スライダーでは 100 で頭打ちになる（それ以上は刻みが粗くなり
+                かえって合わせにくいため）。 */}
+            <Slider
+              minimumValue={STUDY_GOAL_COUNT_MIN}
+              maximumValue={STUDY_GOAL_SLIDER_MAX}
+              step={1}
+              value={Math.min(studyGoalCount, STUDY_GOAL_SLIDER_MAX)}
+              onValueChange={setStudyGoalCount}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.iconSubtle}
+              thumbTintColor={theme.colors.primary}
+            />
+          </View>
+        )}
+      </View>
+  );
+
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
   if (!isPro) {
     return (
-      <SettingsDetail title={t('settings.studySettings')}>
+      <SettingsDetail
+        title={t('settings.studySettings')}
+        // 非 Pro でも目標枚数（無料）の i アイコンが開けるので、Pro 側と同じく
+        // 「開いている説明があれば先に閉じる」を渡す
+        onBack={(direct) => {
+          if (!direct && openTimerInfo) { setOpenTimerInfo(null); return; }
+          router.back();
+        }}
+      >
         <Pressable
           style={[styles.card, { backgroundColor: theme.colors.surface }]}
           onPress={() => router.push('/paywall')}
@@ -97,8 +168,10 @@ export default function StudySettingsScreen() {
           <View style={styles.proRow}>
             <View style={{ flex: 1, gap: 2 }}>
               <View style={styles.proTitleRow}>
+                {/* 046: 画面タイトルと同じ「学習設定」だと、同じ画面に無料の目標枚数が並ぶため
+                    何がロックされているのか伝わらない。ロック対象を具体名で示す。 */}
                 <Text style={[styles.proTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.studySettings')}
+                  {t('settings.studyProLockTitle')}
                 </Text>
                 <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />
               </View>
@@ -109,6 +182,7 @@ export default function StudySettingsScreen() {
             <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
           </View>
         </Pressable>
+        {goalCard}
       </SettingsDetail>
     );
   }
@@ -407,6 +481,8 @@ export default function StudySettingsScreen() {
           </>
         )}
       </View>
+
+      {goalCard}
     </SettingsDetail>
   );
 }

@@ -113,6 +113,9 @@
     "timerEndMessage": "設定した学習時間が経過しました。",
     "timerContinue": "続ける（タイマー再開）",
     "timerFinish": "学習を完了",
+    "goalReachedTitle": "目標達成",
+    "goalReachedMessage": "今日の目標 {{count}} 枚を学習しました。",
+    "goalContinue": "続ける",
     "timerMenuTitle": "学習タイマー",
     "timerMenuMessage": "操作を選択してください。",
     "timerStartHint": "{{minutes}}分",
@@ -502,6 +505,12 @@
     "studyTimerCyclesInfo": "繰り返し回数を2回以上にすると、休憩時間を設定できます。「25分学習→5分休憩」を4回繰り返すなど、ポモドーロタイマーとしても活用できます。",
     "studyTimerRingInfo": "正円から始まり、時間の経過とともに時計回りに欠けていきます。円がなくなると時間切れです。\n・常に：常に円を表示\n・開始時：開始後の数秒間だけ表示\n・オフ：円を表示しない",
     "studyTimerTimeInfo": "残り1分を切るまでは分単位、1分を切ると秒単位で表示します。\n・常に：常に残り時間を表示\n・開始時：開始後の数秒間だけ表示\n・オフ：残り時間を表示しない",
+    "studyProLockTitle": "FSRS・学習タイマー",
+    "studyGoal": "1日の目標枚数",
+    "studyGoalEnable": "目標枚数を設定する",
+    "studyGoalCount": "目標枚数",
+    "studyGoalCountValue": "{{n}} 枚",
+    "studyGoalInfo": "今日学習したカードが目標枚数に達したときにお知らせし、そのまま学習を完了できます。目標は1日単位なので、複数回に分けて学習しても今日の合計で判定します。同じカードを何度評価しても1枚と数えます。",
     "studyTimerEndInfo": "・アラート：時間切れをお知らせし、「再開／完了」を選べます\n・点滅のみ：円が点滅し、タップで停止します"
   },
   "about": {

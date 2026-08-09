@@ -151,7 +151,7 @@ id が解決できない     → 積まない（**先頭にフォールバック
       `card/[cardId]/edit` → `BlockEditor`/`BlocksView` → `CodeBlockItem`/`CodeRunnerView`）
 - [x] i18n（`deck.sqlStages*`/`sqlStageDelete*`・`editor.useDeckSqlInit*`/`deckSqlStagePicker*`・
       `dataManagement.tsvLossDeckSqlStages`・ja/en）。`deck.sqlInitLabel`・`shortcut.sqlInit` から「共通」を外した
-- [x] 検証：`npm run verify:db`（`scripts/verify-deck-stages.ts`）を SQL まで拡張＝**67 アサーション全通過**。
+- [x] 検証：`npm run verify:db`（`scripts/verify-db.ts`）を SQL まで拡張＝**67 アサーション全通過**。
       旧DB正規化・保存/ミラー・エクスポート往復・解決規則の全分岐・**HTML と SQL が互いに影響しないこと**・旧キー互換
 - [x] `npx tsc --noEmit` エラーなし／`npm run lint` 0 errors・48 warnings（変更前と同数）
 - [x] **実機確認（2026-08-09・OK）**：デッキ編集の SQL 行→一覧→編集面、SQL ブロックのトグル/チップ、

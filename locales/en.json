@@ -113,6 +113,9 @@
     "timerEndMessage": "Your study time is over.",
     "timerContinue": "Continue (Restart Timer)",
     "timerFinish": "Finish Session",
+    "goalReachedTitle": "Goal Reached",
+    "goalReachedMessage": "You studied {{count}} cards — today's goal is done.",
+    "goalContinue": "Keep going",
     "timerMenuTitle": "Study Timer",
     "timerMenuMessage": "Choose an action.",
     "timerStartHint": "{{minutes}} min",
@@ -502,6 +505,12 @@
     "studyTimerCyclesInfo": "Set the repeat count to 2 or more to enable break time. You can also use it as a Pomodoro timer, e.g. repeating \"25 min study → 5 min break\" four times.",
     "studyTimerRingInfo": "Starts as a full circle and empties clockwise as time passes. When the circle is gone, time is up.\n- Always: always show the circle\n- At start: show for a few seconds after starting\n- Off: don't show the circle",
     "studyTimerTimeInfo": "Shows minutes until under 1 minute remains, then seconds.\n- Always: always show the remaining time\n- At start: show for a few seconds after starting\n- Off: don't show the remaining time",
+    "studyProLockTitle": "FSRS & study timer",
+    "studyGoal": "Daily card goal",
+    "studyGoalEnable": "Set a daily goal",
+    "studyGoalCount": "Goal",
+    "studyGoalCountValue": "{{n}} cards",
+    "studyGoalInfo": "Alerts you when you reach your goal for the day, so you can finish the session there. The goal is per day, so several sessions add up. Grading the same card more than once still counts as one card.",
     "studyTimerEndInfo": "- Alert: notifies you when time is up and lets you choose Resume/Finish\n- Blink only: the circle blinks; tap to stop"
   },
   "about": {

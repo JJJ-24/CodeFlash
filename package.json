@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "process-icon": "bash scripts/process-icon.sh",
-    "verify:db": "sucrase-node scripts/verify-deck-stages.ts",
+    "verify:db": "sucrase-node scripts/verify-db.ts",
     "postinstall": "patch-package"
   },
   "dependencies": {

@@ -303,7 +303,7 @@ iCloud 同期は **DB ファイル丸ごと**を LWW で往復させるため、
 > **検証ハーネスについて**：本リポジトリにはテストフレームワークが無いため、`node:sqlite` を
 > expo-sqlite 互換の薄いシムでくるみ、`Module._resolveFilename` を差し替えて expo/RN モジュールを
 > スタブする方式で実施した（`sucrase-node` で TS を直接実行）。**リポジトリに残してある**：
-> 土台部分が `scripts/db-harness.ts`、044 のテストが `scripts/verify-044-deck-stages.ts`（`npm run verify:db`）。
+> 土台部分が `scripts/db-harness.ts`、044 のテストが `scripts/verify-db.ts`（`npm run verify:db`）。
 > 同じ土台は `docs/db-migration-checklist.md` の確認（列追加・旧エクスポート読み込み・往復）に流用できる。
 > ⚠️ ハーネス側でアプリのモジュールを読むときは **`import` ではなく `require()`**（`import` は巻き上げられ、
 > スタブを入れる前に expo モジュールが解決されて落ちる）。

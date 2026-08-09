@@ -8,7 +8,7 @@
  * 1. `installModuleStubs()` … expo/RN モジュールをスタブに差し替え、`@/` エイリアスを解決する
  * 2. `makeDb()`            … `node:sqlite`（同期）を expo-sqlite 互換の非同期 API でくるむ
  *
- * 実行例: `npm run verify:db`（= `sucrase-node scripts/verify-044-deck-stages.ts`）
+ * 実行例: `npm run verify:db`（= `sucrase-node scripts/verify-db.ts`）
  *
  * ⚠️ **アプリのモジュールは `import` ではなく `require()` で読むこと。**
  *    `import` はファイル先頭へ巻き上げられ、スタブを入れる前に expo モジュールが解決されて落ちる。

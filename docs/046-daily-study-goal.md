@@ -1,7 +1,7 @@
 # 046 1日の目標枚数と未達成リマインダー
 
 **フェーズ:** 将来
-**ステータス:** 未着手
+**ステータス:** **Phase 1 完了（2026-08-09・実機確認済み）**。Phase 2（未達成リマインダー）・Phase 3 は未着手
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** 023/031（通知リマインダー・`notification_schedules`）・039（学習タイマー＝挙動と UI の雛形）
 **被依存:** なし
@@ -232,21 +232,53 @@ D を1日まで縮めても成立する（毎日アプリを開けば毎日積�
 
 ## Todo
 
-### Phase 1: 目標枚数と達成アラート（DB 変更なし・独立して完結）
+### Phase 1: 目標枚数と達成アラート ＝**実装完了（2026-08-09）／実機確認だけ残**
 
-- [ ] `store/settings.ts`：`studyGoalEnabled` / `studyGoalCount` を DEFS に追加＋setter
-- [ ] **`lib/settings-keys.ts` にも追加**（JSON エクスポート対象・漏れると復元されない）
-- [ ] `app/settings/study.tsx`：トグル＋枚数入力（039 のタイマー設定の隣・同じ見た目）
-- [ ] `hooks/useStudySession.ts` または `app/study/session.tsx`：
-  - [ ] セッション開始時に `goalMetAtStart` を確定（開始時点で達成済みなら以後発火しない）
-  - [ ] 評価送信のたびに `getTodayReviewedCount(db)` を引き直してまたぎを判定
-  - [ ] `alreadyFired` ref で1セッション1回に制限
-- [ ] 達成モーダル（`ConfirmModal`・［続ける］/［学習を完了］→ `finishSession()`）
-- [ ] タイマーと同時発火しないよう、発火理由を1つの state（`'timer' | 'goal' | null`）に統合
-- [ ] キー操作：モーダル表示中は背景キーを抑止（`showTimerEndModal` と同じ扱いを
-      `session.tsx` の `active` ゲートと Esc ハンドラに追加）
-- [ ] i18n（`study.goalReachedTitle`/`goalReachedMessage`・`settings.studyGoal*`・ja/en）
-- [ ] 閲覧モード（`browse=1`）で発火しないことを確認（`submitGrade` を通らないので自動）
+- [x] `store/settings.ts`：`studyGoalEnabled` / `studyGoalCount` を DEFS に追加＋setter
+      （`STUDY_GOAL_COUNT_MIN/MAX/DEFAULT` と `STUDY_GOAL_SLIDER_MAX`）
+- [x] **`lib/settings-keys.ts` にも追加**（JSON エクスポート対象・漏れると復元されない）
+- [x] `app/settings/study.tsx`：トグル＋枚数スライダー（039 のタイマー設定の下・同じ見た目・i アイコン付き）
+- [x] **`lib/studyGoal.ts` を新設**＝判定を純粋関数に切り出す（`shouldFireStudyGoal` /
+      `isStudyGoalUnmet`）。UI を描かずに検証できるようにするため。Phase 2 も同じ関数を使う
+- [x] `app/study/session.tsx`：
+  - [x] セッション開始時に `goalMetAtStartRef` を確定（**セッションにつき1回だけ**・
+        開始時点で達成済みなら以後発火しない）
+  - [x] 評価送信のたびに `getTodayReviewedCount(db)` を引き直してまたぎを判定
+  - [x] `goalFiredRef` で1セッション1回に制限
+- [x] 達成モーダル（`ConfirmModal`・［続ける］/［学習を完了］→ `finishSession()`）
+- [x] タイマーと同時に2枚出ないようにする（下記の実装メモ）
+- [x] キー操作：モーダル表示中は背景キーを抑止（main の `active` ゲートに `!showGoalModal`、
+      Esc ハンドラに「目標モーダルを閉じる」を追加）
+- [x] i18n（`study.goalReachedTitle`/`goalReachedMessage`/`goalContinue`・`settings.studyGoal*`・ja/en）
+- [x] 閲覧モード（`browse=1`）で発火しない（`goalActive` から除外＝無駄なクエリも出さない）
+- [x] 検証：`npm run verify:db` に T13（またぎ判定の全分岐）・T14（枚数の数え方）を追加＝**79 アサーション全通過**
+- [x] `npx tsc --noEmit` エラーなし／`npm run lint` 0 errors・48 warnings（変更前と同数）
+- [x] **入口の Pro ゲートを外す**（`app/(tabs)/settings.tsx` の学習設定行）＋ロックカードの見出しを
+      具体名に変更（`settings.studyProLockTitle`・ja/en）
+- [x] **実機確認（2026-08-09・OK）**：設定画面の表示、達成時にアラートが出る、［続ける］後に再発火しない、
+      達成済みの日に新しいセッションを始めても出ない、非 Pro で学習設定に入って目標枚数を操作できる
+
+#### 実装メモ
+
+- **無料機能を Pro 画面に置くときは「入口」と「遷移先」の両方を直す**（実装漏れを踏んだ）。
+  目標枚数は無料だが、置き場所の `app/settings/study.tsx` は FSRS・学習タイマーが Pro のため
+  画面全体が Pro 扱いだった。最初は遷移先の画面だけ直し（`goalCard` を変数に切り出して
+  非 Pro の early return 分岐でも描画）、**入口である設定タブの行が非 Pro を paywall へ
+  飛ばしたまま**だったため、非 Pro からは到達できない状態になっていた。
+  対応は次の2点：
+  - `app/(tabs)/settings.tsx`：学習設定の行から `locked: !isPro` と paywall 分岐を外し、
+    **常に `/settings/study` へ遷移**させる（画面の中で Pro 部分だけロックする形に変更）
+  - `app/settings/study.tsx`：ロックカードの見出しを画面タイトルと同じ「学習設定」から
+    **`settings.studyProLockTitle`（FSRS・学習タイマー）** に変更。同じ画面に無料の設定が
+    並ぶため、「何がロックされているのか」を具体名で示さないと伝わらないため
+  - ⚠️ 今後この画面に無料の設定を足すときも同じ扱いが要る（Pro 分岐にだけ書くと非 Pro から見えない）
+- **モーダルの二重表示を避ける**：RN の `<Modal>` を2枚同時に visible にすると iOS で
+  present/dismiss が重なって VC が wedged になる（039 のタイマー長押しメニューで実際に踏んだ）。
+  タイマー終了アラートが出ているときは目標アラートを**出さずに譲る**（`goalFiredRef` は立てるので
+  後追いもしない＝終了アラート側にも［学習を完了］があるので操作としては足りる）。
+  逆にタイマー終了時は目標アラートを先に閉じ、350ms 後に出す（既存のメニューと同じ作法）
+- **基準はセッションにつき1回だけ確定する**：学習中に数え直して上書きすると、そのセッションで
+  積んだぶんまで「開始時点」に含まれてしまい、達成しても発火しなくなる
 
 ### Phase 2: 未達成リマインダー
 

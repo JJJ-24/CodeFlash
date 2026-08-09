@@ -53,7 +53,8 @@ import {
 } from "@/lib/donut";
 import { FlipSuppressContext } from "@/lib/FlipSuppressContext";
 import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
-import { getReviewByCardId } from "@/lib/database/reviews";
+import { getReviewByCardId, getTodayReviewedCount } from "@/lib/database/reviews";
+import { shouldFireStudyGoal } from "@/lib/studyGoal";
 import { addTagToCard, createTag, getAllTags, getTagsByCardId, removeTagFromCard } from "@/lib/database/tags";
 import { setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
@@ -197,6 +198,8 @@ export default function StudySessionScreen() {
     studyTimerEndBehavior,
     studyTimerBreakMinutes,
     studyTimerCycles,
+    studyGoalEnabled,
+    studyGoalCount,
   } = useSettingsStore();
   const { isPro } = useProStore();
   const { width: screenWidth } = useWindowDimensions();
@@ -255,12 +258,27 @@ export default function StudySessionScreen() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showTimerMenu, setShowTimerMenu] = useState(false);
   const [showTimerEndModal, setShowTimerEndModal] = useState(false);
+  // 046: 1日の目標枚数の達成アラート。タイマー終了アラートと同じ ConfirmModal を使う。
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  // 「セッション開始時点で既に達成済みだったか」。true なら**このセッションでは一切発火しない**
+  // （目標は1日単位なので、達成済みの日に新しいセッションを始めた瞬間に出てしまうのを防ぐ）。
+  // null = まだ判定していない（初回の集計待ち）。
+  const goalMetAtStartRef = useRef<boolean | null>(null);
+  // 1セッション1回に制限（「続ける」を選んだ後に再発火しないように）
+  const goalFiredRef = useRef(false);
   // 041: コードブロックの全画面インタラクティブプレビュー表示中は背後キー（フリップ/採点/カード送り/戻る）を抑止する。
   const [interactivePreviewOpen, setInteractivePreviewOpen] = useState(false);
   const interactivePreviewCtx = useMemo(() => ({ setOpen: setInteractivePreviewOpen }), []);
   // 時間切れ処理（handleTimerFinish＝useCallback）から最新の開閉状態を読むための ref。
   const showTimerMenuRef = useRef(false);
   showTimerMenuRef.current = showTimerMenu;
+  // 046: モーダルの二重表示を避けるための現在値参照（タイマー終了アラートと目標達成アラート）。
+  // RN の <Modal> を2枚同時に visible にすると iOS で present/dismiss が重なって VC が wedged になる
+  // （画面がフリーズする既知の不具合。タイマー長押しメニューで実際に踏んでいる）。
+  const showTimerEndModalRef = useRef(false);
+  showTimerEndModalRef.current = showTimerEndModal;
+  const showGoalModalRef = useRef(false);
+  showGoalModalRef.current = showGoalModal;
   const [kbHeight, setKbHeight] = useState(0);
 
   // キーボード表示時に paddingBottom を追加してスクロール余白を確保する。
@@ -392,8 +410,10 @@ export default function StudySessionScreen() {
     // RN の <Modal> が2枚同時に visible になり、iOS で present/dismiss が重なって VC が wedged になる
     // （閉じたあと画面がフリーズ・タイマー円だけ反応する不具合）。メニューが開いていれば先に閉じ、
     // フェード完了後（~350ms）に終了アラートを出して二重 Modal を構造的に避ける。
-    if (showTimerMenuRef.current) {
+    // 046: 目標達成アラートが出ていた場合も同じ理由で先に閉じてから出す（タイマーの通知を優先）
+    if (showTimerMenuRef.current || showGoalModalRef.current) {
       setShowTimerMenu(false);
+      setShowGoalModal(false);
       setTimeout(() => setShowTimerEndModal(true), 350);
     } else {
       setShowTimerEndModal(true);
@@ -414,6 +434,48 @@ export default function StudySessionScreen() {
     // 休憩を挟んだカードの responseTimeMs から実休憩時間を除外する（全離脱経路で呼ばれる）
     onBreakElapsed: shiftCardShownAt,
   });
+  // ---- 046: 1日の目標枚数 ----------------------------------------------------
+  // 目標は**1日単位**（セッション単位ではない）。閲覧モードは submitGrade を通らないので
+  // 記録も判定も走らない＝ここで browseMode を除外しておけば無駄なクエリも出ない。
+  const goalActive = studyGoalEnabled && !browseMode;
+
+  // セッション開始時点で既に達成済みかを1回だけ確定する。**達成済みならこのセッションでは
+  // 一切発火しない**（1日単位ゆえ、達成済みの日に新しいセッションを始めた瞬間に出るのを防ぐ）。
+  useEffect(() => {
+    // **セッションにつき1回だけ**確定する（すでに確定済みなら何もしない）。学習中に枚数を
+    // 数え直して基準を上書きすると、このセッションで積んだぶんまで「開始時点」に含まれてしまい、
+    // 達成しても発火しなくなる。基準は「セッションを始めた時点の事実」で固定する。
+    if (!goalActive || goalMetAtStartRef.current !== null) return;
+    let cancelled = false;
+    getTodayReviewedCount(db)
+      .then((count) => { if (!cancelled) goalMetAtStartRef.current = count >= studyGoalCount; })
+      .catch(() => { /* 取得できなければ未判定のまま＝発火しない（安全側） */ });
+    return () => { cancelled = true; };
+  }, [goalActive, db, studyGoalCount]);
+
+  /** 評価送信のたびに今日の枚数を数え直し、閾値を「またいだ」ときだけ1回アラートを出す。
+   *  **ローカルで +1 しない**：`再考` で戻ってきた同じカードを再評価すると二重に数えてしまい、
+   *  実カード枚数を返す getTodayReviewedCount と食い違うため、毎回 DB から引き直す（COUNT 1本）。 */
+  const checkStudyGoal = useCallback(async () => {
+    if (!goalActive || goalFiredRef.current) return;
+    // 基準が未確定（初回クエリが未完了）なら shouldFireStudyGoal が false を返す＝誤発火より不発
+    if (goalMetAtStartRef.current === null) return;
+    const count = await getTodayReviewedCount(db).catch(() => -1);
+    if (!shouldFireStudyGoal(count, studyGoalCount, goalMetAtStartRef.current, goalFiredRef.current)) return;
+    goalFiredRef.current = true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // タイマー終了アラートが出ているときは譲る（2枚同時に出すと iOS で VC が wedged になる）。
+    // goalFiredRef は立てたままなので、後追いで出し直すことはしない＝終了アラート側にも
+    // 「学習を完了」があるので操作としては足りている。
+    if (showTimerEndModalRef.current) return;
+    if (showTimerMenuRef.current) {
+      setShowTimerMenu(false);
+      setTimeout(() => setShowGoalModal(true), 350);
+    } else {
+      setShowGoalModal(true);
+    }
+  }, [goalActive, db, studyGoalCount]);
+
   const timerBlinking = timer.phase === "finished" && studyTimerEndBehavior === "blink";
   // 休憩中（039）: カード面グレーアウト＋操作無効。ヘッダー（戻る/鉛筆/完了）と
   // タイマー長押しメニュー（スキップ/終了）・Q/B/Esc キーは生かす。
@@ -749,6 +811,8 @@ export default function StudySessionScreen() {
     setGrading(true);
     await submitGrade(grade);
     setGrading(false);
+    // 046: 記録が確定した後に今日の枚数を数え直して目標達成を判定する
+    void checkStudyGoal();
   }
 
   function handleGradeWithSlide(grade: Grade) {
@@ -836,7 +900,7 @@ export default function StudySessionScreen() {
   // リンク一覧/タグシート/終了確認/ショートカット一覧/タイマー系モーダルの表示中は背景のショートカットを解除する
   // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/TagSheet/専用 Return は別フックが担当）。
   // タイマー終了/メニューは確定操作を含むため Return は割り当てない（タップ/Esc のみ）。
-  ], !showLinksModal && !showTagSheet && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showTimerMenu && !interactivePreviewOpen);
+  ], !showLinksModal && !showTagSheet && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showGoalModal && !showTimerMenu && !interactivePreviewOpen);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
   useKeyCommands([
@@ -855,6 +919,7 @@ export default function StudySessionScreen() {
         if (showFinishModal) { setShowFinishModal(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (showTimerEndModal) { setShowTimerEndModal(false); timer.stop(); return; }
+        if (showGoalModal) { setShowGoalModal(false); return; }
         if (showTimerMenu) { setShowTimerMenu(false); return; }
         if (isFullscreen) {
           setCodeEditing(false);
@@ -1445,6 +1510,18 @@ export default function StudySessionScreen() {
           { label: t("study.timerFinish"), onPress: () => { setShowTimerEndModal(false); finishSession(); } },
         ]}
         onClose={() => { setShowTimerEndModal(false); timer.stop(); }}
+      />
+      {/* 046: 1日の目標枚数の達成アラート。目標は上限ではなく目安なので「続ける」を必ず用意する
+          （閉じた後は goalFiredRef により、このセッションでは再発火しない）。 */}
+      <ConfirmModal
+        visible={showGoalModal}
+        title={t("study.goalReachedTitle")}
+        message={t("study.goalReachedMessage", { count: studyGoalCount })}
+        actions={[
+          { label: t("study.goalContinue"), onPress: () => setShowGoalModal(false) },
+          { label: t("study.timerFinish"), onPress: () => { setShowGoalModal(false); finishSession(); } },
+        ]}
+        onClose={() => setShowGoalModal(false)}
       />
     </>
   );

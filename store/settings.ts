@@ -121,6 +121,18 @@ export const STUDY_TIMER_CYCLES_DEFAULT = 1;
 const clampTimerCycles = (v: number) =>
   Math.max(STUDY_TIMER_CYCLES_MIN, Math.min(STUDY_TIMER_CYCLES_MAX, Math.round(v)));
 
+// 046: 1日の目標枚数。タイマー（時間で区切る）に対して「量で区切る」ための目標。
+// **1日単位**（セッション単位ではない）＝Phase 2 の未達成リマインダーと同じ目標を共有するため。
+export const STUDY_GOAL_COUNT_MIN = 1;
+export const STUDY_GOAL_COUNT_MAX = 999;
+export const STUDY_GOAL_COUNT_DEFAULT = 20;
+// スライダーが覆う実用域。設定値としては 999 まで保持できるが、スライダーで 999 まで引くと
+// 1目盛りが粗くなって狙った枚数に合わせられないため、UI 側だけ 100 で頭打ちにする。
+export const STUDY_GOAL_SLIDER_MAX = 100;
+
+const clampGoalCount = (v: number) =>
+  Math.max(STUDY_GOAL_COUNT_MIN, Math.min(STUDY_GOAL_COUNT_MAX, Math.round(v)));
+
 export type InitialFilterPreference = 'all' | 'learned' | 'review' | 'new' | 'none';
 export type DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>;
 
@@ -174,6 +186,9 @@ interface SettingsValues {
   studyTimerEndBehavior: StudyTimerEndBehavior;
   studyTimerBreakMinutes: number;
   studyTimerCycles: number;
+  // 046: 1日の目標枚数（量で区切る学習）。OFF のときは達成アラートも未達成判定も動かない
+  studyGoalEnabled: boolean;
+  studyGoalCount: number;
   // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
   badgeLapStageSeen: number;
 }
@@ -319,6 +334,13 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     normalize: clampTimerCycles,
     onApply: resetStudyTimerIfActive,
   },
+  studyGoalEnabled: { key: '@codeflash_study_goal_enabled', default: false, parse: asBool },
+  studyGoalCount: {
+    key: '@codeflash_study_goal_count',
+    default: STUDY_GOAL_COUNT_DEFAULT,
+    parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampGoalCount(v); },
+    normalize: clampGoalCount,
+  },
   badgeLapStageSeen: {
     key: '@codeflash_badge_lap_stage_seen',
     default: 1,
@@ -364,6 +386,8 @@ interface SettingsState extends SettingsValues {
   setStudyTimerEndBehavior: (v: StudyTimerEndBehavior) => void;
   setStudyTimerBreakMinutes: (v: number) => void;
   setStudyTimerCycles: (v: number) => void;
+  setStudyGoalEnabled: (v: boolean) => void;
+  setStudyGoalCount: (v: number) => void;
   setBadgeLapStageSeen: (v: number) => void;
 }
 
@@ -423,6 +447,8 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setStudyTimerEndBehavior: makeSetter('studyTimerEndBehavior'),
     setStudyTimerBreakMinutes: makeSetter('studyTimerBreakMinutes'),
     setStudyTimerCycles: makeSetter('studyTimerCycles'),
+    setStudyGoalEnabled: makeSetter('studyGoalEnabled'),
+    setStudyGoalCount: makeSetter('studyGoalCount'),
     setBadgeLapStageSeen: makeSetter('badgeLapStageSeen'),
   };
 });

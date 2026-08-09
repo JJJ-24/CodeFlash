@@ -57,7 +57,9 @@ export default function SettingsScreen() {
   const navItems: NavItem[] = [
     { key: 'display', label: t('settings.display'), icon: 'color-palette-outline', onPress: () => router.push('/settings/display') },
     { key: 'notifications', label: t('notification.title'), icon: 'notifications-outline', onPress: () => router.push('/settings/notifications') },
-    { key: 'study', label: t('settings.studySettings'), icon: 'school-outline', locked: !isPro, onPress: () => router.push(isPro ? '/settings/study' : '/paywall') },
+    // 046: 学習設定は**行としてはロックしない**（1日の目標枚数が無料機能で、ここが唯一の入口のため）。
+    // 画面の中で Pro 部分（FSRS・学習タイマー）だけをロックカードにして paywall へ誘導する。
+    { key: 'study', label: t('settings.studySettings'), icon: 'school-outline', onPress: () => router.push('/settings/study') },
     { key: 'sync', label: t('sync.title'), icon: 'cloud-outline', locked: !isPro, onPress: () => router.push(isPro ? '/settings/sync' : '/paywall') },
     { key: 'archive', label: t('archive.title'), icon: 'archive-outline', onPress: () => router.push('/archive') },
     { key: 'data', label: t('dataManagement.title'), icon: 'folder-outline', onPress: () => router.push('/settings/data') },

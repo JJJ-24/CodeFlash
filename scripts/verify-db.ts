@@ -1,6 +1,8 @@
 /**
- * デッキ土台の複数持ちの検証（044: HTML/CSS 土台 ／ 045: SQL 初期化）。
- * `docs/044-multiple-deck-stages.md`（HTML・Phase 6）と `docs/045-multiple-deck-sql-stages.md`（SQL）に対応する。
+ * DB ロジックと判定ロジックの検証（テストフレームワーク未導入のための代替）。
+ *
+ * 対象: 044/045 デッキ土台の複数持ち（`docs/044` / `docs/045`）・
+ *       046 1日の目標枚数（`docs/046`）。**新しい機能を足したらここにセクションを追加する。**
  *
  * 実行: `npm run verify:db`
  *
@@ -25,6 +27,8 @@ const { LEGACY_STAGE_ID, resolveDeckStageHtml, resolveDeckStageSql, legacyInitMi
 const { exportDatabase } = require('@/lib/export');
 const { importDatabase } = require('@/lib/import');
 const { inspectTsvExport, hasTsvExportLoss } = require('@/lib/tsv');
+const { getTodayReviewedCount } = require('@/lib/database/reviews');
+const { shouldFireStudyGoal, isStudyGoalUnmet } = require('@/lib/studyGoal');
 
 const { check, eq, report } = createAsserts();
 
@@ -313,6 +317,49 @@ async function main() {
   await updateDeck(db12, 'd-oldkey', { name: '旧キー', description: '', language: 'ja', htmlStages: oldKeyDeck.htmlStages });
   const rewritten = await db12.getFirstAsync('SELECT htmlStages FROM decks WHERE id = ?', ['d-oldkey']);
   check('保存し直すと新キー content で書き戻される', rewritten.htmlStages.includes('"content"') && !rewritten.htmlStages.includes('"html"'));
+
+  // ===========================================================================
+  console.log('\n[T13] 046・1日の目標枚数：達成判定（またぎ判定）');
+  // ===========================================================================
+  // 引数は (今日の枚数, 目標, 開始時点で達成済みか, 既に出したか)
+  check('未達成 → 出さない', !shouldFireStudyGoal(19, 20, false, false));
+  check('ちょうど到達 → 出す', shouldFireStudyGoal(20, 20, false, false));
+  check('超過 → 出す', shouldFireStudyGoal(25, 20, false, false));
+  check('**開始時点で達成済み → 出さない**（1日単位ゆえの誤発火防止）', !shouldFireStudyGoal(30, 20, true, false));
+  check('**基準が未確定（null）→ 出さない**（誤発火より不発）', !shouldFireStudyGoal(30, 20, null, false));
+  check('このセッションで既に出した → 出さない', !shouldFireStudyGoal(30, 20, false, true));
+  check('目標1枚：1枚学習で出す', shouldFireStudyGoal(1, 1, false, false));
+  check('取得失敗（-1）→ 出さない', !shouldFireStudyGoal(-1, 20, false, false));
+  check('未達成判定（リマインダー用）', isStudyGoalUnmet(9, 10) && !isStudyGoalUnmet(10, 10));
+
+  // ===========================================================================
+  console.log('\n[T14] 046・枚数の数え方：同じカードを複数回評価しても1枚');
+  // ===========================================================================
+  const db14 = makeDb();
+  await migrateDbIfNeeded(db14);
+  const deck14 = await createDeck(db14, { name: 'D', description: '', language: 'ja' });
+  const now14 = new Date().toISOString();
+  for (const cid of ['k1', 'k2']) {
+    await db14.runAsync(
+      `INSERT INTO cards (id,deckId,sortOrder,archived,createdAt,updatedAt) VALUES (?,?,0,0,?,?)`,
+      [cid, deck14.id, now14, now14]
+    );
+  }
+  // reviews は cardId が主キー＝同じカードを何度評価しても行は1つ（＝実カード枚数になる）
+  for (const cid of ['k1', 'k2']) {
+    await db14.runAsync(
+      `INSERT INTO reviews (cardId,easeFactor,interval,repetitions,nextReviewDate,lastReviewDate)
+       VALUES (?,2.5,0,1,?,?)`,
+      [cid, now14, now14]
+    );
+  }
+  eq('2枚学習 → 2', await getTodayReviewedCount(db14), 2);
+  // 「再考」で同じカードを再評価（lastReviewDate だけ更新）しても増えない
+  await db14.runAsync('UPDATE reviews SET repetitions = 2, lastReviewDate = ? WHERE cardId = ?', [now14, 'k1']);
+  eq('同じカードを再評価しても増えない', await getTodayReviewedCount(db14), 2);
+  // アーカイブしたカードは数えない（activeCardCond）
+  await db14.runAsync('UPDATE cards SET archived = 1 WHERE id = ?', ['k2']);
+  eq('アーカイブしたカードは数えない', await getTodayReviewedCount(db14), 1);
 
   report();
 }

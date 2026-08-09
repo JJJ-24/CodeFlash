@@ -33,3 +33,31 @@ export function shouldFireStudyGoal(
 export function isStudyGoalUnmet(todayCount: number, goal: number): boolean {
   return todayCount < goal;
 }
+
+// ---- 未達成リマインダーの予約枠（046 Phase 2） -------------------------------
+// 未達成リマインダーは「今日だけスキップ」ができないため繰り返し予約が使えず、
+// **日付指定で数日分を個別に予約**する＝1つのスケジュールが先読み日数ぶんの枠を消費する。
+// 通常のスケジュールも曜日指定があると曜日ごとに1件使うため、合計が iOS の上限に届きうる。
+
+/** iOS が1アプリに許す保留ローカル通知の上限。**超えると古いものから黙って捨てられる**
+ *  （エラーは出ず「設定したはずの通知が一部だけ来ない」という分かりにくい壊れ方をする）。 */
+export const PENDING_NOTIFICATION_LIMIT = 64;
+
+/** 未達成リマインダーに配ってよい枠。上限との差は休憩終了通知（039）などの臨時予約に残す。 */
+export const PENDING_NOTIFICATION_BUDGET = 60;
+
+/** 未達成リマインダーを前倒し予約する最大日数。 */
+export const GOAL_LOOKAHEAD_MAX_DAYS = 7;
+
+/**
+ * 未達成リマインダーの先読み日数を、残りの予約枠から決める。
+ * 1日まで縮んでも機能は成立する（アプリを開くたびに積み直されるため）。
+ *
+ * @param plainRegistrations 通常スケジュールが使う予約数（曜日指定なし=1・ありは曜日の数）
+ * @param conditionalCount   未達成リマインダーのスケジュール件数（1以上）
+ */
+export function computeGoalLookaheadDays(plainRegistrations: number, conditionalCount: number): number {
+  if (conditionalCount <= 0) return 0;
+  const budget = Math.max(PENDING_NOTIFICATION_BUDGET - plainRegistrations, conditionalCount);
+  return Math.max(1, Math.min(GOAL_LOOKAHEAD_MAX_DAYS, Math.floor(budget / conditionalCount)));
+}

@@ -303,6 +303,16 @@ export async function getUpcomingSchedule(
   return rows;
 }
 
+/** 学習できるカードが1枚でもあるか判定するための件数（046・非アーカイブのカード数）。
+ *  0 のときは未達成リマインダーを出さない＝ユーザーに打つ手がない状態で催促しないため。
+ *  `activeCardCond` を使うのでアーカイブ済みデッキ配下のカードも除外される。 */
+export async function getActiveCardCount(db: SQLiteDatabase): Promise<number> {
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM cards c WHERE ${activeCardCond('c')}`
+  );
+  return row?.count ?? 0;
+}
+
 /** 全体の今日 due カード数（新規 + 復習） */
 export async function getTodayDueCount(db: SQLiteDatabase): Promise<number> {
   const { end } = todayLocalRange();

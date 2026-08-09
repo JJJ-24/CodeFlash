@@ -56,7 +56,7 @@ import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import { getReviewByCardId, getTodayReviewedCount } from "@/lib/database/reviews";
 import { shouldFireStudyGoal } from "@/lib/studyGoal";
 import { addTagToCard, createTag, getAllTags, getTagsByCardId, removeTagFromCard } from "@/lib/database/tags";
-import { setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
+import { cancelTodayGoalReminders, scheduleFromDb, setStudyTimerUiVisible, updateBadgeCount } from "@/lib/notifications";
 import type { Grade } from "@/lib/sm2";
 import type { Block, Tag } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
@@ -463,6 +463,10 @@ export default function StudySessionScreen() {
     const count = await getTodayReviewedCount(db).catch(() => -1);
     if (!shouldFireStudyGoal(count, studyGoalCount, goalMetAtStartRef.current, goalFiredRef.current)) return;
     goalFiredRef.current = true;
+    // 046 Phase 2: 達成した瞬間に今日の未達成リマインダーを取り消す。
+    // iOS は発火時に条件を評価できないので、この「達成した瞬間のキャンセル」が条件判定の実体。
+    // 学習中はアプリが開いているため確実に効く（明日以降の予約は残す）。
+    void cancelTodayGoalReminders();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     // タイマー終了アラートが出ているときは譲る（2枚同時に出すと iOS で VC が wedged になる）。
     // goalFiredRef は立てたままなので、後追いで出し直すことはしない＝終了アラート側にも
@@ -620,6 +624,9 @@ export default function StudySessionScreen() {
   useEffect(() => {
     if (completed) {
       updateBadgeCount(db).catch(() => {});
+      // 046 Phase 2: 未達成リマインダーは日付指定の前倒し予約なので、学習した結果を反映して
+      // 積み直す（達成していれば今日の分が落ち、未達成なら残る）。予約が尽きないための補充も兼ねる。
+      scheduleFromDb(db).catch(() => {});
     }
   }, [completed, db]);
 

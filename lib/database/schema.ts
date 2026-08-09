@@ -216,6 +216,14 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN sqlStages TEXT;`);
   }
 
+  // === 046 Phase 2: 未達成のときだけ通知するスケジュール（notification_schedules に列追加）===
+  // スケジュール単位のフラグ（全体設定にしない）＝「朝は無条件・夜は未達成のときだけ」を使い分けられる。
+  // 既定 0 ＝既存スケジュールの挙動は不変。
+  const schedCols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(notification_schedules)');
+  if (!schedCols.some((c) => c.name === 'onlyIfGoalUnmet')) {
+    await db.execAsync(`ALTER TABLE notification_schedules ADD COLUMN onlyIfGoalUnmet INTEGER NOT NULL DEFAULT 0;`);
+  }
+
   // === iCloud 同期用：ローカル変更追跡 ===
   // ファイル mtime は起動/チェックポイントでも動くため変更検知に使えない。
   // ユーザーデータの INSERT/UPDATE/DELETE をトリガーで捕捉し localVersion を進める。

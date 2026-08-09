@@ -151,4 +151,8 @@ export interface NotificationSchedule {
   weekdays: number[];
   label: string;
   enabled: boolean;
+  /** 046：1日の目標枚数が**未達成のときだけ**通知する（既定 false＝従来どおり無条件で通知）。
+   *  iOS は発火時に条件を評価できないため、このスケジュールは繰り返しではなく
+   *  日付指定で数日分を前倒し予約し、目標達成時に当日分をキャンセルする（`lib/notifications.ts`）。 */
+  onlyIfGoalUnmet: boolean;
 }

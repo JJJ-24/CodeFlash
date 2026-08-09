@@ -3,7 +3,10 @@ import * as Notifications from 'expo-notifications';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getAllSchedules } from '@/lib/database/notifications';
-import { getTodayDueCount } from '@/lib/database/reviews';
+import { getActiveCardCount, getTodayDueCount, getTodayReviewedCount } from '@/lib/database/reviews';
+import { computeGoalLookaheadDays, isStudyGoalUnmet } from '@/lib/studyGoal';
+import { useSettingsStore } from '@/store/settings';
+import type { NotificationSchedule } from '@/types';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
 const LEGACY_IDENTIFIER = 'daily-reminder';
@@ -61,9 +64,34 @@ export async function requestPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
+/** 046: 未達成リマインダーの identifier 接頭辞。当日分だけを狙ってキャンセルするため
+ *  `goal-{scheduleId}-{YYYY-MM-DD}` の形にする。 */
+const GOAL_REMINDER_PREFIX = 'goal-';
+
+/** 046: 未達成リマインダーの通知文。**枚数は入れない**（予約時点の値しか焼き込めず、
+ *  発火時にはズレているため）。 */
+function getGoalUnmetBody(): { title: string; body: string } {
+  const locales = Localization.getLocales();
+  const isJa = locales.length > 0 && locales[0].languageCode === 'ja';
+  return {
+    title: 'CodeFlash',
+    body: isJa ? '今日の目標がまだ残っています' : "You haven't reached today's goal yet",
+  };
+}
+
+/** ローカル日付の 'YYYY-MM-DD'（lib/database/utils の localDateStr と同じ規則）。 */
+function localDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * DB の notification_schedules を読み込み、有効なスケジュールをすべて登録する。
  * 既存の全スケジュール通知をキャンセルしてから再登録する（due 枚数入り通知文）。
+ *
+ * **046: `onlyIfGoalUnmet` のスケジュールだけ予約方式が違う。** iOS は発火時に条件を評価できない
+ * （繰り返し通知を「今日だけスキップ」できない）ため、**日付指定で数日分を前倒し予約**し、
+ * 目標を達成した瞬間に当日分をキャンセルする（`cancelTodayGoalReminders`）。
+ * 予約が尽きないよう、フォアグラウンド復帰・セッション終了・設定変更のたびに積み直す。
  */
 export async function scheduleFromDb(db: SQLiteDatabase): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
@@ -75,7 +103,10 @@ export async function scheduleFromDb(db: SQLiteDatabase): Promise<void> {
   const dueCount = await getTodayDueCount(db);
   const { title, body } = getReminderBody(dueCount);
 
-  for (const s of enabled) {
+  const plain = enabled.filter((s) => !s.onlyIfGoalUnmet);
+  const conditional = enabled.filter((s) => s.onlyIfGoalUnmet);
+
+  for (const s of plain) {
     if (s.weekdays.length === 0) {
       await Notifications.scheduleNotificationAsync({
         identifier: `schedule-${s.id}`,
@@ -101,6 +132,70 @@ export async function scheduleFromDb(db: SQLiteDatabase): Promise<void> {
           },
         });
       }
+    }
+  }
+
+  if (conditional.length > 0) await scheduleGoalReminders(db, conditional, plain);
+}
+
+/**
+ * 046: 未達成リマインダー（`onlyIfGoalUnmet`）を日付指定で前倒し予約する。
+ *
+ * - 目標が OFF なら**何も予約しない**（常に未達成扱いで毎日鳴るのを避ける）
+ * - **学習できるカードが1枚も無いとき**（非アーカイブ0枚）も予約しない
+ *   ＝ユーザーに打つ手がない状態で催促しても意味がないため（好みではなく客観条件なので設定にしない）
+ * - **今日ぶんは、すでに目標を達成していれば予約しない**
+ * - 先読み日数は残りの予約枠から決める（64件上限に当たらないように）
+ */
+async function scheduleGoalReminders(
+  db: SQLiteDatabase,
+  conditional: NotificationSchedule[],
+  plain: NotificationSchedule[]
+): Promise<void> {
+  const { studyGoalEnabled, studyGoalCount } = useSettingsStore.getState();
+  if (!studyGoalEnabled) return;
+
+  const studiable = await getActiveCardCount(db);
+  if (studiable === 0) return;
+
+  const todayCount = await getTodayReviewedCount(db);
+  const metToday = !isStudyGoalUnmet(todayCount, studyGoalCount);
+
+  // 無条件スケジュールが使った枠を引いた残りを、条件つきスケジュールで分け合う
+  // （計算は lib/studyGoal.ts の純粋関数＝上限を超えないことを verify:db で検証している）。
+  const usedByPlain = plain.reduce((n, s) => n + (s.weekdays.length === 0 ? 1 : s.weekdays.length), 0);
+  const lookahead = computeGoalLookaheadDays(usedByPlain, conditional.length);
+
+  const { title, body } = getGoalUnmetBody();
+  const now = new Date();
+
+  for (const s of conditional) {
+    for (let offset = 0; offset < lookahead; offset++) {
+      const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, s.hour, s.minute, 0, 0);
+      if (date.getTime() <= now.getTime()) continue;           // 今日のうち過ぎた時刻は予約しない
+      if (offset === 0 && metToday) continue;                  // 今日はもう達成済み
+      // weekdays が空＝毎日。指定があればその曜日だけ（0=日〜6=土）
+      if (s.weekdays.length > 0 && !s.weekdays.includes(date.getDay())) continue;
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${GOAL_REMINDER_PREFIX}${s.id}-${localDateKey(date)}`,
+        content: { title, body, sound: true },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
+      });
+    }
+  }
+}
+
+/**
+ * 046: **今日ぶん**の未達成リマインダーをキャンセルする（目標を達成した瞬間に呼ぶ）。
+ * 学習中はアプリが開いているので、このキャンセルは確実に効く。
+ * 明日以降の予約は残す（今日の達成は明日の催促を止める理由にならない）。
+ */
+export async function cancelTodayGoalReminders(): Promise<void> {
+  const today = localDateKey(new Date());
+  const pending = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  for (const req of pending) {
+    if (req.identifier.startsWith(GOAL_REMINDER_PREFIX) && req.identifier.endsWith(today)) {
+      await Notifications.cancelScheduledNotificationAsync(req.identifier).catch(() => {});
     }
   }
 }

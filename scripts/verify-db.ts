@@ -28,7 +28,10 @@ const { exportDatabase } = require('@/lib/export');
 const { importDatabase } = require('@/lib/import');
 const { inspectTsvExport, hasTsvExportLoss } = require('@/lib/tsv');
 const { getTodayReviewedCount } = require('@/lib/database/reviews');
-const { shouldFireStudyGoal, isStudyGoalUnmet } = require('@/lib/studyGoal');
+const { shouldFireStudyGoal, isStudyGoalUnmet, computeGoalLookaheadDays, PENDING_NOTIFICATION_LIMIT } =
+  require('@/lib/studyGoal');
+const { getActiveCardCount } = require('@/lib/database/reviews');
+const { getAllSchedules, createSchedule, updateSchedule, MAX_SCHEDULES } = require('@/lib/database/notifications');
 
 const { check, eq, report } = createAsserts();
 
@@ -360,6 +363,85 @@ async function main() {
   // アーカイブしたカードは数えない（activeCardCond）
   await db14.runAsync('UPDATE cards SET archived = 1 WHERE id = ?', ['k2']);
   eq('アーカイブしたカードは数えない', await getTodayReviewedCount(db14), 1);
+
+  // ===========================================================================
+  console.log('\n[T15] 046 Phase 2・通知スケジュールの onlyIfGoalUnmet 列');
+  // ===========================================================================
+  const db15 = makeDb();
+  await migrateDbIfNeeded(db15);
+  // 045 以前の DB を再現（列なし）→ 再マイグレーションで既定 0 が入る
+  db15.raw.exec('ALTER TABLE notification_schedules DROP COLUMN onlyIfGoalUnmet');
+  await db15.runAsync(
+    `INSERT INTO notification_schedules (id,hour,minute,weekdays,label,enabled) VALUES ('s-old',8,0,'[]','朝',1)`
+  );
+  await migrateDbIfNeeded(db15);
+  const cols15 = await db15.getAllAsync('PRAGMA table_info(notification_schedules)');
+  check('マイグレーションで onlyIfGoalUnmet 列が追加される',
+    cols15.some((c: { name: string }) => c.name === 'onlyIfGoalUnmet'));
+  const [oldSched] = await getAllSchedules(db15);
+  check('既存スケジュールは false（＝従来どおり無条件で通知）', oldSched.onlyIfGoalUnmet === false);
+  check('SQLite の 0/1 が boolean に正規化される', typeof oldSched.onlyIfGoalUnmet === 'boolean');
+
+  const created15 = await createSchedule(db15, {
+    hour: 20, minute: 0, weekdays: [1, 2, 3, 4, 5], label: '夜', enabled: true, onlyIfGoalUnmet: true,
+  });
+  const all15 = await getAllSchedules(db15);
+  const night = all15.find((x: { id: string }) => x.id === created15.id);
+  check('作成時に onlyIfGoalUnmet が保存される', night.onlyIfGoalUnmet === true);
+  eq('曜日指定も保持される', night.weekdays, [1, 2, 3, 4, 5]);
+  await updateSchedule(db15, { ...night, onlyIfGoalUnmet: false });
+  const afterUpd = (await getAllSchedules(db15)).find((x: { id: string }) => x.id === created15.id);
+  check('更新で false に戻せる', afterUpd.onlyIfGoalUnmet === false);
+
+  // ===========================================================================
+  console.log('\n[T16] 046 Phase 2・学習できるカードの有無（催促を抑止する客観条件）');
+  // ===========================================================================
+  const db16 = makeDb();
+  await migrateDbIfNeeded(db16);
+  eq('カードが無いアプリ → 0（未達成リマインダーを予約しない）', await getActiveCardCount(db16), 0);
+  const deck16 = await createDeck(db16, { name: 'D', description: '', language: 'ja' });
+  const now16 = new Date().toISOString();
+  await db16.runAsync(
+    `INSERT INTO cards (id,deckId,sortOrder,archived,createdAt,updatedAt) VALUES ('m1',?,0,0,?,?)`,
+    [deck16.id, now16, now16]
+  );
+  eq('カードが1枚 → 1', await getActiveCardCount(db16), 1);
+  await db16.runAsync('UPDATE cards SET archived = 1 WHERE id = ?', ['m1']);
+  eq('アーカイブしたら 0（打つ手がない状態）', await getActiveCardCount(db16), 0);
+  // デッキごとアーカイブしても 0（activeCardCond はデッキ側も見る）
+  await db16.runAsync('UPDATE cards SET archived = 0 WHERE id = ?', ['m1']);
+  await db16.runAsync('UPDATE decks SET archived = 1 WHERE id = ?', [deck16.id]);
+  eq('デッキごとアーカイブでも 0', await getActiveCardCount(db16), 0);
+
+  // ===========================================================================
+  console.log('\n[T17] 046 Phase 2・予約本数が iOS の上限（64件）を超えない');
+  // ===========================================================================
+  // 未達成リマインダーは繰り返し予約が使えず日付指定で数日分を個別に予約するため、
+  // 曜日指定つきの通常スケジュールと合わせると理屈の上では上限に届きうる。
+  // **超えると古い予約から黙って捨てられ「一部の通知だけ来ない」という壊れ方をする**ので、
+  // 最悪ケース（全スケジュールが全曜日指定）を総当たりで検算しておく。
+  // ⚠️ MAX_SCHEDULES を増やすとここが落ちる＝そのときに先読み日数か枠の設計を見直すこと。
+  const WEEKDAYS = 7;      // 曜日指定つき通常スケジュールが使う予約数（最悪ケース）
+  const RESERVED = 1;      // 休憩終了通知（039）などの臨時予約
+  let worst = 0;
+  let worstShape = '';
+  for (let plainCount = 0; plainCount <= MAX_SCHEDULES; plainCount++) {
+    const conditionalCount = MAX_SCHEDULES - plainCount;
+    const plainRegistrations = plainCount * WEEKDAYS;
+    const lookahead = computeGoalLookaheadDays(plainRegistrations, conditionalCount);
+    const total = plainRegistrations + conditionalCount * lookahead + RESERVED;
+    if (total > worst) { worst = total; worstShape = `通常${plainCount}件+条件つき${conditionalCount}件(先読み${lookahead}日)`; }
+  }
+  check(
+    `最悪ケースでも上限内（最大 ${worst} 件 / 上限 ${PENDING_NOTIFICATION_LIMIT} 件・${worstShape}）`,
+    worst <= PENDING_NOTIFICATION_LIMIT,
+    { worst, limit: PENDING_NOTIFICATION_LIMIT }
+  );
+  // 先読み日数の分岐そのもの
+  eq('枠に余裕があれば最大7日', computeGoalLookaheadDays(0, 1), 7);
+  eq('条件つきが多ければ配分が減る', computeGoalLookaheadDays(0, 30), 2);
+  eq('枠を使い切っていても最低1日は予約する', computeGoalLookaheadDays(1000, 5), 1);
+  eq('条件つきが無ければ0日（予約しない）', computeGoalLookaheadDays(0, 0), 0);
 
   report();
 }

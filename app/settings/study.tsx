@@ -5,10 +5,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, Text, View } from 'react-native';
 
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { getAllSchedules, toggleScheduleEnabled, updateSchedule } from '@/lib/database/notifications';
+import type { NotificationSchedule } from '@/types';
 import { settingsStyles as styles } from '@/components/settings/styles';
 
-import { requestPermission } from '@/lib/notifications';
+import { requestPermission, scheduleFromDb } from '@/lib/notifications';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import {
@@ -47,6 +51,56 @@ export default function StudySettingsScreen() {
     studyGoalEnabled, setStudyGoalEnabled,
     studyGoalCount, setStudyGoalCount,
   } = useSettingsStore();
+  const db = useSQLiteContext();
+  const { notificationEnabled } = useSettingsStore();
+  // 046: 目標の変更は未達成リマインダーの予約内容を変える（OFF なら予約自体を止める）。
+  // 通知が有効なときだけ積み直す（無効なら予約は無いので何もしなくてよい）。
+  const rescheduleGoalReminders = () => { if (notificationEnabled) scheduleFromDb(db).catch(() => {}); };
+
+  // 046: 目標を切り替えたとき、未達成リマインダーのスケジュールをどう扱うかを確認する。
+  // **目標 OFF ＝「未達成かどうか」を判定できない**ので、条件つきスケジュールは予約されない。
+  // 放置すると「一覧では有効（✓）なのに絶対に鳴らない」という嘘の状態になるため、
+  // ユーザーに2択で決めてもらう（自動で書き換えない＝身に覚えのない変化を起こさないため）。
+  const [goalConflict, setGoalConflict] = useState<{ turningOn: boolean; targets: NotificationSchedule[] } | null>(null);
+
+  async function handleGoalEnabledChange(v: boolean) {
+    const schedules = await getAllSchedules(db).catch(() => [] as NotificationSchedule[]);
+    // OFF: これから鳴らなくなる（有効かつ条件つき）／ON: 戻せる（無効かつ条件つき）
+    const targets = schedules.filter((s) => s.onlyIfGoalUnmet && (v ? !s.enabled : s.enabled));
+
+    // **OFF は矛盾を生むので、選択されるまで設定を適用しない**（トグルは ON のまま）。
+    // ダイアログの出口がひとつでも「目標 OFF ＋ 条件つきスケジュールが有効」に着地すると、
+    // それは「一覧では有効なのに絶対に鳴らない」＝このダイアログが防ごうとしている状態そのもの。
+    // 閉じる＝キャンセル（何も変えない）にすることで、全ての出口が整合した状態に着地する
+    // （削除確認・破棄確認・032 のアーカイブ済みデッキ学習と同じ「閉じる＝キャンセル」の流儀）。
+    if (!v && targets.length > 0) { setGoalConflict({ turningOn: false, targets }); return; }
+
+    setStudyGoalEnabled(v);
+    // **ON は矛盾を生まない**ので先に適用してよい。あとに出すのは「オフになっている未達成通知を
+    // 戻しますか？」という任意のお誘いで、閉じても「目標 ON・それらは OFF」で整合している。
+    if (v && targets.length > 0) { setGoalConflict({ turningOn: true, targets }); return; }
+    rescheduleGoalReminders();
+  }
+
+  const handleGoalCountChange = (v: number) => { setStudyGoalCount(v); rescheduleGoalReminders(); };
+
+  /** 選択されたアクションを適用する。OFF 側はここで初めて目標の設定も確定させる。 */
+  async function applyGoalConflict(mutate: (s: NotificationSchedule) => Promise<void>) {
+    const conflict = goalConflict;
+    setGoalConflict(null);
+    if (!conflict) return;
+    if (!conflict.turningOn) setStudyGoalEnabled(false);   // OFF はここで確定
+    for (const s of conflict.targets) await mutate(s).catch(() => {});
+    rescheduleGoalReminders();
+  }
+
+  /** ダイアログを閉じる（余白タップ・Esc）。**OFF 側は完全なキャンセル**＝目標も変えない。
+   *  ON 側は「そのままにする」と同義（すでに整合しているので積み直しだけ行う）。 */
+  function dismissGoalConflict() {
+    const turningOn = goalConflict?.turningOn ?? false;
+    setGoalConflict(null);
+    if (turningOn) rescheduleGoalReminders();
+  }
   const [showRetentionInfo, setShowRetentionInfo] = useState(false);
   // 学習タイマー・目標枚数の情報 i アイコン。開くのは1つずつ（キー: general/cycles/break/ring/time/end/goal）。
   const [openTimerInfo, setOpenTimerInfo] = useState<string | null>(null);
@@ -90,6 +144,30 @@ export default function StudySettingsScreen() {
       </View>
     ) : null;
 
+  // 046: 目標 ON/OFF に伴う未達成リマインダーの確認ダイアログ（無料機能なので非 Pro 分岐にも出す）。
+  const goalConflictModal = (
+    <ConfirmModal
+      visible={goalConflict !== null}
+      title={t(goalConflict?.turningOn ? 'settings.goalScheduleRestoreTitle' : 'settings.goalScheduleConflictTitle')}
+      message={t(
+        goalConflict?.turningOn ? 'settings.goalScheduleRestoreMessage' : 'settings.goalScheduleConflictMessage',
+        { count: goalConflict?.targets.length ?? 0 }
+      )}
+      actions={goalConflict?.turningOn
+        ? [
+            { label: t('settings.goalScheduleRestore'), onPress: () => void applyGoalConflict((s) => toggleScheduleEnabled(db, s.id, true)) },
+            { label: t('settings.goalScheduleKeep'), onPress: dismissGoalConflict },
+          ]
+        : [
+            // 条件つきの指定は残したままスケジュールを止める＝目標を戻せば復元できる
+            { label: t('settings.goalScheduleDisable'), onPress: () => void applyGoalConflict((s) => toggleScheduleEnabled(db, s.id, false)) },
+            // 条件そのものを外して**普通のスケジュールに変える**（実行時に隠れた挙動をさせない）
+            { label: t('settings.goalSchedulePlain'), onPress: () => void applyGoalConflict((s) => updateSchedule(db, { ...s, onlyIfGoalUnmet: false })) },
+          ]}
+      onClose={dismissGoalConflict}
+    />
+  );
+
   // 1日の目標枚数（046）。タイマー＝時間で区切る／こちら＝量で区切る、という対の関係。
   // **1日単位**なので、複数セッションに分けても今日の累計で判定する。
   // **無料機能**なので Pro ロック時の画面にも出す＝JSX を変数に切り出して両方の分岐から描画する
@@ -116,7 +194,7 @@ export default function StudySettingsScreen() {
           </Text>
           <Switch
             value={studyGoalEnabled}
-            onValueChange={setStudyGoalEnabled}
+            onValueChange={handleGoalEnabledChange}
             trackColor={{ true: theme.colors.primary }}
           />
         </View>
@@ -139,7 +217,7 @@ export default function StudySettingsScreen() {
               maximumValue={STUDY_GOAL_SLIDER_MAX}
               step={1}
               value={Math.min(studyGoalCount, STUDY_GOAL_SLIDER_MAX)}
-              onValueChange={setStudyGoalCount}
+              onValueChange={handleGoalCountChange}
               minimumTrackTintColor={theme.colors.primary}
               maximumTrackTintColor={theme.colors.iconSubtle}
               thumbTintColor={theme.colors.primary}
@@ -157,6 +235,8 @@ export default function StudySettingsScreen() {
         // 非 Pro でも目標枚数（無料）の i アイコンが開けるので、Pro 側と同じく
         // 「開いている説明があれば先に閉じる」を渡す
         onBack={(direct) => {
+          // 確認ダイアログ → 説明の順に閉じる（階層ディスマス）
+          if (!direct && goalConflict) { dismissGoalConflict(); return; }
           if (!direct && openTimerInfo) { setOpenTimerInfo(null); return; }
           router.back();
         }}
@@ -183,6 +263,7 @@ export default function StudySettingsScreen() {
           </View>
         </Pressable>
         {goalCard}
+        {goalConflictModal}
       </SettingsDetail>
     );
   }
@@ -191,6 +272,7 @@ export default function StudySettingsScreen() {
     <SettingsDetail
       title={t('settings.studySettings')}
       onBack={(direct) => {
+        if (!direct && goalConflict) { dismissGoalConflict(); return; }
         if (!direct && (showRetentionInfo || openTimerInfo)) { setShowRetentionInfo(false); setOpenTimerInfo(null); return; }
         router.back();
       }}
@@ -483,6 +565,7 @@ export default function StudySettingsScreen() {
       </View>
 
       {goalCard}
+      {goalConflictModal}
     </SettingsDetail>
   );
 }

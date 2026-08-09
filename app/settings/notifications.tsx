@@ -18,6 +18,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
 import {
+  MAX_SCHEDULES,
   countSchedules, createSchedule, deleteSchedule, getAllSchedules,
   toggleScheduleEnabled, updateSchedule,
 } from '@/lib/database/notifications';
@@ -29,7 +30,6 @@ import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore } from '@/store/settings';
 import type { NotificationSchedule } from '@/types';
 
-const MAX_SCHEDULES = 5;
 const WEEKDAY_COUNT = 7;
 
 function formatTime(hour: number, minute: number): string {
@@ -70,6 +70,10 @@ interface ScheduleModalProps {
   onChangeTime: (h: number, m: number) => void;
   onToggleWeekday: (day: number) => void;
   onChangeLabel: (v: string) => void;
+  /** 046: 目標が未達成のときだけ通知するか。**目標 OFF のときは無効表示にする** */
+  onlyIfGoalUnmet: boolean;
+  onChangeOnlyIfGoalUnmet: (v: boolean) => void;
+  goalEnabled: boolean;
   onSave: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -78,6 +82,7 @@ interface ScheduleModalProps {
 function ScheduleModal({
   visible, isNew, hour, minute, weekdays, label, theme, bottomInset,
   onChangeTime, onToggleWeekday, onChangeLabel, onSave, onDelete, onClose,
+  onlyIfGoalUnmet, onChangeOnlyIfGoalUnmet, goalEnabled,
 }: ScheduleModalProps) {
   const { t } = useTranslation();
   const { height: screenHeight } = useWindowDimensions();
@@ -184,6 +189,25 @@ function ScheduleModal({
               returnKeyType="done"
             />
           </View>
+
+          {/* 046: 目標が未達成のときだけ通知する。目標（設定→学習）が OFF のときは有効にしても
+              常に未達成扱いで毎日鳴る＝分かりにくいので、操作を塞いでヒントを出す。 */}
+          <View style={{ gap: 6, opacity: goalEnabled ? 1 : 0.5 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('notification.onlyIfGoalUnmet')}
+              </Text>
+              <Switch
+                value={onlyIfGoalUnmet}
+                onValueChange={onChangeOnlyIfGoalUnmet}
+                disabled={!goalEnabled}
+                trackColor={{ true: theme.colors.primary }}
+              />
+            </View>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t(goalEnabled ? 'notification.onlyIfGoalUnmetHint' : 'notification.onlyIfGoalUnmetNoGoal')}
+            </Text>
+          </View>
         </ScrollView>
 
         {/* フッター（デッキ・タグ編集画面と同スタイル） */}
@@ -212,7 +236,7 @@ export default function NotificationSettingsScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
   const { bottom: bottomInset } = useSafeAreaInsets();
-  const { notificationEnabled, notificationHour, notificationMinute, setNotificationEnabled } = useSettingsStore();
+  const { notificationEnabled, notificationHour, notificationMinute, setNotificationEnabled, studyGoalEnabled } = useSettingsStore();
 
   const [schedules, setSchedules] = useState<NotificationSchedule[]>([]);
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -227,6 +251,8 @@ export default function NotificationSettingsScreen() {
   const [editMinute, setEditMinute] = useState(0);
   const [editWeekdays, setEditWeekdays] = useState<number[]>([]);
   const [editLabel, setEditLabel] = useState('');
+  // 046: このスケジュールを「目標が未達成のときだけ」鳴らすか
+  const [editOnlyIfGoalUnmet, setEditOnlyIfGoalUnmet] = useState(false);
 
   // 権限拒否情報（OK のみ）表示中は Return=OK で閉じる。スケジュール編集モーダルは入力欄が消費、
   // 削除確認は確定操作のため Return 非割当。Esc/B は SettingsDetail の onBack が閉じる。
@@ -241,7 +267,7 @@ export default function NotificationSettingsScreen() {
     if (rows.length === 0 && notificationEnabled) {
       const created = await createSchedule(db, {
         hour: notificationHour, minute: notificationMinute,
-        weekdays: [], label: '', enabled: true,
+        weekdays: [], label: '', enabled: true, onlyIfGoalUnmet: false,
       });
       setSchedules([created]);
       scheduleFromDb(db).catch(() => {});
@@ -281,6 +307,7 @@ export default function NotificationSettingsScreen() {
     setEditMinute(s.minute);
     setEditWeekdays([...s.weekdays]);
     setEditLabel(s.label);
+    setEditOnlyIfGoalUnmet(s.onlyIfGoalUnmet);
     setModalVisible(true);
   }
 
@@ -295,6 +322,7 @@ export default function NotificationSettingsScreen() {
     setEditMinute(0);
     setEditWeekdays([]);
     setEditLabel('');
+    setEditOnlyIfGoalUnmet(false);
     setModalVisible(true);
   }
 
@@ -315,6 +343,7 @@ export default function NotificationSettingsScreen() {
       const created = await createSchedule(db, {
         hour: editHour, minute: editMinute,
         weekdays: editWeekdays, label: editLabel.trim(), enabled: true,
+        onlyIfGoalUnmet: editOnlyIfGoalUnmet,
       });
       setSchedules((prev) => [...prev, created].sort((a, b) => a.hour !== b.hour ? a.hour - b.hour : a.minute - b.minute));
     } else {
@@ -323,6 +352,7 @@ export default function NotificationSettingsScreen() {
         id: editingId, hour: editHour, minute: editMinute,
         weekdays: editWeekdays, label: editLabel.trim(),
         enabled: schedules.find((s) => s.id === editingId)?.enabled ?? true,
+        onlyIfGoalUnmet: editOnlyIfGoalUnmet,
       };
       await updateSchedule(db, updated);
       setSchedules((prev) => prev.map((s) => s.id === editingId ? updated : s).sort((a, b) => a.hour !== b.hour ? a.hour - b.hour : a.minute - b.minute));
@@ -384,6 +414,9 @@ export default function NotificationSettingsScreen() {
             onChangeTime={(h, m) => { setEditHour(h); setEditMinute(m); }}
             onToggleWeekday={toggleWeekday}
             onChangeLabel={setEditLabel}
+            onlyIfGoalUnmet={editOnlyIfGoalUnmet}
+            onChangeOnlyIfGoalUnmet={setEditOnlyIfGoalUnmet}
+            goalEnabled={studyGoalEnabled}
             onSave={handleSave}
             onDelete={handleDelete}
             onClose={closeModal}
@@ -456,6 +489,29 @@ export default function NotificationSettingsScreen() {
                           }}
                         />
                       ))}
+                    </View>
+                  )}
+                  {/* 046: 未達成のときだけ鳴るスケジュールは一覧でも分かるようにする
+                      （開かないと分からない設定＝時刻だけ見て「毎日鳴る」と誤解するため）。
+                      目標が OFF のときは条件が成立しないので、その旨を添えて注意色にする。 */}
+                  {s.onlyIfGoalUnmet && (
+                    <View style={{
+                      paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4,
+                      backgroundColor: studyGoalEnabled ? theme.colors.primaryLight : theme.colors.background,
+                      borderWidth: studyGoalEnabled ? 0 : StyleSheet.hairlineWidth,
+                      borderColor: theme.colors.danger,
+                    }}>
+                      <Text
+                        style={{
+                          color: !s.enabled ? theme.colors.textTertiary
+                            : studyGoalEnabled ? theme.colors.primary : theme.colors.danger,
+                          fontSize: theme.fontSize.xs,
+                          fontWeight: '700',
+                        }}
+                        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
+                      >
+                        {t(studyGoalEnabled ? 'notification.goalBadge' : 'notification.goalBadgeNoGoal')}
+                      </Text>
                     </View>
                   )}
                   {s.label !== '' && (

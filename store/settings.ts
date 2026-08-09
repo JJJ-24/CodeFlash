@@ -334,6 +334,8 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     normalize: clampTimerCycles,
     onApply: resetStudyTimerIfActive,
   },
+  // 046: 目標を変えると未達成リマインダーの予約内容も変わる（OFF なら予約自体を止める）。
+  // 予約の積み直しは DB が要るので画面側（設定→通知・学習セッション・フォアグラウンド復帰）が行う。
   studyGoalEnabled: { key: '@codeflash_study_goal_enabled', default: false, parse: asBool },
   studyGoalCount: {
     key: '@codeflash_study_goal_count',

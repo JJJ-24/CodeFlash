@@ -624,14 +624,23 @@ export default function StudySessionScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckId, tagId, order, filter, shuffle]);
 
+  // 046: 完了画面に出す「今日の目標に対する進捗」。null = 未取得（行を出さない）。
+  // 通知は発火した時点でその日ぶんを消費するため、**通知時刻にちょうど学習中だった日は
+  // リマインダーが失われる**。ユーザーが必ず見る完了画面に進捗を出すことで、その穴を埋める
+  // （通知を出し直す仕組みより副作用が無く、目標がアプリ内のどこにも出ない問題も同時に解消する）。
+  const [goalProgress, setGoalProgress] = useState<number | null>(null);
+
   useEffect(() => {
     if (completed) {
       updateBadgeCount(db).catch(() => {});
       // 046 Phase 2: 未達成リマインダーは日付指定の前倒し予約なので、学習した結果を反映して
       // 積み直す（達成していれば今日の分が落ち、未達成なら残る）。予約が尽きないための補充も兼ねる。
       scheduleFromDb(db).catch(() => {});
+      if (studyGoalEnabled && !browseMode) {
+        getTodayReviewedCount(db).then(setGoalProgress).catch(() => setGoalProgress(null));
+      }
     }
-  }, [completed, db]);
+  }, [completed, db, studyGoalEnabled, browseMode]);
 
   useEffect(() => {
     if (completed) {
@@ -1160,6 +1169,39 @@ export default function StudySessionScreen() {
               {t("study.complete")}
             </Text>
           </View>
+          {/* 046: 今日の目標に対する進捗。達成／未達成の両方を出す
+              （未達成のときだけ出すと責められている感じになるので、常に情報として置く）。 */}
+          {goalProgress !== null && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons
+                name={goalProgress >= studyGoalCount ? "flag" : "flag-outline"}
+                size={theme.fontSize.md}
+                color={goalProgress >= studyGoalCount ? "#43A047" : theme.colors.textSecondary}
+              />
+              {goalProgress >= studyGoalCount ? (
+                <Text
+                  style={{ color: "#43A047", fontSize: theme.fontSize.md }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {t("study.goalDone", { count: studyGoalCount })}
+                </Text>
+              ) : (
+                // 残り枚数は「あと何枚やればよいか」＝この画面で唯一の行動につながる数字なので、
+                // 文章に埋もれないよう入れ子 Text でサイズ・太さ・色を上げる（ホームの件数表示と同じ青）。
+                <Text
+                  style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.md }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {t("study.goalRemainingLabel")}{" "}
+                  <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.xl, fontWeight: "700" }}>
+                    {studyGoalCount - goalProgress}
+                  </Text>
+                  {t("study.goalRemainingUnit")}{" "}
+                  {t("study.goalProgressOf", { done: goalProgress, goal: studyGoalCount })}
+                </Text>
+              )}
+            </View>
+          )}
           {reviewed > 0 && (
             <View
               style={[

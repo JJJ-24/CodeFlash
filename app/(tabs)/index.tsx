@@ -223,7 +223,7 @@ export default function HomeScreen() {
       const sbTid1 = setTimeout(restoreStatusBar, 200);
       const sbTid2 = setTimeout(restoreStatusBar, 550);
       // 新規デッキ作成から戻った場合は、作成デッキへフォーカス＋スクロール（スクロール位置復元はしない）。
-      const pendingFocusDeck = takePendingFocus('deck');
+      const pendingFocusDeck = takePendingFocus('deck')?.id ?? null;
       let tid1: ReturnType<typeof setTimeout>;
       if (pendingFocusDeck) {
         setFocusDeckId(pendingFocusDeck);

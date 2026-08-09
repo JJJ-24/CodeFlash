@@ -291,7 +291,7 @@ export default function TagsScreen() {
       lastFocusTimeRef.current = Date.now();
       // 新規作成から戻った場合の作成タグ ID を保留（一覧再読込後に下の effect がフォーカス＋スクロール）。
       // その場合はスクロール位置の復元をしない（作成タグへスクロールするため）。
-      const pendingFocusTag = takePendingFocus('tag');
+      const pendingFocusTag = takePendingFocus('tag')?.id ?? null;
       pendingFocusTagIdRef.current = pendingFocusTag;
       const targetOffset = savedScrollOffsetRef.current;
       restorationEndTimeRef.current = pendingFocusTag ? 0 : Date.now() + 800;

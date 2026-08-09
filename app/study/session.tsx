@@ -64,6 +64,7 @@ import { resolveDeckIconColors } from "@/lib/deckIconColors";
 import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits, themedFrameBorder, PRIMARY_COLOR } from "@/lib/theme";
 import { resolveTagColor } from "@/lib/tagColors";
 import { useDeckStore } from "@/store/decks";
+import { usePendingFocusStore } from "@/store/pendingFocus";
 import { useProStore } from "@/store/pro";
 import { useReviewStore } from "@/store/reviews";
 import { useSettingsStore } from "@/store/settings";
@@ -114,7 +115,7 @@ const SESSION_SHORTCUT_SECTIONS = [
 ];
 
 export default function StudySessionScreen() {
-  const { deckId, tagId, filter, shuffle, order, mode, browse } = useLocalSearchParams<{
+  const { deckId, tagId, filter, shuffle, order, mode, browse, from } = useLocalSearchParams<{
     deckId?: string;
     tagId?: string;
     filter?: "all" | "today" | "due" | "unlearned";
@@ -122,7 +123,11 @@ export default function StudySessionScreen() {
     order?: string;
     mode?: string;
     browse?: string;
+    /** 'cards' ＝ カード一覧から始めた（戻り先がその一覧）。中断時のフォーカス受け渡しに使う */
+    from?: string;
   }>();
+  const fromCards = from === 'cards';
+  const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   // order='1' のとき、順序を厳守する cardIds はストア経由で受け取る（巨大IDをURLに載せない）。
   const cardIdsList = order === '1' ? (useReviewStore.getState().studyCardIds ?? undefined) : undefined;
   const isFocusedReview = mode === 'focused';
@@ -133,6 +138,16 @@ export default function StudySessionScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   function safeBack() {
+    // カード一覧から始めた学習を**途中でやめて戻る**とき、最後に見ていたカードへ
+    // フォーカスを置く（「どこまで進んだか」を一覧で示すため）。
+    // - 完了して戻る場合は置かない（最後まで終えたので「続き」が無い）
+    // - **スクロールはしない**（一覧のどこにあるか分からず、遠距離ジャンプは仮想化リストの
+    //   限界でパラパラ動く。アーカイブ後の自動スクロールを不採用にしたのと同じ理由）
+    // - `from: 'cards'` で戻り先がカード一覧のときだけ積む。学習タブ発のセッションで積むと、
+    //   消費されないまま残って**後で無関係にカード一覧を開いたときに発火**してしまう
+    if (fromCards && !completed && currentCard) {
+      setPendingFocus('card', currentCard.id, { scroll: false });
+    }
     if (navigation.canGoBack()) {
       router.back();
     } else {

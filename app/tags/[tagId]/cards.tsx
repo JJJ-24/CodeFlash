@@ -136,7 +136,7 @@ export default function TagCardsScreen() {
   const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, setFocusId, listRef, moveFocus } = useListNavigation(displayedCards, (c) => c.id);
   const { archivePill, showArchivePill } = useArchivePill();
   // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
-  const pendingFocusCardIdRef = useRef<string | null>(null);
+  const pendingFocusCardRef = useRef<{ id: string; scroll: boolean } | null>(null);
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
 
   function confirmDeleteCard(card: Card) {
@@ -237,8 +237,8 @@ export default function TagCardsScreen() {
   useFocusEffect(
     useCallback(() => {
       lastFocusTimeRef.current = Date.now();
-      // 新規作成から戻った場合の作成カード ID を保留（一覧再読込後に下の effect がフォーカス＋スクロール）
-      pendingFocusCardIdRef.current = takePendingFocus('card');
+      // 新規作成から戻った場合の作成カード等を保留（一覧再読込後に下の effect がフォーカス）
+      pendingFocusCardRef.current = takePendingFocus('card');
       getCardsByTagId(db, tagId).then((raw) => {
         if (cardSortOrder === 'newest') setCards([...raw].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.sortOrder - a.sortOrder));
         else if (cardSortOrder === 'oldest') setCards([...raw].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder));
@@ -247,15 +247,20 @@ export default function TagCardsScreen() {
     }, [db, tagId, cardSortOrder])
   );
 
-  // 保留 ID の項目が一覧に現れたらフォーカス（オレンジではなく青枠＝通常フォーカス）＋スクロールする。
+  // 保留分の項目が一覧に現れたらフォーカス（オレンジではなく青枠＝通常フォーカス）する。
+  // **スクロールするかは用途で分かれる**：新規作成は末尾にあるので運ぶ／学習を中断して
+  // 戻った位置はスクロールしない（一覧のどこにあるか分からず、遠距離ジャンプは
+  // 仮想化リストの限界でパラパラ動くため）。
   useEffect(() => {
-    const id = pendingFocusCardIdRef.current;
-    if (!id) return;
-    const idx = displayedCards.findIndex((c) => c.id === id);
+    const pending = pendingFocusCardRef.current;
+    if (!pending) return;
+    const idx = displayedCards.findIndex((c) => c.id === pending.id);
     if (idx === -1) return;
-    pendingFocusCardIdRef.current = null;
-    setFocusId(id);
-    setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: idx, viewPosition: 0.5, animated: false }), 60);
+    pendingFocusCardRef.current = null;
+    setFocusId(pending.id);
+    if (pending.scroll) {
+      setTimeout(() => (listRef.current as any)?.scrollToIndex({ index: idx, viewPosition: 0.5, animated: false }), 60);
+    }
   }, [displayedCards, setFocusId, listRef]);
 
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。CardStats 表示中（statsCardId）は

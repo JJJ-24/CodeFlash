@@ -406,7 +406,8 @@ export default function DeckDetailScreen() {
       // 複製先（A'）へフォーカスを移して A' までスクロールする（スクロール復元はしない）。
       // それ以外は戻ってきた時点でバッジを消し（複製直後の一時表示のみ）、スクロール位置を復元する。
       const pendingNew = takeDuplicated();
-      // 新規作成から戻った場合の作成カード ID（複製と違い「NEW」バッジは出さず、フォーカス＋スクロールのみ）
+      // 別画面から戻った場合の保留フォーカス（新規作成＝フォーカス＋スクロール／
+      // 学習の中断＝フォーカスのみ。「NEW」バッジは複製のときだけ）
       const pendingFocusCard = takePendingFocus('card');
       if (pendingNew.length > 0) {
         const lastId = pendingNew[pendingNew.length - 1];
@@ -416,9 +417,13 @@ export default function DeckDetailScreen() {
         restorationEndTimeRef.current = 0;
         setRecentlyDuplicatedIds(new Set(pendingNew));
       } else if (pendingFocusCard) {
-        focusedCardIdRef.current = pendingFocusCard;
-        setFocusedCardIdState(pendingFocusCard);
-        pendingScrollToIdRef.current = pendingFocusCard;
+        focusedCardIdRef.current = pendingFocusCard.id;
+        setFocusedCardIdState(pendingFocusCard.id);
+        // **スクロールするかは用途で分かれる**：新規作成カードは末尾にあるので運ぶ必要があるが、
+        // 学習を中断して戻った位置（scroll: false）は運ばない。一覧のどこにあるか分からず、
+        // 遠距離ジャンプは仮想化リストの限界でパラパラ動くため（アーカイブ後の自動スクロールを
+        // 不採用にしたのと同じ理由）。自分でスクロールすれば「ここまで学習した」が分かる。
+        if (pendingFocusCard.scroll) pendingScrollToIdRef.current = pendingFocusCard.id;
         restorationEndTimeRef.current = 0;
         setRecentlyDuplicatedIds((prev) => (prev.size === 0 ? prev : new Set()));
       } else {
@@ -998,7 +1003,9 @@ export default function DeckDetailScreen() {
     setStudyCardIds(cardIds);
     router.push({
       pathname: '/study/session',
-      params: { deckId: id, order: '1', ...(browse ? { browse: '1' } : {}) },
+      // from: 'cards' ＝ 戻り先がこのカード一覧であることを学習画面に伝える
+      // （途中で戻ったとき、最後に見ていたカードへフォーカスを置くため）。
+      params: { deckId: id, order: '1', from: 'cards', ...(browse ? { browse: '1' } : {}) },
     });
   };
 

@@ -1,6 +1,6 @@
 /**
  * デッキ土台の複数持ちの検証（044: HTML/CSS 土台 ／ 045: SQL 初期化）。
- * `docs/044-multiple-deck-stages.md` の Phase 6・Phase 7 に対応する。
+ * `docs/044-multiple-deck-stages.md`（HTML・Phase 6）と `docs/045-multiple-deck-sql-stages.md`（SQL）に対応する。
  *
  * 実行: `npm run verify:db`
  *

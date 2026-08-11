@@ -11,6 +11,7 @@ import { WebView } from 'react-native-webview';
 import { LANG_LABELS } from '@/lib/code-execution/constants';
 import { buildInteractiveWebSandboxHtml } from '@/lib/code-execution/sandbox';
 import type { LogEntry } from '@/lib/code-execution/types';
+import { useSandboxReload } from '@/hooks/useSandboxReload';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
@@ -56,6 +57,9 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
   // 開いた時点のインラインの状態（initialRan）で初期化し、▶/⟲ で切り替える。
   const [ran, setRan] = useState(initialRan);
   const consoleRef = useRef<ScrollView>(null);
+  // action="" / action="#" の送信は about:blank への遷移＝真っ白になるので、
+  // ブラウザのリロードと同じ「同じ HTML が描き直されて入力欄が空になる」に寄せる。
+  const { reloadNonce, onShouldStartLoadWithRequest } = useSandboxReload();
 
   const mode: 'html' | 'js' | 'css' = language === 'html' ? 'html' : language === 'css' ? 'css' : 'js';
 
@@ -196,10 +200,11 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
         <View style={styles.webviewWrap}>
           {visible && html !== null && (
             <WebView
-              key={nonce}
+              key={`${nonce}-${reloadNonce}`}
               style={styles.webview}
               source={{ html, baseUrl: 'about:blank' }}
               onMessage={handleMessage}
+              onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
               javaScriptEnabled
               originWhitelist={['*']}
               scrollEnabled

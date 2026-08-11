@@ -10,6 +10,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
+import { useSandboxReload } from '@/hooks/useSandboxReload';
 import { buildStaticPreviewHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
@@ -148,6 +149,10 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
   const [copied, setCopied] = useState(false);
   const [sourceCopied, setSourceCopied] = useState(false);
   const [previewTab, setPreviewTab] = useState<'preview' | 'source'>('preview');
+  // action="" / action="#" の送信をブラウザ同様の「リロード」にする（素通しすると真っ白になる）。
+  // インラインは pointerEvents="none" でタップが届かないため、効くのはカードの JS が
+  // form.submit() を呼んだときだけ＝そこで実行が終わらないまま固着するのを防ぐ意味もある。
+  const { reloadNonce, onShouldStartLoadWithRequest } = useSandboxReload();
 
   // タイムアウト表示の秒数。JS/Web は setTimeout の予約に応じて締切が伸びる（既定5秒→最大30秒）ので、
   // サンドボックスが実際に適用した上限（limitMs）を表示する。未指定なら既定の5秒。
@@ -381,10 +386,11 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
           </View>
           <View style={[styles.previewBody, { height: previewHeight }, activeTab !== 'preview' && styles.previewHidden]} pointerEvents="none">
             <WebView
-              key={execActive ? `exec-${runNonce}` : 'static'}
+              key={`${execActive ? `exec-${runNonce}` : 'static'}-${reloadNonce}`}
               style={styles.previewWebView}
               source={{ html: activeHtml, baseUrl: baseUrl ?? 'about:blank' }}
               onMessage={handleWebViewMessage}
+              onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
               javaScriptEnabled
               originWhitelist={['*']}
               scrollEnabled={false}

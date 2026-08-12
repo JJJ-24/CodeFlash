@@ -1,7 +1,7 @@
 import { transform } from 'sucrase';
 import { useEffect, useRef, useState } from 'react';
 
-import { buildSandboxHtml, EXEC_TIMEOUT_MAX_MS } from '@/lib/code-execution/sandbox';
+import { buildSandboxHtml, EXEC_TIMEOUT_BASE_MS, EXEC_TIMEOUT_MAX_MS } from '@/lib/code-execution/sandbox';
 import type { ExecResult, ExecStatus, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import i18n from '@/lib/i18n';
@@ -37,6 +37,33 @@ const WANDBOX_RETRY_BACKOFFS = [800, 1600];
 
 /** Wandbox（C++）の全リトライ込みの全体タイムアウト。WebView 実行系の絶対上限と揃えてある。 */
 const WANDBOX_TIMEOUT_MS = EXEC_TIMEOUT_MAX_MS;
+
+/**
+ * サンドボックスの締切に対して RN 側の見張りが余分に待つ時間。
+ * WebView のマウント・HTML パース・メッセージ往復のぶんで、正常な実行を誤って打ち切らないための余裕。
+ */
+const WATCHDOG_MARGIN_MS = 3000;
+
+/**
+ * 完了メッセージが届かないまま実行が固着したときに RN 側から打ち切る見張りタイマーの待ち時間。
+ *
+ * サンドボックス内の締切（`DEADLINE_SCRIPT`）は**その WebView の JS が生きていること**が前提なので、
+ * 次のケースでは誰も実行を終わらせられず `status='running'` のまま固着する（＝コードブロックの
+ * ヘッダーが緑のまま・スピナーが回り続ける）：
+ * - カードのコードが `location.href = ...` などでページごと遷移した（harness ごと消える）
+ * - `while(true)` のような同期無限ループで JS スレッドが占有され、締切タイマーが発火できない
+ * - WebView のコンテンツプロセスが落ちた／`window.ReactNativeWebView` を壊された
+ *
+ * 待ち時間は言語で分ける。web/console 系は既定 5 秒で終わるので短く張り、カードが `setTimeout` で
+ * 締切を延ばしたら `{type:'deadline'}` の通知（`DEADLINE_SCRIPT.postDeadline`）で張り直す。
+ * python/sql は CDN からの読み込みを含む 30 秒が正当な上限なので最初から長く取る。
+ * **C++ は対象外**（WebView を使わず `runCppViaWandbox` の AbortController が既に打ち切る）。
+ */
+function watchdogMsFor(language: string): number | null {
+  if (language === 'cpp') return null;
+  if (language === 'python' || language === 'sql') return EXEC_TIMEOUT_MAX_MS + WATCHDOG_MARGIN_MS;
+  return EXEC_TIMEOUT_BASE_MS + WATCHDOG_MARGIN_MS;
+}
 
 /** abort で即座にキャンセルできる待機。abort 時は name='AbortError' の Error で reject する。 */
 function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
@@ -80,10 +107,39 @@ export function useCodeExecution(onResult?: () => void) {
   // 「解決を待っている間に次の実行・clear が走った」場合に古い結果で上書きしないための通し番号。
   // runNonce は関数更新なので同期に値を読めない＝別に ref で持つ。
   const runSeqRef = useRef(0);
+  // 完了が届かないまま固着したときに打ち切る見張り（watchdogMsFor 参照）。
+  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 打ち切り時に途中経過のログを結果へ引き継ぐための控え（state は setTimeout 内から読めないため）。
+  const liveLogsRef = useRef<LogEntry[]>([]);
 
   // 常に最新の onResult を参照するため ref で保持
   const onResultRef = useRef(onResult);
   useEffect(() => { onResultRef.current = onResult; });
+
+  function clearWatchdog() {
+    if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    watchdogRef.current = null;
+  }
+
+  /**
+   * 見張りを張り直す。サンドボックスが締切を動かすたび（`{type:'deadline'}`）にも呼ばれる。
+   * 発火したら「応答なし」として実行を終わらせる＝running のまま固着させない。
+   * WebView の後始末は完了時（`handleMessage`）と同じ流儀にする（可視プレビューは残す）。
+   */
+  function armWatchdog(ms: number) {
+    clearWatchdog();
+    watchdogRef.current = setTimeout(() => {
+      watchdogRef.current = null;
+      setStatus('error');
+      setResult({ status: 'error', logs: liveLogsRef.current, errorMessage: i18n.t('code.noResponse') });
+      // 完了時と同じ扱い：可視プレビューは残し（遷移先や描画結果を消さない）、
+      // console 専用言語の隠し WebView は破棄する（暴走ループが CPU を掴み続けないように）。
+      if (!previewModeRef.current) setHtmlSource(null);
+    }, ms);
+  }
+
+  // アンマウント時に取り残さない（画面を離れた後に結果が入るのを防ぐ）
+  useEffect(() => clearWatchdog, []);
 
   useEffect(() => {
     if (result) setTimeout(() => onResultRef.current?.(), 50);
@@ -189,6 +245,8 @@ export function useCodeExecution(onResult?: () => void) {
     setStatus('running');
     setResult(null);
     setLiveLogs([]);
+    liveLogsRef.current = [];
+    clearWatchdog();
     setRunNonce((n) => n + 1); // 可視プレビューの WebView を再実行ごとに強制再マウントするための key
     const seq = ++runSeqRef.current;
 
@@ -226,6 +284,8 @@ export function useCodeExecution(onResult?: () => void) {
       language === 'sql' ? 'https://cdnjs.cloudflare.com' : undefined
     );
     const html = buildSandboxHtml(code, language, sqlInits, htmlInits);
+    // 見張りは WebView に HTML を渡すのと同じタイミングで張る（画像解決の待ち時間を含めない）
+    const watchdogMs = watchdogMsFor(language);
 
     // 043: web 系で `img://name` を含むときだけ、ファイル読み込みを挟んで data URI に解決する。
     // 含まないとき（＝ほとんどのカード）は従来どおり同期でセットする＝挙動も速度も不変。
@@ -234,16 +294,20 @@ export function useCodeExecution(onResult?: () => void) {
       void resolveHtmlImageRefs(html, deckImages ?? []).then((resolved) => {
         if (runSeqRef.current !== seq) return; // 解決中に次の実行/clear が走った＝この結果は捨てる
         setHtmlSource(resolved);
+        if (watchdogMs !== null) armWatchdog(watchdogMs);
       });
       return;
     }
     setHtmlSource(html);
+    if (watchdogMs !== null) armWatchdog(watchdogMs);
   }
 
   function clear() {
+    clearWatchdog();
     setStatus('idle');
     setResult(null);
     setLiveLogs([]);
+    liveLogsRef.current = [];
     setHtmlSource(null); // Web プレビューの可視 WebView も破棄する
     setPreviewMode(false);
     previewModeRef.current = false;
@@ -258,12 +322,23 @@ export function useCodeExecution(onResult?: () => void) {
       message?: string;
       tables?: SqlTableResult[];
       limitMs?: number;
+      remainingMs?: number;
     };
     // 実行中の途中経過。結果ではないので status / result には触らない。
     if (data.type === 'logs') {
-      if (data.entries?.length) setLiveLogs((prev) => [...prev, ...data.entries!]);
+      if (data.entries?.length) {
+        liveLogsRef.current = [...liveLogsRef.current, ...data.entries];
+        setLiveLogs(liveLogsRef.current);
+      }
       return;
     }
+    // サンドボックスが締切を動かした（setTimeout での延長・ダイアログ待ち）。見張りをそれに合わせる。
+    if (data.type === 'deadline') {
+      const remaining = Number(data.remainingMs);
+      if (Number.isFinite(remaining) && remaining >= 0) armWatchdog(remaining + WATCHDOG_MARGIN_MS);
+      return;
+    }
+    clearWatchdog();
     const newResult: ExecResult = {
       status: data.type as ExecStatus,
       logs: data.logs ?? [],
@@ -280,9 +355,11 @@ export function useCodeExecution(onResult?: () => void) {
   function reset() {
     cppAbortRef.current?.abort();
     cppAbortRef.current = null;
+    clearWatchdog();
     setStatus('idle');
     setResult(null);
     setLiveLogs([]);
+    liveLogsRef.current = [];
     setHtmlSource(null);
     setPreviewMode(false);
     previewModeRef.current = false;

@@ -110,7 +110,7 @@ const LOG_STREAM_SCRIPT = `
 `;
 
 /** 実行の既定の締切（何も予約しないコードは実質これで判定される）。 */
-const EXEC_TIMEOUT_BASE_MS = 5000;
+export const EXEC_TIMEOUT_BASE_MS = 5000;
 /** 実行開始からの絶対上限。setTimeout をいくら重ねてもここで打ち切る（Python・C++ と同じ 30 秒）。 */
 export const EXEC_TIMEOUT_MAX_MS = 30000;
 /** タイマー発火後の後始末（コールバック内のログ・マイクロタスク）ぶんの余白。 */
@@ -128,6 +128,10 @@ const EXEC_TIMEOUT_MARGIN_MS = 300;
  * - 何も予約しないコードの体感は不変（5 秒のまま）
  * - `finish` に `_limitMs`（実際に適用した上限）を持たせ、UI が「N秒を超えたため中断」と出せるようにする
  * - `skipDeadline(ms)` は「コードの実行ではない待ち時間」を締切から差し引く（`DIALOG_SCRIPT` 用）
+ * - **締切が動いたら `{type:'deadline', remainingMs}` で RN 側へ知らせる**（`postDeadline`）。
+ *   RN 側（`useCodeExecution`）は「完了が届かないまま締切＋余裕を過ぎたら打ち切る」見張りを
+ *   持っており、その待ち時間をこの通知で合わせる。通知しないと RN 側は延長を知りようがなく、
+ *   安全側に倒して常に絶対上限（30秒）待つことになる
  *
  * 前提: 呼び出し側に `_origSetTimeout` / `_origClearTimeout` と関数宣言の `finish` があること。
  */
@@ -135,10 +139,16 @@ const DEADLINE_SCRIPT = `
   var _startedAt = Date.now();
   var _limitMs = ${EXEC_TIMEOUT_BASE_MS};
   var _timer = _origSetTimeout(function() { finish('timeout'); }, _limitMs);
+  // 締切までの残りを RN 側の見張りタイマーへ知らせる。初期値（5秒）は RN 側も知っているので送らない。
+  function postDeadline(remainingMs) {
+    try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'deadline', remainingMs: remainingMs })); } catch (e) {}
+  }
   function armDeadline() {
     _origClearTimeout(_timer);
     var remain = _startedAt + _limitMs - Date.now();
-    _timer = _origSetTimeout(function() { finish('timeout'); }, remain > 0 ? remain : 0);
+    if (remain < 0) remain = 0;
+    _timer = _origSetTimeout(function() { finish('timeout'); }, remain);
+    postDeadline(remain);
   }
   function extendDeadline(delay) {
     if (_done) return;
@@ -170,7 +180,13 @@ const DEADLINE_SCRIPT = `
  * 表示直前に溜まったログを吐き出し、閉じた後に止まっていた時間を締切から差し引くことで両方を防ぐ。
  * 戻り値（`confirm`/`prompt`）はそのまま返す。
  *
- * 前提: 呼び出し側に `flushLogs`（LOG_STREAM_SCRIPT）と `skipDeadline`（DEADLINE_SCRIPT）があること。
+ * **RN 側の見張りタイマーも表示直前に伸ばしておく**：スレッドが止まっている間は何も送れないので、
+ * 操作待ちの最中に「応答なし」と判定されてしまう。止まる前に絶対上限ぶんの猶予を送っておき、
+ * 閉じた後に `armDeadline` が正しい残り時間へ戻す（＝ダイアログを30秒以上開いたままにすると
+ * 一度「応答なし」と出るが、閉じれば本来の結果で置き換わる）。
+ *
+ * 前提: 呼び出し側に `flushLogs`（LOG_STREAM_SCRIPT）と `skipDeadline`/`armDeadline`/`postDeadline`
+ * （DEADLINE_SCRIPT）があること。
  */
 const DIALOG_SCRIPT = `
   ['alert', 'confirm', 'prompt'].forEach(function(name) {
@@ -178,11 +194,14 @@ const DIALOG_SCRIPT = `
     if (typeof orig !== 'function') return;
     window[name] = function() {
       flushLogs();
+      postDeadline(${EXEC_TIMEOUT_MAX_MS});
       var t0 = Date.now();
       try {
         return orig.apply(window, arguments);
       } finally {
         skipDeadline(Date.now() - t0);
+        // skipDeadline は待ち時間が 0 のとき何もしないので、見張りを戻すために必ず張り直す
+        if (!_done) armDeadline();
       }
     };
   });

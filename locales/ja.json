@@ -367,7 +367,8 @@
     "pyodideLoadError": "Pyodide の読み込みに失敗しました（インターネット接続を確認してください）",
     "proTitle": "Pro 機能",
     "proMessage": "SQL・C++・HTML・CSS の実行は Pro プランの機能です。",
-    "proStageHint": "HTML/CSS 土台を使うプレビューは Pro 機能です。このブロックは土台なしで実行しました。"
+    "proStageHint": "HTML/CSS 土台を使うプレビューは Pro 機能です。このブロックは土台なしで実行しました。",
+    "noResponse": "実行結果を受け取れませんでした（ページが別のURLへ移動した、無限ループで停止した、などの可能性があります）"
   },
   "common": {
     "save": "保存",

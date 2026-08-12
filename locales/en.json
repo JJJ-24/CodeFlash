@@ -367,7 +367,8 @@
     "pyodideLoadError": "Failed to load Pyodide (check your internet connection)",
     "proTitle": "Pro Feature",
     "proMessage": "Running SQL, C++, HTML, and CSS requires a Pro plan.",
-    "proStageHint": "Previewing on an HTML/CSS stage is a Pro feature. This block ran without the stage."
+    "proStageHint": "Previewing on an HTML/CSS stage is a Pro feature. This block ran without the stage.",
+    "noResponse": "No result was received (the page may have navigated to another URL, or the code may be stuck in an infinite loop)."
   },
   "common": {
     "save": "Save",

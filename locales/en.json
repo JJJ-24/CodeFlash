@@ -78,7 +78,7 @@
     "archivedStudyTitle": "Archived Deck",
     "archivedStudyMessage": "This deck is archived, so your study progress will not be recorded.",
     "archivedStudyUnarchive": "Unarchive and study",
-    "archivedStudyBrowse": "Browse only (not recorded)"
+    "archivedStudyBrowse": "Browse only"
   },
   "study": {
     "title": "Study",

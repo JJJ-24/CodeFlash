@@ -78,7 +78,7 @@
     "archivedStudyTitle": "アーカイブ中のデッキ",
     "archivedStudyMessage": "このデッキはアーカイブ中のため、学習の記録は残りません。",
     "archivedStudyUnarchive": "解除して学習開始",
-    "archivedStudyBrowse": "閲覧のみ（記録なし）"
+    "archivedStudyBrowse": "閲覧のみ"
   },
   "study": {
     "title": "学習",

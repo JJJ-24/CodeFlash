@@ -300,12 +300,18 @@ export default function NotificationSettingsScreen() {
     }
   }
 
-  // スケジュールが実際には鳴らない理由（null = 正常に動作する）。
+  // スケジュールが実際には鳴らない理由（null = 正常に動作する / 知らせる必要がない）。
   // 'master'     … アプリ内の大元トグルが OFF
   // 'permission' … OS 側で通知が許可されていない（アプリ内は ON のまま＝より気づきにくい）
   // 大元 OFF を優先する（OS 許可も無い場合、まず直すべきはアプリ内のトグルのため）。
+  //
+  // **ON のスケジュールが1つも無ければ null にする**：この注意行と淡色表示は「ON に見えるのに
+  // 鳴らない」を防ぐためのもので、鳴る予定のスケジュールが1つも無ければ防ぐべき誤解が存在しない
+  // （大元トグルの状態はスイッチ自体を見れば分かる）。大元 OFF のままスケジュールを ON にした
+  // 瞬間に出るので、必要になった時に初めて現れる形になる。
+  const hasEnabledSchedule = schedules.some((s) => s.enabled);
   const inactiveReason: 'master' | 'permission' | null =
-    !notificationEnabled ? 'master' : permissionGranted === false ? 'permission' : null;
+    !hasEnabledSchedule ? null : !notificationEnabled ? 'master' : permissionGranted === false ? 'permission' : null;
 
   // スケジュール行の enabled トグル
   async function handleToggleEnabled(id: string, enabled: boolean) {

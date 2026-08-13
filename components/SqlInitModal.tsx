@@ -110,7 +110,7 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
           代わりにシートを marginBottom で固定量だけ持ち上げ、保存ボタンのすぐ上に安定配置する。 */}
       <View style={styles.overlay}>
         <Pressable style={styles.closeArea} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: theme.colors.surface, marginBottom: sheetLift, maxHeight: sheetMaxHeight }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.colors.surface, maxHeight: sheetMaxHeight }]}>
             <View style={styles.header}>
               {onTitleChange ? (
                 <TextInput
@@ -163,6 +163,11 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
             />
             {footer}
         </View>
+        {/* 持ち上げた分の隙間を**シートと同じ色で塗る**（marginBottom の代わり）。透明のままだと
+            親のデッキ編集画面の保存/削除ボタンが暗幕越しに透けて「押せそう」に見えるため。
+            キーボード表示中は sheetLift がキーボード高さになるが、その領域はキーボードが覆うので
+            塗っても見えない（閉じると保存ボタンをちょうど隠す高さに戻る）。 */}
+        <View style={{ height: sheetLift, backgroundColor: theme.colors.surface }} />
       </View>
     </Modal>
   );

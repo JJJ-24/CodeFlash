@@ -110,7 +110,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, edit
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={styles.closeArea} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: theme.colors.surface, marginBottom: sheetLift, maxHeight: sheetMaxHeight }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.colors.surface, maxHeight: sheetMaxHeight }]}>
             <View style={styles.header}>
               <Text
                 style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
@@ -189,6 +189,11 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, edit
               </ScrollView>
             )}
         </View>
+        {/* 持ち上げた分の隙間を**シートと同じ色で塗る**（marginBottom の代わり）。透明のままだと
+            親のデッキ編集画面の保存/削除ボタンが暗幕越しに透けて「押せそう」に見えるため。
+            親から FormBottomBar を消す方式は、レイアウトが縮んで裏の ScrollView 位置がずれるので不可。
+            ここはモーダル内に1枚敷くだけなので親のレイアウトには影響しない。 */}
+        <View style={{ height: sheetLift, backgroundColor: theme.colors.surface }} />
 
         {/* ⚠️ 下の2つは**この Modal の中**に置くこと（兄弟にしてはいけない）。
             iOS は「すでに modal を提示している VC」からもう1枚を提示できず、兄弟に置くと

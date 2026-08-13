@@ -29,6 +29,15 @@ const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdow
 // `.id` `.io` `.co` `.dev` などは実在の TLD なので、`dataset.id` のようなコード片が
 // ドメインと誤判定されてリンクになってしまうため。https:// 付きの URL は従来どおりリンク化される。
 mdInstance.linkify.set({ fuzzyLink: false });
+// **字下げコードブロックを無効にする**（`disable('code')`）。CommonMark では空行のあとに
+// 半角スペース4つ以上で始まる行がコードブロックになるが、テキストブロックは自然文や図解を
+// 書く場所なので、罫線や空白で見た目を整えただけの行が黒背景のコードとして描画されてしまう
+// （「複数行テキスト：」の枠を空白で描いた行が該当し、実際に報告された）。原因が
+// 「半角スペースの数」という見えないものなので、踏んだときに気づきにくいのも悪い。
+// コードを見せる手段はフェンス（```）に一本化されており（パレット・ハイライト・TSV往復とも
+// フェンス前提）、**フェンスは disable('code') 後も従来どおり動く**（実測確認済み）。
+// MDX v2 も同じ理由で字下げコードブロックを廃止している。
+mdInstance.disable('code');
 
 /**
  * リンクのタップは linkRule 側で処理するので、ライブラリ既定のオープン動作は無効化する。
@@ -231,6 +240,8 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
       color: theme.colors.danger,
     },
     fence: { backgroundColor: theme.cardTheme.codeBackground, borderRadius: 6, padding: 12, color: '#FFFFFF', fontFamily: 'monospace', fontSize: theme.fontSize.md },
+    // `code_block`（字下げコード）は `mdInstance.disable('code')` で出なくなったため現状は未使用。
+    // 判断を戻したときのために残してある（コードの表示は fence ルールが担当）。
     code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.md, color: '#FFFFFF', backgroundColor: theme.cardTheme.codeBackground },
     link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
     blockquote: {

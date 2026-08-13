@@ -24,6 +24,9 @@ const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark).use(
 // `.id` `.io` `.co` `.dev` などは実在の TLD なので、`dataset.id` のようなコード片が
 // ドメインと誤判定されてリンクになってしまうため。https:// 付きの URL は従来どおりリンク化される。
 markdownItLinkify.linkify.set({ fuzzyLink: false });
+// 字下げコードブロックは無効（理由は BlocksView 側のコメント参照）。**学習画面と同じ設定にする**＝
+// プレビューと本番の見た目が食い違わないようにするため、片方だけ変えないこと。
+markdownItLinkify.disable('code');
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_STATE_HEADERS } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
@@ -201,6 +204,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           color: theme.colors.danger,
         },
         fence: { backgroundColor: '#1E1E1E', borderRadius: 6, padding: 12, color: '#D4D4D4', fontFamily: 'monospace', fontSize: theme.fontSize.md },
+        // code_block（字下げコード）は disable('code') で出なくなったため未使用（BlocksView 側の注参照）
         code_block: { fontFamily: 'monospace', fontSize: theme.fontSize.md, color: '#D4D4D4', backgroundColor: '#1E1E1E' },
         link: { color: '#3B82F6', textDecorationLine: 'underline' as const },
         blockquote: {

@@ -58,6 +58,7 @@
     "htmlInitHint": "この土台を選んだコードブロックの実行前に、body の先頭へ流す HTML/CSS。実行のたびに読み込まれます。",
     "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
     "htmlImagesOnly": "画像 {{count}}枚（土台なし）",
+    "htmlStagesAndImages": "土台 {{stages}}件、画像 {{images}}枚",
     "htmlInitNone": "未設定（任意）",
     "htmlStagesSet": "土台 {{count}}件",
     "stagesHint": "このデッキで使う HTML/CSS 土台の一覧です。カードのコードブロックごとに、どの土台を使うかを選べます。",

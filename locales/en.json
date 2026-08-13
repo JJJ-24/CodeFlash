@@ -58,6 +58,7 @@
     "htmlInitHint": "HTML/CSS injected at the top of <body> before a code block that picks this stage runs. Loaded fresh on each run.",
     "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
     "htmlImagesOnly": "{{count}} image(s), no stage",
+    "htmlStagesAndImages": "{{stages}} stage(s), {{images}} image(s)",
     "htmlInitNone": "Not set (optional)",
     "htmlStagesSet": "{{count}} stage(s)",
     "stagesHint": "HTML/CSS stages available in this deck. Each code block can pick which one it uses.",

@@ -1638,7 +1638,9 @@ export default function DeckDetailScreen() {
           ...(promptHasUnarchiveRef.current
             ? [{ label: t('deck.archivedStudyUnarchive'), onPress: unarchiveAndStudy }]
             : []),
-          { label: t('deck.archivedStudyBrowse'), onPress: browseArchivedDeck },
+          // 閲覧は「状態を変えない側」なのでゴースト。ただし解除が出ないとき（解除しても
+          // 0枚になるとき）は唯一の選択肢になるので、そのときは通常の塗りに戻す。
+          { label: t('deck.archivedStudyBrowse'), onPress: browseArchivedDeck, secondary: promptHasUnarchiveRef.current },
         ]}
         onClose={() => setArchivedStudyPrompt(null)}
       />

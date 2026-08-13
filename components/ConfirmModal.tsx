@@ -7,6 +7,16 @@ export interface ModalAction {
   label: string;
   onPress: () => void;
   destructive?: boolean;
+  /**
+   * 副次的な選択肢（塗りではなく枠線のゴーストで描く）。既定は塗り＝主たる選択肢。
+   *
+   * 選択肢が2つとも塗りだと、どちらが本筋か読み取れず文言を読み比べることになる。
+   * **グレーの塗りにはしない**：iOS ではグレーが無効／キャンセルの記号として読まれ、
+   * 実際には遷移する選択肢を「押せないもの」と誤解させるため（このモーダルはキャンセル
+   * ボタンを持たず暗幕タップで閉じる作りなので、なおさら紛らわしい）。
+   * 塗り／ゴーストの出し分けは 041 の全画面プレビューの ▶ と同じ語彙。
+   */
+  secondary?: boolean;
 }
 
 interface Props {
@@ -43,12 +53,15 @@ export function ConfirmModal({ visible, title, message, actions, onClose }: Prop
               key={i}
               style={[
                 styles.actionBtn,
-                { backgroundColor: action.destructive ? '#E53935' : theme.colors.primary, marginTop: i === 0 ? 8 : 18 },
+                action.secondary
+                  ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.colors.primary }
+                  : { backgroundColor: action.destructive ? '#E53935' : theme.colors.primary },
+                { marginTop: i === 0 ? 8 : 18 },
               ]}
               onPress={action.onPress}
             >
               <Text
-                style={[styles.actionBtnText, { fontSize: theme.fontSize.md }]}
+                style={[styles.actionBtnText, action.secondary && { color: theme.colors.primary }, { fontSize: theme.fontSize.md }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                 numberOfLines={1}
                 adjustsFontSizeToFit

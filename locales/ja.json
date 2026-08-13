@@ -77,7 +77,7 @@
     "selectHint": "デッキをタップして選択",
     "archivedStudyTitle": "アーカイブ中のデッキ",
     "archivedStudyMessage": "このデッキはアーカイブ中のため、学習の記録は残りません。",
-    "archivedStudyUnarchive": "アーカイブを解除して学習",
+    "archivedStudyUnarchive": "解除して学習開始",
     "archivedStudyBrowse": "閲覧のみ（記録なし）"
   },
   "study": {

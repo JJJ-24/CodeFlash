@@ -45,7 +45,11 @@ function nextDefaultName(images: DeckImage[]): string {
 export function HtmlImageLibrary({ images, onChange }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
+  // 初期状態は「画像があるときだけ展開」。デッキ編集の行が「画像 N枚」と出しているので、
+  // 開いた先でその N 枚がすぐ見えるほうが自然につながる（登録済みの画像に気づけない、という
+  // 報告が実際にあった）。空のときは畳んでおく＝空セクションを開いておく意味がないため。
+  // 見出しの ＋ は畳んだ状態でも見えるので、追加したいときの発見性は保たれる。
+  const [expanded, setExpanded] = useState(images.length > 0);
   const [picking, setPicking] = useState(false);
   const [copiedName, setCopiedName] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DeckImage | null>(null);

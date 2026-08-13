@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
@@ -38,17 +39,31 @@ export function DeckStagePicker({ stages, activeStageId, kind, onPickNone, onPic
   const { t } = useTranslation();
   const keys = DECK_STAGE_KEYS[kind];
   const multiple = stages.length > 1;
+  const [showInfo, setShowInfo] = useState(false);
 
   return (
     <View style={[styles.section, { borderTopColor: theme.colors.border }]}>
       <View style={styles.header}>
         <Ionicons name={activeStageId ? 'layers' : 'layers-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
         <Text
-          style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flex: 1 }}
+          style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }}
           maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
         >
           {t(multiple ? keys.pickerLabel : keys.toggleLabel)}
         </Text>
+        {/* 説明は ⓘ で開閉（既定は閉じる）。この行はコードブロック1つごとに描画されるので、
+            長文を常時出すとブロックの数だけ同じ説明が積み上がる。ラベル自体は何の設定かを
+            表しているので、「なぜ・切ると何が起きるか」は必要なときだけ開けばよい。
+            切った結果（プレビューが消える）は同じブロック内ですぐ目に見えるため、
+            常時表示でなくても気づけないまま壊れることはない。 */}
+        <Pressable onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
+          <Ionicons
+            name={showInfo ? 'information-circle' : 'information-circle-outline'}
+            size={Math.max(theme.fontSize.sm, 18)}
+            color="#9CA3AF"
+          />
+        </Pressable>
+        <View style={{ flex: 1 }} />
         {!multiple && (
           <Switch
             value={activeStageId !== null}
@@ -109,12 +124,16 @@ export function DeckStagePicker({ stages, activeStageId, kind, onPickNone, onPic
         </View>
       )}
 
-      <Text
-        style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }}
-        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-      >
-        {t(multiple ? keys.pickerHint : keys.toggleHint)}
-      </Text>
+      {showInfo && (
+        <View style={styles.infoBox}>
+          <Text
+            style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+          >
+            {t(multiple ? keys.pickerHint : keys.toggleHint)}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -124,6 +143,9 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, borderTopWidth: StyleSheet.hairlineWidth },
   header: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
+  // 説明ボックス。コードブロックは暗い面なので、背景は周囲と同じ暗い半透明にする
+  // （theme.colors.background はライトテーマだと白く浮くため使わない）。
+  infoBox: { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
   chip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, maxWidth: 160 },
   switch: { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }], alignSelf: 'center' },
 });

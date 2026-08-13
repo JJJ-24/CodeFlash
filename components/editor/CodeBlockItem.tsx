@@ -100,6 +100,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const skipEditBlurRef = useRef(false);
   // SQL ブロック固有の初期化SQL欄の開閉（内容があれば初期展開）
   const [showInitSql, setShowInitSql] = useState(!!block.sqlInit);
+  // 「実行前プレビュー」の説明の開閉（既定は閉じる。理由は DeckStagePicker のコメント参照）
+  const [showPreviewInitInfo, setShowPreviewInitInfo] = useState(false);
+  // ブロック固有の初期化SQL / HTML 土台の説明の開閉（既定は閉じる）
+  const [showSqlInitInfo, setShowSqlInitInfo] = useState(false);
+  const [showHtmlInitInfo, setShowHtmlInitInfo] = useState(false);
   // js/ts ブロック固有の HTML/CSS 土台欄の開閉（内容があれば初期展開）
   const [showInitHtml, setShowInitHtml] = useState(!!block.htmlInit);
 
@@ -427,6 +432,16 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t('editor.sqlInitLabel')}
                 </Text>
+                {/* 説明は ⓘ で開閉（既定は閉じる）。かつては入力欄のフォーカス中だけ出していたが、
+                    それだと読むために入力欄をタップするしかなく（キーボードが出る）、読みたいときに
+                    読めない・読みたくないときに出る、という操作の意図とずれた出方になっていた。 */}
+                <Pressable onPress={() => setShowSqlInitInfo((v) => !v)} hitSlop={8}>
+                  <Ionicons
+                    name={showSqlInitInfo ? 'information-circle' : 'information-circle-outline'}
+                    size={Math.max(theme.fontSize.sm, 18)}
+                    color="#9CA3AF"
+                  />
+                </Pressable>
                 {!!block.sqlInit && !showInitSql && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
                 {!!block.sqlInit?.trim() && (
                   <>
@@ -437,6 +452,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   </>
                 )}
               </Pressable>
+              {showSqlInitInfo && (
+                <View style={styles.blockInfoBox}>
+                  <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('editor.sqlInitHint')}
+                  </Text>
+                </View>
+              )}
               {showInitSql && (
                 isPreview ? (
                   block.sqlInit ? (
@@ -450,9 +472,6 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   )
                 ) : initSqlFocused ? (
                   <>
-                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('editor.sqlInitHint')}
-                    </Text>
                     <TextInput
                       ref={initSqlInputRef}
                       style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
@@ -523,6 +542,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t('editor.htmlInitLabel')}
                 </Text>
+                {/* 説明は ⓘ で開閉（既定は閉じる）。理由は初期化SQL 側のコメント参照。 */}
+                <Pressable onPress={() => setShowHtmlInitInfo((v) => !v)} hitSlop={8}>
+                  <Ionicons
+                    name={showHtmlInitInfo ? 'information-circle' : 'information-circle-outline'}
+                    size={Math.max(theme.fontSize.sm, 18)}
+                    color="#9CA3AF"
+                  />
+                </Pressable>
                 {!!block.htmlInit && !showInitHtml && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
                 {!!block.htmlInit?.trim() && (
                   <>
@@ -533,6 +560,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   </>
                 )}
               </Pressable>
+              {showHtmlInitInfo && (
+                <View style={styles.blockInfoBox}>
+                  <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('editor.htmlInitHint')}
+                  </Text>
+                </View>
+              )}
               {showInitHtml && (
                 isPreview ? (
                   block.htmlInit ? (
@@ -546,9 +580,6 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   )
                 ) : initHtmlFocused ? (
                   <>
-                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {t('editor.htmlInitHint')}
-                    </Text>
                     <TextInput
                       ref={initHtmlInputRef}
                       style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
@@ -592,9 +623,18 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
               <View style={styles.initSqlHeader}>
                 <Ionicons name={block.previewInit ? 'eye' : 'eye-off-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
-                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t('editor.previewInitLabel')}
                 </Text>
+                {/* 説明は ⓘ で開閉（既定は閉じる）。理由は DeckStagePicker のコメント参照。 */}
+                <Pressable onPress={() => setShowPreviewInitInfo((v) => !v)} hitSlop={8}>
+                  <Ionicons
+                    name={showPreviewInitInfo ? 'information-circle' : 'information-circle-outline'}
+                    size={Math.max(theme.fontSize.sm, 18)}
+                    color="#9CA3AF"
+                  />
+                </Pressable>
+                <View style={{ flex: 1 }} />
                 <Switch
                   value={!!block.previewInit}
                   onValueChange={(v) => onChange({ previewInit: v })}
@@ -603,9 +643,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   style={styles.execSwitch}
                 />
               </View>
-              <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('editor.previewInitHint')}
-              </Text>
+              {showPreviewInitInfo && (
+                <View style={styles.blockInfoBox}>
+                  <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('editor.previewInitHint')}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -749,6 +793,8 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     gap: 4,
     paddingVertical: 6,
   },
+  // 説明ボックス（DeckStagePicker の infoBox と同寸法・同色。暗い面に合わせた半透明）
+  blockInfoBox: { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
   initSqlDot: {
     width: 6,
     height: 6,

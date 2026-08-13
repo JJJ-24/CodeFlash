@@ -54,6 +54,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DeckStage | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   /** 一覧の ScrollView（キーボード表示時に末尾＝画像ライブラリへ送るために持つ）。 */
   const listRef = useRef<ScrollView>(null);
 
@@ -129,12 +130,23 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
         <Pressable style={styles.closeArea} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.colors.surface, maxHeight: sheetMaxHeight }]}>
             <View style={styles.header}>
-              <Text
-                style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-              >
-                {t(keys.title)}
-              </Text>
+              {/* 説明は ⓘ で開閉する（既定は閉じる）。常時表示だと文字が多く、
+                  シートの縦は貴重なため。設定画面の SegmentedCard と同じ形に揃えてある。 */}
+              <View style={styles.titleLine}>
+                <Text
+                  style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {t(keys.title)}
+                </Text>
+                <Pressable onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
+                  <Ionicons
+                    name={showInfo ? 'information-circle' : 'information-circle-outline'}
+                    size={Math.max(theme.fontSize.lg, 20)}
+                    color={theme.colors.textTertiary}
+                  />
+                </Pressable>
+              </View>
               <View style={styles.headerRight}>
                 <Pressable onPress={handleAdd} hitSlop={8} style={styles.headerBtn}>
                   <Ionicons name="add-circle-outline" size={26} color={theme.colors.primary} />
@@ -145,12 +157,16 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
               </View>
             </View>
 
-            <Text
-              style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-            >
-              {t(keys.listHint)}
-            </Text>
+            {showInfo && (
+              <View style={[styles.infoBox, { backgroundColor: theme.colors.background }]}>
+                <Text
+                  style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t(keys.listHint)}
+                </Text>
+              </View>
+            )}
 
             {/* 土台の行と listFooter（043 の画像ライブラリ）は同じ ScrollView に入れる。
                 **土台が0件でも listFooter は出す**：ここが画像ライブラリの唯一の入口なので、
@@ -258,10 +274,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
-  title: { fontWeight: '700', flex: 1 },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  title: { fontWeight: '700', flexShrink: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   headerBtn: { paddingHorizontal: 4 },
-  hint: { marginBottom: 12, lineHeight: 20 },
+  // 説明ボックス（設定画面の syncInfoBox と同じ見た目：背景色は theme.colors.background＝
+  // 土台の行と同じ色で、カードテーマにも追従する）。
+  infoBox: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  hint: { lineHeight: 20 },
   empty: { paddingVertical: 24, textAlign: 'center' },
   row: {
     flexDirection: 'row',

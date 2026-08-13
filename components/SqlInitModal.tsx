@@ -48,6 +48,7 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
   const theme = useTheme();
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const handleCopy = useCallback(async () => {
     if (!value.trim()) return;
     await Clipboard.setStringAsync(value);
@@ -98,6 +99,15 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
                 </Text>
               )}
               <View style={styles.headerRight}>
+                {/* 説明は ⓘ で開閉（既定は閉じる）。タイトル位置は土台の名前入力なので、
+                    見出し行を増やさずヘッダーのボタン群に並べる（キーボード時は縦が特に貴重）。 */}
+                <Pressable onPress={() => setShowInfo((v) => !v)} hitSlop={8} style={styles.copyBtn}>
+                  <Ionicons
+                    name={showInfo ? 'information-circle' : 'information-circle-outline'}
+                    size={22}
+                    color={theme.colors.textTertiary}
+                  />
+                </Pressable>
                 {!!value.trim() && (
                   <Pressable onPress={handleCopy} hitSlop={8} style={styles.copyBtn}>
                     <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={22} color={theme.colors.textSecondary} />
@@ -108,12 +118,16 @@ export function SqlInitModal({ visible, value, onChangeText, onClose, title, hin
                 </Pressable>
               </View>
             </View>
-            <Text
-              style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-            >
-              {hint ?? t('deck.sqlInitHint')}
-            </Text>
+            {showInfo && (
+              <View style={[styles.infoBox, { backgroundColor: theme.colors.background }]}>
+                <Text
+                  style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {hint ?? t('deck.sqlInitHint')}
+                </Text>
+              </View>
+            )}
             <TextInput
               style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.md }]}
               placeholder={placeholder ?? t('deck.sqlInitPlaceholder')}
@@ -174,7 +188,10 @@ const styles = StyleSheet.create({
   doneBtn: {
     paddingHorizontal: 4,
   },
-  hint: { marginBottom: 12, lineHeight: 20 },
+  // 説明ボックス（設定画面の syncInfoBox と同じ見た目：背景色は theme.colors.background＝
+  // 土台の行と同じ色で、カードテーマにも追従する）。
+  infoBox: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  hint: { lineHeight: 20 },
   input: {
     flex: 1,
     borderWidth: 1,

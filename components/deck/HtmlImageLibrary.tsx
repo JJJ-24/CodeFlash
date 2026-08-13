@@ -32,11 +32,11 @@ function nextDefaultName(images: DeckImage[]): string {
 }
 
 /**
- * 043: デッキの HTML 画像ライブラリ。「HTML/CSS 共通土台」モーダルの footer に差し込んで使う。
+ * 043: デッキの HTML 画像ライブラリ。**土台一覧（`DeckStagesModal`）の `listFooter`** に差し込む。
  *
- * 土台や本文を書いている最中に**参照名が見える**ことが目的なので、テキストエディタと同じ面に置く。
- * ただし縦の場所を奪うと入力欄が潰れるため、既定は折りたたみ（ヘッダー行だけ）で、
- * 開いたときだけ高さ上限つきのリストを出す。
+ * 画像はデッキ単位のデータなので、デッキ単位の画面（土台一覧）が置き場所。土台1件の編集面には
+ * 置かない（理由は `DeckStagesModal` の `listFooter` の項）。縦の場所を奪いすぎないよう、
+ * リストは高さ上限つきで、説明は ⓘ で開閉する。
  *
  * 画像の実体は追加した時点で `images/` に保存される（＝デッキ保存をキャンセルしても残る）が、
  * `decks.htmlImages` に入らなければ起動時の孤児掃除が回収するので、画像ブロックと同じ挙動になる。
@@ -51,6 +51,7 @@ export function HtmlImageLibrary({ images, onChange }: Props) {
   // 見出しの ＋ は畳んだ状態でも見えるので、追加したいときの発見性は保たれる。
   const [expanded, setExpanded] = useState(images.length > 0);
   const [picking, setPicking] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [copiedName, setCopiedName] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DeckImage | null>(null);
   const [sizeErrorVisible, setSizeErrorVisible] = useState(false);
@@ -122,6 +123,16 @@ export function HtmlImageLibrary({ images, onChange }: Props) {
           {t('deck.htmlImagesLabel')}
           {images.length > 0 ? ` (${images.length})` : ''}
         </Text>
+        {/* 説明は ⓘ で開閉（既定は閉じる）。開閉は expanded とは独立＝畳んだままでも読める。
+            見出しのすぐ右に置くため、ラベルは flex を持たせず、この後ろに伸縮スペーサーを入れる。 */}
+        <Pressable onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
+          <Ionicons
+            name={showInfo ? 'information-circle' : 'information-circle-outline'}
+            size={Math.max(theme.fontSize.lg, 20)}
+            color={theme.colors.textTertiary}
+          />
+        </Pressable>
+        <View style={styles.headerSpacer} />
         <Pressable onPress={handleAdd} hitSlop={8} disabled={picking} style={styles.addBtn}>
           {picking ? (
             <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -136,14 +147,19 @@ export function HtmlImageLibrary({ images, onChange }: Props) {
         />
       </Pressable>
 
-      {expanded && (
-        <>
+      {showInfo && (
+        <View style={[styles.infoBox, { backgroundColor: theme.colors.background }]}>
           <Text
             style={[styles.hint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]}
             maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
           >
             {t('deck.htmlImagesHint')}
           </Text>
+        </View>
+      )}
+
+      {expanded && (
+        <>
           {images.length === 0 ? (
             <Text
               style={[styles.empty, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}
@@ -226,9 +242,13 @@ export function HtmlImageLibrary({ images, onChange }: Props) {
 const styles = StyleSheet.create({
   container: { borderTopWidth: 1, marginTop: 10, paddingTop: 6 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
-  headerLabel: { fontWeight: '600', flex: 1 },
+  // ⓘ を見出しのすぐ右に置くため flex を持たせない（伸縮は headerSpacer が担う）
+  headerLabel: { fontWeight: '600', flexShrink: 1 },
+  headerSpacer: { flex: 1 },
   addBtn: { paddingHorizontal: 2 },
-  hint: { lineHeight: 16, marginBottom: 6 },
+  // 説明ボックス（設定画面の syncInfoBox と同じ見た目）
+  infoBox: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6 },
+  hint: { lineHeight: 16 },
   empty: { paddingVertical: 10, textAlign: 'center' },
   // 高さ上限を設けて、開いてもテキスト入力欄を潰さないようにする
   list: { maxHeight: 168 },

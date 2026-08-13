@@ -48,8 +48,9 @@ const DECK_EDIT_SHORTCUT_SECTIONS = [
     { key: 'M', descKey: 'shortcut.focusDeckDesc' },
     { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
     { key: 'I', descKey: 'shortcut.pickIcon' },
-    { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+    // 並びは画面の行順（HTML/CSS 土台 → SQL 初期化）に合わせる
     { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
+    { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
     { key: 'E', descKey: 'shortcut.toggleArchive' },
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'Delete', descKey: 'shortcut.deleteDeck' },
@@ -349,26 +350,9 @@ export default function EditDeckScreen() {
             )}
           </View>
 
-          {isPro && (
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('deck.sqlInitLabel')}
-              </Text>
-              <Pressable
-                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-                onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: filledSqlStages > 0 ? theme.colors.primaryLight : theme.colors.background }]}>
-                  <Ionicons name={filledSqlStages > 0 ? 'server' : 'server-outline'} size={20} color={filledSqlStages > 0 ? theme.colors.primary : theme.colors.textSecondary} />
-                </View>
-                <Text style={{ color: filledSqlStages > 0 ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {filledSqlStages > 0 ? t('deck.sqlStagesSet', { count: filledSqlStages }) : t('deck.sqlInitNone')}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-              </Pressable>
-            </View>
-          )}
-
+          {/* HTML/CSS 土台を先に置く：土台を使う言語は html/css/js/ts の4つ（js/ts は無料言語）で、
+              SQL ブロックだけが使う SQL 初期化より触る頻度が高いため。キー割り当て（H/Q）は
+              頭文字由来なのでこの並びとは独立。 */}
           {isPro && (
             <View style={styles.field}>
               <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -383,6 +367,26 @@ export default function EditDeckScreen() {
                 </View>
                 <Text style={{ color: htmlConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {filledStages > 0 ? t('deck.htmlStagesSet', { count: filledStages }) : htmlConfigured ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+
+          {isPro && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.sqlInitLabel')}
+              </Text>
+              <Pressable
+                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
+                onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: filledSqlStages > 0 ? theme.colors.primaryLight : theme.colors.background }]}>
+                  <Ionicons name={filledSqlStages > 0 ? 'server' : 'server-outline'} size={20} color={filledSqlStages > 0 ? theme.colors.primary : theme.colors.textSecondary} />
+                </View>
+                <Text style={{ color: filledSqlStages > 0 ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {filledSqlStages > 0 ? t('deck.sqlStagesSet', { count: filledSqlStages }) : t('deck.sqlInitNone')}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>

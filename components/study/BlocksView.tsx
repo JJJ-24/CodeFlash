@@ -30,6 +30,18 @@ const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdow
 // ドメインと誤判定されてリンクになってしまうため。https:// 付きの URL は従来どおりリンク化される。
 mdInstance.linkify.set({ fuzzyLink: false });
 
+/**
+ * リンクのタップは linkRule 側で処理するので、ライブラリ既定のオープン動作は無効化する。
+ *
+ * **必ずモジュール定数にすること**（インラインの `() => false` にしない）。`Markdown` は
+ * `React.memo` だが、props が1つでも毎回別物になると memo が外れて再レンダーする。そして
+ * このライブラリは**再レンダーのたびに AST を作り直し、ノードの key をグローバル連番
+ * （`getUniqueID`）で振り直す**ため、React から見ると全ノードが別物＝**subtree ごと再マウント**に
+ * なる。コードフェンスの横スクロール位置のような子の状態はそこで失われる（学習タイマー作動中は
+ * 毎秒再レンダーが走るため、1秒ごとにスクロールが先頭へ戻る不具合として現れた）。
+ */
+const denyLinkPress = () => false;
+
 function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: () => void }) {
   const [copied, setCopied] = useState(false);
   const theme = useTheme();
@@ -288,7 +300,9 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
           const textContent = (block as TextBlock).content;
           return (
             <View key={i} style={styles.textBlock}>
-              <Markdown markdownit={mdInstance} style={markdownStyles} onLinkPress={() => false} rules={linkRule}>{textContent}</Markdown>
+              {/* props はすべて参照が安定していること（denyLinkPress のコメント参照）。
+                  1つでも毎回別物だと React.memo が外れ、マークダウンが丸ごと再マウントされる。 */}
+              <Markdown markdownit={mdInstance} style={markdownStyles} onLinkPress={denyLinkPress} rules={linkRule}>{textContent}</Markdown>
               {textContent.trim() ? <TextBlockCopyBtn content={textContent} suppress={suppress} /> : null}
             </View>
           );

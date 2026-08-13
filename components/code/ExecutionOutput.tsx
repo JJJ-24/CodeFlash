@@ -45,7 +45,7 @@ function SqlTable({ table }: { table: SqlTableResult }) {
   const theme = useTheme();
   const minColWidth = Math.max(60, Math.floor(240 / Math.max(table.columns.length, 1)));
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" style={styles.tableWrapper}>
+    <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false} style={styles.tableWrapper}>
       <View>
         {/* 列ごとにセルを縦積みすることで、各列の全セル幅が「その列の最大幅」に揃い行間の凸凹を防ぐ */}
         <View style={styles.tableGrid}>
@@ -86,7 +86,7 @@ function SqlTable({ table }: { table: SqlTableResult }) {
 function LogLines({ logs }: { logs: LogEntry[] }) {
   const theme = useTheme();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+    <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false}>
       <View>
         {logs.map((log, i) => (
           <Text
@@ -316,7 +316,7 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
           </View>
           <View style={styles.outputContent}>
             {(result.status === 'error' && result.errorMessage) || result.status === 'timeout' ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false}>
                 <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {result.status === 'timeout' ? t('code.timeoutMessage', { seconds: timeoutSeconds }) : result.errorMessage}
                 </Text>
@@ -400,7 +400,7 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
           </View>
           {activeTab === 'source' && (
             <ScrollView style={[styles.previewSource, { maxHeight: previewHeight }]}>
-              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white">
+              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false}>
                 <SyntaxHighlightedCode code={sourceText} language="html" wrap={false} />
               </ScrollView>
             </ScrollView>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -267,7 +267,13 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     ),
     // コードフェンス（```js …）を言語に応じてハイライトする（下の fence スタイルの代わり）。
     // 文字サイズは markdownStyles の fence と揃える（プレビューは md・編集中は sm）。
-    ...markdownFenceRule({ background: '#1E1E1E', fontSize: isPreview ? theme.fontSize.md : theme.fontSize.sm }),
+    // ドラッグリスト（NestableDraggableFlatList）の中なので、フェンスの横スクロールは
+    // RNGH の ScrollView を使う（標準だとジェスチャーに奪われる。CodeBlockItem と同じ事情）。
+    ...markdownFenceRule({
+      background: '#1E1E1E',
+      fontSize: isPreview ? theme.fontSize.md : theme.fontSize.sm,
+      ScrollComponent: GHScrollView,
+    }),
   }), [highlightColors, isPreview, theme.fontSize.md, theme.fontSize.sm]);
 
   return (

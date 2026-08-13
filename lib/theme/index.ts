@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
 import { FONT_SCALE, useThemeStore } from '@/store/theme';
@@ -258,30 +259,40 @@ export function useTheme(): AppTheme {
   // ヘッダー・タブバー・各カード面はすべて colors.surface を使うため無彩色のまま保たれ、
   // 「白いカード／カラーの隙間」になる。default のときは従来の無彩色背景を維持する
   // （default の cardPalette.background は surface と同色のため、隙間が消えてしまうのを防ぐ）。
-  const colors =
-    effectiveCardTheme === 'default'
-      ? base.colors
-      : base.dark
-        // ダーク＋非デフォルト：隙間（background）をテーマ色にし、カード面（surface）は
-        // 素の濃い黒（デフォルトの background）に振り替えて、テーマ色の隙間にカードを沈ませる。
-        ? { ...base.colors, background: cardPalette.background, surface: base.colors.background }
-        // ライト：従来どおり隙間だけテーマ色付け（カードは白のまま）
-        : { ...base.colors, background: cardPalette.background };
-  return {
-    ...base,
-    colors,
-    fontScale: scale,
-    fontSize: {
-      xs:  Math.round(BASE_FONT_SIZE.xs  * scale),
-      sm:  Math.round(BASE_FONT_SIZE.sm  * scale),
-      md:  Math.round(BASE_FONT_SIZE.md  * scale),
-      lg:  Math.round(BASE_FONT_SIZE.lg  * scale),
-      xl:   Math.round(BASE_FONT_SIZE.xl   * scale),
-      xxl:  Math.round(BASE_FONT_SIZE.xxl  * scale),
-      xxxl: Math.round(BASE_FONT_SIZE.xxxl * scale),
-    },
-    cardTheme: cardPalette,
-    baseBackground: base.colors.background,
-    baseSurface: base.colors.surface,
-  };
+  // **戻り値は必ずメモ化する**（毎回リテラルを返さない）。`useTheme()` はほぼ全コンポーネントが
+  // 呼ぶため、参照が毎回変わると `useMemo(..., [theme])` と書いてある箇所がすべて空振りし、
+  // スタイルオブジェクトが作り直され、それを props に渡している `React.memo` のコンポーネントの
+  // memo も外れる。実害が出た例：学習画面のマークダウンは `style={markdownStyles}` が毎回
+  // 別物になるため `Markdown`（React.memo）が毎レンダー再描画され、ライブラリが AST の key を
+  // 振り直す＝subtree ごと再マウントされて、コードフェンスの横スクロール位置が失われていた
+  // （タイマー作動中は毎秒発生）。入力（配色・文字サイズ・カードテーマ）はすべて安定した
+  // 参照かプリミティブなので、それだけを依存に取れば値は変わらないまま参照が固定される。
+  return useMemo(() => {
+    const colors =
+      effectiveCardTheme === 'default'
+        ? base.colors
+        : base.dark
+          // ダーク＋非デフォルト：隙間（background）をテーマ色にし、カード面（surface）は
+          // 素の濃い黒（デフォルトの background）に振り替えて、テーマ色の隙間にカードを沈ませる。
+          ? { ...base.colors, background: cardPalette.background, surface: base.colors.background }
+          // ライト：従来どおり隙間だけテーマ色付け（カードは白のまま）
+          : { ...base.colors, background: cardPalette.background };
+    return {
+      ...base,
+      colors,
+      fontScale: scale,
+      fontSize: {
+        xs:  Math.round(BASE_FONT_SIZE.xs  * scale),
+        sm:  Math.round(BASE_FONT_SIZE.sm  * scale),
+        md:  Math.round(BASE_FONT_SIZE.md  * scale),
+        lg:  Math.round(BASE_FONT_SIZE.lg  * scale),
+        xl:   Math.round(BASE_FONT_SIZE.xl   * scale),
+        xxl:  Math.round(BASE_FONT_SIZE.xxl  * scale),
+        xxxl: Math.round(BASE_FONT_SIZE.xxxl * scale),
+      },
+      cardTheme: cardPalette,
+      baseBackground: base.colors.background,
+      baseSurface: base.colors.surface,
+    };
+  }, [base, scale, effectiveCardTheme, cardPalette]);
 }

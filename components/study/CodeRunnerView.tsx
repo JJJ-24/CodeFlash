@@ -497,7 +497,10 @@ export function CodeRunnerView({
           />
         ) : (
           <GestureDetector gesture={codeAreaGesture}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {/* alwaysBounceHorizontal={false}：コードが幅に収まっているときは横ドラッグを
+                掴まない＝その上でもカード送りのスワイプ（useSwipeGesture）が通る。既定の true だと
+                スクロールの余地が無くてもドラッグを取り、コード領域が横スワイプの死角になる。 */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} alwaysBounceHorizontal={false}>
               <SyntaxHighlightedCode
                 code={editedContent ?? block.content}
                 language={block.language}

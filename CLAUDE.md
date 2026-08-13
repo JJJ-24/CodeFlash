@@ -229,7 +229,8 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 #### テーマ・UI スタイル
 
-- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。テーマ色は `theme.colors.*`、フォントサイズは `theme.fontSize.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。
+- **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。テーマ色は `theme.colors.*`、フォントサイズは `theme.fontSize.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。⚠️ **`useTheme()` の戻り値は `useMemo` で参照を固定してある。外さないこと**（`lib/theme/index.ts`）。ほぼ全コンポーネントが呼ぶので、毎回新しいオブジェクトを返すと `useMemo(..., [theme])` が全部空振りし、そこから作るスタイルを props に渡している `React.memo` のコンポーネントの memo まで外れる。実際に **`Markdown` が毎レンダー再描画され、テキストブロック内のコードフェンスの横スクロール位置が毎秒失われる**不具合になった（下の項）。依存は `[base, scale, effectiveCardTheme, cardPalette]`＝すべて安定参照かプリミティブ。
+- **`react-native-markdown-display` に渡す props は参照を安定させる（重要）**: このライブラリは**再レンダーのたびに AST を作り直し、ノードの `key` をグローバル連番（`getUniqueID`）で振り直す**。React から見ると全ノードが別物なので、**再レンダー＝subtree ごと再マウント**になり、子が持っていた状態（コードフェンスの横スクロール位置など）が消える。`Markdown` 本体は `React.memo` なので、**props の参照さえ安定していれば再レンダー自体が起きない**。`onLinkPress={() => false}` のようなインライン関数を渡すと毎回 memo が外れるので、モジュール定数にする（`BlocksView` の `denyLinkPress`）。学習タイマー作動中は1秒ごとに再レンダーが走るため、この手の取りこぼしが「毎秒スクロールが先頭へ戻る」形で露見する。
 - **フォントサイズシステム**: `AppFontSize` は `xs(12)/sm(14)/md(16)/lg(18)/xl(20)/xxl(26)` の6段階（medium設定時）。`store/theme.ts` の `fontSizePreference`（small=0.85×/medium=1.0×/large=1.2×）で全体スケールされる。StyleSheet の静的 fontSize は使わず、必ずインラインスタイルで `{ fontSize: theme.fontSize.md }` のように指定する。
 - **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで `<RootStack />` を描画しない。
 - **`FILTER_COLORS`**: `lib/theme/index.ts` にエクスポートされた定数。`learned: '#4CAF50'`、`due: '#F57C00'`。フィルター色を複数画面で使う場合はここから import する（ハードコード禁止）。
@@ -375,7 +376,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 - **バッジ色**: 「復習」（due）= 青（`#1976D2`）、それ以外のフィルター = グレー（ライト: `#8B949E`、ダーク: `#4B5563`）。`theme.dark` で分岐する。
 - **セクションタイトル**: `theme.fontSize.lg, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。
 - **コードブロック（学習画面）**: `components/study/SyntaxHighlightedCode.tsx` は `theme.fontSize.md` を使用。フォントサイズ設定に連動する。`wrap?: boolean`（既定 true）で折り返し制御。横スクロールさせる箇所（学習画面・編集プレビュー）は `wrap={false}` ＋ 横 `ScrollView` で表示する。
-- **コード横スクロール**: コード表示・実行結果（`components/code/ExecutionOutput.tsx`）はいずれも横スクロール対応。SQL 結果テーブルは「列ごと縦積み」で列幅を揃え、ログ/エラーも折り返さず横 ScrollView に入れる。スクロールバーは `indicatorStyle="white"`。編集画面のドラッグ可能リスト内では `react-native-gesture-handler` の `ScrollView` を使う（標準 ScrollView だと横スクロールがジェスチャーに奪われる）。
+- **コード横スクロール**: コード表示・実行結果（`components/code/ExecutionOutput.tsx`）はいずれも横スクロール対応。SQL 結果テーブルは「列ごと縦積み」で列幅を揃え、ログ/エラーも折り返さず横 ScrollView に入れる。スクロールバーは `indicatorStyle="white"`。編集画面のドラッグ可能リスト内では `react-native-gesture-handler` の `ScrollView` を使う（標準 ScrollView だと横スクロールがジェスチャーに奪われる）。**テキストブロック内のマークダウンのコードフェンス（```js …）も同じ見せ方**（`lib/editor/markdownFenceRule.tsx`＝学習画面と編集プレビューで共用。RNGH 版が要る `TextBlockItem` だけ `ScrollComponent` に `GHScrollView` を渡す）。⚠️ **横スクロールには `alwaysBounceHorizontal={false}` を必ず付ける**：学習セッションはカード送りに横 Pan（`useSwipeGesture` の `activeOffsetX`）を使っており、横スクロール領域は既定（true）だと**中身が幅に収まっていてもドラッグを掴む**ため、その上が「横スワイプでカードを送れない死角」になる。false なら収まっているときはドラッグを開始せず親のスワイプが通り、はみ出しているときだけ横スクロールする（コード表示・ログ・SQL テーブル・ソースタブ・マークダウンのフェンスすべてに適用済み）。
 - **アーカイブの見た目**: アーカイブ済み（デッキ・カード）は一覧で `opacity: 0.55` ＋ `archive` アイコンでグレー表示。カードは「カード自身 or 所属デッキがアーカイブ」を実効アーカイブとして判定する。
 - **locales の改行**: ラベルに改行が必要な場合は `"カード\n総数"` のように `\n` を埋め込む（`Text` コンポーネントがそのまま改行として解釈する）。
 - **ドーナツグラフ**: 定数・パス計算は `lib/donut.ts` からインポート。ドーナツの「穴」部分の fill は描画先の背景色（`theme.colors.surface` など）に合わせる。

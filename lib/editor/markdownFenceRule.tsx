@@ -1,7 +1,15 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { normalizeLanguage } from '@/lib/code-execution/constants';
+
+/** 横スクロールに使う ScrollView（呼び出し側の事情で RN 標準／RNGH 版を使い分ける）。 */
+type HorizontalScrollView = React.ComponentType<{
+  horizontal?: boolean | null;
+  showsHorizontalScrollIndicator?: boolean;
+  alwaysBounceHorizontal?: boolean;
+  children?: React.ReactNode;
+}>;
 
 /**
  * テキストブロック内マークダウンのコードフェンス（```js …）をシンタックスハイライトして描画する
@@ -12,14 +20,33 @@ import { normalizeLanguage } from '@/lib/code-execution/constants';
  * `normalizeLanguage()`（TSV インポートと同じ規則。`js`→`javascript`、`c++`→`cpp` 等）で
  * 正規化し、学習画面のコードブロックと同じ `SyntaxHighlightedCode` に渡す。
  *
- * **折り返し表示**（`wrap` 既定）にしている。横スクロールにすると、テキストブロックの中に
- * 横方向のスクロール領域ができてカードの縦スクロール／フリップと競合しうるため。
- * マークダウン内のコードは短い例示が主用途なので折り返しで足りる。
+ * **折り返さず横スクロール**（コードブロックと同じ見せ方）。かつては折り返しにしていたが、
+ * インデントが崩れて読みにくいうえコードブロックと不揃いだったため 2026-08-13 に揃えた。
+ *
+ * ⚠️ **`alwaysBounceHorizontal={false}` は必須**：学習セッションはカード送りに横 Pan
+ * （`useSwipeGesture` の `activeOffsetX`）を使っており、横スクロール領域はそれより先にドラッグを取る。
+ * 既定（true）のままだと**コードが幅に収まっていてもスクロールビューがドラッグを掴む**ので、
+ * フェンスの上が「横スワイプでカードを送れない死角」になる。false なら収まっているときは
+ * ドラッグを開始せず親のスワイプが通り、はみ出しているときだけ横スクロールする。
+ *
+ * ⚠️ **`ScrollComponent` は呼び出し側が渡す**：編集プレビュー（`TextBlockItem`）は
+ * `NestableDraggableFlatList` の中にあるため **RNGH の ScrollView** でないと横スクロールが
+ * ドラッグに奪われる（`CodeBlockItem` の `GHScrollView` と同じ事情）。学習画面（`BlocksView`）は
+ * RN 標準でよい。
  *
  * @param background コード箱の背景色（学習画面はカードテーマの codeBackground）
  * @param fontSize   コードの文字サイズ（既存の fence スタイルと揃える）
+ * @param ScrollComponent 横スクロールに使う ScrollView（既定は RN 標準）
  */
-export function markdownFenceRule({ background, fontSize }: { background: string; fontSize: number }) {
+export function markdownFenceRule({
+  background,
+  fontSize,
+  ScrollComponent = ScrollView,
+}: {
+  background: string;
+  fontSize: number;
+  ScrollComponent?: HorizontalScrollView;
+}) {
   return {
     fence: (node: any) => {
       const language = normalizeLanguage(String(node.sourceInfo ?? ''));
@@ -28,13 +55,16 @@ export function markdownFenceRule({ background, fontSize }: { background: string
       const content = raw.endsWith('\n') ? raw.slice(0, -1) : raw;
       return (
         <View key={node.key} style={[styles.box, { backgroundColor: background }]}>
-          {/* 余白は外側の箱で持つので、ハイライター側の既定余白は 0 に戻す
-              （padding: 0 では paddingHorizontal/paddingBottom を打ち消せないため個別に指定） */}
-          <SyntaxHighlightedCode
-            code={content}
-            language={language}
-            style={{ fontSize, lineHeight: Math.round(fontSize * 1.5), paddingHorizontal: 0, paddingBottom: 0 }}
-          />
+          <ScrollComponent horizontal showsHorizontalScrollIndicator={false} alwaysBounceHorizontal={false}>
+            {/* 余白は外側の箱で持つので、ハイライター側の既定余白は 0 に戻す
+                （padding: 0 では paddingHorizontal/paddingBottom を打ち消せないため個別に指定） */}
+            <SyntaxHighlightedCode
+              code={content}
+              language={language}
+              wrap={false}
+              style={{ fontSize, lineHeight: Math.round(fontSize * 1.5), paddingHorizontal: 0, paddingBottom: 0 }}
+            />
+          </ScrollComponent>
         </View>
       );
     },

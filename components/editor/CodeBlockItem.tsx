@@ -360,8 +360,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       ) : (
         <>
           <View style={styles.codeArea}>
+            {/* alwaysBounceHorizontal={false}：収まっているコードの上で横ドラッグを掴まない
+                （学習画面のカード送りスワイプと同じ理由。ここは死角の実害は小さいが挙動を揃える） */}
             {isPreview ? (
-              <GHScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <GHScrollView horizontal showsHorizontalScrollIndicator={false} alwaysBounceHorizontal={false}>
                 <SyntaxHighlightedCode code={block.content} language={block.language} wrap={false} />
               </GHScrollView>
             ) : focused ? (

@@ -1,9 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { constants as KeyCommand } from 'react-native-key-command';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
@@ -11,6 +10,7 @@ import { generateId } from '@/lib/database/utils';
 import { DECK_STAGE_KEYS, type DeckStageKind } from '@/lib/deckStageLabels';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { useKeyCommands } from '@/lib/useKeyCommands';
+import { useSheetKeyboardLift } from '@/lib/useSheetKeyboardLift';
 import type { DeckStage } from '@/types';
 
 interface Props {
@@ -20,32 +20,42 @@ interface Props {
   onClose: () => void;
   /** 何の土台の一覧か（044: HTML/CSS 土台 ／ 045: SQL 初期化）。文言だけが変わる */
   kind: DeckStageKind;
-  /** 編集面の入力欄の下に差し込む追加UI（HTML では 043 の画像ライブラリ）。
-   *  デッキ単位のデータなので、どの土台を編集していても同じものが出る */
-  editorFooter?: React.ReactNode;
+  /** **一覧の末尾だけ**に差し込む追加UI（HTML では 043 の画像ライブラリ）。
+   *
+   *  ⚠️ **編集面（`SqlInitModal`）には置かない。戻さないこと。** 2つの理由がある：
+   *  ① 土台が0件だと編集面を開けず、画像ライブラリへ到達する手段がゼロになる（デッキ編集画面の
+   *     行は画像があれば点灯するので「設定済みなのに開くと空」に見える。実際に報告された）
+   *  ② iPhone でキーボードを出したまま編集面で一覧を展開すると、シートの高さ（約345pt）を
+   *     一覧が食い尽くして**土台の入力欄が1行に潰れる**。狭い画面でキーボードと一覧は同居できない
+   *
+   *  画像ライブラリはデッキ単位のデータなので、デッキ単位の画面（この一覧）が本来の置き場所。
+   *  土台を書きながらタグが要るときは、一覧でコピーしてから編集面を開く（土台テキストは
+   *  `onChangeText` で親 state に即時反映されるので、閉じて開き直しても内容は失われない）。 */
+  listFooter?: React.ReactNode;
 }
 
 /**
  * 044/045: デッキの土台の一覧モーダル。**HTML/CSS 土台と SQL 初期化で共用**する
- * （持ち方も操作も同じで、違うのは `kind` で切り替わる文言と編集面の footer だけ）。
+ * （持ち方も操作も同じで、違うのは `kind` で切り替わる文言と、一覧に差し込む `listFooter` だけ）。
  * デッキ編集/新規作成の該当行と `H`（HTML）/`Q`（SQL）キーから開く。
  * 行をタップすると `SqlInitModal`（テキスト編集面）が上に開く2段構成。
  *
- * **名前の編集は編集面のヘッダーで行う**（リストに入力欄を置くとリスト側にもキーボード追従の
- * 面倒を持ち込むため）。一覧は「見て・選んで・消す」だけに絞ってある。
+ * **土台の名前の編集は編集面のヘッダーで行う**。一覧は「見て・選んで・消す」に絞ってある
+ * （当初はリストにキーボード追従を持ち込まないための判断でもあったが、043 の画像リネームで
+ * 結局この一覧も追従が必要になったため、いまは「役割を分ける」ことだけが理由）。
  *
  * 先頭の土台には「既定」バッジを出す。ブロックが土台を選んでいない（`deckStageId` 未指定）
  * ときに使われるのが先頭だからで、**先頭を削除すると既定が次の土台にずれる**ため削除確認の
  * 文言も分けている。
  */
-export function DeckStagesModal({ visible, stages, onChange, onClose, kind, editorFooter }: Props) {
+export function DeckStagesModal({ visible, stages, onChange, onClose, kind, listFooter }: Props) {
   const keys = DECK_STAGE_KEYS[kind];
   const theme = useTheme();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-  const { height: winHeight } = useWindowDimensions();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DeckStage | null>(null);
+  /** 一覧の ScrollView（キーボード表示時に末尾＝画像ライブラリへ送るために持つ）。 */
+  const listRef = useRef<ScrollView>(null);
 
   const editingIndex = stages.findIndex((s) => s.id === editingId);
   const editingStage = editingIndex >= 0 ? stages[editingIndex] : null;
@@ -91,9 +101,16 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, edit
     },
   ]);
 
-  // デッキ編集画面の保存ボタンが下にのぞくため、シートをその分だけ持ち上げる（SqlInitModal と同じ）。
-  const sheetLift = Math.max(insets.bottom, 16) + 76;
-  const sheetMaxHeight = winHeight - sheetLift - insets.top - 96;
+  // 位置と高さは共通フックへ（SqlInitModal と同じ規則）。**キーボード追従は必須**：一覧の末尾に
+  // 差す 043 の画像ライブラリには名前のリネーム入力があり、固定の持ち上げ量だとキーボードに隠れる。
+  const { sheetLift, sheetMaxHeight, keyboardVisible } = useSheetKeyboardLift();
+
+  // キーボードが出たら一覧を末尾までスクロールする。このシートで入力欄を持つのは
+  // listFooter（画像ライブラリのリネーム）だけで、それは常に末尾にあるため、
+  // 「末尾へ送る＝入力欄を見える位置へ出す」が成立する。
+  useEffect(() => {
+    if (keyboardVisible) listRef.current?.scrollToEnd({ animated: true });
+  }, [keyboardVisible]);
 
   const deleteMessage = (() => {
     if (!pendingDelete) return '';
@@ -135,16 +152,19 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, edit
               {t(keys.listHint)}
             </Text>
 
-            {stages.length === 0 ? (
-              <Text
-                style={[styles.empty, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-              >
-                {t(keys.listEmpty)}
-              </Text>
-            ) : (
-              <ScrollView keyboardShouldPersistTaps="handled">
-                {stages.map((stage, index) => {
+            {/* 土台の行と listFooter（043 の画像ライブラリ）は同じ ScrollView に入れる。
+                **土台が0件でも listFooter は出す**：ここが画像ライブラリの唯一の入口なので、
+                出さないと到達手段がゼロになる（listFooter の項参照）。 */}
+            <ScrollView ref={listRef} keyboardShouldPersistTaps="handled">
+              {stages.length === 0 ? (
+                <Text
+                  style={[styles.empty, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {t(keys.listEmpty)}
+                </Text>
+              ) : (
+                stages.map((stage, index) => {
                   const preview = previewLine(stage);
                   return (
                     <View
@@ -185,9 +205,10 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, edit
                       <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
                     </View>
                   );
-                })}
-              </ScrollView>
-            )}
+                })
+              )}
+              {listFooter}
+            </ScrollView>
         </View>
         {/* 持ち上げた分の隙間を**シートと同じ色で塗る**（marginBottom の代わり）。透明のままだと
             親のデッキ編集画面の保存/削除ボタンが暗幕越しに透けて「押せそう」に見えるため。
@@ -213,7 +234,6 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, edit
           titlePlaceholder={editingStage ? t(keys.defaultName, { n: editingIndex + 1 }) : undefined}
           hint={t(keys.editorHint)}
           placeholder={t(keys.editorPlaceholder)}
-          footer={editorFooter}
         />
 
         <ConfirmDeleteModal

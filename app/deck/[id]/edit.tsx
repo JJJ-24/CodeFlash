@@ -366,7 +366,13 @@ export default function EditDeckScreen() {
                   <Ionicons name={htmlConfigured ? 'globe' : 'globe-outline'} size={20} color={htmlConfigured ? theme.colors.primary : theme.colors.textSecondary} />
                 </View>
                 <Text style={{ color: htmlConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {filledStages > 0 ? t('deck.htmlStagesSet', { count: filledStages }) : htmlConfigured ? t('deck.htmlInitSet') : t('deck.htmlInitNone')}
+                  {/* 「設定済み」だと中身が分からず、土台0件で開くと空の一覧が出て矛盾に見えたため、
+                      画像だけある状態は枚数で明示する（画像は一覧の末尾から見られる）。 */}
+                  {filledStages > 0
+                    ? t('deck.htmlStagesSet', { count: filledStages })
+                    : htmlImages.length > 0
+                      ? t('deck.htmlImagesOnly', { count: htmlImages.length })
+                      : t('deck.htmlInitNone')}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>
@@ -434,7 +440,7 @@ export default function EditDeckScreen() {
         stages={htmlStages}
         onChange={setHtmlStages}
         onClose={() => setShowHtmlInitModal(false)}
-        editorFooter={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
+        listFooter={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

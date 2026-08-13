@@ -56,6 +56,12 @@ const DECK_EDIT_SHORTCUT_SECTIONS = [
     { key: 'Delete', descKey: 'shortcut.deleteDeck' },
     { key: 'X', descKey: 'shortcut.close' },
   ] },
+  { titleKey: 'shortcut.catStageSheet', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev', pro: true },
+    { key: 'Return', descKey: 'shortcut.stageOpen', pro: true },
+    { key: 'Delete', descKey: 'shortcut.deleteFocused', pro: true },
+    { key: 'N', descKey: 'shortcut.stageAdd', pro: true },
+  ] },
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC', descKey: 'shortcut.esc' },
     { key: '?', descKey: 'shortcut.showShortcuts' },

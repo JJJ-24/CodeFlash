@@ -6,10 +6,11 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
+import { useListNavigation } from '@/hooks/useListNavigation';
 import { generateId } from '@/lib/database/utils';
 import { DECK_STAGE_KEYS, type DeckStageKind } from '@/lib/deckStageLabels';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSheetKeyboardLift } from '@/lib/useSheetKeyboardLift';
 import type { DeckStage } from '@/types';
 
@@ -88,7 +89,36 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
     onChange(stages.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
 
-  // Esc は階層ディスマス（削除確認 → 編集面は自前の Esc に委譲 → 一覧を閉じる）。
+  // 048: 土台のフォーカス（J/K のヌルサイクル・ID 追跡＝並びが変わっても同じ土台を指す）。
+  const { focusedIndex, setFocusedIndex, moveFocus } = useListNavigation(stages, (s) => s.id);
+  const focusedStage = focusedIndex != null ? stages[focusedIndex] : null;
+  /** 各行の Y 座標（フォーカス移動時に見える位置へ送るため）。 */
+  const rowYRef = useRef<Record<string, number>>({});
+
+  // 一覧を閉じたらフォーカスを捨てる（次に開いたとき前回の位置が残っていると驚く）。
+  useEffect(() => {
+    if (!visible) setFocusedIndex(null);
+  }, [visible, setFocusedIndex]);
+
+  // フォーカス行を見える位置へ。`useListNavigation` の自動スクロールは FlatList 用
+  // （scrollToIndex）なので、ScrollView のこの一覧では行の実 Y を使って自前で送る。
+  useEffect(() => {
+    if (!focusedStage) return;
+    const y = rowYRef.current[focusedStage.id];
+    if (y != null) listRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+  }, [focusedStage]);
+
+  // 048: 一覧のキー。編集面・削除確認が上に乗っている間は解除する（そちらが最上位になるため）。
+  // 文字キーは実 TextInput（画像のリネーム欄）にカーソルがあると発火しない＝034 の住み分け。
+  useKeyCommands([
+    { input: 'j', handler: () => moveFocus('next') },
+    { input: 'k', handler: () => moveFocus('prev') },
+    { input: 'n', handler: handleAdd },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (focusedStage) setEditingId(focusedStage.id); } },
+    ...deleteKeySpecs(() => { if (focusedStage) setPendingDelete(focusedStage); }),
+  ], visible && editingId === null && pendingDelete === null);
+
+  // Esc は階層ディスマス（削除確認 → 編集面は自前の Esc に委譲 → フォーカス解除 → 一覧を閉じる）。
   // 親のデッキ編集画面は subModalOpen() でキーを止めているので、ここが最上位になる。
   useKeyCommands([
     {
@@ -97,6 +127,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
         if (!visible) return;
         if (pendingDelete) { setPendingDelete(null); return; }
         if (editingId) return; // SqlInitModal 側の Esc が閉じる
+        if (focusedIndex != null) { setFocusedIndex(null); return; }
         onClose();
       },
     },
@@ -185,7 +216,13 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
                   return (
                     <View
                       key={stage.id}
-                      style={[styles.row, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder }]}
+                      onLayout={(e) => { rowYRef.current[stage.id] = e.nativeEvent.layout.y; }}
+                      style={[
+                        styles.row,
+                        { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder },
+                        // フォーカス枠はカード一覧・タグ管理と同じ「primary（青）＋ borderWidth 2」に揃える
+                        focusedStage?.id === stage.id && { borderWidth: 2, borderColor: theme.colors.primary },
+                      ]}
                     >
                       <Pressable style={styles.rowMain} onPress={() => setEditingId(stage.id)}>
                         <View style={styles.rowTitleLine}>

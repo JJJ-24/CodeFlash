@@ -863,6 +863,9 @@
     "previewMode": "Preview Mode",
     "finishSession": "Finish session",
     "changeColorSelected": "Change color (selected tags)",
-    "deleteSelectedTags": "Delete selected tags"
+    "deleteSelectedTags": "Delete selected tags",
+    "catStageSheet": "Stage / setup list (in the sheet)",
+    "stageOpen": "Open focused item",
+    "stageAdd": "Add a stage / setup"
   }
 }

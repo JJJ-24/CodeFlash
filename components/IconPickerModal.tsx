@@ -119,7 +119,12 @@ export function IconPickerModal({ visible, selected, highlightColor, onSelect, o
     onClose();
   }
 
-  // モーダル表示中のみ処理（非表示でも親画面フォーカス中は登録されたままのため visible でガード）。
+  // ⚠️ **第2引数（active）に `visible` を渡すこと**。ハンドラ内の `if (visible)` だけでは不十分で、
+  // 非表示のあいだも**ネイティブ側にキーが登録されたまま**になる。同じ画面（デッキ編集/新規作成）に
+  // 常時マウントされているので、他の部品が同じキーを登録すると**同一キーが二重登録**になり、
+  // ネイティブは登録数だけイベントを発行する＝**1押下で2回発火**する。
+  // 実例：048 で土台一覧に J/K を足したところ、1押下でフォーカスが2つ進んだ（3件なら真ん中に飛ぶ）。
+  // ハンドラ側の `if (visible)` は残す（登録が生きている一瞬の取りこぼし対策）。
   useKeyCommands([
     // iPad は矢印が使えないため文字キーで全方向を賄う。左右は他画面と揃えて ,/. ＋ vim の H/L、
     // 上下は J/K（下/上）。
@@ -138,7 +143,7 @@ export function IconPickerModal({ visible, selected, highlightColor, onSelect, o
       { input: KeyCommand.keyInputLeftArrow, handler: () => { if (visible) move(-1); } },
       { input: KeyCommand.keyInputRightArrow, handler: () => { if (visible) move(1); } },
     ]) as { input: string; handler: () => void }[]),
-  ]);
+  ], visible);
 
   function renderCell(icon: DeckIconName | null, index: number) {
     const isSelected = selected === icon;

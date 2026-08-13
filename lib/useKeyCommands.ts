@@ -158,17 +158,57 @@ export function useShortcutsToggleKeys(visible: boolean, open: () => void, close
  * 動的に登録解除」しても、編集中にキャッシュが矢印/Tab を奪い続けカーソル移動/インデントが効かない。
  * そのため**編集が起きる画面（カードエディタ・学習画面）では矢印/Tab を最初から登録しない**運用にする。
  */
+/**
+ * ネイティブ登録の参照カウント（キー＝input＋修飾）。**ライブラリ側に「誰が登録したか」が無い**ため
+ * ここで面倒を見る。`HardwareShortcuts.m` の実装はこうなっている：
+ * - `registerKeyCommand:` は毎回 `_commands` に**追加**する（同じキーでも重複して残る）
+ *   → 重複したぶんだけイベントが発行され、**1押下でハンドラが複数回走る**
+ *     （J/K がフォーカスを2つ進める・Space が偶数回トグルで相殺されて無反応、など）
+ * - `unregisterKeyCommand:` は**入力が一致する全エントリを消す**
+ *   → 片方のコンポーネントが閉じるとき、**別のコンポーネントが登録した同じキーまで巻き添えで消える**
+ *     （アイコン選択を閉じた瞬間、親のデッキ編集画面の H/N/Esc が全部効かなくなる、など）
+ *
+ * そこで **JS 側で (input, modifier) ごとの利用者数を数え、0→1 のときだけ登録し、1→0 のときだけ解除する**。
+ * これでネイティブの登録は常に1件＝二重発火せず、まだ使っている画面がある間は解除もされない。
+ */
+const nativeRefCounts = new Map<string, number>();
+const refKey = (c: { input: string; modifierFlags: number }) => `${c.modifierFlags}::${c.input}`;
+
+/** 参照カウントを増やし、初めて必要になったキーだけネイティブへ登録する。 */
+function acquireKeyCommands(cmds: { input: string; modifierFlags: number }[]) {
+  const toRegister = cmds.filter((c) => {
+    const k = refKey(c);
+    const next = (nativeRefCounts.get(k) ?? 0) + 1;
+    nativeRefCounts.set(k, next);
+    return next === 1;
+  });
+  if (toRegister.length > 0) KeyCommand.registerKeyCommands(toRegister);
+}
+
+/** 参照カウントを減らし、誰も使わなくなったキーだけネイティブから解除する。 */
+function releaseKeyCommands(cmds: { input: string; modifierFlags: number }[]) {
+  const toUnregister = cmds.filter((c) => {
+    const k = refKey(c);
+    const next = (nativeRefCounts.get(k) ?? 1) - 1;
+    if (next <= 0) { nativeRefCounts.delete(k); return true; }
+    nativeRefCounts.set(k, next);
+    return false;
+  });
+  if (toUnregister.length > 0) KeyCommand.unregisterKeyCommands(toUnregister);
+}
+
 export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) {
   const enabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   // Esc spec を代替キー（バッククォート・Cmd+.）へ展開してから登録/マッチに使う。
   const specsRef = useRef<KeyCommandSpec[]>(specs);
   specsRef.current = expandEscapeAliases(specs);
 
-  // `active`：同じ入力（j/k/Space 等）を複数の useKeyCommands が同時登録するのを防ぐゲート。
-  // ネイティブ HardwareShortcut は isEqual/hash 未実装＝内容一致で重複保持されるため、常時マウントの
-  // モーダル（ピッカー）と親画面が同じキーを登録すると 1 押下で複数回発火する（J/K が2つ進む・Space が
-  // 偶数回トグルで相殺＝無反応 等）。表示側だけ active=true にして登録を一本化する。文字キー・iPhone
-  // 矢印のみを出し入れする用途に限る（iPad の矢印/Tab は元々登録しない＝フリーズ回避）。
+  // `active`：**そのキーを今どのコンポーネントが担当するか**を決めるゲート。常時マウントされる
+  // モーダル（RN Modal は visible=false でも children がマウントされる）は、非表示のあいだ false にして
+  // 「見えている側だけがハンドラを持つ」状態にする。ハンドラ内の `if (visible)` だけでは、非表示の
+  // コンポーネントもイベントを受けてしまい、担当が曖昧になる。
+  // ネイティブ登録そのものの重複・巻き添え解除は `acquireKeyCommands`/`releaseKeyCommands` の
+  // 参照カウントが吸収する（詳細はそちらのコメント）。
   useFocusEffect(
     useCallback(() => {
       if (!enabled || !active) return;
@@ -176,7 +216,7 @@ export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) 
         input: s.input,
         modifierFlags: s.modifierFlags ?? 0,
       }));
-      KeyCommand.registerKeyCommands(cmds);
+      acquireKeyCommands(cmds);
       const sub = KeyCommand.eventEmitter.addListener('onKeyCommand', (p) => {
         const pin = norm(p.input);
         const pmod = p.modifierFlags ?? 0;
@@ -187,7 +227,7 @@ export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) 
       });
       return () => {
         sub.remove();
-        KeyCommand.unregisterKeyCommands(cmds);
+        releaseKeyCommands(cmds);
       };
     }, [enabled, active]),
   );

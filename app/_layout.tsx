@@ -165,6 +165,8 @@ function RootStack() {
       <Stack.Screen name="settings/sync-merge" options={{ headerShown: false }} />
       <Stack.Screen name="settings/data" options={{ headerShown: false }} />
       <Stack.Screen name="archive/index" options={{ headerShown: false }} />
+      {/* 049 Phase 1a：読み上げの実測用（__DEV__ 限定・入口は設定タブ最下部）。判断後に画面ごと削除する */}
+      <Stack.Screen name="dev/speech-test" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
     </Stack>
     </ThemeProvider>

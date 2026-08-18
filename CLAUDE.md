@@ -18,6 +18,9 @@ npm run lint
 
 # DB ロジックの検証ハーネス（044/045 のデッキ土台まわり）
 npm run verify:db
+
+# 読み上げのテキスト処理の検証（049：文字体系の分割・Markdown 除去）
+npm run verify:speech
 ```
 
 **テストフレームワークは未導入**。代わりに `scripts/db-harness.ts` が「Node 上でアプリの DB 層をそのまま実行する」土台を提供する：`node:sqlite`（同期）を **expo-sqlite 互換の非同期 API** でくるみ、`Module._resolveFilename` を差し替えて expo/RN モジュールをスタブし `@/` を解決する。これで `migrateDbIfNeeded`・`lib/database/*`・`lib/export.ts`・`lib/import.ts`・`lib/tsv.ts` を**本物のまま**呼べるので、カラム追加マイグレーション・旧DBの正規化・旧エクスポートの読み込み・エクスポート/インポート往復（`docs/db-migration-checklist.md` の確認項目）を実機なしで検証できる。実例は `scripts/verify-db.ts`（044/045 の土台＋046 の目標枚数と未達成リマインダー・94 アサーション）。**新しい検証を書くときの注意**：①アプリのモジュールは `import` ではなく **`require()`** で読む（`import` は先頭へ巻き上げられ、スタブを入れる前に expo モジュールが解決されて落ちる）②旧スキーマの再現には `makeDb().raw`（生の同期 DB）で `ALTER TABLE ... DROP COLUMN` を使う。RN コンポーネントは描画できないので UI は対象外。
@@ -66,6 +69,8 @@ lib/
 ├── fsrs.ts              # FSRS スケジューリングエンジン（ts-fsrs ライブラリのラッパー）。実際の次回復習日計算はここ
 ├── sm2.ts               # Grade 型（0〜3）の定義元。アルゴリズム本体は fsrs.ts に移行済み
 ├── donut.ts             # ドーナツグラフの定数（DONUT_SIZE 等）とパス計算（donutArcPath）
+├── speech.ts            # 049：読み上げ。splitByScript()＝**文字体系**で区間へ割る（かな漢字/ラテン文字）・speakText()＝区間ごとに声を変えてキューへ積む・stopSpeech()・端末の言語一覧
+├── blocksToSpeech.ts    # 049：Block[] → 読み上げ用プレーンテキスト（**唯一の変換元**。Markdown 除去・コードは読まない・画像は alt）
 ├── cardPreview.ts       # getCardPreview()：ブロック配列からプレビューテキストを生成
 ├── cardEditorShortcuts.ts  # CARD_EDITOR_SHORTCUTS_EDIT / _SORT の定義（ShortcutsModal 用）
 ├── useKeyCommands.ts    # ネイティブ UIKeyCommand（react-native-key-command）でハードキーを受ける共通フック（隠しTextInput不使用・034）。deleteKeySpecs（Backspace/Delete）・scrollKeySpecs（U/D・PgUp/PgDn・Home/End・⇧U/⇧D の8spec生成）・useShortcutsToggleKeys（?で開く/表示中Esc・Returnで閉じる）もここ
@@ -81,7 +86,7 @@ store/                   # Zustand ストア（インメモリキャッシュ）
 ├── theme.ts             # useThemeStore（themePreference・fontSizePreference、AsyncStorage永続化）
 ├── sync.ts              # useSyncStore（iCloud同期状態・dataRevision）
 ├── pro.ts               # useProStore（買い切り課金の Pro フラグ）
-└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastHomeFilter・lastSelectedCodeLanguage・deck/tag/cardSortOrder・shuffleEnabled・lastSearchField・fsrsDesiredRetention・studyHideEmpty・gradeRanking系・cardThemePreference・languagePreference・通知設定、AsyncStorage永続化）。永続化定義は DEFS テーブル（キー・既定値・parse・persist・onApply）に一元化＝設定追加は DEFS 1エントリ＋setter 1行。**追加したら lib/settings-keys.ts（JSONエクスポート対象キー一覧）にも必ず追加する**（漏れるとエクスポート/インポートで復元されない）
+└── settings.ts          # useSettingsStore（initialFilterPreference・lastDeckDetailFilter・lastHomeFilter・lastSelectedCodeLanguage・deck/tag/cardSortOrder・shuffleEnabled・lastSearchField・fsrsDesiredRetention・studyHideEmpty・gradeRanking系・cardThemePreference・languagePreference・通知設定・speech系〈049〉、AsyncStorage永続化）。永続化定義は DEFS テーブル（キー・既定値・parse・persist・onApply）に一元化＝設定追加は DEFS 1エントリ＋setter 1行。**追加したら lib/settings-keys.ts（JSONエクスポート対象キー一覧）にも必ず追加する**（漏れるとエクスポート/インポートで復元されない）
 
 components/
 ├── code/
@@ -111,6 +116,7 @@ hooks/
 ├── useSwipeGesture.ts        # 学習セッションのスワイプジェスチャー管理
 ├── useListNavigation.ts      # リスト J/K フォーカスのヌルサイクル（ID ベース追跡で並び替え後も正しい位置を保持）
 ├── useShortcutsHeader.tsx    # ショートカットモーダルのヘッダータイトル UI を生成するフック
+├── useSpeech.ts              # 049：読み上げの再生状態（スピーカー ⇄ 停止）と設定の読み取り
 ├── useSandboxReload.ts       # `action=""`/`"#"` のフォーム送信を「リロード」に変換（WebView を作り直す）。ExecutionOutput / InteractivePreviewModal が使用
 └── useInsertPair.ts          # ブラケット・クォートの自動閉じ挿入
 
@@ -295,7 +301,7 @@ iPadOS は**ハードキーボードの「修飾なし矢印」と Tab を OS �
 - **設定サブ画面キー**（display/study/notifications/sync/data/sync-merge/about/paywall）: Esc / B = 戻る（モーダルを開いていれば先に閉じる）。共通シェル `components/settings/SettingsDetail.tsx` に Esc/B＝戻るを集約し、モーダルを持つ画面は `onBack` prop で「先に閉じる」を渡す。SettingsDetail 非使用の about/paywall は各画面で `useKeyCommands` を直接持つ
 - **アーカイブ一覧キー（042・通常モード）**: J/K（↑/↓）= フォーカス移動、Return = 開く（デッキ→カード一覧／カード→編集）、E = アーカイブ解除、Delete = 削除（確認あり）、S = 選択モード開始、1/2・`,`/`.`・H/L・←/→ = タブ切替（デッキ/カード）、B / Esc = 戻る
 - **アーカイブ一覧キー（042・選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A（⌘A）= 全選択、E = 一括解除、Delete = 一括削除（確認あり）、S = 選択モード終了
-- **学習画面キー**: `,`/`.`・H/L（iPhoneは←/→も） = 前/次カード（iPad は矢印未登録のため H/L が左右ナビを担う）、Space = 表裏反転、1–4 = グレード、J/K = コードブロック次/前フォーカス、E / Return = フォーカス中のコードブロックを編集、U/D・PgUp/PgDn = 画面スクロール、Home/End・Shift+U/D = 最上部/最下部（Home/End 無しキーボード向け）、M = メモ開閉、F = 全画面、P = カード編集、W = リンク一覧（旧 L。H/L をカード送りに使うため移動）、Q = セッション終了（残カードをスキップして集計画面へ、確認ダイアログあり）
+- **学習画面キー**: `,`/`.`・H/L（iPhoneは←/→も） = 前/次カード（iPad は矢印未登録のため H/L が左右ナビを担う）、Space = 表裏反転、1–4 = グレード、J/K = コードブロック次/前フォーカス、E / Return = フォーカス中のコードブロックを編集、U/D・PgUp/PgDn = 画面スクロール、Home/End・Shift+U/D = 最上部/最下部（Home/End 無しキーボード向け）、M = メモ開閉、F = 全画面、P = カード編集、S = 読み上げ/停止（読む文字が無いカードでは無効＝ボタンも出ない）、W = リンク一覧（旧 L。H/L をカード送りに使うため移動）、Q = セッション終了（残カードをスキップして集計画面へ、確認ダイアログあり）
 - **カード一覧キー（通常モード）**: Space = 学習開始、Return / P = フォーカスカード編集、1–4 = フィルター直接選択、`,`/`.`・`←`/`→`・H/L = フィルター切替（すべて/学習済み/復習/新規）、J/K（↑/↓）= カードフォーカス次/前、M = ソート切替（「すべて」のみ）、⌘L = 並べ替えロック切替（手動ソート時のみ）、U/D = フォーカスカードを手動並べ替え（上へ/下へ・手動ソート＋「すべて」＋未ロック時のみ）、N = 新規カード、S = 選択モード開始、Delete = フォーカス中のカードを削除、B = 戻る
 - **カード一覧キー（選択モード）**: J/K = フォーカス移動、Space = 選択/解除、A = 全選択、M = 移動、Delete = 削除、C = 複製、E = アーカイブ切替、S = 選択モード終了
 - **タグ管理キー（通常モード）**: J/K = フォーカス移動、Return = フォーカスタグのカード一覧を開く、P = タグ編集、Delete = タグ削除、N = 新規タグ、S = 選択モード開始、M = ソート切替、⌘L = 並べ替えロック切替（手動ソート時のみ）、U/D = フォーカスタグを手動並べ替え（上へ/下へ・手動ソート＋未ロック時のみ）、B = 戻る
@@ -337,6 +343,7 @@ iPadOS は**ハードキーボードの「修飾なし矢印」と Tab を OS �
 - **シャッフル学習**: `store/settings.ts` の `shuffleEnabled`（AsyncStorage永続化）で管理。学習タブ「学習一覧」行の右端にトグルボタン（ソートボタンと同形状）。ON 時は `useStudySession.loadSession` に `shuffle: true` を渡し、カード配列を Fisher-Yates でシャッフルする。セッション遷移時は `params: { shuffle: '1' | '0' }` で受け渡し。
 - **通知リマインダー**: `lib/notifications.ts` の `scheduleDailyReminder(hour, minute)` が identifier `'daily-reminder'` 固定で毎日繰り返し通知をスケジュール（再呼び出し前に既存通知をキャンセル）。設定画面でオン/オフと時刻を管理。`useSettingsStore` に `notificationEnabled`・`notificationHour`・`notificationMinute` を AsyncStorage 永続化で保存。
 - **アイコンバッジ**: `lib/notifications.ts` の `updateBadgeCount(db)` が `getTodayDueCount()` で全デッキ横断の due 枚数を取得し `setBadgeCountAsync()` でバッジに反映。`app/_layout.tsx` のフォアグラウンド復帰時と学習セッション完了時に呼ばれる。
+- **読み上げ（049・無料機能）**: 学習画面のスピーカーボタン（`S` キー）で表示中の面を読む。`expo-speech`＝iOS 標準の音声合成なのでオフライン・無料・API キー不要（**ネイティブモジュールなので追加時に dev client の再ビルドが要る**）。**iOS は1発話＝1つの声で、文中の言語を自動判別しない**ため、`lib/speech.ts` の `splitByScript()` が**文字体系**（かな漢字／ラテン文字）で区間に割り、区間ごとに声を変えて `Speech.speak()` をキューへ積む（実測で「日本語の声だけで混在文を読む」は許容できなかった）。⚠️ **割れるのは文字体系であって言語ではない**（`Hola` と `Hello` はどちらもラテン文字＝区別不能）。したがって設定は「**ラテン文字を何語として読むか**」1つだけで、これがデッキ単位・カード単位の言語設定を**不要にしている**（統計的な言語判定は短文で精度が出ないので**採らない**）。短いラテン片（**英字3文字以下**）は日本語側へ倒す＝`API` が英語の声で「アピ」と単語読みされるのを防ぐが、**日本語が1文字も無いテキストでは倒さない**（`hasJa` ガード。表面が `GET` だけの単語カードが「ゲット」になるため）。読み上げ用テキストの生成は `lib/blocksToSpeech.ts` が唯一の定義元で、**コードブロックは読まない・画像は alt のみ・Markdown 記法は落とす**（⚠️ **アンダースコアの強調は剥がさない**＝`snake_case` が壊れるため）。**読む文字が無いカードではボタン自体を出さない**（`canSpeak`）。UI は**ヘッダーではなく左下のフローティング**（下段の高さを `onLayout` で実測しその真上）＝ヘッダーに置くと編集・完了と合わせて3個並び、長いデッキ名とタイトルが重なるため。左上ではなく左下なのは、**本文が左上から始まる**のに対し左下は内容が縦中央寄せで空いているから。⚠️ **カードの外側に兄弟として重ねるので反転抑止は不要**（タイマーと同じ方式）／⚠️ **`zIndex` は休憩オーバーレイ（15）より下（10）**＝休憩中は押せないのが正しい。長いカードで最終行が隠れないよう、面の ScrollView に `contentInset`（**`paddingBottom` ではない**＝`justifyContent:'center'` の箱が縮んで短いカードの内容が上へずれるため）を足す。⚠️ **止め忘れ防止は「経路ごとに stop()」ではなく「表示が変わったら止める」**＝`useEffect(..., [currentCard?.id, isFlipped, showMemo])` と `useFocusEffect` のクリーンアップに集約する（経路ごとに書くと必ず漏れて前カードの声が次カードに被る）。テキスト処理を触ったら `npm run verify:speech`（35 アサーション）を流す。詳細は `docs/049`。
 - **iCloud 同期**: DB ファイル全体を iCloud Drive 経由で同期する。`sync_state` テーブルのトリガーがローカル変更で `localVersion`/`localChangedAt` を進め、LWW（Last-Write-Wins）でリモートと比較する。`store/sync.ts` の `dataRevision` が更新されると各画面が DB を再読込する。`archived` も DB 列なので追加対応なく同期される。端末時計のズレ対策は `docs/icloud-sync-overview.md` 参照。
 - **デッキの色付きアイコン**: `decks.iconName`（Ionicons 名）・`colorHex`。表示は `components/DeckIcon.tsx` か `colorHex ?? theme.colors.primary`（背景は `colorHex + '20'`）。プリセット色は `DECK_PRESET_COLORS`（= `TAG_PRESET_COLORS`、`lib/theme`）。
 
@@ -368,7 +375,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 完了済み: 001〜013（プロジェクト基盤・デッキ/カード/タグCRUD・エディタ・SM-2/FSRS・学習画面・全画面+Bluetoothキーボード・JS/TS/Python コード実行・画像ブロック・統計画面・ダークモード）。その後エディタリファクタリング（`BlockItemHeader` 抽出）・ホーム画面フィルターブロック・コードブロックヘッダー色変更・バッジ表示・「新規」フィルター意味変更・エクスポート review_logs 追加・コードリファクタリング・フィルターキー統一・初期フィルター「保持」の全画面対応・統計画面ヒートマップ追加・ヌルサイクル（学習画面コードブロック + カード一覧カードフォーカス）・カード編集初期タブ指定・BlockEditor スクロール改善・カード一覧選択モード（複数選択・移動・削除・アイコンボタン）・学習セッションヘッダーにデッキ/タグ名表示・i18n フォールバック英語化・021（JSONエクスポート/インポート）・022（カード全文検索）・023（通知リマインダー）を実施。その後、学習完了サマリー改善（グレード分布・正答率・次回予定表示・枠なし横幅フル表示）・ホームデッキソート（手動/名前/枚数）・アプリアイコンバッジ（due 枚数）・カード複製（選択モードから一括複製）・シャッフル学習（学習タブのトグルボタン、Fisher-Yates）・統計画面改善（全体学習率セクション・デッキ別習熟度に新規枚数追加・草グラフ右端余白）・学習タブをカードスタイルに変更・学習タブの行アイコンを `play` に変更・TSV エクスポート/インポート・FSRS アルゴリズム移行・カスタムヘッダー統一（push 遷移全画面）・学習セッション終了ボタン（ヘッダー右端 + Q キー）を追加実装。さらに、タグ管理選択モード（一括削除・一括色変更・キーボードショートカット対応）・カード一覧/タグ管理の選択モード UX 統一（モード別ショートカット表示・ヘッダータイトル切替・フォーカス挙動修正）・ホーム画面カスタムヘッダー高さを `getDefaultHeaderHeight` で算出・Development Build 環境整備（`expo-dev-client` 導入）を実施。
 
-さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018（SQL 実行＝`buildSqlSandboxHtml`／C++ 実行＝Wandbox API。ともに Pro 限定）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整・**034（キーボードショートカットのネイティブ化＝`UIKeyCommand`/`react-native-key-command`）の Phase 0〜3：全画面で隠し TextInput を撤去し `lib/useKeyCommands.ts` へ移行、`HiddenKeyboardInput`/`useKeyboardFocus` を削除。これによりショートカット ON 時のタップ食われ・復帰フリーズが構造的に解消**・**042（アーカイブ一覧画面＝設定タブから push・デッキ/カードの2タブ・一括解除/一括削除。あわせて `deleteDeck`/`deleteCard` の `grade_logs`・画像の削除漏れを修正）**・**044（デッキの HTML/CSS 土台を名前付きで複数持てるように＝`decks.htmlStages`）**・**045（同じ仕組みを SQL 初期化にも＝`decks.sqlStages`。044 の部品を HTML/SQL 共用に統一し、`DeckStage.html` → `content` にリネーム）**。
+さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018（SQL 実行＝`buildSqlSandboxHtml`／C++ 実行＝Wandbox API。ともに Pro 限定）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整・**034（キーボードショートカットのネイティブ化＝`UIKeyCommand`/`react-native-key-command`）の Phase 0〜3：全画面で隠し TextInput を撤去し `lib/useKeyCommands.ts` へ移行、`HiddenKeyboardInput`/`useKeyboardFocus` を削除。これによりショートカット ON 時のタップ食われ・復帰フリーズが構造的に解消**・**042（アーカイブ一覧画面＝設定タブから push・デッキ/カードの2タブ・一括解除/一括削除。あわせて `deleteDeck`/`deleteCard` の `grade_logs`・画像の削除漏れを修正）**・**044（デッキの HTML/CSS 土台を名前付きで複数持てるように＝`decks.htmlStages`）**・**045（同じ仕組みを SQL 初期化にも＝`decks.sqlStages`。044 の部品を HTML/SQL 共用に統一し、`DeckStage.html` → `content` にリネーム）**・**049（カード本文の読み上げ＝`expo-speech`。文字体系で区間へ割って声を変える方式で、言語設定は「ラテン文字を何語で読むか」1つだけ）の Phase 1a/1b/1c**。
 
 未着手（または部分実装）: 015（Web版）・016（買い切り課金、`useProStore` で Pro ゲートのみ存在）・017（App Store申請）・019（マーケットプレイス）・020（AI生成）・026（デッキ共有リンク）・027（ウィジェット）・029（デッキ統合/復元）・031（高度な通知、`notification_schedules` テーブルは存在）
 

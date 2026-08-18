@@ -37,7 +37,9 @@ import { ShortcutsModal } from "@/components/study/ShortcutsModal";
 import { TagSheet } from "@/components/study/TagSheet";
 import { StudyTimer } from "@/components/study/StudyTimer";
 import { useCodeBlockSelection } from "@/hooks/useCodeBlockSelection";
+import { useSpeech } from "@/hooks/useSpeech";
 import { useStudyTimer } from "@/hooks/useStudyTimer";
+import { blocksToSpeech } from "@/lib/blocksToSpeech";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { useLockedHeaderHeights } from "@/lib/useLockedTopInset";
@@ -84,6 +86,20 @@ const GRADES: { grade: Grade; labelKey: string; color: string }[] = [
   { grade: 3, labelKey: "grade.easy", color: GRADE_COLORS.easy },
 ];
 
+// 049: 読み上げ FAB（下段の ◀ と同じ 56 丸）と、下段との間隔。
+const SPEAK_FAB_SIZE = 56;
+const SPEAK_FAB_GAP = 8;
+/**
+ * 読み上げ FAB を出しているあいだ、カード面のスクロールに足す下端の余白。
+ *
+ * **`contentContainerStyle` の `paddingBottom` ではなく `contentInset` を使う**。
+ * `faceContent` は `flexGrow:1 + justifyContent:'center'` なので、padding を足すと
+ * **短いカードで内容が上へずれる**（中央寄せの箱が縮むため）。`contentInset` は
+ * レイアウトを変えずスクロール可能範囲だけを伸ばすので、
+ * 「長いカードでも最後の行がボタンに隠れない」だけを実現できる。
+ */
+const SPEAK_FAB_SCROLL_INSET = SPEAK_FAB_SIZE + SPEAK_FAB_GAP;
+
 const SESSION_SHORTCUT_SECTIONS = [
   { titleKey: "shortcut.catDisplay", items: [
     { key: "Space", descKey: "shortcut.flip" },
@@ -106,6 +122,7 @@ const SESSION_SHORTCUT_SECTIONS = [
   { titleKey: "shortcut.catAction", items: [
     { key: "1–4", descKey: "shortcut.grade" },
     { key: "T", descKey: "shortcut.cardTags" },
+    { key: "S", descKey: "shortcut.speak" },
   ] },
   { titleKey: "shortcut.catOther", items: [
     { key: "ESC", descKey: "shortcut.esc" },
@@ -215,6 +232,7 @@ export default function StudySessionScreen() {
     studyTimerCycles,
     studyGoalEnabled,
     studyGoalCount,
+    speechEnabled,
   } = useSettingsStore();
   const { isPro } = useProStore();
   const { width: screenWidth } = useWindowDimensions();
@@ -251,6 +269,29 @@ export default function StudySessionScreen() {
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
+
+  // ---- 読み上げ（049）----------------------------------------------------
+  // 読む対象は「いま表示している面」。裏面でメモを開いていればメモも続けて読む。
+  const speech = useSpeech();
+  const speechText = useMemo(() => {
+    if (!currentCard) return "";
+    if (!isFlipped) return blocksToSpeech(currentCard.frontContent);
+    const back = blocksToSpeech(currentCard.backContent);
+    const memo = showMemo ? blocksToSpeech(currentCard.memoContent) : "";
+    return [back, memo].filter(Boolean).join("\n");
+  }, [currentCard, isFlipped, showMemo]);
+  // 読む文字が無いカード（コードブロックだけ等）ではボタンも S キーも出さない。
+  // 押しても無音＝「オンに見えるのに効いていない」状態を作らないため（CLAUDE.md の鉄則）。
+  const canSpeak = speechEnabled && speechText.trim() !== "";
+  // 読み上げ FAB は下段（表面＝前後送り列／裏面＝評価ボタン列）の**すぐ上**に浮かせる。
+  // 下段の高さは表裏で違うので固定値だとズレる＝実測して追従させる。
+  const [bottomBarHeight, setBottomBarHeight] = useState(0);
+  // **止め忘れ防止**：カード送り・表裏反転・メモ開閉のたびに個別へ stop() を書くと必ず漏れるので、
+  // 「いま読んでいる対象を決める値」が変わったら止める、という1箇所に集約する。
+  const stopSpeaking = speech.stop;
+  useEffect(() => { stopSpeaking(); }, [currentCard?.id, isFlipped, showMemo, stopSpeaking]);
+  // 画面を離れるとき（カード編集モーダルへ push した場合を含む）も止める。
+  useFocusEffect(useCallback(() => () => stopSpeaking(), [stopSpeaking]));
 
   // カード編集モーダルへ遷移する前に、この画面を非フォアグラウンド扱いにし、ソフトキーボードを閉じる。
   // （isScreenFocusedRef は kbHeight 計算やステータスバー制御の早期化に使う）
@@ -818,6 +859,9 @@ export default function StudySessionScreen() {
       else handleFinishSession();
     } else if (key.toLowerCase() === "b") {
       safeBack();
+    } else if (key.toLowerCase() === "s") {
+      // 読む文字が無いカードでは何も起きない（ボタンも出ていない）＝空振りではなく無効。
+      if (canSpeak) speech.toggle(speechText);
     } else if (key.toLowerCase() === "w") {
       if (cardLinks.length > 0) { Keyboard.dismiss(); setShowLinksModal((v) => !v); }
     } else if (key.toLowerCase() === "p") {
@@ -905,6 +949,7 @@ export default function StudySessionScreen() {
     // H/L でもカード送り（,/. と同じ。iPad は矢印未登録なので H/L が左右ナビになる）。
     { input: "h", handler: () => handleKeyPress(",") },
     { input: "l", handler: () => handleKeyPress(".") },
+    { input: "s", handler: () => handleKeyPress("s") },
     { input: "w", handler: () => handleKeyPress("w") },
     { input: "t", handler: () => handleKeyPress("t") },
     { input: "p", handler: () => handleKeyPress("p") },
@@ -991,7 +1036,7 @@ export default function StudySessionScreen() {
           style={{
             position: 'absolute', left: 0, right: 0,
             alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
-            paddingHorizontal: 56, gap: 4,
+            paddingHorizontal: 80, gap: 4,
           }}
         >
           {/* 閲覧モード（記録なし）の目印。グレードボタンが出ないことと合わせて状態を示す */}
@@ -1639,6 +1684,19 @@ export default function StudySessionScreen() {
               </Pressable>
             )}
             <View style={{ flex: 1 }} />
+            {canSpeak && (
+              <Pressable
+                style={styles.fullscreenEditBtn}
+                onPress={() => speech.toggle(speechText)}
+                accessibilityLabel={t("study.speak")}
+              >
+                <Ionicons
+                  name={speech.speaking ? "stop-circle-outline" : "volume-high-outline"}
+                  size={Math.round(theme.fontSize.xl)}
+                  color={theme.colors.iconSubtle}
+                />
+              </Pressable>
+            )}
             <Pressable
               style={styles.fullscreenEditBtn}
               onPress={openCardEdit}
@@ -1918,7 +1976,7 @@ export default function StudySessionScreen() {
                 alignItems: "center",
                 flexDirection: "row",
                 justifyContent: "center",
-                paddingHorizontal: 56,
+                paddingHorizontal: 80,
                 gap: 4,
               }}
             >
@@ -2035,6 +2093,8 @@ export default function StudySessionScreen() {
                   <ScrollView
                     ref={frontScrollRef}
                     style={{ flex: 1 }}
+                    contentInset={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
+                    scrollIndicatorInsets={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
                     contentContainerStyle={[styles.faceContent, timerContentPad && styles.faceContentTimerPad, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
@@ -2071,6 +2131,8 @@ export default function StudySessionScreen() {
                   <ScrollView
                     ref={backScrollRef}
                     style={{ flex: 1 }}
+                    contentInset={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
+                    scrollIndicatorInsets={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
                     contentContainerStyle={[styles.faceContent, timerContentPad && styles.faceContentTimerPad, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
@@ -2185,8 +2247,39 @@ export default function StudySessionScreen() {
           />
         )}
 
+        {/* 049: 読み上げ FAB。下段の真上・左端に浮かせる（表面は ◀ の真上に縦に並ぶ）。
+            **カードの外側に兄弟として重ねる**ので反転抑止（FlipSuppressContext）は不要
+            ＝タップはカードに届かない（学習タイマーと同じ方式）。 */}
+        {canSpeak && bottomBarHeight > 0 && (
+          <Pressable
+            onPress={() => speech.toggle(speechText)}
+            style={[
+              styles.speakFab,
+              {
+                bottom: bottomBarHeight + SPEAK_FAB_GAP,
+                // 再生中は丸に**薄い青の下地**を敷く（`+ '20'` ＝ デッキアイコン・アイコン選択と
+                // 同じアルファ付与の慣習）。アイコンの形（スピーカー ⇄ 停止）だけだと
+                // 鳴っているかが分かりにくいため。**青ベタにはしない**＝読み上げは補助機能で、
+                // カード本文や裏面の評価ボタンより目立つのは重要度の順序がおかしくなるため。
+                // アイコンを青にするのは、真下の ◀（グレー）と役割が違うことを待機中から示すため。
+                backgroundColor: speech.speaking ? theme.colors.primary + '20' : theme.cardTheme.background,
+                borderColor: theme.cardTheme.border,
+              },
+            ]}
+            hitSlop={8}
+            accessibilityLabel={t("study.speak")}
+          >
+            {/* 塗りつぶしのアイコン同士（スピーカー ⇄ 停止）で切り替える */}
+            <Ionicons
+              name={speech.speaking ? "stop" : "volume-high"}
+              size={24}
+              color={theme.colors.primary}
+            />
+          </Pressable>
+        )}
+
         {/* ヒント or 自己評価ボタン（閲覧モードは評価が無いので常にヒント＋前後送り） */}
-        <View style={styles.bottom}>
+        <View style={styles.bottom} onLayout={(e) => setBottomBarHeight(e.nativeEvent.layout.height)}>
           {!isFlipped || browseMode ? (
             <View style={styles.frontNavRow}>
               {/* 左: 前カードへ。先頭カードではセッションを抜けて戻る（配色を変えて区別） */}
@@ -2375,6 +2468,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  // 049: 読み上げ FAB。下段の ◀ と同形状・同配色で縦に並べ、「本文」ではなく
+  // 「操作レイヤー」の一部だと分かるようにする。bottom は下段の実測値から動的に決める。
+  speakFab: {
+    position: "absolute",
+    left: 20,
+    width: SPEAK_FAB_SIZE,
+    height: SPEAK_FAB_SIZE,
+    borderRadius: SPEAK_FAB_SIZE / 2,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    // ⚠️ zIndex は**休憩オーバーレイ（15）より下**にする。読み上げはカード操作なので、
+    // 休憩中（039）はグレーアウトに覆われて押せないのが正しい（S キーも handleKeyPress で
+    // 弾かれる）。タイマー（20）だけが休憩中も操作できる＝オーバーレイより上にある。
+    zIndex: 10,
   },
   // カード一覧などの丸 FAB と同形状（56 丸）。配色だけ控えめにする
   navFab: {

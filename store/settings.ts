@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import type { GradeRankingSortBy } from '@/lib/database/reviews';
 import i18n from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
+import { SPEECH_LATIN_LANG_DEFAULT, SPEECH_RATE_DEFAULT, SPEECH_RATES } from '@/lib/speech';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
@@ -189,6 +190,11 @@ interface SettingsValues {
   // 046: 1日の目標枚数（量で区切る学習）。OFF のときは達成アラートも未達成判定も動かない
   studyGoalEnabled: boolean;
   studyGoalCount: number;
+  // 049: カード本文の読み上げ（TTS）
+  speechEnabled: boolean;
+  speechRate: number;
+  /** ラテン文字の区間を何語として読むか（BCP-47）。かな漢字は常に日本語で読む */
+  speechLatinLang: string;
   // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
   badgeLapStageSeen: number;
 }
@@ -343,6 +349,16 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampGoalCount(v); },
     normalize: clampGoalCount,
   },
+  // 049: 読み上げ。OFF は学習画面の読み上げボタンと S キーを出さない（機能ごと畳む）。
+  speechEnabled: { key: '@codeflash_speech_enabled', default: true, parse: asBool },
+  speechRate: {
+    key: '@codeflash_speech_rate',
+    default: SPEECH_RATE_DEFAULT,
+    parse: (r) => { const v = Number(r); return SPEECH_RATES.includes(v) ? v : undefined; },
+  },
+  // BCP-47 は端末の音声一覧から選ぶので、ここでは値の妥当性を検査しない
+  // （端末に無い言語が入っていても iOS 側が既定の声にフォールバックする）。
+  speechLatinLang: { key: '@codeflash_speech_latin_lang', default: SPEECH_LATIN_LANG_DEFAULT, parse: asIs },
   badgeLapStageSeen: {
     key: '@codeflash_badge_lap_stage_seen',
     default: 1,
@@ -390,6 +406,9 @@ interface SettingsState extends SettingsValues {
   setStudyTimerCycles: (v: number) => void;
   setStudyGoalEnabled: (v: boolean) => void;
   setStudyGoalCount: (v: number) => void;
+  setSpeechEnabled: (v: boolean) => void;
+  setSpeechRate: (v: number) => void;
+  setSpeechLatinLang: (v: string) => void;
   setBadgeLapStageSeen: (v: number) => void;
 }
 
@@ -451,6 +470,9 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setStudyTimerCycles: makeSetter('studyTimerCycles'),
     setStudyGoalEnabled: makeSetter('studyGoalEnabled'),
     setStudyGoalCount: makeSetter('studyGoalCount'),
+    setSpeechEnabled: makeSetter('speechEnabled'),
+    setSpeechRate: makeSetter('speechRate'),
+    setSpeechLatinLang: makeSetter('speechLatinLang'),
     setBadgeLapStageSeen: makeSetter('badgeLapStageSeen'),
   };
 });

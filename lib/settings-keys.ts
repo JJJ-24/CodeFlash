@@ -45,4 +45,8 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_study_goal_count',
   // バッジ周回の段階開放（分母 50→80→110）の案内メッセージ既読段階
   '@codeflash_badge_lap_stage_seen',
+  // 049: カード本文の読み上げ
+  '@codeflash_speech_enabled',
+  '@codeflash_speech_rate',
+  '@codeflash_speech_latin_lang',
 ] as const;

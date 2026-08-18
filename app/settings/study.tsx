@@ -7,6 +7,8 @@ import { Pressable, Switch, Text, View } from 'react-native';
 
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
+import { SPEECH_RATES, speechLanguageLabel } from '@/lib/speech';
 import { getAllSchedules, toggleScheduleEnabled, updateSchedule } from '@/lib/database/notifications';
 import type { NotificationSchedule } from '@/types';
 import { settingsStyles as styles } from '@/components/settings/styles';
@@ -50,7 +52,11 @@ export default function StudySettingsScreen() {
     studyTimerCycles, setStudyTimerCycles,
     studyGoalEnabled, setStudyGoalEnabled,
     studyGoalCount, setStudyGoalCount,
+    speechEnabled, setSpeechEnabled,
+    speechRate, setSpeechRate,
+    speechLatinLang, setSpeechLatinLang,
   } = useSettingsStore();
+  const [speechLangModal, setSpeechLangModal] = useState(false);
   const db = useSQLiteContext();
   const { notificationEnabled } = useSettingsStore();
   // 046: 目標の変更は未達成リマインダーの予約内容を変える（OFF なら予約自体を止める）。
@@ -227,6 +233,86 @@ export default function StudySettingsScreen() {
       </View>
   );
 
+  // 読み上げ（049）。**無料機能**なので Pro ロック時の画面にも出す（目標枚数と同じ扱い）。
+  // 言語設定が「ラテン文字を何語として読むか」1つだけなのは、分割が文字体系しか判別できないため
+  // （`Hola` と `Hello` は同じラテン文字＝自動では言い分けられない）。詳細は docs/049。
+  const speechCard = (
+      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Text
+          style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+        >
+          {t('settings.speech')}
+        </Text>
+        <View style={styles.notificationRow}>
+          <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.speechEnable')}
+          </Text>
+          <Switch
+            value={speechEnabled}
+            onValueChange={setSpeechEnabled}
+            trackColor={{ true: theme.colors.primary }}
+          />
+        </View>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {t('settings.speechHint')}
+        </Text>
+
+        {speechEnabled && (
+          <>
+            <View style={{ gap: 6 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.speechRate')}
+              </Text>
+              <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+                {SPEECH_RATES.map((r) => (
+                  <Pressable
+                    key={r}
+                    style={[styles.segment, r === speechRate && { backgroundColor: theme.colors.surface }]}
+                    onPress={() => setSpeechRate(r)}
+                  >
+                    <Text
+                      style={[
+                        r === speechRate ? styles.segmentTextActive : styles.segmentText,
+                        { color: r === speechRate ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
+                      ]}
+                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                    >
+                      {r.toFixed(2)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal(true)}>
+              <View style={styles.dataRowText}>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.speechLatinLang')}
+                </Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.speechLatinLangHint')}
+                </Text>
+              </View>
+              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {speechLanguageLabel(speechLatinLang)}
+              </Text>
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+            </Pressable>
+          </>
+        )}
+      </View>
+  );
+
+  const speechLangModalEl = (
+    <SpeechLanguageModal
+      visible={speechLangModal}
+      value={speechLatinLang}
+      onSelect={setSpeechLatinLang}
+      onClose={() => setSpeechLangModal(false)}
+    />
+  );
+
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
   if (!isPro) {
     return (
@@ -263,7 +349,9 @@ export default function StudySettingsScreen() {
           </View>
         </Pressable>
         {goalCard}
+        {speechCard}
         {goalConflictModal}
+        {speechLangModalEl}
       </SettingsDetail>
     );
   }
@@ -565,7 +653,9 @@ export default function StudySettingsScreen() {
       </View>
 
       {goalCard}
+      {speechCard}
       {goalConflictModal}
+      {speechLangModalEl}
     </SettingsDetail>
   );
 }

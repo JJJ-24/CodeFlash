@@ -377,7 +377,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 さらに以降で次を実装: 014（iCloud同期、`sync_state` + LWW + `store/sync`）・018（SQL 実行＝`buildSqlSandboxHtml`／C++ 実行＝Wandbox API。ともに Pro 限定）・024（詳細な学習統計：月別グラフ・評価別ランキング・苦手カード・正答率・回答時間、Pro 機能）・025（FSRS カスタマイズ：`fsrsDesiredRetention`）・028-1（デッキの色付きアイコン）・028-2（カード表示テーマ `cardThemePreference`）・028-3（フォントサイズ設定 `fontSizePreference`）・030（検索のデッキ/タグ絞り込み）・言語設定（`languagePreference`）・**032（デッキ/カードのアーカイブ）**・一覧の左スワイプにアーカイブ追加・ホームヘッダー高さ算出の `useMemo` 化（タブヘッダーと位置一致）・デッキ編集カラー選択の並び調整・**034（キーボードショートカットのネイティブ化＝`UIKeyCommand`/`react-native-key-command`）の Phase 0〜3：全画面で隠し TextInput を撤去し `lib/useKeyCommands.ts` へ移行、`HiddenKeyboardInput`/`useKeyboardFocus` を削除。これによりショートカット ON 時のタップ食われ・復帰フリーズが構造的に解消**・**042（アーカイブ一覧画面＝設定タブから push・デッキ/カードの2タブ・一括解除/一括削除。あわせて `deleteDeck`/`deleteCard` の `grade_logs`・画像の削除漏れを修正）**・**044（デッキの HTML/CSS 土台を名前付きで複数持てるように＝`decks.htmlStages`）**・**045（同じ仕組みを SQL 初期化にも＝`decks.sqlStages`。044 の部品を HTML/SQL 共用に統一し、`DeckStage.html` → `content` にリネーム）**・**049（カード本文の読み上げ＝`expo-speech`。文字体系で区間へ割って声を変える方式で、言語設定は「ラテン文字を何語で読むか」1つだけ）の Phase 1a/1b/1c**。
 
-未着手（または部分実装）: 015（Web版）・016（買い切り課金、`useProStore` で Pro ゲートのみ存在）・017（App Store申請）・019（マーケットプレイス）・020（AI生成）・026（デッキ共有リンク）・027（ウィジェット）・029（デッキ統合/復元）・031（高度な通知、`notification_schedules` テーブルは存在）
+未着手（または部分実装）: 015（Web版）・016（買い切り課金、`useProStore` で Pro ゲートのみ存在）・017（App Store申請）・019（マーケットプレイス）・020（AI生成）・026（デッキ共有リンク）・027（ウィジェット）・029（デッキ統合/復元）・031（高度な通知、`notification_schedules` テーブルは存在）・**050（読み上げの多言語対応＝文字体系ごとの言語解決表。日本語⇔韓国語/中国語/ロシア語などの読み分け。Phase 2 でデッキ単位の上書き）**
 
 ### UI パターン（実装済み画面の慣習）
 

@@ -4,33 +4,41 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
-import { getLatinSpeechLanguages, speechLanguageLabel } from '@/lib/speech';
+import { getLatinSpeechLanguages, getNonLatinSpeechLanguages, speechLanguageLabel } from '@/lib/speech';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 
 interface Props {
   visible: boolean;
+  /** どちらの区間の言語を選ぶか。文言と選択肢の絞り込みが変わる */
+  kind: 'latin' | 'nonLatin';
   value: string;
   onSelect: (code: string) => void;
   onClose: () => void;
 }
 
 /**
- * 049：ラテン文字の区間を何語として読むかを選ぶモーダル。
+ * 049：区間を何語として読むかを選ぶモーダル。**ラテン文字/非ラテン文字で共用**し、
+ * `kind` で文言と選択肢だけを切り替える（土台モーダルと同じ流儀）。
  *
  * **選択肢は端末から取る**（`getAvailableVoicesAsync()`）。対応表をアプリ側に持たないので、
  * OS が音声を増やせば自動で増える＝言語追加のメンテがゼロになる。
- * かな漢字は常に日本語で読むので、**ラテン文字を使わない言語は一覧から除いてある**。
+ * 一覧は用途に合う側だけに絞る（ラテン文字の区間に韓国語を割り当てても意味が無いため）。
  */
-export function SpeechLanguageModal({ visible, value, onSelect, onClose }: Props) {
+export function SpeechLanguageModal({ visible, kind, value, onSelect, onClose }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [languages, setLanguages] = useState<string[]>([]);
+  const titleKey = kind === 'latin' ? 'settings.speechLatinLang' : 'settings.speechNonLatinLang';
+  const hintKey = kind === 'latin' ? 'settings.speechLatinLangHint' : 'settings.speechNonLatinLangHint';
 
   useEffect(() => {
     if (!visible) return;
-    getLatinSpeechLanguages().then(setLanguages);
-  }, [visible]);
+    // ⚠️ 開くたびに取り直す（kind が違えば一覧も別物）。
+    setLanguages([]);
+    const load = kind === 'latin' ? getLatinSpeechLanguages : getNonLatinSpeechLanguages;
+    load().then(setLanguages);
+  }, [visible, kind]);
 
   // 表示中だけ Esc を担当する（非表示のあいだ登録を持たない＝034 の住み分け）。
   useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
@@ -53,13 +61,13 @@ export function SpeechLanguageModal({ visible, value, onSelect, onClose }: Props
               style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '700' }}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
-              {t('settings.speechLatinLang')}
+              {t(titleKey)}
             </Text>
             <Text
               style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 4 }}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             >
-              {t('settings.speechLatinLangHint')}
+              {t(hintKey)}
             </Text>
           </View>
           <ScrollView>

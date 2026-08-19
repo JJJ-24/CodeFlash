@@ -4,7 +4,7 @@ import { speakText, stopSpeech } from '@/lib/speech';
 import { useSettingsStore } from '@/store/settings';
 
 /**
- * 049：読み上げの再生状態を持つフック。設定（速度・ラテン文字の言語）はストアから取る。
+ * 049：読み上げの再生状態を持つフック。設定（速度・ラテン文字/非ラテン文字の言語）はストアから取る。
  *
  * `speaking` は**ボタンの見た目（スピーカー ⇄ 停止）**に使う。区間分割で複数の発話を
  * キューに積むため、完了判定は**最後の区間の `onDone`** で行う（`lib/speech.ts` 側で付ける）。
@@ -18,6 +18,7 @@ export function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
   const speechRate = useSettingsStore((s) => s.speechRate);
   const speechLatinLang = useSettingsStore((s) => s.speechLatinLang);
+  const speechNonLatinLang = useSettingsStore((s) => s.speechNonLatinLang);
 
   const stop = useCallback(() => {
     stopSpeech();
@@ -29,11 +30,12 @@ export function useSpeech() {
     speakText(text, {
       rate: speechRate,
       latinLang: speechLatinLang,
+      nonLatinLang: speechNonLatinLang,
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
     });
     setSpeaking(true);
-  }, [speechRate, speechLatinLang]);
+  }, [speechRate, speechLatinLang, speechNonLatinLang]);
 
   /** 読み上げ中なら止める、そうでなければ読む（ボタン・キーの両方から使う）。 */
   const toggle = useCallback((text: string) => {

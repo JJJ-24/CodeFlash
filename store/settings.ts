@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import type { GradeRankingSortBy } from '@/lib/database/reviews';
 import i18n from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
-import { SPEECH_LATIN_LANG_DEFAULT, SPEECH_RATE_DEFAULT, SPEECH_RATES } from '@/lib/speech';
+import { SPEECH_LATIN_LANG_DEFAULT, SPEECH_NON_LATIN_LANG_DEFAULT, SPEECH_RATE_DEFAULT, SPEECH_RATES } from '@/lib/speech';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
@@ -193,8 +193,10 @@ interface SettingsValues {
   // 049: カード本文の読み上げ（TTS）
   speechEnabled: boolean;
   speechRate: number;
-  /** ラテン文字の区間を何語として読むか（BCP-47）。かな漢字は常に日本語で読む */
+  /** ラテン文字の区間を何語として読むか（BCP-47） */
   speechLatinLang: string;
+  /** ラテン文字**以外**の区間（かな漢字・ハングル・キリル…）を何語として読むか（BCP-47） */
+  speechNonLatinLang: string;
   // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
   badgeLapStageSeen: number;
 }
@@ -359,6 +361,8 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   // BCP-47 は端末の音声一覧から選ぶので、ここでは値の妥当性を検査しない
   // （端末に無い言語が入っていても iOS 側が既定の声にフォールバックする）。
   speechLatinLang: { key: '@codeflash_speech_latin_lang', default: SPEECH_LATIN_LANG_DEFAULT, parse: asIs },
+  // 既定は端末の言語から決まる（日本語端末なら ja-JP ＝従来の固定値と同じ）。
+  speechNonLatinLang: { key: '@codeflash_speech_non_latin_lang', default: SPEECH_NON_LATIN_LANG_DEFAULT, parse: asIs },
   badgeLapStageSeen: {
     key: '@codeflash_badge_lap_stage_seen',
     default: 1,
@@ -409,6 +413,7 @@ interface SettingsState extends SettingsValues {
   setSpeechEnabled: (v: boolean) => void;
   setSpeechRate: (v: number) => void;
   setSpeechLatinLang: (v: string) => void;
+  setSpeechNonLatinLang: (v: string) => void;
   setBadgeLapStageSeen: (v: number) => void;
 }
 
@@ -473,6 +478,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setSpeechEnabled: makeSetter('speechEnabled'),
     setSpeechRate: makeSetter('speechRate'),
     setSpeechLatinLang: makeSetter('speechLatinLang'),
+    setSpeechNonLatinLang: makeSetter('speechNonLatinLang'),
     setBadgeLapStageSeen: makeSetter('badgeLapStageSeen'),
   };
 });

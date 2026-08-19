@@ -49,4 +49,5 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_speech_enabled',
   '@codeflash_speech_rate',
   '@codeflash_speech_latin_lang',
+  '@codeflash_speech_non_latin_lang',
 ] as const;

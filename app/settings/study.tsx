@@ -55,8 +55,10 @@ export default function StudySettingsScreen() {
     speechEnabled, setSpeechEnabled,
     speechRate, setSpeechRate,
     speechLatinLang, setSpeechLatinLang,
+    speechNonLatinLang, setSpeechNonLatinLang,
   } = useSettingsStore();
-  const [speechLangModal, setSpeechLangModal] = useState(false);
+  // 開いている言語ピッカー（null＝閉じている）。2行あるがモーダルは1つを使い回す。
+  const [speechLangModal, setSpeechLangModal] = useState<'latin' | 'nonLatin' | null>(null);
   const db = useSQLiteContext();
   const { notificationEnabled } = useSettingsStore();
   // 046: 目標の変更は未達成リマインダーの予約内容を変える（OFF なら予約自体を止める）。
@@ -285,7 +287,8 @@ export default function StudySettingsScreen() {
               </View>
             </View>
 
-            <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal(true)}>
+            {/* 文字体系ごとに1つずつ＝この2行で読み上げの言語が決まる（カード単位の設定は持たない）。 */}
+            <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal('latin')}>
               <View style={styles.dataRowText}>
                 <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.speechLatinLang')}
@@ -299,6 +302,21 @@ export default function StudySettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
             </Pressable>
+
+            <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal('nonLatin')}>
+              <View style={styles.dataRowText}>
+                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.speechNonLatinLang')}
+                </Text>
+                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.speechNonLatinLangHint')}
+                </Text>
+              </View>
+              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {speechLanguageLabel(speechNonLatinLang)}
+              </Text>
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+            </Pressable>
           </>
         )}
       </View>
@@ -306,10 +324,11 @@ export default function StudySettingsScreen() {
 
   const speechLangModalEl = (
     <SpeechLanguageModal
-      visible={speechLangModal}
-      value={speechLatinLang}
-      onSelect={setSpeechLatinLang}
-      onClose={() => setSpeechLangModal(false)}
+      visible={speechLangModal !== null}
+      kind={speechLangModal ?? 'latin'}
+      value={speechLangModal === 'nonLatin' ? speechNonLatinLang : speechLatinLang}
+      onSelect={speechLangModal === 'nonLatin' ? setSpeechNonLatinLang : setSpeechLatinLang}
+      onClose={() => setSpeechLangModal(null)}
     />
   );
 

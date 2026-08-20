@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, Text, View } from 'react-native';
 
@@ -10,6 +10,7 @@ import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import {
   CONFIGURABLE_SCRIPTS,
+  getConfigurableScriptLanguages,
   SCRIPT_DEFAULT_LANGS,
   SPEECH_RATES,
   speechLanguageLabel,
@@ -69,6 +70,10 @@ export default function StudySettingsScreen() {
   const [speechLangModal, setSpeechLangModal] = useState<SpeechScript | null>(null);
   // 「その他の文字体系」（キリル・アラビア・デーヴァナーガリー）の展開状態。
   const [speechOtherScriptsOpen, setSpeechOtherScriptsOpen] = useState(false);
+  // 文字体系ごとに端末が持っている音声の言語。null＝未取得。**選択肢が2つ未満の行は出さない**
+  // ための判定に使う（多くの端末でアラビア文字は ar-SA だけ＝選ばせる意味が無い）。
+  const [scriptOptions, setScriptOptions] = useState<Partial<Record<SpeechScript, string[]>> | null>(null);
+  useEffect(() => { getConfigurableScriptLanguages().then(setScriptOptions).catch(() => {}); }, []);
   const db = useSQLiteContext();
   const { notificationEnabled } = useSettingsStore();
   // 046: 目標の変更は未達成リマインダーの予約内容を変える（OFF なら予約自体を止める）。
@@ -154,11 +159,11 @@ export default function StudySettingsScreen() {
       color={theme.colors.textTertiary}
     />
   );
-  const infoBox = (key: string, textKey: string) =>
+  const infoBox = (key: string, textKey: string, opts?: Record<string, string>) =>
     openInfo === key ? (
       <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-          {t(textKey)}
+          {t(textKey, opts)}
         </Text>
       </View>
     ) : null;
@@ -246,27 +251,52 @@ export default function StudySettingsScreen() {
       </View>
   );
 
-  // 読み上げ（049）。**無料機能**なので Pro ロック時の画面にも出す（目標枚数と同じ扱い）。
-  // 言語設定が「ラテン文字を何語として読むか」1つだけなのは、分割が文字体系しか判別できないため
-  // （`Hola` と `Hello` は同じラテン文字＝自動では言い分けられない）。詳細は docs/049。
-  /** 文字体系1つぶんの言語選択行。値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。 */
+  // 読み上げ（049/050）。**無料機能**なので Pro ロック時の画面にも出す（目標枚数と同じ扱い）。
+  // 言語は**文字体系ごと**に決まる。行を出すのは複数の言語が同じ文字を使う `CONFIGURABLE_SCRIPTS`
+  // だけで、ハングル・タイ文字などは1対1なので出さない（選ばせる意味が無い）。詳細は docs/050。
+
+  /** その文字体系の行を出すか。**端末が持っている選択肢が2つ未満なら出さない**
+   *  （多くの端末でアラビア文字・デーヴァナーガリーは音声が1つ＝選ばせる意味が無い）。
+   *  ⚠️ 未取得のあいだは出す側に倒す（行が消えて見えるちらつきを避ける）。
+   *  ⚠️ **判定材料は端末の音声一覧だけにする**。「上書きが保存されていれば出す」という条件を
+   *  足すと、選択肢が1つしかない行をタップしただけで上書きが保存されて行が居座り、しかも
+   *  ピッカーには「既定に戻す」が無いので**解除できなくなる**（実際にそうなった）。
+   *  隠れている行に上書きが残っていても、選べる音声が1つなら結果は同じなので害はない。 */
+  const isScriptSelectable = (script: SpeechScript) =>
+    scriptOptions === null || (scriptOptions[script]?.length ?? 0) >= 2;
+
+  /** 「その他の文字体系」に実際に出す文字体系（選べないものは畳んだ中にも出さない）。 */
+  const visibleOtherScripts = OTHER_SPEECH_SCRIPTS.filter(isScriptSelectable);
+
+  /** 文字体系1つぶんの言語選択行。値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。
+   *  説明は行名の右の ⓘ をタップして下に開く（常時表示にすると行が縦に伸びて一覧性が落ちる）。 */
   const speechScriptRow = (script: SpeechScript) => {
     const name = t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin');
+    const infoKey = `speechScript:${script}`;
     return (
-      <Pressable key={script} style={styles.dataRow} onPress={() => setSpeechLangModal(script)}>
-        <View style={styles.dataRowText}>
-          <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t('settings.speechScriptLangRow', { name })}
+      <View key={script}>
+        <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal(script)}>
+          <View style={[styles.dataRowText, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            {/* flexShrink：「デーヴァナーガリー文字」のような長い名前でも ⓘ を押し出さない */}
+            <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {name}
+            </Text>
+            {/* ⚠️ 行の Pressable の中に置く＝内側が先にタッチを取るのでピッカーは開かない */}
+            <Pressable onPress={() => toggleInfo(infoKey)} hitSlop={8}>
+              {infoIcon(infoKey)}
+            </Pressable>
+          </View>
+          <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script])}
           </Text>
-          <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {script === 'han' ? t('settings.speechScriptHanHint') : t('settings.speechScriptLangHint', { name })}
-          </Text>
-        </View>
-        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script])}
-        </Text>
-        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-      </Pressable>
+          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+        </Pressable>
+        {infoBox(
+          infoKey,
+          script === 'han' ? 'settings.speechScriptHanHint' : 'settings.speechScriptLangHint',
+          { name },
+        )}
+      </View>
     );
   };
 
@@ -328,25 +358,34 @@ export default function StudySettingsScreen() {
             {/* 050：文字体系ごとに言語を決める。ハングル・タイ文字などは1対1で決まるので
                 行を出さない（選ばせる意味が無く設定画面が無駄に伸びる）。
                 複数の言語が同じ文字を使うものだけ＝`CONFIGURABLE_SCRIPTS` を出す。 */}
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('settings.speechScriptSection')}
+            </Text>
             {speechScriptRow('latin')}
             {speechScriptRow('han')}
 
-            <Pressable style={styles.dataRow} onPress={() => setSpeechOtherScriptsOpen((v) => !v)}>
-              <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.speechScriptOthers')}
-                </Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.speechScriptOthersHint')}
-                </Text>
-              </View>
-              <Ionicons
-                name={speechOtherScriptsOpen ? 'chevron-down' : 'chevron-forward'}
-                size={theme.fontSize.lg}
-                color={theme.colors.iconSubtle}
-              />
-            </Pressable>
-            {speechOtherScriptsOpen && OTHER_SPEECH_SCRIPTS.map((s) => speechScriptRow(s))}
+            {/* 端末に選択肢が2つ以上ある文字体系が1つも無ければ、この行ごと出さない */}
+            {visibleOtherScripts.length > 0 && (
+              <>
+                <Pressable style={styles.dataRow} onPress={() => setSpeechOtherScriptsOpen((v) => !v)}>
+                  <View style={[styles.dataRowText, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                    <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {t('settings.speechScriptOthers')}
+                    </Text>
+                    <Pressable onPress={() => toggleInfo('speechScriptOthers')} hitSlop={8}>
+                      {infoIcon('speechScriptOthers')}
+                    </Pressable>
+                  </View>
+                  <Ionicons
+                    name={speechOtherScriptsOpen ? 'chevron-down' : 'chevron-forward'}
+                    size={theme.fontSize.lg}
+                    color={theme.colors.iconSubtle}
+                  />
+                </Pressable>
+                {infoBox('speechScriptOthers', 'settings.speechScriptOthersHint')}
+                {speechOtherScriptsOpen && visibleOtherScripts.map((s) => speechScriptRow(s))}
+              </>
+            )}
           </>
         )}
       </View>

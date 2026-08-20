@@ -324,21 +324,47 @@ export function stopSpeech(): void {
  */
 export async function getSpeechLanguagesFor(script: SpeechScript): Promise<string[]> {
   try {
-    const voices = await Speech.getAvailableVoicesAsync();
-    const allowed = SCRIPT_LANG_PREFIXES[script];
-    const langs = new Set<string>();
-    for (const v of voices) {
-      if (!v.language) continue;
-      const prefix = v.language.split('-')[0].toLowerCase();
-      // latin は「ラテン文字で書かれない言語」を除く形で絞る（対象言語が多すぎて列挙できない）。
-      const ok = allowed ? allowed.includes(prefix) : !NON_LATIN_SCRIPT_PREFIXES.has(prefix);
-      if (!ok) continue;
-      langs.add(v.language);
-    }
-    return [...langs].sort();
+    return languagesForScript(await loadVoiceLanguages(), script);
   } catch {
     return [];
   }
+}
+
+/**
+ * 設定を出す文字体系すべての選択肢を**音声一覧1回の取得**でまとめて返す。
+ *
+ * 設定画面が「**選択肢が2つ未満の行は出さない**」を判定するのに使う。端末に音声が1つしか
+ * 無い文字体系（多くの端末でアラビア文字＝`ar-SA` のみ・デーヴァナーガリー＝`hi-IN` のみ）は
+ * 選ばせる意味が無いため。⚠️ **アプリ側に「この文字体系は1つだけ」という表を持たない**＝
+ * OS やユーザーが音声を足せば（設定 → アクセシビリティ → 読み上げコンテンツ → 声）
+ * コードを変えずに行が現れる。
+ */
+export async function getConfigurableScriptLanguages(): Promise<Partial<Record<SpeechScript, string[]>>> {
+  try {
+    const all = await loadVoiceLanguages();
+    const out: Partial<Record<SpeechScript, string[]>> = {};
+    for (const script of CONFIGURABLE_SCRIPTS) out[script] = languagesForScript(all, script);
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+async function loadVoiceLanguages(): Promise<string[]> {
+  const voices = await Speech.getAvailableVoicesAsync();
+  return voices.map((v) => v.language).filter((l): l is string => !!l);
+}
+
+function languagesForScript(all: string[], script: SpeechScript): string[] {
+  const allowed = SCRIPT_LANG_PREFIXES[script];
+  const langs = new Set<string>();
+  for (const lang of all) {
+    const prefix = lang.split('-')[0].toLowerCase();
+    // latin は「ラテン文字で書かれない言語」を除く形で絞る（対象言語が多すぎて列挙できない）。
+    const ok = allowed ? allowed.includes(prefix) : !NON_LATIN_SCRIPT_PREFIXES.has(prefix);
+    if (ok) langs.add(lang);
+  }
+  return [...langs].sort();
 }
 
 /** ラテン文字で書かれない言語（`latin` の選択肢から外す）。 */

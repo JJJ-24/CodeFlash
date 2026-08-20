@@ -495,6 +495,10 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setSpeechEnabled: makeSetter('speechEnabled'),
     setSpeechRate: makeSetter('speechRate'),
     // マップの1エントリだけ差し替えるため個別定義（永続化は DEFS の persist に従う）。
+    // ⚠️ **選んだ値はそのまま保存する**（既定と同じでも捨てない）。かつて「既定と同じなら
+    // 保存しない」にしたが、既定は `SCRIPT_DEFAULT_LANGS` の固定タグで、端末が実際に持って
+    // いる音声（例：`ar-SA` ではなく `ar-001`）と一致するとは限らないため当てにならない。
+    // 設定画面の行の出し分けは**端末の音声一覧だけ**で判断する（保存内容と結びつけない）。
     setSpeechScriptLang: (script, lang) => {
       set((state) => {
         const next = { ...state.speechScriptLangs, [script]: lang };

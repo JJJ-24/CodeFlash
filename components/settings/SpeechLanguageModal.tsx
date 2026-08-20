@@ -68,7 +68,8 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose 
               style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '700' }}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
-              {t('settings.speechScriptLangRow', { name: scriptName })}
+              {/* タイトルは文字体系の名前そのもの（タップした行と同じ語にする） */}
+              {scriptName}
             </Text>
             <Text
               style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 4 }}

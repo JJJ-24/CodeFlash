@@ -167,11 +167,11 @@ export default function StudySettingsScreen() {
       color={theme.colors.textTertiary}
     />
   );
-  const infoBox = (key: string, textKey: string, opts?: Record<string, string>) =>
+  const infoBox = (key: string, textKey: string) =>
     openInfo === key ? (
       <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-          {t(textKey, opts)}
+          {t(textKey)}
         </Text>
       </View>
     ) : null;
@@ -292,61 +292,43 @@ export default function StudySettingsScreen() {
   }, [shownLangsKey]);
 
   /** 文字体系1つぶんの言語選択行。値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。
-   *  説明は行名の右の ⓘ をタップして下に開く（常時表示にすると行が縦に伸びて一覧性が落ちる）。 */
-  const speechScriptRow = (script: SpeechScript) => {
-    const name = t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin');
-    const infoKey = `speechScript:${script}`;
-    return (
-      <View key={script}>
-        <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal(script)}>
-          <View style={[styles.dataRowText, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-            {/* flexShrink：「デーヴァナーガリー文字」のような長い名前でも ⓘ を押し出さない */}
-            <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {name}
-            </Text>
-            {/* ⚠️ 行の Pressable の中に置く＝内側が先にタッチを取るのでピッカーは開かない */}
-            <Pressable onPress={() => toggleInfo(infoKey)} hitSlop={8}>
-              {infoIcon(infoKey)}
-            </Pressable>
-          </View>
-          <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script], t)}
+   *  ⚠️ **説明の ⓘ は置かない**＝タップして開くピッカーの上部に同じ文言が出るため
+   *  （行に置くと二重になり、行の中に入れ子の Pressable ができて誤タップの余地も増える）。 */
+  const speechScriptRow = (script: SpeechScript) => (
+    <View key={script}>
+      <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal(script)}>
+        <View style={styles.dataRowText}>
+          <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin')}
           </Text>
-          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-        </Pressable>
-        {infoBox(
-          infoKey,
-          script === 'han' ? 'settings.speechScriptHanHint' : 'settings.speechScriptLangHint',
-          { name },
-        )}
-        {speechVoiceRow(langOf(script))}
-      </View>
-    );
-  };
+        </View>
+        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script], t)}
+        </Text>
+        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+      </Pressable>
+      {speechVoiceRow(langOf(script))}
+    </View>
+  );
 
-  /** その言語を読む声の行。**声が2つ以上あるときだけ**出す（1つなら選ぶ意味が無い）。 */
+  /** その言語を読む声の行。**声が2つ以上あるときだけ**出す（1つなら選ぶ意味が無い）。
+   *  言語行と同じく ⓘ は置かない（声ピッカーの上部に同じ文言が出る）。 */
   const speechVoiceRow = (language: string) => {
     const list = voicesByLang[language];
     if (!list || list.length < 2) return null;
     const selected = list.find((v) => v.identifier === speechVoices[language]);
     return (
-      <View>
-        <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechVoiceModal(language)}>
-          <View style={[styles.dataRowText, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-            <Text style={[styles.dataRowTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('settings.speechVoice')}
-            </Text>
-            <Pressable onPress={() => toggleInfo(`speechVoice:${language}`)} hitSlop={8}>
-              {infoIcon(`speechVoice:${language}`)}
-            </Pressable>
-          </View>
-          <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {selected ? selected.name : t('settings.speechVoiceAuto')}
+      <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechVoiceModal(language)}>
+        <View style={styles.dataRowText}>
+          <Text style={[styles.dataRowTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.speechVoice')}
           </Text>
-          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-        </Pressable>
-        {infoBox(`speechVoice:${language}`, 'settings.speechVoiceHint', { name: speechLanguageLabel(language, t) })}
-      </View>
+        </View>
+        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {selected ? selected.name : t('settings.speechVoiceAuto')}
+        </Text>
+        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+      </Pressable>
     );
   };
 

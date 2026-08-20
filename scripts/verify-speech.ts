@@ -119,24 +119,27 @@ eq(shape('nǐ hǎo'), ['latin:nǐ hǎo'], '拼音の声調記号（拡張B）も
 eq(voices('非同期処理はあとで終わります。'), ['ja-JP:非同期処理はあとで終わります。'],
   '漢字＋かなは同じ言語なので1発話に畳まれる');
 eq(voices('React の useEffect は副作用を扱う'),
-  ['en-US:React ', 'ja-JP:の ', 'en-US:useEffect ', 'ja-JP:は副作用を扱う'],
+  ['en-US:React', 'ja-JP:の', 'en-US:useEffect', 'ja-JP:は副作用を扱う'],
   '日英混在は声が切り替わり、日本語側は畳まれる');
 
-// 短ラテン寄せ（3文字以下）。⚠️ 倒すのは**隣が日本語のときだけ**（閾値は日本語音声の実測値）。
-eq(voices('API を叩く'), ['ja-JP:API を叩く'], '3文字の略語 API は日本語側へ倒れる');
-eq(voices('OK です'), ['ja-JP:OK です'], '2文字の OK も日本語側');
-eq(voices('HTML を書く'), ['en-US:HTML ', 'ja-JP:を書く'], '4文字の HTML は英語側に残る');
+// 短ラテン寄せ（2文字以下）。⚠️ 倒すのは**隣が日本語のときだけ**（閾値は日本語音声の実測値）。
+// ⚠️ 3 にすると `CSS` が日本語・`HTML` が英語となり**同じ文で読み分けが起きる**（実機で指摘）。
+eq(voices('OK です'), ['ja-JP:OK です'], '2文字の OK は日本語側へ倒れる');
+eq(voices('ID を入力'), ['ja-JP:ID を入力'], '2文字の ID も日本語側');
+eq(voices('API を叩く'), ['en-US:API', 'ja-JP:を叩く'], '3文字の略語は英語側に残る（声が綴り読みする）');
+eq(voices('CSS と HTML'), ['en-US:CSS', 'ja-JP:と', 'en-US:HTML'], 'CSS と HTML が同じ扱いになる');
+eq(voices('HTML を書く'), ['en-US:HTML', 'ja-JP:を書く'], '4文字の HTML は英語側に残る');
 eq(voices('ES2015 の仕様'), ['ja-JP:ES2015 の仕様'], '英字が短ければ数字付きでも日本語側へ倒れる');
 eq(voices('GET'), ['en-US:GET'], '隣に非ラテンが無ければ倒さない（単語カードが日本語読みにならない）');
 eq(voices('1. GET'), ['en-US:1. GET'], '先頭の数字があっても倒さない');
-eq(voices('학습 API 사용'), ['ko-KR:학습 ', 'en-US:API ', 'ko-KR:사용'],
+eq(voices('학습 API 사용'), ['ko-KR:학습', 'en-US:API', 'ko-KR:사용'],
   '隣が日本語でなければ短い略語を倒さず英語の声に残す');
 
 // **1対1の文字体系は設定なしで読み分く**（050 の主目的）。
 eq(voices('안녕하세요'), ['ko-KR:안녕하세요'], '韓国語は設定なしで韓国語の声');
 eq(voices('Привет мир'), ['ru-RU:Привет мир'], 'ロシア語は設定なしでロシア語の声');
 eq(voices('สวัสดี'), ['th-TH:สวัสดี'], 'タイ語は設定なしでタイ語の声');
-eq(voices('안녕 と こんにちは'), ['ko-KR:안녕 ', 'ja-JP:と こんにちは'],
+eq(voices('안녕 と こんにちは'), ['ko-KR:안녕', 'ja-JP:と こんにちは'],
   '日韓混在カードが自動で読み分かる（これが 050 の目的）');
 
 // 上書き（設定）。
@@ -179,19 +182,33 @@ eq(voices('こんにちは、と言います', { han: 'zh-CN' }), ['ja-JP:こん
 eq(voices('한자 漢字'), ['ko-KR:한자 漢字'], 'ハングルがあれば漢字は韓国語');
 eq(voices('123'), ['ja-JP:123'], '中立しか無いテキストは漢字の言語で読む');
 
+// ---- 区間の前後の空白（読みが文中の位置で変わらないようにする） -----------------
+
+// ⚠️ iOS の音声は**末尾の空白の有無で綴り読み/単語読みの判断を反転させる**（実機で確認）：
+//   "API" → エーピーアイ ／ "API " → アピ ／ "GUI" → グイ ／ "GUI " → ジーユーアイ
+// 中立文字は直前の区間へ吸わせるので、**後ろに日本語が続くときだけ**末尾に空白が付いていた
+// ＝同じ語がカードの位置によって違う読みになっていた。畳んだ後に trim して揃える。
+eq(voices('これは API です'), ['ja-JP:これは', 'en-US:API', 'ja-JP:です'],
+  'ラテン区間の末尾に空白を残さない（文中でも単体と同じ読みになる）');
+// ⚠️ trim は**畳んだ後**に行う。畳む前だと、同じ言語の区間を連結するときに語間の空白まで消える。
+eq(voices('New York を訪ねる'), ['en-US:New York', 'ja-JP:を訪ねる'],
+  '区間の内部の空白は残る（New York が繋がらない）');
+eq(voices('これは これも 日本語'), ['ja-JP:これは これも 日本語'],
+  '同じ言語で畳んだ区間の語間の空白も残る');
+
 // ---- speakText（キューへの積み方） -------------------------------------------
 
 spoken.length = 0;
 speakText('React の話', { rate: 1.0 });
 eq(spoken, [
-  { text: 'React ', language: 'en-US' },
+  { text: 'React', language: 'en-US' },
   { text: 'の話', language: 'ja-JP' },
 ], '区間ごとに言語を変えて順にキューへ積む');
 
 spoken.length = 0;
 speakText('안녕 hello', { rate: 1.0, scriptLangs: { latin: 'en-GB' } });
 eq(spoken, [
-  { text: '안녕 ', language: 'ko-KR' },
+  { text: '안녕', language: 'ko-KR' },
   { text: 'hello', language: 'en-GB' },
 ], '設定は scriptLangs で渡す');
 
@@ -205,14 +222,14 @@ eq(spoken, [], '空白だけなら1件も積まない');
 spoken.length = 0;
 speakText('React の話', { rate: 1.0, voices: { 'en-US': 'voice.en.Alex', 'ja-JP': 'voice.ja.Kyoko' } });
 eq(spoken, [
-  { text: 'React ', language: 'en-US', voice: 'voice.en.Alex' },
+  { text: 'React', language: 'en-US', voice: 'voice.en.Alex' },
   { text: 'の話', language: 'ja-JP', voice: 'voice.ja.Kyoko' },
 ], '区間の言語に対応する声を渡す');
 
 spoken.length = 0;
 speakText('React の話', { rate: 1.0, voices: { 'en-US': 'voice.en.Alex' } });
 eq(spoken, [
-  { text: 'React ', language: 'en-US', voice: 'voice.en.Alex' },
+  { text: 'React', language: 'en-US', voice: 'voice.en.Alex' },
   { text: 'の話', language: 'ja-JP', voice: undefined },
 ], '選んでいない言語は声を渡さない（端末の既定に任せる）');
 

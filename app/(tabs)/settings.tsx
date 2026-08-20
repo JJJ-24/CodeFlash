@@ -64,12 +64,6 @@ export default function SettingsScreen() {
     { key: 'archive', label: t('archive.title'), icon: 'archive-outline', onPress: () => router.push('/archive') },
     { key: 'data', label: t('dataManagement.title'), icon: 'folder-outline', onPress: () => router.push('/settings/data') },
     { key: 'about', label: t('about.title'), icon: 'information-circle-outline', onPress: () => router.push('/about') },
-    // 049 Phase 1a：読み上げの実測用の使い捨て画面。__DEV__ 限定なので i18n キーは作らない。
-    // 混在テキストの判断が済んだらこの行と app/dev/speech-test.tsx ごと削除する。
-    ...(__DEV__ ? [{
-      key: 'speechTest', label: '読み上げ検証 (DEV)', icon: 'volume-high-outline',
-      onPress: () => router.push('/dev/speech-test'),
-    } as NavItem] : []),
   ];
 
   // ---- キーボード操作（034）：Pro カード(0) ＋ navItems(1..n) を J/K でフォーカス、Return で開く ----

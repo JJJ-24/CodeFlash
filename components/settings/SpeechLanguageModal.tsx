@@ -4,41 +4,48 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
-import { getLatinSpeechLanguages, getNonLatinSpeechLanguages, speechLanguageLabel } from '@/lib/speech';
+import { getSpeechLanguagesFor, speechLanguageLabel, type SpeechScript } from '@/lib/speech';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 
 interface Props {
   visible: boolean;
-  /** どちらの区間の言語を選ぶか。文言と選択肢の絞り込みが変わる */
-  kind: 'latin' | 'nonLatin';
+  /** どの文字体系の言語を選ぶか。文言と選択肢の絞り込みが変わる */
+  script: SpeechScript;
   value: string;
   onSelect: (code: string) => void;
   onClose: () => void;
 }
 
+/** 文字体系の表示名（設定画面と共用）。`CONFIGURABLE_SCRIPTS` のぶんだけあればよい。 */
+export const SPEECH_SCRIPT_LABEL_KEYS: Partial<Record<SpeechScript, string>> = {
+  latin: 'settings.speechScriptLatin',
+  han: 'settings.speechScriptHan',
+  cyrillic: 'settings.speechScriptCyrillic',
+  arabic: 'settings.speechScriptArabic',
+  devanagari: 'settings.speechScriptDevanagari',
+};
+
 /**
- * 049：区間を何語として読むかを選ぶモーダル。**ラテン文字/非ラテン文字で共用**し、
- * `kind` で文言と選択肢だけを切り替える（土台モーダルと同じ流儀）。
+ * 049/050：ある文字体系を何語として読むかを選ぶモーダル。**全文字体系で共用**し、
+ * `script` で文言と選択肢だけを切り替える（土台モーダルと同じ流儀）。
  *
  * **選択肢は端末から取る**（`getAvailableVoicesAsync()`）。対応表をアプリ側に持たないので、
  * OS が音声を増やせば自動で増える＝言語追加のメンテがゼロになる。
- * 一覧は用途に合う側だけに絞る（ラテン文字の区間に韓国語を割り当てても意味が無いため）。
+ * 一覧はその文字体系を使う言語だけに絞る（漢字の設定にフランス語が並んでも意味が無い）。
  */
-export function SpeechLanguageModal({ visible, kind, value, onSelect, onClose }: Props) {
+export function SpeechLanguageModal({ visible, script, value, onSelect, onClose }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [languages, setLanguages] = useState<string[]>([]);
-  const titleKey = kind === 'latin' ? 'settings.speechLatinLang' : 'settings.speechNonLatinLang';
-  const hintKey = kind === 'latin' ? 'settings.speechLatinLangHint' : 'settings.speechNonLatinLangHint';
+  const scriptName = t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin');
 
   useEffect(() => {
     if (!visible) return;
-    // ⚠️ 開くたびに取り直す（kind が違えば一覧も別物）。
+    // ⚠️ 開くたびに取り直す（文字体系が違えば一覧も別物）。
     setLanguages([]);
-    const load = kind === 'latin' ? getLatinSpeechLanguages : getNonLatinSpeechLanguages;
-    load().then(setLanguages);
-  }, [visible, kind]);
+    getSpeechLanguagesFor(script).then(setLanguages);
+  }, [visible, script]);
 
   // 表示中だけ Esc を担当する（非表示のあいだ登録を持たない＝034 の住み分け）。
   useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
@@ -61,13 +68,15 @@ export function SpeechLanguageModal({ visible, kind, value, onSelect, onClose }:
               style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '700' }}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >
-              {t(titleKey)}
+              {t('settings.speechScriptLangRow', { name: scriptName })}
             </Text>
             <Text
               style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 4 }}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             >
-              {t(hintKey)}
+              {script === 'han'
+                ? t('settings.speechScriptHanHint')
+                : t('settings.speechScriptLangHint', { name: scriptName })}
             </Text>
           </View>
           <ScrollView>

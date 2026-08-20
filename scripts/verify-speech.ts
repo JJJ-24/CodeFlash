@@ -24,7 +24,7 @@ const stubs: Record<string, unknown> = {
     stop: () => {},
     getAvailableVoicesAsync: async () => [],
   },
-  // 非ラテン言語の既定値を端末言語から作るのに使う（本物はネイティブなので Node では解決できない）。
+  // 漢字の既定言語を端末言語から作るのに使う（本物はネイティブなので Node では解決できない）。
   'expo-localization': { getLocales: () => [{ languageCode: 'ja', regionCode: 'JP' }] },
 };
 
@@ -45,7 +45,9 @@ M._resolveFilename = function (request: string, ...rest: unknown[]) {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { splitByScript, speakText, nonLatinLangForLocale, SPEECH_NON_LATIN_LANG_DEFAULT } = require('@/lib/speech');
+const speech = require('@/lib/speech');
+const { splitByScript, resolveSpeechSegments, speakText } = speech;
+const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { blocksToSpeech, stripMarkdown } = require('@/lib/blocksToSpeech');
 
@@ -61,132 +63,137 @@ function eq(actual: unknown, expected: unknown, label: string) {
   failures.push(`${label}\n    期待: ${e}\n    実際: ${a}`);
 }
 
-/** 分割結果を `nonLatin:テキスト` の配列に畳んで比べる。 */
+/** 分割結果を `文字体系:テキスト` の配列にして比べる（中立は `neutral:`）。 */
 const shape = (text: string) =>
-  splitByScript(text).map((s: { script: string; text: string }) => `${s.script}:${s.text}`);
+  splitByScript(text).map((s: { script: string | null; text: string }) => `${s.script ?? 'neutral'}:${s.text}`);
 
-// ---- splitByScript -----------------------------------------------------------
+/** **実際に読まれる形**（解決＋畳み込み後）を `言語:テキスト` の配列にして比べる。 */
+const voices = (text: string, langs: Record<string, string> = {}) =>
+  resolveSpeechSegments(text, langs).map((s: { language: string; text: string }) => `${s.language}:${s.text}`);
 
-eq(shape('非同期処理はあとで終わります。'), ['nonLatin:非同期処理はあとで終わります。'],
-  '純日本語は1区間（nonLatin）');
+// ---- splitByScript（文字体系で細かく割る） -----------------------------------
+
+// ⚠️ この段階では**言語に解決しない**。日本語は漢字とかなで別区間になる（あとで畳む）。
+eq(shape('非同期処理はあとで終わります。'),
+  ['han:非同期処理', 'kana:はあとで', 'han:終', 'kana:わります。'],
+  '日本語は漢字とかなで別区間になる（句点は中立でかな側に吸われる）');
 
 eq(shape('Asynchronous code finishes later.'), ['latin:Asynchronous code finishes later.'],
-  '純英語は1区間（latin）');
+  '純英語は1区間');
 
 eq(shape('React の useEffect は副作用を扱う'),
-  ['latin:React ', 'nonLatin:の ', 'latin:useEffect ', 'nonLatin:は副作用を扱う'],
-  '混在は文字体系ごとに割れる');
+  ['latin:React ', 'kana:の ', 'latin:useEffect ', 'kana:は', 'han:副作用', 'kana:を', 'han:扱', 'kana:う'],
+  '混在は文字体系ごとに細かく割れる');
 
-// 実測で決めた閾値（3文字以下は日本語側）。API が英語の声に残ると「アピ」と読まれる。
-eq(shape('API を叩く'), ['nonLatin:API を叩く'], '3文字の略語 API は日本語側へ倒れる');
-eq(shape('OK です'), ['nonLatin:OK です'], '2文字の OK も日本語側');
-eq(shape('HTML を書く'), ['latin:HTML ', 'nonLatin:を書く'], '4文字の HTML は英語側に残る');
+// ⚠️ **先頭の中立文字は次の区間へ吸わせる**。かつては「先頭の中立は非ラテン区間として始める」
+// だったため、`1. GET` が「非ラテン文字を含む」と誤判定され GET が「ゲット」と読まれていた。
+eq(shape('1. GET'), ['latin:1. GET'], '先頭の数字は次の区間（ラテン）へ吸われる');
+eq(shape('123'), ['neutral:123'], '中立しか無いテキストは1区間（script なし）');
+eq(shape('React18 の新機能'), ['latin:React18 ', 'kana:の', 'han:新機能'], '途中の数字は直前の区間に吸われる');
 
-// ⚠️ ここが `hasNonLatin` ガードの肝。非ラテン文字が1文字も無いなら短くても倒さない。
-eq(shape('GET'), ['latin:GET'], '純ラテンの短い語は英語のまま（単語カードが日本語読みにならない）');
-eq(shape('OK'), ['latin:OK'], '2文字でも非ラテン文字が無ければ英語のまま');
-// ⚠️ ガードは**区間ではなく元テキストの文字**で判定する。先頭の数字・記号は中立のまま
-// 非ラテン区間を作るので、区間で数えると英語カードなのにガードが素通りしていた（修正済み）。
-eq(shape('1. GET'), ['nonLatin:1. ', 'latin:GET'],
-  '先頭の数字だけで非ラテン扱いにならない（英語カードの GET が「ゲット」にならない）');
+// 文字体系の判定（1対1のものは設定なしでこの区間になる）。
+eq(shape('hello 안녕'), ['latin:hello ', 'hangul:안녕'], 'ハングルは後ろに来てもラテン区間に吸われない');
+eq(shape('Привет мир'), ['cyrillic:Привет мир'], 'キリル文字');
+eq(shape('สวัสดี'), ['thai:สวัสดี'], 'タイ文字');
+eq(shape('Γεια σου'), ['greek:Γεια σου'], 'ギリシャ文字');
+eq(shape('שלום'), ['hebrew:שלום'], 'ヘブライ文字');
+eq(shape('नमस्ते'), ['devanagari:नमस्ते'], 'デーヴァナーガリー');
+eq(shape('你好，世界'), ['han:你好，世界'], '中国語は漢字1区間（読点は中立）');
+// ⚠️ 全角の約物・全角英数は**中立**にしてある（`，` を kana に入れると中国語の文が
+// 「かなを含む」と誤判定され日本語の声で読まれた）。半角カナは kana。
+eq(shape('ＡＰＩ と ｶﾀｶﾅ'), ['kana:ＡＰＩ と ｶﾀｶﾅ'], '全角英数は中立で隣のかなに吸われる');
+eq(shape('你好，世界です'), ['han:你好，世界', 'kana:です'], '全角読点は中立＝中国語の漢字区間を割らない');
 
-// 中立文字（数字・記号・空白）は直前の区間へ吸わせる＝単独で声を切り替えない。
-eq(shape('React18 の新機能'), ['latin:React18 ', 'nonLatin:の新機能'], '数字は直前のラテン区間に吸われる');
-eq(shape('123'), ['nonLatin:123'], '数字だけなら日本語で読む');
-// ⚠️ **閾値は「文字数」であって「区間の長さ」ではない**。`ES2015` は英字が2文字なので
-// 日本語側へ倒れる（＝日本語の声が「イーエス2015」と読む）。日本語文中の略語は数字が
-// 付いていても日本語読みが自然なので、この挙動を正とする。
-eq(shape('ES2015 の仕様'), ['nonLatin:ES2015 の仕様'], '英字が短ければ数字付きでも日本語側へ倒れる');
-
-// スペイン語（ラテン拡張）も同じ切り方で割れる＝多言語は言語コードの差し替えだけ。
-eq(shape('スペイン語で ありがとう は gracias'),
-  ['nonLatin:スペイン語で ありがとう は ', 'latin:gracias'],
-  '日西混在も同じ規則で割れる');
-eq(shape('café と言います'), ['latin:café ', 'nonLatin:と言います'], 'アクセント付きラテン文字もラテン側');
-
-// ⚠️ ベトナム語は声調つきの文字が拡張B（ơ ư）と拡張追加（ạ ế ộ ứ）に散っている。
-// これらを LATIN_CHARS から外すと「中立」に落ち、**文頭に来ただけで ja 区間が生まれて**
-// 日本語の声で読まれる（かつ hasJa が立って短い語が丸ごと日本語側へ倒れる）。
+// ラテン文字の範囲（ベトナム語・ルーマニア語・拼音）。⚠️ 他の文字体系の範囲と交わらせない。
 eq(shape('Ứng dụng học tiếng Việt'), ['latin:Ứng dụng học tiếng Việt'],
-  'ベトナム語だけのカードは1区間（latin）＝声調つきの文字も落ちない');
-eq(shape('ứng'), ['latin:ứng'], '短いベトナム語の単語カードも日本語側へ倒れない');
-eq(shape('ベトナム語で ありがとう は cảm ơn'),
-  ['nonLatin:ベトナム語で ありがとう は ', 'latin:cảm ơn'],
-  '日越混在も文字体系で割れる');
-eq(shape('Și țara aceasta'), ['latin:Și țara aceasta'],
-  'ルーマニア語のコンマ下（ș ț・拡張B）もラテン側');
+  'ベトナム語だけのカードは1区間（声調つきの文字も落ちない）');
+eq(shape('Și țara aceasta'), ['latin:Și țara aceasta'], 'ルーマニア語のコンマ下（拡張B）もラテン側');
 eq(shape('nǐ hǎo'), ['latin:nǐ hǎo'], '拼音の声調記号（拡張B）もラテン側');
 
-// ⚠️ かな漢字**以外**の文字体系も能動的に判定する。かつては中立扱いだったため、
-// ラテン文字の**後ろ**に来たハングルやキリル文字が直前のラテン区間に吸われ、
-// 英語の声で読まれていた（文頭に来たときだけ非ラテン扱いになる位置依存の挙動）。
-eq(shape('hello 안녕'), ['latin:hello ', 'nonLatin:안녕'], 'ハングルは後ろに来てもラテン区間に吸われない');
-eq(shape('안녕하세요'), ['nonLatin:안녕하세요'], '韓国語だけのカードは1区間（nonLatin）');
-eq(shape('Привет мир'), ['nonLatin:Привет мир'], 'キリル文字も非ラテン側');
-eq(shape('สวัสดี'), ['nonLatin:สวัสดี'], 'タイ文字も非ラテン側');
-eq(shape('你好，世界'), ['nonLatin:你好，世界'], '中国語（漢字）も非ラテン側');
-eq(shape('Γεια σου'), ['nonLatin:Γεια σου'], 'ギリシャ文字も非ラテン側');
-// `splitByScript` は文字体系しか見ない＝短ラテン寄せは非ラテン文字があれば言語に関係なく効く。
-// 「日本語のときだけ倒す」判断は `speakText` の役目（下の speakText 節で検証する）。
-eq(shape('학습 API 사용'), ['nonLatin:학습 API 사용'],
-  '短ラテン寄せは文字体系だけで決まる（言語による出し分けは speakText の役目）');
+// ---- resolveSpeechSegments（実際に読まれる形＝解決して畳む） -----------------
+
+// ⚠️ 畳むのは**解決後の言語**が同じ区間。文字体系で畳むと日本語が細切れのままになる。
+eq(voices('非同期処理はあとで終わります。'), ['ja-JP:非同期処理はあとで終わります。'],
+  '漢字＋かなは同じ言語なので1発話に畳まれる');
+eq(voices('React の useEffect は副作用を扱う'),
+  ['en-US:React ', 'ja-JP:の ', 'en-US:useEffect ', 'ja-JP:は副作用を扱う'],
+  '日英混在は声が切り替わり、日本語側は畳まれる');
+
+// 短ラテン寄せ（3文字以下）。⚠️ 倒すのは**隣が日本語のときだけ**（閾値は日本語音声の実測値）。
+eq(voices('API を叩く'), ['ja-JP:API を叩く'], '3文字の略語 API は日本語側へ倒れる');
+eq(voices('OK です'), ['ja-JP:OK です'], '2文字の OK も日本語側');
+eq(voices('HTML を書く'), ['en-US:HTML ', 'ja-JP:を書く'], '4文字の HTML は英語側に残る');
+eq(voices('ES2015 の仕様'), ['ja-JP:ES2015 の仕様'], '英字が短ければ数字付きでも日本語側へ倒れる');
+eq(voices('GET'), ['en-US:GET'], '隣に非ラテンが無ければ倒さない（単語カードが日本語読みにならない）');
+eq(voices('1. GET'), ['en-US:1. GET'], '先頭の数字があっても倒さない');
+eq(voices('학습 API 사용'), ['ko-KR:학습 ', 'en-US:API ', 'ko-KR:사용'],
+  '隣が日本語でなければ短い略語を倒さず英語の声に残す');
+
+// **1対1の文字体系は設定なしで読み分く**（050 の主目的）。
+eq(voices('안녕하세요'), ['ko-KR:안녕하세요'], '韓国語は設定なしで韓国語の声');
+eq(voices('Привет мир'), ['ru-RU:Привет мир'], 'ロシア語は設定なしでロシア語の声');
+eq(voices('สวัสดี'), ['th-TH:สวัสดี'], 'タイ語は設定なしでタイ語の声');
+eq(voices('안녕 と こんにちは'), ['ko-KR:안녕 ', 'ja-JP:と こんにちは'],
+  '日韓混在カードが自動で読み分かる（これが 050 の目的）');
+
+// 上書き（設定）。
+eq(voices('Hola amigo', { latin: 'es-ES' }), ['es-ES:Hola amigo'], 'ラテン文字の言語は設定で差し替わる');
+eq(voices('Ứng dụng', { latin: 'vi-VN' }), ['vi-VN:Ứng dụng'], 'ベトナム語もラテン文字の設定で読める');
+eq(voices('Привет', { cyrillic: 'uk-UA' }), ['uk-UA:Привет'], 'キリル文字の言語も設定できる');
+
+// 漢字の日中判別。
+eq(voices('你好，世界'), ['ja-JP:你好，世界'], '漢字だけの文は既定（端末言語）で読む');
+eq(voices('你好，世界', { han: 'zh-CN' }), ['zh-CN:你好，世界'], '漢字の言語を中国語にすれば中国語の声');
+eq(voices('非同期処理', { han: 'zh-CN' }), ['zh-CN:非同期処理'],
+  '⚠️ 純漢字の日本語は中国語で読まれる（推定の限界。デッキ単位の上書き＝Phase 2 が本来の解）');
+eq(voices('こんにちは、と言います', { han: 'zh-CN' }), ['ja-JP:こんにちは、と言います'],
+  'かながあれば漢字は日本語（表=中国語/裏=日本語のカードが読み分かる）');
+eq(voices('한자 漢字'), ['ko-KR:한자 漢字'], 'ハングルがあれば漢字は韓国語');
+eq(voices('123'), ['ja-JP:123'], '中立しか無いテキストは漢字の言語で読む');
 
 // ---- speakText（キューへの積み方） -------------------------------------------
 
 spoken.length = 0;
-speakText('React の話', { latinLang: 'en-US', nonLatinLang: 'ja-JP', rate: 1.0 });
+speakText('React の話', { rate: 1.0 });
 eq(spoken, [
   { text: 'React ', language: 'en-US' },
   { text: 'の話', language: 'ja-JP' },
 ], '区間ごとに言語を変えて順にキューへ積む');
 
 spoken.length = 0;
-speakText('スペイン語で gracias', { latinLang: 'es-ES', nonLatinLang: 'ja-JP', rate: 1.0 });
-eq(spoken, [
-  { text: 'スペイン語で ', language: 'ja-JP' },
-  { text: 'gracias', language: 'es-ES' },
-], 'ラテン側の言語は設定で差し替わる（分割コードは不変）');
-
-// 非ラテン側も設定で差し替わる＝中国語・韓国語・ロシア語のカードが読めるようになった。
-spoken.length = 0;
-speakText('你好，世界', { latinLang: 'en-US', nonLatinLang: 'zh-CN', rate: 1.0 });
-eq(spoken, [{ text: '你好，世界', language: 'zh-CN' }], '中国語のカードは中国語の声で読む');
-
-spoken.length = 0;
-speakText('안녕 hello', { latinLang: 'en-US', nonLatinLang: 'ko-KR', rate: 1.0 });
+speakText('안녕 hello', { rate: 1.0, scriptLangs: { latin: 'en-GB' } });
 eq(spoken, [
   { text: '안녕 ', language: 'ko-KR' },
-  { text: 'hello', language: 'en-US' },
-], '韓国語＋英語も文字体系で割れて別々の声になる');
-
-// ⚠️ 短ラテン寄せは**非ラテン側が日本語のときだけ**。閾値3は日本語音声の実測値なので、
-// 他言語の声がラテン片を同じように読める保証がない＝ラテン側（既定は英語）に残す。
-spoken.length = 0;
-speakText('API を叩く', { latinLang: 'en-US', nonLatinLang: 'ja-JP', rate: 1.0 });
-eq(spoken, [{ text: 'API を叩く', language: 'ja-JP' }], '日本語なら API は日本語側へ倒す（従来どおり）');
+  { text: 'hello', language: 'en-GB' },
+], '設定は scriptLangs で渡す');
 
 spoken.length = 0;
-speakText('API 사용법', { latinLang: 'en-US', nonLatinLang: 'ko-KR', rate: 1.0 });
-eq(spoken, [
-  { text: 'API ', language: 'en-US' },
-  { text: '사용법', language: 'ko-KR' },
-], '日本語以外なら短い略語を倒さず英語の声に残す');
-
-spoken.length = 0;
-speakText('   ', { latinLang: 'en-US', nonLatinLang: 'ja-JP', rate: 1.0 });
+speakText('   ', { rate: 1.0 });
 eq(spoken, [], '空白だけなら1件も積まない');
 
-// ---- 非ラテン言語の既定値（端末言語から決める） -------------------------------
+// ---- 旧設定（049）からの移行 -------------------------------------------------
+
+eq(scriptForLanguage('ja-JP'), 'han', '日本語は漢字の設定へ寄せる');
+eq(scriptForLanguage('zh-CN'), 'han', '中国語も漢字の設定へ');
+eq(scriptForLanguage('ko-KR'), 'han', '韓国語も漢字の設定へ（ハングルは既定で韓国語のため）');
+eq(scriptForLanguage('ru-RU'), 'cyrillic', 'ロシア語はキリル文字の設定へ');
+eq(scriptForLanguage('th-TH'), 'thai', 'タイ語はタイ文字の設定へ（既定と同値だが害はない）');
+eq(scriptForLanguage('en-US'), undefined, 'ラテン文字の言語は非ラテンの移行先を持たない');
+
+// ---- 漢字の既定言語（端末言語から決める） -------------------------------------
 
 // ⚠️ 対応表は持たず languageCode＋regionCode を繋ぐだけ（iOS の音声もこの形）。
-eq(nonLatinLangForLocale({ languageCode: 'ko', regionCode: 'KR' }), 'ko-KR', '韓国語端末は ko-KR');
-eq(nonLatinLangForLocale({ languageCode: 'zh', regionCode: 'TW' }), 'zh-TW', '台湾の端末は zh-TW（簡体に丸めない）');
-eq(nonLatinLangForLocale({ languageCode: 'ru', regionCode: 'ru' }), 'ru-RU', '地域コードは大文字へ正規化する');
-eq(nonLatinLangForLocale({ languageCode: 'th' }), 'th', '地域が取れなければ言語コードだけ（iOS が近い声へ倒す）');
-// ラテン文字の言語の端末は ja-JP ＝**従来の固定値と同じ**なので既存利用者の挙動が変わらない。
-eq(nonLatinLangForLocale({ languageCode: 'en', regionCode: 'US' }), 'ja-JP', '英語端末は従来どおり ja-JP');
-eq(nonLatinLangForLocale(undefined), 'ja-JP', '端末情報が取れなくても ja-JP へ倒す');
-eq(SPEECH_NON_LATIN_LANG_DEFAULT, 'ja-JP', '既定値は端末言語（このハーネスでは ja-JP）から作られる');
+eq(hanLangForLocale({ languageCode: 'zh', regionCode: 'TW' }), 'zh-TW', '台湾の端末は zh-TW（簡体に丸めない）');
+eq(hanLangForLocale({ languageCode: 'zh', regionCode: 'cn' }), 'zh-CN', '地域コードは大文字へ正規化する');
+eq(hanLangForLocale({ languageCode: 'ko', regionCode: 'KR' }), 'ko-KR', '韓国語端末は ko-KR');
+eq(hanLangForLocale({ languageCode: 'zh' }), 'zh', '地域が取れなければ言語コードだけ（iOS が近い声へ倒す）');
+// 漢字を使わない言語の端末は ja-JP＝**049 の固定値と同じ**なので既存利用者の挙動が変わらない
+// （その端末の文字体系〈キリル等〉は別の既定で読まれるので、漢字の既定は影響しない）。
+eq(hanLangForLocale({ languageCode: 'en', regionCode: 'US' }), 'ja-JP', '英語端末は従来どおり ja-JP');
+eq(hanLangForLocale({ languageCode: 'ru', regionCode: 'RU' }), 'ja-JP', 'ロシア語端末も漢字の既定は ja-JP');
+eq(hanLangForLocale(undefined), 'ja-JP', '端末情報が取れなくても ja-JP へ倒す');
+eq(SCRIPT_DEFAULT_LANGS.han, 'ja-JP', '既定表の漢字は端末言語（このハーネスでは ja-JP）から作られる');
+eq(SCRIPT_DEFAULT_LANGS.hangul, 'ko-KR', '1対1の文字体系はその言語で確定（設定を出さない根拠）');
 
 // ---- stripMarkdown -----------------------------------------------------------
 

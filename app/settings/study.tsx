@@ -7,8 +7,14 @@ import { Pressable, Switch, Text, View } from 'react-native';
 
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
-import { SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
-import { SPEECH_RATES, speechLanguageLabel } from '@/lib/speech';
+import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
+import {
+  CONFIGURABLE_SCRIPTS,
+  SCRIPT_DEFAULT_LANGS,
+  SPEECH_RATES,
+  speechLanguageLabel,
+  type SpeechScript,
+} from '@/lib/speech';
 import { getAllSchedules, toggleScheduleEnabled, updateSchedule } from '@/lib/database/notifications';
 import type { NotificationSchedule } from '@/types';
 import { settingsStyles as styles } from '@/components/settings/styles';
@@ -36,6 +42,9 @@ import {
   type StudyTimerEndBehavior,
 } from '@/store/settings';
 
+/** 読み上げ設定で「その他の文字体系」に畳む文字体系（ラテン・漢字は常時表示するので除く）。 */
+const OTHER_SPEECH_SCRIPTS = CONFIGURABLE_SCRIPTS.filter((s) => s !== 'latin' && s !== 'han');
+
 export default function StudySettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -54,11 +63,12 @@ export default function StudySettingsScreen() {
     studyGoalCount, setStudyGoalCount,
     speechEnabled, setSpeechEnabled,
     speechRate, setSpeechRate,
-    speechLatinLang, setSpeechLatinLang,
-    speechNonLatinLang, setSpeechNonLatinLang,
+    speechScriptLangs, setSpeechScriptLang,
   } = useSettingsStore();
-  // 開いている言語ピッカー（null＝閉じている）。2行あるがモーダルは1つを使い回す。
-  const [speechLangModal, setSpeechLangModal] = useState<'latin' | 'nonLatin' | null>(null);
+  // 開いている言語ピッカー（null＝閉じている）。行は複数あるがモーダルは1つを使い回す。
+  const [speechLangModal, setSpeechLangModal] = useState<SpeechScript | null>(null);
+  // 「その他の文字体系」（キリル・アラビア・デーヴァナーガリー）の展開状態。
+  const [speechOtherScriptsOpen, setSpeechOtherScriptsOpen] = useState(false);
   const db = useSQLiteContext();
   const { notificationEnabled } = useSettingsStore();
   // 046: 目標の変更は未達成リマインダーの予約内容を変える（OFF なら予約自体を止める）。
@@ -238,6 +248,27 @@ export default function StudySettingsScreen() {
   // 読み上げ（049）。**無料機能**なので Pro ロック時の画面にも出す（目標枚数と同じ扱い）。
   // 言語設定が「ラテン文字を何語として読むか」1つだけなのは、分割が文字体系しか判別できないため
   // （`Hola` と `Hello` は同じラテン文字＝自動では言い分けられない）。詳細は docs/049。
+  /** 文字体系1つぶんの言語選択行。値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。 */
+  const speechScriptRow = (script: SpeechScript) => {
+    const name = t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin');
+    return (
+      <Pressable key={script} style={styles.dataRow} onPress={() => setSpeechLangModal(script)}>
+        <View style={styles.dataRowText}>
+          <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.speechScriptLangRow', { name })}
+          </Text>
+          <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {script === 'han' ? t('settings.speechScriptHanHint') : t('settings.speechScriptLangHint', { name })}
+          </Text>
+        </View>
+        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script])}
+        </Text>
+        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+      </Pressable>
+    );
+  };
+
   const speechCard = (
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Text
@@ -287,47 +318,40 @@ export default function StudySettingsScreen() {
               </View>
             </View>
 
-            {/* 文字体系ごとに1つずつ＝この2行で読み上げの言語が決まる（カード単位の設定は持たない）。 */}
-            <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal('latin')}>
-              <View style={styles.dataRowText}>
-                <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.speechLatinLang')}
-                </Text>
-                <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.speechLatinLangHint')}
-                </Text>
-              </View>
-              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {speechLanguageLabel(speechLatinLang)}
-              </Text>
-              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-            </Pressable>
+            {/* 050：文字体系ごとに言語を決める。ハングル・タイ文字などは1対1で決まるので
+                行を出さない（選ばせる意味が無く設定画面が無駄に伸びる）。
+                複数の言語が同じ文字を使うものだけ＝`CONFIGURABLE_SCRIPTS` を出す。 */}
+            {speechScriptRow('latin')}
+            {speechScriptRow('han')}
 
-            <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal('nonLatin')}>
+            <Pressable style={styles.dataRow} onPress={() => setSpeechOtherScriptsOpen((v) => !v)}>
               <View style={styles.dataRowText}>
                 <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.speechNonLatinLang')}
+                  {t('settings.speechScriptOthers')}
                 </Text>
                 <Text style={[styles.dataRowSubtitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.speechNonLatinLangHint')}
+                  {t('settings.speechScriptOthersHint')}
                 </Text>
               </View>
-              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {speechLanguageLabel(speechNonLatinLang)}
-              </Text>
-              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+              <Ionicons
+                name={speechOtherScriptsOpen ? 'chevron-down' : 'chevron-forward'}
+                size={theme.fontSize.lg}
+                color={theme.colors.iconSubtle}
+              />
             </Pressable>
+            {speechOtherScriptsOpen && OTHER_SPEECH_SCRIPTS.map((s) => speechScriptRow(s))}
           </>
         )}
       </View>
   );
 
+  const speechLangModalScript = speechLangModal ?? 'latin';
   const speechLangModalEl = (
     <SpeechLanguageModal
       visible={speechLangModal !== null}
-      kind={speechLangModal ?? 'latin'}
-      value={speechLangModal === 'nonLatin' ? speechNonLatinLang : speechLatinLang}
-      onSelect={speechLangModal === 'nonLatin' ? setSpeechNonLatinLang : setSpeechLatinLang}
+      script={speechLangModalScript}
+      value={speechScriptLangs[speechLangModalScript] ?? SCRIPT_DEFAULT_LANGS[speechLangModalScript]}
+      onSelect={(code) => setSpeechScriptLang(speechLangModalScript, code)}
       onClose={() => setSpeechLangModal(null)}
     />
   );

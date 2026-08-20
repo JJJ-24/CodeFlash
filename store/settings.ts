@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import type { GradeRankingSortBy } from '@/lib/database/reviews';
 import i18n from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
-import { SPEECH_LATIN_LANG_DEFAULT, SPEECH_NON_LATIN_LANG_DEFAULT, SPEECH_RATE_DEFAULT, SPEECH_RATES } from '@/lib/speech';
+import { scriptForLanguage, SPEECH_RATE_DEFAULT, SPEECH_RATES, type ScriptLangs, type SpeechScript } from '@/lib/speech';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
@@ -193,10 +193,11 @@ interface SettingsValues {
   // 049: カード本文の読み上げ（TTS）
   speechEnabled: boolean;
   speechRate: number;
-  /** ラテン文字の区間を何語として読むか（BCP-47） */
-  speechLatinLang: string;
-  /** ラテン文字**以外**の区間（かな漢字・ハングル・キリル…）を何語として読むか（BCP-47） */
-  speechNonLatinLang: string;
+  /**
+   * 文字体系ごとの読み上げ言語の**上書き**（BCP-47）。空なら全部 `SCRIPT_DEFAULT_LANGS`。
+   * ⚠️ 既定値は端末言語から作るものがある（漢字）ので、**上書きだけを保存する**（全部保存しない）。
+   */
+  speechScriptLangs: ScriptLangs;
   // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
   badgeLapStageSeen: number;
 }
@@ -227,6 +228,10 @@ const oneOf = <T extends string>(values: readonly T[]) => (raw: string): T | und
 
 const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
 const STATS_COLLAPSED_SECTIONS_KEY = '@codeflash_stats_collapsed_sections';
+const SPEECH_SCRIPT_LANGS_KEY = '@codeflash_speech_script_langs';
+// 049 の旧キー（ラテン／非ラテンの2つだけだった時代）。050 のマップへ一度だけ移行する。
+const LEGACY_SPEECH_LATIN_KEY = '@codeflash_speech_latin_lang';
+const LEGACY_SPEECH_NON_LATIN_KEY = '@codeflash_speech_non_latin_lang';
 
 // 作動中（一時停止含む）にタイマー設定（分数/休憩/回数）を変更したら計り直す（旧い残り時間の
 // ままだと設定が効いていないように見えるため）。次の学習開始時に新しい設定でスタートする。
@@ -360,9 +365,21 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   },
   // BCP-47 は端末の音声一覧から選ぶので、ここでは値の妥当性を検査しない
   // （端末に無い言語が入っていても iOS 側が既定の声にフォールバックする）。
-  speechLatinLang: { key: '@codeflash_speech_latin_lang', default: SPEECH_LATIN_LANG_DEFAULT, parse: asIs },
-  // 既定は端末の言語から決まる（日本語端末なら ja-JP ＝従来の固定値と同じ）。
-  speechNonLatinLang: { key: '@codeflash_speech_non_latin_lang', default: SPEECH_NON_LATIN_LANG_DEFAULT, parse: asIs },
+  speechScriptLangs: {
+    key: SPEECH_SCRIPT_LANGS_KEY,
+    default: {},
+    parse: (r) => {
+      try {
+        const parsed = JSON.parse(r);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
+      } catch { return undefined; }
+    },
+    // 上書きが空（＝すべて既定）ならキー自体を消す。
+    persist: (v) => {
+      if (Object.keys(v).length === 0) AsyncStorage.removeItem(SPEECH_SCRIPT_LANGS_KEY);
+      else AsyncStorage.setItem(SPEECH_SCRIPT_LANGS_KEY, JSON.stringify(v));
+    },
+  },
   badgeLapStageSeen: {
     key: '@codeflash_badge_lap_stage_seen',
     default: 1,
@@ -412,8 +429,8 @@ interface SettingsState extends SettingsValues {
   setStudyGoalCount: (v: number) => void;
   setSpeechEnabled: (v: boolean) => void;
   setSpeechRate: (v: number) => void;
-  setSpeechLatinLang: (v: string) => void;
-  setSpeechNonLatinLang: (v: string) => void;
+  /** 文字体系1つぶんの言語を上書きする（他の文字体系はそのまま） */
+  setSpeechScriptLang: (script: SpeechScript, lang: string) => void;
   setBadgeLapStageSeen: (v: number) => void;
 }
 
@@ -477,8 +494,14 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setStudyGoalCount: makeSetter('studyGoalCount'),
     setSpeechEnabled: makeSetter('speechEnabled'),
     setSpeechRate: makeSetter('speechRate'),
-    setSpeechLatinLang: makeSetter('speechLatinLang'),
-    setSpeechNonLatinLang: makeSetter('speechNonLatinLang'),
+    // マップの1エントリだけ差し替えるため個別定義（永続化は DEFS の persist に従う）。
+    setSpeechScriptLang: (script, lang) => {
+      set((state) => {
+        const next = { ...state.speechScriptLangs, [script]: lang };
+        DEFS.speechScriptLangs.persist?.(next);
+        return { speechScriptLangs: next };
+      });
+    },
     setBadgeLapStageSeen: makeSetter('badgeLapStageSeen'),
   };
 });
@@ -492,6 +515,29 @@ function hydrateOne<K extends keyof SettingsValues>(k: K, raw: string, update: P
   def.onApply?.(parsed);
 }
 
+/**
+ * 049（ラテン／非ラテンの2キー）→ 050（文字体系ごとのマップ）へ一度だけ移行する。
+ *
+ * 旧「非ラテンの言語」は**その言語が使う文字体系の上書き**へ移す（`ja`/`zh` → 漢字、
+ * `ru` → キリル…）。既定と同じ値になることもあるが、書いても害はない。
+ * ⚠️ 新キーが既にあるときは何もしない（移行後にユーザーが変えた設定を旧値で潰さないため）。
+ */
+async function migrateLegacySpeechLangs(): Promise<ScriptLangs | undefined> {
+  const [latin, nonLatin] = await Promise.all([
+    AsyncStorage.getItem(LEGACY_SPEECH_LATIN_KEY),
+    AsyncStorage.getItem(LEGACY_SPEECH_NON_LATIN_KEY),
+  ]);
+  const langs: ScriptLangs = {};
+  if (latin) langs.latin = latin;
+  if (nonLatin) {
+    const script = scriptForLanguage(nonLatin);
+    if (script) langs[script] = nonLatin;
+  }
+  if (Object.keys(langs).length === 0) return undefined;
+  DEFS.speechScriptLangs.persist?.(langs);
+  return langs;
+}
+
 export async function hydrateSettings(): Promise<void> {
   const raws = await Promise.all(SETTING_KEYS.map((k) => AsyncStorage.getItem(DEFS[k].key)));
   const update: Partial<SettingsValues> = {};
@@ -499,6 +545,10 @@ export async function hydrateSettings(): Promise<void> {
     const raw = raws[i];
     if (raw !== null) hydrateOne(k, raw, update);
   });
+  if (update.speechScriptLangs === undefined) {
+    const migrated = await migrateLegacySpeechLangs();
+    if (migrated) update.speechScriptLangs = migrated;
+  }
   if (Object.keys(update).length > 0) useSettingsStore.setState(update);
 }
 

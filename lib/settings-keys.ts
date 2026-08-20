@@ -48,6 +48,9 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   // 049: カード本文の読み上げ
   '@codeflash_speech_enabled',
   '@codeflash_speech_rate',
+  // 050：文字体系ごとの読み上げ言語（JSON）。旧2キーは 049 の遺産で、
+  // 新キーが無い端末でだけ移行元として読まれる（エクスポートには残しておく）。
+  '@codeflash_speech_script_langs',
   '@codeflash_speech_latin_lang',
   '@codeflash_speech_non_latin_lang',
 ] as const;

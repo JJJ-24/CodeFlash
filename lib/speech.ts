@@ -2,71 +2,56 @@ import { getLocales } from 'expo-localization';
 import * as Speech from 'expo-speech';
 
 /**
- * 049：カード本文の読み上げ（TTS）。iOS の音声合成（`AVSpeechSynthesizer`）を `expo-speech` 経由で使う。
- * オフライン・無料・API キー不要。
+ * 049/050：カード本文の読み上げ（TTS）。iOS の音声合成（`AVSpeechSynthesizer`）を
+ * `expo-speech` 経由で使う。オフライン・無料・API キー不要。
  *
  * ここが解いている問題は **1発話＝1つの声** という制約。`Speech.speak()` はテキストの中身を見て
  * 言語を切り替えたりしないので、「日本語の説明文に英語の技術用語が埋まっている」カード
  * （＝このアプリで最も多い形）を日本語の声だけで読ませると、`idempotent` が「イデンポテント」に
  * なってしまう。そこで**文字体系ごとに区間へ割り、区間ごとに声を変えて順に流す**
- * （`speak()` は連続で呼ぶとキューに積まれる）。実機実測の記録は `docs/049`。
+ * （`speak()` は連続で呼ぶとキューに積まれる）。
+ *
+ * 処理は3段（**この順序に意味がある**。詳細は `docs/050`）：
+ *
+ * 1. `splitByScript`   … 文字体系で**細かく**割る（かな／漢字／ラテン／ハングル…）
+ * 2. 言語への解決       … 文字体系 → 言語。漢字の日中判別はここ
+ * 3. 言語で畳む         … 隣り合う**同じ言語**の区間をつなぐ
+ *
+ * ⚠️ 3 を「同じ文字体系で畳む」にしてはいけない。日本語は漢字とかなで文字体系が違うので、
+ * 文字体系のまま畳むと1文が細切れになり、発話境界だらけで間延びする。
  */
 
 /** 速度。1.0 が標準（実測で自然だったので既定値） */
 export const SPEECH_RATE_DEFAULT = 1.0;
 export const SPEECH_RATES = [0.7, 0.85, 1.0, 1.2];
 
-/** ラテン文字の区間を何語として読むかの既定。 */
-export const SPEECH_LATIN_LANG_DEFAULT = 'en-US';
-
 /**
- * この文字数以下のラテン片は非ラテン側へ倒す。
+ * この文字数以下のラテン片は隣の区間の言語へ倒す。
  *
  * **3 は実測で決めた値**。2 にすると `API`（3文字）が英語側に残り、
  * **英語の声が略語を綴り読みせず単語として発音して「アピ」になる**。
  * 3 なら日本語の声が「エーピーアイ」と正しく読む。
  * ⚠️ これ以上上げると `useEffect` のような本来英語で読ませたい語まで倒れるので上げない。
- * ⚠️ **実測したのは日本語の声だけ**なので、`speakText` は非ラテン側が日本語のときしか使わない。
+ * ⚠️ **実測したのは日本語の声だけ**なので、倒すのは隣が日本語のときに限る（`isJapanese`）。
  */
 const SHORT_LATIN_MAX = 3;
 
-export type SpeechScript = 'nonLatin' | 'latin';
+// ---- 文字体系 ---------------------------------------------------------------
 
+export type SpeechScript =
+  | 'latin' | 'kana' | 'han' | 'hangul' | 'cyrillic' | 'greek' | 'hebrew' | 'arabic'
+  | 'devanagari' | 'bengali' | 'gurmukhi' | 'gujarati' | 'tamil' | 'telugu' | 'kannada'
+  | 'malayalam' | 'sinhala' | 'thai' | 'lao' | 'tibetan' | 'myanmar' | 'georgian'
+  | 'armenian' | 'khmer' | 'amharic';
+
+/** 区間。`script` が `null` なら中立文字だけ（数字・記号）＝ どの声で読んでも同じ。 */
 export interface SpeechSegment {
   text: string;
-  script: SpeechScript;
+  script: SpeechScript | null;
 }
 
 /**
- * ラテン文字**以外**の文字（＝もう一方の声で読む側）。
- *
- * ⚠️ **かな漢字だけを見てはいけない**。かつては `RE_JA` としてかな漢字・CJK 記号・全角形しか
- * 持っていなかったため、ハングル・キリル・タイ文字などは**どちらにも当たらず「中立」**になり、
- * 「直前の区間へ吸われる」規則によって**ラテン文字の後ろに続く韓国語が英語の声で読まれて**いた
- * （`hello 안녕` が丸ごとラテン区間）。文頭に来た場合だけ非ラテン区間として始まる、という
- * 位置依存の挙動になっていたのが実害。**能動的に判定する**ことでこれを解消する。
- *
- * ⚠️ **`LATIN_CHARS` と重ならないように切ってある**（U+1D00–U+1EFF＝音声記号拡張と
- * Latin Extended Additional を避けて 1CFF で止め、1F00 のギリシャ拡張から再開する）。
- * 重ねて「ラテン判定を先に評価するから大丈夫」にすると、**文字単位ではない判定**
- * （短ラテン寄せのガード＝テキスト全体に対する `test`）が誤爆する。実際にベトナム語の
- * `ứng` が「非ラテン文字を含む」と判定され、日本語側へ倒れた。**2つの集合は交わらせない。**
- */
-const RE_NON_LATIN = new RegExp(
-  '[' +
-  '\\u0370-\\u1CFF' +   // ギリシャ・キリル・アルメニア・ヘブライ・アラビア・インド系・タイ・ラオ
-                        // ・チベット・ミャンマー・ジョージア・ハングル字母・エチオピア・クメール
-  '\\u1F00-\\u1FFF' +   // ギリシャ拡張（1E00–1EFF はラテン側なので飛ばす）
-  '\\u2E80-\\uA4CF' +   // CJK 記号（、。「」）・かな・注音・ハングル互換字母・CJK 拡張A・漢字
-  '\\uA960-\\uA97F' +   // ハングル字母拡張A
-  '\\uAC00-\\uD7FF' +   // ハングル音節
-  '\\uF900-\\uFAFF' +   // CJK 互換漢字
-  '\\uFF00-\\uFFEF' +   // 半角・全角形（全角英数と半角カナ）
-  ']'
-);
-
-/**
- * ラテン文字とみなす文字。**2つの正規表現の定義元**（片方だけ直すと閾値の数え方がずれる）。
+ * ラテン文字とみなす文字。**この文字列が定義元**（2つの正規表現が同じ集合を見るため）。
  *
  * - `A-Za-z` … ASCII
  * - `À-ÖØ-öø-ɏ` … U+00C0〜U+024F（Latin-1 補助の文字・拡張A・**拡張B**）。
@@ -74,67 +59,230 @@ const RE_NON_LATIN = new RegExp(
  *   **ベトナム語の `ơ ư`・ルーマニア語の `ș ț`・拼音の `ǎ`**（いずれも拡張B）まで入る。
  * - `Ḁ-ỿ` … U+1E00〜U+1EFF（Latin Extended Additional）。**ベトナム語の声調つき `ạ ế ộ ứ`**。
  *
- * ⚠️ **拡張B・拡張追加を外すとベトナム語が壊れる**：外れた文字は「中立」に落ちて直前の区間へ
- * 吸われるため、文の**先頭**に来ると非ラテン区間として始まり日本語の声で読まれる。さらに
- * `hasNonLatin` が立つので、`ứng` のような短い語が下の短ラテン寄せで丸ごと非ラテン側へ倒れる。
+ * ⚠️ **拡張B・拡張追加を外すとベトナム語が壊れる**：外れた文字は「中立」に落ちるため、
+ * 文の**先頭**に来ると区間の始まりを他の文字体系に譲り、短ラテン寄せの判定も狂う。
+ * ⚠️ **`SCRIPT_RANGES` の他の範囲と交わらせない**（重ねると、文字単位ではない判定
+ * ＝テキスト全体への `test` が誤爆する。実際にベトナム語の `ứng` が日本語側へ倒れた）。
  */
 const LATIN_CHARS = 'A-Za-zÀ-ÖØ-öø-ɏḀ-ỿ';
 const RE_LATIN = new RegExp(`[${LATIN_CHARS}]`);
 const RE_NOT_LATIN_G = new RegExp(`[^${LATIN_CHARS}]`, 'g');
 
 /**
- * テキストを「ラテン文字の声で読む区間」と「それ以外の声で読む区間」に割る。
+ * 文字体系の範囲表。**先に一致したものが勝つ**ので、よく出るものから並べてある
+ * （範囲は互いに交わらないので、順序は速度だけの問題）。
  *
- * ⚠️ **割れるのは文字体系であって言語ではない**。`Hola` と `Hello` はどちらもラテン文字なので
- * 区別できない（＝それぞれを何語として読むかは設定で決める。自動判別はしない・できない）。
- * 同じ理由で**非ラテン側も1つの声**なので、日本語と韓国語が同居するカードは分けられない。
+ * ⚠️ **句読点・記号はどこにも入れない**＝中立にする。CJK 記号（U+3000–U+303F＝`、。「」`）も
+ * **全角の約物**（U+FF01–U+FF65 の `，．！？`）も日中で共有するので、片方に寄せると
+ * ①隣の本文から切り離されて発話が割れる ②`，` があるだけで「かなを含む」と誤判定され
+ *   **中国語の文が日本語の声で読まれる**（実際に踏んだ）。全角英数も同じ理由で中立にし、
+ *   隣の区間へ吸わせる（日本語文中なら日本語の声、中国語文中なら中国語の声になる）。
+ * ⚠️ ここに無い文字体系（未対応）は中立になり、隣の区間へ吸われる。
+ */
+const SCRIPT_RANGES: { script: SpeechScript; re: RegExp }[] = [
+  { script: 'latin', re: RE_LATIN },
+  { script: 'kana', re: /[\u3040-\u30FF\u31F0-\u31FF\uFF66-\uFF9F]/ },
+  { script: 'han', re: /[\u2E80-\u2FDF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/ },
+  { script: 'hangul', re: /[\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uAC00-\uD7FF\uFFA0-\uFFDC]/ },
+  { script: 'cyrillic', re: /[\u0400-\u052F\u1C80-\u1C8F\u2DE0-\u2DFF\uA640-\uA69F]/ },
+  { script: 'greek', re: /[\u0370-\u03FF\u1F00-\u1FFF]/ },
+  { script: 'arabic', re: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFC]/ },
+  { script: 'hebrew', re: /[\u0590-\u05FF\uFB1D-\uFB4F]/ },
+  { script: 'devanagari', re: /[\u0900-\u097F\uA8E0-\uA8FF]/ },
+  { script: 'thai', re: /[\u0E00-\u0E7F]/ },
+  { script: 'bengali', re: /[\u0980-\u09FF]/ },
+  { script: 'gurmukhi', re: /[\u0A00-\u0A7F]/ },
+  { script: 'gujarati', re: /[\u0A80-\u0AFF]/ },
+  { script: 'tamil', re: /[\u0B80-\u0BFF]/ },
+  { script: 'telugu', re: /[\u0C00-\u0C7F]/ },
+  { script: 'kannada', re: /[\u0C80-\u0CFF]/ },
+  { script: 'malayalam', re: /[\u0D00-\u0D7F]/ },
+  { script: 'sinhala', re: /[\u0D80-\u0DFF]/ },
+  { script: 'lao', re: /[\u0E80-\u0EFF]/ },
+  { script: 'tibetan', re: /[\u0F00-\u0FFF]/ },
+  { script: 'myanmar', re: /[\u1000-\u109F]/ },
+  { script: 'georgian', re: /[\u10A0-\u10FF\u1C90-\u1CBF]/ },
+  { script: 'armenian', re: /[\u0530-\u058F]/ },
+  { script: 'khmer', re: /[\u1780-\u17FF\u19E0-\u19FF]/ },
+  { script: 'amharic', re: /[\u1200-\u137F]/ },
+];
+
+function scriptOf(ch: string): SpeechScript | null {
+  for (const { script, re } of SCRIPT_RANGES) if (re.test(ch)) return script;
+  return null;
+}
+
+/** テキストにその文字体系の文字が1つでもあるか。 */
+function hasScript(text: string, script: SpeechScript): boolean {
+  const re = SCRIPT_RANGES.find((s) => s.script === script)?.re;
+  return re ? re.test(text) : false;
+}
+
+/**
+ * テキストを文字体系で**細かく**割る（言語への解決はしない）。
  *
  * - 数字・記号・空白は**中立**として直前の区間へ吸わせる（単独で声を切り替えると間延びするため）
- * - `SHORT_LATIN_MAX` 文字以下のラテン片は非ラテン側へ倒す（「API を叩く」「OK です」対策）
- *
- * ⚠️ **短いラテン片の寄せは「非ラテン文字が実際に混ざっている文」にだけ適用する**。
- * 無条件に適用すると、表面が `GET` だけの単語カード（ラテン文字しか無い）まで
- * 日本語の声で「ゲット」と読まれる。単語カードでは致命的なので `hasNonLatin` で守る。
- * ⚠️ この判定は**区間ではなく元テキストの文字**で行う：先頭の数字・記号は中立のまま
- * 非ラテン区間を作るので、区間で数えると `1. GET` のような英語カードでもガードが素通りする。
+ * - **先頭の中立文字は次の区間へ吸わせる**。⚠️ かつては「先頭の中立は非ラテン区間として始める」
+ *   だったため、`1. GET` のような英語カードが「非ラテン文字を含む」と誤判定され、
+ *   短ラテン寄せで `GET` が「ゲット」と読まれていた
+ * - 中立しか無いテキスト（`123` など）は1区間・`script: null` になる
  */
-export function splitByScript(text: string, shortLatinMax: number = SHORT_LATIN_MAX): SpeechSegment[] {
+export function splitByScript(text: string): SpeechSegment[] {
   const runs: SpeechSegment[] = [];
   for (const ch of text) {
-    const script: SpeechScript | null = RE_LATIN.test(ch) ? 'latin' : RE_NON_LATIN.test(ch) ? 'nonLatin' : null;
+    const script = scriptOf(ch);
     const last = runs[runs.length - 1];
     if (script === null) {
-      // 中立文字（数字・記号・空白）。先頭にあるときは非ラテン扱いで区間を始める。
       if (last) last.text += ch;
-      else runs.push({ text: ch, script: 'nonLatin' });
+      else runs.push({ text: ch, script: null });
       continue;
     }
-    if (last && last.script === script) last.text += ch;
+    if (!last) runs.push({ text: ch, script });
+    else if (last.script === script) last.text += ch;
+    else if (last.script === null) { last.text += ch; last.script = script; } // 先頭の中立を吸わせる
     else runs.push({ text: ch, script });
   }
+  return runs;
+}
 
-  if (shortLatinMax > 0 && RE_NON_LATIN.test(text)) {
-    for (const run of runs) {
-      if (run.script !== 'latin') continue;
-      if (run.text.replace(RE_NOT_LATIN_G, '').length <= shortLatinMax) run.script = 'nonLatin';
-    }
+// ---- 文字体系 → 言語 ---------------------------------------------------------
+
+/** 文字体系ごとの言語の上書き（未指定は `SCRIPT_DEFAULT_LANGS`）。 */
+export type ScriptLangs = Partial<Record<SpeechScript, string>>;
+
+/**
+ * 端末の言語から漢字の既定を決める。日本語端末なら日本語、中国語端末なら中国語。
+ * ⚠️ 対応表は持たない。`languageCode`＋`regionCode` を繋いで `ja-JP` / `zh-TW` を作る
+ * （iOS の音声もこの形）。端末に無い組み合わせになっても iOS が近い声へ倒す。
+ */
+export function hanLangForLocale(locale?: { languageCode?: string | null; regionCode?: string | null }): string {
+  const code = locale?.languageCode?.toLowerCase();
+  if (!code || !HAN_LANG_PREFIXES.includes(code)) return 'ja-JP';
+  return locale?.regionCode ? `${code}-${locale.regionCode.toUpperCase()}` : code;
+}
+
+const deviceHanLang = (() => {
+  try {
+    return hanLangForLocale(getLocales()[0]);
+  } catch {
+    return 'ja-JP';
   }
+})();
 
-  // 倒した結果として隣り合った同種の区間をつなぎ直す（無駄な発話境界＝間を作らないため）。
-  const merged: SpeechSegment[] = [];
+/**
+ * 文字体系の既定言語。**1つの文字体系を1つの言語しか使わないものは、これで確定**
+ * （＝設定を出す必要が無い）。複数の言語で共有される文字体系だけ `CONFIGURABLE_SCRIPTS`。
+ */
+export const SCRIPT_DEFAULT_LANGS: Record<SpeechScript, string> = {
+  latin: 'en-US',
+  kana: 'ja-JP',
+  han: deviceHanLang,
+  hangul: 'ko-KR',
+  cyrillic: 'ru-RU',
+  greek: 'el-GR',
+  hebrew: 'he-IL',
+  arabic: 'ar-SA',
+  devanagari: 'hi-IN',
+  bengali: 'bn-IN',
+  gurmukhi: 'pa-IN',
+  gujarati: 'gu-IN',
+  tamil: 'ta-IN',
+  telugu: 'te-IN',
+  kannada: 'kn-IN',
+  malayalam: 'ml-IN',
+  sinhala: 'si-LK',
+  thai: 'th-TH',
+  lao: 'lo-LA',
+  tibetan: 'bo-CN',
+  myanmar: 'my-MM',
+  georgian: 'ka-GE',
+  armenian: 'hy-AM',
+  khmer: 'km-KH',
+  amharic: 'am-ET',
+};
+
+/**
+ * **設定を出す文字体系**＝複数の言語が同じ文字を使うため機械的に決められないもの。
+ * ここに無い文字体系（ハングル・タイ・ギリシャ…）は1対1なので設定を出さない
+ * （選ばせても意味が無く、設定画面が無駄に伸びる）。
+ */
+export const CONFIGURABLE_SCRIPTS: SpeechScript[] = ['latin', 'han', 'cyrillic', 'arabic', 'devanagari'];
+
+/** 一覧を絞るための「その文字体系を使う言語」の接頭辞。`latin` だけは除外リストで判定する。 */
+const HAN_LANG_PREFIXES = ['ja', 'zh', 'yue', 'ko'];
+const SCRIPT_LANG_PREFIXES: Partial<Record<SpeechScript, string[]>> = {
+  han: HAN_LANG_PREFIXES,
+  cyrillic: ['ru', 'uk', 'bg', 'sr', 'mk', 'be', 'kk', 'ky', 'mn', 'tg'],
+  arabic: ['ar', 'fa', 'ur', 'ps', 'sd', 'ku', 'ug'],
+  devanagari: ['hi', 'mr', 'ne', 'sa'],
+};
+
+/** `ja` / `ja-JP` のように日本語を指しているか。 */
+const isJapanese = (lang: string) => lang.toLowerCase().startsWith('ja');
+
+/**
+ * 区間を言語へ解決する。**漢字の日中判別はここ**。
+ *
+ * 漢字は日本語と中国語（と韓国語の漢字）で同じコードポイントなので機械的には決まらない。
+ * そこで**読み上げるテキスト全体**を見て推定する：
+ *
+ * 1. **かながあれば** → その漢字は日本語（かなと同じ声＝あとで1発話に畳まれる）
+ * 2. **ハングルがあれば** → 韓国語（漢字ハングル混じり）
+ * 3. どちらも無ければ → 設定値（既定は端末言語）
+ *
+ * ⚠️ **推定なので外れることがある**。`非同期処理` のような純漢字の日本語は、設定を中国語に
+ * していると中国語で読まれる。逆に1つの面に `你好 ＝ こんにちは` と書くと、かなが優先されて
+ * 中国語部分も日本語で読まれる。**デッキ単位の上書き（050 Phase 2）が本来の解**。
+ */
+function langForScript(script: SpeechScript | null, langs: ScriptLangs, text: string): string {
+  if (script === 'han') {
+    if (hasScript(text, 'kana')) return langs.kana ?? SCRIPT_DEFAULT_LANGS.kana;
+    if (hasScript(text, 'hangul')) return langs.hangul ?? SCRIPT_DEFAULT_LANGS.hangul;
+  }
+  // 中立しか無いテキスト（数字だけ等）は漢字の言語で読む＝このアプリの「もう一方の声」。
+  const key = script ?? 'han';
+  return langs[key] ?? SCRIPT_DEFAULT_LANGS[key];
+}
+
+export interface ResolvedSegment {
+  text: string;
+  language: string;
+}
+
+/**
+ * テキストを「読み上げる単位」へ変換する＝**分割 → 言語へ解決 → 言語で畳む**。
+ * `speakText` の中身だが、検証（`npm run verify:speech`）から直接呼べるように分けてある。
+ */
+export function resolveSpeechSegments(text: string, langs: ScriptLangs = {}): ResolvedSegment[] {
+  const runs = splitByScript(text).map((run) => ({
+    text: run.text,
+    script: run.script,
+    language: langForScript(run.script, langs, text),
+  }));
+
+  // 短いラテン片を隣へ倒す（隣が日本語のときだけ＝閾値は日本語音声の実測値のため）。
+  runs.forEach((run, i) => {
+    if (run.script !== 'latin') return;
+    if (run.text.replace(RE_NOT_LATIN_G, '').length > SHORT_LATIN_MAX) return;
+    const neighbor = runs[i - 1] ?? runs[i + 1];
+    if (neighbor && neighbor.script !== 'latin' && isJapanese(neighbor.language)) {
+      run.language = neighbor.language;
+    }
+  });
+
+  // ⚠️ 畳むのは**解決後の言語**が同じ区間（文字体系ではない）。漢字＋かなが1発話に戻る。
+  const merged: ResolvedSegment[] = [];
   for (const run of runs) {
     const last = merged[merged.length - 1];
-    if (last && last.script === run.script) last.text += run.text;
-    else merged.push({ ...run });
+    if (last && last.language === run.language) last.text += run.text;
+    else merged.push({ text: run.text, language: run.language });
   }
   return merged.filter((s) => s.text.trim() !== '');
 }
 
 export interface SpeakOptions {
-  /** ラテン文字の区間を読む言語（BCP-47）。 */
-  latinLang: string;
-  /** ラテン文字**以外**の区間を読む言語（BCP-47）。かつては `ja-JP` 固定だった。 */
-  nonLatinLang: string;
+  /** 文字体系ごとの言語の上書き（設定から渡す。未指定は既定） */
+  scriptLangs?: ScriptLangs;
   rate: number;
   /** **最後の区間**を読み終えたときだけ呼ばれる。 */
   onDone?: () => void;
@@ -142,26 +290,18 @@ export interface SpeakOptions {
   onStopped?: () => void;
 }
 
-/** `ja` / `ja-JP` のように日本語を指しているか。 */
-const isJapanese = (lang: string) => lang.toLowerCase().startsWith('ja');
-
 /**
  * テキストを文字体系で割り、区間ごとに声を変えて順に読む。
  * 読む対象が空なら何もしない（呼び出し側で「読む文字が無いなら操作させない」判定に使える）。
- *
- * ⚠️ **短いラテン片の寄せは非ラテン側が日本語のときだけ効かせる**。閾値3は
- * 「日本語の声なら `API` を『エーピーアイ』と正しく綴り読みする」という**実測**から決めた値で、
- * 他言語の声が同じように振る舞う保証がない（読み飛ばす声もありうる）。日本語以外を選んでいる
- * ときは倒さず、ラテン片はラテン側の声（既定は英語）に残すほうが確実。
  */
 export function speakText(text: string, options: SpeakOptions): void {
-  const segments = splitByScript(text, isJapanese(options.nonLatinLang) ? SHORT_LATIN_MAX : 0);
+  const segments = resolveSpeechSegments(text, options.scriptLangs ?? {});
   if (segments.length === 0) return;
   Speech.stop();
   segments.forEach((seg, i) => {
     const isLast = i === segments.length - 1;
     Speech.speak(seg.text, {
-      language: seg.script === 'nonLatin' ? options.nonLatinLang : options.latinLang,
+      language: seg.language,
       rate: options.rate,
       onDone: isLast ? options.onDone : undefined,
       onStopped: options.onStopped,
@@ -174,21 +314,25 @@ export function stopSpeech(): void {
   Speech.stop();
 }
 
+// ---- 選択肢の一覧 ------------------------------------------------------------
+
 /**
- * 端末が読める言語の一覧（BCP-47）を、どちらの区間用かで絞って返す。
+ * 端末が読める言語の一覧（BCP-47）を、その文字体系で使うものだけに絞って返す。
  *
  * **選択肢は端末から取る**（対応表をアプリ側に持たない＝OS が音声を増やせば自動で増える）。
- * 絞り込みだけは `NON_LATIN_SCRIPT_PREFIXES` で行う＝ラテン文字の区間に韓国語を、
- * 非ラテンの区間にフランス語を割り当てても意味が無いため。
+ * 絞り込みだけは接頭辞で行う＝漢字の設定にフランス語が並んでも意味が無いため。
  */
-async function getSpeechLanguages(script: SpeechScript): Promise<string[]> {
+export async function getSpeechLanguagesFor(script: SpeechScript): Promise<string[]> {
   try {
     const voices = await Speech.getAvailableVoicesAsync();
+    const allowed = SCRIPT_LANG_PREFIXES[script];
     const langs = new Set<string>();
     for (const v of voices) {
       if (!v.language) continue;
-      const isNonLatin = NON_LATIN_SCRIPT_PREFIXES.has(v.language.split('-')[0].toLowerCase());
-      if (isNonLatin !== (script === 'nonLatin')) continue;
+      const prefix = v.language.split('-')[0].toLowerCase();
+      // latin は「ラテン文字で書かれない言語」を除く形で絞る（対象言語が多すぎて列挙できない）。
+      const ok = allowed ? allowed.includes(prefix) : !NON_LATIN_SCRIPT_PREFIXES.has(prefix);
+      if (!ok) continue;
       langs.add(v.language);
     }
     return [...langs].sort();
@@ -197,12 +341,7 @@ async function getSpeechLanguages(script: SpeechScript): Promise<string[]> {
   }
 }
 
-/** ラテン文字の区間を読む言語の選択肢（＝ラテン文字を使う言語）。 */
-export const getLatinSpeechLanguages = () => getSpeechLanguages('latin');
-/** ラテン文字以外の区間を読む言語の選択肢（＝ラテン文字を使わない言語）。 */
-export const getNonLatinSpeechLanguages = () => getSpeechLanguages('nonLatin');
-
-/** ラテン文字で書かれない言語。2つの選択肢一覧を振り分ける唯一の基準。 */
+/** ラテン文字で書かれない言語（`latin` の選択肢から外す）。 */
 const NON_LATIN_SCRIPT_PREFIXES = new Set([
   'ja', 'ko', 'zh', 'yue', 'ru', 'uk', 'bg', 'sr', 'mk', 'be', 'el', 'he', 'iw',
   'ar', 'fa', 'ur', 'hi', 'bn', 'ta', 'te', 'kn', 'ml', 'mr', 'gu', 'pa', 'si',
@@ -210,30 +349,23 @@ const NON_LATIN_SCRIPT_PREFIXES = new Set([
 ]);
 
 /**
- * ラテン文字以外の区間を読む言語の既定値。**端末の言語から決める**。
- *
- * 端末が非ラテン文字の言語（日本語・韓国語・中国語・ロシア語…）なら**その言語**、
- * ラテン文字の言語（英語など）なら `ja-JP`。後者を日本語にしておくのは、
- * ①この設定に用がある＝非ラテン文字のカードを持つ利用者で、UI 言語が英語の人は
- * 日本語学習者である可能性が高い ②**従来の固定値と同じ**なので既存利用者の挙動が変わらない、
- * の2つ（設定なので合わなければ変えられる）。
- *
- * ⚠️ 対応表は持たない。`languageCode` と `regionCode` を繋いで `ja-JP` / `ko-KR` /
- * `zh-CN` を作る（iOS の音声もこの形）。端末に無い組み合わせになっても iOS が近い声へ倒す。
+ * 言語コード → その言語が使う文字体系。**049 の1つだけの設定から移行するため**に使う
+ * （「非ラテンをこの言語で読む」という旧設定を、対応する文字体系の上書きへ移す）。
  */
-export function nonLatinLangForLocale(locale?: { languageCode?: string | null; regionCode?: string | null }): string {
-  const code = locale?.languageCode?.toLowerCase();
-  if (!code || !NON_LATIN_SCRIPT_PREFIXES.has(code)) return 'ja-JP';
-  return locale?.regionCode ? `${code}-${locale.regionCode.toUpperCase()}` : code;
-}
-
-export const SPEECH_NON_LATIN_LANG_DEFAULT: string = (() => {
-  try {
-    return nonLatinLangForLocale(getLocales()[0]);
-  } catch {
-    return 'ja-JP';
+export function scriptForLanguage(code: string): SpeechScript | undefined {
+  const prefix = code.split('-')[0].toLowerCase();
+  if (HAN_LANG_PREFIXES.includes(prefix)) return 'han'; // ja/zh/ko は漢字の設定へ寄せる
+  for (const script of CONFIGURABLE_SCRIPTS) {
+    if (SCRIPT_LANG_PREFIXES[script]?.includes(prefix)) return script;
   }
-})();
+  const single: Record<string, SpeechScript> = {
+    el: 'greek', he: 'hebrew', iw: 'hebrew', th: 'thai', lo: 'lao', my: 'myanmar',
+    km: 'khmer', ka: 'georgian', hy: 'armenian', am: 'amharic', si: 'sinhala',
+    bn: 'bengali', ta: 'tamil', te: 'telugu', kn: 'kannada', ml: 'malayalam',
+    gu: 'gujarati', pa: 'gurmukhi',
+  };
+  return single[prefix];
+}
 
 /**
  * 言語コードの表示名。よく使うものだけ持ち、無いものはコードをそのまま出す
@@ -245,13 +377,13 @@ export const SPEECH_LANGUAGE_NAMES: Record<string, string> = {
   no: 'Norsk', fi: 'Suomi', pl: 'Polski', cs: 'Čeština', sk: 'Slovenčina',
   hu: 'Magyar', ro: 'Română', tr: 'Türkçe', id: 'Bahasa Indonesia',
   ms: 'Bahasa Melayu', vi: 'Tiếng Việt', ca: 'Català', hr: 'Hrvatski',
-  // 非ラテン文字（＝もう一方の一覧に並ぶ言語）
+  // 非ラテン文字
   ja: '日本語', ko: '한국어', zh: '中文', yue: '粵語', ru: 'Русский',
   uk: 'Українська', bg: 'Български', sr: 'Српски', el: 'Ελληνικά',
   he: 'עברית', iw: 'עברית', ar: 'العربية', fa: 'فارسی', hi: 'हिन्दी',
   bn: 'বাংলা', ta: 'தமிழ்', te: 'తెలుగు', kn: 'ಕನ್ನಡ', ml: 'മലയാളം',
-  mr: 'मराठी', gu: 'ગુજરાતી', th: 'ไทย', km: 'ភាសាខ្មែរ', ka: 'ქართული',
-  hy: 'Հայերեն', my: 'မြန်မာ',
+  mr: 'मराठी', gu: 'ગુજરાતી', pa: 'ਪੰਜਾਬੀ', th: 'ไทย', km: 'ភាសាខ្មែរ',
+  ka: 'ქართული', hy: 'Հայերեն', my: 'မြန်မာ', si: 'සිංහල', am: 'አማርኛ',
 };
 
 /** `en-US` → `English (en-US)` のような表示用ラベル。 */

@@ -144,21 +144,30 @@ eq(voices('Hola amigo', { latin: 'es-ES' }), ['es-ES:Hola amigo'], 'ラテン文
 eq(voices('Ứng dụng', { latin: 'vi-VN' }), ['vi-VN:Ứng dụng'], 'ベトナム語もラテン文字の設定で読める');
 eq(voices('Привет', { cyrillic: 'uk-UA' }), ['uk-UA:Привет'], 'キリル文字の言語も設定できる');
 
-// 「なし」＝声を分けない（ラテン文字ももう一方の声で読む）。
-// ⚠️ `HTML` が英語・`CSS` が日本語と**同じ文で読み分かれる**のが分かりにくい、という声への逃げ道。
-eq(voices('React の useEffect は副作用を扱う', { latin: 'none' }),
-  ['ja-JP:React の useEffect は副作用を扱う'],
-  '「なし」なら声が切り替わらず1発話に畳まれる');
-eq(voices('HTML と CSS', { latin: 'none' }), ['ja-JP:HTML と CSS'],
+// 「日本語と混ざるときは同じ声で読む」（`noMixedSwitch`）。
+// ⚠️ `HTML` が英語・`CSS` が日本語と**同じ文で読み分かれる**のが分かりにくい、という声への対処。
+const mixed = (text: string, langs: Record<string, string> = {}) =>
+  resolveSpeechSegments(text, langs, { noMixedSwitch: true })
+    .map((s: { language: string; text: string }) => `${s.language}:${s.text}`);
+
+eq(mixed('React の useEffect は副作用を扱う'), ['ja-JP:React の useEffect は副作用を扱う'],
+  '混在文では声が切り替わらず1発話に畳まれる');
+eq(mixed('HTML と CSS'), ['ja-JP:HTML と CSS'],
   '同じ文の HTML と CSS が同じ声になる（読み分けの不一致が消える）');
-eq(voices('Hello', { latin: 'none' }), ['ja-JP:Hello'],
-  '英語だけのカードも「なし」なら日本語の声（設定の意味どおり）');
-// ⚠️ 「なし」は**漢字側の解決をそのまま使う**＝かなの推定も効く。既定へ落とすと、漢字を
-// 中国語にしている人のラテン文字だけ中国語の声になって「分けない」目的から外れる。
-eq(voices('React の話', { latin: 'none', han: 'zh-CN' }), ['ja-JP:React の話'],
-  'かながあれば「なし」のラテン文字も日本語の声（漢字＝中国語の設定でも）');
-eq(voices('CSS 你好', { latin: 'none', han: 'zh-CN' }), ['zh-CN:CSS 你好'],
+// ⚠️ **英語だけのカードには効かせない**＝常に倒すと「英語の技術用語の発音を聞く」という
+// 本命の使い道が失われる（旧「なし」方式はここで英語まで日本語の声にしてしまっていた）。
+eq(mixed('idempotent'), ['en-US:idempotent'], '英語だけのカードは英語のまま（混在ではないため）');
+eq(mixed('GET'), ['en-US:GET'], '英語だけの単語カードも英語のまま');
+// ⚠️ 倒す先は漢字側の解決＝かなの推定も効くので、漢字を中国語にしていても周りと同じ声になる。
+eq(mixed('React の話', { han: 'zh-CN' }), ['ja-JP:React の話'],
+  'かながあれば日本語の声（漢字＝中国語の設定でも）');
+eq(mixed('CSS 你好', { han: 'zh-CN' }), ['zh-CN:CSS 你好'],
   'かなが無ければ漢字の設定に従う（中国語の声で読む）');
+// ⚠️ 倒す先は**最初の非ラテン区間の言語**。`han` に固定すると、ハングルやキリル文字と
+// 混ざる文でラテン文字だけ日本語の声になる（実際にそうなっていた）。
+eq(mixed('Привет CSS'), ['ru-RU:Привет CSS'], 'ロシア語と混ざる文はロシア語の声で揃う');
+eq(mixed('안녕 CSS'), ['ko-KR:안녕 CSS'], '韓国語と混ざる文は韓国語の声で揃う');
+eq(mixed('CSS สวัสดี'), ['th-TH:CSS สวัสดี'], 'ラテン文字が先頭でも後ろの言語に揃う');
 
 // 漢字の日中判別。
 eq(voices('你好，世界'), ['ja-JP:你好，世界'], '漢字だけの文は既定（端末言語）で読む');

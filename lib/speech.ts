@@ -151,18 +151,6 @@ export function splitByScript(text: string): SpeechSegment[] {
 export type ScriptLangs = Partial<Record<SpeechScript, string>>;
 
 /**
- * ラテン文字の言語に選べる特別な値＝**声を分けない**。
- *
- * `HTML` は英語の声で「エイチティーエムエル」、`CSS` は短いので日本語の声で「シーエスエス」と、
- * **同じ文の中で読み分けが起きる**のが分かりにくいという指摘から追加した。これを選ぶと
- * ラテン文字の区間も**もう一方の声（漢字/かなの言語）**で読むので、声の切り替えが一切起きない。
- * 代償は英語の発音が得られないこと（`idempotent` が「イデンポテント」になる）。
- *
- * ⚠️ BCP-47 と衝突しない値にしてある（言語タグに `none` は存在しない）。
- */
-export const SPEECH_LANG_NONE = 'none';
-
-/**
  * 言語ごとに使う声（BCP-47 → `identifier`）。**文字体系ではなく言語で持つ**のは、
  * 区間が解決後の言語で畳まれるため（かなと漢字が同じ `ja-JP` になったとき、
  * 文字体系キーだとどちらの声か決まらない）。言語を変えても前の選択が残る利点もある。
@@ -260,14 +248,7 @@ function langForScript(script: SpeechScript | null, langs: ScriptLangs, text: st
   }
   // 中立しか無いテキスト（数字だけ等）は漢字の言語で読む＝このアプリの「もう一方の声」。
   const key = script ?? 'han';
-  const lang = langs[key] ?? SCRIPT_DEFAULT_LANGS[key];
-  if (lang !== SPEECH_LANG_NONE) return lang;
-  // 「なし」＝声を分けない。**漢字側の解決をそのまま使う**＝かな/ハングルの推定も効くので、
-  // 周りの日本語と同じ声になって1発話に畳まれる（`han` を既定に落とすと、漢字を中国語に
-  // している人のラテン文字だけ中国語の声になって「分けない」目的から外れる）。
-  // ⚠️ 漢字側まで「なし」なら既定へ倒す（UI では漢字に「なし」を出さないが再帰を止める保険）。
-  if (key === 'han') return SCRIPT_DEFAULT_LANGS.han;
-  return langForScript('han', langs, text);
+  return langs[key] ?? SCRIPT_DEFAULT_LANGS[key];
 }
 
 export interface ResolvedSegment {
@@ -279,12 +260,28 @@ export interface ResolvedSegment {
  * テキストを「読み上げる単位」へ変換する＝**分割 → 言語へ解決 → 言語で畳む**。
  * `speakText` の中身だが、検証（`npm run verify:speech`）から直接呼べるように分けてある。
  */
-export function resolveSpeechSegments(text: string, langs: ScriptLangs = {}): ResolvedSegment[] {
+export function resolveSpeechSegments(
+  text: string,
+  langs: ScriptLangs = {},
+  options: { noMixedSwitch?: boolean } = {},
+): ResolvedSegment[] {
   const runs = splitByScript(text).map((run) => ({
     text: run.text,
     script: run.script,
     language: langForScript(run.script, langs, text),
   }));
+
+  // 「混在文では声を分けない」＝ラテン区間を**周りの非ラテン文字と同じ声**にする。
+  // ⚠️ **非ラテン文字を含むテキストのときだけ**効かせる。常に倒すと英語だけのカードまで
+  // 日本語の声になり、このアプリの本命（英語の技術用語の発音を聞く）が失われる。
+  // ⚠️ 倒す先は**その文に最初に出てくる非ラテン区間の言語**。`han` に固定すると、
+  // ハングルやキリル文字と混ざる文でラテン文字だけ日本語の声になる（`Привет CSS` が
+  // ロシア語＋日本語で読まれた）。最初の区間の言語なら日本語・韓国語・ロシア語のいずれでも
+  // 文脈どおりになり、かな/漢字の推定（`langForScript`）もそのまま効く。
+  if (options.noMixedSwitch) {
+    const host = runs.find((r) => r.script !== null && r.script !== 'latin');
+    if (host) for (const run of runs) if (run.script === 'latin') run.language = host.language;
+  }
 
   // 短いラテン片を隣へ倒す（隣が日本語のときだけ＝閾値は日本語音声の実測値のため）。
   runs.forEach((run, i) => {
@@ -315,6 +312,8 @@ export interface SpeakOptions {
    * 実在しない identifier を渡すと `expo-speech` が例外を投げる。
    */
   voices?: VoiceByLang;
+  /** 日本語と混ざるときはラテン文字も同じ声で読む（読み分けが起きない） */
+  noMixedSwitch?: boolean;
   rate: number;
   /** **最後の区間**を読み終えたときだけ呼ばれる。 */
   onDone?: () => void;
@@ -327,7 +326,9 @@ export interface SpeakOptions {
  * 読む対象が空なら何もしない（呼び出し側で「読む文字が無いなら操作させない」判定に使える）。
  */
 export function speakText(text: string, options: SpeakOptions): void {
-  const segments = resolveSpeechSegments(text, options.scriptLangs ?? {});
+  const segments = resolveSpeechSegments(text, options.scriptLangs ?? {}, {
+    noMixedSwitch: options.noMixedSwitch,
+  });
   if (segments.length === 0) return;
   Speech.stop();
   segments.forEach((seg, i) => {

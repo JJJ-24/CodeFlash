@@ -54,6 +54,7 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   // 050 Phase 3：言語ごとに選んだ声（identifier）。⚠️ identifier は端末固有なので、
   // 別端末へインポートしても存在しないものは filterKnownVoices が落とす（無音にならない）。
   '@codeflash_speech_voices',
+  '@codeflash_speech_no_mixed_switch',
   '@codeflash_speech_latin_lang',
   '@codeflash_speech_non_latin_lang',
 ] as const;

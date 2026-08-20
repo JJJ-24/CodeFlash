@@ -14,7 +14,6 @@ import {
   getConfigurableScriptLanguages,
   getVoicesForLanguage,
   SCRIPT_DEFAULT_LANGS,
-  SPEECH_LANG_NONE,
   SPEECH_RATES,
   speechLanguageLabel,
   type SpeechScript,
@@ -70,6 +69,7 @@ export default function StudySettingsScreen() {
     speechRate, setSpeechRate,
     speechScriptLangs, setSpeechScriptLang,
     speechVoices, setSpeechVoice,
+    speechNoMixedSwitch, setSpeechNoMixedSwitch,
   } = useSettingsStore();
   // 開いている言語ピッカー（null＝閉じている）。行は複数あるがモーダルは1つを使い回す。
   const [speechLangModal, setSpeechLangModal] = useState<SpeechScript | null>(null);
@@ -304,12 +304,27 @@ export default function StudySettingsScreen() {
           </Text>
         </View>
         <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {langOf(script) === SPEECH_LANG_NONE
-            ? t('settings.speechLangNone')
-            : speechLanguageLabel(langOf(script), t)}
+          {speechLanguageLabel(langOf(script), t)}
         </Text>
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>
+      {/* 「混在文で声を分けない」はラテン文字にしか意味が無いので latin の行にだけ出す。
+          ⚠️ 英語だけのカードには効かない（`resolveSpeechSegments` が混在文だけに適用する）。 */}
+      {script === 'latin' && (
+        <View style={[styles.notificationRow, { paddingLeft: 16 }]}>
+          <Text
+            style={[styles.dataRowTitle, { flex: 1, color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+          >
+            {t('settings.speechNoMixedSwitch')}
+          </Text>
+          <Switch
+            value={speechNoMixedSwitch}
+            onValueChange={setSpeechNoMixedSwitch}
+            trackColor={{ true: theme.colors.primary }}
+          />
+        </View>
+      )}
       {speechVoiceRow(langOf(script))}
     </View>
   );

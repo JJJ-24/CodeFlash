@@ -19,6 +19,7 @@ export function useSpeech() {
   const speechRate = useSettingsStore((s) => s.speechRate);
   const speechScriptLangs = useSettingsStore((s) => s.speechScriptLangs);
   const speechVoices = useSettingsStore((s) => s.speechVoices);
+  const speechNoMixedSwitch = useSettingsStore((s) => s.speechNoMixedSwitch);
 
   // ⚠️ **端末に実在する声だけを渡す**。identifier は端末固有で、iCloud 同期や JSON
   // インポートで来た設定には無いものが混ざる。存在しない identifier を渡すと
@@ -41,11 +42,12 @@ export function useSpeech() {
       rate: speechRate,
       scriptLangs: speechScriptLangs,
       voices,
+      noMixedSwitch: speechNoMixedSwitch,
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
     });
     setSpeaking(true);
-  }, [speechRate, speechScriptLangs, voices]);
+  }, [speechRate, speechScriptLangs, voices, speechNoMixedSwitch]);
 
   /** 読み上げ中なら止める、そうでなければ読む（ボタン・キーの両方から使う）。 */
   const toggle = useCallback((text: string) => {

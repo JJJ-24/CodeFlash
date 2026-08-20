@@ -538,7 +538,7 @@
     "speechVoiceAuto": "Automatic",
     "speechVoiceEnhanced": "Enhanced",
     "speechVoiceHint": "Chooses the voice used for {{name}}. \"Automatic\" follows the device setting.",
-    "speechLangNone": "None (don\u2019t switch voices)",
+    "speechNoMixedSwitch": "Don't switch voices in mixed text",
     "speechScriptSection": "Languages",
     "speechScriptLangHint": "Sets the language used to read {{name}} text aloud.",
     "speechScriptLatin": "Latin script",

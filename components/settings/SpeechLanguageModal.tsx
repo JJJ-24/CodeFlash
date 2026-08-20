@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
-import { getSpeechLanguagesFor, speechLanguageLabel, SPEECH_LANG_NONE, type SpeechScript } from '@/lib/speech';
+import { getSpeechLanguagesFor, speechLanguageLabel, type SpeechScript } from '@/lib/speech';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 
@@ -52,9 +52,6 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose 
 
   // 端末に音声が1つも無い場合でも現在値は選べるようにしておく。
   const rows = languages.length > 0 ? languages : [value];
-  // 「なし」＝声を分けない。⚠️ **ラテン文字にだけ出す**（漢字に「なし」＝漢字を英語の声で読む、
-  // は意味を成さない）。端末の音声一覧には無い値なので、ここで先頭に足す。
-  const showNone = script === 'latin';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -84,26 +81,6 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose 
             </Text>
           </View>
           <ScrollView>
-            {showNone && (
-              <Pressable
-                onPress={() => { onSelect(SPEECH_LANG_NONE); onClose(); }}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 10,
-                  paddingHorizontal: 16, paddingVertical: 12,
-                  borderBottomWidth: 1, borderBottomColor: theme.colors.border,
-                }}
-              >
-                <Text
-                  style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
-                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                >
-                  {t('settings.speechLangNone')}
-                </Text>
-                {value === SPEECH_LANG_NONE && (
-                  <Ionicons name="checkmark" size={theme.fontSize.lg} color={theme.colors.primary} />
-                )}
-              </Pressable>
-            )}
             {rows.map((code) => (
               <Pressable
                 key={code}

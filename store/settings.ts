@@ -204,6 +204,12 @@ interface SettingsValues {
    * ⚠️ identifier は端末固有なので、使う前に `filterKnownVoices` で実在確認する。
    */
   speechVoices: VoiceByLang;
+  /**
+   * 日本語と混ざるときはラテン文字も同じ声で読む（＝混在文で声を分けない）。
+   * ⚠️ **英語だけのカードには効かせない**（`resolveSpeechSegments` が判定）＝常に倒すと
+   * 「英語の技術用語の発音を聞く」という本命の使い道が失われるため。
+   */
+  speechNoMixedSwitch: boolean;
   // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
   badgeLapStageSeen: number;
 }
@@ -387,6 +393,7 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
       else AsyncStorage.setItem(SPEECH_SCRIPT_LANGS_KEY, JSON.stringify(v));
     },
   },
+  speechNoMixedSwitch: { key: '@codeflash_speech_no_mixed_switch', default: false, parse: asBool },
   speechVoices: {
     key: SPEECH_VOICES_KEY,
     default: {},
@@ -453,6 +460,7 @@ interface SettingsState extends SettingsValues {
   setSpeechRate: (v: number) => void;
   /** 文字体系1つぶんの言語を上書きする（他の文字体系はそのまま） */
   setSpeechScriptLang: (script: SpeechScript, lang: string) => void;
+  setSpeechNoMixedSwitch: (v: boolean) => void;
   /** 言語1つぶんの声を選ぶ。`null` で「自動」（端末の既定に任せる）へ戻す */
   setSpeechVoice: (language: string, identifier: string | null) => void;
   setBadgeLapStageSeen: (v: number) => void;
@@ -530,6 +538,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
         return { speechScriptLangs: next };
       });
     },
+    setSpeechNoMixedSwitch: makeSetter('speechNoMixedSwitch'),
     // 「自動」（null）は言語ごと消す＝声を選び直せる状態に戻す。
     setSpeechVoice: (language, identifier) => {
       set((state) => {
@@ -583,6 +592,15 @@ export async function hydrateSettings(): Promise<void> {
     const raw = raws[i];
     if (raw !== null) hydrateOne(k, raw, update);
   });
+  // 旧「なし」（言語に 'none' を選ぶ方式）からの移行。言語は既定へ戻し、トグルを ON にする。
+  // ⚠️ 「なし」は英語だけのカードまで日本語の声にしてしまうため、混在文限定のトグルへ置き換えた。
+  if (update.speechScriptLangs?.latin === 'none') {
+    const { latin: _dropped, ...rest } = update.speechScriptLangs;
+    update.speechScriptLangs = rest;
+    update.speechNoMixedSwitch = true;
+    DEFS.speechScriptLangs.persist?.(rest);
+    AsyncStorage.setItem(DEFS.speechNoMixedSwitch.key, 'true');
+  }
   if (update.speechScriptLangs === undefined) {
     const migrated = await migrateLegacySpeechLangs();
     if (migrated) update.speechScriptLangs = migrated;

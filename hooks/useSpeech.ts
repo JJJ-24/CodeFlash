@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { speakText, stopSpeech } from '@/lib/speech';
+import { filterKnownVoices, getAvailableVoiceIds, speakText, stopSpeech } from '@/lib/speech';
 import { useSettingsStore } from '@/store/settings';
 
 /**
@@ -18,6 +18,17 @@ export function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
   const speechRate = useSettingsStore((s) => s.speechRate);
   const speechScriptLangs = useSettingsStore((s) => s.speechScriptLangs);
+  const speechVoices = useSettingsStore((s) => s.speechVoices);
+
+  // ⚠️ **端末に実在する声だけを渡す**。identifier は端末固有で、iCloud 同期や JSON
+  // インポートで来た設定には無いものが混ざる。存在しない identifier を渡すと
+  // expo-speech が例外を投げるため、一覧を1回取って突き合わせる（取得前は声を渡さない）。
+  const [knownVoiceIds, setKnownVoiceIds] = useState<Set<string> | null>(null);
+  useEffect(() => { getAvailableVoiceIds().then(setKnownVoiceIds).catch(() => {}); }, []);
+  const voices = useMemo(
+    () => (knownVoiceIds ? filterKnownVoices(speechVoices, knownVoiceIds) : {}),
+    [speechVoices, knownVoiceIds],
+  );
 
   const stop = useCallback(() => {
     stopSpeech();
@@ -29,11 +40,12 @@ export function useSpeech() {
     speakText(text, {
       rate: speechRate,
       scriptLangs: speechScriptLangs,
+      voices,
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
     });
     setSpeaking(true);
-  }, [speechRate, speechScriptLangs]);
+  }, [speechRate, speechScriptLangs, voices]);
 
   /** 読み上げ中なら止める、そうでなければ読む（ボタン・キーの両方から使う）。 */
   const toggle = useCallback((text: string) => {

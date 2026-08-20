@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import type { GradeRankingSortBy } from '@/lib/database/reviews';
 import i18n from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
-import { scriptForLanguage, SPEECH_RATE_DEFAULT, SPEECH_RATES, type ScriptLangs, type SpeechScript } from '@/lib/speech';
+import { scriptForLanguage, SPEECH_RATE_DEFAULT, SPEECH_RATES, type ScriptLangs, type SpeechScript, type VoiceByLang } from '@/lib/speech';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
@@ -198,6 +198,12 @@ interface SettingsValues {
    * ⚠️ 既定値は端末言語から作るものがある（漢字）ので、**上書きだけを保存する**（全部保存しない）。
    */
   speechScriptLangs: ScriptLangs;
+  /**
+   * 言語ごとに使う声（BCP-47 → identifier）。空なら端末の既定の声に任せる。
+   * ⚠️ **文字体系ではなく言語で持つ**（区間は言語で畳まれるため）。
+   * ⚠️ identifier は端末固有なので、使う前に `filterKnownVoices` で実在確認する。
+   */
+  speechVoices: VoiceByLang;
   // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
   badgeLapStageSeen: number;
 }
@@ -229,6 +235,7 @@ const oneOf = <T extends string>(values: readonly T[]) => (raw: string): T | und
 const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
 const STATS_COLLAPSED_SECTIONS_KEY = '@codeflash_stats_collapsed_sections';
 const SPEECH_SCRIPT_LANGS_KEY = '@codeflash_speech_script_langs';
+const SPEECH_VOICES_KEY = '@codeflash_speech_voices';
 // 049 の旧キー（ラテン／非ラテンの2つだけだった時代）。050 のマップへ一度だけ移行する。
 const LEGACY_SPEECH_LATIN_KEY = '@codeflash_speech_latin_lang';
 const LEGACY_SPEECH_NON_LATIN_KEY = '@codeflash_speech_non_latin_lang';
@@ -380,6 +387,21 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
       else AsyncStorage.setItem(SPEECH_SCRIPT_LANGS_KEY, JSON.stringify(v));
     },
   },
+  speechVoices: {
+    key: SPEECH_VOICES_KEY,
+    default: {},
+    parse: (r) => {
+      try {
+        const parsed = JSON.parse(r);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
+      } catch { return undefined; }
+    },
+    // 1つも選んでいなければキー自体を消す。
+    persist: (v) => {
+      if (Object.keys(v).length === 0) AsyncStorage.removeItem(SPEECH_VOICES_KEY);
+      else AsyncStorage.setItem(SPEECH_VOICES_KEY, JSON.stringify(v));
+    },
+  },
   badgeLapStageSeen: {
     key: '@codeflash_badge_lap_stage_seen',
     default: 1,
@@ -431,6 +453,8 @@ interface SettingsState extends SettingsValues {
   setSpeechRate: (v: number) => void;
   /** 文字体系1つぶんの言語を上書きする（他の文字体系はそのまま） */
   setSpeechScriptLang: (script: SpeechScript, lang: string) => void;
+  /** 言語1つぶんの声を選ぶ。`null` で「自動」（端末の既定に任せる）へ戻す */
+  setSpeechVoice: (language: string, identifier: string | null) => void;
   setBadgeLapStageSeen: (v: number) => void;
 }
 
@@ -504,6 +528,16 @@ export const useSettingsStore = create<SettingsState>((set) => {
         const next = { ...state.speechScriptLangs, [script]: lang };
         DEFS.speechScriptLangs.persist?.(next);
         return { speechScriptLangs: next };
+      });
+    },
+    // 「自動」（null）は言語ごと消す＝声を選び直せる状態に戻す。
+    setSpeechVoice: (language, identifier) => {
+      set((state) => {
+        const next = { ...state.speechVoices };
+        if (identifier) next[language] = identifier;
+        else delete next[language];
+        DEFS.speechVoices.persist?.(next);
+        return { speechVoices: next };
       });
     },
     setBadgeLapStageSeen: makeSetter('badgeLapStageSeen'),

@@ -151,6 +151,13 @@ export function splitByScript(text: string): SpeechSegment[] {
 export type ScriptLangs = Partial<Record<SpeechScript, string>>;
 
 /**
+ * 言語ごとに使う声（BCP-47 → `identifier`）。**文字体系ではなく言語で持つ**のは、
+ * 区間が解決後の言語で畳まれるため（かなと漢字が同じ `ja-JP` になったとき、
+ * 文字体系キーだとどちらの声か決まらない）。言語を変えても前の選択が残る利点もある。
+ */
+export type VoiceByLang = Record<string, string>;
+
+/**
  * 端末の言語から漢字の既定を決める。日本語端末なら日本語、中国語端末なら中国語。
  * ⚠️ 対応表は持たない。`languageCode`＋`regionCode` を繋いで `ja-JP` / `zh-TW` を作る
  * （iOS の音声もこの形）。端末に無い組み合わせになっても iOS が近い声へ倒す。
@@ -283,6 +290,12 @@ export function resolveSpeechSegments(text: string, langs: ScriptLangs = {}): Re
 export interface SpeakOptions {
   /** 文字体系ごとの言語の上書き（設定から渡す。未指定は既定） */
   scriptLangs?: ScriptLangs;
+  /**
+   * 言語ごとに使う声（BCP-47 → `identifier`）。未指定の言語は端末の既定の声。
+   * ⚠️ **端末に実在する identifier だけを渡すこと**（`filterKnownVoices`）。
+   * 実在しない identifier を渡すと `expo-speech` が例外を投げる。
+   */
+  voices?: VoiceByLang;
   rate: number;
   /** **最後の区間**を読み終えたときだけ呼ばれる。 */
   onDone?: () => void;
@@ -300,13 +313,87 @@ export function speakText(text: string, options: SpeakOptions): void {
   Speech.stop();
   segments.forEach((seg, i) => {
     const isLast = i === segments.length - 1;
-    Speech.speak(seg.text, {
+    const base = {
       language: seg.language,
       rate: options.rate,
       onDone: isLast ? options.onDone : undefined,
       onStopped: options.onStopped,
-    });
+    };
+    const voice = options.voices?.[seg.language];
+    if (!voice) { Speech.speak(seg.text, base); return; }
+    try {
+      Speech.speak(seg.text, { ...base, voice });
+    } catch {
+      // ⚠️ 端末に無い identifier だと expo-speech が投げる（別端末から同期した設定など）。
+      // 声を諦めて言語だけで読み直す＝**黙って無音になるのが一番まずい**ため。
+      Speech.speak(seg.text, base);
+    }
   });
+}
+
+/**
+ * 試聴用のサンプル文（言語の接頭辞 → **その言語で書かれた文**）。
+ *
+ * ⚠️ **`locales` に置かない**。UI 言語に翻訳するものではなく、読み上げる声の言語で
+ * 書かれていなければ試聴の意味が無いため（タイ語の声に日本語を読ませても評価できない）。
+ * ⚠️ **表に無い言語は声の名前を読む**（`voiceSampleText`）。正しさを確信できない文を
+ * 各国語で埋め込むより、名前を読むほうが害が無い。
+ */
+const VOICE_SAMPLE_TEXTS: Record<string, string> = {
+  en: 'The quick brown fox jumps over the lazy dog.',   // pangram。`lazy` の /eɪ/ で豪州英語の母音を確かめられる
+  ja: 'こんにちは。今日はいい天気ですね。',
+  ko: '안녕하세요. 오늘 날씨가 좋네요.',
+  zh: '你好，今天天气很好。',
+  yue: '你好，今日天氣好好。',
+  es: 'Hola, hoy hace buen tiempo.',
+  fr: 'Bonjour, il fait beau aujourd\'hui.',
+  de: 'Hallo, heute ist schönes Wetter.',
+  it: 'Ciao, oggi è una bella giornata.',
+  pt: 'Olá, hoje está um bom tempo.',
+  nl: 'Hallo, het is mooi weer vandaag.',
+  sv: 'Hej, det är fint väder idag.',
+  da: 'Hej, det er godt vejr i dag.',
+  nb: 'Hei, det er fint vær i dag.',
+  no: 'Hei, det er fint vær i dag.',
+  fi: 'Hei, tänään on kaunis sää.',
+  pl: 'Cześć, dzisiaj jest ładna pogoda.',
+  cs: 'Ahoj, dnes je hezké počasí.',
+  sk: 'Ahoj, dnes je pekné počasie.',
+  hu: 'Szia, ma szép idő van.',
+  ro: 'Bună, astăzi este vreme frumoasă.',
+  hr: 'Bok, danas je lijepo vrijeme.',
+  ca: 'Hola, avui fa bon temps.',
+  tr: 'Merhaba, bugün hava çok güzel.',
+  id: 'Halo, cuaca hari ini bagus.',
+  ms: 'Helo, cuaca hari ini baik.',
+  vi: 'Xin chào, hôm nay trời đẹp.',
+  th: 'สวัสดีครับ วันนี้อากาศดี',
+  ru: 'Здравствуйте, сегодня хорошая погода.',
+  uk: 'Привіт, сьогодні гарна погода.',
+  el: 'Γεια σας, σήμερα ο καιρός είναι ωραίος.',
+  he: 'שלום, מזג האוויר נעים היום.',
+  ar: 'مرحبا، الطقس جميل اليوم.',
+  hi: 'नमस्ते, आज मौसम अच्छा है।',
+};
+
+/** 試聴で読む文。表に無い言語は声の名前（`Karen` など）を読む。 */
+export function voiceSampleText(language: string, voiceName: string): string {
+  return VOICE_SAMPLE_TEXTS[language.split('-')[0].toLowerCase()] ?? voiceName;
+}
+
+/**
+ * 声の試聴。**読み上げ本体と同じ速度**で鳴らす（実際の聞こえ方で判断できるように）。
+ * ⚠️ 前の再生は必ず止める（連続タップで声が重なるため）。
+ * ⚠️ 実在しない identifier は例外になるので、失敗したら声なしで読み直す。
+ */
+export function previewVoice(opts: { text: string; language: string; voice?: string; rate: number }): void {
+  Speech.stop();
+  const base = { language: opts.language, rate: opts.rate };
+  try {
+    Speech.speak(opts.text, opts.voice ? { ...base, voice: opts.voice } : base);
+  } catch {
+    Speech.speak(opts.text, base);
+  }
 }
 
 /** 読み上げを止め、キューに残っている区間も破棄する。 */
@@ -348,6 +435,75 @@ export async function getConfigurableScriptLanguages(): Promise<Partial<Record<S
   } catch {
     return {};
   }
+}
+
+/** 端末の音声1つぶん（ピッカーの行に出す情報）。 */
+export interface SpeechVoice {
+  identifier: string;
+  name: string;
+  language: string;
+  /** 強化版・プレミアム版は 'Enhanced'。音質が高いぶんダウンロードが要る */
+  quality: string;
+}
+
+/**
+ * **奇抜な声**（macOS 由来のノベルティ音声）の identifier 末尾トークン。
+ *
+ * `Bad News` や `Zarvox` に単語を読ませる場面は学習アプリには無く、一覧が伸びるぶん邪魔になる
+ * ので**ピッカーから外す**。⚠️ **`com.apple.speech.synthesis.voice.*` を接頭辞ごと弾かないこと**＝
+ * 同じ場所に `Alex` のようなまっとうな高品質音声も入っているため、個別トークンで拒否する。
+ * ⚠️ **表示名では弾かない**（端末の言語で訳されることがある。identifier は訳されない）。
+ */
+const NOVELTY_VOICE_TOKENS = new Set([
+  'albert', 'badnews', 'bahh', 'bells', 'boing', 'bubbles', 'cellos', 'deranged',
+  'goodnews', 'hysterical', 'jester', 'organ', 'superstar', 'trinoids', 'whisper',
+  'wobble', 'zarvox',
+]);
+
+/** 奇抜な声か（ピッカーから外す判定）。⚠️ `Alex` のような同じ接頭辞のまともな声を巻き込まないこと。 */
+export const isNoveltyVoice = (identifier: string) =>
+  NOVELTY_VOICE_TOKENS.has(identifier.split('.').pop()?.toLowerCase() ?? '');
+
+/** その言語で使える声の一覧（ピッカー用）。名前順で返す。**奇抜な声は除く**。 */
+export async function getVoicesForLanguage(language: string): Promise<SpeechVoice[]> {
+  try {
+    const voices = await Speech.getAvailableVoicesAsync();
+    return voices
+      .filter((v) => v.language === language && !isNoveltyVoice(v.identifier))
+      .map((v) => ({
+        identifier: v.identifier,
+        name: v.name || v.identifier,
+        language: v.language,
+        quality: String(v.quality ?? ''),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
+}
+
+/** 端末に実在する声の identifier 一式。`filterKnownVoices` に渡して検証に使う。 */
+export async function getAvailableVoiceIds(): Promise<Set<string>> {
+  try {
+    const voices = await Speech.getAvailableVoicesAsync();
+    return new Set(voices.map((v) => v.identifier).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * **端末に実在する声だけを残す。**
+ *
+ * ⚠️ identifier は端末固有なので、iCloud 同期や JSON インポートで来た設定には
+ * この端末に無いものが混ざりうる。実在しない identifier を `Speech.speak` に渡すと
+ * `expo-speech` が例外を投げる（`InvalidVoiceException`）ので、**渡す前にここで落とす**。
+ * ⚠️ `known` が空（取得前・取得失敗）のときは**何も渡さない**＝言語だけで読む安全側に倒す。
+ */
+export function filterKnownVoices(voices: VoiceByLang, known: Set<string>): VoiceByLang {
+  const out: VoiceByLang = {};
+  for (const [lang, id] of Object.entries(voices)) if (known.has(id)) out[lang] = id;
+  return out;
 }
 
 async function loadVoiceLanguages(): Promise<string[]> {

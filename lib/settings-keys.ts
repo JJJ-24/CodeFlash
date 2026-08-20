@@ -51,6 +51,9 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   // 050：文字体系ごとの読み上げ言語（JSON）。旧2キーは 049 の遺産で、
   // 新キーが無い端末でだけ移行元として読まれる（エクスポートには残しておく）。
   '@codeflash_speech_script_langs',
+  // 050 Phase 3：言語ごとに選んだ声（identifier）。⚠️ identifier は端末固有なので、
+  // 別端末へインポートしても存在しないものは filterKnownVoices が落とす（無音にならない）。
+  '@codeflash_speech_voices',
   '@codeflash_speech_latin_lang',
   '@codeflash_speech_non_latin_lang',
 ] as const;

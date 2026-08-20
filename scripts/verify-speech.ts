@@ -15,12 +15,14 @@ const root = nodePath.join(__dirname, '..');
 
 // ---- expo-speech のスタブ（speak/stop を記録するだけ） -----------------------
 
-interface SpokenUtterance { text: string; language: string }
+interface SpokenUtterance { text: string; language: string; voice?: string }
 const spoken: SpokenUtterance[] = [];
 
 const stubs: Record<string, unknown> = {
   'expo-speech': {
-    speak: (text: string, opts: { language: string }) => { spoken.push({ text, language: opts.language }); },
+    speak: (text: string, opts: { language: string; voice?: string }) => {
+      spoken.push({ text, language: opts.language, voice: opts.voice });
+    },
     stop: () => {},
     getAvailableVoicesAsync: async () => [],
   },
@@ -48,6 +50,7 @@ M._resolveFilename = function (request: string, ...rest: unknown[]) {
 const speech = require('@/lib/speech');
 const { splitByScript, resolveSpeechSegments, speakText } = speech;
 const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS, speechLanguageLabel } = speech;
+const { filterKnownVoices, voiceSampleText, isNoveltyVoice } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { blocksToSpeech, stripMarkdown } = require('@/lib/blocksToSpeech');
 
@@ -171,6 +174,44 @@ spoken.length = 0;
 speakText('   ', { rate: 1.0 });
 eq(spoken, [], '空白だけなら1件も積まない');
 
+// ---- 声の選択（050 Phase 3） -------------------------------------------------
+
+// ⚠️ 声は**言語ごと**に持つ（文字体系ごとではない）＝区間が言語で畳まれるため。
+spoken.length = 0;
+speakText('React の話', { rate: 1.0, voices: { 'en-US': 'voice.en.Alex', 'ja-JP': 'voice.ja.Kyoko' } });
+eq(spoken, [
+  { text: 'React ', language: 'en-US', voice: 'voice.en.Alex' },
+  { text: 'の話', language: 'ja-JP', voice: 'voice.ja.Kyoko' },
+], '区間の言語に対応する声を渡す');
+
+spoken.length = 0;
+speakText('React の話', { rate: 1.0, voices: { 'en-US': 'voice.en.Alex' } });
+eq(spoken, [
+  { text: 'React ', language: 'en-US', voice: 'voice.en.Alex' },
+  { text: 'の話', language: 'ja-JP', voice: undefined },
+], '選んでいない言語は声を渡さない（端末の既定に任せる）');
+
+// ⚠️ identifier は端末固有。実在しないものを渡すと expo-speech が例外を投げるので、
+// 呼び出し側（useSpeech）が `filterKnownVoices` で落としてから渡す。
+eq(filterKnownVoices({ 'en-US': 'a', 'ja-JP': 'b' }, new Set(['a'])), { 'en-US': 'a' },
+  '端末に無い identifier は落とす');
+eq(filterKnownVoices({ 'en-US': 'a' }, new Set()), {},
+  '一覧が取れていないときは何も渡さない（言語だけで読む安全側）');
+
+// 試聴のサンプル文。⚠️ 表に無い言語は**声の名前**を読む（誤った文を各国語で持たない）。
+eq(voiceSampleText('en-AU', 'Karen'), 'The quick brown fox jumps over the lazy dog.',
+  '地域が違ってもラテン言語の接頭辞で引く');
+eq(voiceSampleText('ja-JP', 'Kyoko'), 'こんにちは。今日はいい天気ですね。', '日本語のサンプル文');
+eq(voiceSampleText('bo-CN', 'Tenzin'), 'Tenzin', '表に無い言語は声の名前を読む');
+
+// 奇抜な声（Bad News・Zarvox 等）はピッカーから外す。⚠️ **identifier のトークンで判定**する
+// （表示名は端末の言語で訳されることがある）。⚠️ 同じ接頭辞の `Alex` を巻き込まないこと。
+eq(isNoveltyVoice('com.apple.speech.synthesis.voice.BadNews'), true, '奇抜な声は外す');
+eq(isNoveltyVoice('com.apple.speech.synthesis.voice.Zarvox'), true, '大小文字を問わず判定する');
+eq(isNoveltyVoice('com.apple.speech.synthesis.voice.Alex'), false,
+  '同じ接頭辞でも Alex はまともな声なので残す（接頭辞ごと弾かない根拠）');
+eq(isNoveltyVoice('com.apple.voice.compact.en-AU.Karen'), false, '通常の声は残す');
+
 // ---- 旧設定（049）からの移行 -------------------------------------------------
 
 eq(scriptForLanguage('ja-JP'), 'han', '日本語は漢字の設定へ寄せる');
@@ -199,9 +240,7 @@ eq(SCRIPT_DEFAULT_LANGS.hangul, 'ko-KR', '1対1の文字体系はその言語で
 
 // ⚠️ `Intl.DisplayNames` は iOS の Hermes に無いので表示名はアプリ側に持つ。
 // ここでは i18next の代わりに locales の JSON を直接引く簡易 `t` で検証する。
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const jaLocale = require('@/locales/ja.json');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const enLocale = require('@/locales/en.json');
 const makeT = (dict: Record<string, unknown>) => (key: string, opts?: Record<string, unknown>) => {
   const val = key.split('.').reduce<unknown>((o, k) => (o == null ? undefined : (o as Record<string, unknown>)[k]), dict);

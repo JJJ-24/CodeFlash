@@ -8,13 +8,16 @@ import { Pressable, Switch, Text, View } from 'react-native';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
+import { SpeechVoiceModal } from '@/components/settings/SpeechVoiceModal';
 import {
   CONFIGURABLE_SCRIPTS,
   getConfigurableScriptLanguages,
+  getVoicesForLanguage,
   SCRIPT_DEFAULT_LANGS,
   SPEECH_RATES,
   speechLanguageLabel,
   type SpeechScript,
+  type SpeechVoice,
 } from '@/lib/speech';
 import { getAllSchedules, toggleScheduleEnabled, updateSchedule } from '@/lib/database/notifications';
 import type { NotificationSchedule } from '@/types';
@@ -65,6 +68,7 @@ export default function StudySettingsScreen() {
     speechEnabled, setSpeechEnabled,
     speechRate, setSpeechRate,
     speechScriptLangs, setSpeechScriptLang,
+    speechVoices, setSpeechVoice,
   } = useSettingsStore();
   // 開いている言語ピッカー（null＝閉じている）。行は複数あるがモーダルは1つを使い回す。
   const [speechLangModal, setSpeechLangModal] = useState<SpeechScript | null>(null);
@@ -74,6 +78,10 @@ export default function StudySettingsScreen() {
   // ための判定に使う（多くの端末でアラビア文字は ar-SA だけ＝選ばせる意味が無い）。
   const [scriptOptions, setScriptOptions] = useState<Partial<Record<SpeechScript, string[]>> | null>(null);
   useEffect(() => { getConfigurableScriptLanguages().then(setScriptOptions).catch(() => {}); }, []);
+  // 050 Phase 3：声のピッカーを開いている言語（null＝閉じている）。
+  const [speechVoiceModal, setSpeechVoiceModal] = useState<string | null>(null);
+  // 今表示している言語ごとの声の一覧。**声が2つ以上あるときだけ「声」の行を出す**ため。
+  const [voicesByLang, setVoicesByLang] = useState<Record<string, SpeechVoice[]>>({});
   const db = useSQLiteContext();
   const { notificationEnabled } = useSettingsStore();
   // 046: 目標の変更は未達成リマインダーの予約内容を変える（OFF なら予約自体を止める）。
@@ -268,6 +276,21 @@ export default function StudySettingsScreen() {
   /** 「その他の文字体系」に実際に出す文字体系（選べないものは畳んだ中にも出さない）。 */
   const visibleOtherScripts = OTHER_SPEECH_SCRIPTS.filter(isScriptSelectable);
 
+  /** その文字体系がいま読む言語（上書きが無ければ既定）。 */
+  const langOf = (script: SpeechScript) => speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script];
+
+  // 表示中の言語について声の一覧を読む（言語を変えたら読み直す）。
+  // ⚠️ **声が1つしか無い言語では「声」の行を出さない**（言語の行と同じ規則）。
+  const shownLangs = [langOf('latin'), langOf('han'), ...visibleOtherScripts.map(langOf)];
+  const shownLangsKey = shownLangs.join(',');
+  useEffect(() => {
+    let alive = true;
+    Promise.all(shownLangsKey.split(',').map(async (lang) => [lang, await getVoicesForLanguage(lang)] as const))
+      .then((pairs) => { if (alive) setVoicesByLang(Object.fromEntries(pairs)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [shownLangsKey]);
+
   /** 文字体系1つぶんの言語選択行。値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。
    *  説明は行名の右の ⓘ をタップして下に開く（常時表示にすると行が縦に伸びて一覧性が落ちる）。 */
   const speechScriptRow = (script: SpeechScript) => {
@@ -296,6 +319,33 @@ export default function StudySettingsScreen() {
           script === 'han' ? 'settings.speechScriptHanHint' : 'settings.speechScriptLangHint',
           { name },
         )}
+        {speechVoiceRow(langOf(script))}
+      </View>
+    );
+  };
+
+  /** その言語を読む声の行。**声が2つ以上あるときだけ**出す（1つなら選ぶ意味が無い）。 */
+  const speechVoiceRow = (language: string) => {
+    const list = voicesByLang[language];
+    if (!list || list.length < 2) return null;
+    const selected = list.find((v) => v.identifier === speechVoices[language]);
+    return (
+      <View>
+        <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechVoiceModal(language)}>
+          <View style={[styles.dataRowText, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            <Text style={[styles.dataRowTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('settings.speechVoice')}
+            </Text>
+            <Pressable onPress={() => toggleInfo(`speechVoice:${language}`)} hitSlop={8}>
+              {infoIcon(`speechVoice:${language}`)}
+            </Pressable>
+          </View>
+          <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {selected ? selected.name : t('settings.speechVoiceAuto')}
+          </Text>
+          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+        </Pressable>
+        {infoBox(`speechVoice:${language}`, 'settings.speechVoiceHint', { name: speechLanguageLabel(language, t) })}
       </View>
     );
   };
@@ -391,6 +441,16 @@ export default function StudySettingsScreen() {
       </View>
   );
 
+  const speechVoiceModalEl = (
+    <SpeechVoiceModal
+      visible={speechVoiceModal !== null}
+      language={speechVoiceModal ?? 'en-US'}
+      value={speechVoiceModal ? speechVoices[speechVoiceModal] ?? null : null}
+      onSelect={(id) => { if (speechVoiceModal) setSpeechVoice(speechVoiceModal, id); }}
+      onClose={() => setSpeechVoiceModal(null)}
+    />
+  );
+
   const speechLangModalScript = speechLangModal ?? 'latin';
   const speechLangModalEl = (
     <SpeechLanguageModal
@@ -441,6 +501,7 @@ export default function StudySettingsScreen() {
         {speechCard}
         {goalConflictModal}
         {speechLangModalEl}
+        {speechVoiceModalEl}
       </SettingsDetail>
     );
   }
@@ -745,6 +806,7 @@ export default function StudySettingsScreen() {
       {speechCard}
       {goalConflictModal}
       {speechLangModalEl}
+      {speechVoiceModalEl}
     </SettingsDetail>
   );
 }

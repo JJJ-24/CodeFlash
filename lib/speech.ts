@@ -393,27 +393,34 @@ export function scriptForLanguage(code: string): SpeechScript | undefined {
   return single[prefix];
 }
 
-/**
- * 言語コードの表示名。よく使うものだけ持ち、無いものはコードをそのまま出す
- * （選択肢は端末から取るので、ここに無い言語が並ぶのは正常）。
- */
-export const SPEECH_LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', it: 'Italiano',
-  pt: 'Português', nl: 'Nederlands', sv: 'Svenska', da: 'Dansk', nb: 'Norsk',
-  no: 'Norsk', fi: 'Suomi', pl: 'Polski', cs: 'Čeština', sk: 'Slovenčina',
-  hu: 'Magyar', ro: 'Română', tr: 'Türkçe', id: 'Bahasa Indonesia',
-  ms: 'Bahasa Melayu', vi: 'Tiếng Việt', ca: 'Català', hr: 'Hrvatski',
-  // 非ラテン文字
-  ja: '日本語', ko: '한국어', zh: '中文', yue: '粵語', ru: 'Русский',
-  uk: 'Українська', bg: 'Български', sr: 'Српски', el: 'Ελληνικά',
-  he: 'עברית', iw: 'עברית', ar: 'العربية', fa: 'فارسی', hi: 'हिन्दी',
-  bn: 'বাংলা', ta: 'தமிழ்', te: 'తెలుగు', kn: 'ಕನ್ನಡ', ml: 'മലയാളം',
-  mr: 'मराठी', gu: 'ગુજરાતી', pa: 'ਪੰਜਾਬੀ', th: 'ไทย', km: 'ភាសាខ្មែរ',
-  ka: 'ქართული', hy: 'Հայերեն', my: 'မြန်မာ', si: 'සිංහල', am: 'አማርኛ',
-};
+/** 表示名の取得に使う（`useTranslation()` の `t` をそのまま渡す）。 */
+type Translate = (key: string, opts?: Record<string, unknown>) => string;
 
-/** `en-US` → `English (en-US)` のような表示用ラベル。 */
-export function speechLanguageLabel(code: string): string {
-  const name = SPEECH_LANGUAGE_NAMES[code.split('-')[0].toLowerCase()];
-  return name ? `${name} (${code})` : code;
+/** 地域サブタグ（`US` / `001`）を取り出す。`zh-Hans-CN` のような文字体系つきにも対応する。 */
+function regionOf(code: string): string | undefined {
+  return code
+    .split('-')
+    .slice(1)
+    .find((part) => /^([A-Za-z]{2}|\d{3})$/.test(part))
+    ?.toUpperCase();
+}
+
+/**
+ * 言語コードを UI 言語の表示名にする（`en-AU` → 日本語 UI なら `英語（オーストラリア）`）。
+ *
+ * ⚠️ **表示名はアプリ側（`locales/*.json` の `speechLang` / `speechRegion`）に持つ**。
+ * `Intl.DisplayNames` があれば OS から取れるが、**iOS の Hermes には入っていない**
+ * （`DateTimeFormat`/`NumberFormat`/`Collator` はあるが `DisplayNames` は無いことを
+ * `hermes.framework` の文字列で確認済み）。
+ *
+ * ⚠️ **表に無いコードはコードのまま返す**。選択肢は端末の音声一覧から作るので、
+ * OS が新しい言語の音声を追加しても一覧には出続ける（ラベルが読めなくなるだけで壊れない）。
+ */
+export function speechLanguageLabel(code: string, t: Translate): string {
+  const lang = code.split('-')[0].toLowerCase();
+  const langName = t(`speechLang.${lang}`, { defaultValue: '' });
+  if (!langName) return code;
+  const region = regionOf(code);
+  const regionName = region ? t(`speechRegion.${region}`, { defaultValue: '' }) : '';
+  return regionName ? t('settings.speechLangWithRegion', { language: langName, region: regionName }) : langName;
 }

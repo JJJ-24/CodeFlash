@@ -95,7 +95,7 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose 
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
-                  {speechLanguageLabel(code)}
+                  {speechLanguageLabel(code, t)}
                 </Text>
                 {code === value && (
                   <Ionicons name="checkmark" size={theme.fontSize.lg} color={theme.colors.primary} />

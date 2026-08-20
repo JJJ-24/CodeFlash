@@ -47,7 +47,7 @@ M._resolveFilename = function (request: string, ...rest: unknown[]) {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const speech = require('@/lib/speech');
 const { splitByScript, resolveSpeechSegments, speakText } = speech;
-const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS } = speech;
+const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS, speechLanguageLabel } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { blocksToSpeech, stripMarkdown } = require('@/lib/blocksToSpeech');
 
@@ -194,6 +194,32 @@ eq(hanLangForLocale({ languageCode: 'ru', regionCode: 'RU' }), 'ja-JP', 'ロシ�
 eq(hanLangForLocale(undefined), 'ja-JP', '端末情報が取れなくても ja-JP へ倒す');
 eq(SCRIPT_DEFAULT_LANGS.han, 'ja-JP', '既定表の漢字は端末言語（このハーネスでは ja-JP）から作られる');
 eq(SCRIPT_DEFAULT_LANGS.hangul, 'ko-KR', '1対1の文字体系はその言語で確定（設定を出さない根拠）');
+
+// ---- 言語コードの表示名（locales の表を引く） ---------------------------------
+
+// ⚠️ `Intl.DisplayNames` は iOS の Hermes に無いので表示名はアプリ側に持つ。
+// ここでは i18next の代わりに locales の JSON を直接引く簡易 `t` で検証する。
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const jaLocale = require('@/locales/ja.json');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const enLocale = require('@/locales/en.json');
+const makeT = (dict: Record<string, unknown>) => (key: string, opts?: Record<string, unknown>) => {
+  const val = key.split('.').reduce<unknown>((o, k) => (o == null ? undefined : (o as Record<string, unknown>)[k]), dict);
+  if (typeof val !== 'string') return (opts?.defaultValue as string) ?? key;
+  return val.replace(/\{\{(\w+)\}\}/g, (_m: string, k: string) => String(opts?.[k] ?? ''));
+};
+const tJa = makeT(jaLocale);
+const tEn = makeT(enLocale);
+
+eq(speechLanguageLabel('en-AU', tJa), '英語（オーストラリア）', '地域つきは「言語（地域）」で出す');
+eq(speechLanguageLabel('en-AU', tEn), 'English (Australia)', '英語 UI では半角括弧');
+eq(speechLanguageLabel('ja-JP', tJa), '日本語（日本）', '日本語も同じ形');
+eq(speechLanguageLabel('th', tJa), 'タイ語', '地域が無ければ言語名だけ');
+eq(speechLanguageLabel('ar-001', tJa), 'アラビア語（世界）', 'UN M49 の 001 は「世界」');
+eq(speechLanguageLabel('zh-Hans-CN', tJa), '中国語（中国）', '文字体系サブタグを挟んでも地域を拾う');
+// ⚠️ 表に無いコードは**コードのまま**返す＝端末が新しい言語の音声を持っていても一覧は壊れない。
+eq(speechLanguageLabel('xx-YY', tJa), 'xx-YY', '未知の言語はコードのまま');
+eq(speechLanguageLabel('en-XX', tJa), '英語', '未知の地域は言語名だけにする');
 
 // ---- stripMarkdown -----------------------------------------------------------
 

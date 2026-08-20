@@ -287,7 +287,7 @@ export default function StudySettingsScreen() {
             </Pressable>
           </View>
           <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script])}
+            {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script], t)}
           </Text>
           <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
         </Pressable>

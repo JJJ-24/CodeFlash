@@ -530,7 +530,7 @@
     "studyGoalCountValue": "{{n}} cards",
     "speech": "Read aloud",
     "speechEnable": "Read cards aloud",
-    "speechHint": "Use the speaker button (S key) on the study screen to read the visible side aloud. Code blocks are skipped.",
+    "speechHint": "Use the speaker button on the study screen to read the visible side aloud. Code blocks are skipped.",
     "speechRate": "Speed",
     "speechScriptLangRow": "Language for {{name}}",
     "speechScriptLangHint": "Text written in {{name}} is read in this language.",

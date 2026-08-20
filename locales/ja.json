@@ -530,7 +530,7 @@
     "studyGoalCountValue": "{{n}} 枚",
     "speech": "読み上げ",
     "speechEnable": "カードを読み上げる",
-    "speechHint": "学習画面のスピーカーボタン（S キー）で、表示中の面を読み上げます。コードブロックは読み上げません。",
+    "speechHint": "学習画面のスピーカーボタンで、表示中の面を読み上げます。コードブロックは読み上げません。",
     "speechRate": "速度",
     "speechScriptLangRow": "{{name}}の言語",
     "speechScriptLangHint": "{{name}}で書かれた部分をこの言語で読み上げます。",

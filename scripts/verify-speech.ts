@@ -144,6 +144,22 @@ eq(voices('Hola amigo', { latin: 'es-ES' }), ['es-ES:Hola amigo'], 'ラテン文
 eq(voices('Ứng dụng', { latin: 'vi-VN' }), ['vi-VN:Ứng dụng'], 'ベトナム語もラテン文字の設定で読める');
 eq(voices('Привет', { cyrillic: 'uk-UA' }), ['uk-UA:Привет'], 'キリル文字の言語も設定できる');
 
+// 「なし」＝声を分けない（ラテン文字ももう一方の声で読む）。
+// ⚠️ `HTML` が英語・`CSS` が日本語と**同じ文で読み分かれる**のが分かりにくい、という声への逃げ道。
+eq(voices('React の useEffect は副作用を扱う', { latin: 'none' }),
+  ['ja-JP:React の useEffect は副作用を扱う'],
+  '「なし」なら声が切り替わらず1発話に畳まれる');
+eq(voices('HTML と CSS', { latin: 'none' }), ['ja-JP:HTML と CSS'],
+  '同じ文の HTML と CSS が同じ声になる（読み分けの不一致が消える）');
+eq(voices('Hello', { latin: 'none' }), ['ja-JP:Hello'],
+  '英語だけのカードも「なし」なら日本語の声（設定の意味どおり）');
+// ⚠️ 「なし」は**漢字側の解決をそのまま使う**＝かなの推定も効く。既定へ落とすと、漢字を
+// 中国語にしている人のラテン文字だけ中国語の声になって「分けない」目的から外れる。
+eq(voices('React の話', { latin: 'none', han: 'zh-CN' }), ['ja-JP:React の話'],
+  'かながあれば「なし」のラテン文字も日本語の声（漢字＝中国語の設定でも）');
+eq(voices('CSS 你好', { latin: 'none', han: 'zh-CN' }), ['zh-CN:CSS 你好'],
+  'かなが無ければ漢字の設定に従う（中国語の声で読む）');
+
 // 漢字の日中判別。
 eq(voices('你好，世界'), ['ja-JP:你好，世界'], '漢字だけの文は既定（端末言語）で読む');
 eq(voices('你好，世界', { han: 'zh-CN' }), ['zh-CN:你好，世界'], '漢字の言語を中国語にすれば中国語の声');

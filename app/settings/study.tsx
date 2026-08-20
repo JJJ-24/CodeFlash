@@ -14,6 +14,7 @@ import {
   getConfigurableScriptLanguages,
   getVoicesForLanguage,
   SCRIPT_DEFAULT_LANGS,
+  SPEECH_LANG_NONE,
   SPEECH_RATES,
   speechLanguageLabel,
   type SpeechScript,
@@ -303,7 +304,9 @@ export default function StudySettingsScreen() {
           </Text>
         </View>
         <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {speechLanguageLabel(speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script], t)}
+          {langOf(script) === SPEECH_LANG_NONE
+            ? t('settings.speechLangNone')
+            : speechLanguageLabel(langOf(script), t)}
         </Text>
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>

@@ -538,6 +538,7 @@
     "speechVoiceAuto": "自動",
     "speechVoiceEnhanced": "強化",
     "speechVoiceHint": "{{name}}を読み上げる声を選びます。「自動」なら端末の設定に従います。",
+    "speechLangNone": "なし（声を分けない）",
     "speechScriptSection": "言語設定",
     "speechScriptLangHint": "{{name}}部分を読み上げる言語を設定します。",
     "speechScriptLatin": "アルファベット",

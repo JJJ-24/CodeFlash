@@ -85,9 +85,9 @@ speakText                  区間ごとに声を変えてキューへ積む
 | script | 主な範囲 | 既定の言語 | 設定 |
 |---|---|---|---|
 | `latin` | 現在の `LATIN_CHARS`（ASCII＋U+00C0–U+024F＋U+1E00–U+1EFF） | `en-US` | **あり**（既存） |
-| `kana` | U+3040–U+30FF・U+31F0–U+31FF・U+FF00–U+FFEF（全角英数・半角カナ） | `ja-JP` | なし |
+| `kana` | U+3040–U+30FF・U+31F0–U+31FF・**U+FF66–U+FF9F（半角カナのみ）** | `ja-JP` | なし |
 | `han` | U+3400–U+4DBF・U+4E00–U+9FFF・U+F900–U+FAFF | 端末言語（`zh`/`ko` なら該当、他は `ja-JP`） | **あり** |
-| `hangul` | U+1100–U+11FF・U+3130–U+318F・U+A960–U+A97F・U+AC00–U+D7FF | `ko-KR` | なし |
+| `hangul` | U+1100–U+11FF・U+3130–U+318F・U+A960–U+A97F・U+AC00–U+D7FF・U+FFA0–U+FFDC | `ko-KR` | なし |
 | `cyrillic` | U+0400–U+052F・U+1C80–U+1C8F | `ru-RU` | **あり**（uk/bg/sr/mk/be） |
 | `greek` | U+0370–U+03FF・U+1F00–U+1FFF | `el-GR` | なし |
 | `hebrew` | U+0590–U+05FF | `he-IL` | なし |
@@ -96,9 +96,10 @@ speakText                  区間ごとに声を変えてキューへ積む
 | `thai` | U+0E00–U+0E7F | `th-TH` | なし |
 | `armenian` / `georgian` / `khmer` / `lao` / `myanmar` / `sinhala` / `amharic` / `bengali` / `tamil` / `telugu` / `kannada` / `malayalam` / `gujarati` / `gurmukhi` | それぞれの単一ブロック | 各言語 | なし |
 
-⚠️ **`kana` に全角形（U+FF00–U+FFEF）を含める**のは、全角英数・半角カナが日本語の文脈でしか
-出ないため。⚠️ **CJK 記号（U+3000–U+303F＝`、。「」`）は中立にする**（日中で共有するため、
-どちらかに寄せると隣の区間から切り離されて発話が割れる）。
+⚠️ **句読点・記号・全角英数はどこにも入れない＝中立にする**。CJK 記号（U+3000–U+303F＝`、。「」`）も
+**全角の約物**（U+FF01–U+FF65 の `，．！？`）も日中で共有するので、片方に寄せると発話が割れるうえ
+**中国語の文が「かなを含む」と誤判定される**（下の「実装で踏んだ罠」＝当初この表のとおり
+U+FF00–U+FFEF を丸ごと `kana` に入れて実際に壊した。**戻さないこと**）。
 
 ⚠️ **`LATIN_CHARS` と各範囲は交わらせない**（049 で踏んだ罠。テキスト全体に `test` をかける
 判定があるため、重ねると文字単位の優先順位が効かずベトナム語が誤判定される）。

@@ -80,7 +80,9 @@ export default function StudySettingsScreen() {
   const [scriptOptions, setScriptOptions] = useState<Partial<Record<SpeechScript, string[]>> | null>(null);
   useEffect(() => { getConfigurableScriptLanguages().then(setScriptOptions).catch(() => {}); }, []);
   // 050 Phase 3：声のピッカーを開いている言語（null＝閉じている）。
-  const [speechVoiceModal, setSpeechVoiceModal] = useState<string | null>(null);
+  // ⚠️ **どの文字体系の行から開いたか**も持つ＝説明文の言語名を行と同じ表記にするため
+  //（同じ一覧に同じ言語が並ぶかで地域を出すか決めるので、並びの一覧が要る）。
+  const [speechVoiceModal, setSpeechVoiceModal] = useState<{ language: string; script: SpeechScript } | null>(null);
   // 今表示している言語ごとの声の一覧。**声が2つ以上あるときだけ「声」の行を出す**ため。
   const [voicesByLang, setVoicesByLang] = useState<Record<string, SpeechVoice[]>>({});
   const db = useSQLiteContext();
@@ -292,51 +294,87 @@ export default function StudySettingsScreen() {
     return () => { alive = false; };
   }, [shownLangsKey]);
 
-  /** 文字体系1つぶんの言語選択行。値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。
+  /** 文字体系1つぶんの設定＝**見出し（文字体系の名前）＋インデントした行**（言語・声ほか）。
+   *  言語の値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。
    *  ⚠️ **説明の ⓘ は置かない**＝タップして開くピッカーの上部に同じ文言が出るため
    *  （行に置くと二重になり、行の中に入れ子の Pressable ができて誤タップの余地も増える）。 */
   const speechScriptRow = (script: SpeechScript) => (
-    <View key={script}>
-      <Pressable style={styles.dataRow} onPress={() => setSpeechLangModal(script)}>
+    <View key={script} style={{ gap: 2 }}>
+      {/* ⚠️ **文字体系の名前と言語名を同じ行に置かない**＝「デーヴァナーガリー文字」と
+          「スウェーデン語（スウェーデン）」が1行に収まらず、`dataRowText` が `flex:1`
+          （＝残り幅にだけ収まる）なので見出しが折り返し、値ははみ出して切れる。
+          文字サイズを大きくすると必ず起きるので、見出しを独立した行にして幅の取り合いを無くす。 */}
+      <Text
+        style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+      >
+        {t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin')}
+      </Text>
+      {/* 子の行はインデントして「声」と同じ形（ラベル左・値右）に揃える。
+          ⚠️ ラベルは**専用キー**（英語は `Lang`＝隣の `Voice`/`Speed` と長さを揃える）。
+          表示設定のアプリ言語（`settings.language`＝「表示言語」/`Display Language`）とは別物。 */}
+      <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechLangModal(script)}>
         <View style={styles.dataRowText}>
-          <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin')}
+          <Text style={[styles.dataRowTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.speechLanguage')}
           </Text>
         </View>
         <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {speechLanguageLabel(langOf(script), t)}
+          {/* 地域は同じ言語が2つ以上並ぶときだけ出す（ピッカーの一覧と同じ判定にする）。
+              ⚠️ **一覧の取得前は `[]`（＝地域なし）で描く**＝取得を待つあいだだけ地域つきにすると、
+              解決後に縮んでちらつくうえ、その一瞬だけ行が溢れる。単独の言語が大多数なので
+              `[]` の方が最終結果と一致しやすく、外れても短い側なので幅を壊さない。 */}
+          {speechLanguageLabel(langOf(script), t, scriptOptions?.[script] ?? [])}
         </Text>
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>
-      {/* 「混在文で声を分けない」はラテン文字にしか意味が無いので latin の行にだけ出す。
-          ⚠️ 英語だけのカードには効かない（`resolveSpeechSegments` が混在文だけに適用する）。 */}
+      {/* 「声を分けない」はラテン文字にしか意味が無いので latin の行にだけ出す。
+          ⚠️ 英語だけのカードには効かない（`resolveSpeechSegments` が混在文だけに適用する）ので、
+          ⓘ の説明で**効かない場面まで書く**＝書かないと「オンにしたのに効かない＝壊れている」に見える。 */}
       {script === 'latin' && (
-        <View style={[styles.notificationRow, { paddingLeft: 16 }]}>
-          <Text
-            style={[styles.dataRowTitle, { flex: 1, color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-          >
-            {t('settings.speechNoMixedSwitch')}
-          </Text>
-          <Switch
-            value={speechNoMixedSwitch}
-            onValueChange={setSpeechNoMixedSwitch}
-            trackColor={{ true: theme.colors.primary }}
-          />
-        </View>
+        <>
+          <View style={[styles.notificationRow, { paddingLeft: 16 }]}>
+            {/* ⚠️ ⓘ の Pressable は**ラベルまで**に留める（スイッチに重ねるとトグルの誤操作になる）。 */}
+            <Pressable
+              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              onPress={() => toggleInfo('speechNoMixed')}
+              hitSlop={6}
+            >
+              <Text
+                style={[styles.dataRowTitle, { flexShrink: 1, color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {t('settings.speechNoMixedSwitch')}
+              </Text>
+              {infoIcon('speechNoMixed')}
+            </Pressable>
+            <Switch
+              value={speechNoMixedSwitch}
+              onValueChange={setSpeechNoMixedSwitch}
+              trackColor={{ true: theme.colors.primary }}
+            />
+          </View>
+          {/* 説明は子の行に合わせてインデントする。⚠️ 閉じているときに空の View を残さない
+              （親が `gap` を持つので、中身が無くても隙間だけ空いてしまう）。 */}
+          {openInfo === 'speechNoMixed' && (
+            <View style={{ paddingLeft: 16 }}>
+              {infoBox('speechNoMixed', 'settings.speechNoMixedSwitchHint')}
+            </View>
+          )}
+        </>
       )}
-      {speechVoiceRow(langOf(script))}
+      {speechVoiceRow(langOf(script), script)}
     </View>
   );
 
   /** その言語を読む声の行。**声が2つ以上あるときだけ**出す（1つなら選ぶ意味が無い）。
    *  言語行と同じく ⓘ は置かない（声ピッカーの上部に同じ文言が出る）。 */
-  const speechVoiceRow = (language: string) => {
+  const speechVoiceRow = (language: string, script: SpeechScript) => {
     const list = voicesByLang[language];
     if (!list || list.length < 2) return null;
     const selected = list.find((v) => v.identifier === speechVoices[language]);
     return (
-      <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechVoiceModal(language)}>
+      <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechVoiceModal({ language, script })}>
         <View style={styles.dataRowText}>
           <Text style={[styles.dataRowTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.speechVoice')}
@@ -444,9 +482,10 @@ export default function StudySettingsScreen() {
   const speechVoiceModalEl = (
     <SpeechVoiceModal
       visible={speechVoiceModal !== null}
-      language={speechVoiceModal ?? 'en-US'}
-      value={speechVoiceModal ? speechVoices[speechVoiceModal] ?? null : null}
-      onSelect={(id) => { if (speechVoiceModal) setSpeechVoice(speechVoiceModal, id); }}
+      language={speechVoiceModal?.language ?? 'en-US'}
+      peers={speechVoiceModal ? scriptOptions?.[speechVoiceModal.script] ?? [] : undefined}
+      value={speechVoiceModal ? speechVoices[speechVoiceModal.language] ?? null : null}
+      onSelect={(id) => { if (speechVoiceModal) setSpeechVoice(speechVoiceModal.language, id); }}
       onClose={() => setSpeechVoiceModal(null)}
     />
   );

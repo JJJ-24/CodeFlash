@@ -302,6 +302,22 @@ eq(speechLanguageLabel('zh-Hans-CN', tJa), '中国語（中国）', '文字体�
 eq(speechLanguageLabel('xx-YY', tJa), 'xx-YY', '未知の言語はコードのまま');
 eq(speechLanguageLabel('en-XX', tJa), '英語', '未知の地域は言語名だけにする');
 
+// 第3引数（同じ一覧に並ぶコード）を渡すと、**区別が要るときだけ**地域を出す。
+const latinPeers = ['en-US', 'en-GB', 'en-AU', 'cs-CZ', 'sv-SE'];
+eq(speechLanguageLabel('en-AU', tJa, latinPeers), '英語（オーストラリア）', '同じ言語が並ぶときは地域を出す');
+eq(speechLanguageLabel('en-US', tEn, latinPeers), 'English (US)', '英語 UI の地域名は短縮形');
+eq(speechLanguageLabel('en-GB', tEn, latinPeers), 'English (UK)', 'イギリスも短縮形');
+eq(speechLanguageLabel('cs-CZ', tJa, latinPeers), 'チェコ語', '1つしか無い言語は地域を出さない');
+eq(speechLanguageLabel('sv-SE', tEn, latinPeers), 'Swedish', '英語 UI でも同じ規則');
+eq(speechLanguageLabel('ar-001', tJa, ['ar-001']), 'アラビア語', '「世界」も相手がいなければ出さない');
+eq(speechLanguageLabel('zh-Hans-CN', tJa, ['zh-Hans-CN', 'zh-Hant-TW', 'ja-JP']), '中国語（中国）',
+  '文字体系サブタグを挟んでも同じ言語として数える');
+eq(speechLanguageLabel('ja-JP', tJa, ['zh-Hans-CN', 'zh-Hant-TW', 'ja-JP']), '日本語', '漢字の一覧でも1つなら地域なし');
+// ⚠️ **自分自身を数に入れる**＝端末から消えた音声を設定が指していても、並びに同じ言語があれば地域を出す。
+eq(speechLanguageLabel('en-IE', tJa, ['en-US', 'en-GB']), '英語（アイルランド）', '一覧に無い現在値も同じ言語として数える');
+eq(speechLanguageLabel('fr-FR', tJa, []), 'フランス語', '一覧が空なら区別する相手がいない');
+eq(speechLanguageLabel('fr-FR', tJa), 'フランス語（フランス）', '一覧を渡さない呼び出しは従来どおり地域つき');
+
 // ---- stripMarkdown -----------------------------------------------------------
 
 eq(stripMarkdown('**強調**と*斜体*と~~打ち消し~~'), '強調と斜体と打ち消し', '強調記法を落とす');

@@ -22,6 +22,9 @@ interface Props {
   language: string;
   /** 選択中の identifier。未選択（＝端末の既定に任せる）なら null */
   value: string | null;
+  /** 同じ文字体系で並んでいる言語コード（説明文の言語名から**不要な地域を省く**ために使う）。
+   *  ⚠️ 呼び出し元の行と同じ一覧を渡す＝行が「英語」なのに説明文だけ「英語（アメリカ）」になるのを防ぐ。 */
+  peers?: readonly string[];
   onSelect: (identifier: string | null) => void;
   onClose: () => void;
 }
@@ -36,7 +39,7 @@ interface Props {
  * ⚠️ 選ぶのは `identifier` で**端末固有**。別端末では存在しないことがあるので、
  * 読み上げ側は `filterKnownVoices` で実在するものだけを使う。
  */
-export function SpeechVoiceModal({ visible, language, value, onSelect, onClose }: Props) {
+export function SpeechVoiceModal({ visible, language, value, peers, onSelect, onClose }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [voices, setVoices] = useState<SpeechVoice[]>([]);
@@ -111,7 +114,7 @@ export function SpeechVoiceModal({ visible, language, value, onSelect, onClose }
               style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 4 }}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
             >
-              {t('settings.speechVoiceHint', { name: speechLanguageLabel(language, t) })}
+              {t('settings.speechVoiceHint', { name: speechLanguageLabel(language, t, peers) })}
             </Text>
           </View>
           <ScrollView>

@@ -95,7 +95,9 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose 
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
-                  {speechLanguageLabel(code, t)}
+                  {/* 地域は**同じ言語が2つ以上並ぶときだけ**出す（`rows` を渡して判定させる）。
+                      端末に1つしか無い言語で「チェコ語（チェコ）」と書いても区別する相手がいない。 */}
+                  {speechLanguageLabel(code, t, rows)}
                 </Text>
                 {code === value && (
                   <Ionicons name="checkmark" size={theme.fontSize.lg} color={theme.colors.primary} />

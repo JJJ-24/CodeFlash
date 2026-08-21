@@ -601,6 +601,16 @@ function regionOf(code: string): string | undefined {
 /**
  * 言語コードを UI 言語の表示名にする（`en-AU` → 日本語 UI なら `英語（オーストラリア）`）。
  *
+ * **地域を書くのは、同じ一覧に同じ言語が2つ以上並ぶときだけ**（`peers` を渡した場合）。
+ * 端末に `cs-CZ` しか無ければ「チェコ語（チェコ）」と書いても区別する相手がおらず、
+ * 名前が長くなって行からはみ出すだけ。`en-US`/`en-GB`/`en-AU` のように並ぶときだけ付ける。
+ *
+ * ⚠️ **「その言語の本国」の対応表は持たない**（`hanLangForLocale` と同じ方針）。表方式だと
+ * pt→PT・ar→SA のような判断を抱えたうえ、**`pt-BR` しか無い端末でも「ポルトガル語（ブラジル）」
+ * と出続ける**＝地域を書く意味が無い場面が残る。端末の一覧から決めれば OS が音声を増減した
+ * ぶんだけ自動で切り替わる。
+ * ⚠️ **`peers` を渡さない呼び出しは従来どおり地域つき**（並びの文脈が無い＝省略の判断ができない）。
+ *
  * ⚠️ **表示名はアプリ側（`locales/*.json` の `speechLang` / `speechRegion`）に持つ**。
  * `Intl.DisplayNames` があれば OS から取れるが、**iOS の Hermes には入っていない**
  * （`DateTimeFormat`/`NumberFormat`/`Collator` はあるが `DisplayNames` は無いことを
@@ -609,11 +619,28 @@ function regionOf(code: string): string | undefined {
  * ⚠️ **表に無いコードはコードのまま返す**。選択肢は端末の音声一覧から作るので、
  * OS が新しい言語の音声を追加しても一覧には出続ける（ラベルが読めなくなるだけで壊れない）。
  */
-export function speechLanguageLabel(code: string, t: Translate): string {
+export function speechLanguageLabel(code: string, t: Translate, peers?: readonly string[]): string {
   const lang = code.split('-')[0].toLowerCase();
   const langName = t(`speechLang.${lang}`, { defaultValue: '' });
   if (!langName) return code;
   const region = regionOf(code);
-  const regionName = region ? t(`speechRegion.${region}`, { defaultValue: '' }) : '';
+  if (!region || (peers !== undefined && !hasSameLanguagePeer(code, peers))) return langName;
+  const regionName = t(`speechRegion.${region}`, { defaultValue: '' });
   return regionName ? t('settings.speechLangWithRegion', { language: langName, region: regionName }) : langName;
+}
+
+/**
+ * `peers` の中に**同じ言語の別コード**があるか（＝地域を書かないと区別できないか）。
+ *
+ * ⚠️ **自分自身を必ず数に入れる**＝端末から消えた音声の言語が設定に残っていても
+ * （`peers` に自分が居なくても）、同じ言語の別コードが並んでいれば地域を出す。
+ */
+function hasSameLanguagePeer(code: string, peers: readonly string[]): boolean {
+  const lang = code.split('-')[0].toLowerCase();
+  const same = new Set<string>();
+  for (const p of [code, ...peers]) {
+    const norm = p.toLowerCase();
+    if (norm.split('-')[0] === lang) same.add(norm);
+  }
+  return same.size >= 2;
 }

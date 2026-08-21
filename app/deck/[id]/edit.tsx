@@ -7,6 +7,8 @@ import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { IconPickerModal } from '@/components/IconPickerModal';
+import { DeckSpeechModal, deckSpeechSummary } from '@/components/deck/DeckSpeechModal';
+import { scriptLangsEqual, type ScriptLangs } from '@/lib/speech';
 import { DeckStagesModal } from '@/components/deck/DeckStagesModal';
 import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
 import { useTranslation } from 'react-i18next';
@@ -51,6 +53,8 @@ const DECK_EDIT_SHORTCUT_SECTIONS = [
     // 並びは画面の行順（HTML/CSS 土台 → SQL 初期化）に合わせる
     { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
     { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+    // 読み上げは無料機能なので pro フラグを付けない
+    { key: 'R', descKey: 'shortcut.deckSpeechLangs' },
     { key: 'E', descKey: 'shortcut.toggleArchive' },
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'Delete', descKey: 'shortcut.deleteDeck' },
@@ -100,6 +104,10 @@ export default function EditDeckScreen() {
   const filledStages = htmlStages.filter((s) => s.content.trim() !== '').length;
   const htmlConfigured = filledStages > 0 || htmlImages.length > 0;
   const filledSqlStages = sqlStages.filter((s) => s.content.trim() !== '').length;
+  // 050 Phase 2: このデッキだけの読み上げ言語（文字体系 → 言語の上書き。未設定は {}）
+  const [speechLangs, setSpeechLangs] = useState<ScriptLangs>(deck?.speechLangs ?? {});
+  const [showSpeechModal, setShowSpeechModal] = useState(false);
+  const speechConfigured = Object.keys(speechLangs).length > 0;
 
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
@@ -127,7 +135,7 @@ export default function EditDeckScreen() {
   // 034: ハードキーボードショートカット（フック規約上、早期 return より前で呼ぶ。
   // ハンドラが後方定義の値を参照するのはクロージャなので可＝キー押下時には初期化済み）。
   // サブモーダル（アイコン/SQL/削除確認/破棄確認）は RN Modal。開いている間は親のキーを無効化する。
-  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showDeleteModal || showDiscardModal;
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showSpeechModal || showDeleteModal || showDiscardModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
@@ -139,6 +147,8 @@ export default function EditDeckScreen() {
     { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
     { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
     { input: 'h', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowHtmlInitModal(true); } } },
+    // 050 Phase 2: 読み上げ（Read）。⚠️ Pro ゲートは無い（読み上げは無料機能）
+    { input: 'r', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowSpeechModal(true); } },
     { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setArchived((v) => !v); } }, // アーカイブ切替（全画面で E に統一）
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
@@ -170,14 +180,14 @@ export default function EditDeckScreen() {
       // 044/045: 中身が空の土台は保存しない（名前だけ作って離脱した行が残らないように）
       const normalizedSqlStages = sqlStages.filter((s) => s.content.trim() !== '');
       const normalizedStages = htmlStages.filter((s) => s.content.trim() !== '');
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages });
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages, speechLangs });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
       // 044/045: sqlInit / htmlInit は互換用ミラー。DB 側（updateDeck）と同じ値をストアにも入れて食い違わせない。
       updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex,
         sqlInit: legacyInitMirror(normalizedSqlStages), sqlStages: normalizedSqlStages,
-        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, archived });
+        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, speechLangs, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -205,6 +215,9 @@ export default function EditDeckScreen() {
     || JSON.stringify(sqlStages.filter((s) => s.content.trim() !== '')) !== JSON.stringify(deck.sqlStages ?? [])
     || JSON.stringify(htmlStages.filter((s) => s.content.trim() !== '')) !== JSON.stringify(deck.htmlStages ?? [])
     || JSON.stringify(htmlImages) !== JSON.stringify(deck.htmlImages ?? [])
+    // ⚠️ キーの並び順は追加した順に決まるので、比較はキーを並べ替えてから行う
+    //（`{han:..., latin:...}` と `{latin:..., han:...}` を「変更あり」と誤判定しないため）
+    || !scriptLangsEqual(speechLangs, deck.speechLangs ?? {})
     || archived !== deck.archived;
 
   function handleClose() {
@@ -407,6 +420,25 @@ export default function EditDeckScreen() {
             </View>
           )}
 
+          {/* 050 Phase 2: このデッキだけの読み上げ言語。⚠️ **Pro で囲まない**（読み上げは無料機能）。 */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('deck.speechLangsLabel')}
+            </Text>
+            <Pressable
+              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
+              onPress={() => { Keyboard.dismiss(); setShowSpeechModal(true); }}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
+                <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
+              </View>
+              <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {deckSpeechSummary(speechLangs, t)}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </Pressable>
+          </View>
+
           <View style={styles.field}>
             <View style={[styles.archiveRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
               <View style={{ flex: 1, gap: 4 }}>
@@ -455,6 +487,12 @@ export default function EditDeckScreen() {
         message={t('deck.deleteConfirm', { name: deck.name.length > 20 ? deck.name.slice(0, 20) + '…' : deck.name })}
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
+      />
+      <DeckSpeechModal
+        visible={showSpeechModal}
+        langs={speechLangs}
+        onChange={setSpeechLangs}
+        onClose={() => setShowSpeechModal(false)}
       />
       <DiscardConfirmModal
         visible={showDiscardModal}

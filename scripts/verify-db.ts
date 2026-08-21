@@ -2,7 +2,8 @@
  * DB ロジックと判定ロジックの検証（テストフレームワーク未導入のための代替）。
  *
  * 対象: 044/045 デッキ土台の複数持ち（`docs/044` / `docs/045`）・
- *       046 1日の目標枚数（`docs/046`）。**新しい機能を足したらここにセクションを追加する。**
+ *       046 1日の目標枚数（`docs/046`）・050 Phase 2 デッキ単位の読み上げ言語（`docs/050`）。
+ *       **新しい機能を足したらここにセクションを追加する。**
  *
  * 実行: `npm run verify:db`
  *
@@ -27,6 +28,7 @@ const { LEGACY_STAGE_ID, resolveDeckStageHtml, resolveDeckStageSql, legacyInitMi
 const { exportDatabase } = require('@/lib/export');
 const { importDatabase } = require('@/lib/import');
 const { inspectTsvExport, hasTsvExportLoss } = require('@/lib/tsv');
+const { parseScriptLangs } = require('@/lib/speech');
 const { getTodayReviewedCount } = require('@/lib/database/reviews');
 const { shouldFireStudyGoal, isStudyGoalUnmet, computeGoalLookaheadDays, PENDING_NOTIFICATION_LIMIT } =
   require('@/lib/studyGoal');
@@ -442,6 +444,67 @@ async function main() {
   eq('条件つきが多ければ配分が減る', computeGoalLookaheadDays(0, 30), 2);
   eq('枠を使い切っていても最低1日は予約する', computeGoalLookaheadDays(1000, 5), 1);
   eq('条件つきが無ければ0日（予約しない）', computeGoalLookaheadDays(0, 0), 0);
+
+  // ===========================================================================
+  console.log('\n[T18] 050 Phase 2・デッキ単位の読み上げ言語（speechLangs 列）');
+  // ===========================================================================
+  const db18 = makeDb();
+  await migrateDbIfNeeded(db18);
+  // 050 以前の DB を再現（列を落として旧バージョンの状態に戻す）
+  db18.raw.exec('ALTER TABLE decks DROP COLUMN speechLangs');
+  await db18.runAsync(
+    `INSERT INTO decks (id,name,description,language,cardCount,sortOrder,createdAt,updatedAt)
+     VALUES ('d-spk','旧デッキ','','ja',0,1,'2026-01-01','2026-01-01')`
+  );
+  await migrateDbIfNeeded(db18);
+  const cols18 = await db18.getAllAsync('PRAGMA table_info(decks)');
+  check('マイグレーションで speechLangs 列が追加される', cols18.some((c: { name: string }) => c.name === 'speechLangs'));
+  eq('既存デッキは未設定（{}）', (await getDeckById(db18, 'd-spk')).speechLangs, {});
+
+  const deck18 = await createDeck(db18, {
+    name: '中国語', description: '', language: 'ja', speechLangs: { han: 'zh-CN' },
+  });
+  eq('createDeck の戻り値に上書きが入る', deck18.speechLangs, { han: 'zh-CN' });
+  eq('読み直しても同じ', (await getDeckById(db18, deck18.id)).speechLangs, { han: 'zh-CN' });
+
+  // ⚠️ 044 の教訓：渡さない更新で黙って消えてはいけない
+  await updateDeck(db18, deck18.id, { name: '中国語', description: '', language: 'ja' });
+  eq('speechLangs を渡さない更新では消えない', (await getDeckById(db18, deck18.id)).speechLangs, { han: 'zh-CN' });
+  await updateDeck(db18, deck18.id, { name: '中国語', description: '', language: 'ja', speechLangs: {} });
+  eq('空を渡せば解除できる（NULL に戻る）', (await getDeckById(db18, deck18.id)).speechLangs, {});
+
+  // 壊れた値・知らないキーは捨てる（iCloud / JSON インポート経由の防御）
+  await db18.runAsync('UPDATE decks SET speechLangs = ? WHERE id = ?', ['{"han":"zh-CN","zzz":"xx","latin":""}', deck18.id]);
+  eq('知らないキーと空の値は捨てる', (await getDeckById(db18, deck18.id)).speechLangs, { han: 'zh-CN' });
+  await db18.runAsync('UPDATE decks SET speechLangs = ? WHERE id = ?', ['{壊れた', deck18.id]);
+  eq('壊れた JSON は未設定に倒す', (await getDeckById(db18, deck18.id)).speechLangs, {});
+  eq('配列も未設定に倒す', parseScriptLangs('["latin"]'), {});
+
+  // ⚠️ 解決規則（`mergeScriptLangs`）とキー比較（`scriptLangsEqual`）は純関数なので
+  // `npm run verify:speech` が見る（lib/speech.ts の持ち場）。ここは DB 経路だけを見る。
+
+  // TSV は往復しないので件数を警告に出す
+  await updateDeck(db18, deck18.id, { name: '中国語', description: '', language: 'ja', speechLangs: { han: 'zh-CN' } });
+  const loss18 = await inspectTsvExport(db18, await getDeckById(db18, deck18.id));
+  eq('TSV 損失: 上書きの件数を数える', loss18.deckSpeechLangs, 1);
+  check('上書きだけでも警告を出す', hasTsvExportLoss(loss18));
+
+  // JSON エクスポート → インポート往復
+  for (const k of Object.keys(fsFiles)) if (k.endsWith('.json')) delete fsFiles[k];
+  await exportDatabase(db18, false);
+  const spkUri = Object.keys(fsFiles).find((k) => k.endsWith('.json'))!;
+  const db18b = makeDb();
+  await migrateDbIfNeeded(db18b);
+  await importDatabase(db18b, spkUri, 'replace');
+  eq('replace インポートで speechLangs が復元', (await getDeckById(db18b, deck18.id)).speechLangs, { han: 'zh-CN' });
+  // 050 以前のエクスポート（speechLangs キーなし）
+  const oldSpkExport = JSON.parse(fsFiles[spkUri]);
+  for (const d of oldSpkExport.decks) delete d.speechLangs;
+  fsFiles['/cache/old_speech.json'] = JSON.stringify(oldSpkExport);
+  const db18c = makeDb();
+  await migrateDbIfNeeded(db18c);
+  await importDatabase(db18c, '/cache/old_speech.json', 'replace');
+  eq('050 以前のエクスポートは未設定として読める', (await getDeckById(db18c, deck18.id)).speechLangs, {});
 
   report();
 }

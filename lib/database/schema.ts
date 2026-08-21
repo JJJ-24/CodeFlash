@@ -216,6 +216,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN sqlStages TEXT;`);
   }
 
+  // === 050 Phase 2: デッキ単位の読み上げ言語（decks に speechLangs カラム）===
+  // 「文字体系 → 言語」の上書きだけを持つ JSON 文字列（未設定は NULL）。アプリ設定に
+  // **設定した文字体系だけ**重なる（`mergeScriptLangs`）ので、既存デッキは NULL のまま挙動が変わらない。
+  // ⚠️ 旧列のミラーは無い（044/045 と違い新機能で、旧バージョンは読まないだけで壊れない）。
+  const deckColsSpeechLangs = await db.getAllAsync<{ name: string }>('PRAGMA table_info(decks)');
+  if (!deckColsSpeechLangs.some((c) => c.name === 'speechLangs')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN speechLangs TEXT;`);
+  }
+
   // === 046 Phase 2: 未達成のときだけ通知するスケジュール（notification_schedules に列追加）===
   // スケジュール単位のフラグ（全体設定にしない）＝「朝は無条件・夜は未達成のときだけ」を使い分けられる。
   // 既定 0 ＝既存スケジュールの挙動は不変。

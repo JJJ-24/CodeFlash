@@ -257,6 +257,11 @@ export default function StudySessionScreen() {
   const currentDeckHtmlImages = currentCard
     ? decks.find((d) => d.id === currentCard.deckId)?.htmlImages
     : undefined;
+  // 現在のカードが属するデッキの読み上げ言語の上書き（050 Phase 2）。
+  // ⚠️ 土台と同じく**カードごとに引く**（タグ学習は複数デッキが混ざるため）。
+  const currentDeckSpeechLangs = currentCard
+    ? decks.find((d) => d.id === currentCard.deckId)?.speechLangs
+    : undefined;
   const sessionTitle = isFocusedReview
     ? t("study.focusedReviewTitle")
     : deckId
@@ -272,7 +277,7 @@ export default function StudySessionScreen() {
 
   // ---- 読み上げ（049）----------------------------------------------------
   // 読む対象は「いま表示している面」。裏面でメモを開いていればメモも続けて読む。
-  const speech = useSpeech();
+  const speech = useSpeech(currentDeckSpeechLangs);
   const speechText = useMemo(() => {
     if (!currentCard) return "";
     if (!isFlipped) return blocksToSpeech(currentCard.frontContent);

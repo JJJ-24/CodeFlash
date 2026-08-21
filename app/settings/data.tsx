@@ -192,6 +192,7 @@ export default function DataSettingsScreen() {
     if (loss.blockSqlInit > 0) items.push(t('dataManagement.tsvLossBlockSqlInit', { count: loss.blockSqlInit }));
     if (loss.blockHtmlInit > 0) items.push(t('dataManagement.tsvLossBlockHtmlInit', { count: loss.blockHtmlInit }));
     if (loss.images > 0) items.push(t('dataManagement.tsvLossImages', { count: loss.images }));
+    if (loss.deckSpeechLangs > 0) items.push(t('dataManagement.tsvLossDeckSpeechLangs', { count: loss.deckSpeechLangs }));
     return t('dataManagement.tsvExportLossMessage', { items: items.map((i) => `・${i}`).join('\n') });
   }
 

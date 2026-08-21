@@ -1,5 +1,7 @@
 // ---- Block types ----
 
+import type { ScriptLangs } from '@/lib/speech';
+
 export interface TextBlock {
   type: 'text';
   content: string;
@@ -96,6 +98,10 @@ export interface Deck {
   htmlStages: DeckStage[];
   /** HTML 画像ライブラリ（043）。DB には JSON 文字列で保存し、読み取り時に配列へ正規化する。未登録は [] */
   htmlImages: DeckImage[];
+  /** 050 Phase 2：このデッキを読み上げるときの「文字体系 → 言語」の上書き。未設定は {}。
+   *  **設定した文字体系だけ**アプリ設定に重なる（`mergeScriptLangs`）＝漢字だけ中国語にしても
+   *  ラテン文字は巻き込まれない。DB には JSON 文字列で保存し、読み取り時に正規化する */
+  speechLangs: ScriptLangs;
   /** アーカイブ済み（学習サイクル・将来指標から除外）。配下カードも含めて除外される */
   archived: boolean;
 }

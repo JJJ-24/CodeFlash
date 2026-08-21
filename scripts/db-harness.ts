@@ -61,6 +61,9 @@ export function installModuleStubs(extraStubs: Record<string, unknown> = {}): vo
     'expo-image-manipulator': { ImageManipulator: {}, SaveFormat: {} },
     'expo-image-picker': {},
     'expo-localization': { getLocales: () => [{ languageCode: 'ja' }] },
+    // 050 Phase 2：`lib/database/decks.ts` が `lib/speech.ts`（読み上げ言語の正規化）を読むので要る。
+    // 発話そのものは検証対象外＝何もしないスタブでよい（テキスト処理は verify-speech が見る）。
+    'expo-speech': { speak() {}, stop() {}, async getAvailableVoicesAsync() { return []; } },
     'react-native': { Platform: { OS: 'ios' }, Appearance: { getColorScheme: () => 'light' } },
     '@react-native-async-storage/async-storage': {
       async multiGet() { return [] as [string, string | null][]; },

@@ -23,9 +23,11 @@ import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { IconPickerModal } from '@/components/IconPickerModal';
+import { DeckSpeechModal, deckSpeechSummary } from '@/components/deck/DeckSpeechModal';
 import { DeckStagesModal } from '@/components/deck/DeckStagesModal';
 import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
 import type { DeckIconName } from '@/lib/deckIcons';
+import type { ScriptLangs } from '@/lib/speech';
 import type { DeckImage, DeckStage } from '@/types';
 import { createDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
@@ -49,6 +51,8 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
     // 並びは画面の行順（HTML/CSS 土台 → SQL 初期化）に合わせる
     { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
     { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
+    // 読み上げは無料機能なので pro フラグを付けない
+    { key: 'R', descKey: 'shortcut.deckSpeechLangs' },
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'X', descKey: 'shortcut.close' },
   ] },
@@ -94,6 +98,10 @@ export default function NewDeckScreen() {
   const filledStages = htmlStages.filter((s) => s.content.trim() !== '').length;
   const htmlConfigured = filledStages > 0 || htmlImages.length > 0;
   const filledSqlStages = sqlStages.filter((s) => s.content.trim() !== '').length;
+  // 050 Phase 2: このデッキだけの読み上げ言語（文字体系 → 言語の上書き。未設定は {}）
+  const [speechLangs, setSpeechLangs] = useState<ScriptLangs>({});
+  const [showSpeechModal, setShowSpeechModal] = useState(false);
+  const speechConfigured = Object.keys(speechLangs).length > 0;
 
   const language = 'ja';
   const [saving, setSaving] = useState(false);
@@ -122,6 +130,7 @@ export default function NewDeckScreen() {
         sqlStages: sqlStages.filter((s) => s.content.trim() !== ''),
         htmlStages: htmlStages.filter((s) => s.content.trim() !== ''),
         htmlImages,
+        speechLangs,
       });
       addDeck(deck);
       // 一覧へ戻ったとき、作成したデッキへフォーカスを移す
@@ -133,7 +142,7 @@ export default function NewDeckScreen() {
   }
 
   const canSave = !!name.trim() && !saving;
-  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || filledSqlStages > 0 || filledStages > 0 || htmlImages.length > 0;
+  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || filledSqlStages > 0 || filledStages > 0 || htmlImages.length > 0 || speechConfigured;
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
@@ -155,7 +164,7 @@ export default function NewDeckScreen() {
   // サブモーダル（アイコン/SQL/破棄確認）は RN Modal。開いている間はそのモーダル側が
   // キーを処理するため、親画面のショートカットは無効化する（キーコマンドは AppDelegate に
   // 付くため開いていても発火しうる＝明示ガードが必要）。
-  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showDiscardModal || showShortcutsModal;
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showSpeechModal || showDiscardModal || showShortcutsModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
@@ -167,6 +176,8 @@ export default function NewDeckScreen() {
     { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },
     { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
     { input: 'h', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowHtmlInitModal(true); } } },
+    // 050 Phase 2: 読み上げ（Read）。⚠️ Pro ゲートは無い（読み上げは無料機能）
+    { input: 'r', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowSpeechModal(true); } },
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
     ...scrollKeySpecs({ scrollRef, scrollYRef, guard: subModalOpen }),
     // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
@@ -388,6 +399,25 @@ export default function NewDeckScreen() {
             </View>
           )}
 
+          {/* 050 Phase 2: このデッキだけの読み上げ言語。⚠️ **Pro で囲まない**（読み上げは無料機能）。 */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('deck.speechLangsLabel')}
+            </Text>
+            <Pressable
+              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
+              onPress={() => { Keyboard.dismiss(); setShowSpeechModal(true); }}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
+                <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
+              </View>
+              <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {deckSpeechSummary(speechLangs, t)}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </Pressable>
+          </View>
+
         </ScrollView>
         <FormBottomBar onSave={handleCreate} saveDisabled={!canSave} />
       </View>
@@ -412,6 +442,12 @@ export default function NewDeckScreen() {
         onChange={setHtmlStages}
         onClose={() => setShowHtmlInitModal(false)}
         listFooter={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
+      />
+      <DeckSpeechModal
+        visible={showSpeechModal}
+        langs={speechLangs}
+        onChange={setSpeechLangs}
+        onClose={() => setShowSpeechModal(false)}
       />
       <DiscardConfirmModal
         visible={showDiscardModal}

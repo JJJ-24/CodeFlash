@@ -12,9 +12,15 @@ interface Props {
   visible: boolean;
   /** どの文字体系の言語を選ぶか。文言と選択肢の絞り込みが変わる */
   script: SpeechScript;
-  value: string;
-  onSelect: (code: string) => void;
+  /** 選択中の言語。`null` は「上書きしない」（`allowInherit` のときだけ起こりうる） */
+  value: string | null;
+  onSelect: (code: string | null) => void;
   onClose: () => void;
+  /** 050 Phase 2：先頭に「アプリ設定に従う」行を出す（デッキ単位の上書きを**解除する手段**）。
+   *  ⚠️ アプリ設定側では出さない＝必ず何かの言語で読むので「未設定」に戻す意味が無い。 */
+  allowInherit?: boolean;
+  /** 「アプリ設定に従う」を選んだときに実際に読まれる言語（行の右に薄く出す）。 */
+  inheritLang?: string;
 }
 
 /** 文字体系の表示名（設定画面と共用）。`CONFIGURABLE_SCRIPTS` のぶんだけあればよい。 */
@@ -34,7 +40,7 @@ export const SPEECH_SCRIPT_LABEL_KEYS: Partial<Record<SpeechScript, string>> = {
  * OS が音声を増やせば自動で増える＝言語追加のメンテがゼロになる。
  * 一覧はその文字体系を使う言語だけに絞る（漢字の設定にフランス語が並んでも意味が無い）。
  */
-export function SpeechLanguageModal({ visible, script, value, onSelect, onClose }: Props) {
+export function SpeechLanguageModal({ visible, script, value, onSelect, onClose, allowInherit, inheritLang }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [languages, setLanguages] = useState<string[]>([]);
@@ -51,7 +57,8 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose 
   useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
 
   // 端末に音声が1つも無い場合でも現在値は選べるようにしておく。
-  const rows = languages.length > 0 ? languages : [value];
+  // ⚠️ 「アプリ設定に従う」を選んでいるとき（value === null）は現在値が無いので空のままにする。
+  const rows = languages.length > 0 ? languages : value ? [value] : [];
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -81,6 +88,37 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose 
             </Text>
           </View>
           <ScrollView>
+            {/* 050 Phase 2：デッキ側だけに出す「上書きしない」行。声ピッカーの「自動」と同じ役割で、
+                ⚠️ **これが無いとデッキの上書きを解除できない**（一度選ぶと元に戻せなくなる）。 */}
+            {allowInherit && (
+              <Pressable
+                onPress={() => { onSelect(null); onClose(); }}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  paddingHorizontal: 16, paddingVertical: 12,
+                  borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+                }}
+              >
+                <Text
+                  style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t('deck.speechInherit')}
+                </Text>
+                {/* 実際に何語で読まれるかを添える＝「従う」だけだと結果が分からない */}
+                {inheritLang && (
+                  <Text
+                    style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                  >
+                    {speechLanguageLabel(inheritLang, t, rows)}
+                  </Text>
+                )}
+                {value === null && (
+                  <Ionicons name="checkmark" size={theme.fontSize.lg} color={theme.colors.primary} />
+                )}
+              </Pressable>
+            )}
             {rows.map((code) => (
               <Pressable
                 key={code}

@@ -222,6 +222,66 @@ export const SCRIPT_DEFAULT_LANGS: Record<SpeechScript, string> = {
  */
 export const CONFIGURABLE_SCRIPTS: SpeechScript[] = ['latin', 'han', 'cyrillic', 'arabic', 'devanagari'];
 
+// ---- デッキ単位の上書き（050 Phase 2）----------------------------------------
+
+/**
+ * デッキの上書きをアプリ設定に重ねる。**解決順はデッキ → アプリ → 文字体系の既定**。
+ *
+ * ⚠️ **上書きは「設定した文字体系だけ」**（丸ごと置き換えない）。中国語デッキで漢字だけ
+ * 中国語にしたいときに、ラテン文字まで巻き込まれると英語の用語が中国語読みになる。
+ * ⚠️ 空文字は「未設定」として無視する（JSON インポートや壊れた保存値の防御）。
+ */
+export function mergeScriptLangs(app: ScriptLangs, deck?: ScriptLangs | null): ScriptLangs {
+  // 上書きが無いデッキでは**アプリ設定の参照をそのまま返す**（毎回新しいオブジェクトを作ると
+  // `useSpeech` の `useMemo` が空振りし、そこから作る `speak` の参照まで毎回変わる）。
+  if (!deck || Object.keys(deck).length === 0) return app;
+  const out: ScriptLangs = { ...app };
+  for (const [script, lang] of Object.entries(deck)) {
+    if (typeof lang === 'string' && lang.trim() !== '') out[script as SpeechScript] = lang;
+  }
+  return out;
+}
+
+/**
+ * DB の JSON 文字列（`decks.speechLangs`）を上書きマップに正規化する。
+ *
+ * ⚠️ **知らないキー・空の値は捨てる**＝iCloud や JSON インポートで新しいバージョンの値や
+ * 壊れた値が来ても、読み上げ側は「未設定」に倒れるだけで落ちない。
+ */
+export function parseScriptLangs(json: string | null | undefined): ScriptLangs {
+  if (!json) return {};
+  try {
+    const raw = JSON.parse(json) as unknown;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const out: ScriptLangs = {};
+    for (const [script, lang] of Object.entries(raw as Record<string, unknown>)) {
+      if (!(script in SCRIPT_DEFAULT_LANGS)) continue;
+      if (typeof lang === 'string' && lang.trim() !== '') out[script as SpeechScript] = lang;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * 上書きマップが同じ内容か。**キーの並び順に依存しない**（`JSON.stringify` で比べると
+ * `{han,latin}` と `{latin,han}` が別物になり、デッキ編集の「変更あり」判定が誤爆する）。
+ */
+export function scriptLangsEqual(a: ScriptLangs, b: ScriptLangs): boolean {
+  const ka = Object.keys(a) as SpeechScript[];
+  const kb = Object.keys(b) as SpeechScript[];
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) => a[k] === b[k]);
+}
+
+/** 上書きマップを DB へ書く形にする。**空なら NULL**（列を「未設定」として扱えるように）。 */
+export function serializeScriptLangs(langs: ScriptLangs | undefined): string | null {
+  if (!langs) return null;
+  const cleaned = parseScriptLangs(JSON.stringify(langs));
+  return Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : null;
+}
+
 /** 一覧を絞るための「その文字体系を使う言語」の接頭辞。`latin` だけは除外リストで判定する。 */
 const HAN_LANG_PREFIXES = ['ja', 'zh', 'yue', 'ko'];
 const SCRIPT_LANG_PREFIXES: Partial<Record<SpeechScript, string[]>> = {

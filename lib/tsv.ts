@@ -205,6 +205,8 @@ export type TsvExportLoss = {
   blockSqlInit: number;
   blockHtmlInit: number;
   images: number;
+  /** 050 Phase 2: デッキ単位の読み上げ言語の上書きの件数 */
+  deckSpeechLangs: number;
 };
 
 /** エクスポート前の検査。該当が無ければ警告を出さずそのまま書き出す（通常デッキで操作を増やさない） */
@@ -229,11 +231,13 @@ export async function inspectTsvExport(db: SQLiteDatabase, deck: Deck): Promise<
     blockSqlInit,
     blockHtmlInit,
     images,
+    deckSpeechLangs: Object.keys(deck.speechLangs ?? {}).length,
   };
 }
 
 export function hasTsvExportLoss(loss: TsvExportLoss): boolean {
-  return loss.deckSqlStages > 0 || loss.deckHtmlStages > 0 || loss.blockSqlInit > 0 || loss.blockHtmlInit > 0 || loss.images > 0;
+  return loss.deckSqlStages > 0 || loss.deckHtmlStages > 0 || loss.blockSqlInit > 0 || loss.blockHtmlInit > 0
+    || loss.images > 0 || loss.deckSpeechLangs > 0;
 }
 
 export async function exportDeckToTsv(db: SQLiteDatabase, deckId: string, deckName: string): Promise<void> {

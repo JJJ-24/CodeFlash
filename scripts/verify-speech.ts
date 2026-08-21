@@ -51,6 +51,7 @@ const speech = require('@/lib/speech');
 const { splitByScript, resolveSpeechSegments, speakText } = speech;
 const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS, speechLanguageLabel } = speech;
 const { filterKnownVoices, voiceSampleText, isNoveltyVoice } = speech;
+const { mergeScriptLangs, parseScriptLangs, scriptLangsEqual } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { blocksToSpeech, stripMarkdown } = require('@/lib/blocksToSpeech');
 
@@ -215,6 +216,43 @@ eq(spoken, [
 spoken.length = 0;
 speakText('   ', { rate: 1.0 });
 eq(spoken, [], '空白だけなら1件も積まない');
+
+// ---- デッキ単位の上書き（050 Phase 2） ---------------------------------------
+
+// **設定した文字体系だけ**重ねる（丸ごと置き換えない）＝中国語デッキでラテン文字を巻き込まない。
+eq(mergeScriptLangs({ latin: 'en-GB', han: 'ja-JP' }, { han: 'zh-CN' }), { latin: 'en-GB', han: 'zh-CN' },
+  'デッキの上書きは設定した文字体系だけ重なる');
+eq(mergeScriptLangs({ latin: 'en-GB' }, { han: '' }), { latin: 'en-GB' }, '空文字は未設定として無視する');
+const appOnly = { latin: 'en-GB' };
+eq(mergeScriptLangs(appOnly, {}) === appOnly, true, '上書きが無ければアプリ設定の参照をそのまま返す');
+eq(mergeScriptLangs(appOnly, undefined) === appOnly, true, 'undefined でも同じ参照');
+
+eq(parseScriptLangs('{"han":"zh-CN","zzz":"xx","latin":""}'), { han: 'zh-CN' }, '知らないキーと空の値を捨てる');
+eq(parseScriptLangs('{壊れた'), {}, '壊れた JSON は未設定');
+eq(parseScriptLangs(null), {}, 'NULL は未設定');
+
+eq(scriptLangsEqual({ latin: 'en-US', han: 'ja-JP' }, { han: 'ja-JP', latin: 'en-US' }), true,
+  'キーの並び順が違っても同じ扱い（編集画面の「変更あり」判定）');
+eq(scriptLangsEqual({ han: 'ja-JP' }, { han: 'zh-CN' }), false, '値が違えば別物');
+eq(scriptLangsEqual({ han: 'ja-JP' }, {}), false, '件数が違えば別物');
+
+// 上書きを重ねた結果で実際に読み分かれる（漢字だけ中国語・ラテンは巻き込まれない）。
+spoken.length = 0;
+speakText('漢字 React', { rate: 1.0, scriptLangs: mergeScriptLangs({}, { han: 'zh-CN' }) });
+eq(spoken, [
+  { text: '漢字', language: 'zh-CN' },
+  { text: 'React', language: 'en-US' },
+], 'デッキで漢字を中国語にしてもラテン文字は英語のまま');
+
+// ⚠️ **かなが混ざる文はデッキ設定より「かな＝日本語」が勝つ**（漢字の推定は設定より前に決まる）。
+// 中国語デッキに日本語の説明文が混ざったカードが中国語で読まれるのを防ぐための順序で、
+// デッキ設定が効くのは**かな・ハングルを含まない漢字の文**（＝判別できない場合）だけ。
+spoken.length = 0;
+speakText('漢字と React', { rate: 1.0, scriptLangs: mergeScriptLangs({}, { han: 'zh-CN' }) });
+eq(spoken, [
+  { text: '漢字と', language: 'ja-JP' },
+  { text: 'React', language: 'en-US' },
+], 'かなを含む文はデッキ設定より「かな＝日本語」が優先される');
 
 // ---- 声の選択（050 Phase 3） -------------------------------------------------
 

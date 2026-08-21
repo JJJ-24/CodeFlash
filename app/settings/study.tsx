@@ -496,7 +496,8 @@ export default function StudySettingsScreen() {
       visible={speechLangModal !== null}
       script={speechLangModalScript}
       value={speechScriptLangs[speechLangModalScript] ?? SCRIPT_DEFAULT_LANGS[speechLangModalScript]}
-      onSelect={(code) => setSpeechScriptLang(speechLangModalScript, code)}
+      // null＝「上書きしない」はデッキ側だけの概念（`allowInherit` を渡していないので来ない）
+      onSelect={(code) => { if (code) setSpeechScriptLang(speechLangModalScript, code); }}
       onClose={() => setSpeechLangModal(null)}
     />
   );

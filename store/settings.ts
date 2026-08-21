@@ -70,6 +70,17 @@ const clampRetention = (v: number) => Math.max(FSRS_RETENTION_MIN, Math.min(FSRS
 export type StudyTimerEndBehavior = 'alert' | 'blink';
 
 /**
+ * 046: 1日の目標を達成したときの知らせ方。
+ * - 'alert' : モーダル（［続ける］／［学習を完了］）。手を止めてタップが要る
+ * - 'pill'  : 数秒で消えるピル通知（タップ不要）＝既定
+ * - 'none'  : 何も出さない（触覚だけ。進捗バッジと完了画面には出る）
+ *
+ * 触覚（Haptics.Success）は3択のどれでも鳴らす＝最も静かな知らせで、'none' は
+ * 「画面を止めない」の意であって「無反応」ではない。
+ */
+export type StudyGoalReachedBehavior = 'alert' | 'pill' | 'none';
+
+/**
  * 学習タイマーの表示要素（円・残り時間）の表示モード。
  * - 'on'    : 常に表示
  * - 'start' : 開始時（＋タップ時のピーク）に数秒だけ表示→フェードアウト
@@ -190,6 +201,7 @@ interface SettingsValues {
   // 046: 1日の目標枚数（量で区切る学習）。OFF のときは達成アラートも未達成判定も動かない
   studyGoalEnabled: boolean;
   studyGoalCount: number;
+  studyGoalReachedBehavior: StudyGoalReachedBehavior;
   // 049: カード本文の読み上げ（TTS）
   speechEnabled: boolean;
   speechRate: number;
@@ -369,6 +381,13 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     parse: (r) => { const v = Number(r); return Number.isNaN(v) ? undefined : clampGoalCount(v); },
     normalize: clampGoalCount,
   },
+  // 既定は 'pill'（アラートではない）。目標は上限ではなく目安なので、達成のたびに
+  // ［続ける／完了］の選択を迫る必然性が無い。完了への導線はヘッダーの ✓ と Q キーにある。
+  studyGoalReachedBehavior: {
+    key: '@codeflash_study_goal_reached_behavior',
+    default: 'pill',
+    parse: oneOf(['alert', 'pill', 'none'] as const),
+  },
   // 049: 読み上げ。OFF は学習画面の読み上げボタンと S キーを出さない（機能ごと畳む）。
   speechEnabled: { key: '@codeflash_speech_enabled', default: true, parse: asBool },
   speechRate: {
@@ -456,6 +475,7 @@ interface SettingsState extends SettingsValues {
   setStudyTimerCycles: (v: number) => void;
   setStudyGoalEnabled: (v: boolean) => void;
   setStudyGoalCount: (v: number) => void;
+  setStudyGoalReachedBehavior: (v: StudyGoalReachedBehavior) => void;
   setSpeechEnabled: (v: boolean) => void;
   setSpeechRate: (v: number) => void;
   /** 文字体系1つぶんの言語を上書きする（他の文字体系はそのまま） */
@@ -524,6 +544,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setStudyTimerCycles: makeSetter('studyTimerCycles'),
     setStudyGoalEnabled: makeSetter('studyGoalEnabled'),
     setStudyGoalCount: makeSetter('studyGoalCount'),
+    setStudyGoalReachedBehavior: makeSetter('studyGoalReachedBehavior'),
     setSpeechEnabled: makeSetter('speechEnabled'),
     setSpeechRate: makeSetter('speechRate'),
     // マップの1エントリだけ差し替えるため個別定義（永続化は DEFS の persist に従う）。

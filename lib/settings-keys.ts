@@ -43,6 +43,7 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   // 046: 1日の目標枚数
   '@codeflash_study_goal_enabled',
   '@codeflash_study_goal_count',
+  '@codeflash_study_goal_reached_behavior',
   // バッジ周回の段階開放（分母 50→80→110）の案内メッセージ既読段階
   '@codeflash_badge_lap_stage_seen',
   // 049: カード本文の読み上げ

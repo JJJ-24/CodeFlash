@@ -44,6 +44,7 @@ import {
   type FsrsPreset,
   type StudyTimerElementMode,
   type StudyTimerEndBehavior,
+  type StudyGoalReachedBehavior,
 } from '@/store/settings';
 
 /** 読み上げ設定で「その他の文字体系」に畳む文字体系（ラテン・漢字は常時表示するので除く）。 */
@@ -65,6 +66,7 @@ export default function StudySettingsScreen() {
     studyTimerCycles, setStudyTimerCycles,
     studyGoalEnabled, setStudyGoalEnabled,
     studyGoalCount, setStudyGoalCount,
+    studyGoalReachedBehavior, setStudyGoalReachedBehavior,
     speechEnabled, setSpeechEnabled,
     speechRate, setSpeechRate,
     speechScriptLangs, setSpeechScriptLang,
@@ -257,6 +259,43 @@ export default function StudySettingsScreen() {
               maximumTrackTintColor={theme.colors.iconSubtle}
               thumbTintColor={theme.colors.primary}
             />
+
+            {/* 達成時の動作。タイマーの「終了時の動作」（alert/blink）と同じセグメント。
+                **「なし」でも学習画面の残り枚数バッジは出る**ので、オンに見えて何も無い
+                状態にはならない（説明文にもその1行を入れてある）。 */}
+            <View style={{ gap: 6, paddingTop: 6 }}>
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('goalReached')} hitSlop={6}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.studyGoalReachedBehavior')}
+                </Text>
+                {infoIcon('goalReached')}
+              </Pressable>
+              <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+                {(['alert', 'pill', 'none'] as StudyGoalReachedBehavior[]).map((behavior) => {
+                  const active = behavior === studyGoalReachedBehavior;
+                  return (
+                    <Pressable
+                      key={behavior}
+                      style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                      onPress={() => setStudyGoalReachedBehavior(behavior)}
+                    >
+                      <Text style={[
+                        styles.segmentText,
+                        { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
+                        active && styles.segmentTextActive,
+                      ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                        {t(behavior === 'alert'
+                          ? 'settings.studyGoalReachedAlert'
+                          : behavior === 'pill'
+                            ? 'settings.studyGoalReachedPill'
+                            : 'settings.studyGoalReachedNone')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {infoBox('goalReached', 'settings.studyGoalReachedInfo')}
+            </View>
           </View>
         )}
       </View>

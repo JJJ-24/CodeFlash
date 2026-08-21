@@ -63,7 +63,7 @@ import type { Grade } from "@/lib/sm2";
 import type { Block, Tag } from "@/types";
 import { extractLinks } from "@/lib/study/extractLinks";
 import { resolveDeckIconColors } from "@/lib/deckIconColors";
-import { GRADE_COLORS, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits, themedFrameBorder, PRIMARY_COLOR } from "@/lib/theme";
+import { GRADE_COLORS, FILTER_COLORS, SHADOW, useTheme, MAX_FONT_MULTIPLIER, fontSizeForDigits, themedFrameBorder, PRIMARY_COLOR } from "@/lib/theme";
 import { resolveTagColor } from "@/lib/tagColors";
 import { useDeckStore } from "@/store/decks";
 import { usePendingFocusStore } from "@/store/pendingFocus";
@@ -99,6 +99,12 @@ const SPEAK_FAB_GAP = 8;
  * 「長いカードでも最後の行がボタンに隠れない」だけを実現できる。
  */
 const SPEAK_FAB_SCROLL_INSET = SPEAK_FAB_SIZE + SPEAK_FAB_GAP;
+/** 046: 目標達成ピルの表示時間。ArchivePill（2500ms）と同じ長さに揃える。 */
+const GOAL_PILL_DURATION_MS = 2500;
+/** 046: 目標達成ピルの上端。通常モードは進捗行の下、全画面はヘッダー＋進捗バー（≈88）の下。
+ *  ⚠️ **中央に出さない**＝学習中はカード本文を読んでいるので、中央だと読んでいる場所に被る。 */
+const GOAL_PILL_TOP = 12;
+const GOAL_PILL_TOP_FULLSCREEN = 96;
 
 const SESSION_SHORTCUT_SECTIONS = [
   { titleKey: "shortcut.catDisplay", items: [
@@ -232,6 +238,7 @@ export default function StudySessionScreen() {
     studyTimerCycles,
     studyGoalEnabled,
     studyGoalCount,
+    studyGoalReachedBehavior,
     speechEnabled,
   } = useSettingsStore();
   const { isPro } = useProStore();
@@ -327,6 +334,13 @@ export default function StudySessionScreen() {
   const goalMetAtStartRef = useRef<boolean | null>(null);
   // 1セッション1回に制限（「続ける」を選んだ後に再発火しないように）
   const goalFiredRef = useRef(false);
+  // 046: 今日の学習枚数（残り枚数バッジのライブ値）。null = 未取得＝バッジを出さない
+  // （取得前に「あと N 枚」を出すと、直後に正しい値へ飛んで見えるため）。
+  // **追加クエリはゼロ**＝checkStudyGoal が評価のたびに数え直している結果をそのまま持つ。
+  const [goalTodayCount, setGoalTodayCount] = useState<number | null>(null);
+  // 046: 達成時の動作「通知のみ」で数秒だけ出すピル。
+  const [goalPillVisible, setGoalPillVisible] = useState(false);
+  const goalPillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 041: コードブロックの全画面インタラクティブプレビュー表示中は背後キー（フリップ/採点/カード送り/戻る）を抑止する。
   const [interactivePreviewOpen, setInteractivePreviewOpen] = useState(false);
   const interactivePreviewCtx = useMemo(() => ({ setOpen: setInteractivePreviewOpen }), []);
@@ -503,6 +517,14 @@ export default function StudySessionScreen() {
   // 記録も判定も走らない＝ここで browseMode を除外しておけば無駄なクエリも出ない。
   const goalActive = studyGoalEnabled && !browseMode;
 
+  /** 達成ピルを数秒だけ出す（タップ不要・自動で消える）。 */
+  const showGoalPill = useCallback(() => {
+    if (goalPillTimerRef.current) clearTimeout(goalPillTimerRef.current);
+    setGoalPillVisible(true);
+    goalPillTimerRef.current = setTimeout(() => setGoalPillVisible(false), GOAL_PILL_DURATION_MS);
+  }, []);
+  useEffect(() => () => { if (goalPillTimerRef.current) clearTimeout(goalPillTimerRef.current); }, []);
+
   // セッション開始時点で既に達成済みかを1回だけ確定する。**達成済みならこのセッションでは
   // 一切発火しない**（1日単位ゆえ、達成済みの日に新しいセッションを始めた瞬間に出るのを防ぐ）。
   useEffect(() => {
@@ -512,7 +534,11 @@ export default function StudySessionScreen() {
     if (!goalActive || goalMetAtStartRef.current !== null) return;
     let cancelled = false;
     getTodayReviewedCount(db)
-      .then((count) => { if (!cancelled) goalMetAtStartRef.current = count >= studyGoalCount; })
+      .then((count) => {
+        if (cancelled) return;
+        goalMetAtStartRef.current = count >= studyGoalCount;
+        setGoalTodayCount(count);
+      })
       .catch(() => { /* 取得できなければ未判定のまま＝発火しない（安全側） */ });
     return () => { cancelled = true; };
   }, [goalActive, db, studyGoalCount]);
@@ -525,13 +551,21 @@ export default function StudySessionScreen() {
     // 基準が未確定（初回クエリが未完了）なら shouldFireStudyGoal が false を返す＝誤発火より不発
     if (goalMetAtStartRef.current === null) return;
     const count = await getTodayReviewedCount(db).catch(() => -1);
+    // 残り枚数バッジのライブ更新。**この後の早期 return より前に置く**
+    // （未達成のうちは毎回ここを通るので、バッジは評価のたびに1枚ずつ減る）。
+    if (count >= 0) setGoalTodayCount(count);
     if (!shouldFireStudyGoal(count, studyGoalCount, goalMetAtStartRef.current, goalFiredRef.current)) return;
     goalFiredRef.current = true;
     // 046 Phase 2: 達成した瞬間に今日の未達成リマインダーを取り消す。
     // iOS は発火時に条件を評価できないので、この「達成した瞬間のキャンセル」が条件判定の実体。
     // 学習中はアプリが開いているため確実に効く（明日以降の予約は残す）。
     void cancelTodayGoalReminders();
+    // 触覚は**3択のどれでも鳴らす**＝画面を止めない最も静かな知らせで、「なし」は
+    // 「無反応」ではなく「画面には出さない」の意（バッジと完了画面には残る）。
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (studyGoalReachedBehavior === "none") return;
+    if (studyGoalReachedBehavior === "pill") { showGoalPill(); return; }
+    // 以下は「アラート」のときだけ。
     // タイマー終了アラートが出ているときは譲る（2枚同時に出すと iOS で VC が wedged になる）。
     // goalFiredRef は立てたままなので、後追いで出し直すことはしない＝終了アラート側にも
     // 「学習を完了」があるので操作としては足りている。
@@ -542,7 +576,7 @@ export default function StudySessionScreen() {
     } else {
       setShowGoalModal(true);
     }
-  }, [goalActive, db, studyGoalCount]);
+  }, [goalActive, db, studyGoalCount, studyGoalReachedBehavior, showGoalPill]);
 
   const timerBlinking = timer.phase === "finished" && studyTimerEndBehavior === "blink";
   // 休憩中（039）: カード面グレーアウト＋操作無効。ヘッダー（戻る/鉛筆/完了）と
@@ -1442,6 +1476,58 @@ export default function StudySessionScreen() {
 
   const progressRatio =
     result.totalCards > 0 ? (currentIndex + 1) / result.totalCards : 0;
+
+  // ---- 046: 今日の目標の残り枚数バッジ / 達成ピル -----------------------------
+  // **目標 ON なら達成時の動作（3択）に関わらず常時出す**＝「なし」を選んでも学習画面に
+  // 目標が残る（＝オンなのに何も無い状態を作らない）。閲覧モードは記録が残らないので出さない。
+  const goalAchieved = goalTodayCount !== null && goalTodayCount >= studyGoalCount;
+  // ⚠️ **達成したら数字を落として旗だけにする**＝残り枚数は「あと何枚やるか」という行動の
+  // ための数字なので、達成後は意味が無い（情報が減るぶん表示も縮む）。
+  // 旗＝目標・緑＝達成は学習タブの目標行／完了画面と同じ記号で、色も同じ FILTER_COLORS.learned。
+  const goalBadgeEl = goalActive && goalTodayCount !== null ? (
+    <View
+      style={styles.goalBadge}
+      // 旗と数字を1つの読み上げ単位にまとめる（accessible が無いと数字だけが読まれる）
+      accessible
+      accessibilityLabel={
+        goalAchieved
+          ? t("study.goalDone", { count: studyGoalCount })
+          : `${t("study.goalBadgeLabel")} ${t("study.goalRowRemaining", { count: studyGoalCount - goalTodayCount })}`
+      }
+    >
+      <Ionicons
+        name={goalAchieved ? "flag" : "flag-outline"}
+        size={theme.fontSize.md}
+        color={goalAchieved ? FILTER_COLORS.learned : theme.colors.textSecondary}
+      />
+      {!goalAchieved && (
+        <Text
+          style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: "600" }}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+        >
+          {studyGoalCount - goalTodayCount}
+        </Text>
+      )}
+    </View>
+  ) : null;
+
+  /** 達成ピル（「通知のみ」用）。配色は ArchivePill と同じテーマ反転＝カードから確実に浮く。
+   *  `pointerEvents="none"` ＝**タップ標的にしない**（2.5秒の的は押し損ねやすく、外すと
+   *  カードがフリップする）。学習を完了したいときはヘッダーの ✓ か Q キーを使う。 */
+  const renderGoalPill = (top: number) =>
+    goalPillVisible ? (
+      <View pointerEvents="none" style={[styles.goalPillOverlay, { top }]}>
+        <View style={[styles.goalPill, { backgroundColor: theme.colors.text }]}>
+          <Ionicons name="flag" size={16} color={theme.colors.background} />
+          <Text
+            style={{ color: theme.colors.background, fontSize: theme.fontSize.sm, fontWeight: "600" }}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          >
+            {t("study.goalPill", { count: studyGoalCount })}
+          </Text>
+        </View>
+      </View>
+    ) : null;
   const hasMemo = currentCard.memoContent.some(
     (b: Block) =>
       (b.type !== "image" && "content" in b && b.content.trim() !== "") ||
@@ -1688,6 +1774,10 @@ export default function StudySessionScreen() {
                 />
               </Pressable>
             )}
+            {/* 046: 残り枚数バッジ。**全画面にも必ず出す**＝ここに出さないと
+                「目標はオンなのに全画面では何も無い」状態になる（進捗行が無いため）。
+                操作ボタンの並び（右側）ではなく左側に置く＝押せる物ではないため。 */}
+            {goalBadgeEl}
             <View style={{ flex: 1 }} />
             {canSpeak && (
               <Pressable
@@ -1912,6 +2002,8 @@ export default function StudySessionScreen() {
               </Pressable>
             </>
           )}
+
+          {renderGoalPill(GOAL_PILL_TOP_FULLSCREEN)}
         </View>
 
         <LinksSheet
@@ -2190,7 +2282,7 @@ export default function StudySessionScreen() {
           </Animated.View>
         </GestureDetector>
 
-        {/* 全画面ボタン＋リンクボタン（カードエリア左上） */}
+        {/* 全画面ボタン＋リンクボタン＋目標バッジ（カードエリア左上） */}
         <View style={styles.fullscreenBtnRow}>
           <Pressable
             style={styles.fullscreenBtn}
@@ -2220,6 +2312,11 @@ export default function StudySessionScreen() {
               />
             </Pressable>
           )}
+          {/* 046: 今日の目標の残り枚数。**進捗行には置けない**＝この行は
+              `position:absolute` でカードエリア左上に浮いており、進捗行の左端と同じ帯にいる
+              （進捗行が `flex-end` なのは、まさにこの浮きボタンのために左を空けているから）。
+              全画面モードもヘッダー左＝全画面ボタン/リンクの隣なので、両モードで並びが揃う。 */}
+          {goalBadgeEl}
         </View>
 
         {/* 休憩中: カード面＋下部操作列を覆うグレーアウト（タッチ吸収）。タイマーだけ上に残す（039）。
@@ -2343,6 +2440,8 @@ export default function StudySessionScreen() {
             gradeRow
           )}
         </View>
+
+        {renderGoalPill(GOAL_PILL_TOP)}
       </View>
 
       <LinksSheet
@@ -2407,6 +2506,33 @@ const styles = StyleSheet.create({
   },
   progressText: {
     textAlign: "right",
+  },
+  // 046: 今日の目標の残り枚数バッジ（旗＋数字。達成すると数字が消えて旗だけになる）。
+  // 枠も下地も置かない＝進捗行でも全画面ヘッダーでも周りに馴染ませる（押せる物ではないため）。
+  goalBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginLeft: 2,
+  },
+  // 046: 達成ピル（「通知のみ」）。上端中央に浮かせる。
+  // ⚠️ zIndex はタイマー（20）・休憩オーバーレイ（15）より上にする＝数秒で消える通知なので
+  // 隠れると存在ごと失われる（pointerEvents="none" なので操作は一切奪わない）。
+  goalPillOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 25,
+  },
+  goalPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...SHADOW.card,
   },
   cardArea: { flex: 1, paddingHorizontal: 20, paddingVertical: 12 },
   faceContent: { flexGrow: 1, justifyContent: "center", paddingVertical: 8 },

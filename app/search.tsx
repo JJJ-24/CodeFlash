@@ -604,7 +604,8 @@ export default function SearchScreen() {
           onSubmitEditing={() => inputRef.current?.blur()}
           autoCorrect={false}
           autoCapitalize="none"
-          keyboardAppearance={theme.dark ? 'dark' : 'light'}
+          // ⚠️ `keyboardAppearance` は指定しない（理由は store/theme.ts の注記）。アプリのテーマを
+          // 指定すると、iOS ダーク＋アプリ ライトのときに長押し候補が背景=白・文字=白になって読めない。
         />
         {query.length > 0 && (
           <Pressable

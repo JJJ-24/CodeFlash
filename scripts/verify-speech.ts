@@ -52,6 +52,7 @@ const { splitByScript, resolveSpeechSegments, speakText } = speech;
 const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS, speechLanguageLabel } = speech;
 const { filterKnownVoices, voiceSampleText, isNoveltyVoice } = speech;
 const { mergeScriptLangs, parseScriptLangs, scriptLangsEqual } = speech;
+const { splitSentencesForPause } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { blocksToSpeech, stripMarkdown } = require('@/lib/blocksToSpeech');
 
@@ -216,6 +217,54 @@ eq(spoken, [
 spoken.length = 0;
 speakText('   ', { rate: 1.0 });
 eq(spoken, [], '空白だけなら1件も積まない');
+
+// ---- 文末の間（ピリオドの後が小文字のとき） ---------------------------------
+
+// iOS の音声エンジンは「ピリオド＋空白＋**大文字**」だけを文末と見なす（実機と iOS 純正の
+// 読み上げの両方で確認済み）。**エンジンが間を入れない位置だけ**をアプリが別発話に分ける。
+eq(splitSentencesForPause('This is a pen. That is a book.'), ['This is a pen. That is a book.'],
+  '大文字が続く位置では切らない（エンジンが既に間を入れている）');
+eq(splitSentencesForPause('this is a pen. that is a book.'), ['this is a pen.', 'that is a book.'],
+  '小文字が続く位置で切る');
+eq(splitSentencesForPause('useEffect は副作用を扱う. props は読み取り専用です.'),
+  ['useEffect は副作用を扱う.', 'props は読み取り専用です.'],
+  '識別子から始まる文（大文字にできない）で切る＝この機能の主目的');
+eq(splitSentencesForPause('go. went. gone.'), ['go.', 'went.', 'gone.'], '短い列挙も1つずつ');
+eq(splitSentencesForPause('line one.\nline two.'), ['line one.', 'line two.'], '改行も空白として扱う');
+
+// 切ってはいけないもの
+eq(splitSentencesForPause('e.g. this is an example. it works.'),
+  ['e.g. this is an example.', 'it works.'], '略語（e.g.）では切らない');
+eq(splitSentencesForPause('The meeting is at 9 a.m. and ends at 5 p.m. bring your laptop.'),
+  ['The meeting is at 9 a.m. and ends at 5 p.m. bring your laptop.'], '略語（a.m./p.m.）では切らない');
+eq(splitSentencesForPause('Mr. smith is here.'), ['Mr. smith is here.'], '敬称でも切らない');
+eq(splitSentencesForPause('J. r. r. tolkien'), ['J. r. r. tolkien'], '1文字のイニシャルでも切らない');
+eq(splitSentencesForPause('Version 1.5 is out.'), ['Version 1.5 is out.'], '小数点は空白が無いので対象外');
+// ⚠️ 実機で見つけた理由がある：`API. Next word`（文中）は「エーピーアイ」と綴り読みするのに、
+// 文を切って `API.` が**発話の末尾**に来ると「アピ」と単語のように読まれる。間より読みを優先する。
+eq(splitSentencesForPause('See the API. it works.'), ['See the API. it works.'],
+  '全大文字の略語では切らない（発話の末尾に来ると綴り読みでなくなる）');
+eq(splitSentencesForPause('Upload to S3. then check it.'), ['Upload to S3. then check it.'],
+  '数字を含む全大文字の略語も同じ');
+eq(splitSentencesForPause('I met John. he said hi.'), ['I met John.', 'he said hi.'],
+  '先頭だけ大文字の普通の語では切る（略語ではない）');
+eq(splitSentencesForPause('It is an api. next word'), ['It is an api.', 'next word'],
+  '小文字の語は略語扱いしない');
+eq(splitSentencesForPause('array.map().filter() は連鎖する.'), ['array.map().filter() は連鎖する.'],
+  'メソッドチェーンも対象外');
+eq(splitSentencesForPause('hello.world'), ['hello.world'], '空白の無いピリオドは切らない');
+eq(splitSentencesForPause('これはテストです。次の文です。'), ['これはテストです。次の文です。'],
+  '日本語の句点は対象外（エンジンが間を入れる）');
+eq(splitSentencesForPause('Really? yes! ok.'), ['Really? yes! ok.'], '`!` `?` は対象外（二重の間を作らない）');
+eq(splitSentencesForPause('   '), [], '空白だけなら1件も返さない');
+
+// キューへの積まれ方（区間 → 文の順で割る）
+spoken.length = 0;
+speakText('this is a pen. that is a book.', { rate: 1.0 });
+eq(spoken, [
+  { text: 'this is a pen.', language: 'en-US' },
+  { text: 'that is a book.', language: 'en-US' },
+], '同じ言語でも文ごとに別の発話として積む（発話の切れ目が「間」になる）');
 
 // ---- デッキ単位の上書き（050 Phase 2） ---------------------------------------
 

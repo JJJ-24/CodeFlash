@@ -380,6 +380,69 @@ export function resolveSpeechSegments(
   return merged.map((s) => ({ ...s, text: s.text.trim() })).filter((s) => s.text !== '');
 }
 
+// ---- 文末の間（ピリオドの後が小文字のとき） ---------------------------------
+
+/**
+ * ピリオドの直前がこれらの語なら**文末ではない**ので切らない（`e.g. this` / `9 a.m. and`）。
+ * 小文字にして末尾一致で見る。⚠️ **1文字の語（`J. r. r.` のようなイニシャル）も切らない**。
+ */
+const SENTENCE_ABBREVIATIONS = new Set([
+  'mr', 'mrs', 'ms', 'dr', 'prof', 'sr', 'jr', 'st', 'vs', 'etc', 'fig', 'no', 'approx',
+  'inc', 'ltd', 'co', 'dept', 'est', 'al', 'e.g', 'i.e', 'a.m', 'p.m', 'u.s', 'u.k',
+]);
+
+/**
+ * ピリオドで終わる断片の**最後の語**が「そこで切ってはいけない語」か。
+ *
+ * ①略語（`... e.g.` → `e.g`）②1文字のイニシャル（`J.`）
+ * ③**全大文字の略語**（`API.` `HTML.` `S3.`）＝ ⚠️ **実機で見つかった理由がある**：
+ * iOS の英語の声は `API. Next word`（文中）なら「エーピーアイ」と綴り読みするのに、
+ * **`API.` が発話の末尾に来ると「アピ」と単語のように読む**。文を切ると末尾に来てしまうので、
+ * ここでは切らずに1発話のまま読ませる（間より読みの正しさを優先する）。
+ * 049 の「`API` と `API `（末尾空白つき）で読みが反転する」と同じ性質の現象。
+ */
+function endsWithAbbreviation(piece: string): boolean {
+  const m = /([A-Za-z][A-Za-z0-9.]*)\.$/.exec(piece);
+  if (!m) return false;
+  const word = m[1];
+  if (word.length === 1) return true;              // イニシャル（`J. r. r.`）
+  if (/^[A-Z0-9.]+$/.test(word)) return true;      // 全大文字の略語（`API.` `HTML.` `S3.`）
+  return SENTENCE_ABBREVIATIONS.has(word.toLowerCase());
+}
+
+/**
+ * **iOS が文末と判定してくれないピリオドの位置だけ**で文を切る（別々の発話にして間を作る）。
+ *
+ * iOS の音声エンジンは「ピリオド＋空白＋**大文字**」を文末と見なして一呼吸置くが、
+ * **小文字や数字が続くと文末と見なさない**（`1.5` や `e.g.` と区別できないため）。実機と
+ * iOS 純正の読み上げの両方で確認済み＝アプリの実装ではなくエンジンの仕様。
+ * コード学習では `useEffect は…. props は…` のように**識別子から始まる文**が避けられず、
+ * 書き手が正しく書いても小文字始まりになるので、そこだけアプリが補う。
+ *
+ * ⚠️ **大文字が続く位置では切らない**＝エンジンが既に間を入れているところに手を出さない
+ * （二重の間にならないし、正しく書かれた英文の聞こえ方は今のまま）。
+ * ⚠️ 空白を必須にするので `1.5` や `array.map()` は自動的に対象外。
+ * ⚠️ **全大文字の略語の後でも切らない**（`API.` が発話の末尾に来ると綴り読みでなくなるため。
+ * `endsWithAbbreviation` 参照）。
+ * ⚠️ `!` `?` は対象にしない（エンジンが既に間を入れている可能性が高く、二重になる）。
+ */
+export function splitSentencesForPause(text: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  // ピリオド＋空白（改行含む）＋小文字/数字。空白は捨てる（断片は別発話なので繋がらない）
+  const re = /\.\s+(?=[a-z0-9])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const piece = text.slice(start, m.index + 1); // ピリオドまでを1文にする
+    if (endsWithAbbreviation(piece)) continue;    // 略語なら切らずに読み進める
+    parts.push(piece);
+    start = re.lastIndex;
+  }
+  parts.push(text.slice(start));
+  // ⚠️ 各文は trim する（049：末尾の空白があると iOS が `API` を綴り読みしなくなる）
+  return parts.map((p) => p.trim()).filter((p) => p !== '');
+}
+
 export interface SpeakOptions {
   /** 文字体系ごとの言語の上書き（設定から渡す。未指定は既定） */
   scriptLangs?: ScriptLangs;
@@ -407,9 +470,14 @@ export function speakText(text: string, options: SpeakOptions): void {
     noMixedSwitch: options.noMixedSwitch,
   });
   if (segments.length === 0) return;
+  // 区間をさらに文へ割る（間が入らないピリオドの位置だけ）。言語・声は区間のものを引き継ぐ。
+  const utterances = segments.flatMap((seg) =>
+    splitSentencesForPause(seg.text).map((text) => ({ text, language: seg.language })),
+  );
+  if (utterances.length === 0) return;
   Speech.stop();
-  segments.forEach((seg, i) => {
-    const isLast = i === segments.length - 1;
+  utterances.forEach((seg, i) => {
+    const isLast = i === utterances.length - 1;
     const base = {
       language: seg.language,
       rate: options.rate,

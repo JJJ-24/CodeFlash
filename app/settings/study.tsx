@@ -847,7 +847,9 @@ export default function StudySettingsScreen() {
               {infoBox('time', 'settings.studyTimerTimeInfo')}
             </View>
 
-            {/* 終了時の動作 */}
+            {/* 終了時の動作。046 の「達成時の動作」と同じ3択セグメント。
+                **「なし」でも満円だけは残る**ので、円/残り時間を両方「なし」にしても
+                時間切れの合図が画面から消えることはない（説明文にもその1行を入れてある）。 */}
             <View style={{ gap: 6 }}>
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('end')} hitSlop={6}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -856,7 +858,7 @@ export default function StudySettingsScreen() {
                 {infoIcon('end')}
               </Pressable>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
-                {(['alert', 'blink'] as StudyTimerEndBehavior[]).map((behavior) => {
+                {(['alert', 'blink', 'none'] as StudyTimerEndBehavior[]).map((behavior) => {
                   const active = behavior === studyTimerEndBehavior;
                   return (
                     <Pressable
@@ -869,7 +871,11 @@ export default function StudySettingsScreen() {
                         { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
                         active && styles.segmentTextActive,
                       ]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                        {t(behavior === 'alert' ? 'settings.studyTimerEndAlert' : 'settings.studyTimerEndBlink')}
+                        {t(behavior === 'alert'
+                          ? 'settings.studyTimerEndAlert'
+                          : behavior === 'blink'
+                            ? 'settings.studyTimerEndBlink'
+                            : 'settings.studyTimerEndNone')}
                       </Text>
                     </Pressable>
                   );

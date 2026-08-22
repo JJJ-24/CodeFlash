@@ -66,8 +66,19 @@ export const FSRS_RETENTION_DEFAULT = 0.90;
 
 const clampRetention = (v: number) => Math.max(FSRS_RETENTION_MIN, Math.min(FSRS_RETENTION_MAX, v));
 
-/** 学習タイマーの終了時動作。alert=バイブ＋モーダル / blink=リング点滅のみ */
-export type StudyTimerEndBehavior = 'alert' | 'blink';
+/**
+ * 学習タイマーの終了時動作。
+ * - 'alert' : バイブ＋モーダル（［再開］／［完了］）＝既定。時間切れは「やめるか続けるか」を
+ *             決める区切りなので、手を止めさせること自体が機能
+ * - 'blink' : リング点滅のみ（タップで停止）
+ * - 'none'  : 何も出さない（バイブも無し）。**満円だけは静止したまま淡く残る**
+ *             （円/残り時間をどちらも「なし」にしていると時間切れの合図が画面から完全に
+ *              消えるため。淡くするのは走行中の満円＝開始直後と見分けるため）
+ *
+ * 046 の「達成時の動作」と違い 'none' でも触覚を鳴らさない＝'blink' がすでに無音なので、
+ * 'none' だけ震えると「点滅より『なし』の方がうるさい」逆転が起きる。
+ */
+export type StudyTimerEndBehavior = 'alert' | 'blink' | 'none';
 
 /**
  * 046: 1日の目標を達成したときの知らせ方。
@@ -357,7 +368,7 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   },
   studyTimerRing: { key: '@codeflash_study_timer_ring_visible', default: 'on', parse: parseStudyTimerRing },
   studyTimerTime: { key: '@codeflash_study_timer_show_time', default: 'off', parse: parseStudyTimerTime },
-  studyTimerEndBehavior: { key: '@codeflash_study_timer_end_behavior', default: 'alert', parse: oneOf(['alert', 'blink'] as const) },
+  studyTimerEndBehavior: { key: '@codeflash_study_timer_end_behavior', default: 'alert', parse: oneOf(['alert', 'blink', 'none'] as const) },
   studyTimerBreakMinutes: {
     key: '@codeflash_study_timer_break_minutes',
     default: STUDY_TIMER_BREAK_MINUTES_DEFAULT,

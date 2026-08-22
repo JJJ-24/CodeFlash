@@ -579,6 +579,11 @@ export default function StudySessionScreen() {
   }, [goalActive, db, studyGoalCount, studyGoalReachedBehavior, showGoalPill]);
 
   const timerBlinking = timer.phase === "finished" && studyTimerEndBehavior === "blink";
+  // 終了時の動作＝「なし」: モーダルも点滅も触覚も出さないが、**満円だけは残す**
+  // （円・残り時間をどちらも「なし」にしていると時間切れの合図が画面から完全に消え、
+  //  「タイマーはオンなのに何も起きない」状態になるため）。静止したまま淡く出して、
+  //  走行中の満円＝開始直後と見分けられるようにする。
+  const timerDimmed = timer.phase === "finished" && studyTimerEndBehavior === "none";
   // 休憩中（039）: カード面グレーアウト＋操作無効。ヘッダー（戻る/鉛筆/完了）と
   // タイマー長押しメニュー（スキップ/終了）・Q/B/Esc キーは生かす。
   const onBreak = timer.mode === "break" && timer.phase === "running";
@@ -1955,6 +1960,7 @@ export default function StudySessionScreen() {
               epoch={timer.epoch}
               timeMode={studyTimerTime}
               blinking={timerBlinking}
+              dimmed={timerDimmed}
               ringMode={studyTimerRing}
               breakMode={onBreak}
               cycleIndex={timer.cycleIndex}
@@ -2338,6 +2344,7 @@ export default function StudySessionScreen() {
             epoch={timer.epoch}
             timeMode={studyTimerTime}
             blinking={timerBlinking}
+            dimmed={timerDimmed}
             ringMode={studyTimerRing}
             breakMode={onBreak}
             cycleIndex={timer.cycleIndex}

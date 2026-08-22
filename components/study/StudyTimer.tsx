@@ -55,6 +55,8 @@ interface Props {
   timeMode: StudyTimerElementMode;
   /** 終了時 blink 動作中（円の点滅） */
   blinking: boolean;
+  /** 終了時 'none' 動作中（点滅させず、満円を静止したまま淡く出す） */
+  dimmed?: boolean;
   /** 円（パイ/ゴースト）の表示モード（studyTimerRing）: on=常時 / start=開始時＋ピーク→ゴースト / off=ゴーストのみ */
   ringMode: StudyTimerElementMode;
   /** 休憩中（039）: リングを休憩色にし「休憩中」ピルを常時表示。ringMode（ゴースト）は無視 */
@@ -78,6 +80,7 @@ export function StudyTimer({
   epoch,
   timeMode,
   blinking,
+  dimmed = false,
   ringMode,
   breakMode = false,
   cycleIndex = 1,
@@ -160,7 +163,7 @@ export function StudyTimer({
   useEffect(() => {
     cancelAnimation(progress);
     if (phase === 'finished') {
-      // 終了時（blink 通知）は満円
+      // 終了時（blink 通知・dimmed）は満円
       progress.value = 1;
       return;
     }
@@ -241,7 +244,8 @@ export function StudyTimer({
   const timeLabel = String(secondsLeft > 60 ? Math.floor(secondsLeft / 60) : secondsLeft);
 
   // 円（パイ）を出すか:
-  // - 終了(blink/アラート)は設定に関係なく常に出す（時間切れの合図）。
+  // - 終了(アラート/点滅/なし)は設定に関係なく常に出す（時間切れの合図）。「なし」は点滅も
+  //   バイブもしないので、この満円だけが合図になる（dimmed で淡く静止＝走行中の満円と区別）。
   // - 休憩中はタップ無効＝ピーク不可なので必ず1つは残り時間の指標を残す: 円=常に(on) のとき、
   //   または数字も出ない（time!=='on'）ときのフォールバックとして円を出す。数字だけ出るとき
   //   （ring≠on かつ time==='on'）は円を出さない（＝円オフの意図を休憩中も尊重）。
@@ -281,7 +285,7 @@ export function StudyTimer({
       <Pressable
         onPress={handlePress}
         onLongPress={onLongPress}
-        style={[styles.body, onPie && paused && { opacity: 0.5 }]}
+        style={[styles.body, onPie && (paused || dimmed) && { opacity: 0.5 }]}
         hitSlop={6}
       >
         {showPie ? (

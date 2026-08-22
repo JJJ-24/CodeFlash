@@ -517,6 +517,7 @@
     "studyTimerEndBehavior": "When time is up",
     "studyTimerEndAlert": "Alert",
     "studyTimerEndBlink": "Blink only",
+    "studyTimerEndNone": "Nothing",
     "studyTimerCycles": "Repeat count",
     "studyTimerCyclesValue": "{{n}}x",
     "studyTimerBreakMinutes": "Break duration",
@@ -568,7 +569,7 @@
     "speechScriptOthersHint": "Only scripts shared by several languages can be configured.\nHangul, Thai and others are handled without any setting.",
     "studyGoalInfo": "Lets you know when you reach your goal for the day. The goal is per day, so several sessions add up. Grading the same card more than once still counts as one card.",
     "studyGoalReachedInfo": "- Alert: notifies you and lets you choose Keep going/Finish\n- Toast only: shows a note that disappears after a few seconds (no tap needed)\n- Nothing: shows nothing on screen\nIn every case the study screen shows how many cards are left to reach the goal.",
-    "studyTimerEndInfo": "- Alert: notifies you when time is up and lets you choose Resume/Finish\n- Blink only: the circle blinks; tap to stop"
+    "studyTimerEndInfo": "- Alert: notifies you when time is up and lets you choose Resume/Finish\n- Blink only: the circle blinks; tap to stop\n- Nothing: no notice (the circle just fills, dims and stops; tap to clear)"
   },
   "about": {
     "title": "About",

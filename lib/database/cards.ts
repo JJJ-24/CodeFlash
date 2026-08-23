@@ -269,9 +269,12 @@ export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: strin
   await db.execAsync(sql);
 }
 
-/** 今日作成したカード数（全デッキ合計）。統計タブ「新規」ブロック用。
+/** 今日作成したカード数（全デッキ合計）。統計タブ上部ブロック「新規」用。
  *  作成実績（過去実績）なのでアーカイブ除外しない（032方針）＝「過去7日間の新規作成」グラフと一致させる。
- *  学習対象数が必要な学習タブは getTodayCreatedCountPerDeck/PerTag（activeCardCond あり）を使う。 */
+ *  ⚠️ **「新規」が今日作成なのはこの統計タブだけ**で、学習タブ・カード一覧の「新規」は
+ *  **未学習カード**（getUnlearnedCount*／学習すると減る）＝別物。
+ *  ⚠️ 下の getTodayCreatedCountPerDeck/PerTag/ByDeck/CardIds* は**現在どこからも呼ばれていない**
+ *  （学習タブが未学習ベースに変わった名残）。 */
 export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> {
   const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(

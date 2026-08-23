@@ -95,8 +95,8 @@ export default function StudyScreen() {
   const [tagDueCounts, setTagDueCounts] = useState<Record<string, number>>({});
   const [todayReviewedPerDeck, setTodayReviewedPerDeck] = useState<Record<string, number>>({});
   const [todayReviewedPerTag, setTodayReviewedPerTag] = useState<Record<string, number>>({});
-  const [todayCreatedPerDeck, setTodayCreatedPerDeck] = useState<Record<string, number>>({});
-  const [todayCreatedPerTag, setTodayCreatedPerTag] = useState<Record<string, number>>({});
+  const [unlearnedPerDeck, setUnlearnedPerDeck] = useState<Record<string, number>>({});
+  const [unlearnedPerTag, setUnlearnedPerTag] = useState<Record<string, number>>({});
   const [totalPerTag, setTotalPerTag] = useState<Record<string, number>>({});
 
   const [loading, setLoading] = useState(true);
@@ -177,7 +177,7 @@ export default function StudyScreen() {
     const [
       loadedDecks, deckCounts, loadedTags, tagCounts,
       todayDeck, todayTag,
-      createdDeck, createdTag, totalTag,
+      unlearnedDeck, unlearnedTag, totalTag,
       todayTotal,
     ] = await Promise.all([
       getAllDecks(db),
@@ -199,8 +199,8 @@ export default function StudyScreen() {
     setTagDueCounts(tagCounts);
     setTodayReviewedPerDeck(todayDeck);
     setTodayReviewedPerTag(todayTag);
-    setTodayCreatedPerDeck(createdDeck);
-    setTodayCreatedPerTag(createdTag);
+    setUnlearnedPerDeck(unlearnedDeck);
+    setUnlearnedPerTag(unlearnedTag);
     setTotalPerTag(totalTag);
     setTodayReviewedTotal(todayTotal);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -241,7 +241,7 @@ export default function StudyScreen() {
       all: deck.cardCount,
       learned: todayReviewedPerDeck[deck.id] ?? 0,
       review: dueCounts[deck.id] ?? 0,
-      new: todayCreatedPerDeck[deck.id] ?? 0,
+      new: unlearnedPerDeck[deck.id] ?? 0,
     };
     return makeDisplayInfo(counts[activeFilter]);
   }
@@ -251,7 +251,7 @@ export default function StudyScreen() {
       all: totalPerTag[tag.id] ?? 0,
       learned: todayReviewedPerTag[tag.id] ?? 0,
       review: tagDueCounts[tag.id] ?? 0,
-      new: todayCreatedPerTag[tag.id] ?? 0,
+      new: unlearnedPerTag[tag.id] ?? 0,
     };
     return makeDisplayInfo(counts[activeFilter]);
   }
@@ -370,11 +370,11 @@ export default function StudyScreen() {
         all: deck.cardCount,
         learned: todayReviewedPerDeck[deck.id] ?? 0,
         review: dueCounts[deck.id] ?? 0,
-        new: todayCreatedPerDeck[deck.id] ?? 0,
+        new: unlearnedPerDeck[deck.id] ?? 0,
       };
       return counts[activeFilter] > 0;
     });
-  }, [sortedDecks, hideEmpty, activeFilter, todayReviewedPerDeck, dueCounts, todayCreatedPerDeck]);
+  }, [sortedDecks, hideEmpty, activeFilter, todayReviewedPerDeck, dueCounts, unlearnedPerDeck]);
 
   const visibleTags = useMemo(() => {
     if (!hideEmpty) return sortedTags;
@@ -383,11 +383,11 @@ export default function StudyScreen() {
         all: totalPerTag[tag.id] ?? 0,
         learned: todayReviewedPerTag[tag.id] ?? 0,
         review: tagDueCounts[tag.id] ?? 0,
-        new: todayCreatedPerTag[tag.id] ?? 0,
+        new: unlearnedPerTag[tag.id] ?? 0,
       };
       return counts[activeFilter] > 0;
     });
-  }, [sortedTags, hideEmpty, activeFilter, totalPerTag, todayReviewedPerTag, tagDueCounts, todayCreatedPerTag]);
+  }, [sortedTags, hideEmpty, activeFilter, totalPerTag, todayReviewedPerTag, tagDueCounts, unlearnedPerTag]);
 
   // ソート・フィルター変更後もフォーカスを同じデッキに維持
   useEffect(() => {
@@ -412,7 +412,7 @@ export default function StudyScreen() {
     : sumValues(totalPerTag);
   const totalLearned = activeTab === 'decks' ? sumValues(todayReviewedPerDeck) : sumValues(todayReviewedPerTag);
   const totalReview = activeTab === 'decks' ? sumValues(dueCounts) : sumValues(tagDueCounts);
-  const totalNew = activeTab === 'decks' ? sumValues(todayCreatedPerDeck) : sumValues(todayCreatedPerTag);
+  const totalNew = activeTab === 'decks' ? sumValues(unlearnedPerDeck) : sumValues(unlearnedPerTag);
 
   const filterDescMap: Record<Filter, string> = {
     all: t('study.filterDescAll'),

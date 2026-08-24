@@ -13,8 +13,13 @@ interface Props {
 
 export function InfoModal({ visible, title, message, onClose, okLabel = 'OK' }: Props) {
   const theme = useTheme();
+  // 閉じるときだけアニメーションを外す（'none' → dismissViewControllerAnimated:NO）。
+  // iOS は VC のトランジション中、下の画面へのタッチを配送しないため、フェードアウトの
+  // 約0.3秒はスワイプが丸ごと捨てられ、「閉じた直後は一覧を操作できない」ように見える。
+  // RN の updateProps は animationType を反映してから visible を見るので、同じレンダーで
+  // 両方渡せば「開く＝フェード／閉じる＝即時」になる。
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={visible ? 'fade' : 'none'} onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={[styles.dialog, { backgroundColor: theme.colors.surface }, isPad && styles.dialogPad]} onPress={() => {}}>
           {!!title && (

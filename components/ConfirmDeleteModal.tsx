@@ -15,8 +15,10 @@ export function ConfirmDeleteModal({ visible, message, onConfirm, onClose }: Pro
   const { t } = useTranslation();
   const theme = useTheme();
 
+  // 閉じるときだけアニメーションを外す（理由は InfoModal のコメント）。削除確認は
+  // 「行を左スワイプ→削除→次の行をスワイプ」と続けるので、閉じた直後の死に時間が効く。
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={visible ? 'fade' : 'none'} onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={[styles.dialog, { backgroundColor: theme.colors.surface }, isPad && styles.dialogPad]} onPress={() => {}}>
           <Text style={[styles.message, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

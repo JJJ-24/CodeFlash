@@ -257,6 +257,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 #### ナビゲーション・状態管理
 
+- **中央ダイアログは「開く＝フェード／閉じる＝即時」にする**: `InfoModal`/`ConfirmDeleteModal`/`ConfirmModal` は `animationType={visible ? 'fade' : 'none'}`。iOS は **VC のトランジション中、下の画面へタッチを配送しない**ので、フェードアウトの約0.3秒に始めたスワイプは丸ごと捨てられ「閉じた直後は一覧を操作できない」ように見える（アプリ側にガードは無い）。RN の `updateProps` は `animationType` を反映してから `visible` を見るため、同じレンダーで両方渡せば開くフェードだけ残せる。⚠️ **slide のシート（`ShortcutsModal`・`DeckPickerModal`・`IconPickerModal`・`SqlInitModal`・`DeckStagesModal`・`DeckSpeechModal`・検索のピッカー）には入れない**＝画面の大半を占める面が予告なく消える代償に対し、閉じた直後にスワイプする導線が無い（「スライドアウトを見せつつタッチも通す」は原理的に選べない）。`DiscardConfirmModal` 経由の入力系6画面は、直後に `fullScreenModal` 自体がスライドで閉じるので**効果はゼロ**（害も無いので除外の配線はしない）。
 - **RN `Modal` を2枚重ねるときは必ず入れ子にする（兄弟にしない・重要）**: モーダルの上にさらにモーダル（編集面・確認ダイアログ等）を出すときは、2枚目を**1枚目の `<Modal>` の children の中**に置く。兄弟に並べると **iOS は「すでに modal を提示している VC」からもう1枚を提示できず、2枚目の presentation が黙って失敗する**。症状は「2枚目が開かない」だけでなく、**提示状態が固着して1枚目を閉じた後も親画面がタップを一切受け付けなくなる**（ヘッダーのボタンなど一部だけ効くので原因を見誤りやすい）。044 の `DeckStagesModal` で実際に踏んだ。正しい形の実例は 043 の `HtmlImageLibrary`（`SqlInitModal` の `footer` として **Modal の中**に描画され、その中に `ConfirmDeleteModal`/`InfoModal` を持つ）。
 - **モーダルから戻った後のデータ更新**: モーダルを閉じた後に最新データが必要な画面では `useFocusEffect` で DB を再読み込みする（`deck/[id]/index.tsx`・`study/session.tsx` が実例）。
 - **フィルターキーの統一**: 全画面でフィルターキーは `'all' | 'learned' | 'review' | 'new'` に統一。`DeckDetailFilter = Exclude<InitialFilterPreference, 'none'>` で型を派生させている（`store/settings.ts`）。
@@ -382,6 +383,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 
 ### UI パターン（実装済み画面の慣習）
 
+- **設定サブ画面の ⓘ（インライン説明）は行ごとに独立して開閉する**: 何個でも同時に開ける（`app/settings/study.tsx` の `openInfos: Set<string>`・`sync.tsx`/`data.tsx` は行ごとの boolean）。⚠️ **「1つだけ開く」方式に戻さない**＝別の行が閉じることで**タップした行が上へジャンプ**し、画面外の行のアイコンが勝手に outline へ戻る（見えないところで状態が変わる）。Esc は開いている説明を全部閉じてから戻る／`B`・戻るボタン・FAB は説明を消費せず直接戻る（`SettingsDetail` の `onBack(direct)`）。
 - **統計ブロック**: 数字（`theme.fontSize.xxl`・色付き）→ラベル（`theme.fontSize.xs`・`textSecondary`）の縦並び。`theme.colors.surface` 背景・角丸・影付き。`deck/[id]/index.tsx` の `statItem` スタイルが基準。
 - **バッジ色**: 「復習」（due）= 青（`#1976D2`）、それ以外のフィルター = グレー（ライト: `#8B949E`、ダーク: `#4B5563`）。`theme.dark` で分岐する。
 - **セクションタイトル**: `theme.fontSize.lg, fontWeight: '700', color: theme.colors.textSecondary`。ホーム画面・カード一覧画面で使用。

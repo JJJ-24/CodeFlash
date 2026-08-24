@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AppSwitch } from '@/components/AppSwitch';
 import { SegmentedCard } from '@/components/settings/SegmentedCard';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
@@ -181,10 +182,9 @@ export default function DisplaySettingsScreen() {
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.keyboardEnabled')}
           </Text>
-          <Switch
+          <AppSwitch
             value={keyboardShortcutsEnabled}
             onValueChange={setKeyboardShortcutsEnabled}
-            trackColor={{ true: theme.colors.primary }}
           />
         </View>
       </View>

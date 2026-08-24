@@ -5,13 +5,14 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
+  Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppSwitch } from '@/components/AppSwitch';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
@@ -197,11 +198,10 @@ function ScheduleModal({
               <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('notification.onlyIfGoalUnmet')}
               </Text>
-              <Switch
+              <AppSwitch
                 value={onlyIfGoalUnmet}
                 onValueChange={onChangeOnlyIfGoalUnmet}
                 disabled={!goalEnabled}
-                trackColor={{ true: theme.colors.primary }}
               />
             </View>
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -456,10 +456,9 @@ export default function NotificationSettingsScreen() {
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('notification.dailyReminder')}
           </Text>
-          <Switch
+          <AppSwitch
             value={notificationEnabled}
             onValueChange={handleGlobalToggle}
-            trackColor={{ true: theme.colors.primary }}
           />
         </View>
         {/* 「スケジュールのトグルは ON なのに鳴らない」を防ぐ注意行。
@@ -567,10 +566,9 @@ export default function NotificationSettingsScreen() {
                   )}
                 </View>
               </View>
-              <Switch
+              <AppSwitch
                 value={s.enabled}
                 onValueChange={(v) => handleToggleEnabled(s.id, v)}
-                trackColor={{ true: theme.colors.primary }}
               />
             </View>
           </Pressable>

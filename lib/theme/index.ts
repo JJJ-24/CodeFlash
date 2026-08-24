@@ -35,6 +35,9 @@ export interface AppColors {
   danger: string;
   icon: string;
   iconSubtle: string;
+  /** スイッチ（`components/AppSwitch.tsx`）のオフのトラック色。⚠️ 未指定だと iOS 既定
+   *  （ライト ≈ #E9E9EA）になり、白いカードの上でオフがほとんど見えない。 */
+  switchTrackOff: string;
   progressBg: string;
   codeBackground: string;
   memoBackground: string;
@@ -84,6 +87,7 @@ export const lightTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' |
     danger: '#E53935',
     icon: '#666666',
     iconSubtle: '#BDBDBD',
+    switchTrackOff: '#BDBDBD',
     progressBg: '#E0E0E0',
     codeBackground: '#2A2A2A',
     memoBackground: '#EFEFEF',
@@ -107,6 +111,7 @@ export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 
     danger: '#E53935',
     icon: '#9E9E9E',
     iconSubtle: '#555555',
+    switchTrackOff: '#3A3A3C',
     progressBg: '#333333',
     codeBackground: '#2A2A2A',
     memoBackground: '#383838',

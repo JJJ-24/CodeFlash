@@ -17,7 +17,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -26,6 +25,7 @@ import {
 
 import { constants as KeyCommand } from "react-native-key-command";
 
+import { AppSwitch } from "@/components/AppSwitch";
 import { ArchivePill, useArchivePill } from "@/components/ArchivePill";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
@@ -892,10 +892,9 @@ export function BlockEditor({
                   {t("deck.archiveHint")}
                 </Text>
               </View>
-              <Switch
+              <AppSwitch
                 value={!!archived}
                 onValueChange={onArchivedChange}
-                trackColor={{ true: theme.colors.primary }}
                 thumbColor="#FFF"
               />
             </View>

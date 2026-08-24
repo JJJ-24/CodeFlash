@@ -8,7 +8,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,6 +20,7 @@ import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-nati
 import { runOnJS } from 'react-native-reanimated';
 
 import { BlockItemHeader } from './BlockItemHeader';
+import { AppSwitch } from '@/components/AppSwitch';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
 import { InteractivePreviewModal } from '@/components/code/InteractivePreviewModal';
 import { SymbolPalette } from '@/components/code/SymbolPalette';
@@ -320,10 +320,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           {!collapsed && !isPreview && EXECUTABLE_LANGUAGES.includes(block.language) && (
             <>
               {!block.executable && <Text style={[styles.execLabel, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('code.run')}</Text>}
-              <Switch
+              <AppSwitch
                 value={block.executable}
                 onValueChange={(v) => onChange({ executable: v })}
-                trackColor={{ true: '#1976D2' }}
                 thumbColor="#FFF"
                 style={styles.execSwitch}
               />
@@ -635,10 +634,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   />
                 </Pressable>
                 <View style={{ flex: 1 }} />
-                <Switch
+                <AppSwitch
                   value={!!block.previewInit}
                   onValueChange={(v) => onChange({ previewInit: v })}
-                  trackColor={{ true: '#1976D2' }}
                   thumbColor="#FFF"
                   style={styles.execSwitch}
                 />

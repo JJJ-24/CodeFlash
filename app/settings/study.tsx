@@ -3,8 +3,9 @@ import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { AppSwitch } from '@/components/AppSwitch';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
@@ -237,10 +238,9 @@ export default function StudySettingsScreen() {
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyGoalEnable')}
           </Text>
-          <Switch
+          <AppSwitch
             value={studyGoalEnabled}
             onValueChange={handleGoalEnabledChange}
-            trackColor={{ true: theme.colors.primary }}
           />
         </View>
 
@@ -395,10 +395,9 @@ export default function StudySettingsScreen() {
               </Text>
               {infoIcon('speechNoMixed')}
             </Pressable>
-            <Switch
+            <AppSwitch
               value={speechNoMixedSwitch}
               onValueChange={setSpeechNoMixedSwitch}
-              trackColor={{ true: theme.colors.primary }}
             />
           </View>
           {/* 説明は子の行に合わせてインデントする。⚠️ 閉じているときに空の View を残さない
@@ -456,10 +455,9 @@ export default function StudySettingsScreen() {
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.speechEnable')}
           </Text>
-          <Switch
+          <AppSwitch
             value={speechEnabled}
             onValueChange={setSpeechEnabled}
-            trackColor={{ true: theme.colors.primary }}
           />
         </View>
 
@@ -696,10 +694,9 @@ export default function StudySettingsScreen() {
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyTimerEnable')}
           </Text>
-          <Switch
+          <AppSwitch
             value={studyTimerEnabled}
             onValueChange={setStudyTimerEnabled}
-            trackColor={{ true: theme.colors.primary }}
           />
         </View>
 

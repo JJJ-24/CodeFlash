@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AppSwitch } from '@/components/AppSwitch';
 import { DECK_STAGE_KEYS, type DeckStageKind } from '@/lib/deckStageLabels';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import type { DeckStage } from '@/types';
@@ -65,12 +66,11 @@ export function DeckStagePicker({ stages, activeStageId, kind, onPickNone, onPic
         </Pressable>
         <View style={{ flex: 1 }} />
         {!multiple && (
-          <Switch
+          <AppSwitch
             value={activeStageId !== null}
             // ON に戻すときは宙に浮いた選択 id も消す（＝未指定＝先頭の土台に復帰）。
             // これが無いと、トグルを操作しても死んだ参照が残って土台が積まれない。
             onValueChange={(v) => (v ? onPickDefault() : onPickNone())}
-            trackColor={{ true: '#1976D2' }}
             thumbColor="#FFF"
             style={styles.switch}
           />

@@ -3,9 +3,10 @@ import { useRouter } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { constants as KeyCommand } from "react-native-key-command";
 
+import { AppSwitch } from "@/components/AppSwitch";
 import { ConfirmModal, type ModalAction } from "@/components/ConfirmModal";
 import { InfoModal } from "@/components/InfoModal";
 import { SettingsDetail } from "@/components/settings/SettingsDetail";
@@ -508,10 +509,9 @@ export default function SyncSettingsScreen() {
               />
             </Pressable>
           </View>
-          <Switch
+          <AppSwitch
             value={syncEnabled}
             onValueChange={handleSyncToggle}
-            trackColor={{ true: theme.colors.primary }}
             disabled={syncing}
           />
         </View>

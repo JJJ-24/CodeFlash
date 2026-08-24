@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { constants as KeyCommand } from 'react-native-key-command';
+import { AppSwitch } from '@/components/AppSwitch';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
@@ -18,7 +19,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -449,10 +449,9 @@ export default function EditDeckScreen() {
                   {t('deck.archiveHint')}
                 </Text>
               </View>
-              <Switch
+              <AppSwitch
                 value={archived}
                 onValueChange={(v) => { Keyboard.dismiss(); setArchived(v); }}
-                trackColor={{ true: theme.colors.primary }}
                 thumbColor="#FFF"
               />
             </View>

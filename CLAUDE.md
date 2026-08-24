@@ -21,6 +21,9 @@ npm run verify:db
 
 # 読み上げのテキスト処理の検証（049：文字体系の分割・Markdown 除去）
 npm run verify:speech
+
+# 学習タイマーの検証（036/039：同日の永続化・復元・日またぎのリセット）
+npm run verify:timer
 ```
 
 **テストフレームワークは未導入**。代わりに `scripts/db-harness.ts` が「Node 上でアプリの DB 層をそのまま実行する」土台を提供する：`node:sqlite`（同期）を **expo-sqlite 互換の非同期 API** でくるみ、`Module._resolveFilename` を差し替えて expo/RN モジュールをスタブし `@/` を解決する。これで `migrateDbIfNeeded`・`lib/database/*`・`lib/export.ts`・`lib/import.ts`・`lib/tsv.ts` を**本物のまま**呼べるので、カラム追加マイグレーション・旧DBの正規化・旧エクスポートの読み込み・エクスポート/インポート往復（`docs/db-migration-checklist.md` の確認項目）を実機なしで検証できる。実例は `scripts/verify-db.ts`（044/045 の土台＋046 の目標枚数と未達成リマインダー＋050 Phase 2 のデッキ単位の読み上げ言語・107 アサーション）。**新しい検証を書くときの注意**：①アプリのモジュールは `import` ではなく **`require()`** で読む（`import` は先頭へ巻き上げられ、スタブを入れる前に expo モジュールが解決されて落ちる）②旧スキーマの再現には `makeDb().raw`（生の同期 DB）で `ALTER TABLE ... DROP COLUMN` を使う。RN コンポーネントは描画できないので UI は対象外。

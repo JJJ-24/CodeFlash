@@ -246,7 +246,8 @@ interface SettingsValues {
  * - `parse`: 保存文字列 → 値。`undefined` を返すと無効値として無視（既定値のまま）。
  * - `normalize`: setter での正規化（clamp 等）。
  * - `persist`: 既定の `AsyncStorage.setItem(key, String(v))` を差し替える（配列の JSON 化等）。
- * - `onApply`: setter 適用時・hydrate 成功時の副作用（言語切替等）。
+ * - `onApply`: setter 適用時・hydrate 成功時の副作用（言語切替等）。第2引数 `hydrating` は
+ *   起動時の読み込み由来かどうか。**ユーザー操作のときだけ効かせたい副作用はこれで弾く**。
  */
 interface SettingDef<T> {
   key: string;
@@ -254,7 +255,7 @@ interface SettingDef<T> {
   parse: (raw: string) => T | undefined;
   normalize?: (v: T) => T;
   persist?: (v: T) => void;
-  onApply?: (v: T) => void;
+  onApply?: (v: T, hydrating?: boolean) => void;
 }
 
 const asIs = (raw: string) => raw;
@@ -274,9 +275,12 @@ const LEGACY_SPEECH_NON_LATIN_KEY = '@codeflash_speech_non_latin_lang';
 
 // 作動中（一時停止含む）にタイマー設定（分数/休憩/回数）を変更したら計り直す（旧い残り時間の
 // ままだと設定が効いていないように見えるため）。次の学習開始時に新しい設定でスタートする。
-// hydrate 時にも呼ばれるが、起動直後はタイマー未開始（idle）なので無害。
 // 休憩中だった場合は予約済みの休憩終了通知も掃除する（039・休憩開始時予約方式）。
-const resetStudyTimerIfActive = () => {
+// ⚠️ **hydrate 由来では絶対に走らせない**（`hydrating` で弾く）。タイマーは同じ日のうち
+// 保存から復元されるようになったため、起動時に「未開始だから無害」という前提が成り立たない。
+// 弾かないと、復元したタイマーを設定の読み込みが毎回消す（実際にそうなった）。
+const resetStudyTimerIfActive = (_v?: unknown, hydrating?: boolean) => {
+  if (hydrating) return;
   const st = useStudyTimerStore.getState();
   if (st.phase !== 'idle') {
     const wasBreak = st.mode === 'break';
@@ -375,7 +379,7 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     // 休憩終了通知を残さないため。従来の「次回セッションマウント時に掃除」だと通知だけ先に鳴り得る）。
     // hydrate 時（起動直後＝idle）は無害。
     parse: asBool,
-    onApply: (v) => { if (!v) resetStudyTimerIfActive(); },
+    onApply: (v, hydrating) => { if (!v) resetStudyTimerIfActive(v, hydrating); },
   },
   studyTimerMinutes: {
     key: '@codeflash_study_timer_minutes',
@@ -618,7 +622,7 @@ function hydrateOne<K extends keyof SettingsValues>(k: K, raw: string, update: P
   const parsed = def.parse(raw);
   if (parsed === undefined) return;
   update[k] = parsed;
-  def.onApply?.(parsed);
+  def.onApply?.(parsed, true);
 }
 
 /**

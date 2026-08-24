@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { cancelBreakEndNotification, scheduleBreakEndNotification } from '@/lib/notifications';
-import { useStudyTimerStore } from '@/store/studyTimer';
+import { isTimerStale, useStudyTimerStore } from '@/store/studyTimer';
 
 interface UseStudyTimerOptions {
   /** isPro && studyTimerEnabled。false ならタイマーを開始しない（既存状態もクリアする） */
@@ -47,12 +47,34 @@ export function useStudyTimer({
   onBreakEnd,
   onBreakElapsed,
 }: UseStudyTimerOptions) {
-  const { phase, mode, cycleIndex, cycleCount, remainingMs, totalMs, breakEndAt, epoch, togglePause, restart } =
+  const { phase, mode, cycleIndex, cycleCount, remainingMs, totalMs, breakEndAt, epoch, hydrated, togglePause, restart } =
     useStudyTimerStore();
   const onFinishRef = useRef(onFinish);
   onFinishRef.current = onFinish;
   const breakCallbacksRef = useRef({ onBreakStart, onBreakEnd, onBreakElapsed });
   breakCallbacksRef.current = { onBreakStart, onBreakEnd, onBreakElapsed };
+  // AppState リスナー（依存を固定したい）から最新の設定を読むための ref
+  const configRef = useRef({ enabled, minutes, breakMinutes, cycles });
+  configRef.current = { enabled, minutes, breakMinutes, cycles };
+
+  /**
+   * 日をまたいだ中断なら畳んで新しいタイマーを始める（`isTimerStale` の条件は store 側）。
+   * ⚠️ **呼ぶのは再開の瞬間だけ**＝学習画面に入るときとフォアグラウンド復帰時。動いている最中に
+   * 呼ぶと、0:00 をまたいで続けて学習している最中にリセットしてしまう。
+   */
+  const resetIfStale = useCallback(() => {
+    const st = useStudyTimerStore.getState();
+    if (!isTimerStale(st, Date.now())) return false;
+    st.reset();
+    cancelBreakEndNotification();
+    const cfg = configRef.current;
+    if (cfg.enabled) {
+      useStudyTimerStore
+        .getState()
+        .start(cfg.minutes * 60_000, { cycleCount: cfg.cycles, breakMs: cfg.breakMinutes * 60_000 });
+    }
+    return true;
+  }, []);
 
   // 休憩からの離脱を一元化: 実休憩時間を統計除外へ通知 → stop なら停止／それ以外は次の学習へ。
   // mode ガードで二重解決（AppState リスナーと tick effect の競合等）を防ぐ。
@@ -83,7 +105,9 @@ export function useStudyTimer({
   // セッション開始（マウント）時の継続/新規スタート判定。1回だけ実行する。
   const startedRef = useRef(false);
   useEffect(() => {
-    if (startedRef.current) return;
+    // ⚠️ 保存済み状態の読み込みを待つ（`hydrated`）。待たずに始めると、アプリ再起動直後に
+    // 学習画面へ入ったとき新規スタートが復元を追い越し、同じ日の続きが消える。
+    if (!hydrated || startedRef.current) return;
     startedRef.current = true;
     const store = useStudyTimerStore.getState();
     if (!enabled) {
@@ -94,13 +118,15 @@ export function useStudyTimer({
       }
       return;
     }
+    // 日をまたいだ中断なら、ここで畳んで新しいタイマーを始める（済んでいれば以降は何もしない）
+    if (resetIfStale()) return;
     if (store.phase === 'idle' || store.phase === 'finished' || store.phase === 'stopped') {
       store.start(minutes * 60_000, { cycleCount: cycles, breakMs: breakMinutes * 60_000 });
     }
-    // running/paused はそのまま継続（デッキ跨ぎ・同デッキやり直しで続きから動く）。
+    // running/paused はそのまま継続（デッキ跨ぎ・同デッキやり直し・同じ日のうちの再開で続きから動く）。
     // デッキ切替中（アンマウント中）に休憩が終わっていたケースはここで解決する。
     resolveBreak();
-  }, [enabled, minutes, breakMinutes, cycles, resolveBreak]);
+  }, [hydrated, enabled, minutes, breakMinutes, cycles, resolveBreak, resetIfStale]);
 
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   useEffect(() => {
@@ -110,12 +136,14 @@ export function useStudyTimer({
       // _layout の active 復帰時 cancel-all（リマインダー再登録）に巻き込まれて消える分は
       // _layout 側の syncBreakEndNotification() が予約し直す（この hook では触らない）。
       if (s === 'active') {
+        // 日をまたいだ中断なら畳んで新しく始める（畳んだら解決すべき休憩も残っていない）
+        if (resetIfStale()) return;
         // バックグラウンド中に休憩が終わっていたら即遷移
         resolveBreak();
       }
     });
     return () => sub.remove();
-  }, [resolveBreak]);
+  }, [resolveBreak, resetIfStale]);
 
   // リングアニメ駆動。学習はフォーカス中＋フォアグラウンドのみ、休憩は suspended を無視
   // （壁時計＝編集モーダル上・完了画面でも進むため、アニメも追従させる）。
@@ -167,6 +195,9 @@ export function useStudyTimer({
       if (st.epoch === epochAtStart && st.phase !== 'finished') {
         st.setRemainingMs(Math.max(0, endAt - Date.now()));
       }
+      // ここが「最後に動いていた時刻」＝日をまたいだ中断の判定と永続化の基準。
+      // ⚠️ この記録で store が変わることが保存のトリガーでもある（remainingMs は購読していない）。
+      st.noteActive(Date.now());
     };
   }, [studyCounting, epoch]);
 

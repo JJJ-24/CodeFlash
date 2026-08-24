@@ -569,7 +569,14 @@
     "speechScriptOthersHint": "Only scripts shared by several languages can be configured.\nHangul, Thai and others are handled without any setting.",
     "studyGoalInfo": "The Study list and study screen show today's total and how many cards are left to reach the goal. You can also be notified when you reach it. Grading the same card more than once still counts as one card.",
     "studyGoalReachedInfo": "- Alert: notifies you and lets you choose Keep going/Finish\n- Toast only: shows a note that disappears after a few seconds (no tap needed)\n- Nothing: no alert or toast",
-    "studyTimerEndInfo": "- Alert: notifies you when time is up and lets you choose Resume/Finish\n- Blink only: the circle blinks; tap to stop\n- Nothing: no alert or blinking (the circle just fills and dims)"
+    "studyTimerEndInfo": "- Alert: notifies you when time is up and lets you choose Resume/Finish\n- Blink only: the circle blinks; tap to stop\n- Nothing: no alert or blinking (the circle just fills and dims)",
+    "sectionSummaryOff": "Off",
+    "studyGoalSummary": "{{n}} cards/day",
+    "fsrsSummaryPreset": "{{preset}} ({{percent}}%)",
+    "fsrsSummaryCustom": "Retention {{percent}}%",
+    "studyTimerSummary": "{{minutes}} min",
+    "studyTimerSummaryCycles": "{{minutes}} min x {{cycles}}, {{break}} min break",
+    "studyTimerSummaryCyclesNoBreak": "{{minutes}} min x {{cycles}}, no break"
   },
   "about": {
     "title": "About",

@@ -16,6 +16,8 @@ export const settingsStyles = StyleSheet.create({
     ...SHADOW.subtle,
   },
   sectionLabel: { fontWeight: '600' },
+  // 折りたたみ見出し（CollapsibleSectionTitle）の外枠。card が gap を持つので既定の marginBottom は消す。
+  sectionTitleWrap: { marginBottom: 0 },
 
   // トップのナビ一覧 行
   navRow: {

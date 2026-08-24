@@ -569,7 +569,14 @@
     "speechScriptOthersHint": "複数の言語で使われる文字だけ設定できます。\nハングル・タイ文字などは設定なしで読み分けます。",
     "studyGoalInfo": "学習一覧や学習画面にその日の合計や目標までの残数が表示されます。達成時にお知らせすることもできます。同じカードを何度評価しても1枚と数えます。",
     "studyGoalReachedInfo": "・アラート：達成をお知らせし、「続ける／学習を完了」を選べます\n・通知のみ：数秒で消えるお知らせを出します（タップ不要）\n・なし：アラートや通知は出しません",
-    "studyTimerEndInfo": "・アラート：時間切れをお知らせし、「再開／完了」を選べます\n・点滅のみ：円が点滅しタップで停止します\n・なし：アラートや点滅は出しません（円が満ちて淡く止まります）"
+    "studyTimerEndInfo": "・アラート：時間切れをお知らせし、「再開／完了」を選べます\n・点滅のみ：円が点滅しタップで停止します\n・なし：アラートや点滅は出しません（円が満ちて淡く止まります）",
+    "sectionSummaryOff": "オフ",
+    "studyGoalSummary": "1日 {{n}} 枚",
+    "fsrsSummaryPreset": "{{preset}}（{{percent}}%）",
+    "fsrsSummaryCustom": "目標保持率 {{percent}}%",
+    "studyTimerSummary": "{{minutes}}分",
+    "studyTimerSummaryCycles": "{{minutes}}分 × {{cycles}}回・休憩{{break}}分",
+    "studyTimerSummaryCyclesNoBreak": "{{minutes}}分 × {{cycles}}回・休憩なし"
   },
   "about": {
     "title": "アプリについて",

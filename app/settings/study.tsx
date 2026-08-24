@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import { AppSwitch } from '@/components/AppSwitch';
+import { CollapsibleSectionTitle } from '@/components/CollapsibleSectionTitle';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
@@ -73,6 +74,7 @@ export default function StudySettingsScreen() {
     speechScriptLangs, setSpeechScriptLang,
     speechVoices, setSpeechVoice,
     speechNoMixedSwitch, setSpeechNoMixedSwitch,
+    studyCollapsedSections, toggleStudySection,
   } = useSettingsStore();
   // 開いている言語ピッカー（null＝閉じている）。行は複数あるがモーダルは1つを使い回す。
   const [speechLangModal, setSpeechLangModal] = useState<SpeechScript | null>(null);
@@ -190,6 +192,35 @@ export default function StudySettingsScreen() {
       </View>
     ) : null;
 
+  // セクションの折りたたみ（統計タブと同じ流儀・端末に永続化）。**タイトルタップ＝折りたたみ／
+  // ⓘ タップ＝説明**で役割を分ける（統計と揃える）。
+  // ⚠️ **説明ボックスは折りたたみガードの外に置く**＝閉じたままでも ⓘ で読めるようにするため。
+  // 中に入れると「ⓘ は塗りに変わるのに何も出ない」＝押せるのに効かない状態になる。
+  const collapsedSet = useMemo(() => new Set(studyCollapsedSections), [studyCollapsedSections]);
+  const isCollapsed = (id: string) => collapsedSet.has(id);
+  // 折りたたみ中だけ見出しの下に出す要約。⚠️ **実際に効いている値だけを書く**
+  //（オフのセクションで設定値を出すと「オンに見えて効いていない」状態になる）。
+  const goalSummary = studyGoalEnabled
+    ? t('settings.studyGoalSummary', { n: studyGoalCount })
+    : t('settings.sectionSummaryOff');
+  const fsrsPreset = (['longTerm', 'standard', 'exam'] as FsrsPreset[])
+    .find((preset) => FSRS_PRESET_RETENTION[preset] === fsrsDesiredRetention);
+  const fsrsPercent = Math.round(fsrsDesiredRetention * 100);
+  const fsrsSummary = fsrsPreset
+    ? t('settings.fsrsSummaryPreset', {
+        preset: t(({ exam: 'settings.fsrsPresetFocus', standard: 'settings.fsrsPresetStandard', longTerm: 'settings.fsrsPresetLongTerm' } as const)[fsrsPreset]),
+        percent: fsrsPercent,
+      })
+    : t('settings.fsrsSummaryCustom', { percent: fsrsPercent });
+  const timerSummary = !studyTimerEnabled
+    ? t('settings.sectionSummaryOff')
+    : studyTimerCycles < 2
+      ? t('settings.studyTimerSummary', { minutes: studyTimerMinutes })
+      : t(studyTimerBreakMinutes === 0 ? 'settings.studyTimerSummaryCyclesNoBreak' : 'settings.studyTimerSummaryCycles',
+          { minutes: studyTimerMinutes, cycles: studyTimerCycles, break: studyTimerBreakMinutes });
+  // 見出しの文字は各カードの sectionLabel（sm・600）のまま＝共通部品の既定（lg・700）を上書きする。
+  const sectionTitleStyle = [styles.sectionLabel, { fontSize: theme.fontSize.sm }];
+
   // 046: 目標 ON/OFF に伴う未達成リマインダーの確認ダイアログ（無料機能なので非 Pro 分岐にも出す）。
   const goalConflictModal = (
     <ConfirmModal
@@ -220,20 +251,19 @@ export default function StudySettingsScreen() {
   // （FSRS・学習タイマーは Pro のまま）。
   const goalCard = (
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Pressable
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-          onPress={() => toggleInfo('goal')}
-          hitSlop={6}
-        >
-          <Text
-            style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-          >
-            {t('settings.studyGoal')}
-          </Text>
-          {infoIcon('goal')}
-        </Pressable>
+        <CollapsibleSectionTitle
+          title={t('settings.studyGoal')}
+          titleStyle={sectionTitleStyle}
+          wrapStyle={styles.sectionTitleWrap}
+          blankTapToggles
+          collapsed={isCollapsed('goal')}
+          onToggle={() => toggleStudySection('goal')}
+          onInfo={() => toggleInfo('goal')}
+          infoOpen={openInfos.has('goal')}
+          summary={goalSummary}
+        />
         {infoBox('goal', 'settings.studyGoalInfo')}
+        {!isCollapsed('goal') && (<>
         <View style={styles.notificationRow}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyGoalEnable')}
@@ -306,6 +336,7 @@ export default function StudySettingsScreen() {
             </View>
           </View>
         )}
+        </>)}
       </View>
   );
 
@@ -328,6 +359,14 @@ export default function StudySettingsScreen() {
 
   /** その文字体系がいま読む言語（上書きが無ければ既定）。 */
   const langOf = (script: SpeechScript) => speechScriptLangs[script] ?? SCRIPT_DEFAULT_LANGS[script];
+
+  /** 折りたたみ時の要約。**ラテン文字と漢字をどの言語で読むか**を出す（この画面でいちばん効く
+   *  設定で、行としても常に見えている2つ。他の文字体系は端末に選択肢が2つ以上あるときだけ行が
+   *  出るので要約には入れない）。⚠️ **地域名は出さない**（`peers` に空配列を渡す）＝
+   *  「英語（アメリカ）/ 日本語」は見出し下の1行には長すぎる。 */
+  const speechSummary = speechEnabled
+    ? `${speechLanguageLabel(langOf('latin'), t, [])} / ${speechLanguageLabel(langOf('han'), t, [])}`
+    : t('settings.sectionSummaryOff');
 
   // 表示中の言語について声の一覧を読む（言語を変えたら読み直す）。
   // ⚠️ **声が1つしか無い言語では「声」の行を出さない**（言語の行と同じ規則）。
@@ -437,20 +476,19 @@ export default function StudySettingsScreen() {
   const speechCard = (
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         {/* 説明は ⓘ に畳む（目標・タイマーの各カードと同じ形）。常時表示だとここだけ浮く。 */}
-        <Pressable
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-          onPress={() => toggleInfo('speech')}
-          hitSlop={6}
-        >
-          <Text
-            style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-          >
-            {t('settings.speech')}
-          </Text>
-          {infoIcon('speech')}
-        </Pressable>
+        <CollapsibleSectionTitle
+          title={t('settings.speech')}
+          titleStyle={sectionTitleStyle}
+          wrapStyle={styles.sectionTitleWrap}
+          blankTapToggles
+          collapsed={isCollapsed('speech')}
+          onToggle={() => toggleStudySection('speech')}
+          onInfo={() => toggleInfo('speech')}
+          infoOpen={openInfos.has('speech')}
+          summary={speechSummary}
+        />
         {infoBox('speech', 'settings.speechHint')}
+        {!isCollapsed('speech') && (<>
         <View style={styles.notificationRow}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.speechEnable')}
@@ -521,6 +559,7 @@ export default function StudySettingsScreen() {
             )}
           </>
         )}
+        </>)}
       </View>
   );
 
@@ -602,12 +641,16 @@ export default function StudySettingsScreen() {
     >
       {/* FSRSカスタマイズ */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Text
-          style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-        >
-          {t('settings.fsrs')}
-        </Text>
+        <CollapsibleSectionTitle
+          title={t('settings.fsrs')}
+          titleStyle={sectionTitleStyle}
+          wrapStyle={styles.sectionTitleWrap}
+          blankTapToggles
+          collapsed={isCollapsed('fsrs')}
+          onToggle={() => toggleStudySection('fsrs')}
+          summary={fsrsSummary}
+        />
+        {!isCollapsed('fsrs') && (<>
         {/* プリセット */}
         <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
           {(['longTerm', 'standard', 'exam'] as FsrsPreset[]).map((preset) => {
@@ -672,24 +715,24 @@ export default function StudySettingsScreen() {
           </View>
           {infoBox('retention', 'settings.fsrsRetentionInfo')}
         </View>
+        </>)}
       </View>
 
       {/* 学習タイマー（036・Pro）。説明は常時表示せず、i アイコンのタップで展開（目標保持率と同じ流儀） */}
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <Pressable
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-          onPress={() => toggleInfo('general')}
-          hitSlop={6}
-        >
-          <Text
-            style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-          >
-            {t('settings.studyTimer')}
-          </Text>
-          {infoIcon('general')}
-        </Pressable>
+        <CollapsibleSectionTitle
+          title={t('settings.studyTimer')}
+          titleStyle={sectionTitleStyle}
+          wrapStyle={styles.sectionTitleWrap}
+          blankTapToggles
+          collapsed={isCollapsed('timer')}
+          onToggle={() => toggleStudySection('timer')}
+          onInfo={() => toggleInfo('general')}
+          infoOpen={openInfos.has('general')}
+          summary={timerSummary}
+        />
         {infoBox('general', 'settings.studyTimerInfo')}
+        {!isCollapsed('timer') && (<>
         <View style={styles.notificationRow}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyTimerEnable')}
@@ -880,6 +923,7 @@ export default function StudySettingsScreen() {
             </View>
           </>
         )}
+        </>)}
       </View>
 
       {goalCard}

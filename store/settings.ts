@@ -198,6 +198,8 @@ interface SettingsValues {
   gradeRankingDeckIds: string[];
   // 統計タブで折りたたみ中のセクションID（'chart'|'heatmap'|'today'|'total'|'mastery'|'pro'）
   statsCollapsedSections: string[];
+  // 学習設定で折りたたみ中のセクションID（'goal'|'speech'|'fsrs'|'timer'）
+  studyCollapsedSections: string[];
   cardThemePreference: CardThemeName;
   languagePreference: LanguagePreference;
   lastHomeFilter: HomeFilter;
@@ -263,6 +265,7 @@ const oneOf = <T extends string>(values: readonly T[]) => (raw: string): T | und
 
 const GRADE_RANKING_DECK_IDS_KEY = '@codeflash_grade_ranking_deck_ids';
 const STATS_COLLAPSED_SECTIONS_KEY = '@codeflash_stats_collapsed_sections';
+const STUDY_COLLAPSED_SECTIONS_KEY = '@codeflash_study_collapsed_sections';
 const SPEECH_SCRIPT_LANGS_KEY = '@codeflash_speech_script_langs';
 const SPEECH_VOICES_KEY = '@codeflash_speech_voices';
 // 049 の旧キー（ラテン／非ラテンの2つだけだった時代）。050 のマップへ一度だけ移行する。
@@ -335,6 +338,21 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     persist: (v) => {
       if (v.length === 0) AsyncStorage.removeItem(STATS_COLLAPSED_SECTIONS_KEY);
       else AsyncStorage.setItem(STATS_COLLAPSED_SECTIONS_KEY, JSON.stringify(v));
+    },
+  },
+  studyCollapsedSections: {
+    key: STUDY_COLLAPSED_SECTIONS_KEY,
+    default: [],
+    parse: (r) => {
+      try {
+        const parsed = JSON.parse(r);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch { return undefined; }
+    },
+    // 空配列（=すべて展開）はキー自体を消す。
+    persist: (v) => {
+      if (v.length === 0) AsyncStorage.removeItem(STUDY_COLLAPSED_SECTIONS_KEY);
+      else AsyncStorage.setItem(STUDY_COLLAPSED_SECTIONS_KEY, JSON.stringify(v));
     },
   },
   cardThemePreference: {
@@ -473,6 +491,7 @@ interface SettingsState extends SettingsValues {
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   setGradeRankingDeckIds: (v: string[]) => void;
   toggleStatsSection: (id: string) => void;
+  toggleStudySection: (id: string) => void;
   setCardThemePreference: (v: CardThemeName) => void;
   setLanguagePreference: (v: LanguagePreference) => void;
   setLastHomeFilter: (v: HomeFilter) => void;
@@ -534,6 +553,14 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setGradeRankingPeriod: makeSetter('gradeRankingPeriod'),
     setGradeRankingDeckIds: makeSetter('gradeRankingDeckIds'),
     // 配列へのトグル追加/削除のため個別定義（永続化は DEFS の persist に従う）。
+    toggleStudySection: (id) => {
+      set((state) => {
+        const cur = state.studyCollapsedSections;
+        const next = cur.includes(id) ? cur.filter((s) => s !== id) : [...cur, id];
+        DEFS.studyCollapsedSections.persist?.(next);
+        return { studyCollapsedSections: next };
+      });
+    },
     toggleStatsSection: (id) => {
       set((state) => {
         const cur = state.statsCollapsedSections;

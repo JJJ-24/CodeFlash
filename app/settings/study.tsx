@@ -137,9 +137,13 @@ export default function StudySettingsScreen() {
     setGoalConflict(null);
     if (turningOn) rescheduleGoalReminders();
   }
-  const [showRetentionInfo, setShowRetentionInfo] = useState(false);
-  // 各設定の情報 i アイコン。開くのは1つずつ（キー: general/cycles/break/ring/time/end/goal/speech）。
-  const [openInfo, setOpenInfo] = useState<string | null>(null);
+  // 各設定の情報 i アイコン。行ごとに独立して開閉する（同時に何個でも開ける）。
+  // キー: general/cycles/break/ring/time/end/goal/goalReached/retention/speech/
+  //       speechNoMixed/speechScriptOthers
+  // ⚠️ 「1つだけ開く」方式に戻さないこと：別の行が閉じることで**タップした行が上へジャンプ**し、
+  // 画面外の行のアイコンが勝手に outline へ戻る（見えないところで状態が変わる）。
+  // iCloud同期（app/settings/sync.tsx）・データ管理（app/settings/data.tsx）とも同じ流儀。
+  const [openInfos, setOpenInfos] = useState<Set<string>>(() => new Set());
 
   function handleFsrsPresetSelect(preset: FsrsPreset) {
     setFsrsDesiredRetention(FSRS_PRESET_RETENTION[preset]);
@@ -164,16 +168,20 @@ export default function StudySettingsScreen() {
 
   // セクション見出しの右に出す i アイコンと、その下に開くインライン説明ボックス。
   // ⚠️ **説明文は常時表示にせず必ずこの形にする**（このカードだけ常時表示にすると浮く）。
-  const toggleInfo = (key: string) => setOpenInfo((cur) => (cur === key ? null : key));
+  const toggleInfo = (key: string) => setOpenInfos((cur) => {
+    const next = new Set(cur);
+    if (!next.delete(key)) next.add(key);
+    return next;
+  });
   const infoIcon = (key: string) => (
     <Ionicons
-      name={openInfo === key ? 'information-circle' : 'information-circle-outline'}
+      name={openInfos.has(key) ? 'information-circle' : 'information-circle-outline'}
       size={Math.max(theme.fontSize.lg, 20)}
       color={theme.colors.textTertiary}
     />
   );
   const infoBox = (key: string, textKey: string) =>
-    openInfo === key ? (
+    openInfos.has(key) ? (
       <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
         <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {t(textKey)}
@@ -395,7 +403,7 @@ export default function StudySettingsScreen() {
           </View>
           {/* 説明は子の行に合わせてインデントする。⚠️ 閉じているときに空の View を残さない
               （親が `gap` を持つので、中身が無くても隙間だけ空いてしまう）。 */}
-          {openInfo === 'speechNoMixed' && (
+          {openInfos.has('speechNoMixed') && (
             <View style={{ paddingLeft: 16 }}>
               {infoBox('speechNoMixed', 'settings.speechNoMixedSwitchHint')}
             </View>
@@ -551,7 +559,7 @@ export default function StudySettingsScreen() {
         onBack={(direct) => {
           // 確認ダイアログ → 説明の順に閉じる（階層ディスマス）
           if (!direct && goalConflict) { dismissGoalConflict(); return; }
-          if (!direct && openInfo) { setOpenInfo(null); return; }
+          if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
           router.back();
         }}
       >
@@ -590,7 +598,7 @@ export default function StudySettingsScreen() {
       title={t('settings.studySettings')}
       onBack={(direct) => {
         if (!direct && goalConflict) { dismissGoalConflict(); return; }
-        if (!direct && (showRetentionInfo || openInfo)) { setShowRetentionInfo(false); setOpenInfo(null); return; }
+        if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
         router.back();
       }}
     >
@@ -634,17 +642,13 @@ export default function StudySettingsScreen() {
           <View style={styles.fsrsRetentionHeader}>
             <Pressable
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-              onPress={() => setShowRetentionInfo((v) => !v)}
+              onPress={() => toggleInfo('retention')}
               hitSlop={6}
             >
               <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.fsrsRetention')}
               </Text>
-              <Ionicons
-                name={showRetentionInfo ? 'information-circle' : 'information-circle-outline'}
-                size={Math.max(theme.fontSize.lg, 20)}
-                color={theme.colors.textTertiary}
-              />
+              {infoIcon('retention')}
             </Pressable>
             <Text style={[styles.fsrsRetentionValue, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {Math.round(fsrsDesiredRetention * 100)}%
@@ -668,13 +672,7 @@ export default function StudySettingsScreen() {
               {Math.round(FSRS_RETENTION_MAX * 100)}%
             </Text>
           </View>
-          {showRetentionInfo && (
-            <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('settings.fsrsRetentionInfo')}
-              </Text>
-            </View>
-          )}
+          {infoBox('retention', 'settings.fsrsRetentionInfo')}
         </View>
       </View>
 

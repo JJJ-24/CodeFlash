@@ -29,8 +29,13 @@ interface Props {
 
 export function ConfirmModal({ visible, title, message, actions, onClose }: Props) {
   const theme = useTheme();
+  // 閉じるときだけアニメーションを外す（理由は InfoModal のコメント）。
+  // InfoModal・ConfirmDeleteModal と3種そろえて手触りを揃える。
+  // なお DiscardConfirmModal 経由の6画面（入力系モーダルの「変更を破棄しますか？」）は
+  // 破棄/保存の直後に fullScreenModal 自体がスライドで閉じ、その間もタッチが止まるので
+  // 効果は無い（害も無いので除外はしない。編集に戻る経路だけは効く）。
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={visible ? 'fade' : 'none'} onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={[styles.dialog, { backgroundColor: theme.colors.surface }, isPad && styles.dialogPad]} onPress={() => {}}>
           {!!title && (

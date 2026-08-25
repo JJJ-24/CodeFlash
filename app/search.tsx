@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -378,6 +379,7 @@ export default function SearchScreen() {
   const [showSearchInfo, setShowSearchInfo] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
 
   const toggleDeck = (id: string) => setSelectedDeckIds((prev) =>
     prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -455,6 +457,10 @@ export default function SearchScreen() {
       const next = shiftStudiedDate(cur, days);
       return next > todayStr ? cur : next;
     });
+  /** 学習日フィルターの値を Date に（カレンダーピッカー用）。未指定なら今日。 */
+  const studiedDateAsDate = studiedDate === null
+    ? new Date()
+    : new Date(Number(studiedDate.slice(0, 4)), Number(studiedDate.slice(5, 7)) - 1, Number(studiedDate.slice(8, 10)));
   const studiedDateLabel = studiedDate === null
     ? ''
     : studiedDate === todayStr
@@ -501,7 +507,7 @@ export default function SearchScreen() {
   }
 
   // ピッカー/シート表示中は親キーを無効化（Esc は階層処理するので個別に判定）。
-  const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showSearchInfo || showShortcutsModal;
+  const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showSearchInfo || showShortcutsModal || datePickerVisible;
   useKeyCommands([
     { input: 'd', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setTagPickerVisible(true); } },
@@ -517,7 +523,9 @@ export default function SearchScreen() {
     { input: 'k', handler: () => { if (overlayOpen()) return; moveFocus('prev'); } },
     // A は統計シートのトグル（表示中の A で閉じる）。他のオーバーレイ表示中は無効。
     { input: 'a', handler: () => {
-        if (deckPickerVisible || tagPickerVisible || showSearchInfo) return;
+        // ⚠️ カレンダー表示中も弾く：許すと統計シートと2枚同時になり、iOS は同じ VC から
+        //    2枚目を提示できず**提示状態が固着して画面がタップを受け付けなくなる**。
+        if (deckPickerVisible || tagPickerVisible || showSearchInfo || datePickerVisible) return;
         if (statsCardId !== null) { setStatsCardId(null); return; }
         if (isPro && focusedIndex !== null && results[focusedIndex]) setStatsCardId(results[focusedIndex].id);
     } },
@@ -544,6 +552,9 @@ export default function SearchScreen() {
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (showSearchInfo) { setShowSearchInfo(false); return; }
         if (statsCardId !== null) { setStatsCardId(null); return; }
+        // カレンダーは自前のキーを持たない（ネイティブの UI なのでキー操作を渡せない）ため
+        // ここで閉じる。デッキ/タグのピッカーは自分で Esc を処理するので委ねる。
+        if (datePickerVisible) { setDatePickerVisible(false); return; }
         if (deckPickerVisible || tagPickerVisible) return; // ピッカー側の Esc に委ねる
         if (editingRef.current) { Keyboard.dismiss(); return; }
         router.back();
@@ -777,13 +788,16 @@ export default function SearchScreen() {
               <Pressable onPress={() => stepStudiedDate(-1)} hitSlop={6} accessibilityLabel={t('card.searchDatePrev')}>
                 <Ionicons name="chevron-back" size={16} color={theme.colors.primary} />
               </Pressable>
-              <Text
-                style={[styles.chipText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]}
-                numberOfLines={1}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-              >
-                {studiedDateLabel}
-              </Text>
+              {/* 日付部分のタップでカレンダーを開く（◀▶ で届かない日を1発で指す）。 */}
+              <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setDatePickerVisible(true); }} hitSlop={6}>
+                <Text
+                  style={[styles.chipText, { color: theme.colors.primary, fontSize: theme.fontSize.sm, textDecorationLine: 'underline' }]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                >
+                  {studiedDateLabel}
+                </Text>
+              </Pressable>
               <Pressable
                 onPress={() => stepStudiedDate(1)}
                 hitSlop={6}
@@ -891,6 +905,34 @@ export default function SearchScreen() {
       <Pressable style={[styles.fab, { backgroundColor: theme.colors.primary }]} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={28} color="#FFF" />
       </Pressable>
+
+      {/* 学習日のカレンダー。**日付を選んだ時点で確定して閉じる**（カレンダーで日を押すのは
+          それ自体が確定操作なので、[完了] を挟むと1タップ増えるだけ）。
+          ⚠️ 未来の日付には学習記録が存在しえないので `maximumDate` で today に止める
+          （チップの ▶ が今日で止まるのと同じ制限をピッカー側にも掛ける）。
+          ⚠️ 色は `themeVariant` で渡す（`Appearance.setColorScheme()` は使わない方針）。 */}
+      <Modal visible={datePickerVisible} transparent animationType="slide" onRequestClose={() => setDatePickerVisible(false)}>
+        <Pressable style={pickerStyles.overlay} onPress={() => setDatePickerVisible(false)}>
+          <Pressable style={[pickerStyles.sheet, { backgroundColor: theme.colors.surface, paddingBottom: 16 }]} onPress={() => {}}>
+            <Text style={[pickerStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('card.searchStudiedDate')}
+            </Text>
+            <DateTimePicker
+              value={studiedDateAsDate}
+              mode="date"
+              display="inline"
+              maximumDate={new Date()}
+              locale={i18n.language}
+              themeVariant={theme.dark ? 'dark' : 'light'}
+              onChange={(_, date) => {
+                if (date) setStudiedDate(localDateStr(date));
+                setDatePickerVisible(false);
+              }}
+              style={{ marginHorizontal: 8 }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* デッキ絞り込みピッカー */}
       <DeckMultiSelectPickerModal

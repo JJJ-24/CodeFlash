@@ -103,6 +103,9 @@ const HEATMAP_WEEKS = 52; // 約1年分
 const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
 const DAY_LABELS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BAR_MAX_HEIGHT = 60;
+// 046: 目標ラインの破線1本ぶんの長さと間隔。
+const GOAL_DASH_W = 4;
+const GOAL_DASH_GAP = 3;
 const EASE_MIN = 1.3;
 const EASE_MAX = 3.0;
 
@@ -324,23 +327,40 @@ function BarChart({
   theme,
   barColor,
   todayIsLast = false,
+  goal,
 }: {
   schedule: ScheduleItem[];
   locale: string;
   theme: AppTheme;
   barColor?: string;
   todayIsLast?: boolean;
+  /** 046: 1日の目標枚数。渡すと目標ラインを引き、スケールも目標を含めて取り直す。
+   *  **「学習済み」ブロックのときだけ**渡す（他のブロックは棒の意味が違う）。 */
+  goal?: number;
 }) {
   const labels = locale.startsWith('ja') ? DAY_LABELS_JA : DAY_LABELS_EN;
-  const maxCount = Math.max(...schedule.map((s) => s.count), 1);
   const color = barColor ?? theme.colors.primary;
+  // 目標ラインを枠内に収めるため、スケールは「週の最大」ではなく「週の最大と目標の大きいほう」。
+  // ⚠️ 目標に大きく届いていない週は棒が全体的に低くなる（＝実際に届いていないことの表現）。
+  const maxCount = Math.max(...schedule.map((s) => s.count), goal ?? 0, 1);
 
   const barCountH = Math.ceil(theme.fontSize.xs * 1.95);
   const barLabelH = Math.ceil(theme.fontSize.sm * 1.95);
   const chartH = BAR_MAX_HEIGHT + barCountH + barLabelH + 8;
+  // 棒の下端は「曜日ラベルの高さ＋ gap 4」の位置（barCol は flex-end・gap 4 の縦積み）。
+  // 目標ラインはそこから目標ぶんの高さだけ上に置く。
+  const goalLineBottom = goal != null && goal > 0
+    ? barLabelH + 4 + (goal / maxCount) * BAR_MAX_HEIGHT
+    : null;
+  const [chartW, setChartW] = useState(0);
 
   return (
-    <View style={[styles.barChart, { height: chartH }]}>
+    <View
+      style={[styles.barChart, { height: chartH }]}
+      // ⚠️ 目標ラインを引くときだけ onLayout を付ける、はダメ：目標を ON にしても
+      //    View の大きさは変わらないので onLayout が発火せず、線が引かれないままになる。
+      onLayout={(e) => { const w = e.nativeEvent.layout.width; setChartW((cur) => (cur === w ? cur : w)); }}
+    >
       {schedule.map((item, i) => {
         const barH = Math.max((item.count / maxCount) * BAR_MAX_HEIGHT, item.count > 0 ? 4 : 0);
         const dayIndex = new Date(item.date + 'T00:00:00').getDay();
@@ -363,6 +383,18 @@ function BarChart({
           </View>
         );
       })}
+      {/* 046: 目標ライン。**棒の手前**に引く（越えた/越えないが読めるように）。色は中立の
+          textTertiary＝棒と同じ緑にすると沈むため。ラベルは付けない（1列 約27pt の棒に
+          数字を重ねると窮屈になる。意味はセクションの ⓘ で説明する）。
+          ⚠️ RN の `borderStyle:'dashed'` は iOS で辺ごとに幅が違うと実線で描かれることが
+          あるので、短い矩形を並べて破線にする（プラットフォーム差が出ない）。 */}
+      {goalLineBottom != null && chartW > 0 && (
+        <View pointerEvents="none" style={[styles.goalLine, { bottom: goalLineBottom }]}>
+          {Array.from({ length: Math.ceil(chartW / (GOAL_DASH_W + GOAL_DASH_GAP)) }).map((_, i) => (
+            <View key={i} style={{ width: GOAL_DASH_W, height: 1, marginRight: GOAL_DASH_GAP, backgroundColor: theme.colors.textTertiary }} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -939,7 +971,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder, statsCollapsedSections, toggleStatsSection } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のメイン
@@ -1598,6 +1630,9 @@ export default function StatsScreen() {
     new: theme.colors.textSecondary,
   };
 
+  // 046: 目標ラインは「学習済み」ブロックのときだけ。「連続」は 0/1、「復習」は未来の予定、
+  // 「新規」は作成枚数で、いずれも1日の目標枚数と比べる意味が無いため。
+  const chartGoal = studyGoalEnabled && selectedBlock === 'learned' ? studyGoalCount : undefined;
   const chartConfig: { data: ScheduleItem[]; title: string; color: string; todayIsLast: boolean } =
     selectedBlock === 'learned'
       ? { data: past7DaysReviewed, title: t('stats.past7DaysReviewed'), color: FILTER_COLORS.learned, todayIsLast: true }
@@ -1695,7 +1730,12 @@ export default function StatsScreen() {
           title={chartConfig.title}
           collapsed={isSectionCollapsed('chart')}
           onToggle={() => toggleStatsSection('chart')}
-          onInfo={() => setSectionInfoModal({ title: t('stats.topBlocksInfoTitle'), message: <InfoContent text={t('stats.topBlocksInfoMessage') + collapseHint} /> })}
+          onInfo={() => setSectionInfoModal({
+            title: t('stats.topBlocksInfoTitle'),
+            // 目標ラインの説明は **破線が実際に出ているときだけ**（目標 ON かつ「済み」）。
+            // 目標 ON だけを条件にすると、他の3ブロックを見ている間も画面に無い線の説明が出る。
+            message: <InfoContent text={t('stats.topBlocksInfoMessage') + (chartGoal != null ? '\n\n' + t('stats.goalLineInfoMessage', { count: chartGoal }) : '') + collapseHint} />,
+          })}
           infoLabel={t('stats.topBlocksInfoLabel')}
         />
         {!isSectionCollapsed('chart') && (
@@ -1706,6 +1746,7 @@ export default function StatsScreen() {
               theme={theme}
               barColor={chartConfig.color}
               todayIsLast={chartConfig.todayIsLast}
+              goal={chartGoal}
             />
           </View>
         )}
@@ -2299,6 +2340,7 @@ const styles = StyleSheet.create({
 
   // Bar chart
   barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  goalLine: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', overflow: 'hidden' },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
   barCount: { textAlign: 'center' },

@@ -513,10 +513,16 @@ export default function SearchScreen() {
     { input: 't', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setTagPickerVisible(true); } },
     { input: ',', handler: () => { if (overlayOpen()) return; cycleField(-1); } },
     { input: '.', handler: () => { if (overlayOpen()) return; cycleField(1); } },
-    // 学習日フィルター：R で ON/OFF、⇧,／⇧. で前日/翌日（横方向の `,`/`.` と同じ向き）。
+    // 学習日フィルター：R（Reviewed＝`review_logs.reviewedDate`）で ON/OFF、前日/翌日は日送り。
+    // 日送りは**横方向の操作**なので、フィールド切替と同じく `,`/`.` と `H`/`L` の両方を受ける
+    // （規約：横方向は `,`/`.` ＝ `←`/`→` ＝ `H`/`L` を同義にする）。
+    // ⚠️ `⇧←`/`⇧→` は足さない：この画面の矢印は検索欄があるため **iPhone でしか登録していない**
+    //    ので iPad で効かず不揃いになるうえ、⇧+矢印は「範囲選択」と強く結びついた操作のため。
     { input: 'r', handler: () => { if (overlayOpen()) return; toggleStudiedDate(); } },
     { input: ',', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; stepStudiedDate(-1); } },
     { input: '.', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; stepStudiedDate(1); } },
+    { input: 'h', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; stepStudiedDate(-1); } },
+    { input: 'l', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; stepStudiedDate(1); } },
     { input: 'h', handler: () => { if (overlayOpen()) return; cycleField(-1); } },
     { input: 'l', handler: () => { if (overlayOpen()) return; cycleField(1); } },
     { input: 'j', handler: () => { if (overlayOpen()) return; moveFocus('next'); } },

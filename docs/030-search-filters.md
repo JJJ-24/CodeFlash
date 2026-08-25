@@ -94,7 +94,7 @@
 | アーカイブ | **含める**（過去実績なので `activeCardCond` は掛けない規約どおり） |
 | UI | タイトル行に3つ目のアイコン（カレンダー）＝押すと今日で ON。チップに `◀ 日付 ▶ ×` |
 | 日付の直接指定 | チップの**日付部分をタップ**でカレンダー（`DateTimePicker` の `display="inline"`） |
-| キー | `R` = ON/OFF、`⇧,` / `⇧.` = 前日/翌日（カレンダーを開くキーは割り当てない） |
+| キー | `R`（Reviewed）= ON/OFF、`⇧,`/`⇧.`・`⇧H`/`⇧L` = 前日/翌日（カレンダーを開くキーは割り当てない） |
 
 ### なぜ「1日単位」なのか（範囲チップを不採用にした理由）
 
@@ -161,7 +161,9 @@
 - [x] `lib/database/cards.ts`：`searchCards` に `studiedDate` 引数／空クエリ対応／並び順・上限の出し分け／
       `SEARCH_DATE_RESULT_LIMIT` を追加
 - [x] `store/search.ts`：セッション保持に `studiedDate` を追加
-- [x] `app/search.tsx`：カレンダーボタン・日送りチップ・件数表示の上限・キー（`R`・`⇧,`/`⇧.`）
+- [x] `app/search.tsx`：カレンダーボタン・日送りチップ・件数表示の上限・
+      キー（`R`・`⇧,`/`⇧.`・`⇧H`/`⇧L`。⚠️ `⇧←`/`⇧→` は足さない＝この画面の矢印は
+      検索欄があるため iPhone のみ登録で iPad と不揃いになる／⇧+矢印は範囲選択と結びつく）
 - [x] `app/search.tsx`：日付タップでカレンダー（`DateTimePicker` inline・`maximumDate`＝今日・
       選択で確定して閉じる・`overlayOpen()`／`A` の早期 return／Esc に組み込み）
 - [x] i18n（`card.searchStudiedDate`/`searchDateToday`/`searchDateYesterday`/`searchDatePrev`/

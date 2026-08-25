@@ -77,6 +77,14 @@ export type SearchField = 'all' | 'front' | 'back' | 'memo';
 // 検索結果の取得上限。これに達したら UI では「N件以上」と表示する。
 export const SEARCH_RESULT_LIMIT = 100;
 
+/** 学習日で絞ったときの取得上限。**文字検索の 100 とは性格が違うので別にする**：
+ *  文字検索の上限は「クエリを絞り込め」という促しだが、学習日の結果は
+ *  「その日に学習した全部」＝有限で、それ自体が答え。日付はもう最小単位なので
+ *  ユーザーには絞り込む手立てが無く、100 で切ると必ず取りこぼす。
+ *  1枚10秒でも1時間で360枚なので 1000 は人間の1日の上限を超えている。
+ *  0（無制限）にしないのは、インポート等で同じ日付に大量の記録が入ったときに固まらないため。 */
+export const SEARCH_DATE_RESULT_LIMIT = 1000;
+
 function hiraganaToKatakana(str: string): string {
   return str.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
 }
@@ -121,12 +129,16 @@ export async function searchCards(
   field: SearchField = 'all',
   deckIds?: string[],
   tagIds?: string[],
+  /** 学習日（ローカル YYYY-MM-DD）。指定するとその日に学習したカードだけに絞る。
+   *  **文字クエリが空でもこれだけで検索が成立する**（「昨日学習した一覧」は文字を打たないため）。 */
+  studiedDate?: string,
 ): Promise<Card[]> {
   // クエリを空白（半角/全角スペース）で区切って複数キーワードの AND 検索にする。
   // 各キーワードが（選択フィールド内に）すべて含まれるカードだけがヒットする。
   // カンマはコード中に頻出するため区切りにしない（カンマを含む文字列をそのまま検索できるように）。
   const terms = query.split(/\s+/).map((t) => t.trim()).filter((t) => t !== '');
-  const searchTerms = terms.length > 0 ? terms : [query];
+  // 文字クエリが空のときは**フィールド条件そのものを作らない**（LIKE '%%' に頼らない）。
+  const searchTerms = terms.length > 0 ? terms : query !== '' ? [query] : [];
   const termClauses = searchTerms.map((term) => buildFieldClause(field, term));
   const fieldClause = termClauses.map((c) => c.clause).join(' AND ');
   const fieldParams = termClauses.flatMap((c) => c.params);
@@ -141,14 +153,36 @@ export async function searchCards(
     extraConditions.push(`c.id IN (SELECT cardId FROM card_tags WHERE tagId IN (${tagIds.map(() => '?').join(',')}))`);
     extraParams.push(...tagIds);
   }
+  if (studiedDate) {
+    // review_logs は (cardId, reviewedDate) が PK ＝その日に学習したカードがそのまま並ぶ。
+    // ⚠️ 過去実績なので activeCardCond は掛けない（アーカイブしても実績は消さない規約）。
+    extraConditions.push(`c.id IN (SELECT cardId FROM review_logs WHERE reviewedDate = ?)`);
+    extraParams.push(studiedDate);
+  }
 
-  const whereClause = extraConditions.length > 0
-    ? `(${fieldClause}) AND ${extraConditions.join(' AND ')}`
-    : fieldClause;
+  const conditions = [...(fieldClause ? [`(${fieldClause})`] : []), ...extraConditions];
+  // 条件が1つも無い＝全件になるので呼び出し側の想定外。空を返して防ぐ。
+  if (conditions.length === 0) return [];
+
+  // 並び順：通常は「最近編集した順」だが、**学習日で絞ったときは「その日に学習した順」**にする。
+  // ⚠️ `cards.updatedAt` は学習では更新されない（`saveReview` は reviews/review_logs/grade_logs
+  //    だけを書く）ので、日付検索で updatedAt 順に並べると学習と無関係な順序になり、
+  //    上限で切れるときに落ちるカードも学習の新旧と無関係になる。
+  // grade_logs は「カード×日で1行・その日の最後の評価」を保つ作りなので時刻が取れる。
+  // 024 より前の記録には行が無く NULL になるが、SQLite は NULL が最小＝DESC で末尾に回る。
+  const orderParams: string[] = [];
+  let orderBy = 'c.updatedAt DESC';
+  if (studiedDate) {
+    orderBy =
+      `(SELECT MAX(g.reviewedAt) FROM grade_logs g
+         WHERE g.cardId = c.id AND date(g.reviewedAt, 'localtime') = ?) DESC, c.updatedAt DESC`;
+    orderParams.push(studiedDate);
+  }
+  const limit = studiedDate ? SEARCH_DATE_RESULT_LIMIT : SEARCH_RESULT_LIMIT;
 
   const rows = await db.getAllAsync<RawCard>(
-    `${CARD_SELECT} WHERE ${whereClause} ORDER BY c.updatedAt DESC LIMIT ${SEARCH_RESULT_LIMIT}`,
-    [...fieldParams, ...extraParams]
+    `${CARD_SELECT} WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy} LIMIT ${limit}`,
+    [...fieldParams, ...extraParams, ...orderParams]
   );
   return rows.map(toCard);
 }

@@ -33,6 +33,7 @@ const { getTodayReviewedCount } = require('@/lib/database/reviews');
 const { shouldFireStudyGoal, isStudyGoalUnmet, computeGoalLookaheadDays, computeGoalDayStats, PENDING_NOTIFICATION_LIMIT } =
   require('@/lib/studyGoal');
 const { getLifetimeStats } = require('@/lib/database/reviews');
+const { searchCards, SEARCH_RESULT_LIMIT, SEARCH_DATE_RESULT_LIMIT } = require('@/lib/database/cards');
 const { getActiveCardCount } = require('@/lib/database/reviews');
 const { getAllSchedules, createSchedule, updateSchedule, MAX_SCHEDULES } = require('@/lib/database/notifications');
 
@@ -557,6 +558,63 @@ async function main() {
   ]);
   eq('totalDays は dailyCounts の行数と一致', life19.totalDays, life19.dailyCounts.length);
   eq('目標2枚なら達成は 2/1 の1日だけ', computeGoalDayStats(life19.dailyCounts, 2).achievedDays, 1);
+
+  // ===========================================================================
+  console.log('\n[T20] 検索の「学習した日」フィルター（1日単位・学習順・上限別建て）');
+  // ===========================================================================
+  const db20 = makeDb();
+  await migrateDbIfNeeded(db20);
+  const deckA = await createDeck(db20, { name: 'A', description: '', language: 'ja' });
+  const deckB = await createDeck(db20, { name: 'B', description: '', language: 'ja' });
+  const t20 = '2026-08-20T00:00:00.000Z';
+  for (const [id, deckId, front] of [
+    ['c1', deckA.id, 'カードいち'],
+    ['c2', deckA.id, 'カードに'],
+    ['c3', deckB.id, 'カードさん'],
+    ['c4', deckA.id, 'カードよん'],
+  ] as [string, string, string][]) {
+    await db20.runAsync(
+      `INSERT INTO cards (id,deckId,sortOrder,archived,createdAt,updatedAt) VALUES (?,?,0,0,?,?)`,
+      [id, deckId, t20, t20]
+    );
+    await db20.runAsync(
+      `INSERT INTO card_contents (cardId,frontContent,backContent,memoContent) VALUES (?,?,'[]','[]')`,
+      [id, JSON.stringify([{ id: 'b1', type: 'text', content: front }])]
+    );
+  }
+  // 8/24 に c1・c2・c3 を学習、8/23 に c4 を学習
+  for (const [cardId, date] of [['c1', '2026-08-24'], ['c2', '2026-08-24'], ['c3', '2026-08-24'], ['c4', '2026-08-23']] as [string, string][]) {
+    await db20.runAsync('INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?,?)', [cardId, date]);
+  }
+  // 学習時刻（並び順の元）。⚠️ `date(reviewedAt,'localtime')` で判定されるので、UTC-11〜+11 の
+  // どのタイムゾーンで実行しても 8/24 になる昼の時刻を使う。c2 のほうが後 ＝ 先に並ぶ。
+  for (const [cardId, at] of [['c1', '2026-08-24T12:00:00.000Z'], ['c2', '2026-08-24T13:00:00.000Z']] as [string, string][]) {
+    await db20.runAsync('INSERT INTO grade_logs (cardId, grade, reviewedAt, responseTimeMs) VALUES (?,2,?,1000)', [cardId, at]);
+  }
+
+  const byDate = await searchCards(db20, '', 'all', undefined, undefined, '2026-08-24');
+  eq('文字クエリが空でも学習日だけで検索できる', byDate.map((c: { id: string }) => c.id).sort().join(','), 'c1,c2,c3');
+  eq('別の日のカードは入らない', byDate.some((c: { id: string }) => c.id === 'c4'), false);
+  // 並び順：grade_logs があるものが新しい順、無いものは末尾（SQLite は NULL が最小＝DESC で最後）
+  eq('その日の学習が新しい順に並ぶ（記録の無いものは末尾）', byDate.map((c: { id: string }) => c.id).join(','), 'c2,c1,c3');
+
+  const byDateDeck = await searchCards(db20, '', 'all', [deckA.id], undefined, '2026-08-24');
+  eq('学習日とデッキを掛け合わせられる', byDateDeck.map((c: { id: string }) => c.id).join(','), 'c2,c1');
+
+  const byDateText = await searchCards(db20, 'さん', 'all', undefined, undefined, '2026-08-24');
+  eq('文字クエリとも併用できる', byDateText.map((c: { id: string }) => c.id).join(','), 'c3');
+
+  eq('条件が何も無ければ空（全件返さない）', (await searchCards(db20, '', 'all')).length, 0);
+  eq('学習日なしの文字検索は従来どおり', (await searchCards(db20, 'カード', 'all')).length, 4);
+
+  // アーカイブ済みも出す（過去実績なので activeCardCond は掛けない規約）
+  await db20.runAsync('UPDATE cards SET archived = 1 WHERE id = ?', ['c1']);
+  eq('アーカイブ済みカードも学習日検索には出る', (await searchCards(db20, '', 'all', undefined, undefined, '2026-08-24')).length, 3);
+
+  check(
+    `学習日の上限は文字検索より大きい（${SEARCH_DATE_RESULT_LIMIT} > ${SEARCH_RESULT_LIMIT}）`,
+    SEARCH_DATE_RESULT_LIMIT > SEARCH_RESULT_LIMIT
+  );
 
   report();
 }

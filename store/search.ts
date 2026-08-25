@@ -9,12 +9,15 @@ interface SearchSessionState {
   query: string;
   deckIds: string[];
   tagIds: string[];
-  setSearch: (s: { query: string; deckIds: string[]; tagIds: string[] }) => void;
+  /** 学習日フィルター（ローカル YYYY-MM-DD）。未指定は null。 */
+  studiedDate: string | null;
+  setSearch: (s: { query: string; deckIds: string[]; tagIds: string[]; studiedDate: string | null }) => void;
 }
 
 export const useSearchSessionStore = create<SearchSessionState>((set) => ({
   query: '',
   deckIds: [],
   tagIds: [],
-  setSearch: ({ query, deckIds, tagIds }) => set({ query, deckIds, tagIds }),
+  studiedDate: null,
+  setSearch: ({ query, deckIds, tagIds, studiedDate }) => set({ query, deckIds, tagIds, studiedDate }),
 }));

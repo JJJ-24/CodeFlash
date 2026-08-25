@@ -16,9 +16,10 @@ import {
 } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
-import { searchCards, SEARCH_RESULT_LIMIT } from '@/lib/database/cards';
+import { searchCards, SEARCH_DATE_RESULT_LIMIT, SEARCH_RESULT_LIMIT } from '@/lib/database/cards';
 import type { SearchField } from '@/lib/database/cards';
 import { getAllDecks } from '@/lib/database/decks';
+import { localDateStr } from '@/lib/database/utils';
 import { getAllTags } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
@@ -46,6 +47,8 @@ const SEARCH_SHORTCUT_SECTIONS = [
     { key: ', / .', descKey: 'shortcut.switchSearchField' },
     { key: 'D', descKey: 'shortcut.selectDeck' },
     { key: 'T', descKey: 'shortcut.selectTag' },
+    { key: 'R', descKey: 'shortcut.toggleStudiedDate' },
+    { key: '⇧, / ⇧.', descKey: 'shortcut.studiedDatePrevNext' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
@@ -64,6 +67,13 @@ const SEARCH_SHORTCUT_SECTIONS = [
     { key: '?', descKey: 'shortcut.showShortcuts' },
   ] },
 ];
+
+/** 学習日フィルターを n 日ずらす。**UTC 換算ではなくローカルの Date で日を足す**
+ *  （`new Date(y, m-1, d + days)` は月またぎ・年またぎを自動で吸収する）。 */
+function shiftStudiedDate(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return localDateStr(new Date(y, m - 1, d + days));
+}
 
 // ---- MultiSelectPickerModal（汎用・タグ用） ----
 
@@ -338,7 +348,7 @@ function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onT
 export default function SearchScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
@@ -359,6 +369,10 @@ export default function SearchScreen() {
 
   const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(savedSearch.deckIds);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(savedSearch.tagIds);
+  // 学習日フィルター（ローカル YYYY-MM-DD・null = 未指定）。**1日単位**にしているのは、
+  // ①1日ぶんなら件数が自然に収まる ②統計の棒グラフは1本＝1日なので後から導線を繋げられる
+  // ③ユーザーの言い方（「昨日学習したカード」）がそもそも1日単位、の3点から。
+  const [studiedDate, setStudiedDate] = useState<string | null>(savedSearch.studiedDate);
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [tagPickerVisible, setTagPickerVisible] = useState(false);
   const [showSearchInfo, setShowSearchInfo] = useState(false);
@@ -398,11 +412,14 @@ export default function SearchScreen() {
 
   // 入力内容をセッションへ保存し、再オープン時に復元できるようにする。
   useEffect(() => {
-    useSearchSessionStore.getState().setSearch({ query, deckIds: selectedDeckIds, tagIds: selectedTagIds });
-  }, [query, selectedDeckIds, selectedTagIds]);
+    useSearchSessionStore.getState().setSearch({ query, deckIds: selectedDeckIds, tagIds: selectedTagIds, studiedDate });
+  }, [query, selectedDeckIds, selectedTagIds, studiedDate]);
 
   useEffect(() => {
-    if (query.trim().length === 0) {
+    // **文字が無くても学習日が指定されていれば検索する**（「昨日学習した一覧」は文字を打たない）。
+    // デッキ/タグだけでは検索しない＝それは「デッキの全カード」でデッキ詳細画面の役目だが、
+    // 学習日は1日ぶんに限られるので、それ単体で意味のある有限の結果になる。
+    if (query.trim().length === 0 && studiedDate === null) {
       setResults([]);
       setSearched(false);
       return;
@@ -413,22 +430,60 @@ export default function SearchScreen() {
       searchField,
       selectedDeckIds.length > 0 ? selectedDeckIds : undefined,
       selectedTagIds.length > 0 ? selectedTagIds : undefined,
+      studiedDate ?? undefined,
     ).then((cards) => {
       setResults(cards);
       setSearched(true);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, searchField, selectedDeckIds.join(','), selectedTagIds.join(',')]);
+  }, [query, searchField, selectedDeckIds.join(','), selectedTagIds.join(','), studiedDate]);
 
   const deckMap = useMemo(() => Object.fromEntries(decks.map((d) => [d.id, d])), [decks]);
   const tagMap = useMemo(() => Object.fromEntries(tags.map((t) => [t.id, t])), [tags]);
   const tagPickerItems: PickerItem[] = tags.map((tag) => ({ id: tag.id, name: tag.name, color: resolveTagColor(tag.color, theme) }));
 
-  const hasFilter = selectedDeckIds.length > 0 || selectedTagIds.length > 0;
+  const hasFilter = selectedDeckIds.length > 0 || selectedTagIds.length > 0 || studiedDate !== null;
+
+  // ---- 学習日フィルター ----
+  const todayStr = localDateStr(new Date());
+  // 未指定なら今日から始める（◀ を1回で昨日）。指定中にもう一度押したら解除。
+  const toggleStudiedDate = () => setStudiedDate((cur) => (cur === null ? todayStr : null));
+  // 未来の日付は学習記録が存在しえないので進めない。
+  const stepStudiedDate = (days: number) =>
+    setStudiedDate((cur) => {
+      if (cur === null) return cur;
+      const next = shiftStudiedDate(cur, days);
+      return next > todayStr ? cur : next;
+    });
+  const studiedDateLabel = studiedDate === null
+    ? ''
+    : studiedDate === todayStr
+      ? t('card.searchDateToday')
+      : studiedDate === shiftStudiedDate(todayStr, -1)
+        ? t('card.searchDateYesterday')
+        : new Date(
+            Number(studiedDate.slice(0, 4)),
+            Number(studiedDate.slice(5, 7)) - 1,
+            Number(studiedDate.slice(8, 10))
+          ).toLocaleDateString(i18n.language, { month: 'numeric', day: 'numeric' });
+  // 件数表示の上限は検索の種類で違う（学習日は「その日の全部」が答えなので大きい）。
+  const resultLimit = studiedDate !== null ? SEARCH_DATE_RESULT_LIMIT : SEARCH_RESULT_LIMIT;
 
   // ---- ハードキーボードショートカット（034） ----
   const editingRef = useRef(false);
   const { focusedIndex, setFocusedIndex, listRef, moveFocus } = useListNavigation(results, (c) => c.id);
+
+  /** 余白タップの共通処理。J/K のフォーカス解除に加えて**検索欄のカーソルも外す**。
+   *  ⚠️ `setFocusedIndex(null)` だけだと、ハードキーボードの無い端末で
+   *  **検索欄のカーソルを外す手段が画面内に無かった**（カード編集へ遷移して戻るしかない）。
+   *  ソフトキーボードが出たままだと結果一覧の見える範囲がその分狭くなる。
+   *  ⚠️ リストは `keyboardShouldPersistTaps="handled"` なので、Pressable が受けたタップでは
+   *  キーボードは自動で閉じない＝ここで明示的に閉じる必要がある。 */
+  const dismissFocus = () => {
+    setFocusedIndex(null);
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+  };
 
   function cycleField(dir: number) {
     const i = FIELD_OPTIONS.findIndex((o) => o.value === searchField);
@@ -452,6 +507,10 @@ export default function SearchScreen() {
     { input: 't', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setTagPickerVisible(true); } },
     { input: ',', handler: () => { if (overlayOpen()) return; cycleField(-1); } },
     { input: '.', handler: () => { if (overlayOpen()) return; cycleField(1); } },
+    // 学習日フィルター：R で ON/OFF、⇧,／⇧. で前日/翌日（横方向の `,`/`.` と同じ向き）。
+    { input: 'r', handler: () => { if (overlayOpen()) return; toggleStudiedDate(); } },
+    { input: ',', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; stepStudiedDate(-1); } },
+    { input: '.', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; stepStudiedDate(1); } },
     { input: 'h', handler: () => { if (overlayOpen()) return; cycleField(-1); } },
     { input: 'l', handler: () => { if (overlayOpen()) return; cycleField(1); } },
     { input: 'j', handler: () => { if (overlayOpen()) return; moveFocus('next'); } },
@@ -540,7 +599,7 @@ export default function SearchScreen() {
       {/* 余白タップでフォーカス解除。Pressable をリスト（FlatList）の祖先に置くと、
           押せる要素のない場所からのドラッグでスクロールが始まらない不具合があるため、
           固定部（タイトル〜件数）とリスト内フッターに分けて配置する（統計参照）。 */}
-      <Pressable onPress={() => setFocusedIndex(null)}>
+      <Pressable onPress={dismissFocus}>
       {/* タイトル行: 「カード検索」＋フィルターアイコン */}
       <View style={styles.titleRow}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -582,6 +641,24 @@ export default function SearchScreen() {
             name={selectedTagIds.length > 0 ? 'pricetag' : 'pricetag-outline'}
             size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
             color={selectedTagIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
+          />
+        </Pressable>
+        {/* 学習日フィルター。デッキ/タグと違いピッカーは開かず、押すと今日で ON（もう一度で解除）。
+            日を遡るのは下のチップの ◀ ＝「昨日」が1タップで出せる。 */}
+        <Pressable
+          onPress={toggleStudiedDate}
+          style={[
+            styles.filterBtn,
+            { borderColor: studiedDate !== null ? theme.colors.primary : themedFrameBorder(theme) },
+            { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+          ]}
+          hitSlop={4}
+          accessibilityLabel={t('card.searchStudiedDate')}
+        >
+          <Ionicons
+            name={studiedDate !== null ? 'calendar' : 'calendar-outline'}
+            size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+            color={studiedDate !== null ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
       </View>
@@ -693,6 +770,34 @@ export default function SearchScreen() {
               </Pressable>
             );
           })}
+          {/* 学習日チップ。デッキ/タグのチップと違い、中に日送りの ◀ ▶ を持つ（チップ全体の
+              タップで解除ではなく、右端の × で解除する）。▶ は今日で止める。 */}
+          {studiedDate !== null && (
+            <View style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary }]}>
+              <Pressable onPress={() => stepStudiedDate(-1)} hitSlop={6} accessibilityLabel={t('card.searchDatePrev')}>
+                <Ionicons name="chevron-back" size={16} color={theme.colors.primary} />
+              </Pressable>
+              <Text
+                style={[styles.chipText, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {studiedDateLabel}
+              </Text>
+              <Pressable
+                onPress={() => stepStudiedDate(1)}
+                hitSlop={6}
+                disabled={studiedDate === todayStr}
+                style={studiedDate === todayStr ? { opacity: 0.3 } : undefined}
+                accessibilityLabel={t('card.searchDateNext')}
+              >
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />
+              </Pressable>
+              <Pressable onPress={() => setStudiedDate(null)} hitSlop={6}>
+                <Ionicons name="close" size={14} color={theme.colors.primary} />
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
 
@@ -702,8 +807,8 @@ export default function SearchScreen() {
           style={[styles.resultCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
           maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
         >
-          {results.length >= SEARCH_RESULT_LIMIT
-            ? t('card.searchResultCountMax', { count: SEARCH_RESULT_LIMIT })
+          {results.length >= resultLimit
+            ? t('card.searchResultCountMax', { count: resultLimit })
             : t('card.searchResultCount', { count: results.length })}
         </Text>
       )}
@@ -712,7 +817,7 @@ export default function SearchScreen() {
 
       {/* 結果 */}
       {searched && results.length === 0 ? (
-        <Pressable style={styles.empty} onPress={() => setFocusedIndex(null)}>
+        <Pressable style={styles.empty} onPress={dismissFocus}>
           <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('card.searchNoResults')}
           </Text>
@@ -724,8 +829,11 @@ export default function SearchScreen() {
           data={results}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          // 結果をスクロールしたらキーボードを閉じる（iOS 標準の検索の挙動）。余白タップより
+          // 確実で、「読もうとスクロールした瞬間に見える範囲が広がる」ので導線としても自然。
+          keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.list, { flexGrow: 1 }]}
-          ListFooterComponent={<Pressable style={{ flexGrow: 1, minHeight: 120 }} onPress={() => setFocusedIndex(null)} />}
+          ListFooterComponent={<Pressable style={{ flexGrow: 1, minHeight: 120 }} onPress={dismissFocus} />}
           ListFooterComponentStyle={{ flexGrow: 1 }}
           onScrollToIndexFailed={() => {}}
           renderItem={({ item, index }) => {

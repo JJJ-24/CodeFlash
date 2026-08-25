@@ -2,13 +2,14 @@
 // 継続・積み上げ系の指標（最長連続・総学習回数・総学習時間・経過日数）と、獲得バッジ
 // （連続20＋回数/時間/日数 各10・周回込み110）を表示する。
 // ドーナツグラフ側（正答率/学習日数/平均時間）と重複しない指標に絞っている。無料機能。
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as KeyCommand from 'react-native-key-command';
 
+import { computeGoalDayStats } from '@/lib/studyGoal';
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore } from '@/store/settings';
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, themedFrameBorder, type AppTheme } from '@/lib/theme';
@@ -65,12 +66,18 @@ const RECORD_COUNTDOWN_MAX = 3;
 // 既定の content（iPad 2.5 / iPhone 1.5）だとアクセシビリティ最大で大きすぎるため、専用に抑える。
 // ここを変えるとラベルの最大サイズを調整できる（数字は allowFontScaling={false} で固定・別管理）。
 const RECORD_LABEL_MAX_FONT = IS_PAD ? 2 : 1.3;
+// 目標達成の数値ブロックの色。**学習タブ/学習画面の旗と同じ緑**（`FILTER_COLORS.learned` 系）＝
+// アプリ全体で「達成」を表す色から目標だけ外さない。右列の「日数」と同色だが、達成日は
+// 学習日の部分集合で同族の指標なので、同じ色であることが包含関係の手掛かりになる。
+const GOAL_COLOR = '#43A047';
 
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const { t } = useTranslation();
   const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const badgeLapStageSeen = useSettingsStore((s) => s.badgeLapStageSeen);
   const setBadgeLapStageSeen = useSettingsStore((s) => s.setBadgeLapStageSeen);
+  const studyGoalEnabled = useSettingsStore((s) => s.studyGoalEnabled);
+  const studyGoalCount = useSettingsStore((s) => s.studyGoalCount);
   const { height: screenHeight } = useWindowDimensions();
   const sheetY = useSharedValue(screenHeight);
   const overlayOpacity = useSharedValue(0);
@@ -178,14 +185,17 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
     return null;
   })();
 
-  // 左列：最長連続（大・プライマリ背景）＋開始からの日数（下）。右列：総学習回数・総学習時間・総学習日数の3つ。
+  // 左列：最長連続（大・プライマリ背景）＋目標達成（下・目標 ON のときだけ）。
+  // 右列：総学習回数・総学習時間・総学習日数の3つ。
   const streakBlock = stats
     ? { value: String(stats.longestStreak), label: t('stats.recordLongestStreak'), color: '#F4511E' }
     : null;
-  // 左下：開始からの日数（数字はグレー＝フィルター「新規」色）
-  const leftBottomBlock = stats
-    ? { value: elapsed != null ? String(elapsed) : '-', label: t('stats.recordElapsed'), color: theme.colors.textSecondary }
-    : null;
+  // 046 Phase 5：目標達成の集計。**現在の目標枚数で過去も判定する**ので、目標を変えると
+  // 値も変わる（クエリの再実行は不要＝`dailyCounts` から計算し直すだけ）。
+  const goalStats = useMemo(
+    () => (stats ? computeGoalDayStats(stats.dailyCounts, studyGoalCount) : null),
+    [stats, studyGoalCount]
+  );
   // 回数=青／時間=オレンジ（フィルター「復習」色）／日数=緑。モードで値とラベルを切り替える。
   // 平均は「1日あたり」＝学習日数で割る（回数・時間）。日数は継続率＝学習日数÷経過日数（%）。
   const REVIEW_COLOR = '#1976D2';
@@ -213,6 +223,31 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
         { segments: formatDuration(stats.totalTimeMs), label: t('stats.recordTotalTime'), color: FILTER_COLORS.due },
         { segments: plain(stats.totalDays.toLocaleString()), label: t('stats.recordTotalDays'), color: DAYS_COLOR },
       ];
+  // 目標達成（4軸目）。右列と同じモードに追従する（Σ=達成日数／最高=最長連続達成／平均=達成率）。
+  const goalBlock = !stats || !goalStats || !studyGoalEnabled
+    ? null
+    : mode === 'max'
+    ? { segments: plain(goalStats.longestAchievedStreak.toLocaleString()), label: t('stats.recordGoalMaxStreak'), color: GOAL_COLOR }
+    : mode === 'avg'
+    ? {
+        segments: goalStats.achievementRate != null
+          ? [{ text: String(goalStats.achievementRate) }, { text: '%', unit: true }]
+          : plain('-'),
+        label: t('stats.recordGoalRate'),
+        color: GOAL_COLOR,
+      }
+    : { segments: plain(goalStats.achievedDays.toLocaleString()), label: t('stats.recordGoalDays'), color: GOAL_COLOR };
+  // 左下のセル：目標 ON なら目標達成、OFF なら開始からの日数（＝046 以前とまったく同じ見た目）。
+  // ⚠️ **左列は常に2セルに保つ**：OFF のとき1セルにすると streakCell の `flexGrow` で
+  // 右列3セル分の高さに伸び、実機で数字が間延びして見えた（Y案を実機確認して差し戻し）。
+  // 開始からの日数は目標 ON のときだけグリッドの下のキャプション行へ移る。経緯は `docs/046` Phase 5。
+  const leftBottomBlock = goalBlock ?? (stats
+    ? {
+        segments: plain(elapsed != null ? String(elapsed) : '-'),
+        label: t('stats.recordElapsed'),
+        color: theme.colors.textSecondary,
+      }
+    : null);
 
   return (
     <View
@@ -284,8 +319,8 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               </View>
             </View>
           )}
-          {/* 上部の数値ブロック：左列（最長連続・大＋総学習日数）／右列（3つ縦積み） */}
-          {stats && streakBlock && leftBottomBlock && (
+          {/* 上部の数値ブロック：左列（最長連続・大＋目標達成）／右列（3つ縦積み） */}
+          {stats && streakBlock && (
             <View style={styles.numberRow}>
               <View style={styles.leftColumn}>
                 <View style={[styles.streakCell, { backgroundColor: theme.colors.primary }]}>
@@ -304,14 +339,20 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                     {streakBlock.label}
                   </Text>
                 </View>
-                <View style={[styles.numberCell, { backgroundColor: theme.colors.surface }]}>
-                  <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * (IS_PAD ? 1.5 : 1.1) }]} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
-                    {leftBottomBlock.value}
-                  </Text>
-                  <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={RECORD_LABEL_MAX_FONT}>
-                    {leftBottomBlock.label}
-                  </Text>
-                </View>
+                {leftBottomBlock && (
+                  <View style={[styles.numberCell, { backgroundColor: theme.colors.surface }]}>
+                    <Text style={[styles.numberValue, { color: leftBottomBlock.color, fontSize: theme.fontSize.xxl * (IS_PAD ? 1.5 : 1.1) }]} numberOfLines={1} adjustsFontSizeToFit allowFontScaling={false}>
+                      {leftBottomBlock.segments.map((s, si) => (
+                        <Text key={si} style={s.unit ? { fontSize: theme.fontSize.md, fontWeight: '600' } : undefined}>
+                          {s.text}
+                        </Text>
+                      ))}
+                    </Text>
+                    <Text style={[styles.numberLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} numberOfLines={1} maxFontSizeMultiplier={RECORD_LABEL_MAX_FONT}>
+                      {leftBottomBlock.label}
+                    </Text>
+                  </View>
+                )}
               </View>
               <View style={styles.rightColumn}>
                 {rightBlocks.map((b, i) => (
@@ -331,6 +372,19 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                 ))}
               </View>
             </View>
+          )}
+
+          {/* 開始からの日数。**目標 ON のときだけ**ここに出る（左下のセルを目標達成に明け渡すため）。
+              数値セルではなくキャプション行にするのは、他の5つが「積み上げた成果」なのに対し
+              これは何もしなくても増える経過だから（グリッド＝成果／行＝文脈）。
+              「学習継続率」の分母でもあるので、説明の近くに置く意味もある。未学習なら出さない。 */}
+          {stats && studyGoalEnabled && elapsed != null && (
+            <Text
+              style={[styles.elapsedLine, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            >
+              {t('stats.recordElapsedLine', { days: elapsed })}
+            </Text>
           )}
 
           {/* バッジ */}
@@ -432,6 +486,12 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('stats.recordModeContinuityNote')}
             </Text>
+            {/* 目標を使っている人にだけ、判定の基準（現在の目標枚数）と達成率の分母を説明する。 */}
+            {studyGoalEnabled && (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('stats.recordModeGoalNote', { count: studyGoalCount })}
+              </Text>
+            )}
           </View>
         }
         onClose={() => setShowModeInfo(false)}
@@ -473,6 +533,7 @@ const styles = StyleSheet.create({
   numberCell: { borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
   numberValue: { fontWeight: '700' },
   numberLabel: { textAlign: 'center' },
+  elapsedLine: { marginTop: 10 },
   badgeHeaderRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 20, marginBottom: 4 },
   sectionTitle: { fontWeight: '700' },
   badgeSection: { marginTop: 12 },

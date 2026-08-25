@@ -49,3 +49,12 @@ export function localDateStr(d: Date): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+/** 2つの YYYY-MM-DD ローカル日付の日数差（b - a）。
+ *  **DST の影響を避けるため UTC 換算で計算する**（ローカルの Date 差だと夏時間の日に 23/25 時間になる）。
+ *  「暦日が連続しているか」（＝差が 1）の判定に使う。 */
+export function localDateDiffDays(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number);
+  const [by, bm, bd] = b.split('-').map(Number);
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
+}

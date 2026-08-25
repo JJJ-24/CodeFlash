@@ -30,8 +30,9 @@ const { importDatabase } = require('@/lib/import');
 const { inspectTsvExport, hasTsvExportLoss } = require('@/lib/tsv');
 const { parseScriptLangs } = require('@/lib/speech');
 const { getTodayReviewedCount } = require('@/lib/database/reviews');
-const { shouldFireStudyGoal, isStudyGoalUnmet, computeGoalLookaheadDays, PENDING_NOTIFICATION_LIMIT } =
+const { shouldFireStudyGoal, isStudyGoalUnmet, computeGoalLookaheadDays, computeGoalDayStats, PENDING_NOTIFICATION_LIMIT } =
   require('@/lib/studyGoal');
+const { getLifetimeStats } = require('@/lib/database/reviews');
 const { getActiveCardCount } = require('@/lib/database/reviews');
 const { getAllSchedules, createSchedule, updateSchedule, MAX_SCHEDULES } = require('@/lib/database/notifications');
 
@@ -505,6 +506,57 @@ async function main() {
   await migrateDbIfNeeded(db18c);
   await importDatabase(db18c, '/cache/old_speech.json', 'replace');
   eq('050 以前のエクスポートは未設定として読める', (await getDeckById(db18c, deck18.id)).speechLangs, {});
+
+  // ===========================================================================
+  console.log('\n[T19] 046 Phase 5・統計「学習の記録」の目標達成（現在の目標で過去も判定）');
+  // ===========================================================================
+  // 日別の枚数から「達成日数・最長連続達成・達成率」を出す純粋関数。
+  // ⚠️ **目標値の履歴は持たない**（A案）＝同じ日別データでも goal を変えれば結果が変わる。
+  const daily = [
+    { date: '2026-01-01', count: 25 }, // 達成
+    { date: '2026-01-02', count: 30 }, // 達成（連続2）
+    { date: '2026-01-03', count: 5 },  // 未達成 → ここで切れる
+    { date: '2026-01-04', count: 20 }, // 達成（連続1）
+    // 2026-01-05 は学習していない（行が無い）→ 連続が切れる
+    { date: '2026-01-06', count: 40 }, // 達成（連続1）
+  ];
+  const g20 = computeGoalDayStats(daily, 20);
+  eq('達成日数（20枚目標）', g20.achievedDays, 4);
+  eq('最長連続達成は暦日が連続した分だけ', g20.longestAchievedStreak, 2);
+  eq('達成率の分母は「学習した日」（4/5）', g20.achievementRate, 80);
+  // 学習していない日（1/5）は分母にも連続にも入らない＝経過日数を分母にしていないことの確認
+  check('学習していない日は分母に入らない（6日間だが分母は5日）', daily.length === 5);
+  const g30 = computeGoalDayStats(daily, 30);
+  eq('目標を上げると過去の達成日数も減る', g30.achievedDays, 2);
+  eq('目標を上げると連続も切れる（1/2 と 1/6 は非連続）', g30.longestAchievedStreak, 1);
+  eq('達成率も現在の目標で計算し直す（2/5）', g30.achievementRate, 40);
+  const gEmpty = computeGoalDayStats([], 20);
+  eq('未学習なら達成日数 0', gEmpty.achievedDays, 0);
+  eq('未学習なら達成率は null（0% と区別する）', gEmpty.achievementRate, null);
+  eq('全日達成なら連続＝日数', computeGoalDayStats(
+    [{ date: '2026-03-01', count: 5 }, { date: '2026-03-02', count: 5 }, { date: '2026-03-03', count: 5 }], 5
+  ).longestAchievedStreak, 3);
+  // 月をまたぐ連続（UTC 換算の日数差で判定しているか）
+  eq('月またぎでも連続と判定する', computeGoalDayStats(
+    [{ date: '2026-01-31', count: 9 }, { date: '2026-02-01', count: 9 }], 5
+  ).longestAchievedStreak, 2);
+
+  // dailyCounts の作られ方（review_logs は (cardId, reviewedDate) が PK ＝1行1枚）。
+  // ⚠️ ここが崩れると「その日に学習した実カード枚数」という目標の定義とズレる。
+  const db19 = makeDb();
+  await migrateDbIfNeeded(db19);
+  for (const [cardId, date] of [['c1', '2026-02-01'], ['c2', '2026-02-01'], ['c3', '2026-02-02']]) {
+    await db19.runAsync('INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?,?)', [cardId, date]);
+  }
+  // 同じカードを同じ日に何度評価しても増えない（PK で弾かれる）
+  await db19.runAsync('INSERT OR IGNORE INTO review_logs (cardId, reviewedDate) VALUES (?,?)', ['c1', '2026-02-01']);
+  const life19 = await getLifetimeStats(db19);
+  eq('dailyCounts は日別の実カード枚数（昇順）', life19.dailyCounts, [
+    { date: '2026-02-01', count: 2 },
+    { date: '2026-02-02', count: 1 },
+  ]);
+  eq('totalDays は dailyCounts の行数と一致', life19.totalDays, life19.dailyCounts.length);
+  eq('目標2枚なら達成は 2/1 の1日だけ', computeGoalDayStats(life19.dailyCounts, 2).achievedDays, 1);
 
   report();
 }

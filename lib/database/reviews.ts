@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Review } from '@/types';
-import { activeCardCond, localDateStr, todayISO, todayLocalRange } from './utils';
+import { activeCardCond, localDateDiffDays, localDateStr, todayISO, todayLocalRange } from './utils';
 
 /** タグIDをキー、due 枚数を値とするマップを一括取得 */
 export async function getDueCountPerTag(
@@ -787,17 +787,17 @@ export interface LifetimeStats {
   maxMonthlyDays: number;
   /** 最初に学習した日（YYYY-MM-DD ローカル）。未学習は null */
   firstDate: string | null;
+  /** 日別の学習枚数（学習した日だけ・日付昇順）。
+   *  `review_logs` は `(cardId, reviewedDate)` が PK ＝1行1枚なので、日別 COUNT はそのまま
+   *  **その日に学習した実カード枚数**＝046 の目標枚数と同じ定義になる（同じカードを何度
+   *  評価しても1枚）。目標達成日数の集計（`computeGoalDayStats`）がこれを使う。
+   *  ⚠️ 過去実績なので `activeCardCond` は掛けない（アーカイブしても実績は消さない規約）＝
+   *  今日ぶんだけ学習画面の進捗（アーカイブ除外）と数枚ズレうる。 */
+  dailyCounts: { date: string; count: number }[];
 }
 
 /** 「1日の最高学習時間」を求めるときに、1回答あたりの時間を丸める上限（放置=AFK 対策）。5分。 */
 const MAX_ANSWER_MS = 5 * 60 * 1000;
-
-/** 2つの YYYY-MM-DD ローカル日付の日数差（b - a）。DST の影響を避けるため UTC 換算で計算する。 */
-function localDateDiffDays(a: string, b: string): number {
-  const [ay, am, ad] = a.split('-').map(Number);
-  const [by, bm, bd] = b.split('-').map(Number);
-  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
-}
 
 /** ドーナツグラフ用の文脈別（全体/デッキ/月）の学習日数と平均回答時間。
  *  grade_logs（cardId・reviewedAt・responseTimeMs）を対象に、deckId/month で絞り込む。 */
@@ -828,10 +828,14 @@ export async function getContextTimeStats(
 }
 
 export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStats> {
-  const dateRows = await db.getAllAsync<{ reviewedDate: string }>(
-    `SELECT DISTINCT reviewedDate FROM review_logs ORDER BY reviewedDate`
+  // 学習した日と、その日の枚数を1本のクエリで取る（distinct 日付は行数＝totalDays に等しい）。
+  const dailyCounts = await db.getAllAsync<{ date: string; count: number }>(
+    `SELECT reviewedDate AS date, COUNT(*) AS count
+     FROM review_logs
+     GROUP BY reviewedDate
+     ORDER BY reviewedDate`
   );
-  const dates = dateRows.map((r) => r.reviewedDate);
+  const dates = dailyCounts.map((r) => r.date);
 
   let longestStreak = 0;
   // prevRunMax：run が途切れる（新しい run が始まる）たびに、直前に完了した run の長さを記録。
@@ -901,5 +905,6 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
     maxDailyTimeMs: maxTimeRow?.m ?? 0,
     maxMonthlyDays: maxMonthRow?.m ?? 0,
     firstDate: dates[0] ?? null,
+    dailyCounts,
   };
 }

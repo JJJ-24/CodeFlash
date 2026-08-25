@@ -11,7 +11,7 @@ import * as KeyCommand from 'react-native-key-command';
 
 import { computeGoalDayStats } from '@/lib/studyGoal';
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
-import { useSettingsStore } from '@/store/settings';
+import { useSettingsStore, type RecordSheetMode } from '@/store/settings';
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, themedFrameBorder, type AppTheme } from '@/lib/theme';
 import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
@@ -28,9 +28,9 @@ interface Props {
 // 数値ブロックの表示片。unit=true の片（h/m/%）だけ小さいフォントで描画する。
 type ValueSegment = { text: string; unit?: boolean };
 
-// 右列3ブロックの表示モード（ソートトグルと同じ3アイコン切替）。回数・時間に効き、日数は特別扱い。
-type RecordMode = 'total' | 'max' | 'avg';
-const RECORD_MODES: { key: RecordMode; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; labelKey: string; descKey: string }[] = [
+// 数値ブロックの表示モード（ソートトグルと同じ3アイコン切替）。回数・時間・目標に効き、日数は特別扱い。
+// 型と現在値は `store/settings.ts`（AsyncStorage 永続化＝**開き直しても選択が残る**）。
+const RECORD_MODES: { key: RecordSheetMode; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; labelKey: string; descKey: string }[] = [
   { key: 'total', icon: 'sigma', labelKey: 'stats.recordModeTotal', descKey: 'stats.recordModeDescTotal' },
   { key: 'max', icon: 'format-vertical-align-top', labelKey: 'stats.recordModeMax', descKey: 'stats.recordModeDescMax' },
   { key: 'avg', icon: 'scale-balance', labelKey: 'stats.recordModeAvg', descKey: 'stats.recordModeDescAvg' },
@@ -95,15 +95,18 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
 
-  // 右列3ブロックのトータル/最高/平均トグル。開くたびトータルに戻す（初期選択＝トータル）。
-  const [mode, setMode] = useState<RecordMode>('total');
+  // トータル/最高/平均トグル。**選択は永続化するので開き直しても残る**（他の一覧のソート・
+  // フィルターと同じ流儀。既定はトータル）。
+  const mode = useSettingsStore((s) => s.recordSheetMode);
+  const setMode = useSettingsStore((s) => s.setRecordSheetMode);
   // 表示モードの説明モーダル（iアイコン）。シートを閉じたら一緒に閉じる。
   const [showModeInfo, setShowModeInfo] = useState(false);
   // ショートカット一覧（? キー）。シートを閉じたら一緒に閉じる。
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   // 周回の段階開放（分母 50→80→110）の案内。シートを閉じたら一緒に閉じる。
   const [showUnlockInfo, setShowUnlockInfo] = useState(false);
-  useEffect(() => { if (visible) setMode('total'); else { setShowModeInfo(false); setShowShortcutsModal(false); setShowUnlockInfo(false); } }, [visible]);
+  // 閉じたら上に載っていたモーダルを畳む（表示モードは永続化するのでここでは触らない）。
+  useEffect(() => { if (!visible) { setShowModeInfo(false); setShowShortcutsModal(false); setShowUnlockInfo(false); } }, [visible]);
 
   // 画面スクロール（U/D・PgUp/PgDn＝段階、⇧U/⇧D・Home/End＝最上部/最下部）用。
   const scrollRef = useRef<ScrollView>(null);
@@ -113,13 +116,15 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
     scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
   const scrollToTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
   const scrollToBottom = () => scrollRef.current?.scrollToEnd({ animated: true });
-  // M：右列の表示モード（トータル→最高→平均）を循環。⇧M で逆順。stale closure を避け関数更新で回す。
-  const cycleMode = (dir = 1) =>
-    setMode((cur) => {
-      const n = RECORD_MODES.length;
-      const i = RECORD_MODES.findIndex((m) => m.key === cur);
-      return RECORD_MODES[(i + dir + n) % n].key;
-    });
+  // M：表示モード（トータル→最高→平均）を循環。⇧M で逆順。
+  // ⚠️ **現在値はストアから読む**（`useState` の関数更新が使えないうえ、キーコマンドの
+  //    ハンドラは登録時のクロージャなので、render 時の `mode` を参照すると stale になる）。
+  const cycleMode = (dir = 1) => {
+    const cur = useSettingsStore.getState().recordSheetMode;
+    const n = RECORD_MODES.length;
+    const i = RECORD_MODES.findIndex((m) => m.key === cur);
+    setMode(RECORD_MODES[(i + dir + n) % n].key);
+  };
 
   // Space / Return でシートを閉じる（ドーナツシートと同じトグル挙動）。表示中のみ有効。
   // 説明モーダル（i アイコン）／ショートカット一覧表示中は解除する。

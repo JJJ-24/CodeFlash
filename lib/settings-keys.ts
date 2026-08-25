@@ -29,6 +29,8 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_grade_ranking_deck_ids',
   // 統計タブの折りたたみ中セクションID配列（'chart' 等の固定IDなので端末間で常に有効）
   '@codeflash_stats_collapsed_sections',
+  // 「学習の記録」シートの表示モード（'total'|'max'|'avg'）
+  '@codeflash_record_sheet_mode',
   // 学習設定の折りたたみ中セクションID配列（同上）
   '@codeflash_study_collapsed_sections',
   '@codeflash_card_theme',

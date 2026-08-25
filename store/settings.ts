@@ -92,6 +92,12 @@ export type StudyTimerEndBehavior = 'alert' | 'blink' | 'none';
 export type StudyGoalReachedBehavior = 'alert' | 'pill' | 'none';
 
 /**
+ * 統計「学習の記録」シートの数値ブロックの表示モード（Σ／最高／平均）。
+ * 回数・時間・日数・目標の4軸すべてに同時に効く。
+ */
+export type RecordSheetMode = 'total' | 'max' | 'avg';
+
+/**
  * 学習タイマーの表示要素（円・残り時間）の表示モード。
  * - 'on'    : 常に表示
  * - 'start' : 開始時（＋タップ時のピーク）に数秒だけ表示→フェードアウト
@@ -198,6 +204,8 @@ interface SettingsValues {
   gradeRankingDeckIds: string[];
   // 統計タブで折りたたみ中のセクションID（'chart'|'heatmap'|'today'|'total'|'mastery'|'pro'）
   statsCollapsedSections: string[];
+  // 統計「学習の記録」シートの表示モード（Σ／最高／平均）
+  recordSheetMode: RecordSheetMode;
   // 学習設定で折りたたみ中のセクションID（'goal'|'speech'|'fsrs'|'timer'）
   studyCollapsedSections: string[];
   cardThemePreference: CardThemeName;
@@ -313,6 +321,10 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   },
   studyHideEmpty: { key: '@codeflash_study_hide_empty', default: false, parse: asBool },
   gradeRankingSortBy: { key: '@codeflash_grade_ranking_by_time', default: 'count', parse: parseGradeRankingSortBy },
+  // 「学習の記録」の表示モード。**シートを開くたびにリセットしない**＝一覧のソートやフィルターと
+  // 同じで直近の選択を覚える（4軸すべてに効くので「平均で見たい」等の好みが固定されうる）。
+  // 誤読の心配が小さいのは、モードを変えると数字だけでなくラベルも変わるため。
+  recordSheetMode: { key: '@codeflash_record_sheet_mode', default: 'total', parse: oneOf(['total', 'max', 'avg'] as const) },
   gradeRankingPeriod: { key: '@codeflash_grade_ranking_period', default: 'all', parse: oneOf(['all', '90d', '30d', '7d'] as const) },
   gradeRankingDeckIds: {
     key: GRADE_RANKING_DECK_IDS_KEY,
@@ -492,6 +504,7 @@ interface SettingsState extends SettingsValues {
   setFsrsDesiredRetention: (v: number) => void;
   setStudyHideEmpty: (v: boolean) => void;
   setGradeRankingSortBy: (v: GradeRankingSortBy) => void;
+  setRecordSheetMode: (v: RecordSheetMode) => void;
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   setGradeRankingDeckIds: (v: string[]) => void;
   toggleStatsSection: (id: string) => void;
@@ -554,6 +567,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setFsrsDesiredRetention: makeSetter('fsrsDesiredRetention'),
     setStudyHideEmpty: makeSetter('studyHideEmpty'),
     setGradeRankingSortBy: makeSetter('gradeRankingSortBy'),
+    setRecordSheetMode: makeSetter('recordSheetMode'),
     setGradeRankingPeriod: makeSetter('gradeRankingPeriod'),
     setGradeRankingDeckIds: makeSetter('gradeRankingDeckIds'),
     // 配列へのトグル追加/削除のため個別定義（永続化は DEFS の persist に従う）。

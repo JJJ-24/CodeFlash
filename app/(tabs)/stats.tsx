@@ -328,6 +328,7 @@ function BarChart({
   barColor,
   todayIsLast = false,
   goal,
+  onSelectDate,
 }: {
   schedule: ScheduleItem[];
   locale: string;
@@ -337,6 +338,9 @@ function BarChart({
   /** 046: 1日の目標枚数。渡すと目標ラインを引き、スケールも目標を含めて取り直す。
    *  **「学習済み」ブロックのときだけ**渡す（他のブロックは棒の意味が違う）。 */
   goal?: number;
+  /** 030: 棒をタップしたときにその日（ローカル YYYY-MM-DD）を渡す。
+   *  **「学習済み」ブロックのときだけ**渡す（呼び出し側で判断する）。 */
+  onSelectDate?: (date: string) => void;
 }) {
   const labels = locale.startsWith('ja') ? DAY_LABELS_JA : DAY_LABELS_EN;
   const color = barColor ?? theme.colors.primary;
@@ -366,8 +370,8 @@ function BarChart({
         const dayIndex = new Date(item.date + 'T00:00:00').getDay();
         const isToday = todayIsLast ? i === schedule.length - 1 : i === 0;
 
-        return (
-          <View key={item.date} style={styles.barCol}>
+        const col = (
+          <>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit={!(Platform as any).isPad}
@@ -380,7 +384,21 @@ function BarChart({
             <Text style={[styles.barLabel, { color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, height: barLabelH }, isToday && { color }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {labels[dayIndex]}
             </Text>
-          </View>
+          </>
+        );
+
+        // 030: 0枚の日は開いても空の結果にしかならないので、押下フィードバックごと出さない
+        //（押せる見た目なのに何も起きない状態を作らない）。月別グラフと同じ流儀。
+        return onSelectDate != null && item.count > 0 ? (
+          <Pressable
+            key={item.date}
+            style={({ pressed }) => [styles.barCol, pressed && { opacity: 0.6 }]}
+            onPress={() => onSelectDate(item.date)}
+          >
+            {col}
+          </Pressable>
+        ) : (
+          <View key={item.date} style={styles.barCol}>{col}</View>
         );
       })}
       {/* 046: 目標ライン。**棒の手前**に引く（越えた/越えないが読めるように）。色は中立の
@@ -1129,13 +1147,26 @@ export default function StatsScreen() {
     }
   }, [db]);
 
+  // 初期フィルターは「タブに入ったとき」に適用する設定であって、**自分が開いた子画面から
+  // 戻ってきたとき**に適用するものではない（ユーザーはその場所を離れていない）。統計タブは
+  // 検索・カード編集・学習セッション・Pro 案内へ push するので、そこへ出るときに印を付けて
+  // 戻りの focus では上部ブロックを保つ（学習タブの `fromSessionRef` と同じ考え方）。
+  // ⚠️ タブ切替の `router.navigate` には付けない＝そちらは「入り直し」なので再適用が正しい。
+  const keepBlockRef = useRef(false);
+  const pushChild = useCallback((href: Parameters<typeof router.push>[0]) => {
+    keepBlockRef.current = true;
+    router.push(href);
+  }, [router]);
+
   useFocusEffect(
     useCallback(() => {
       const blockMap: Record<InitialFilterPreference, BlockKey | null> = {
         all: 'streak', learned: 'learned', review: 'due', new: 'new', none: null,
       };
       const initial = blockMap[initialFilterPreference];
-      if (initial !== null) setSelectedBlock(initial);
+      if (initial !== null && !keepBlockRef.current) setSelectedBlock(initial);
+      // ⚠️ 印は「保持」設定（initial === null）でも必ず戻す＝次のタブ切替まで残ると効かなくなる。
+      keepBlockRef.current = false;
       loadStats();
     }, [initialFilterPreference, loadStats])
   );
@@ -1381,8 +1412,8 @@ export default function StatsScreen() {
     if (gradeBlockCards.length === 0) return;
     // 順序指定の cardIds はストア経由で渡す（URLパラメータに載せない）。
     setStudyCardIds(gradeBlockCards.map((c) => c.cardId));
-    router.push({ pathname: '/study/session', params: { mode: 'focused', order: '1' } });
-  }, [gradeBlockCards, router, setStudyCardIds]);
+    pushChild({ pathname: '/study/session', params: { mode: 'focused', order: '1' } });
+  }, [gradeBlockCards, pushChild, setStudyCardIds]);
 
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ置換。
   // CardStatsSheet 表示中（statsCardId）は A のみ、ドーナツシート表示中（activeSheet）は
@@ -1422,7 +1453,7 @@ export default function StatsScreen() {
         if (activeSheet !== null) { closeSheet(); return; }
         if (focusedItem?.kind === 'card') {
           const card = gradeBlockCards[focusedItem.idx];
-          if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+          if (card) pushChild(`/deck/${card.deckId}/card/${card.cardId}/edit`);
           return;
         }
         if (focusedItem?.kind === 'heatmap') { openRecordSheet(); return; }
@@ -1461,7 +1492,7 @@ export default function StatsScreen() {
         if (statsCardId !== null || activeSheet !== null) return;
         if (focusedItem?.kind === 'card') {
           const card = gradeBlockCards[focusedItem.idx];
-          if (card) router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+          if (card) pushChild(`/deck/${card.deckId}/card/${card.cardId}/edit`);
         }
       },
     },
@@ -1633,6 +1664,15 @@ export default function StatsScreen() {
   // 046: 目標ラインは「学習済み」ブロックのときだけ。「連続」は 0/1、「復習」は未来の予定、
   // 「新規」は作成枚数で、いずれも1日の目標枚数と比べる意味が無いため。
   const chartGoal = studyGoalEnabled && selectedBlock === 'learned' ? studyGoalCount : undefined;
+
+  // 030: 「済み」の棒＝その日に学習したカードなので、タップで検索画面の学習日フィルターを開く
+  //（棒の数字＝結果の件数になり、一覧は検索画面のものをそのまま再利用できる）。
+  // ⚠️ 他の3ブロックには渡さない（＝棒を押せなくする）：
+  //   「連続」は同じ review_logs 由来だが棒が 0/1 なので数字と件数が一致しない、
+  //   「新規」は作成日（検索の絞り込みは**学習日**）、「復習」は未来の日付で学習記録が存在しえない。
+  const openStudiedDate = selectedBlock === 'learned'
+    ? (date: string) => pushChild({ pathname: '/search', params: { studiedDate: date } })
+    : undefined;
   const chartConfig: { data: ScheduleItem[]; title: string; color: string; todayIsLast: boolean } =
     selectedBlock === 'learned'
       ? { data: past7DaysReviewed, title: t('stats.past7DaysReviewed'), color: FILTER_COLORS.learned, todayIsLast: true }
@@ -1734,7 +1774,9 @@ export default function StatsScreen() {
             title: t('stats.topBlocksInfoTitle'),
             // 目標ラインの説明は **破線が実際に出ているときだけ**（目標 ON かつ「済み」）。
             // 目標 ON だけを条件にすると、他の3ブロックを見ている間も画面に無い線の説明が出る。
-            message: <InfoContent text={t('stats.topBlocksInfoMessage') + (chartGoal != null ? '\n\n' + t('stats.goalLineInfoMessage', { count: chartGoal }) : '') + collapseHint} />,
+            // 棒タップの説明も **押せる棒が出ているときだけ**（＝「済み」）。棒は押せる見た目を
+            // 持たないので、気づける場所はここしかない。
+            message: <InfoContent text={t('stats.topBlocksInfoMessage') + (chartGoal != null ? '\n\n' + t('stats.goalLineInfoMessage', { count: chartGoal }) : '') + (openStudiedDate != null ? '\n\n' + t('stats.barTapInfoMessage') : '') + collapseHint} />,
           })}
           infoLabel={t('stats.topBlocksInfoLabel')}
         />
@@ -1747,6 +1789,7 @@ export default function StatsScreen() {
               barColor={chartConfig.color}
               todayIsLast={chartConfig.todayIsLast}
               goal={chartGoal}
+              onSelectDate={openStudiedDate}
             />
           </View>
         )}
@@ -2157,7 +2200,7 @@ export default function StatsScreen() {
                         onPress={() => {
                           setFocusedItem({ kind: 'card', idx });
                           pendingFocusRankingRef.current = false;
-                          router.push(`/deck/${card.deckId}/card/${card.cardId}/edit`);
+                          pushChild(`/deck/${card.deckId}/card/${card.cardId}/edit`);
                         }}
                       >
                         <View style={{ flex: 1, gap: 2 }}>
@@ -2211,7 +2254,7 @@ export default function StatsScreen() {
         ) : (
           <Pressable
             style={[styles.card, styles.proLockedCard, { backgroundColor: theme.colors.surface }]}
-            onPress={() => router.push('/paywall')}
+            onPress={() => pushChild('/paywall')}
           >
             <Ionicons name="lock-closed-outline" size={28} color={theme.colors.textSecondary} />
             <Text style={[styles.proLockedTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>

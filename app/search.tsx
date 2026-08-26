@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -361,19 +361,31 @@ export default function SearchScreen() {
   const inputRef = useRef<TextInput>(null);
   useDismissKeyboardOnLeave();
 
+  // 030: 統計の「済み」の棒からは `studiedDate` 付きで push される。このときは
+  // **セッションの復元をせず、その日付だけの素の状態**で開く（文字クエリ・デッキ/タグをクリア）。
+  // 前回の絞り込みが残ると「棒の数字」と「結果の件数」が食い違い、原因が画面から読めないため。
+  const params = useLocalSearchParams<{ studiedDate?: string }>();
+  const openedDate = typeof params.studiedDate === 'string' && params.studiedDate.length > 0
+    ? params.studiedDate
+    : null;
+
   // セッション保持した直前の検索を初期値として復元する（再起動では消える）。
   const savedSearch = useSearchSessionStore.getState();
-  const [query, setQuery] = useState(savedSearch.query);
+  const initialSearch: { query: string; deckIds: string[]; tagIds: string[]; studiedDate: string | null } =
+    openedDate != null
+      ? { query: '', deckIds: [], tagIds: [], studiedDate: openedDate }
+      : savedSearch;
+  const [query, setQuery] = useState(initialSearch.query);
   const [results, setResults] = useState<Card[]>([]);
   const [searched, setSearched] = useState(false);
   const [searchField, setSearchField] = useState<SearchField>(lastSearchField as SearchField);
 
-  const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(savedSearch.deckIds);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(savedSearch.tagIds);
+  const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(initialSearch.deckIds);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialSearch.tagIds);
   // 学習日フィルター（ローカル YYYY-MM-DD・null = 未指定）。**1日単位**にしているのは、
   // ①1日ぶんなら件数が自然に収まる ②統計の棒グラフは1本＝1日なので後から導線を繋げられる
   // ③ユーザーの言い方（「昨日学習したカード」）がそもそも1日単位、の3点から。
-  const [studiedDate, setStudiedDate] = useState<string | null>(savedSearch.studiedDate);
+  const [studiedDate, setStudiedDate] = useState<string | null>(initialSearch.studiedDate);
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [tagPickerVisible, setTagPickerVisible] = useState(false);
   const [showSearchInfo, setShowSearchInfo] = useState(false);
@@ -404,7 +416,9 @@ export default function SearchScreen() {
 
   useEffect(() => {
     // 復元した検索があるときは結果を見せたいので自動フォーカス（＝キーボード表示）しない。
-    if (query.trim().length > 0) return;
+    // 学習日フィルターが入っているときも同じ（文字が空でも結果は出ている）＝統計の棒から
+    // 開いた直後にキーボードが結果を覆わないようにする。
+    if (query.trim().length > 0 || studiedDate !== null) return;
     const timer = setTimeout(() => {
       inputRef.current?.focus();
     }, 100);

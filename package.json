@@ -11,6 +11,7 @@
     "lint": "expo lint",
     "process-icon": "bash scripts/process-icon.sh",
     "verify:db": "sucrase-node scripts/verify-db.ts",
+    "verify:i18n": "sucrase-node scripts/verify-i18n.ts",
     "verify:speech": "sucrase-node scripts/verify-speech.ts",
     "verify:timer": "sucrase-node scripts/verify-timer.ts",
     "postinstall": "patch-package"

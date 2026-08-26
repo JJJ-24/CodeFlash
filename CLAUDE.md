@@ -24,6 +24,9 @@ npm run verify:speech
 
 # 学習タイマーの検証（036/039：同日の永続化・復元・日またぎのリセット）
 npm run verify:timer
+
+# 翻訳ファイルの突き合わせ（047：キー欠落・補間トークン・行記法。locales/*.json を全部読むので es.json を足せば自動で対象）
+npm run verify:i18n
 ```
 
 **テストフレームワークは未導入**。代わりに `scripts/db-harness.ts` が「Node 上でアプリの DB 層をそのまま実行する」土台を提供する：`node:sqlite`（同期）を **expo-sqlite 互換の非同期 API** でくるみ、`Module._resolveFilename` を差し替えて expo/RN モジュールをスタブし `@/` を解決する。これで `migrateDbIfNeeded`・`lib/database/*`・`lib/export.ts`・`lib/import.ts`・`lib/tsv.ts` を**本物のまま**呼べるので、カラム追加マイグレーション・旧DBの正規化・旧エクスポートの読み込み・エクスポート/インポート往復（`docs/db-migration-checklist.md` の確認項目）を実機なしで検証できる。実例は `scripts/verify-db.ts`（044/045 の土台＋046 の目標枚数と未達成リマインダー＋050 Phase 2 のデッキ単位の読み上げ言語・107 アサーション）。**新しい検証を書くときの注意**：①アプリのモジュールは `import` ではなく **`require()`** で読む（`import` は先頭へ巻き上げられ、スタブを入れる前に expo モジュールが解決されて落ちる）②旧スキーマの再現には `makeDb().raw`（生の同期 DB）で `ALTER TABLE ... DROP COLUMN` を使う。RN コンポーネントは描画できないので UI は対象外。
@@ -258,9 +261,9 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 #### i18n
 
-- **言語フォールバック**: 端末言語を自動検出し、未対応言語の場合は**英語**にフォールバック（`lib/i18n/index.ts` の `fallbackLng: 'en'`）。`ja.json` を変更したら `en.json` も必ずセットで更新する。
+- **言語フォールバック**: 端末言語を自動検出し、未対応言語の場合は**英語**にフォールバック（`lib/i18n/index.ts` の `fallbackLng: 'en'`）。説明文を出す箱は **`components/InfoContent.tsx` に通す**（素の `<Text>` に流すと `[見出し]`・`※`・`>` が記法として解釈されず、書いたとおりの文字が並ぶ。`app/settings/study.tsx` の ⓘ が実際にそうなっていて、見出しのつもりの行が太字にならなかった）。`ja.json` を変更したら `en.json` も必ずセットで更新し、**`npm run verify:i18n` を流す**（`scripts/verify-i18n.ts`＝キー欠落・`{{token}}` の不一致・説明モーダルの行記法〈`■`/`[…]`/`>`〉の数を突き合わせる。⚠️ **複数形サフィックスを畳んでから比べる**＝en にだけ `pro.trialRemaining_one` があるのは正常な差分。`{{count}}` を含むのに `_one` が無いキー、および**補間の直後が複数形の名詞**なのに `_one` が無いキーは**警告**として出る〈現在 0 件＝緑を保つ〉）。
 - **「日本語か、それ以外は英語」の二択を新しく書かない（047 Phase 0）**: 第3の言語を足したときに**そこだけ英語のまま**になる。既に潰した3種類＝①**通知文**（`lib/notifications.ts`。React コンポーネント外なので `useTranslation` は使えず **`i18n` インスタンスを import して `i18n.t()`**。⚠️ かつて `expo-localization` の `getLocales()` を直参照していたため、**アプリ内で言語を変えても通知だけ端末言語で届く**バグになっていた。⚠️ **`scheduleNotificationAsync` は本文を「予約した時点」で焼き込む**＝あとから言語を変えても**予約済みの通知は古い文言のまま発火する**ので、`app/_layout.tsx` が `i18n.language` の変化を見て `scheduleFromDb(db)`（＋直後に `syncBreakEndNotification()`）で張り直す。「時刻を設定 → 言語を変更」の順でだけ再現するので、逆順で試すと気づけない）②**曜日名・月名**（`lib/dateLabels.ts` の `weekdayLabels()`/`monthLabel()`＝`Intl.DateTimeFormat` に委譲。言語ごとのテーブルを持たない。⚠️ 基準日は UTC で作り `timeZone:'UTC'` で整形する＝ローカル時刻だと端末のタイムゾーンで1日ずれる）③**複数形**（下記）。
-- **複数形は i18next の複数形キーで書く（`{{count}} card(s)` のような括弧書きにしない）**: 規約は **en＝サフィックス無しのキーが `other`／`_one` を別に置く**、**ja＝サフィックス無しのキーだけ**（日本語に単数複数が無いため）。i18next は `key_one` が無ければサフィックス無しへ落ちるので ja はこれで足りる。⚠️ **1文に `count` が2つある文は複数形が効かない**（`{{stages}} stage(s), {{images}} image(s)`）＝**キーを分割し、整形済みの断片をつなぐキー**（`deck.htmlStagesAndImages` = `{{stages}}、{{images}}`）で組む。つなぎ方も言語で変わるので翻訳キーとして残す。⚠️ 機械的な置換で `_one` を作らない（`1 reminder fire` / `are` のような**動詞の不一致**が残る）。なお `notification.weekdayShort`（`["Su","Mo",…]`）は**意図的に翻訳側に残している**＝`Intl` の短縮形（`Sun`）とは字数が違い見た目が変わるため。
+- **複数形は i18next の複数形キーで書く（`{{count}} card(s)` のような括弧書きにしない）**: 規約は **en＝サフィックス無しのキーが `other`／`_one` を別に置く**、**ja＝サフィックス無しのキーだけ**（日本語に単数複数が無いため）。i18next は `key_one` が無ければサフィックス無しへ落ちるので ja はこれで足りる。⚠️ **数を差し込むときの名前は `count` にする**（`{{n}}`・`{{total}}` のような別名だと i18next の複数形が効かない＝`Studied 1 / 1 cards` になる。名詞に掛かる側の数を `count` にする）。⚠️ **1文に `count` が2つある文は複数形が効かない**（`{{stages}} stage(s), {{images}} image(s)`）＝**キーを分割し、整形済みの断片をつなぐキー**（`deck.htmlStagesAndImages` = `{{stages}}、{{images}}`）で組む。つなぎ方も言語で変わるので翻訳キーとして残す。⚠️ 機械的な置換で `_one` を作らない（`1 reminder fire` / `are` のような**動詞の不一致**が残る）。なお `notification.weekdayShort`（`["Su","Mo",…]`）は**意図的に翻訳側に残している**＝`Intl` の短縮形（`Sun`）とは字数が違い見た目が変わるため。
 
 #### ナビゲーション・状態管理
 

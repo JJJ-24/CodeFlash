@@ -252,7 +252,7 @@ function GradeDistPieChart({ dist, theme, extraStats, header, grayLabel, bottomS
     <View style={pieStyles.container}>
       {/* ヘッダー: 学習済み / トータル */}
       <Text style={[pieStyles.learnedHeader, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-        {header ?? t('stats.learnedOf', { learned, total })}
+        {header ?? t('stats.learnedOf', { learned, count: total })}
       </Text>
       {/* ドーナツチャート */}
       <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
@@ -2284,7 +2284,7 @@ export default function StatsScreen() {
         colorHex={sheetIcon?.colorHex}
         dist={sheetDist}
         extraStats={sheetExtra}
-        header={activeSheet === 'today' && sheetDist ? t('stats.todayDoneOf', { done: todaySheetGraded, total: todaySheetGraded + sheetDist.unlearned }) : undefined}
+        header={activeSheet === 'today' && sheetDist ? t('stats.todayDoneOf', { done: todaySheetGraded, count: todaySheetGraded + sheetDist.unlearned }) : undefined}
         grayLabel={activeSheet === 'today' ? t('common.due') : undefined}
         bottomStats={todayBottomStats}
         emptyText={activeSheet === 'today' ? t('stats.todaySheetEmpty') : undefined}

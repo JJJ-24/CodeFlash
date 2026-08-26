@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 import { AppSwitch } from '@/components/AppSwitch';
 import { CollapsibleSectionTitle } from '@/components/CollapsibleSectionTitle';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { InfoContent } from '@/components/InfoContent';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import { SpeechVoiceModal } from '@/components/settings/SpeechVoiceModal';
@@ -183,12 +184,14 @@ export default function StudySettingsScreen() {
       color={theme.colors.textTertiary}
     />
   );
+  // ⚠️ 中身は **`InfoContent` に通す**（素の `<Text>` で出すと `[見出し]` や `※` が記法として
+  //    解釈されず、ただの文字として並ぶ）。実際 `settings.studyTimerInfo` の「[タイマーのタップ]」
+  //    は見出しのつもりで書かれているのに、太字にならないまま出ていた。
+  //    記法を持たない説明文は1行ずつ同じ大きさ・色（sm・textSecondary）で出るので見た目は変わらない。
   const infoBox = (key: string, textKey: string) =>
     openInfos.has(key) ? (
       <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-          {t(textKey)}
-        </Text>
+        <InfoContent text={t(textKey)} />
       </View>
     ) : null;
 
@@ -201,7 +204,7 @@ export default function StudySettingsScreen() {
   // 折りたたみ中だけ見出しの下に出す要約。⚠️ **実際に効いている値だけを書く**
   //（オフのセクションで設定値を出すと「オンに見えて効いていない」状態になる）。
   const goalSummary = studyGoalEnabled
-    ? t('settings.studyGoalSummary', { n: studyGoalCount })
+    ? t('settings.studyGoalSummary', { count: studyGoalCount })
     : t('settings.sectionSummaryOff');
   const fsrsPreset = (['longTerm', 'standard', 'exam'] as FsrsPreset[])
     .find((preset) => FSRS_PRESET_RETENTION[preset] === fsrsDesiredRetention);
@@ -281,7 +284,7 @@ export default function StudySettingsScreen() {
                 {t('settings.studyGoalCount')}
               </Text>
               <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('settings.studyGoalCountValue', { n: studyGoalCount })}
+                {t('settings.studyGoalCountValue', { count: studyGoalCount })}
               </Text>
             </View>
             {/* スライダーは実用域（1〜100枚）だけを覆う。100 超は上限 999 まで設定値としては

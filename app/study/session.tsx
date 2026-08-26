@@ -1322,7 +1322,7 @@ export default function StudySessionScreen() {
                 }}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
-                {t("study.reviewedOf", { reviewed, total: totalCards })}
+                {t("study.reviewedOf", { reviewed, count: totalCards })}
               </Text>
               {/* ドーナツチャート */}
               <View style={styles.donutContainer}>

@@ -245,7 +245,12 @@ export default function ArchiveScreen() {
     if (tab === 'decks') {
       const ids = archivedDecks.filter((d) => selectedIds.has(d.id)).map((d) => d.id);
       const cardCount = archivedDecks.filter((d) => selectedIds.has(d.id)).reduce((s, d) => s + d.cardCount, 0);
-      confirmDelete(t('archive.deleteDecksConfirm', { count: ids.length, cardCount }), () => doDeleteDecks(ids));
+      // 047: 「N件のデッキ」と「紐づく M枚」は**別々の数**なので、複数形が効くよう
+      //   各々を作ってから繋ぐ（i18next の複数形は count 1つにしか効かない）。
+      confirmDelete(t('archive.deleteDecksConfirm', {
+        decks: t('archive.deleteDecksConfirmDecks', { count: ids.length }),
+        cards: t('archive.deleteDecksConfirmCards', { count: cardCount }),
+      }), () => doDeleteDecks(ids));
     } else {
       const cards = archivedCards.filter((c) => selectedIds.has(c.id));
       confirmDelete(t('card.deleteSelectedConfirm', { count: cards.length }), () => doDeleteCards(cards));

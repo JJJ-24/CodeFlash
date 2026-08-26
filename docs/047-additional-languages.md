@@ -141,14 +141,66 @@
 - [ ] `app/settings/display.tsx`：言語選択の選択肢を追加
 - [ ] `locales/xx.json` を新規作成
 - [ ] `locales/ja.json`・`en.json`（＋追加言語）に言語名ラベル `settings.languageXx` を追加
-- [ ] **キーの網羅チェック**（⚠️ **翻訳の前に作る**＝1040キーを人手で追わないため）。
-      `npm run verify:db` と同じ要領で `scripts/` に小さなチェックを足す。見るのは3つ：
-  - **キーの欠落**（ja/en/es の突き合わせ）。⚠️ `_one`/`_other` の複数形サフィックスを理解させる
-    こと＝en にだけ `pro.trialRemaining_one` があるのは**正常な差分**で、素朴な比較は誤検知する
-  - **`{{token}}` の一致**（現状 ja/en で**不一致ゼロ**というきれいな基準線がある。翻訳で
-    `{{count}}` が消える/名前が変わるのが最も起きやすい破損）
-  - **行記法の保持**（`■` / `[…]` / `※` / `>` と `{{albums}}` のようなアイコントークン。
-    崩れると説明モーダルのレイアウトが壊れる）
+- [x] **キーの網羅チェック**（⚠️ **翻訳の前に作る**＝1040キーを人手で追わないため）
+      → `scripts/verify-i18n.ts` / `npm run verify:i18n`（2026-08-26）。`locales/*.json` を全部読むので
+      **`es.json` を置けば自動で対象**になる。基準は `ja`。**現在の結果：エラー 0・警告 0**（見つかった不整合は同日すべて修正・実機確認済み 2026-08-26）。
+  - **キーの欠落**（エラー）。⚠️ **複数形サフィックスを畳んでから比べる**＝en にだけ
+    `pro.trialRemaining_one` があるのは**正常な差分**で、素朴な比較は誤検知する。配列
+    （`notification.weekdayShort`）は `.0`〜`.6` に潰すので**要素数の違いも拾える**
+  - **`{{token}}` の一致**（エラー）。翻訳で `{{count}}` が消える/名前が変わるのが最も
+    起きやすい破損。アイコントークン（`{{albums}}` 等）もここで守られる
+  - **行記法の保持**（エラー）。`■` / `[…]` / `>` の**行数**を突き合わせる。
+    ⚠️ **`※` と行数そのものは見ない**＝実測すると ja/en で 16 キーが行数違い・5 キーが
+    `※`/段落の違いで、翻訳として正当な差だった。`■`/`[…]`/`>` に絞ると**不一致は1件だけ**で、
+    それは実際の不具合だった（下記）
+  - **複数形の欠落**（警告）。その言語に `one` の区分があるとき、`{{count}}` を含むキーに
+    `_one` が無いものを出す。⚠️ **`{{count}}` は数値とは限らない**（`InfoContent` の
+    アイコントークンにも `count`＝枚数アイコンがある）ので、数が 1 でも壊れない書き方は
+    スクリプト内の `COUNT_INVARIANT` に**理由つきで**列挙して除外する
+
+**このチェックで見つかった既存の不具合（2026-08-26 に修正）**：`settings.studyTimerInfo` の
+日本語が見出しを **`【…】`** で書いていた（`InfoContent` の見出し記法は**半角 `[…]` だけ**）。
+⚠️ **真因はもっと手前にあった**＝この説明箱（`app/settings/study.tsx` の `infoBox`）は
+**素の `<Text>` に文字列を流していて `InfoContent` を通していなかった**ので、記法自体が
+一切解釈されていなかった（`[…]` に直しても太字にならず、実機確認で発覚）。`infoBox` を
+`InfoContent` に通す形へ直して解決。記法を持たない説明文は1行ずつ同じ大きさ・色（sm・
+textSecondary）で出るため、他の11個の説明箱の見た目は変わらない。
+**教訓：翻訳ファイル側の記法を疑う前に、その文字列が誰にどう描かれているかを確認する。**
+
+**チェッカーが出した警告 11 件も同時に解消した（2026-08-26）**。いずれも英語の既存文言で、
+`{{count}}` が 1 のとき `Reviewed 1 cards` / `1 cards` のように出ていた（Phase 0 で直した `(s)`
+表記とは別種で、名詞をそのまま複数形で書いていたもの）。内訳は3種類：
+
+- **`_one` を追加**（9キー）＝`study.reviewedCount`/`finishConfirmMessage`/`goalReachedMessage`/
+  `goalDone`/`goalPill`・`stats.goalLineInfoMessage`/`recordModeGoalNote`・`common.cardsCount`・
+  `sync.mergeDeckCount`。日本語は変更不要
+- **未使用キーの削除**＝`stats.nextReviewDays` は**どこからも呼ばれていない**（実際に使われて
+  いるのは `nextReviewToday`/`nextReviewTomorrow`/`unitDaysLater`）。翻訳対象を増やさないため
+  ja/en とも削除した。⚠️ 動的にキーを組む箇所（`t(\`stats.${key}\`)`）が固定リストであることを
+  確認してから消すこと
+- **分割**＝`archive.deleteDecksConfirm` はデッキ数とカード枚数の**2つの数**を含むので、
+  `deleteDecksConfirmDecks` / `deleteDecksConfirmCards` に分け `{{decks}}\n{{cards}}` で合成
+  （`deck.htmlStagesAndImages` と同じ手）。⚠️ この分割は英語の **its / their** の使い分けも
+  正しくする＝1文にまとめたまま `{{cardCount}}` を素の数値にすると、デッキ1件・カード1枚でも
+  `their` になる
+
+**実機確認でさらに6件見つかった（2026-08-26・同日修正）**。W1 は `{{count}}` を含むキーしか
+見ないので、**数を別の名前で渡している**文を取りこぼしていた（`Studied {{reviewed}} /
+{{total}} cards` は総数が1でも「1 cards」）。i18next の複数形は **`count` にしか効かない**ので、
+名詞に掛かる側の数を `count` に改名するところから直す必要がある。
+
+- `study.reviewedOf`・`stats.todayDoneOf`・`stats.learnedOf` … `{{total}}` → `{{count}}`＋`_one`
+- `settings.studyGoalCountValue`・`settings.studyGoalSummary` … `{{n}}` → `{{count}}`＋`_one`
+- `deck.speechLangsSet` … 「N件」相当だと思って `COUNT_INVARIANT` に入れていたが、英語は
+  「1 overrides」だった。⚠️ **除外リストに入れる前に「1 のとき実際にどう出るか」を確かめる**
+- `stats.unitDays`（英語）を空にした＝ラベルが `Study days` なので単位 `(days)` と重複し
+  「1 Study days (days)」になっていた。単位は別の `<Text>` なので空でも行数は変わらず、
+  隣の2つ（`(%)`・`(sec)`）との縦位置も揃ったまま。⚠️ **ラベル `Study days` は 1 でも複数形の
+  まま**でよい＝これは**指標の名前**であって文の目的語ではない（`Correct rate` / `Avg. time` と
+  同じ並び。英語のダッシュボードは値が 1 でもラベルを変えない）。文中の名詞（`1 card`）とは別扱い
+
+同じ取りこぼしを繰り返さないよう、チェッカーに **W2「補間の直後が複数形の名詞なのに `_one`
+が無い」** を追加した。これで **エラー 0・警告 0**。以後この検査を緑に保つ。
 
 ### Phase 2: 翻訳
 

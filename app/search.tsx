@@ -385,6 +385,12 @@ export default function SearchScreen() {
     openedDate != null ? 'all' : (lastSearchField as SearchField)
   );
 
+  // 一覧で見ていた面のまま編集画面を開く（030 Phase 4）。カード編集は `tab` パラメータで
+  // 裏面/メモを初期表示できる（学習画面の編集ボタンと同じ経路）。
+  // ⚠️ すべて/表面では渡さない＝「すべて」は**どの面にヒットしたのか分からない**ので表面のまま
+  //    （面を選んで見ているときだけその面で開く、という規則にする）。
+  const editTab = searchField === 'back' || searchField === 'memo' ? searchField : undefined;
+
   const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(initialSearch.deckIds);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialSearch.tagIds);
   // 学習日フィルター（ローカル YYYY-MM-DD・null = 未指定）。**1日単位**にしているのは、
@@ -533,7 +539,7 @@ export default function SearchScreen() {
     if (focusedIndex === null) return;
     const c = results[focusedIndex];
     if (!c) return;
-    router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: c.deckId, cardId: c.id } });
+    router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: c.deckId, cardId: c.id, ...(editTab ? { tab: editTab } : {}) } });
   }
 
   // ピッカー/シート表示中は親キーを無効化（Esc は階層処理するので個別に判定）。
@@ -903,7 +909,7 @@ export default function SearchScreen() {
                   setFocusedIndex(index);
                   router.push({
                     pathname: '/deck/[id]/card/[cardId]/edit',
-                    params: { id: item.deckId, cardId: item.id },
+                    params: { id: item.deckId, cardId: item.id, ...(editTab ? { tab: editTab } : {}) },
                   });
                 }}
               >
@@ -929,7 +935,7 @@ export default function SearchScreen() {
                     </Pressable>
                   )}
                   <Pressable
-                    onPress={() => { setFocusedIndex(index); router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: item.deckId, cardId: item.id } }); }}
+                    onPress={() => { setFocusedIndex(index); router.push({ pathname: '/deck/[id]/card/[cardId]/edit', params: { id: item.deckId, cardId: item.id, ...(editTab ? { tab: editTab } : {}) } }); }}
                     hitSlop={8}
                     style={{ padding: 4 }}
                   >

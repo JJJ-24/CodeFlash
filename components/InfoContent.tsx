@@ -17,6 +17,9 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   pricetag: 'pricetag-outline',
   search: 'search-outline',
   calendar: 'calendar-outline',
+  // 検索の学習日チップの日送り（◀ ▶）。説明文でも画面と同じ矢印を出すため。
+  prev: 'chevron-back',
+  next: 'chevron-forward',
   timer: 'timer-outline',
   pencil: 'pencil-sharp',
   analytics: 'analytics-sharp',
@@ -57,6 +60,7 @@ interface Props {
    *   [見出し]            → 太字の見出し（操作ラベル / セクション）
    *   ※ ...              → 注意行（小さめ・セカンダリ色）
    *   （先頭インデント）    → 見出し配下の項目（インデント表示）
+   *   > ...              → 小さめの行（注意行と同じ字送り・色。`>` の後の字下げでインデント）
    *   その他              → 補足段落（小さめ・セカンダリ色）
    *   {{token}}          → インラインアイコン（ICON_TOKENS 参照）
    *   （空行）            → スペーサー
@@ -75,6 +79,25 @@ export function InfoContent({ text }: Props) {
         // 空行 → スペーサー
         if (line.trim() === '') {
           return <View key={idx} style={{ height: 10 }} />;
+        }
+
+        // 小さめの行 `> xxx`（見出し＋項目の構造は保ったまま、注意行と同じ小ささ・グレーで出す）。
+        // 補助的な説明を数行のかたまりで添えるときに、md の見出し/項目で書くと縦に伸びるため。
+        // `>` の後の字下げの有無だけでインデントを決める（記法をこれ以上増やさない）。
+        if (line.startsWith('>')) {
+          const body = line.slice(1);
+          return (
+            <Text
+              key={idx}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              style={{
+                color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20,
+                marginTop: 2, paddingLeft: /^\s/.test(body) ? 14 : 0,
+              }}
+            >
+              {renderInline(body.trim(), theme.colors.primary, theme.fontSize.sm, `d${idx}`, theme.colors.border)}
+            </Text>
+          );
         }
 
         // 大見出し ■ xxx（機能グループの区切り）

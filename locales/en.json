@@ -234,7 +234,7 @@
     "searchDateYesterday": "Yesterday",
     "searchDatePrev": "Previous day",
     "searchDateNext": "Next day",
-    "searchInfoMessage": "■ Search\nSeparate multiple keywords with spaces to find cards containing all of them (AND search).\n\n■ Filter\n  {{albums}} Filter by deck\n  {{pricetag}} Filter by tag\n※ Each supports multiple selections and further narrows the results.\n\n■ Results\n[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)",
+    "searchInfoMessage": "■ Search\nSeparate multiple keywords with spaces to find cards containing all of them (AND search).\n\n■ Filter\n  {{albums}} Filter by deck\n  {{pricetag}} Filter by tag\n  {{calendar}} Filter by studied date\n※ Decks and tags support multiple selections and further narrow the results.\n>[When a studied date is set]\n>  Tap the date → Pick from a calendar\n>  {{prev}} {{next}} → Previous / next day\n>  Works with no keywords\n\n■ Results\n[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)",
     "filterByDeck": "Filter by Deck",
     "filterByTag": "Filter by Tag",
     "allDecks": "All Decks",

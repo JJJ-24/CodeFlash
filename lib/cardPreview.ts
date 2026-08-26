@@ -32,6 +32,16 @@ function blockPreviewLines(block: Block, imageLabel: string): string[] {
 const previewCache = new WeakMap<Block[], { label: string; value: string }>();
 
 /**
+ * その面（表/裏/メモ）に中身があるか。**エディタのタブに点が付く条件と同じ定義元**
+ * （`BlockEditor` の `hasDot` と検索のフィールド絞り込みが同じ規則になるように共有する）。
+ * ⚠️ 空ブロックだけの面は「無し」＝`[{"type":"text","content":""}]` は false。
+ *    このため SQL（JSON 文字列への LIKE）では判定できず、JS 側で使う。
+ */
+export function hasBlockContent(blocks: Block[]): boolean {
+  return blocks.some((b) => (b.type === 'image' ? !!b.uri : b.content.trim() !== ''));
+}
+
+/**
  * カード一覧などで使う最大2行のプレビュー文字列を生成する（結果は blocks 参照でメモ化）。
  * 最初の非空ブロック（主ブロック）を基準にし、
  * - 主ブロックだけで2行ぶんあればその先頭2行を使う

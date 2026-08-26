@@ -22,7 +22,7 @@ import type { SearchField } from '@/lib/database/cards';
 import { getAllDecks } from '@/lib/database/decks';
 import { localDateStr } from '@/lib/database/utils';
 import { getAllTags } from '@/lib/database/tags';
-import { getCardPreview } from '@/lib/cardPreview';
+import { getCardPreview, hasBlockContent } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -378,7 +378,12 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(initialSearch.query);
   const [results, setResults] = useState<Card[]>([]);
   const [searched, setSearched] = useState(false);
-  const [searchField, setSearchField] = useState<SearchField>(lastSearchField as SearchField);
+  // ⚠️ 統計の棒から開いたときはフィールドも「すべて」に戻す（`lastSearchField` が「メモ」の
+  //    ままだと開いた瞬間に絞られ、「棒の数字＝結果の件数」が崩れる）。
+  //    `setLastSearchField` は呼ばない＝ユーザーの記憶値は潰さない。
+  const [searchField, setSearchField] = useState<SearchField>(
+    openedDate != null ? 'all' : (lastSearchField as SearchField)
+  );
 
   const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(initialSearch.deckIds);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialSearch.tagIds);
@@ -448,7 +453,18 @@ export default function SearchScreen() {
       selectedTagIds.length > 0 ? selectedTagIds : undefined,
       studiedDate ?? undefined,
     ).then((cards) => {
-      setResults(cards);
+      // 日付モードではフィールド選択が「**どの面を見るか**」になる（結果行のプレビューもその面）。
+      // 裏面/メモを選んだときに、その面が空のカードで「テキストなし」の行が並ばないよう落とす。
+      // ⚠️ SQL でやらない：`card_contents` は JSON 文字列なので `[{"type":"text","content":""}]`
+      //    のような空ブロックを見分けられない。日付モードは最大 1000 件が手元に来るので、
+      //    エディタのタブに点が付くのと同じ規則（`hasBlockContent`）で判定するほうが正確。
+      // ⚠️ キーワード検索では絞らない：LIKE がすでに「その面に記載がある」を含意するうえ、
+      //    LIMIT 100 の**後**で落とすと件数が減って上限表示の意味が狂う。
+      // ⚠️ すべて/表面は落とさない：表面は必須なので全件が出る＝棒の数字と一致する状態を保つ。
+      const filtered = studiedDate !== null && (searchField === 'back' || searchField === 'memo')
+        ? cards.filter((c) => hasBlockContent(searchField === 'back' ? c.backContent : c.memoContent))
+        : cards;
+      setResults(filtered);
       setSearched(true);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -871,7 +887,12 @@ export default function SearchScreen() {
           ListFooterComponentStyle={{ flexGrow: 1 }}
           onScrollToIndexFailed={() => {}}
           renderItem={({ item, index }) => {
-            const preview = getCardPreview(item.frontContent, t('card.imageBlock'));
+            // 選択中のフィールドの面を出す（裏面/メモで検索したとき、何にヒットしたのかが
+            // 一覧から読めるように。日付モードでは「昨日学習したカードの裏面を流し読み」になる）。
+            const previewBlocks = searchField === 'back' ? item.backContent
+              : searchField === 'memo' ? item.memoContent
+                : item.frontContent;
+            const preview = getCardPreview(previewBlocks, t('card.imageBlock'));
             const deckName = deckMap[item.deckId]?.name ?? '';
             return (
               <Pressable

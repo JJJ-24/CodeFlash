@@ -29,6 +29,7 @@ import { AppSwitch } from "@/components/AppSwitch";
 import { ArchivePill, useArchivePill } from "@/components/ArchivePill";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
+import { hasBlockContent } from "@/lib/cardPreview";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
@@ -1075,9 +1076,8 @@ export function BlockEditor({
       >
         {tabs.map((tab) => {
           const blocks = blocksByTab[tab.key];
-          const hasDot = blocks.some((b) =>
-            b.type === 'image' ? !!b.uri : b.content.trim() !== ''
-          );
+          // 「その面に中身があるか」の定義元は lib/cardPreview.ts（検索のフィールド絞り込みと共有）。
+          const hasDot = hasBlockContent(blocks);
           return (
             <Pressable
               key={tab.key}

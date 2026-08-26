@@ -1,9 +1,11 @@
-import * as Localization from 'expo-localization';
 import * as Notifications from 'expo-notifications';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getAllSchedules } from '@/lib/database/notifications';
 import { getActiveCardCount, getTodayDueCount, getTodayReviewedCount } from '@/lib/database/reviews';
+// React コンポーネント外なので useTranslation は使えない。i18n インスタンスを直接呼ぶ
+//（store/settings.ts が i18n.changeLanguage を呼んでいるのと同じ経路）。
+import i18n from '@/lib/i18n';
 import { computeGoalLookaheadDays, isStudyGoalUnmet } from '@/lib/studyGoal';
 import { useSettingsStore } from '@/store/settings';
 import type { NotificationSchedule } from '@/types';
@@ -63,18 +65,14 @@ Notifications.setNotificationHandler({
 });
 
 function getReminderBody(dueCount?: number): { title: string; body: string } {
-  const locales = Localization.getLocales();
-  const isJa = locales.length > 0 && locales[0].languageCode === 'ja';
   const title = 'CodeFlash';
   let body: string;
   if (dueCount !== undefined && dueCount > 0) {
-    body = isJa
-      ? `今日の復習カードが ${dueCount} 枚あります`
-      : `You have ${dueCount} cards to review today`;
+    body = i18n.t('notification.bodyDue', { count: dueCount });
   } else if (dueCount === 0) {
-    body = isJa ? '今日の復習カードはありません' : 'No cards to review today';
+    body = i18n.t('notification.bodyNoDue');
   } else {
-    body = isJa ? '今日のカードを復習しましょう' : 'Time to review your cards!';
+    body = i18n.t('notification.bodyDefault');
   }
   return { title, body };
 }
@@ -97,11 +95,9 @@ export async function isPermissionGranted(): Promise<boolean> {
 /** 046: 未達成リマインダーの通知文。**枚数は入れない**（予約時点の値しか焼き込めず、
  *  発火時にはズレているため）。 */
 function getGoalUnmetBody(): { title: string; body: string } {
-  const locales = Localization.getLocales();
-  const isJa = locales.length > 0 && locales[0].languageCode === 'ja';
   return {
     title: 'CodeFlash',
-    body: isJa ? '今日の目標がまだ残っています' : "You haven't reached today's goal yet",
+    body: i18n.t('notification.bodyGoalUnmet'),
   };
 }
 
@@ -259,19 +255,17 @@ export async function cancelAllReminders(): Promise<void> {
  * （学習画面マウント中は非表示・それ以外の画面ではバナー表示）。
  * - granted でなければ何もしない（未許可でも復帰時の resolveBreak が即遷移するため機能は完全動作）
  * - 残り1秒未満は予約しない（即発火と画面内解決の競合回避）
- * - 文言は getReminderBody と同じ expo-localization 直参照（React コンテキスト外で使うため）
+ * - 文言は getReminderBody と同じ i18n.t()（React コンテキスト外なので useTranslation は使わない）
  */
 export async function scheduleBreakEndNotification(endAt: number): Promise<void> {
   const { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted') return;
   if (endAt - Date.now() < 1000) return;
-  const locales = Localization.getLocales();
-  const isJa = locales.length > 0 && locales[0].languageCode === 'ja';
   await Notifications.scheduleNotificationAsync({
     identifier: BREAK_END_IDENTIFIER,
     content: {
       title: 'CodeFlash',
-      body: isJa ? '休憩が終わりました。学習を再開しましょう' : 'Break is over — time to get back to studying!',
+      body: i18n.t('notification.bodyBreakEnd'),
       sound: true,
     },
     trigger: {

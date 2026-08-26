@@ -59,6 +59,7 @@ lib/
 │   ├── constants.ts     # LANGUAGES・LANG_LABELS・EXECUTABLE_LANGUAGES・PRO_LANGUAGES（sql/cpp/html/css は Pro 限定）
 │   └── types.ts         # ExecResult・ExecStatus・LogEntry
 ├── i18n/index.ts        # i18next 設定（端末言語自動検出、フォールバック: en）
+├── dateLabels.ts        # 047：曜日名・月名を `Intl.DateTimeFormat` で作る（weekdayLabels/monthLabel）。言語ごとのテーブルを持たない＝言語追加で触らない
 ├── theme/index.ts       # useTheme()・lightTheme/darkTheme・AppColors・AppFontSize 型定義
 ├── image.ts             # resolveImageUri()：画像パス解決。pickAndSaveImage()（maxDimension 指定で縮小＋png/jpg正規化）・getReferencedImageFilenames()（**card_contents と decks.htmlImages の2系統**を走査）・parseDeckImages/serializeDeckImages
 ├── htmlImages.ts        # 043：HTML 画像ライブラリの参照解決。`img://name` を実行直前に data URI へ置換（resolveHtmlImageRefs）。hasImageRefs で同期判定・メモリキャッシュ12枚・未解決はプレースホルダSVG・isValidImageName/buildImageTag で構文の定義元を集約
@@ -258,6 +259,8 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 #### i18n
 
 - **言語フォールバック**: 端末言語を自動検出し、未対応言語の場合は**英語**にフォールバック（`lib/i18n/index.ts` の `fallbackLng: 'en'`）。`ja.json` を変更したら `en.json` も必ずセットで更新する。
+- **「日本語か、それ以外は英語」の二択を新しく書かない（047 Phase 0）**: 第3の言語を足したときに**そこだけ英語のまま**になる。既に潰した3種類＝①**通知文**（`lib/notifications.ts`。React コンポーネント外なので `useTranslation` は使えず **`i18n` インスタンスを import して `i18n.t()`**。⚠️ かつて `expo-localization` の `getLocales()` を直参照していたため、**アプリ内で言語を変えても通知だけ端末言語で届く**バグになっていた。⚠️ **`scheduleNotificationAsync` は本文を「予約した時点」で焼き込む**＝あとから言語を変えても**予約済みの通知は古い文言のまま発火する**ので、`app/_layout.tsx` が `i18n.language` の変化を見て `scheduleFromDb(db)`（＋直後に `syncBreakEndNotification()`）で張り直す。「時刻を設定 → 言語を変更」の順でだけ再現するので、逆順で試すと気づけない）②**曜日名・月名**（`lib/dateLabels.ts` の `weekdayLabels()`/`monthLabel()`＝`Intl.DateTimeFormat` に委譲。言語ごとのテーブルを持たない。⚠️ 基準日は UTC で作り `timeZone:'UTC'` で整形する＝ローカル時刻だと端末のタイムゾーンで1日ずれる）③**複数形**（下記）。
+- **複数形は i18next の複数形キーで書く（`{{count}} card(s)` のような括弧書きにしない）**: 規約は **en＝サフィックス無しのキーが `other`／`_one` を別に置く**、**ja＝サフィックス無しのキーだけ**（日本語に単数複数が無いため）。i18next は `key_one` が無ければサフィックス無しへ落ちるので ja はこれで足りる。⚠️ **1文に `count` が2つある文は複数形が効かない**（`{{stages}} stage(s), {{images}} image(s)`）＝**キーを分割し、整形済みの断片をつなぐキー**（`deck.htmlStagesAndImages` = `{{stages}}、{{images}}`）で組む。つなぎ方も言語で変わるので翻訳キーとして残す。⚠️ 機械的な置換で `_one` を作らない（`1 reminder fire` / `are` のような**動詞の不一致**が残る）。なお `notification.weekdayShort`（`["Su","Mo",…]`）は**意図的に翻訳側に残している**＝`Intl` の短縮形（`Sun`）とは字数が違い見た目が変わるため。
 
 #### ナビゲーション・状態管理
 

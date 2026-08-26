@@ -9,6 +9,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
+import { monthLabel, weekdayLabels } from '@/lib/dateLabels';
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
@@ -100,8 +101,6 @@ const STATS_SHORTCUT_GROUPS = [
 ];
 
 const HEATMAP_WEEKS = 52; // 約1年分
-const DAY_LABELS_JA = ['日', '月', '火', '水', '木', '金', '土'];
-const DAY_LABELS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BAR_MAX_HEIGHT = 60;
 // 046: 目標ラインの破線1本ぶんの長さと間隔。
 const GOAL_DASH_W = 4;
@@ -342,7 +341,7 @@ function BarChart({
    *  **「学習済み」ブロックのときだけ**渡す（呼び出し側で判断する）。 */
   onSelectDate?: (date: string) => void;
 }) {
-  const labels = locale.startsWith('ja') ? DAY_LABELS_JA : DAY_LABELS_EN;
+  const labels = weekdayLabels(locale);
   const color = barColor ?? theme.colors.primary;
   // 目標ラインを枠内に収めるため、スケールは「週の最大」ではなく「週の最大と目標の大きいほう」。
   // ⚠️ 目標に大きく届いていない週は棒が全体的に低くなる（＝実際に届いていないことの表現）。
@@ -418,7 +417,6 @@ function BarChart({
 }
 
 const MONTH_BAR_COL_W = 52;
-const MONTH_LABELS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_GRADE_SEGMENTS: { key: keyof Omit<MonthlyGradeData, 'month'>; color: string }[] = [
   { key: 'again', color: GRADE_COLORS.again },
   { key: 'hard',  color: GRADE_COLORS.hard },
@@ -436,7 +434,6 @@ function MonthBarChart({
   onSelectMonth?: (item: MonthlyGradeData, label: string) => void;
 }) {
   const { i18n } = useTranslation();
-  const isJa = i18n.language.startsWith('ja');
   const scrollRef = useRef<ScrollView>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const maxTotal = Math.max(...data.map((d) => d.again + d.hard + d.good + d.easy), 1);
@@ -477,7 +474,7 @@ function MonthBarChart({
             const total = item.again + item.hard + item.good + item.easy;
             const barH = Math.max((total / maxTotal) * BAR_MAX_HEIGHT, total > 0 ? 4 : 0);
             const monthNum = parseInt(item.month.split('-')[1]);
-            const label = isJa ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
+            const label = monthLabel(i18n.language, monthNum - 1);
             const isCurrentMonth = i === data.length - 1;
             return (
               <Pressable
@@ -1365,7 +1362,7 @@ export default function StatsScreen() {
     if (!item) return;
     if (item.again + item.hard + item.good + item.easy === 0) return;
     const monthNum = parseInt(item.month.split('-')[1]);
-    const label = i18n.language.startsWith('ja') ? `${monthNum}月` : MONTH_LABELS_EN[monthNum - 1];
+    const label = monthLabel(i18n.language, monthNum - 1);
     openMonthSheet(item, label);
   }, [monthlyReviewed, i18n.language, openMonthSheet]);
 

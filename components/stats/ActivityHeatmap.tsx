@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { monthLabel, weekdayLabels } from '@/lib/dateLabels';
 import { localDateStr } from '@/lib/database/utils';
 import { FILTER_COLORS, useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -49,7 +50,7 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
         const dateStr = localDateStr(cursor);
         col.push({ date: dateStr, count: countMap.get(dateStr) ?? 0 });
         if (cursor.getDate() === 1) {
-          labels.push({ colIndex: w, label: cursor.toLocaleDateString(i18n.language, { month: 'short' }) });
+          labels.push({ colIndex: w, label: monthLabel(i18n.language, cursor.getMonth()) });
         }
         cursor.setDate(cursor.getDate() + 1);
       }
@@ -57,15 +58,15 @@ export default function ActivityHeatmap({ data, weeks = 52 }: Props) {
     }
 
     const max = Math.max(0, ...cols.flat().map((c) => c.count));
-    const isJa = i18n.language.startsWith('ja');
+    // 行は月曜始まり（列の先頭が月曜になるよう startDate を取っている）。
+    // `weekdayLabels` は日曜始まりの配列なので、月〜日の順に引き直す。
+    const narrow = weekdayLabels(i18n.language, 'narrow');
     return {
       today: localDateStr(now),
       columns: cols,
       monthLabels: labels,
       maxCount: max,
-      dayLabels: isJa
-        ? ['月', '火', '水', '木', '金', '土', '日']
-        : ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      dayLabels: [1, 2, 3, 4, 5, 6, 0].map((d) => narrow[d]),
     };
   }, [data, weeks, i18n.language]);
 

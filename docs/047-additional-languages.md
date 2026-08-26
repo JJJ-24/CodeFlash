@@ -1,7 +1,8 @@
 # 047 対応言語の追加（日本語・英語 → 多言語）
 
 **フェーズ:** 将来
-**ステータス:** 未着手（**実装するかは未定**。まず Phase 0 だけ先行する価値がある）
+**ステータス:** Phase 0 完了（2026-08-26）。Phase 1 以降は未着手（**どの言語を入れるかは未定**）
+**着手中の言語:** スペイン語（実データと候補の両方に入る唯一の言語＝下記）
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** なし（i18n 基盤・言語設定は実装済み）
 **被依存:** なし
@@ -52,11 +53,13 @@
 
 ## 現状の規模
 
-| 項目 | 値 |
-|---|---|
-| 翻訳キー | **817個**（`locales/ja.json`・19セクション） |
-| 総文字数 | 約 14,800字（日本語） |
-| 言語追加に触るコード | **5ファイル・30行程度** |
+| 項目 | 2026-08-09 | **2026-08-26（再測定）** |
+|---|---|---|
+| 翻訳キー | 817個・19セクション | **1040個**・21セクション |
+| 総文字数（日本語） | 約 14,800字 | **約 16,900字** |
+| 言語追加に触るコード | 5ファイル・30行程度 | 同左（Phase 0 完了で**分岐の追加修正は不要**になった） |
+
+⚠️ **半月で 220 キー増えている**。継続コスト（末尾）の見積もりはこの増加率で読むこと。
 
 **i18n 基盤は既に正しく組まれている**（`lib/i18n/index.ts`・`fallbackLng: 'en'`）。
 翻訳が一部欠けていても**英語で表示されて落ちない**ので、段階的に追加できる。
@@ -68,13 +71,13 @@
 
 ## Todo
 
-### Phase 0: 2言語前提の解消（**言語を増やさなくても価値がある**）
+### Phase 0: 2言語前提の解消（**言語を増やさなくても価値がある**）＝**完了（2026-08-26）**
 
 現状のコードには「日本語か、それ以外は英語」という**二択で書かれた分岐**が残っている。
 第3の言語を足しても壊れはしないが、**その言語だけ通知とグラフが英語のまま**になる。
 ここを先に直せば、以降は JSON を足すだけになる。
 
-- [ ] **`lib/notifications.ts` の `isJa` 三項演算子を `i18n.t()` に置き換える**（3箇所）
+- [x] **`lib/notifications.ts` の `isJa` 三項演算子を `i18n.t()` に置き換える**（3箇所）
   - `getReminderBody()`（デイリーリマインダー本文・due 枚数入り）
   - `getGoalUnmetBody()`（046 の未達成リマインダー）
   - `scheduleBreakEndNotification()`（039 の休憩終了通知）
@@ -84,18 +87,52 @@
     `getLocales()` を直参照しているが、**これだとアプリ内の言語設定（`languagePreference`）を
     無視して端末言語で出る**という既存のバグでもある（日本語端末で UI を英語にしても
     通知だけ日本語で来る）。`i18n.t()` にすれば同時に直る
-- [ ] **月名・曜日ラベルを `Intl.DateTimeFormat` に置き換える**（2箇所）
+- [x] **月名・曜日ラベルを `Intl.DateTimeFormat` に置き換える**（2箇所）
   - `app/(tabs)/stats.tsx`（`MONTH_LABELS_EN` のハードコード table）
   - `components/stats/ActivityHeatmap.tsx`（曜日ラベル）
   - `Intl` なら全言語に自動対応し、テーブル自体が不要になる
-- [ ] **複数形を `(s)` 方式から i18next の複数形キーへ**（**10箇所**・英語のみ）
+- [x] **複数形を `(s)` 方式から i18next の複数形キーへ**（実際は **12キー**・英語のみ）
   - 現状 `{{count}} card(s)` のように括弧で逃げている。スペイン語では不自然さが目立つ
   - `key_one` / `key_other` に分割する。**日本語は複数形が無いので ja.json は変更不要**
   - 該当：`deck.sqlStagesSet` / `deck.htmlStagesSet` / `tag.removeFromCardsConfirm` /
     `tag.deleteSelectedConfirm` / `card.moveConfirmMessage` / `card.deleteSelectedConfirm` /
     `card.duplicateSuccess` / `card.searchResultCount` /
     `settings.goalScheduleConflictMessage` / `settings.goalScheduleRestoreMessage`
-- [ ] `npx tsc --noEmit` / `npm run lint` がエラーなし・警告が増えないこと
+- [x] **表示言語の変更時に通知を予約し直す**（`app/_layout.tsx`）＝予約済み通知の文言は焼き込みのため
+- [x] `npx tsc --noEmit` エラーなし／`npm run lint` 0 errors・48 warnings（増えていない）／`verify:db` 130・`verify:speech` 153・`verify:timer` 9 すべて成功
+- [x] **実機確認（2026-08-26・OK）**：アプリの表示言語で通知が届く（「時刻を設定 → 言語を変更」の
+      順でも新しい言語）／**休憩中に言語を変えても休憩終了通知が消えず、新しい言語で届く**／
+      統計の曜日・月別グラフ・ヒートマップのラベルが従来と同じ表示
+
+#### Phase 0 の実装メモ（2026-08-26）
+
+- **通知**：`lib/notifications.ts` から `expo-localization` の直参照を落とし、`i18n` インスタンスを
+  import して `i18n.t()` を呼ぶ。文言は `notification.body*` の5キー（`bodyDue`/`bodyNoDue`/
+  `bodyDefault`/`bodyGoalUnmet`/`bodyBreakEnd`）。**due 枚数入りの文は複数形キーにした**
+  （`bodyDue_one`）。⚠️ これは**既存バグの修正**でもある＝端末言語を見ていたため、日本語端末で
+  UI を英語にしても通知だけ日本語で届いていた
+  - ⚠️ **予約済みの通知は文言が焼き込まれている**：`scheduleNotificationAsync` は本文を予約時に
+    確定するので、あとから言語を変えても古い文言のまま発火する。**実機で発覚**（「①時刻を設定
+    → ②言語を変更」の順で日本語のまま届く。逆順だと新しい言語で予約されるので気づけない）。
+    `app/_layout.tsx` が `i18n.language` の変化を見て `scheduleFromDb(db)` で張り直す
+    （フォアグラウンド復帰と**同じ組み合わせ**＝cancel-all を含むので直後に
+    `syncBreakEndNotification()` で休憩終了通知を復元する／初回マウントでは走らせない）
+- **曜日・月名**：`lib/dateLabels.ts` を新設（`weekdayLabels(locale, 'short'|'narrow')` /
+  `monthLabel(locale, monthIndex)`）。`app/(tabs)/stats.tsx` の `DAY_LABELS_JA`/`DAY_LABELS_EN`/
+  `MONTH_LABELS_EN` を削除し、`components/stats/ActivityHeatmap.tsx` の曜日ラベルもこれに寄せた。
+  出力は現行のハードコードと**完全一致**（ja `日月火水木金土`・en `Sun…Sat`・narrow `S M T W T F S`・
+  ja 月 `1月`・en 月 `Jan`）を確認済み。スペイン語は `dom lun mar mié jue vie sáb` / `ene feb…`
+  - ⚠️ 基準日は **UTC** で作り `timeZone:'UTC'` で整形する（ローカル時刻だと端末の TZ で1日ずれる）
+  - ⚠️ `notification.weekdayShort`（`["Su","Mo",…]`）は**変えていない**＝`Intl` の短縮形は `Sun` で
+    字数が変わり、既存画面の見た目が変わるため。これは翻訳側（JSON）にあるので言語追加で埋まる
+- **複数形**：チケットの10キーに `deck.htmlImagesOnly` と `deck.htmlStagesAndImages` を加えた12キー。
+  規約は **en＝サフィックス無しが `other`＋`_one` を追加／ja＝サフィックス無しのみ**
+  （`pro.trialRemaining` の既存の書き方に合わせた）。i18next 25.8 の実物で 1/3 の両方を解決確認
+  - ⚠️ **`deck.htmlStagesAndImages` は分割**（1文に `count` が2つあると複数形が効かない）。
+    `土台 N件`（`htmlStagesSet`）と `画像 N枚`（**新規** `htmlImagesSet`）を各々複数形つきで作り、
+    `{{stages}}、{{images}}` のつなぎキーで合成する。**つなぎ方も言語で変わる**ので翻訳キーに残す
+  - ⚠️ **機械的な置換で `_one` を作らない**：`1 reminder fire` / `1 … are currently off` のような
+    動詞の不一致が残る（実際に一度そうなったので手で直した）
 
 ### Phase 1: 言語を増やす仕組み（1言語につき30行程度）
 
@@ -104,9 +141,14 @@
 - [ ] `app/settings/display.tsx`：言語選択の選択肢を追加
 - [ ] `locales/xx.json` を新規作成
 - [ ] `locales/ja.json`・`en.json`（＋追加言語）に言語名ラベル `settings.languageXx` を追加
-- [ ] **キーの網羅チェック**：ja/en に対して欠けているキーを洗い出す仕組みを用意する
-      （`npm run verify:db` と同じ要領で `scripts/` に小さなチェックを足すのが早い。
-      現状は「ja.json を変更したら en.json も必ずセットで更新」を手作業で守っている）
+- [ ] **キーの網羅チェック**（⚠️ **翻訳の前に作る**＝1040キーを人手で追わないため）。
+      `npm run verify:db` と同じ要領で `scripts/` に小さなチェックを足す。見るのは3つ：
+  - **キーの欠落**（ja/en/es の突き合わせ）。⚠️ `_one`/`_other` の複数形サフィックスを理解させる
+    こと＝en にだけ `pro.trialRemaining_one` があるのは**正常な差分**で、素朴な比較は誤検知する
+  - **`{{token}}` の一致**（現状 ja/en で**不一致ゼロ**というきれいな基準線がある。翻訳で
+    `{{count}}` が消える/名前が変わるのが最も起きやすい破損）
+  - **行記法の保持**（`■` / `[…]` / `※` / `>` と `{{albums}}` のようなアイコントークン。
+    崩れると説明モーダルのレイアウトが壊れる）
 
 ### Phase 2: 翻訳
 

@@ -126,6 +126,28 @@ function RootStack() {
     return () => sub.remove();
   }, [notificationEnabled]);
 
+  // 047 Phase 0: **表示言語を変えたら通知を予約し直す**。
+  // `scheduleNotificationAsync` は本文を**予約した時点で焼き込む**ので、あとから言語を変えても
+  // 予約済みの通知は古い文言のまま発火する（「時刻を設定 → 言語を変更」の順で再現。逆順だと
+  // 新しい言語で予約されるので気づけない）。フォアグラウンド復帰でも組み直されるが、
+  // 復帰を挟まずに発火する場合があるのでここでも張り直す。
+  // ⚠️ 上の復帰処理と**同じ組み合わせ**にすること（cancel-all を含むので、直後に
+  //    syncBreakEndNotification() で休憩終了通知を復元する）。
+  // ⚠️ 初回マウントでは走らせない（何も変わっていないのに cancel-all を挟むと、予約済みの
+  //    休憩終了通知が一瞬消える）。`i18n.language` が実際に変わったときだけ動かす。
+  const { i18n } = useTranslation();
+  const prevLangRef = useRef(i18n.language);
+  useEffect(() => {
+    if (prevLangRef.current === i18n.language) return;
+    prevLangRef.current = i18n.language;
+    const reschedule = notificationEnabled
+      ? scheduleFromDb(db)
+      : cancelAllScheduledNotifications();
+    reschedule
+      .catch(() => {})
+      .finally(() => { syncBreakEndNotification().catch(() => {}); });
+  }, [i18n.language, notificationEnabled, db]);
+
   return (
     <ThemeProvider value={navigationTheme}>
     {/* アプリ全体のステータスバー文字色の基準（ダーク=白/ライト=黒）。

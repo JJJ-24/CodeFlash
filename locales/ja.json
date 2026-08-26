@@ -58,7 +58,7 @@
     "htmlInitHint": "この土台を選んだコードブロックの実行前に、body の先頭へ流す HTML/CSS。実行のたびに読み込まれます。",
     "htmlInitPlaceholder": "<div id=\"stage\"></div>\n<style>#stage{ width:100px; height:100px; background:#eee }</style>",
     "htmlImagesOnly": "画像 {{count}}枚（土台なし）",
-    "htmlStagesAndImages": "土台 {{stages}}件、画像 {{images}}枚",
+    "htmlStagesAndImages": "{{stages}}、{{images}}",
     "htmlInitNone": "未設定（任意）",
     "htmlStagesSet": "土台 {{count}}件",
     "speechLangsLabel": "読み上げの言語",
@@ -87,7 +87,8 @@
     "archivedStudyTitle": "アーカイブ中のデッキ",
     "archivedStudyMessage": "このデッキはアーカイブ中のため、学習の記録は残りません。",
     "archivedStudyUnarchive": "解除して学習開始",
-    "archivedStudyBrowse": "閲覧のみ"
+    "archivedStudyBrowse": "閲覧のみ",
+    "htmlImagesSet": "画像 {{count}}枚"
   },
   "study": {
     "title": "学習",
@@ -633,7 +634,12 @@
       "土"
     ],
     "deleteSchedule": "削除",
-    "deleteScheduleConfirm": "このスケジュールを削除しますか？"
+    "deleteScheduleConfirm": "このスケジュールを削除しますか？",
+    "bodyDue": "今日の復習カードが {{count}} 枚あります",
+    "bodyNoDue": "今日の復習カードはありません",
+    "bodyDefault": "今日のカードを復習しましょう",
+    "bodyGoalUnmet": "今日の目標がまだ残っています",
+    "bodyBreakEnd": "休憩が終わりました。学習を再開しましょう"
   },
   "archive": {
     "title": "アーカイブ",

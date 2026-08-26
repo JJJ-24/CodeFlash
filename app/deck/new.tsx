@@ -368,7 +368,13 @@ export default function NewDeckScreen() {
                       「設定済み」の一語だと中身が分からず、土台0件で開くと空の一覧が出て矛盾に見えた。 */}
                   {filledStages > 0
                     ? htmlImages.length > 0
-                      ? t('deck.htmlStagesAndImages', { stages: filledStages, images: htmlImages.length })
+                      // 047 Phase 0: 1文に count が2つあると複数形が効かないので、
+                      //   「土台 N件」「画像 N枚」を各々複数形つきで作ってから繋ぐ
+                      //   （繋ぎ方（区切り文字）も言語で変わるので翻訳キーに残す）。
+                      ? t('deck.htmlStagesAndImages', {
+                        stages: t('deck.htmlStagesSet', { count: filledStages }),
+                        images: t('deck.htmlImagesSet', { count: htmlImages.length }),
+                      })
                       : t('deck.htmlStagesSet', { count: filledStages })
                     : htmlImages.length > 0
                       ? t('deck.htmlImagesOnly', { count: htmlImages.length })

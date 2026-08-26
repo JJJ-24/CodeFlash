@@ -150,7 +150,26 @@
   **RN Modal が2枚同時**になり、iOS は同じ VC から2枚目を提示できず**提示状態が固着して
   画面がタップを受け付けなくなる**（CLAUDE.md「Modal を2枚重ねるときは入れ子にする」）
 
-### 統計の棒グラフからの導線（Phase 3・実装済み）
+### Todo（Phase 2）
+
+- [x] `lib/database/cards.ts`：`searchCards` に `studiedDate` 引数／空クエリ対応／並び順・上限の出し分け／
+      `SEARCH_DATE_RESULT_LIMIT` を追加
+- [x] `store/search.ts`：セッション保持に `studiedDate` を追加
+- [x] `app/search.tsx`：カレンダーボタン・日送りチップ・件数表示の上限・
+      キー（`R`・`⇧,`/`⇧.`・`⇧H`/`⇧L`。⚠️ `⇧←`/`⇧→` は足さない＝この画面の矢印は
+      検索欄があるため iPhone のみ登録で iPad と不揃いになる／⇧+矢印は範囲選択と結びつく）
+- [x] `app/search.tsx`：日付タップでカレンダー（`DateTimePicker` inline・`maximumDate`＝今日・
+      選択で確定して閉じる・`overlayOpen()`／`A` の早期 return／Esc に組み込み）
+- [x] i18n（`card.searchStudiedDate`/`searchDateToday`/`searchDateYesterday`/`searchDatePrev`/
+      `searchDateNext`・`shortcut.toggleStudiedDate`/`studiedDatePrevNext`・ja/en）
+- [x] `scripts/verify-db.ts` に T20 を追加（9 アサーション）
+- [x] `npx tsc --noEmit` エラーなし／`npm run lint` 0 errors・48 warnings／`npm run verify:db` 130 passed
+- [x] **実機確認（2026-08-25・OK）**：カレンダーボタンで今日が入る／◀ で昨日・おととい／
+      ▶ が今日で止まる／× で解除／デッキ絞り込みとの併用／文字クエリとの併用／件数表示／
+      `R`・`⇧,`・`⇧.`／日付タップでカレンダーが開き、選ぶと閉じて結果が変わる／
+      未来の日が選べない／カレンダーの配色がアプリのテーマに合う
+
+## Phase 3: 統計の棒グラフからの導線 ＝**完了（2026-08-26・実機確認済み）**
 
 「過去7日間の学習済み」の棒をタップ → その日付フィルターで検索画面を開く（棒＝1日なので
 7本すべてが対応する）。**一覧の実装は検索画面のものを再利用**するので、同じ一覧が2箇所に
@@ -196,6 +215,20 @@
   ソフトキーボードが結果一覧を覆ってしまう（判定を `query` だけでなく `studiedDate` にも広げた
   ので、ホームから開いて日付が復元されたときも同じ扱いになる）
 
+### 検索画面の ⓘ（学習した日の使い方）
+
+Phase 2 で学習した日フィルターを足したのに、検索画面の ⓘ の説明はデッキ/タグのままだった。
+絞り込みの一覧にカレンダーの行を足し、「日付タップ＝カレンダー」「◀ ▶ ＝前の日・次の日」
+「キーワードなしでも表示できる」を説明する。⚠️ **見出し `[xxx]` ＋字下げ項目（どちらも md）で
+書くと縦に伸びる**ため、`InfoContent` に **`>`＝その行を小さく出す記法**（注意行 `※` と同じ
+サイズ・色。`>` の後の字下げの有無だけでインデントを決める＝記法をこれ以上増やさない）を足して
+それで書いた。日送りの説明には画面のチップと同じ chevron を出すため `ICON_TOKENS` に
+`prev`/`next` を追加。「※ どちらも複数選択でき」は対象が3つになったので「デッキとタグは〜」へ。
+
+⚠️ **`[xxx]` と `■` の見出しは `{{token}}` を通していない**（アイコンが波括弧のまま出る）。
+一度通す実装にしたが、`>` 記法で書くなら見出しにトークンを置く必要が無いので戻した。
+見出しにアイコンを置きたくなったら `renderInline` を通すこと。
+
 ### Todo（Phase 3）
 
 - [x] `app/(tabs)/stats.tsx`：`BarChart` に `onSelectDate` を追加（0枚の日と「済み」以外は
@@ -206,28 +239,14 @@
 - [x] `app/(tabs)/stats.tsx`：`pushChild()` を追加し全 `router.push`（6箇所）を通す／`useFocusEffect`
       の初期フィルター再適用を `keepBlockRef` でスキップ（⚠️ 印は「保持」設定でも必ず戻す）
 - [x] i18n（`stats.barTapInfoMessage`・ja/en）
+- [x] `components/InfoContent.tsx`：`>`（小さめの行）記法と `prev`/`next` アイコントークンを追加
+      （⚠️ 既存メッセージに `>` 始まりの行が無いことを全 locales の走査で確認）
+- [x] i18n（`card.searchInfoMessage` にカレンダーの行と「学習した日で絞り込んだとき」の3項目・ja/en）
 - [x] `npx tsc --noEmit` エラーなし／`npm run lint` 0 errors・48 warnings
 - [x] **実機確認（2026-08-26・OK）**：「済み」の棒タップで検索が開き、その日の学習カードが出る（件数が棒と一致）／
       閉じると統計タブへ戻り、**初期フィルターを「復習」にしていても「済み」のまま**／
       苦手カードの編集・重点復習・Pro 案内から戻っても同じ／タブを切り替えて戻ったときは
       従来どおり初期フィルターが適用される／0枚の日は無反応／
       連続・復習・新規の棒は押せない／前回の検索条件が残らない／キーボードが出ない
-
-### Todo
-
-- [x] `lib/database/cards.ts`：`searchCards` に `studiedDate` 引数／空クエリ対応／並び順・上限の出し分け／
-      `SEARCH_DATE_RESULT_LIMIT` を追加
-- [x] `store/search.ts`：セッション保持に `studiedDate` を追加
-- [x] `app/search.tsx`：カレンダーボタン・日送りチップ・件数表示の上限・
-      キー（`R`・`⇧,`/`⇧.`・`⇧H`/`⇧L`。⚠️ `⇧←`/`⇧→` は足さない＝この画面の矢印は
-      検索欄があるため iPhone のみ登録で iPad と不揃いになる／⇧+矢印は範囲選択と結びつく）
-- [x] `app/search.tsx`：日付タップでカレンダー（`DateTimePicker` inline・`maximumDate`＝今日・
-      選択で確定して閉じる・`overlayOpen()`／`A` の早期 return／Esc に組み込み）
-- [x] i18n（`card.searchStudiedDate`/`searchDateToday`/`searchDateYesterday`/`searchDatePrev`/
-      `searchDateNext`・`shortcut.toggleStudiedDate`/`studiedDatePrevNext`・ja/en）
-- [x] `scripts/verify-db.ts` に T20 を追加（9 アサーション）
-- [x] `npx tsc --noEmit` エラーなし／`npm run lint` 0 errors・48 warnings／`npm run verify:db` 130 passed
-- [x] **実機確認（2026-08-25・OK）**：カレンダーボタンで今日が入る／◀ で昨日・おととい／
-      ▶ が今日で止まる／× で解除／デッキ絞り込みとの併用／文字クエリとの併用／件数表示／
-      `R`・`⇧,`・`⇧.`／日付タップでカレンダーが開き、選ぶと閉じて結果が変わる／
-      未来の日が選べない／カレンダーの配色がアプリのテーマに合う
+- [x] **実機確認（2026-08-26・OK）**：検索の ⓘ にカレンダーの説明が出る／`>` の行が
+      注意行と同じ小さいグレーで、字下げも効いている／日送りの説明に画面と同じ chevron が出る

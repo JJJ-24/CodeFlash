@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getLocales } from 'expo-localization';
 import { create } from 'zustand';
 
 import type { GradeRankingSortBy } from '@/lib/database/reviews';
-import i18n from '@/lib/i18n';
+import i18n, { resolveSystemLanguage, SUPPORTED_LANGUAGE_CODES, type SupportedLanguage } from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
 import { scriptForLanguage, SPEECH_RATE_DEFAULT, SPEECH_RATES, type ScriptLangs, type SpeechScript, type VoiceByLang } from '@/lib/speech';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
@@ -12,14 +11,11 @@ import { useStudyTimerStore } from '@/store/studyTimer';
 /** ホーム画面のデッキ絞り込み。active=有効デッキのみ / all=アーカイブ含む全デッキ */
 export type HomeFilter = 'active' | 'all';
 
-export type LanguagePreference = 'system' | 'ja' | 'en';
+/** 'system'＝端末言語に従う。言語の追加は `lib/i18n` の SUPPORTED_LANGUAGES だけを触る。 */
+export type LanguagePreference = 'system' | SupportedLanguage;
 
 function resolveLanguage(pref: LanguagePreference): string {
-  if (pref === 'system') {
-    const deviceLang = getLocales()[0]?.languageCode ?? 'ja';
-    return ['ja', 'en'].includes(deviceLang) ? deviceLang : 'en';
-  }
-  return pref;
+  return pref === 'system' ? resolveSystemLanguage() : pref;
 }
 
 export type DeckSortOrder = 'manual' | 'name' | 'cardCount';
@@ -379,7 +375,7 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   languagePreference: {
     key: '@codeflash_language_pref',
     default: 'system',
-    parse: oneOf(['system', 'ja', 'en'] as const),
+    parse: oneOf<LanguagePreference>(['system', ...SUPPORTED_LANGUAGE_CODES]),
     onApply: (v) => { i18n.changeLanguage(resolveLanguage(v)); },
   },
   lastHomeFilter: { key: '@codeflash_last_home_filter', default: 'active', parse: oneOf(['active', 'all'] as const) },

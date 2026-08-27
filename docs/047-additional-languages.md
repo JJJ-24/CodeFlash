@@ -1,7 +1,8 @@
 # 047 対応言語の追加（日本語・英語 → 多言語）
 
 **フェーズ:** 将来
-**ステータス:** Phase 0 完了（2026-08-26）。Phase 1 以降は未着手（**どの言語を入れるかは未定**）
+**ステータス:** Phase 0 完了（2026-08-26）。**Phase 1 完了・Phase 2 はアプリ本体の翻訳完了**（2026-08-27。
+ストア掲載情報の翻訳と Phase 3 の実機確認が残り）
 **着手中の言語:** スペイン語（実データと候補の両方に入る唯一の言語＝下記）
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** なし（i18n 基盤・言語設定は実装済み）
@@ -136,11 +137,11 @@
 
 ### Phase 1: 言語を増やす仕組み（1言語につき30行程度）
 
-- [ ] `lib/i18n/index.ts`：`resources` に追加＋対応言語リスト（`['ja','en'].includes(...)`）に追加
-- [ ] `store/settings.ts`：`LanguagePreference` の型と `oneOf([...])` の2箇所に追加
-- [ ] `app/settings/display.tsx`：言語選択の選択肢を追加
-- [ ] `locales/xx.json` を新規作成
-- [ ] `locales/ja.json`・`en.json`（＋追加言語）に言語名ラベル `settings.languageXx` を追加
+- [x] `lib/i18n/index.ts`：`resources` に追加＋**対応言語リストを `SUPPORTED_LANGUAGES` に一本化**
+- [x] `store/settings.ts`：`LanguagePreference` の型と `oneOf([...])` の2箇所に追加
+- [x] `app/settings/display.tsx`：言語選択の選択肢を追加
+- [x] `locales/es.json` を新規作成
+- [x] `locales/ja.json`・`en.json`・`es.json` に言語名ラベル `settings.languageEs` を追加
 - [x] **キーの網羅チェック**（⚠️ **翻訳の前に作る**＝1040キーを人手で追わないため）
       → `scripts/verify-i18n.ts` / `npm run verify:i18n`（2026-08-26）。`locales/*.json` を全部読むので
       **`es.json` を置けば自動で対象**になる。基準は `ja`。**現在の結果：エラー 0・警告 0**（見つかった不整合は同日すべて修正・実機確認済み 2026-08-26）。
@@ -202,10 +203,88 @@ textSecondary）で出るため、他の11個の説明箱の見た目は変わ�
 同じ取りこぼしを繰り返さないよう、チェッカーに **W2「補間の直後が複数形の名詞なのに `_one`
 が無い」** を追加した。これで **エラー 0・警告 0**。以後この検査を緑に保つ。
 
+#### Phase 1・2 の実装メモ（2026-08-27）
+
+- **対応言語リストは `lib/i18n/index.ts` の `SUPPORTED_LANGUAGES` が唯一の定義元**にした
+  （**コード → 自言語表記**の表＋`isSupportedLanguage()`／`resolveSystemLanguage()`）。従来は
+  `lib/i18n` と `store/settings.ts` の `resolveLanguage()` に `['ja','en'].includes(...)` が**2つ複製**
+  されていて、片方だけ足すと「設定では選べるのに端末言語では選ばれない」というズレが出る。
+  次の言語追加で触るのは**この表 1 行と `import` 1 行だけ**
+  - ⚠️ **言語名は翻訳ファイルに置かない**＝`日本語`/`English`/`Español` は自言語表記なので
+    **どの UI 言語でも同じ文字列**。`settings.languageJa/En/Es` として持つと言語数の二乗ぶん
+    同じ値が並ぶ（3言語で 9 個）ので、上の表へ移して locales からは削除した。
+    `Intl.DisplayNames` は Hermes に無く OS からも取れないため、表を持つこと自体は避けられない
+
+##### 表示言語の UI＝セグメントをやめて「行＋一覧」に（2026-08-27）
+
+言語が増えるたびにセグメントの区画が増えて破綻するため、`SegmentedCard` から
+**行（ラベル左・現在の言語右・シェブロン）＋ `LanguagePickerModal`** へ移した。
+表示設定の他の3つ（テーマ／文字サイズ／初期フィルター）は**すべて3択固定**で、
+言語だけが唯一「増え続ける」設定だった＝セグメントはこのアプリでは3択の部品。
+
+- **「システム」は独立した部品ではなく一覧の先頭行**にした。セグメント2つ（`言語選択`／`システム`）
+  という案もあったが、`言語選択` は**値ではなく操作**なので、選択中でも**何語かが画面に出ない**
+  ＝結局もう1行必要になり、1つの設定を2つの部品で表すことになる
+- 「システム」を選んでいるときは**実際に使われる言語まで出す**（`システム（日本語）`）＝
+  読み上げの「アプリ設定に従う」行が同じ理由で結果を添えているのと揃えた
+- ⚠️ **モーダルが自前で Esc を持つなら、親の `SettingsDetail` に `suspendKeys` を渡す**：
+  `useKeyCommands` は**登録ごとに listener を張る**ので、親（常時 Esc）と子（表示中 Esc）が
+  両方登録していると**両方のハンドラが発火**し「モーダルを閉じる＋画面ごと戻る」になる。
+  - この二重発火は**既存の `SpeechLanguageModal`／`SpeechVoiceModal`（050）にもあった**ので、
+    同じ 2026-08-27 に `SettingsDetail` へ `suspendKeys` prop を足して 3 画面（display/study/data）
+    まとめて直した。⚠️ **モーダル側は直さない**＝`SpeechLanguageModal` は
+    `DeckSpeechModal`（デッキ編集）からも使われ、そちらは親が `picking === null` で
+    自分の Esc を外す形で**既に正しく住み分けている**。真因は「親が手放していない」側にある
+  - `data.tsx` だけは `onBack` の早期 return（`if (tsvDeckPickerVisible) …; return;`）で
+    **結果的に戻らずに済んでいた**＝二重発火自体は起きていたので、あわせて明示的にした
+- ⚠️ **iOS（Hermes）に `Intl.PluralRules` は無い**。実測（`hermes.framework` の文字列）で
+  `DateTimeFormat`・`NumberFormat`・`Collator` はあるが `PluralRules`・`DisplayNames` は無い。
+  i18next 25.8 は `new Intl.PluralRules()` の例外を捕まえて **`count === 1 ? 'one' : 'other'` の
+  内蔵ルールへ落ちる**（`dummyRule`）。**英語・スペイン語はこれで正しい**（どちらも 1 だけが
+  `one`）ので `_one` は実機でも効くが、**`few`/`many`/`zero` を持つ言語（ポーランド語・ロシア語・
+  アラビア語・チェコ語など）を足すと複数形が黙って壊れる**＝その言語を入れるときは
+  `Intl.PluralRules` のポリフィルが要る。**先に「en/es だから成立している」ことを知らずに
+  追加しないこと**
+- **翻訳中は `locales/` に置かない**：`verify-i18n` は `locales/*.json` を全部読むので、途中の
+  `es.json` を置くとキー欠落が**エラー扱い**になり（1044件）翻訳期間ずっと検査が赤くなる＝
+  ja/en 側の劣化を検知できなくなる。`locales/wip/es.json`（サブディレクトリは走査されない）で
+  組み立て、完成してから移動した。**セクション単位で積むたびに検査を回す**運用にすると、
+  補間トークンと行記法の崩れをその場で潰せる
+
+##### スペイン語の訳語（次の言語でも同じ判断が要る）
+
+- **語彙**：カード＝`tarjeta` ／ デッキ＝`mazo`（Anki の定訳） ／ タグ＝`etiqueta` ／
+  表面・裏面＝`Anverso`・`Reverso` ／ メモ＝`Nota` ／ 土台＝`base` ／ SQL初期化＝`inicialización` ／
+  評価＝`Repetir`/`Difícil`/`Bien`/`Fácil`
+  - ⚠️ 評価ボタンに Anki の `Otra vez` を採らなかったのは**2語で長く**、`adjustsFontSizeToFit` が
+    そのボタンだけ縮めて4つの文字サイズが不揃いになるため。1語の `Repetir` で長さを揃えた
+- ⚠️ **性の一致が取れないキーがある**＝`common.all`・`common.active` は**デッキ（男性）にも
+  カード（女性）にも使う1つの文字列**。`Todos/Todas`・`Activos/Activas` はどちらかが必ず誤りに
+  なるので、**性を持たない語に逃がした**（`Todo` ／ `En uso`）。
+  ⚠️ この手は**フランス語・ポルトガル語・イタリア語でも同じ問題**が起きる
+- **フィルターの4ラベルは字数を揃える**（2026-08-27 に短縮）＝当初 `Todo`(4) / `Estudiadas`(10) /
+  `Repaso`(6) / `Nuevas`(6) としたが、フィルターブロックは `adjustsFontSizeToFit` なので
+  **「済み」だけが一段小さく縮んで不揃いに見えた**。`Hechas`(6) に替えて 4/6/6/6 に揃えた
+  （`Vistas`＝評価せずめくっただけでも当てはまり不正確、`Repasadas`＝ほぼ縮まないため不採用）。
+  「有効」も `Sin archivar`(12) → **`En uso`(6)**（どちらも性変化しない）。
+  ⚠️ **ラベルを変えたら、本文中でラベル名を参照している9キーも直す**（`stats.topBlocksInfoMessage`・
+  `goalLineInfoMessage`〈＋`_one`〉・`barTapInfoMessage`・`todaySummaryInfoMessage`・
+  `shortcut.switchFilter`・`cycleChart`・`switchFilterAllActive`・`home.noActiveDecks`・
+  `card.noActiveCards`）＝説明文と画面の呼び名が食い違う。⚠️ 一方
+  `Estudiadas {{done}} / {{count}} tarjetas` のような**文中の語は縮めない**（幅の制約が無く、
+  短縮形にすると逆に不自然）
+- **地域変種は中南米寄りの中立**（実データがメキシコのため）＝`Agregar`（`Añadir` ではなく）。
+  ただし**OS の設定アプリは名前で呼ばない**（スペイン `Ajustes` ／ 中南米 `Configuración` で
+  食い違い、「その名前の項目が無い」案内になる）＝`los ajustes del dispositivo` と**普通名詞**で書く
+- **`settings.language`（アプリ言語）と `settings.speechLanguage`（読み上げ）は別語**にした
+  （`Idioma de la app` / `Idioma`）＝CLAUDE.md の「共用すると片方を短くしたときにもう片方の
+  行名まで変わる」規約どおり
+- `stats.unitDays` は**英語と同じく空**にした（ラベル `Días de estudio` と単位が重複するため）
+
 ### Phase 2: 翻訳
 
-- [ ] 対象言語の `locales/xx.json` を翻訳する（817キー・約14,800字）
-- [ ] ⚠️ **機械翻訳をそのまま入れない**。このアプリは説明文が長く（ショートカット一覧・
+- [x] 対象言語の `locales/es.json` を翻訳する（**1044キー・約17,000字**・2026-08-27）
+- [x] ⚠️ **機械翻訳をそのまま入れない**。このアプリは説明文が長く（ショートカット一覧・
       情報モーダル・機能説明）、文言の意図が失われやすい。特に 046 で確立した
       「**状態ではなく結果を書く**」（「オフです」ではなく「動作しません」）のような
       判断は、直訳すると消える
@@ -220,6 +299,13 @@ textSecondary）で出るため、他の11個の説明箱の見た目は変わ�
   - 未達成通知バッジ（曜日ドット・ラベルと同じ行に並ぶ）
   - 学習タブの目標行、評価ボタン（再考/苦手/正解/即答）
   - ※ フィルターブロックは `numberOfLines={1} adjustsFontSizeToFit` で自動縮小するので比較的安全
+- [ ] **スペイン語で特に見るところ**（翻訳時点で長くなると分かっている箇所）：
+  - ~~**表示言語のセグメント**が 3 → 4 つ~~ → **解消済み**（2026-08-27 に行＋一覧へ変更。上記）
+  - **下タブの `Estadísticas`**（英語 `Stats` の 2 倍以上）
+  - **通知スケジュールのバッジ**＝`Si falta` / `Si falta (sin objetivo)`（英語 `If unmet` 相当。
+    短く詰めたので**意味が通るかも**あわせて確認する）
+  - ※ フィルターの `Hechas` / `En uso` は 2026-08-27 に短縮済み（上の実装メモ）
+  - 統計の指標ラベル `Días de estudio` / `Tiempo medio` / `Aciertos`（3つ横並び）
 - [ ] **フォントサイズ「大」**（`fontSizePreference: 'large'`＝1.2倍）でも崩れないこと
 - [ ] iPhone / iPad の両方（iPad は横幅があるぶん有利）
 

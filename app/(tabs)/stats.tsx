@@ -401,8 +401,8 @@ function BarChart({
         );
       })}
       {/* 046: 目標ライン。**棒の手前**に引く（越えた/越えないが読めるように）。色は中立の
-          textTertiary＝棒と同じ緑にすると沈むため。ラベルは付けない（1列 約27pt の棒に
-          数字を重ねると窮屈になる。意味はセクションの ⓘ で説明する）。
+          textTertiary＝棒と同じ緑にすると沈むため。**線の上にラベルは重ねない**（1列 約27pt の
+          棒に数字を重ねると窮屈）＝枚数はグラフの下の凡例（`goalLegend`）で示す。
           ⚠️ RN の `borderStyle:'dashed'` は iOS で辺ごとに幅が違うと実線で描かれることが
           あるので、短い矩形を並べて破線にする（プラットフォーム差が出ない）。 */}
       {goalLineBottom != null && chartW > 0 && (
@@ -1769,11 +1769,11 @@ export default function StatsScreen() {
           onToggle={() => toggleStatsSection('chart')}
           onInfo={() => setSectionInfoModal({
             title: t('stats.topBlocksInfoTitle'),
-            // 目標ラインの説明は **破線が実際に出ているときだけ**（目標 ON かつ「済み」）。
-            // 目標 ON だけを条件にすると、他の3ブロックを見ている間も画面に無い線の説明が出る。
-            // 棒タップの説明も **押せる棒が出ているときだけ**（＝「済み」）。棒は押せる見た目を
+            // ⚠️ **目標ラインの説明はここに入れない**＝破線はグラフの下の凡例（`goalLegend`）が
+            // 常時説明する。ⓘ は開かないと読めないので、線という見た目の説明には向かない。
+            // 棒タップの説明は **押せる棒が出ているときだけ**（＝「済み」）。棒は押せる見た目を
             // 持たないので、気づける場所はここしかない。
-            message: <InfoContent text={t('stats.topBlocksInfoMessage') + (chartGoal != null ? '\n\n' + t('stats.goalLineInfoMessage', { count: chartGoal }) : '') + (openStudiedDate != null ? '\n\n' + t('stats.barTapInfoMessage') : '') + collapseHint} />,
+            message: <InfoContent text={t('stats.topBlocksInfoMessage') + (openStudiedDate != null ? '\n\n' + t('stats.barTapInfoMessage') : '') + collapseHint} />,
           })}
           infoLabel={t('stats.topBlocksInfoLabel')}
         />
@@ -1788,6 +1788,21 @@ export default function StatsScreen() {
               goal={chartGoal}
               onSelectDate={openStudiedDate}
             />
+            {/* 046: 目標ラインの凡例。**グラフの下**に置く＝上に置くとブロックを切り替えるたびに
+                （凡例が出るのは「済み」＋目標 ON のときだけなので）棒が1行ぶん上下にジャンプする。
+                ⚠️ 破線と**同じ片・同じ色**を並べる＝離れていても見た目で線と結びつく。
+                ⚠️ セクションのタイトル行には置かない（`CollapsibleSectionTitle` の注記：
+                `[見出し][値][>]` を1行に詰めると文字サイズ「大」で見出しが折り返して値が消える）。 */}
+            {chartGoal != null && (
+              <View style={styles.goalLegend}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <View key={i} style={{ width: GOAL_DASH_W, height: 1, marginRight: GOAL_DASH_GAP, backgroundColor: theme.colors.textTertiary }} />
+                ))}
+                <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, marginLeft: 2 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('stats.goalLineLegend', { count: chartGoal })}
+                </Text>
+              </View>
+            )}
           </View>
         )}
       </Pressable>
@@ -2381,6 +2396,7 @@ const styles = StyleSheet.create({
   // Bar chart
   barChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   goalLine: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', overflow: 'hidden' },
+  goalLegend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '60%', borderRadius: 4, minHeight: 0 },
   barCount: { textAlign: 'center' },

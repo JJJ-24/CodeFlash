@@ -40,6 +40,7 @@ const COUNT_INVARIANT = new Set([
   'card.searchResultCountMax',      // "{{count}}+ results"（上限表示なので常に複数）
   'study.goalRowRemaining',         // "{{count}} to go"
   'stats.gradeCount',               // "×{{count}}"
+  'stats.goalLineLegend',           // "Goal {{count}}/day"（数の後ろに名詞が来ない）
   'dataManagement.tsvLossDeckSqlStages',
   'dataManagement.tsvLossDeckHtmlStages',
   'dataManagement.tsvLossBlockSqlInit',

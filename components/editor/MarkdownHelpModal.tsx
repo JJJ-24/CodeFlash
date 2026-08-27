@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -67,12 +67,22 @@ export function MarkdownHelpModal({ visible, onClose }: Props) {
   const theme = useTheme();
   const sections = useMemo(() => parseHelp(t('editor.mdHelpBody')), [t]);
 
+  // 開くフェードは JS でやる（Modal は `animationType="none"`）。iOS は VC のトランジション中に
+  // タッチを配送しないので、`fade` のままだと**開いた直後の1回目のスワイプが空振りする**
+  // （早見表は長いので、開いてすぐスクロールする使い方をしやすい）。閉じるときは即時。
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!visible) return;
+    fade.setValue(0);
+    Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  }, [visible, fade]);
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       {/* 背景タップで閉じる Pressable は **ScrollView の祖先にしない**（兄弟として敷く）。
           祖先に置くと、押せる要素の無い場所から始めたドラッグでスクロールが始まらない
           （Fabric の _shouldDisableScrollInteraction。CLAUDE.md / ShortcutsModal と同じ構造）。 */}
-      <View style={styles.overlay}>
+      <Animated.View style={[styles.overlay, { opacity: fade }]}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         <View style={[styles.dialog, { backgroundColor: theme.colors.surface }, isPad && styles.dialogPad]}>
           <Text
@@ -140,7 +150,7 @@ export function MarkdownHelpModal({ visible, onClose }: Props) {
             </Text>
           </Pressable>
         </View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

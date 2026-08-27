@@ -83,6 +83,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const isEmptyForDelete = isEmpty && !block.sqlInit?.trim() && !block.htmlInit?.trim();
   const prevCollapsedRef = useRef(collapsed);
   const flashAnim = useRef(new Animated.Value(0)).current;
+  // 開くフェードは JS でやる（Modal は `animationType="none"`）。iOS は VC のトランジション中に
+  // タッチを配送しないので、`fade` のままだと開いた直後の操作が空振りする（CLAUDE.md の
+  // 中央ダイアログの項）。⚠️ ここは**構造を変えず** Animated.View を1枚かぶせるだけにする
+  // （背景 Pressable を兄弟へ移すと「シート本体のタップでも閉じる」現在の挙動まで変わるため）。
+  const langFade = useRef(new Animated.Value(0)).current;
   const codeInputRef = useRef<TextInput>(null);
   const initSqlInputRef = useRef<TextInput>(null);
   const initHtmlInputRef = useRef<TextInput>(null);
@@ -226,14 +231,16 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); initHtmlInputRef.current?.blur(); }
   }, [blurTrigger]);
 
-  // 言語選択モーダルを開いたら選択中の言語が見える位置までスクロールする
+  // 言語選択モーダルを開いたら選択中の言語が見える位置までスクロールする＋フェードを再生する
   useEffect(() => {
     if (!langModalVisible) return;
+    langFade.setValue(0);
+    Animated.timing(langFade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     const id = setTimeout(() => {
       langScrollRef.current?.scrollTo({ y: Math.max(0, selectedLangYRef.current - 40), animated: false });
     }, 30);
     return () => clearTimeout(id);
-  }, [langModalVisible]);
+  }, [langModalVisible, langFade]);
 
   useEffect(() => {
     if ((runTrigger ?? 0) > 0 && block.executable) {
@@ -682,7 +689,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
       />
 
       {/* 言語選択モーダル */}
-      <Modal visible={langModalVisible} transparent animationType="fade">
+      <Modal visible={langModalVisible} transparent animationType="none">
+        <Animated.View style={{ flex: 1, opacity: langFade }}>
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
           <View style={[styles.langModal, { backgroundColor: theme.colors.surface, width: Math.max(220, width * 0.5) }]}>
             <Text style={[styles.langModalTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('editor.selectLanguage')}</Text>
@@ -717,6 +725,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </ScrollView>
           </View>
         </Pressable>
+        </Animated.View>
       </Modal>
       <Animated.View
         style={[StyleSheet.absoluteFill, { opacity: flashAnim, backgroundColor: theme.colors.primaryLight, borderRadius: 10 }]}

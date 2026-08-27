@@ -1,4 +1,6 @@
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 const isPad = (Platform as any).isPad;
@@ -29,15 +31,36 @@ interface Props {
 
 export function ConfirmModal({ visible, title, message, actions, onClose }: Props) {
   const theme = useTheme();
-  // 閉じるときだけアニメーションを外す（理由は InfoModal のコメント）。
-  // InfoModal・ConfirmDeleteModal と3種そろえて手触りを揃える。
-  // なお DiscardConfirmModal 経由の6画面（入力系モーダルの「変更を破棄しますか？」）は
-  // 破棄/保存の直後に fullScreenModal 自体がスライドで閉じ、その間もタッチが止まるので
-  // 効果は無い（害も無いので除外はしない。編集に戻る経路だけは効く）。
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  // 高さの上限＋本文スクロールは `InfoModal` と同じ理由（中央寄せなので溢れると上下**両方**が
+  // 切れ、タイトルがダイナミックアイランドに隠れてボタンも画面外へ出る）。文字サイズ次第で
+  // 本文はいくらでも伸びる（`pro.trialConfirmMessage` はスペイン語で 377 字）。
+  const maxHeight = Math.max(200, height - insets.top - insets.bottom - 48);
+  // 開くフェードは **JS 側でやる**（Modal は `animationType="none"`）。
+  // ⚠️ iOS は **VC のトランジション中はタッチを配送しない**ので、`animationType="fade"` だと
+  // 提示アニメーション（約0.3秒）に始めたスワイプが丸ごと捨てられ、**開いた直後の1回目の
+  // スクロールが空振りする**（実機で確認）。タッチを止めているのは VC のトランジションであって
+  // 見た目のフェードではないので、提示を即時にしてフェードだけ Animated に移せば両立する。
+  // 閉じるときは従来どおり即時（下の画面のタッチを止めないため＝この3つで揃えてある）。
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!visible) return;
+    fade.setValue(0);
+    Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  }, [visible, fade]);
   return (
-    <Modal visible={visible} transparent animationType={visible ? 'fade' : 'none'} onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.dialog, { backgroundColor: theme.colors.surface }, isPad && styles.dialogPad]} onPress={() => {}}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={[styles.overlay, { opacity: fade }]}>
+        {/* ⚠️ **背景（タップで閉じる）を ScrollView の祖先にしない**＝兄弟として背面に敷く。
+            Fabric の `_shouldDisableScrollInteraction` は「スクロールビューの祖先に JS レスポンダ
+            （Pressable 等）がいる」と `touchesShouldCancelInContentView` を NO にするので、
+            押せる要素の無い本文から始めたドラッグでスクロールが始まらない（開いた直後に数回
+            空振りする症状。CLAUDE.md の「余白タップの配置ルール」と同じ罠）。
+            ダイアログ自身も素の View にする＝レスポンダを持たないので、その上のタップは
+            背面の背景まで届かず「閉じない」も成立する（兄弟なのでバブリングしない）。 */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessible={false} />
+        <View style={[styles.dialog, { backgroundColor: theme.colors.surface, maxHeight }, isPad && styles.dialogPad]}>
           {!!title && (
             <Text
               style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
@@ -46,12 +69,14 @@ export function ConfirmModal({ visible, title, message, actions, onClose }: Prop
               {title}
             </Text>
           )}
-          <Text
-            style={[styles.message, { color: title ? theme.colors.textSecondary : theme.colors.text, fontSize: theme.fontSize.md }]}
-            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-          >
-            {message}
-          </Text>
+          <ScrollView style={styles.messageScroll} alwaysBounceVertical={false}>
+            <Text
+              style={[styles.message, { color: title ? theme.colors.textSecondary : theme.colors.text, fontSize: theme.fontSize.md }]}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
+              {message}
+            </Text>
+          </ScrollView>
           <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
           {actions.map((action, i) => (
             <Pressable
@@ -76,8 +101,8 @@ export function ConfirmModal({ visible, title, message, actions, onClose }: Prop
             </Pressable>
           ))}
           <View style={{ height: 20 }} />
-        </Pressable>
-      </Pressable>
+        </View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -91,7 +116,9 @@ const styles = StyleSheet.create({
   // iPad は横幅を広げてボタン文字（日時・「強制アップロード」等）が折り返さないようにする
   dialogPad: { width: 440, maxWidth: '90%' },
   title: { fontWeight: '700', marginBottom: 8 },
-  message: { lineHeight: 22, marginBottom: 16 },
+  // flexGrow:0＝短いときに伸びない／flexShrink:1＝上限に当たったら縮んでスクロールする
+  messageScroll: { flexGrow: 0, flexShrink: 1, marginBottom: 16 },
+  message: { lineHeight: 22 },
   separator: { height: StyleSheet.hairlineWidth, marginHorizontal: -24 },
   actionBtn: { paddingVertical: 14, alignItems: 'center', borderRadius: 12 },
   actionBtnText: { color: '#FFF', fontWeight: '700' },

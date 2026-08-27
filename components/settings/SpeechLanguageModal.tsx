@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { getSpeechLanguagesFor, speechLanguageLabel, type SpeechScript } from '@/lib/speech';
@@ -53,6 +53,16 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
     getSpeechLanguagesFor(script).then(setLanguages);
   }, [visible, script]);
 
+  // 開くフェードは JS でやる（Modal は `animationType="none"`）。iOS は VC のトランジション中に
+  // タッチを配送しないので、`fade` のままだと**開いた直後の操作が空振りする**（CLAUDE.md の
+  // 中央ダイアログの項）。閉じるときは従来どおり即時。
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!visible) return;
+    fade.setValue(0);
+    Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  }, [visible, fade]);
+
   // 表示中だけ Esc を担当する（非表示のあいだ登録を持たない＝034 の住み分け）。
   useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
 
@@ -61,14 +71,18 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
   const rows = languages.length > 0 ? languages : value ? [value] : [];
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }}
-        onPress={onClose}
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', opacity: fade }}
       >
-        <Pressable
-          style={{ backgroundColor: theme.colors.surface, borderRadius: 12, maxHeight: '75%', overflow: 'hidden' }}
-          onPress={(e) => e.stopPropagation()}
+        {/* ⚠️ 背景（タップで閉じる）は一覧の**祖先にしない**＝兄弟として背面に敷く。祖先が JS
+            レスポンダだと Fabric がスクロールのキャンセルを止め、行の隙間から始めたドラッグが
+            滑らない（CLAUDE.md の「余白タップの配置ルール」）。
+            ⚠️ 余白は overlay の padding ではなく**シートの marginHorizontal**で作る＝padding だと
+            絶対配置の背景がその内側に収まり、外周24ptがタップで閉じなくなりうる。 */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessible={false} />
+        <View
+          style={{ backgroundColor: theme.colors.surface, borderRadius: 12, maxHeight: '75%', overflow: 'hidden', marginHorizontal: 24 }}
         >
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
             <Text
@@ -143,8 +157,8 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
               </Pressable>
             ))}
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </Animated.View>
     </Modal>
   );
 }

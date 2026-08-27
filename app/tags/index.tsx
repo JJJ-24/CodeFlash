@@ -4,6 +4,7 @@ import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useTranslation } from 'react-i18next';
 import {
+  Animated,
   Modal,
   FlatList,
   Platform,
@@ -91,6 +92,9 @@ export default function TagsScreen() {
   // ホーム/タグカード一覧のフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
   const blockWidth = (screenWidth - 56) / 4;
   const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+  // カラーピッカーの開くフェード（Modal は `animationType="none"`）。iOS は VC のトランジション中に
+  // タッチを配送しないので、`fade` のままだと開いた直後の操作が空振りする（CLAUDE.md の中央ダイアログの項）。
+  const colorPickerFade = useRef(new Animated.Value(0)).current;
   const lastFocusTimeRef = useRef(0);
   const scrollOffsetRef = useRef(0);
   const savedScrollOffsetRef = useRef(0);
@@ -108,6 +112,11 @@ export default function TagsScreen() {
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  useEffect(() => {
+    if (!showColorPicker) return;
+    colorPickerFade.setValue(0);
+    Animated.timing(colorPickerFade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  }, [showColorPicker, colorPickerFade]);
   const [pickedColor, setPickedColor] = useState<string>(PRESET_COLORS[0]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
@@ -843,9 +852,12 @@ export default function TagsScreen() {
       <Modal
         visible={showColorPicker}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowColorPicker(false)}
       >
+        {/* ⚠️ 構造は変えず Animated.View を1枚かぶせるだけ（背景 Pressable を兄弟へ移すと
+            「シート本体のタップでも閉じる」現在の挙動まで変わるため）。 */}
+        <Animated.View style={{ flex: 1, opacity: colorPickerFade }}>
         <Pressable style={styles.colorPickerOverlay} onPress={() => setShowColorPicker(false)}>
           <Pressable style={[styles.colorPickerSheet, { backgroundColor: theme.colors.surface }, (Platform as any).isPad && styles.colorPickerSheetPad]} onPress={() => {}}>
             <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, marginBottom: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -870,6 +882,7 @@ export default function TagsScreen() {
             </TouchableOpacity>
           </Pressable>
         </Pressable>
+        </Animated.View>
       </Modal>
     </GestureHandlerRootView>
   );

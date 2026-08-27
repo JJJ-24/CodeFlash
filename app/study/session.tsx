@@ -338,7 +338,7 @@ export default function StudySessionScreen() {
   // （取得前に「あと N 枚」を出すと、直後に正しい値へ飛んで見えるため）。
   // **追加クエリはゼロ**＝checkStudyGoal が評価のたびに数え直している結果をそのまま持つ。
   const [goalTodayCount, setGoalTodayCount] = useState<number | null>(null);
-  // 046: 達成時の動作「通知のみ」で数秒だけ出すピル。
+  // 046: 達成時の動作「お知らせ」（`'pill'`）で数秒だけ出すピル。
   const [goalPillVisible, setGoalPillVisible] = useState(false);
   const goalPillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 041: コードブロックの全画面インタラクティブプレビュー表示中は背後キー（フリップ/採点/カード送り/戻る）を抑止する。
@@ -1516,7 +1516,7 @@ export default function StudySessionScreen() {
     </View>
   ) : null;
 
-  /** 達成ピル（「通知のみ」用）。配色は ArchivePill と同じテーマ反転＝カードから確実に浮く。
+  /** 達成ピル（「お知らせ」＝`'pill'` 用）。配色は ArchivePill と同じテーマ反転＝カードから確実に浮く。
    *  `pointerEvents="none"` ＝**タップ標的にしない**（2.5秒の的は押し損ねやすく、外すと
    *  カードがフリップする）。学習を完了したいときはヘッダーの ✓ か Q キーを使う。 */
   const renderGoalPill = (top: number) =>

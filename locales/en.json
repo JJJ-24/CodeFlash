@@ -507,8 +507,7 @@
     "fontSizeLarge": "Large",
     "language": "Display Language",
     "languageSystem": "System",
-    "languageJa": "日本語",
-    "languageEn": "English",
+    "languageSystemResolved": "System ({{language}})",
     "colorTheme": "Color Theme",
     "colorThemeName": {
       "default": "Default",

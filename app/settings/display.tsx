@@ -5,13 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppSwitch } from '@/components/AppSwitch';
+import { LanguagePickerModal } from '@/components/settings/LanguagePickerModal';
 import { SegmentedCard } from '@/components/settings/SegmentedCard';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
 
+import { resolveSystemLanguage, SUPPORTED_LANGUAGES } from '@/lib/i18n';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { CARD_THEME_NAMES, CARD_THEMES, FREE_CARD_THEMES, type CardThemeName } from '@/lib/theme/cardThemes';
-import { useSettingsStore, type InitialFilterPreference, type LanguagePreference } from '@/store/settings';
+import { useSettingsStore, type InitialFilterPreference } from '@/store/settings';
 import { useThemeStore, type ColorSchemePreference, type FontSizePreference } from '@/store/theme';
 import { useProStore } from '@/store/pro';
 
@@ -27,6 +29,13 @@ export default function DisplaySettingsScreen() {
     languagePreference, setLanguagePreference,
   } = useSettingsStore();
   const { isPro } = useProStore();
+  const [langModal, setLangModal] = useState(false);
+
+  // 「システム」を選んでいるときは**実際に使われる言語**まで出す（「システム」だけだと結果が分からない）。
+  const systemLang = resolveSystemLanguage();
+  const languageValueLabel = languagePreference === 'system'
+    ? t('settings.languageSystemResolved', { language: SUPPORTED_LANGUAGES[systemLang] })
+    : SUPPORTED_LANGUAGES[languagePreference];
 
   function handleCardThemeSelect(name: CardThemeName) {
     // 無料配色（default / paper）は常に選択可。それ以外は Pro 限定でペイウォールへ誘導。
@@ -59,7 +68,11 @@ export default function DisplaySettingsScreen() {
   }, []);
 
   return (
-    <SettingsDetail title={t('settings.display')}>
+    <SettingsDetail
+      title={t('settings.display')}
+      // 言語ピッカーは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
+      suspendKeys={langModal}
+    >
       <SegmentedCard
         label={t('settings.theme')}
         options={[
@@ -94,16 +107,22 @@ export default function DisplaySettingsScreen() {
         onChange={setInitialFilterPreference}
       />
 
-      <SegmentedCard
-        label={t('settings.language')}
-        options={[
-          { value: 'ja' as LanguagePreference, label: t('settings.languageJa') },
-          { value: 'en' as LanguagePreference, label: t('settings.languageEn') },
-          { value: 'system' as LanguagePreference, label: t('settings.languageSystem') },
-        ]}
-        value={languagePreference}
-        onChange={setLanguagePreference}
-      />
+      {/* 言語はセグメントにしない＝対応言語が増えるたびに区画が増えて破綻するため
+          （他の設定は3択固定）。行に現在の言語を出し、タップで一覧（先頭が「システム」）。 */}
+      <Pressable
+        style={[styles.card, { backgroundColor: theme.colors.surface, flexDirection: 'row', alignItems: 'center' }]}
+        onPress={() => setLangModal(true)}
+      >
+        <View style={styles.dataRowText}>
+          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {t('settings.language')}
+          </Text>
+        </View>
+        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {languageValueLabel}
+        </Text>
+        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+      </Pressable>
 
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -188,6 +207,14 @@ export default function DisplaySettingsScreen() {
           />
         </View>
       </View>
+
+      <LanguagePickerModal
+        visible={langModal}
+        value={languagePreference}
+        onSelect={setLanguagePreference}
+        onClose={() => setLangModal(false)}
+        resolved={systemLang}
+      />
     </SettingsDetail>
   );
 }

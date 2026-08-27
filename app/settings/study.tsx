@@ -594,6 +594,9 @@ export default function StudySettingsScreen() {
     return (
       <SettingsDetail
         title={t('settings.studySettings')}
+        // 読み上げの言語/声のモーダルは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
+        // （両方が登録すると Esc でモーダルが閉じると同時に画面まで戻る）
+        suspendKeys={speechLangModal !== null || speechVoiceModal !== null}
         // 非 Pro でも目標枚数・読み上げ（ともに無料）の i アイコンが開けるので、
         // Pro 側と同じく「開いている説明があれば先に閉じる」を渡す
         onBack={(direct) => {
@@ -636,6 +639,8 @@ export default function StudySettingsScreen() {
   return (
     <SettingsDetail
       title={t('settings.studySettings')}
+      // 上（非 Pro 分岐）と同じ理由でモーダル表示中はキーを手放す
+      suspendKeys={speechLangModal !== null || speechVoiceModal !== null}
       onBack={(direct) => {
         if (!direct && goalConflict) { dismissGoalConflict(); return; }
         if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }

@@ -23,6 +23,15 @@ interface Props {
    * false は Esc＝階層ディスマス（info 展開も1段として閉じる）。
    */
   onBack?: (direct: boolean) => void;
+  /**
+   * 自前で Esc を持つモーダル（`SpeechLanguageModal` 等）を開いている間 true にして、
+   * この画面のキー（Esc / B）を**手放す**。
+   * ⚠️ **これが無いと Esc が二重に発火する**＝`useKeyCommands` は登録ごとに listener を張るので、
+   * モーダルが閉じると同時にこの画面まで戻ってしまう（034 の「今そのキーを担当するのは誰か」）。
+   * ⚠️ 一方 `SegmentedCard` のインライン説明のように**自前でキーを持たない**一時表示は、
+   * `escStack` 経由で下の `handleEsc` が閉じる（そちらは suspendKeys の対象ではない）。
+   */
+  suspendKeys?: boolean;
 }
 
 /**
@@ -30,7 +39,7 @@ interface Props {
  * push 遷移時の戻るボタン残像を防ぐため headerShown:false ＋ インラインカスタムヘッダー
  * （CLAUDE.md のカスタムヘッダーパターン。about.tsx と同形）。
  */
-export function SettingsDetail({ title, children, overlay, onBack }: Props) {
+export function SettingsDetail({ title, children, overlay, onBack, suspendKeys }: Props) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -50,7 +59,7 @@ export function SettingsDetail({ title, children, overlay, onBack }: Props) {
   useKeyCommands([
     { input: 'b', handler: handleBack },
     { input: KeyCommand.keyInputEscape, handler: handleEsc },
-  ]);
+  ], !suspendKeys);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>

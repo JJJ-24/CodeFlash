@@ -332,6 +332,8 @@ export default function DataSettingsScreen() {
     <SettingsDetail
       title={t('dataManagement.title')}
       overlay={overlay}
+      // DeckPickerModal は自前で Esc を持つ＝開いている間はこの画面のキーを手放す
+      suspendKeys={tsvDeckPickerVisible}
       onBack={(direct) => {
         if (modal) { setModal(null); return; }
         if (tsvDeckPickerVisible) { setTsvDeckPickerVisible(false); return; }

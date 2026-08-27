@@ -15,6 +15,7 @@ import { SpeechVoiceModal } from '@/components/settings/SpeechVoiceModal';
 import {
   CONFIGURABLE_SCRIPTS,
   getConfigurableScriptLanguages,
+  getCachedVoicesByLanguage,
   getVoicesForLanguage,
   SCRIPT_DEFAULT_LANGS,
   SPEECH_RATES,
@@ -90,7 +91,9 @@ export default function StudySettingsScreen() {
   //（同じ一覧に同じ言語が並ぶかで地域を出すか決めるので、並びの一覧が要る）。
   const [speechVoiceModal, setSpeechVoiceModal] = useState<{ language: string; script: SpeechScript } | null>(null);
   // 今表示している言語ごとの声の一覧。**声が2つ以上あるときだけ「声」の行を出す**ため。
-  const [voicesByLang, setVoicesByLang] = useState<Record<string, SpeechVoice[]>>({});
+  // ⚠️ **初期値は直近の取得結果**（同期）。空から始めると、この画面を開くたびに「声」の行が
+  //    一拍おいて現れる（取得が非同期なため）。取得自体は下の useEffect が毎回やり直す。
+  const [voicesByLang, setVoicesByLang] = useState<Record<string, SpeechVoice[]>>(getCachedVoicesByLanguage);
   const db = useSQLiteContext();
   const { notificationEnabled } = useSettingsStore();
   // 046: 目標の変更は未達成リマインダーの予約内容を変える（OFF なら予約自体を止める）。
@@ -455,12 +458,20 @@ export default function StudySettingsScreen() {
     </View>
   );
 
-  /** その言語を読む声の行。**声が2つ以上あるときだけ**出す（1つなら選ぶ意味が無い）。
+  /** その言語を読む声の行。**声が1つしか無いと分かったら**引っ込める（選ぶ意味が無いため）。
    *  言語行と同じく ⓘ は置かない（声ピッカーの上部に同じ文言が出る）。 */
   const speechVoiceRow = (language: string, script: SpeechScript) => {
     const list = voicesByLang[language];
-    if (!list || list.length < 2) return null;
-    const selected = list.find((v) => v.identifier === speechVoices[language]);
+    // ⚠️ **未取得（undefined）のあいだは出す側に倒す**＝言語の行（`isScriptSelectable`）と同じ規則。
+    //    ここだけ「無ければ出さない」にしていたため、画面を開くたびに行が一拍おいて現れていた。
+    //    取得できて「1つ以下」と分かったときだけ消える。
+    if (list && list.length < 2) return null;
+    const selected = list?.find((v) => v.identifier === speechVoices[language]);
+    // 未取得のうちは、上書きが保存されている言語だけ**名前が分からない**ので空にする
+    // （「自動」と出すと一瞬だけ違う値を見せることになる）。上書きが無ければ結果は「自動」で確定。
+    const valueText = selected ? selected.name
+      : !list && speechVoices[language] ? ''
+      : t('settings.speechVoiceAuto');
     return (
       <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechVoiceModal({ language, script })}>
         <View style={styles.dataRowText}>
@@ -469,7 +480,7 @@ export default function StudySettingsScreen() {
           </Text>
         </View>
         <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {selected ? selected.name : t('settings.speechVoiceAuto')}
+          {valueText}
         </Text>
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>

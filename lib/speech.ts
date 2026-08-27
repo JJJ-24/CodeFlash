@@ -629,11 +629,38 @@ const NOVELTY_VOICE_TOKENS = new Set([
 export const isNoveltyVoice = (identifier: string) =>
   NOVELTY_VOICE_TOKENS.has(identifier.split('.').pop()?.toLowerCase() ?? '');
 
+/**
+ * 同時に走る `getAvailableVoicesAsync()` を1回にまとめる。
+ *
+ * 設定画面は表示中の言語ぶん（2〜5個）を `Promise.all` で並べて取るので、素直に書くと
+ * ネイティブ呼び出しが言語の数だけ走る。**解決したら捨てる**ので次に呼べば取り直す
+ * ＝OS で音声を足したときに古い結果を返し続けることはない。
+ */
+let voicesInFlight: Promise<Speech.Voice[]> | null = null;
+function loadVoices(): Promise<Speech.Voice[]> {
+  if (!voicesInFlight) {
+    voicesInFlight = Speech.getAvailableVoicesAsync().finally(() => { voicesInFlight = null; });
+  }
+  return voicesInFlight;
+}
+
+/**
+ * 直近に取得できた声の一覧（言語ごと）。**設定画面の初回描画に使うだけ**のキャッシュで、
+ * 取得そのものは毎回やり直す＝OS で音声を増やせば次に開いたときに反映される（049/050 の規約）。
+ * ⚠️ これが無いと、画面を開くたびに「声」の行が一拍おいて現れる（取得が非同期なため）。
+ */
+const lastVoicesByLang = new Map<string, SpeechVoice[]>();
+
+/** 直近の取得結果のスナップショット（同期）。設定画面が state の初期値に使う。 */
+export function getCachedVoicesByLanguage(): Record<string, SpeechVoice[]> {
+  return Object.fromEntries(lastVoicesByLang);
+}
+
 /** その言語で使える声の一覧（ピッカー用）。名前順で返す。**奇抜な声は除く**。 */
 export async function getVoicesForLanguage(language: string): Promise<SpeechVoice[]> {
   try {
-    const voices = await Speech.getAvailableVoicesAsync();
-    return voices
+    const voices = await loadVoices();
+    const list = voices
       .filter((v) => v.language === language && !isNoveltyVoice(v.identifier))
       .map((v) => ({
         identifier: v.identifier,
@@ -642,6 +669,8 @@ export async function getVoicesForLanguage(language: string): Promise<SpeechVoic
         quality: String(v.quality ?? ''),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
+    lastVoicesByLang.set(language, list);
+    return list;
   } catch {
     return [];
   }
@@ -650,7 +679,7 @@ export async function getVoicesForLanguage(language: string): Promise<SpeechVoic
 /** 端末に実在する声の identifier 一式。`filterKnownVoices` に渡して検証に使う。 */
 export async function getAvailableVoiceIds(): Promise<Set<string>> {
   try {
-    const voices = await Speech.getAvailableVoicesAsync();
+    const voices = await loadVoices();
     return new Set(voices.map((v) => v.identifier).filter(Boolean));
   } catch {
     return new Set();
@@ -672,7 +701,7 @@ export function filterKnownVoices(voices: VoiceByLang, known: Set<string>): Voic
 }
 
 async function loadVoiceLanguages(): Promise<string[]> {
-  const voices = await Speech.getAvailableVoicesAsync();
+  const voices = await loadVoices();
   return voices.map((v) => v.language).filter((l): l is string => !!l);
 }
 

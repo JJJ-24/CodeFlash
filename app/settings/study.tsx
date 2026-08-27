@@ -283,7 +283,7 @@ export default function StudySettingsScreen() {
         {studyGoalEnabled && (
           <View style={{ gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyGoalCount')}
               </Text>
               <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -764,10 +764,14 @@ export default function StudySettingsScreen() {
 
         {studyTimerEnabled && (
           <>
+            {/* ⚠️ 「ラベル＋青い値」の行は**ラベル側に `flexShrink: 1`** を入れてある。入れないと
+                どちらも縮まないため、翻訳が長い言語＋文字サイズ最大でラベルが値を画面外へ押し出す
+                （スペイン語の「休憩」＝`Duración del descanso` で実際に起きた）。ⓘ つきのラベルは
+                Pressable ごと縮ませないと中の Text が折り返せない。 */}
             {/* 時間（1〜60分） */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerMinutes')}
                 </Text>
                 <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -789,8 +793,8 @@ export default function StudySettingsScreen() {
             {/* 繰り返し回数（039 ポモドーロ・1〜12回。1回＝従来の単発タイマー） */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('cycles')} hitSlop={6}>
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }} onPress={() => toggleInfo('cycles')} hitSlop={6}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('settings.studyTimerCycles')}
                   </Text>
                   {infoIcon('cycles')}
@@ -816,8 +820,8 @@ export default function StudySettingsScreen() {
             {studyTimerCycles >= 2 && (
               <View style={{ gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('break')} hitSlop={6}>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }} onPress={() => toggleInfo('break')} hitSlop={6}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {t('settings.studyTimerBreakMinutes')}
                     </Text>
                     {infoIcon('break')}

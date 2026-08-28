@@ -7,6 +7,8 @@ import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   menu: 'reorder-three-outline',
   lock: 'lock-closed',
+  // 未ロック（＝並べ替えできる状態）。一覧ヘッダーのロックボタンが解除時に出すアイコンと同じ。
+  unlock: 'lock-open-outline',
   name: 'text-outline',
   count: 'layers-outline',
   newest: 'arrow-down-outline',
@@ -21,6 +23,13 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   prev: 'chevron-back',
   next: 'chevron-forward',
   timer: 'timer-outline',
+  // 選択モードの下部バーのボタン（カード一覧）。実物と同じアイコンを使う。
+  selectAll: 'checkmark-circle-outline',
+  copy: 'copy-outline',
+  move: 'arrow-forward-circle-outline',
+  archive: 'archive-outline',
+  unarchive: 'arrow-undo-outline',
+  trash: 'trash-outline',
   pencil: 'pencil-sharp',
   analytics: 'analytics-sharp',
   podium: 'podium-outline',
@@ -30,8 +39,12 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
 // {{heatscale}} 用：ヒートマップ（草グラフ）と同じ4段階の緑
 const HEAT_COLORS = ['#C8E6C9', '#A5D6A7', '#4CAF50', '#2E7D32'];
 
+// 破壊的な操作のアイコンだけ実物のボタンと同じ赤（theme.colors.danger）で描く。
+// 他は一律 primary＝説明文の中で「押すと消える操作」だけが色で立つ。
+const DANGER_ICON_TOKENS = new Set(['trash']);
+
 // 1行内の {{token}} を Ionicons / 凡例に置換しつつテキストと混在表示する
-function renderInline(text: string, iconColor: string, iconSize: number, keyBase: string, emptyColor: string): React.ReactNode {
+function renderInline(text: string, iconColor: string, iconSize: number, keyBase: string, emptyColor: string, dangerColor: string): React.ReactNode {
   return text.split(/(\{\{\w+\}\})/g).map((part, i) => {
     // ヒートマップ凡例（空セルのグレー + 緑4段階の色付き■を横並び）
     if (part === '{{heatscale}}') {
@@ -47,7 +60,8 @@ function renderInline(text: string, iconColor: string, iconSize: number, keyBase
     const m = part.match(/^\{\{(\w+)\}\}$/);
     const name = m && ICON_TOKENS[m[1]];
     if (name) {
-      return <Ionicons key={`${keyBase}-${i}`} name={name} size={iconSize} color={iconColor} />;
+      const color = m && DANGER_ICON_TOKENS.has(m[1]) ? dangerColor : iconColor;
+      return <Ionicons key={`${keyBase}-${i}`} name={name} size={iconSize} color={color} />;
     }
     return part;
   });
@@ -95,7 +109,7 @@ export function InfoContent({ text }: Props) {
                 marginTop: 2, paddingLeft: /^\s/.test(body) ? 14 : 0,
               }}
             >
-              {renderInline(body.trim(), theme.colors.primary, theme.fontSize.sm, `d${idx}`, theme.colors.border)}
+              {renderInline(body.trim(), theme.colors.primary, theme.fontSize.sm, `d${idx}`, theme.colors.border, theme.colors.danger)}
             </Text>
           );
         }
@@ -127,7 +141,8 @@ export function InfoContent({ text }: Props) {
           );
         }
 
-        // 注意行 ※（テキストはグレーのまま、インラインアイコンは項目行と同じ青で統一）
+        // 注意行 ※（テキストはグレーのまま、インラインアイコンは項目行と同じ扱い
+        //   ＝既定は青・DANGER_ICON_TOKENS だけ赤）
         if (line.startsWith('※')) {
           return (
             <Text
@@ -135,7 +150,7 @@ export function InfoContent({ text }: Props) {
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 2 }}
             >
-              {renderInline(line, theme.colors.primary, theme.fontSize.sm, `n${idx}`, theme.colors.border)}
+              {renderInline(line, theme.colors.primary, theme.fontSize.sm, `n${idx}`, theme.colors.border, theme.colors.danger)}
             </Text>
           );
         }
@@ -148,7 +163,7 @@ export function InfoContent({ text }: Props) {
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 24, paddingLeft: 14 }}
             >
-              {renderInline(line.trim(), theme.colors.primary, theme.fontSize.md, `i${idx}`, theme.colors.border)}
+              {renderInline(line.trim(), theme.colors.primary, theme.fontSize.md, `i${idx}`, theme.colors.border, theme.colors.danger)}
             </Text>
           );
         }
@@ -160,7 +175,7 @@ export function InfoContent({ text }: Props) {
             maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 4 }}
           >
-            {renderInline(line, theme.colors.primary, theme.fontSize.sm, `f${idx}`, theme.colors.border)}
+            {renderInline(line, theme.colors.primary, theme.fontSize.sm, `f${idx}`, theme.colors.border, theme.colors.danger)}
           </Text>
         );
       })}

@@ -805,7 +805,7 @@ export default function TagsScreen() {
               <Ionicons name="color-palette-outline" size={22} color="#FFF" />
             </Pressable>
             <Pressable
-              style={[styles.iconBtn, { backgroundColor: '#C62828' }, (selectedTagIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              style={[styles.iconBtn, { backgroundColor: theme.colors.danger }, (selectedTagIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
               onPress={() => { if (selectedTagIds.size > 0 && !isProcessing) setShowBulkDeleteModal(true); }}
               disabled={selectedTagIds.size === 0 || isProcessing}
             >

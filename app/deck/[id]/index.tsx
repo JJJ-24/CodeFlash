@@ -1336,9 +1336,20 @@ export default function DeckDetailScreen() {
         <Pressable style={styles.sectionTitleRow} onPress={() => { if (!selectionMode) setFocusedCardIndex(null); }}>
           <View style={styles.sectionTitleLeft}>
             {selectionMode ? (
-              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('card.selectHint')}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('card.selectHint')}
+                </Text>
+                {/* 選択モードの操作説明。非選択時の一覧 ⓘ と同じ形（選択中はそちらが消えるため、
+                    選択モード固有の操作＝下部バーのボタン・まとめ並べ替えはここで説明する）。 */}
+                <Pressable
+                  onPress={() => setInfoModal({ title: t('card.selectHint'), message: <InfoContent text={t('card.selectInfoMessage')} /> })}
+                  hitSlop={8}
+                  accessibilityLabel={t('card.selectInfoLabel')}
+                >
+                  <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+                </Pressable>
+              </View>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -1574,7 +1585,7 @@ export default function DeckDetailScreen() {
               <Ionicons name={allSelectedArchived ? 'archive' : 'archive-outline'} size={22} color="#FFF" />
             </Pressable>
             <Pressable
-              style={[styles.iconBtn, { backgroundColor: '#C62828' }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
+              style={[styles.iconBtn, { backgroundColor: theme.colors.danger }, (selectedCardIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
               onPress={handleDeleteSelected}
               disabled={selectedCardIds.size === 0 || isProcessing}
             >

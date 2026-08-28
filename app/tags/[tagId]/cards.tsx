@@ -101,6 +101,9 @@ export default function TagCardsScreen() {
   const [showDeckPicker, setShowDeckPicker] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showTagCardsInfo, setShowTagCardsInfo] = useState(false);
+  // ⓘ を開いた時点が選択モードだったか。閉じるフェード中に selectionMode が変わっても
+  // 中身が入れ替わらないよう、state ではなく開いた瞬間の値を保持する。
+  const infoIsSelectRef = useRef(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
   const [pendingDeleteCard, setPendingDeleteCard] = useState<Card | null>(null);
@@ -492,16 +495,18 @@ export default function TagCardsScreen() {
           scrollsToTop={scrollsToTopArmed}
           ListHeaderComponent={
             // 選択モードでは操作案内に差し替える（カード一覧・タグ管理と同じ流儀）。
-            // 説明アイコンは選択操作と関係ないので出さない。
+            // ⓘ は両モードで出し、中身を「一覧の説明／選択モードの説明」で切り替える。
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, marginHorizontal: 20 }}>
               <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, marginBottom: 0, marginHorizontal: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {selectionMode ? t('card.selectHint') : t('tag.cardListTitle')}
               </Text>
-              {!selectionMode && (
-                <Pressable onPress={() => setShowTagCardsInfo(true)} hitSlop={8} accessibilityLabel={t('tag.cardListInfoLabel')}>
-                  <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-                </Pressable>
-              )}
+              <Pressable
+                onPress={() => { infoIsSelectRef.current = selectionMode; setShowTagCardsInfo(true); }}
+                hitSlop={8}
+                accessibilityLabel={selectionMode ? t('tag.cardSelectInfoLabel') : t('tag.cardListInfoLabel')}
+              >
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+              </Pressable>
             </View>
           }
           ListFooterComponent={<Pressable style={{ height: 120 }} onPress={() => setFocusedCardIndex(null)} />}
@@ -643,8 +648,8 @@ export default function TagCardsScreen() {
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <InfoModal
         visible={showTagCardsInfo}
-        title={t('tag.cardListTitle')}
-        message={<InfoContent text={t('tag.cardListInfoMessage')} />}
+        title={infoIsSelectRef.current ? t('card.selectHint') : t('tag.cardListTitle')}
+        message={<InfoContent text={t(infoIsSelectRef.current ? 'tag.cardSelectInfoMessage' : 'tag.cardListInfoMessage')} />}
         onClose={() => setShowTagCardsInfo(false)}
       />
       <ShortcutsModal

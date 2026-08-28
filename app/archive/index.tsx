@@ -20,6 +20,8 @@ import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DeckIcon } from '@/components/DeckIcon';
 import { EmptyState } from '@/components/EmptyState';
+import { InfoContent } from '@/components/InfoContent';
+import { InfoModal } from '@/components/InfoModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { getCardPreview } from '@/lib/cardPreview';
@@ -108,6 +110,10 @@ export default function ArchiveScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  // ⓘ を開いた時点のタブと選択モード。閉じるフェード中にタブやモードが変わっても
+  // 中身が入れ替わらないよう、state ではなく開いた瞬間の値を保持する。
+  const infoContextRef = useRef<{ tab: ArchiveTab; select: boolean }>({ tab: 'decks', select: false });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModalMessage, setDeleteModalMessage] = useState('');
   // 削除実行は「単一行」「選択分の一括」で中身が違うので、確定時に呼ぶ関数を持たせる
@@ -289,7 +295,7 @@ export default function ArchiveScreen() {
   }
 
   // ---- キーボード（034）----
-  const overlayOpen = showDeleteModal || showShortcutsModal;
+  const overlayOpen = showDeleteModal || showShortcutsModal || showInfoModal;
   useKeyCommands([
     { input: 'j', handler: () => moveFocus('next') },
     { input: 'k', handler: () => moveFocus('prev') },
@@ -327,6 +333,7 @@ export default function ArchiveScreen() {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (showDeleteModal) { setShowDeleteModal(false); pendingDeleteRef.current = null; return; }
+        if (showInfoModal) { setShowInfoModal(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (selectionMode) { exitSelectionMode(); return; }
         router.back();
@@ -334,10 +341,10 @@ export default function ArchiveScreen() {
     },
   ]);
 
-  // 「OK のみ」アラート（ショートカット一覧）は Return=閉じる。表示中のみ有効（main は解除済み）。
+  // 「OK のみ」アラート（ショートカット一覧・説明）は Return=閉じる。表示中のみ有効（main は解除済み）。
   useKeyCommands([
-    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
-  ], showShortcutsModal);
+    { input: KeyCommand.keyInputEnter, handler: () => { setShowInfoModal(false); setShowShortcutsModal(false); } },
+  ], showShortcutsModal || showInfoModal);
 
   // ホームのフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
   const blockWidth = (screenWidth - 56) / 4;
@@ -490,7 +497,7 @@ export default function ArchiveScreen() {
             選択モードでは操作案内に差し替える（対象がデッキかカードかでも文言を変える）。 */}
         <Pressable style={styles.sectionTitleRow} onPress={() => setFocusedIndex(null)}>
           <Text
-            style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]}
+            style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, flexShrink: 1 }]}
             numberOfLines={1}
             maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
           >
@@ -498,6 +505,14 @@ export default function ArchiveScreen() {
               ? (tab === 'decks' ? t('deck.selectHint') : t('card.selectHint'))
               : (tab === 'decks' ? t('archive.deckListTitle') : t('archive.cardListTitle'))}
           </Text>
+          {/* ⓘ はタブ×モードの4通りで中身が変わる（他の一覧画面と同じ形）。 */}
+          <Pressable
+            onPress={() => { infoContextRef.current = { tab, select: selectionMode }; setShowInfoModal(true); }}
+            hitSlop={8}
+            accessibilityLabel={selectionMode ? t('archive.selectInfoLabel') : t('archive.listInfoLabel')}
+          >
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+          </Pressable>
         </Pressable>
 
         {items.length === 0 ? (
@@ -580,6 +595,20 @@ export default function ArchiveScreen() {
         sections={(selectionMode ? ARCHIVE_SELECTION_SHORTCUT_SECTIONS : ARCHIVE_SHORTCUT_SECTIONS)
           .map((s) => ({ title: t(s.titleKey), items: s.items }))}
       />
+      <InfoModal
+        visible={showInfoModal}
+        title={infoContextRef.current.select
+          ? (infoContextRef.current.tab === 'decks' ? t('deck.selectHint') : t('card.selectHint'))
+          : (infoContextRef.current.tab === 'decks' ? t('archive.deckListTitle') : t('archive.cardListTitle'))}
+        message={
+          <InfoContent
+            text={t(infoContextRef.current.select
+              ? 'archive.selectInfoMessage'
+              : (infoContextRef.current.tab === 'decks' ? 'archive.deckListInfoMessage' : 'archive.cardListInfoMessage'))}
+          />
+        }
+        onClose={() => setShowInfoModal(false)}
+      />
       <ConfirmDeleteModal
         visible={showDeleteModal}
         message={deleteModalMessage}
@@ -595,7 +624,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   list: { paddingBottom: 96 },
   tabRow: { flexDirection: 'row', gap: 4, marginHorizontal: 18, paddingTop: 16, paddingBottom: 4 },
-  sectionTitleRow: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 },
   sectionTitle: { fontWeight: '700' },
   fab: {
     position: 'absolute',

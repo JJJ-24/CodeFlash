@@ -105,6 +105,14 @@ export const settingsStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(127,127,127,0.25)',
   },
+  // 時刻3行（同期／接続／iCloud）の見出し。折りたたみヘッダーと違い畳めないのでシェブロンは付けず、
+  // 直下の行と1つのグループに見えるように card の gap(12) を負マージンで詰める。
+  syncTimesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: -6,
+  },
   // 展開された説明ボックス
   syncInfoBox: {
     borderRadius: 8,

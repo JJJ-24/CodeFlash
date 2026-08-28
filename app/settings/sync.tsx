@@ -57,6 +57,7 @@ export default function SyncSettingsScreen() {
 
   // ⓘタップでインライン展開する説明トグル
   const [showTagline, setShowTagline] = useState(false);
+  const [showTermsHelp, setShowTermsHelp] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
   const [showRestoreSectionInfo, setShowRestoreSectionInfo] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -327,7 +328,7 @@ export default function SyncSettingsScreen() {
     return t("sync.remoteDataAt", { datetime: formatDateTimeSec(lastRemoteUpdatedAt) });
   }
 
-  // 「最終同期」＝実際にデータを転送した時刻（no-op 照合では動かない）。
+  // 「同期」＝実際にデータを転送した時刻（no-op 照合では動かない）。
   function formatLastSynced(): string {
     if (!lastDataSyncedAt) return t("sync.lastSyncedNever");
     return t("sync.lastSyncedAt", {
@@ -335,7 +336,7 @@ export default function SyncSettingsScreen() {
     });
   }
 
-  // 「最終接続」＝最後に iCloud と照合できた時刻。最終同期より新しいときだけ補足表示する
+  // 「接続」＝最後に iCloud と照合できた時刻。同期より新しいときだけ補足表示する
   // （データ転送はなかったが、同期が生きていて最新であることを確認できた、の意）。
   function formatLastConnected(): string | null {
     if (!lastSyncedAt) return null;
@@ -440,6 +441,13 @@ export default function SyncSettingsScreen() {
 
   const syncing = syncStatus === "syncing";
 
+  // 時刻の見出し（＋用語説明のⓘ）を出すかどうか。一度も同期していない端末では
+  // 3行のうち出るのは「まだ同期されていません」だけ＝見出しが指す時刻が1つも無い。
+  const hasSyncTimes =
+    lastDataSyncedAt != null ||
+    lastSyncedAt != null ||
+    lastRemoteUpdatedAt != null;
+
   return (
     <SettingsDetail
       title={t("sync.title")}
@@ -452,6 +460,7 @@ export default function SyncSettingsScreen() {
         if (
           !direct && (
           showTagline ||
+          showTermsHelp ||
           showRestoreSectionInfo ||
           showAdvancedInfo ||
           showUploadInfo ||
@@ -462,6 +471,7 @@ export default function SyncSettingsScreen() {
           )
         ) {
           setShowTagline(false);
+          setShowTermsHelp(false);
           setShowRestoreSectionInfo(false);
           setShowAdvancedInfo(false);
           setShowUploadInfo(false);
@@ -515,8 +525,10 @@ export default function SyncSettingsScreen() {
             disabled={syncing}
           />
         </View>
-        {/* 同期OFF時のみ：タグラインが出ないので Switch 行直下に展開を出す */}
-        {!syncEnabled && showTagline && (
+        {/* ⓘ タップ時のみ詳細説明を展開（タグラインは廃止し、タイトル＋ⓘ に集約）。
+            同期 ON/OFF で内容が同じなので分岐せず Switch 行の直下に置く。
+            時刻ラベルの用語説明は「最新の時刻」見出しのⓘが持つ（自分の直下を説明する）。 */}
+        {showTagline && (
           <View
             style={[
               styles.syncInfoBox,
@@ -538,8 +550,38 @@ export default function SyncSettingsScreen() {
 
         {syncEnabled && (
           <>
-            {/* ⓘ タップ時のみ詳細説明を展開（タグラインは廃止し、タイトル＋ⓘ に集約） */}
-            {showTagline && (
+            {/* 時刻3行の見出し。畳めないのでシェブロンは付けず、行全体も押さない（ⓘ だけ押せる）。 */}
+            {hasSyncTimes && (
+              <View style={styles.syncTimesHeader}>
+                <Text
+                  style={[
+                    styles.syncAdvancedHeaderText,
+                    {
+                      color: theme.colors.textSecondary,
+                      fontSize: theme.fontSize.sm,
+                    },
+                  ]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t("sync.timesSectionTitle")}
+                </Text>
+                <Pressable
+                  onPress={() => setShowTermsHelp((v) => !v)}
+                  hitSlop={8}
+                >
+                  <Ionicons
+                    name={
+                      showTermsHelp
+                        ? "information-circle"
+                        : "information-circle-outline"
+                    }
+                    size={Math.max(theme.fontSize.lg, 20)}
+                    color={theme.colors.textTertiary}
+                  />
+                </Pressable>
+              </View>
+            )}
+            {hasSyncTimes && showTermsHelp && (
               <View
                 style={[
                   styles.syncInfoBox,
@@ -554,25 +596,12 @@ export default function SyncSettingsScreen() {
                   }}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
-                  {t("sync.descriptionDetail")}
-                </Text>
-                {/* 表示している時刻ラベルの用語説明（最終同期／最終接続／iCloud）。
-                    上の一般説明と同じ配色・サイズに揃えて読みやすくする。 */}
-                <Text
-                  style={{
-                    color: theme.colors.textSecondary,
-                    fontSize: theme.fontSize.sm,
-                    lineHeight: 20,
-                    marginTop: 8,
-                  }}
-                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                >
                   {t("sync.termsHelp")}
                 </Text>
               </View>
             )}
 
-            {/* 最終同期（実際にデータが転送された時刻） */}
+            {/* 同期（実際にデータが転送された時刻） */}
             <Text
               style={[
                 {
@@ -585,7 +614,7 @@ export default function SyncSettingsScreen() {
               {formatLastSynced()}
             </Text>
 
-            {/* 最終接続（最後に iCloud と照合できた時刻。最終同期より新しいときだけ補足表示） */}
+            {/* 接続（最後に iCloud と照合できた時刻。同期より新しいときだけ補足表示） */}
             {formatLastConnected() && (
               <Text
                 style={[

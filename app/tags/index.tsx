@@ -70,9 +70,9 @@ const TAG_SELECTION_SHORTCUT_SECTIONS = [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'Space', descKey: 'shortcut.toggleCheck' },
     { key: 'A',     descKey: 'shortcut.selectAll' },
-    { key: 'U / D', descKey: 'shortcut.reorderSelectedTagsUpDown' },
+    { key: 'U / D', descKey: 'shortcut.reorderSelectedUpDown' },
     { key: 'C',     descKey: 'shortcut.changeColorSelected' },
-    { key: 'Delete', descKey: 'shortcut.deleteSelectedTags' },
+    { key: 'Delete', descKey: 'shortcut.deleteSelected' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC',   descKey: 'shortcut.esc' },

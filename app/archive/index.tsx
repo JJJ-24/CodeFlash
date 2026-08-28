@@ -69,7 +69,7 @@ const ARCHIVE_SELECTION_SHORTCUT_SECTIONS = [
     { key: 'Space',  descKey: 'shortcut.toggleCheck' },
     { key: 'A',      descKey: 'shortcut.selectAll' },
     { key: 'E',      descKey: 'shortcut.unarchiveSelected' },
-    { key: 'Delete', descKey: 'shortcut.deleteSelectedItems' },
+    { key: 'Delete', descKey: 'shortcut.deleteSelected' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC', descKey: 'shortcut.esc' },

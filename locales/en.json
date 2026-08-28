@@ -160,6 +160,8 @@
     "tagListTitle": "Tags",
     "tagListInfoLabel": "About tag list",
     "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study tab.",
+    "selectInfoLabel": "About select mode",
+    "selectInfoMessage": "[Tap]\n  Select / deselect\n[Bottom buttons]\n  {{selectAll}} Select all / none\n  {{palette}} Change color\n  {{trash}} Delete\n[Long-press drag]\n  Reorder together\n※ Reordering needs {{menu}} mode and {{unlock}} unlocked",
     "cardListTitle": "Tag Card List",
     "removeFromCards": "Remove tag",
     "removeFromCardsAction": "Remove",

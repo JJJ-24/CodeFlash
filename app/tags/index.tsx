@@ -208,6 +208,9 @@ export default function TagsScreen() {
   ];
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showTagListInfo, setShowTagListInfo] = useState(false);
+  // ⓘ を開いた時点が選択モードだったか。閉じるフェード中にモードが変わっても
+  // 中身が入れ替わらないよう、state ではなく開いた瞬間の値を保持する。
+  const infoIsSelectRef = useRef(false);
   // U/D 並べ替え不可時の案内（カード一覧と同方針・文言も card.* を流用）。タグには
   // フィルター条件が無いため sort/locked の2種のみ。閉じる瞬間にフェード中の中身が
   // 空にならないよう直前内容を ref で保持する（カード一覧 lastInfoModalRef と同パターン）。
@@ -587,15 +590,25 @@ export default function TagsScreen() {
       <View style={[styles.sectionRow, { paddingHorizontal: 16, paddingTop: 16, backgroundColor: theme.colors.background }]}>
         <View style={styles.sectionTitleCol}>
           {selectionMode ? (
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('tag.selectHint')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('tag.selectHint')}
+              </Text>
+              {/* 選択モードの操作説明（非選択時の一覧 ⓘ と同じ形）。 */}
+              <Pressable
+                onPress={() => { infoIsSelectRef.current = true; setShowTagListInfo(true); }}
+                hitSlop={8}
+                accessibilityLabel={t('tag.selectInfoLabel')}
+              >
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+              </Pressable>
+            </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('tag.tagListTitle')}
               </Text>
-              <Pressable onPress={() => setShowTagListInfo(true)} hitSlop={8} accessibilityLabel={t('tag.tagListInfoLabel')}>
+              <Pressable onPress={() => { infoIsSelectRef.current = false; setShowTagListInfo(true); }} hitSlop={8} accessibilityLabel={t('tag.tagListInfoLabel')}>
                 <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
               </Pressable>
             </View>
@@ -817,8 +830,8 @@ export default function TagsScreen() {
 
       <InfoModal
         visible={showTagListInfo}
-        title={t('tag.tagListTitle')}
-        message={<InfoContent text={t('tag.tagListInfoMessage')} />}
+        title={infoIsSelectRef.current ? t('tag.selectHint') : t('tag.tagListTitle')}
+        message={<InfoContent text={t(infoIsSelectRef.current ? 'tag.selectInfoMessage' : 'tag.tagListInfoMessage')} />}
         onClose={() => setShowTagListInfo(false)}
       />
       <InfoModal

@@ -149,6 +149,8 @@
     "tagListTitle": "タグ一覧",
     "tagListInfoLabel": "タグ一覧の説明",
     "tagListInfoMessage": "[タップ]\n  カード一覧へ移動\n  {{pencil}} タグ編集\n[スワイプ]\n  削除\n※ {{menu}} モードでは不可（{{lock}} ロック中は可）\n\n[並べ替えモード]\n  {{menu}} 長押しドラッグ\n  {{name}} 名前順（A→Z）\n  {{count}} カード枚数順\n並び順は学習タブにも反映されます。",
+    "selectInfoLabel": "選択モードの説明",
+    "selectInfoMessage": "[タップ]\n  選択/選択解除\n[下部のボタン]\n  {{selectAll}} 全選択/全解除\n  {{palette}} 色変更\n  {{trash}} 削除\n[長押しドラッグ]\n  まとめて並べ替え\n※ 並べ替えは {{menu}} モード・{{unlock}} ロック解除のときだけ",
     "cardListTitle": "タグカード一覧",
     "removeFromCards": "タグを外す",
     "removeFromCardsAction": "外す",

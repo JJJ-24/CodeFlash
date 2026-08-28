@@ -27,6 +27,7 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   selectAll: 'checkmark-circle-outline',
   copy: 'copy-outline',
   move: 'arrow-forward-circle-outline',
+  palette: 'color-palette-outline',
   archive: 'archive-outline',
   unarchive: 'arrow-undo-outline',
   trash: 'trash-outline',

@@ -161,6 +161,8 @@
     "tagListTitle": "Etiquetas",
     "tagListInfoLabel": "Sobre la lista de etiquetas",
     "tagListInfoMessage": "[Tocar]\n  Abrir la lista de tarjetas\n  {{pencil}} Editar etiqueta\n[Deslizar]\n  Eliminar\n※ No disponible en el modo {{menu}} (sí mientras esté {{lock}} bloqueado)\n\n[Modo de orden]\n  {{menu}} Mantener pulsado y arrastrar\n  {{name}} Nombre (A→Z)\n  {{count}} Número de tarjetas\nEl orden también se aplica a la pestaña Estudio.",
+    "selectInfoLabel": "Sobre el modo de selección",
+    "selectInfoMessage": "[Tocar]\n  Seleccionar o quitar\n[Botones de abajo]\n  {{selectAll}} Seleccionar todo o nada\n  {{palette}} Cambiar el color\n  {{trash}} Eliminar\n[Mantener pulsado y arrastrar]\n  Reordenar juntas\n※ Reordenar requiere el modo {{menu}} y {{unlock}} desbloqueado",
     "cardListTitle": "Tarjetas de la etiqueta",
     "removeFromCards": "Quitar etiqueta",
     "removeFromCardsAction": "Quitar",

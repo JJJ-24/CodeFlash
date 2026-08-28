@@ -29,6 +29,7 @@ import { AppSwitch } from "@/components/AppSwitch";
 import { ArchivePill, useArchivePill } from "@/components/ArchivePill";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
+import { InfoContent } from "@/components/InfoContent";
 import { hasBlockContent } from "@/lib/cardPreview";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
@@ -48,6 +49,13 @@ export type EditorMode = "edit" | "sort" | "preview";
 
 // エディタ内部でブロックを一意に識別するためのローカルキー付き型
 type EditBlock = Block & { _key: string };
+
+/**
+ * 末尾に確保する余白。最下部のアーカイブ行で ⓘ を開いたとき、説明は行とこの余白のあいだに
+ * 入るので、余白ぶんはスクロールせずにその場で見える（自動スクロールを持ち込まないための余白）。
+ * 140 は文字サイズ「大」で説明が折り返しても収まる高さ。デッキ編集にも同じ値を入れてある。
+ */
+const ARCHIVE_INFO_SLACK = 140;
 
 function makeKey() {
   return Math.random().toString(36).slice(2, 9);
@@ -218,6 +226,8 @@ export function BlockEditor({
     toEditBlocks(initialData?.memoBlocks ?? [newTextBlock()]),
   );
   const [tagIds, setTagIds] = useState<string[]>(initialData?.tagIds ?? []);
+  // アーカイブの説明（常時表示をやめ、ⓘ タップでインライン展開する）
+  const [showArchiveInfo, setShowArchiveInfo] = useState(false);
   const [addMenuVisible, setAddMenuVisible] = useState(false);
   const [addMenuFocusIndex, setAddMenuFocusIndex] = useState(0);
   const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
@@ -876,28 +886,42 @@ export function BlockEditor({
             </View>
           )}
 
-          {/* アーカイブトグル（編集時のみ）。タグ・デッキと並ぶカード単位のメタ情報 */}
+          {/* アーカイブトグル（編集時のみ）。タグ・デッキと並ぶカード単位のメタ情報。
+              説明は常時表示せず、ⓘ タップで白枠の中にインライン展開する
+              （設定画面の card + syncInfoBox と同じ形。デッキ編集も同じ）。 */}
           {onArchivedChange && (
-            <View style={[styles.archiveRow, { borderColor: theme.colors.inputBorder, backgroundColor: theme.colors.surface }]}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text
-                  style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]}
-                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                >
-                  {t("deck.archive")}
-                </Text>
-                <Text
-                  style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }}
-                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                >
-                  {t("deck.archiveHint")}
-                </Text>
+            <View style={[styles.archiveCard, { borderColor: theme.colors.inputBorder, backgroundColor: theme.colors.surface }]}>
+              <View style={styles.archiveRow}>
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text
+                    style={[styles.tagLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md, flexShrink: 1 }]}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                  >
+                    {t("deck.archive")}
+                  </Text>
+                  <Pressable
+                    onPress={() => { Keyboard.dismiss(); setShowArchiveInfo((v) => !v); }}
+                    hitSlop={8}
+                    accessibilityLabel={t("deck.archiveInfoLabel")}
+                  >
+                    <Ionicons
+                      name={showArchiveInfo ? "information-circle" : "information-circle-outline"}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
+                    />
+                  </Pressable>
+                </View>
+                <AppSwitch
+                  value={!!archived}
+                  onValueChange={onArchivedChange}
+                  thumbColor="#FFF"
+                />
               </View>
-              <AppSwitch
-                value={!!archived}
-                onValueChange={onArchivedChange}
-                thumbColor="#FFF"
-              />
+              {showArchiveInfo && (
+                <View style={[styles.archiveInfoBox, { backgroundColor: theme.colors.background }]}>
+                  <InfoContent text={t("deck.archiveHint")} />
+                </View>
+              )}
             </View>
           )}
         </>
@@ -1168,7 +1192,9 @@ export function BlockEditor({
       <ScrollView
         ref={scrollRef}
         style={[styles.scroll, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: keyboardPadding }}
+        // ARCHIVE_INFO_SLACK は最下部のアーカイブ行で ⓘ を開いたときのための余白。最下部まで来て
+        // いるとき説明は行と余白のあいだに入るので、余白ぶんはその場に現れる（自動スクロール不要）。
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: keyboardPadding + ARCHIVE_INFO_SLACK }}
         onLayout={(e) => {
           scrollViewHeightRef.current = e.nativeEvent.layout.height;
         }}
@@ -1403,15 +1429,24 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  archiveRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  // ⓘ タップで開くインライン説明（デッキ編集と同じ見せ方）
+  archiveInfoBox: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  archiveCard: {
     marginTop: 12,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  archiveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   deckName: { fontWeight: "600" },
   validationError: { textAlign: "center" },

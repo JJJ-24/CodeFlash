@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { AppSwitch } from '@/components/AppSwitch';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { InfoContent } from '@/components/InfoContent';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
@@ -110,6 +111,8 @@ export default function EditDeckScreen() {
   const speechConfigured = Object.keys(speechLangs).length > 0;
 
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
+  // アーカイブの説明（常時表示をやめ、ⓘ タップでこの行の下にインライン展開する）
+  const [showArchiveInfo, setShowArchiveInfo] = useState(false);
   const language = (deck?.language as 'ja' | 'en') ?? 'ja';
   const [saving, setSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -157,6 +160,8 @@ export default function EditDeckScreen() {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (subModalOpen()) return; // モーダル側の Esc に委ねる
+        // 開いているインライン説明を先に閉じる（設定サブ画面の Esc と同じ流儀）
+        if (showArchiveInfo) { setShowArchiveInfo(false); return; }
         if (editingRef.current) { Keyboard.dismiss(); return; }
         handleClose();
       },
@@ -446,20 +451,32 @@ export default function EditDeckScreen() {
           </View>
 
           <View style={styles.field}>
-            <View style={[styles.archiveRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {/* 白枠（カード）の中に行＋インライン説明を収める（設定画面の card + syncInfoBox と同じ形） */}
+            <View style={[styles.archiveCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}>
+            <View style={styles.archiveRow}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t('deck.archive')}
                 </Text>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('deck.archiveHint')}
-                </Text>
+                <Pressable onPress={() => { Keyboard.dismiss(); setShowArchiveInfo((v) => !v); }} hitSlop={8} accessibilityLabel={t('deck.archiveInfoLabel')}>
+                  <Ionicons
+                    name={showArchiveInfo ? 'information-circle' : 'information-circle-outline'}
+                    size={Math.max(theme.fontSize.lg, 20)}
+                    color={theme.colors.textTertiary}
+                  />
+                </Pressable>
               </View>
               <AppSwitch
                 value={archived}
                 onValueChange={(v) => { Keyboard.dismiss(); setArchived(v); }}
                 thumbColor="#FFF"
               />
+            </View>
+            {showArchiveInfo && (
+              <View style={[styles.archiveInfoBox, { backgroundColor: theme.colors.background }]}>
+                <InfoContent text={t('deck.archiveHint')} />
+              </View>
+            )}
             </View>
           </View>
         </ScrollView>
@@ -517,7 +534,10 @@ export default function EditDeckScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { padding: 20, gap: 20 },
+  // 末尾の余白は「最下部のアーカイブ行で ⓘ を開いたとき、スクロールせずに説明が全部見える」ための
+  // 場所。最下部まで来ているとき説明（高さ H）は行と余白のあいだに入るので、余白 ≧ H なら
+  // その場に現れる（自動スクロール不要）。140 は文字サイズ「大」で折り返した説明でも収まる高さ。
+  container: { padding: 20, gap: 20, paddingBottom: 140 },
   field: { gap: 6 },
   label: { fontWeight: '600' },
   input: {
@@ -559,13 +579,22 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFF',
   },
-  archiveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  archiveCard: {
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  archiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  // ⓘ タップで開くインライン説明（設定サブ画面の syncInfoBox と同じ見せ方）
+  archiveInfoBox: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 8,
   },
 });

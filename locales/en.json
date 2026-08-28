@@ -10,7 +10,7 @@
     "sortDescName": "Sorted by deck name",
     "sortDescCardCount": "Most cards first",
     "deckListInfoLabel": "About deck list",
-    "deckListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit deck\n[Swipe]\n  Archive / Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study and Stats tabs."
+    "deckListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit deck\n[Swipe]\n  Archive / Delete\n※ Not available in {{menu}} mode when {{unlock}} unlocked\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study and Stats tabs."
   },
   "deck": {
     "new": "New Deck",
@@ -159,7 +159,7 @@
   "tag": {
     "tagListTitle": "Tags",
     "tagListInfoLabel": "About tag list",
-    "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study tab.",
+    "tagListInfoMessage": "[Tap]\n  Open card list\n  {{pencil}} Edit tag\n[Swipe]\n  Delete\n※ Not available in {{menu}} mode when {{unlock}} unlocked\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{name}} Name (A→Z)\n  {{count}} Card count\nOrder also applies to the Study tab.",
     "selectInfoLabel": "About select mode",
     "selectInfoMessage": "[Tap]\n  Select / deselect\n[Bottom buttons]\n  {{selectAll}} Select all / none\n  {{palette}} Change color\n  {{trash}} Delete\n[Long-press drag]\n  Reorder together\n※ Reordering needs {{menu}} mode and {{unlock}} unlocked",
     "cardListTitle": "Tag Card List",
@@ -221,7 +221,7 @@
     "archivedPill": "Archived",
     "unarchivedPill": "Unarchived",
     "listInfoLabel": "About card list",
-    "listInfoMessage": "[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Swipe]\n  Left: Archive / Delete\n  Right: Study from here\n※ Not available in {{menu}} mode (works while {{lock}} locked)\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\n※ Only when \"All\" is shown",
+    "listInfoMessage": "[Tap]\n  Open editor\n  {{analytics}} Card stats (Pro)\n[Swipe]\n  Left: Archive / Delete\n  Right: Study from here\n※ Not available in {{menu}} mode when {{unlock}} unlocked\n[Start study]\n  Open study screen\nOnly review-due cards (including relearning) update your study history.\n\n[Reorder mode]\n  {{menu}} Long-press drag\n  {{newest}} Newest first\n  {{oldest}} Oldest first\n※ Only when \"All\" is shown",
     "reorderHintMessage": "To reorder cards, set the filter to \"All\", switch to {{menu}} mode, then long-press a card and drag.",
     "sortDescNewest": "Newest first",
     "sortDescOldest": "Oldest first",

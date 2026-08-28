@@ -10,7 +10,7 @@
     "sortDescName": "Ordenado por nombre",
     "sortDescCardCount": "Más tarjetas primero",
     "deckListInfoLabel": "Sobre la lista de mazos",
-    "deckListInfoMessage": "[Tocar]\n  Abrir la lista de tarjetas\n  {{pencil}} Editar mazo\n[Deslizar]\n  Archivar / Eliminar\n※ No disponible en el modo {{menu}} (sí mientras esté {{lock}} bloqueado)\n\n[Modo de orden]\n  {{menu}} Mantener pulsado y arrastrar\n  {{name}} Nombre (A→Z)\n  {{count}} Número de tarjetas\nEl orden también se aplica a las pestañas Estudio y Estadísticas."
+    "deckListInfoMessage": "[Tocar]\n  Abrir la lista de tarjetas\n  {{pencil}} Editar mazo\n[Deslizar]\n  Archivar / Eliminar\n※ No disponible en el modo {{menu}} con {{unlock}} desbloqueado\n\n[Modo de orden]\n  {{menu}} Mantener pulsado y arrastrar\n  {{name}} Nombre (A→Z)\n  {{count}} Número de tarjetas\nEl orden también se aplica a las pestañas Estudio y Estadísticas."
   },
   "deck": {
     "new": "Nuevo mazo",
@@ -160,7 +160,7 @@
   "tag": {
     "tagListTitle": "Etiquetas",
     "tagListInfoLabel": "Sobre la lista de etiquetas",
-    "tagListInfoMessage": "[Tocar]\n  Abrir la lista de tarjetas\n  {{pencil}} Editar etiqueta\n[Deslizar]\n  Eliminar\n※ No disponible en el modo {{menu}} (sí mientras esté {{lock}} bloqueado)\n\n[Modo de orden]\n  {{menu}} Mantener pulsado y arrastrar\n  {{name}} Nombre (A→Z)\n  {{count}} Número de tarjetas\nEl orden también se aplica a la pestaña Estudio.",
+    "tagListInfoMessage": "[Tocar]\n  Abrir la lista de tarjetas\n  {{pencil}} Editar etiqueta\n[Deslizar]\n  Eliminar\n※ No disponible en el modo {{menu}} con {{unlock}} desbloqueado\n\n[Modo de orden]\n  {{menu}} Mantener pulsado y arrastrar\n  {{name}} Nombre (A→Z)\n  {{count}} Número de tarjetas\nEl orden también se aplica a la pestaña Estudio.",
     "selectInfoLabel": "Sobre el modo de selección",
     "selectInfoMessage": "[Tocar]\n  Seleccionar o quitar\n[Botones de abajo]\n  {{selectAll}} Seleccionar todo o nada\n  {{palette}} Cambiar el color\n  {{trash}} Eliminar\n[Mantener pulsado y arrastrar]\n  Reordenar juntas\n※ Reordenar requiere el modo {{menu}} y {{unlock}} desbloqueado",
     "cardListTitle": "Tarjetas de la etiqueta",
@@ -223,7 +223,7 @@
     "archivedPill": "Archivada",
     "unarchivedPill": "Desarchivada",
     "listInfoLabel": "Sobre la lista de tarjetas",
-    "listInfoMessage": "[Tocar]\n  Abrir el editor\n  {{analytics}} Estadísticas de la tarjeta (Pro)\n[Deslizar]\n  Izquierda: Archivar / Eliminar\n  Derecha: Estudiar desde aquí\n※ No disponible en el modo {{menu}} (sí mientras esté {{lock}} bloqueado)\n[Empezar a estudiar]\n  Abrir la pantalla de estudio\nSolo las tarjetas que toca repasar (incluidas las de reaprendizaje) actualizan el historial.\n\n[Modo de orden]\n  {{menu}} Mantener pulsado y arrastrar\n  {{newest}} Más recientes primero\n  {{oldest}} Más antiguas primero\n※ Solo cuando se muestra «Todo»",
+    "listInfoMessage": "[Tocar]\n  Abrir el editor\n  {{analytics}} Estadísticas de la tarjeta (Pro)\n[Deslizar]\n  Izquierda: Archivar / Eliminar\n  Derecha: Estudiar desde aquí\n※ No disponible en el modo {{menu}} con {{unlock}} desbloqueado\n[Empezar a estudiar]\n  Abrir la pantalla de estudio\nSolo las tarjetas que toca repasar (incluidas las de reaprendizaje) actualizan el historial.\n\n[Modo de orden]\n  {{menu}} Mantener pulsado y arrastrar\n  {{newest}} Más recientes primero\n  {{oldest}} Más antiguas primero\n※ Solo cuando se muestra «Todo»",
     "reorderHintMessage": "Para reordenar las tarjetas, pon el filtro en «Todo», cambia al modo {{menu}} y luego mantén pulsada una tarjeta y arrástrala.",
     "sortDescNewest": "Más recientes primero",
     "sortDescOldest": "Más antiguas primero",

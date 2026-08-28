@@ -1300,8 +1300,7 @@ export default function StudySessionScreen() {
                   <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.xl, fontWeight: "700" }}>
                     {studyGoalCount - goalProgress}
                   </Text>
-                  {t("study.goalRemainingUnit")}{" "}
-                  {t("study.goalProgressOf", { done: goalProgress, goal: studyGoalCount })}
+                  {t("study.goalRemainingUnit")}
                 </Text>
               )}
             </View>

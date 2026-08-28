@@ -400,6 +400,9 @@ export default function SearchScreen() {
   const [deckPickerVisible, setDeckPickerVisible] = useState(false);
   const [tagPickerVisible, setTagPickerVisible] = useState(false);
   const [showSearchInfo, setShowSearchInfo] = useState(false);
+  // ⓘ は「検索の説明（タイトル行）」と「検索結果の説明（件数行）」で中身が違う。
+  // 閉じるフェード中に入れ替わらないよう、開いた瞬間の対象を保持する。
+  const infoIsResultsRef = useRef(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [statsCardId, setStatsCardId] = useState<string | null>(null);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
@@ -662,7 +665,7 @@ export default function SearchScreen() {
           >
             {t('card.searchTitle')}
           </Text>
-          <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setShowSearchInfo(true); }} hitSlop={8} accessibilityLabel={t('card.searchInfoLabel')}>
+          <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); infoIsResultsRef.current = false; setShowSearchInfo(true); }} hitSlop={8} accessibilityLabel={t('card.searchInfoLabel')}>
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
           </Pressable>
         </View>
@@ -857,16 +860,26 @@ export default function SearchScreen() {
         </View>
       )}
 
-      {/* 件数（スクロールしても常に見えるようリスト外に固定表示） */}
+      {/* 見出し＋件数（スクロールしても常に見えるようリスト外に固定表示）。
+          0件のときは「一致するカードはありません」が出るのでこの行ごと出さない。 */}
       {searched && results.length > 0 && (
-        <Text
-          style={[styles.resultCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-        >
-          {results.length >= resultLimit
-            ? t('card.searchResultCountMax', { count: resultLimit })
-            : t('card.searchResultCount', { count: results.length })}
-        </Text>
+        <View style={styles.resultCountRow}>
+          <Text
+            style={[styles.resultCount, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, flexShrink: 1 }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          >
+            {results.length >= resultLimit
+              ? t('card.searchResultCountMax', { count: resultLimit })
+              : t('card.searchResultCount', { count: results.length })}
+          </Text>
+          <Pressable
+            onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); infoIsResultsRef.current = true; setShowSearchInfo(true); }}
+            hitSlop={8}
+            accessibilityLabel={t('card.searchResultsInfoLabel')}
+          >
+            <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
+          </Pressable>
+        </View>
       )}
 
       </Pressable>
@@ -1006,8 +1019,8 @@ export default function SearchScreen() {
 
       <InfoModal
         visible={showSearchInfo}
-        title={t('card.searchTitle')}
-        message={<InfoContent text={t('card.searchInfoMessage')} />}
+        title={infoIsResultsRef.current ? t('card.searchResults') : t('card.searchTitle')}
+        message={<InfoContent text={t(infoIsResultsRef.current ? 'card.searchResultsInfoMessage' : 'card.searchInfoMessage')} />}
         onClose={() => setShowSearchInfo(false)}
       />
 
@@ -1124,7 +1137,8 @@ const styles = StyleSheet.create({
     ...SHADOW.subtle,
   },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  resultCount: { marginHorizontal: 16, marginTop: 8, marginBottom: 8 },
+  resultCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 16, marginTop: 8, marginBottom: 8 },
+  resultCount: {},
   resultText: { flex: 1, gap: 2 },
   preview: { fontWeight: '500' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },

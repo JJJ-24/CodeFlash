@@ -37,6 +37,7 @@ const COUNT_INVARIANT = new Set([
   // 名詞を伴わない・括弧つきなど、単数でも自然な形
   'tag.selectedCount',              // "{{count}} selected"
   'card.selectedCount',             // "{{count}} sel."
+  'card.searchResultCount',         // "Results ({{count}})"（見出し＋括弧内が数字だけ）
   'card.searchResultCountMax',      // "{{count}}+ results"（上限表示なので常に複数）
   'study.goalRowRemaining',         // "{{count}} to go"
   'stats.gradeCount',               // "×{{count}}"

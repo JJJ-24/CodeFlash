@@ -205,18 +205,15 @@ function RootStack() {
 function SyncNoticeBanner({ isDark }: { isDark: boolean }) {
   const { t } = useTranslation();
   const noticeId = useSyncStore((s) => s.noticeId);
+  // 種別と内容は**ストアから直接読む**（state に写さない）。理由は下の副作用のコメント参照。
+  const kind = useSyncStore((s) => s.noticeKind);
+  const code = useSyncStore((s) => s.noticeCode);
   const [visible, setVisible] = useState(false);
-  const [text, setText] = useState('');
-  const [kind, setKind] = useState<'error' | 'info'>('info');
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // noticeId が変化した瞬間に表示（同じ内容でも showNotice のたびに id が進むので再点灯する）。
     if (noticeId === 0) return; // 初期状態（まだ何も通知していない）
-    const { noticeKind, noticeCode } = useSyncStore.getState();
-    if (!noticeKind || !noticeCode) return;
-    setKind(noticeKind);
-    setText(syncNoticeText(noticeCode, t));
     setVisible(true);
     Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
     const timer = setTimeout(() => {
@@ -227,9 +224,16 @@ function SyncNoticeBanner({ isDark }: { isDark: boolean }) {
       );
     }, 4000);
     return () => clearTimeout(timer);
-  }, [noticeId, t, opacity]);
+  }, [noticeId, opacity]);
+  // ⚠️ **依存は `noticeId` だけにすること（`t` を入れない）**。`useTranslation` の `t` は
+  // **言語を変えると別の関数になる**ので、依存に入れると「表示言語を変えるたびに前回の通知が
+  // 再点灯する」（実際に「オフラインです…」が言語変更のたびに出た）。表示のきっかけは
+  // 「新しい通知が来たとき」＝`noticeId` の変化だけであるべき。
+  // そのため本文は state に写さず**描画時に組み立てる**＝`t` を副作用から追い出せるうえ、
+  // 表示中に言語を変えれば文言も追従する。
 
-  if (!visible) return null;
+  if (!visible || !kind || !code) return null;
+  const text = syncNoticeText(code, t);
   const backgroundColor =
     kind === 'error'
       ? isDark ? '#5C1A16' : '#B3261E'

@@ -1,0 +1,62 @@
+diff --git a/node_modules/@react-native-community/slider/ios/RNCSliderComponentView.mm b/node_modules/@react-native-community/slider/ios/RNCSliderComponentView.mm
+index 928c532..51f56d2 100644
+--- a/node_modules/@react-native-community/slider/ios/RNCSliderComponentView.mm
++++ b/node_modules/@react-native-community/slider/ios/RNCSliderComponentView.mm
+@@ -164,23 +164,37 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
+     const auto &oldScreenProps = *std::static_pointer_cast<const RNCSliderProps>(_props);
+     const auto &newScreenProps = *std::static_pointer_cast<const RNCSliderProps>(props);
+ 
+-    if (oldScreenProps.value != newScreenProps.value) {
+-        if (!slider.isSliding) {
+-            slider.value = newScreenProps.value;
+-        }
++    // PATCH: minimumValue / maximumValue / step / value は**差分で弾かず毎回適用**し、
++    // かつ value より**先に** min/max/step を入れる。
++    //
++    // Fabric はアンマウントしたビューをプールに戻して再利用する。そのとき `_props` だけが
++    // defaultProps（min=0 / max=1 / step=0 / value=0）に戻り、ネイティブの UISlider は
++    // **前に使われたときの min/max/step/value を保持したまま**になる。この関数は
++    // `_props`（＝再利用後は defaultProps）と比較して適用を決めるので、
++    // **新しい値が default と同値だと適用がスキップされ、前回の状態が残る**。
++    // 例：min=1 のスライダーを閉じたあと min=0 のスライダーを開くと min が適用されず、
++    // value=0 が古い min=1 でクランプされて「左端のはずのつまみが一目盛ずれる」。
++    // 差分で弾く価値のある処理でもない（float の代入だけ）ので、素直に毎回入れる。
++    //
++    // ⚠️ min と max は**交差しない順序**で入れること。UIKit は min > max になる代入を受けると
++    // もう片方を巻き添えで書き換えるため、順序を固定すると範囲を大きく変えたときに壊れる。
++    if (newScreenProps.maximumValue < slider.minimumValue) {
++        [slider setMinimumValue:newScreenProps.minimumValue];
++        [slider setMaximumValue:newScreenProps.maximumValue];
++    } else {
++        [slider setMaximumValue:newScreenProps.maximumValue];
++        [slider setMinimumValue:newScreenProps.minimumValue];
++    }
++    slider.step = newScreenProps.step;
++    if (!slider.isSliding) {
++        slider.value = newScreenProps.value;
+     }
+     if (oldScreenProps.disabled != newScreenProps.disabled) {
+         [slider setDisabled: newScreenProps.disabled];
+     }
+-    if (oldScreenProps.step != newScreenProps.step) {
+-        slider.step = newScreenProps.step;
+-    }
+     if (oldScreenProps.inverted != newScreenProps.inverted) {
+         [self setInverted:newScreenProps.inverted];
+     }
+-    if (oldScreenProps.maximumValue != newScreenProps.maximumValue) {
+-        [slider setMaximumValue:newScreenProps.maximumValue];
+-    }
+     if (slider.lowerLimit != newScreenProps.lowerLimit) {
+         if(newScreenProps.lowerLimit > slider.upperLimit){
+             NSLog(@"Invalid configuration: upperLimit < lowerLimit; lowerLimit not set");
+@@ -198,9 +212,6 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
+     if (oldScreenProps.tapToSeek != newScreenProps.tapToSeek) {
+         slider.tapToSeek = newScreenProps.tapToSeek;
+     }
+-    if (oldScreenProps.minimumValue != newScreenProps.minimumValue) {
+-        [slider setMinimumValue:newScreenProps.minimumValue];
+-    }
+     if (oldScreenProps.thumbTintColor != newScreenProps.thumbTintColor) {
+         slider.thumbTintColor = RCTUIColorFromSharedColor(newScreenProps.thumbTintColor);
+     }

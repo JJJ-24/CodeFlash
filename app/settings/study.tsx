@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
@@ -12,6 +11,7 @@ import { InfoContent } from '@/components/InfoContent';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import { SpeechVoiceModal } from '@/components/settings/SpeechVoiceModal';
+import { ValueSliderModal } from '@/components/settings/ValueSliderModal';
 import {
   CONFIGURABLE_SCRIPTS,
   getConfigurableScriptLanguages,
@@ -258,6 +258,89 @@ export default function StudySettingsScreen() {
     />
   );
 
+  // ---- スライダーはダイアログで調整する（ページ上には置かない） ----------------
+  //
+  // iOS の `UIScrollView` は `touchesShouldCancelInContentView:` が **`UIControl` に対して
+  // NO を返す**（`UIButton` だけが例外）。`UISlider` は `UIControl` なので、**スライダーの上で
+  // 始まったタッチはスクロールに横取りされない**＝スクロールする面にスライダーがある限り、
+  // 上下スワイプで値が変わる事故は原理的に避けられない（RN の props では変えられない）。
+  // セクションの折りたたみ（938bcc6）は露出を減らしただけで、開いている間はまだ起きていた。
+  // そこで**値の行だけをページに置き、調整は `ValueSliderModal`（スクロールしない面）で行う**。
+  // 副次的に、1本あたり約70pt あったブロックが約30pt の行になり画面も大幅に短くなる。
+  // ⚠️ **プリセットのセグメント（FSRS の 長期/標準/試験前・速度の 遅い/標準/速い）は
+  // ページに残す**＝タップなのでスクロールと競合せず、「よく使う値はワンタップ／細かい調整は
+  // ダイアログ」という切り分けになる。
+  type SliderKey = 'goalCount' | 'speechRate' | 'retention' | 'timerMinutes' | 'cycles' | 'breakMinutes';
+  const [sliderModal, setSliderModal] = useState<SliderKey | null>(null);
+
+  /** ダイアログの中身（開いているキーで決まる）。⚠️ 書式は行と同じ関数を使い回す。 */
+  const sliderConfig = (() => {
+    switch (sliderModal) {
+      case 'goalCount': return {
+        title: t('settings.studyGoalCount'),
+        // ⚠️ 上限を超える保存値（インポート等で 999 まで入りうる）はスライダーの上限で頭打ちにする。
+        value: Math.min(studyGoalCount, STUDY_GOAL_SLIDER_MAX),
+        min: STUDY_GOAL_COUNT_MIN, max: STUDY_GOAL_SLIDER_MAX, step: 1,
+        format: (v: number) => t('settings.studyGoalCountValue', { count: v }),
+        onChange: handleGoalCountChange,
+      };
+      case 'speechRate': return {
+        title: t('settings.speechRate'),
+        value: speechRate,
+        min: SPEECH_RATE_MIN, max: SPEECH_RATE_MAX, step: SPEECH_RATE_STEP,
+        format: (v: number) => t('settings.speechRateValue', { rate: v.toFixed(2) }),
+        onChange: (v: number) => setSpeechRate(clampSpeechRate(v)),
+      };
+      case 'retention': return {
+        title: t('settings.fsrsRetention'),
+        value: fsrsDesiredRetention,
+        min: FSRS_RETENTION_MIN, max: FSRS_RETENTION_MAX, step: 0.01,
+        format: (v: number) => `${Math.round(v * 100)}%`,
+        onChange: handleFsrsRetentionChange,
+      };
+      case 'timerMinutes': return {
+        title: t('settings.studyTimerMinutes'),
+        value: studyTimerMinutes,
+        min: STUDY_TIMER_MINUTES_MIN, max: STUDY_TIMER_MINUTES_MAX, step: 1,
+        format: (v: number) => t('settings.studyTimerMinutesValue', { n: v }),
+        onChange: setStudyTimerMinutes,
+      };
+      case 'cycles': return {
+        title: t('settings.studyTimerCycles'),
+        value: studyTimerCycles,
+        min: STUDY_TIMER_CYCLES_MIN, max: STUDY_TIMER_CYCLES_MAX, step: 1,
+        format: (v: number) => t('settings.studyTimerCyclesValue', { n: v }),
+        onChange: handleCyclesChange,
+      };
+      case 'breakMinutes': return {
+        title: t('settings.studyTimerBreakMinutes'),
+        value: studyTimerBreakMinutes,
+        min: STUDY_TIMER_BREAK_MINUTES_MIN, max: STUDY_TIMER_BREAK_MINUTES_MAX, step: 1,
+        format: (v: number) => (v === 0 ? t('settings.studyTimerBreakNone') : t('settings.studyTimerMinutesValue', { n: v })),
+        onChange: setStudyTimerBreakMinutes,
+      };
+      default: return null;
+    }
+  })();
+
+  /** スライダーを開く値の行。**ラベル＋値＋シェブロン**で、行のどこをタップしても開く。
+   *  ⚠️ ⓘ つきのラベルは Pressable を入れ子にする＝内側が先にタッチを取るので
+   *  「ⓘ＝説明／それ以外＝調整」が両立する（声の行の ▶ と同じ流儀）。 */
+  const sliderRow = (key: SliderKey, label: ReactNode, valueText: string) => (
+    <Pressable
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+      onPress={() => setSliderModal(key)}
+    >
+      {label}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {valueText}
+        </Text>
+        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+      </View>
+    </Pressable>
+  );
+
   // 1日の目標枚数（046）。タイマー＝時間で区切る／こちら＝量で区切る、という対の関係。
   // **1日単位**なので、複数セッションに分けても今日の累計で判定する。
   // **無料機能**なので Pro ロック時の画面にも出す＝JSX を変数に切り出して両方の分岐から描画する
@@ -289,27 +372,14 @@ export default function StudySettingsScreen() {
 
         {studyGoalEnabled && (
           <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('settings.studyGoalCount')}
-              </Text>
-              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {t('settings.studyGoalCountValue', { count: studyGoalCount })}
-              </Text>
-            </View>
             {/* スライダーは実用域（1〜100枚）だけを覆う。100 超は上限 999 まで設定値としては
                 保持できるが、スライダーでは 100 で頭打ちになる（それ以上は刻みが粗くなり
                 かえって合わせにくいため）。 */}
-            <Slider
-              minimumValue={STUDY_GOAL_COUNT_MIN}
-              maximumValue={STUDY_GOAL_SLIDER_MAX}
-              step={1}
-              value={Math.min(studyGoalCount, STUDY_GOAL_SLIDER_MAX)}
-              onValueChange={handleGoalCountChange}
-              minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor={theme.colors.iconSubtle}
-              thumbTintColor={theme.colors.primary}
-            />
+            {sliderRow('goalCount', (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.studyGoalCount')}
+              </Text>
+            ), t('settings.studyGoalCountValue', { count: studyGoalCount }))}
 
             {/* 達成時の動作。タイマーの「終了時の動作」（alert/blink）と同じセグメント。
                 **「なし」でも学習画面の残り枚数バッジは出る**ので、オンに見えて何も無い
@@ -545,25 +615,23 @@ export default function StudySettingsScreen() {
 
         {speechEnabled && (
           <>
-            {/* 速度＝3択のプリセット＋スライダー（FSRS の保持率と同じ形）。
-                タップで決まる3つで足りる人はそれだけ、詰めたい人はスライダーで 0.05 刻み。
+            {/* 速度＝3択のプリセット＋値の行（FSRS の保持率と同じ形）。タップで決まる3つで
+                足りる人はそれだけ、詰めたい人は値の行から 0.05 刻みのスライダーを開く。
                 ⚠️ **▶ の試聴はここでは省略できない**＝保持率の「90%」と違って速度は
                 聞かないと分からず、その場で確かめられないとスライダーを詰められない
                 （声のピッカーまで開きに行く往復になる）。 */}
             <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {sliderRow('speechRate', (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('settings.speechRate')}
                   </Text>
+                  {/* ▶ は行の内側の Pressable＝試聴が先に取る（行タップはダイアログ）。 */}
                   <Pressable onPress={previewSpeechRate} hitSlop={8} accessibilityLabel={t('settings.speechVoicePreview')}>
                     <Ionicons name="play-circle-outline" size={Math.max(theme.fontSize.lg, 22)} color={theme.colors.primary} />
                   </Pressable>
                 </View>
-                <Text style={[styles.fsrsRetentionValue, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('settings.speechRateValue', { rate: speechRate.toFixed(2) })}
-                </Text>
-              </View>
+              ), t('settings.speechRateValue', { rate: speechRate.toFixed(2) }))}
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {SPEECH_RATE_PRESETS.map((r, i) => {
                   const active = r === speechRate;
@@ -587,24 +655,6 @@ export default function StudySettingsScreen() {
                     </Pressable>
                   );
                 })}
-              </View>
-              <Slider
-                minimumValue={SPEECH_RATE_MIN}
-                maximumValue={SPEECH_RATE_MAX}
-                step={SPEECH_RATE_STEP}
-                value={speechRate}
-                onValueChange={(v) => setSpeechRate(clampSpeechRate(v))}
-                minimumTrackTintColor={theme.colors.primary}
-                maximumTrackTintColor={theme.colors.iconSubtle}
-                thumbTintColor={theme.colors.primary}
-              />
-              <View style={styles.fsrsRetentionScale}>
-                <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                  {t('settings.speechRateValue', { rate: SPEECH_RATE_MIN.toFixed(2) })}
-                </Text>
-                <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                  {t('settings.speechRateValue', { rate: SPEECH_RATE_MAX.toFixed(2) })}
-                </Text>
               </View>
             </View>
 
@@ -656,6 +706,22 @@ export default function StudySettingsScreen() {
     />
   );
 
+  /** 数値スライダーのダイアログ。⚠️ **開いているときだけマウントする**＝閉じると config が
+   *  null になるので、常時マウントだと閉じた瞬間に中身が空のダイアログを描くことになる。 */
+  const sliderModalEl = sliderConfig && (
+    <ValueSliderModal
+      visible
+      title={sliderConfig.title}
+      value={sliderConfig.value}
+      min={sliderConfig.min}
+      max={sliderConfig.max}
+      step={sliderConfig.step}
+      format={sliderConfig.format}
+      onChange={sliderConfig.onChange}
+      onClose={() => setSliderModal(null)}
+    />
+  );
+
   const speechLangModalScript = speechLangModal ?? 'latin';
   const speechLangModalEl = (
     <SpeechLanguageModal
@@ -675,7 +741,7 @@ export default function StudySettingsScreen() {
         title={t('settings.studySettings')}
         // 読み上げの言語/声のモーダルは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
         // （両方が登録すると Esc でモーダルが閉じると同時に画面まで戻る）
-        suspendKeys={speechLangModal !== null || speechVoiceModal !== null}
+        suspendKeys={speechLangModal !== null || speechVoiceModal !== null || sliderModal !== null}
         // 非 Pro でも目標枚数・読み上げ（ともに無料）の i アイコンが開けるので、
         // Pro 側と同じく「開いている説明があれば先に閉じる」を渡す
         onBack={(direct) => {
@@ -711,6 +777,7 @@ export default function StudySettingsScreen() {
         {goalConflictModal}
         {speechLangModalEl}
         {speechVoiceModalEl}
+        {sliderModalEl}
       </SettingsDetail>
     );
   }
@@ -719,7 +786,7 @@ export default function StudySettingsScreen() {
     <SettingsDetail
       title={t('settings.studySettings')}
       // 上（非 Pro 分岐）と同じ理由でモーダル表示中はキーを手放す
-      suspendKeys={speechLangModal !== null || speechVoiceModal !== null}
+      suspendKeys={speechLangModal !== null || speechVoiceModal !== null || sliderModal !== null}
       onBack={(direct) => {
         if (!direct && goalConflict) { dismissGoalConflict(); return; }
         if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
@@ -767,39 +834,18 @@ export default function StudySettingsScreen() {
 
         {/* 目標保持率 */}
         <View style={{ gap: 6 }}>
-          <View style={styles.fsrsRetentionHeader}>
+          {sliderRow('retention', (
             <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
               onPress={() => toggleInfo('retention')}
               hitSlop={6}
             >
-              <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.fsrsRetention')}
               </Text>
               {infoIcon('retention')}
             </Pressable>
-            <Text style={[styles.fsrsRetentionValue, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {Math.round(fsrsDesiredRetention * 100)}%
-            </Text>
-          </View>
-          <Slider
-            minimumValue={FSRS_RETENTION_MIN}
-            maximumValue={FSRS_RETENTION_MAX}
-            step={0.01}
-            value={fsrsDesiredRetention}
-            onValueChange={handleFsrsRetentionChange}
-            minimumTrackTintColor={theme.colors.primary}
-            maximumTrackTintColor={theme.colors.iconSubtle}
-            thumbTintColor={theme.colors.primary}
-          />
-          <View style={styles.fsrsRetentionScale}>
-            <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {Math.round(FSRS_RETENTION_MIN * 100)}%
-            </Text>
-            <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-              {Math.round(FSRS_RETENTION_MAX * 100)}%
-            </Text>
-          </View>
+          ), `${Math.round(fsrsDesiredRetention * 100)}%`)}
           {infoBox('retention', 'settings.fsrsRetentionInfo')}
         </View>
         </>)}
@@ -837,79 +883,38 @@ export default function StudySettingsScreen() {
                 （スペイン語の「休憩」＝`Duración del descanso` で実際に起きた）。ⓘ つきのラベルは
                 Pressable ごと縮ませないと中の Text が折り返せない。 */}
             {/* 時間（1〜60分） */}
-            <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {t('settings.studyTimerMinutes')}
-                </Text>
-                <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('settings.studyTimerMinutesValue', { n: studyTimerMinutes })}
-                </Text>
-              </View>
-              <Slider
-                minimumValue={STUDY_TIMER_MINUTES_MIN}
-                maximumValue={STUDY_TIMER_MINUTES_MAX}
-                step={1}
-                value={studyTimerMinutes}
-                onValueChange={setStudyTimerMinutes}
-                minimumTrackTintColor={theme.colors.primary}
-                maximumTrackTintColor={theme.colors.iconSubtle}
-                thumbTintColor={theme.colors.primary}
-              />
-            </View>
+            {sliderRow('timerMinutes', (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('settings.studyTimerMinutes')}
+              </Text>
+            ), t('settings.studyTimerMinutesValue', { n: studyTimerMinutes }))}
 
             {/* 繰り返し回数（039 ポモドーロ・1〜12回。1回＝従来の単発タイマー） */}
             <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              {sliderRow('cycles', (
                 <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }} onPress={() => toggleInfo('cycles')} hitSlop={6}>
                   <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('settings.studyTimerCycles')}
                   </Text>
                   {infoIcon('cycles')}
                 </Pressable>
-                <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('settings.studyTimerCyclesValue', { n: studyTimerCycles })}
-                </Text>
-              </View>
-              <Slider
-                minimumValue={STUDY_TIMER_CYCLES_MIN}
-                maximumValue={STUDY_TIMER_CYCLES_MAX}
-                step={1}
-                value={studyTimerCycles}
-                onValueChange={handleCyclesChange}
-                minimumTrackTintColor={theme.colors.primary}
-                maximumTrackTintColor={theme.colors.iconSubtle}
-                thumbTintColor={theme.colors.primary}
-              />
+              ), t('settings.studyTimerCyclesValue', { n: studyTimerCycles }))}
               {infoBox('cycles', 'settings.studyTimerCyclesInfo')}
             </View>
 
             {/* 休憩時間（1〜30分）＋通知注記。繰り返し2回以上のときだけ意味を持つ */}
             {studyTimerCycles >= 2 && (
               <View style={{ gap: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                {sliderRow('breakMinutes', (
                   <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }} onPress={() => toggleInfo('break')} hitSlop={6}>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {t('settings.studyTimerBreakMinutes')}
                     </Text>
                     {infoIcon('break')}
                   </Pressable>
-                  <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.lg, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {studyTimerBreakMinutes === 0
-                      ? t('settings.studyTimerBreakNone')
-                      : t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes })}
-                  </Text>
-                </View>
-                <Slider
-                  minimumValue={STUDY_TIMER_BREAK_MINUTES_MIN}
-                  maximumValue={STUDY_TIMER_BREAK_MINUTES_MAX}
-                  step={1}
-                  value={studyTimerBreakMinutes}
-                  onValueChange={setStudyTimerBreakMinutes}
-                  minimumTrackTintColor={theme.colors.primary}
-                  maximumTrackTintColor={theme.colors.iconSubtle}
-                  thumbTintColor={theme.colors.primary}
-                />
+                ), studyTimerBreakMinutes === 0
+                  ? t('settings.studyTimerBreakNone')
+                  : t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes }))}
                 {infoBox('break', 'settings.studyTimerBreakNotice')}
               </View>
             )}
@@ -1022,6 +1027,7 @@ export default function StudySettingsScreen() {
       {goalConflictModal}
       {speechLangModalEl}
       {speechVoiceModalEl}
+      {sliderModalEl}
     </SettingsDetail>
   );
 }

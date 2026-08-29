@@ -382,6 +382,7 @@ react-native-gesture-handler (RNGH) v2 と react-native-reanimated を組み合�
 - `tsconfig.json`: strictモード、`@/*` がリポジトリルートに対応
 - VSCode: 保存時に ESLint 自動修正とインポート整理が実行される
 - `patch-package`: `postinstall` フックで自動適用。`patches/` 配下に差分ファイルを置く
+- **`patches/@react-native-community+slider+5.0.1.patch` は必須（重要）**：Fabric 実装の `updateProps` が `_props`（**ビュー再利用時に defaultProps へ戻る**）と比較して適用を決めるため、**新しい値が既定と同じだと適用がスキップされ、前に使われたときの min/max/step/value がネイティブ側に残る**。さらに `value` を min/max より**先に**入れるので、古い min でクランプされる。症状は「範囲の違うスライダーを続けて開くと、左端（min）のはずのつまみが一目盛ずれる」（`ValueSliderModal` は6つの設定で1つのダイアログを使い回す＝まさにこの条件）。パッチは min/max/step を毎回・value より先に適用する（min と max は交差しない順序で入れる＝UIKit は min>max の代入で片方を巻き添えに書き換えるため）。**ライブラリを上げたらこのパッチの当たり直しを確認する**。ネイティブ側の変更なので反映には dev client の再ビルドが必要
 - `package.json` の `expo.install.exclude`: Expo SDK のピンと**意図的に**バージョンを変えている依存を宣言する場所（現在は `react-native-webview`＝SDK 54 のピンは 13.15.0 だが、New Architecture のクラッシュ修正が入った **13.16.1 以上が必須**なため上げてある）。ここに入れると `expo start` / `expo-doctor` / `expo install --check` の「should be updated」警告から外れる。**バージョンを下げ直さないこと**
 
 **技術スタック:** React Native 0.81 / React 19 / Expo 54 / expo-router 6 / expo-sqlite / Zustand 5 / i18next / ts-fsrs。アニメーションに react-native-reanimated、ジェスチャー操作に react-native-gesture-handler が利用可能。

@@ -72,20 +72,8 @@ export const settingsStyles = StyleSheet.create({
   },
   notificationLabel: { flex: 1 },
 
-  // FSRS
+  // FSRS（値の見出し・目盛りのスタイルは ValueSliderModal 側へ移ったので持たない）
   fsrsSubLabel: { fontWeight: '600' },
-  fsrsRetentionHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  fsrsRetentionValue: { fontWeight: '700' },
-  fsrsRetentionScale: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: -4,
-  },
-  fsrsScaleText: {},
 
   // 同期
   syncStatusRow: { paddingVertical: 4 },

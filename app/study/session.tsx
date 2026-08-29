@@ -1532,6 +1532,41 @@ export default function StudySessionScreen() {
         </View>
       </View>
     ) : null;
+
+  /** 049: 読み上げ FAB。下段（前後送り or 評価行）の真上・左端に浮かせる。
+   *  **カードの外側に兄弟として重ねる**ので反転抑止（FlipSuppressContext）は不要
+   *  ＝タップはカードに届かない（学習タイマーと同じ方式）。
+   *  通常モードと全画面モードで**同じ位置**（左下）に出す＝全画面のヘッダー右上に置いていたが、
+   *  画面が広いほど上端は指が届きにくく、モードで置き場所が変わるのも分かりにくいため。
+   *  `bottom` は下段の実測値（評価行）か ◀ の位置（前後送り）から呼び出し側が決める。 */
+  const renderSpeakFab = (bottom: number) => (
+    <Pressable
+      onPress={() => speech.toggle(speechText)}
+      style={[
+        styles.speakFab,
+        {
+          bottom,
+          // 再生中は丸に**薄い青の下地**を敷く（`+ '20'` ＝ デッキアイコン・アイコン選択と
+          // 同じアルファ付与の慣習）。アイコンの形（スピーカー ⇄ 停止）だけだと
+          // 鳴っているかが分かりにくいため。**青ベタにはしない**＝読み上げは補助機能で、
+          // カード本文や裏面の評価ボタンより目立つのは重要度の順序がおかしくなるため。
+          // アイコンを青にするのは、真下の ◀（グレー）と役割が違うことを待機中から示すため。
+          backgroundColor: speech.speaking ? theme.colors.primary + '20' : theme.cardTheme.background,
+          borderColor: theme.cardTheme.border,
+        },
+      ]}
+      hitSlop={8}
+      accessibilityLabel={t("study.speak")}
+    >
+      {/* 塗りつぶしのアイコン同士（スピーカー ⇄ 停止）で切り替える */}
+      <Ionicons
+        name={speech.speaking ? "stop" : "volume-high"}
+        size={24}
+        color={theme.colors.primary}
+      />
+    </Pressable>
+  );
+
   const hasMemo = currentCard.memoContent.some(
     (b: Block) =>
       (b.type !== "image" && "content" in b && b.content.trim() !== "") ||
@@ -1783,19 +1818,8 @@ export default function StudySessionScreen() {
                 操作ボタンの並び（右側）ではなく左側に置く＝押せる物ではないため。 */}
             {goalBadgeEl}
             <View style={{ flex: 1 }} />
-            {canSpeak && (
-              <Pressable
-                style={styles.fullscreenEditBtn}
-                onPress={() => speech.toggle(speechText)}
-                accessibilityLabel={t("study.speak")}
-              >
-                <Ionicons
-                  name={speech.speaking ? "stop-circle-outline" : "volume-high-outline"}
-                  size={Math.round(theme.fontSize.xl)}
-                  color={theme.colors.iconSubtle}
-                />
-              </Pressable>
-            )}
+            {/* 049: 読み上げはここ（ヘッダー右）ではなく**左下の FAB**に置く（通常モードと同じ位置）。
+                全画面ほど画面が広く上端は指が届きにくいうえ、モードで置き場所が変わると探すことになる。 */}
             <Pressable
               style={styles.fullscreenEditBtn}
               onPress={openCardEdit}
@@ -1853,6 +1877,9 @@ export default function StudySessionScreen() {
                       // 表面は下部左右隅のフローティングボタンが常に出るので、最下部の文字が
                       // 隠れないよう（ボタン高さ＋余白＋safe area 分）下に多めにスクロールできるようにする。
                       contentContainerStyle={[styles.fullscreenContent, timerContentPad && styles.fullscreenContentTimerPad, { paddingBottom: insets.bottom + 88 }, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
+                      // 読み上げ FAB は ◀ の真上に重なるので、そのぶんスクロール範囲を伸ばす（通常モードと同じ理由）
+                      contentInset={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
+                      scrollIndicatorInsets={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
@@ -1889,6 +1916,9 @@ export default function StudySessionScreen() {
                       ref={backScrollRef}
                       style={{ flex: 1 }}
                       contentContainerStyle={[styles.fullscreenContent, timerContentPad && styles.fullscreenContentTimerPad, kbHeight > 0 && { paddingBottom: kbHeight + 20 }]}
+                      // 読み上げ FAB のぶんスクロール範囲を伸ばす（通常モードと同じ理由）
+                      contentInset={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
+                      scrollIndicatorInsets={canSpeak ? { bottom: SPEAK_FAB_SCROLL_INSET } : undefined}
                       showsVerticalScrollIndicator={false}
                       keyboardShouldPersistTaps="handled"
                       bounces={false}
@@ -1971,7 +2001,11 @@ export default function StudySessionScreen() {
             />
           )}
 
-          {isFlipped && !browseMode && <View style={styles.bottom}>{gradeRow}</View>}
+          {isFlipped && !browseMode && (
+            <View style={styles.bottom} onLayout={(e) => setBottomBarHeight(e.nativeEvent.layout.height)}>
+              {gradeRow}
+            </View>
+          )}
 
           {/* 表面のみ：下部左右隅にフローティングの前後送りボタン（通常モードと同形状・配色）。
               閲覧モードは評価が無いので裏面でも前後送りを出したままにする。 */}
@@ -2007,6 +2041,13 @@ export default function StudySessionScreen() {
               </Pressable>
             </>
           )}
+
+          {/* 049: 読み上げ FAB。通常モードと同じ左下。前後送りが出ている面（表面／閲覧モード）は
+              その ◀（`insets.bottom + 16` の 56 丸）の真上、評価行が出ている面は実測値の真上に置く。 */}
+          {canSpeak &&
+            (!isFlipped || browseMode
+              ? renderSpeakFab(insets.bottom + 16 + SPEAK_FAB_SIZE + SPEAK_FAB_GAP)
+              : bottomBarHeight > 0 && renderSpeakFab(bottomBarHeight + SPEAK_FAB_GAP))}
 
           {renderGoalPill(GOAL_PILL_TOP_FULLSCREEN)}
         </View>
@@ -2355,36 +2396,8 @@ export default function StudySessionScreen() {
           />
         )}
 
-        {/* 049: 読み上げ FAB。下段の真上・左端に浮かせる（表面は ◀ の真上に縦に並ぶ）。
-            **カードの外側に兄弟として重ねる**ので反転抑止（FlipSuppressContext）は不要
-            ＝タップはカードに届かない（学習タイマーと同じ方式）。 */}
-        {canSpeak && bottomBarHeight > 0 && (
-          <Pressable
-            onPress={() => speech.toggle(speechText)}
-            style={[
-              styles.speakFab,
-              {
-                bottom: bottomBarHeight + SPEAK_FAB_GAP,
-                // 再生中は丸に**薄い青の下地**を敷く（`+ '20'` ＝ デッキアイコン・アイコン選択と
-                // 同じアルファ付与の慣習）。アイコンの形（スピーカー ⇄ 停止）だけだと
-                // 鳴っているかが分かりにくいため。**青ベタにはしない**＝読み上げは補助機能で、
-                // カード本文や裏面の評価ボタンより目立つのは重要度の順序がおかしくなるため。
-                // アイコンを青にするのは、真下の ◀（グレー）と役割が違うことを待機中から示すため。
-                backgroundColor: speech.speaking ? theme.colors.primary + '20' : theme.cardTheme.background,
-                borderColor: theme.cardTheme.border,
-              },
-            ]}
-            hitSlop={8}
-            accessibilityLabel={t("study.speak")}
-          >
-            {/* 塗りつぶしのアイコン同士（スピーカー ⇄ 停止）で切り替える */}
-            <Ionicons
-              name={speech.speaking ? "stop" : "volume-high"}
-              size={24}
-              color={theme.colors.primary}
-            />
-          </Pressable>
-        )}
+        {/* 049: 読み上げ FAB。下段の真上・左端に浮かせる（表面は ◀ の真上に縦に並ぶ） */}
+        {canSpeak && bottomBarHeight > 0 && renderSpeakFab(bottomBarHeight + SPEAK_FAB_GAP)}
 
         {/* ヒント or 自己評価ボタン（閲覧モードは評価が無いので常にヒント＋前後送り） */}
         <View style={styles.bottom} onLayout={(e) => setBottomBarHeight(e.nativeEvent.layout.height)}>

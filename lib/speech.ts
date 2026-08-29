@@ -644,22 +644,41 @@ export interface SpeechVoice {
 }
 
 /**
- * **奇抜な声**（macOS 由来のノベルティ音声）の identifier 末尾トークン。
+ * **ピッカーに出さない声**の identifier 末尾トークン。2種類ある。
  *
- * `Bad News` や `Zarvox` に単語を読ませる場面は学習アプリには無く、一覧が伸びるぶん邪魔になる
- * ので**ピッカーから外す**。⚠️ **`com.apple.speech.synthesis.voice.*` を接頭辞ごと弾かないこと**＝
- * 同じ場所に `Alex` のようなまっとうな高品質音声も入っているため、個別トークンで拒否する。
+ * ① **奇抜な声**（macOS 由来のノベルティ音声）。`Bad News` や `Zarvox` に単語を読ませる場面は
+ *    学習アプリには無く、一覧が伸びるぶん邪魔になる。
+ * ② **Eloquence**（`Eddy`〜`Shelley` の8声）。旧世代のフォルマント合成でかなり機械的なうえ、
+ *    **8声 × 対応言語ぶん**一覧が伸びる（英語のピッカーはこれだけで倍近くになる）。
+ *    ⚠️ 外すのは**アプリの一覧から**だけで、iOS の VoiceOver・画面読み上げには影響しない。
+ *    高速でも聞き取れる Eloquence を好んで使う人は OS 側でそのまま使えるので、奪うものが無い。
+ *
+ * ⚠️ **`com.apple.speech.synthesis.voice.*` を接頭辞ごと弾かないこと**＝同じ場所に `Alex` の
+ * ようなまっとうな高品質音声も入っているため、個別トークンで拒否する。
  * ⚠️ **表示名では弾かない**（端末の言語で訳されることがある。identifier は訳されない）。
  */
-const NOVELTY_VOICE_TOKENS = new Set([
+const EXCLUDED_VOICE_TOKENS = new Set([
+  // ① ノベルティ
   'albert', 'badnews', 'bahh', 'bells', 'boing', 'bubbles', 'cellos', 'deranged',
   'goodnews', 'hysterical', 'jester', 'organ', 'superstar', 'trinoids', 'whisper',
   'wobble', 'zarvox',
+  // ② Eloquence
+  'eddy', 'flo', 'grandma', 'grandpa', 'reed', 'rocko', 'sandy', 'shelley',
 ]);
 
-/** 奇抜な声か（ピッカーから外す判定）。⚠️ `Alex` のような同じ接頭辞のまともな声を巻き込まないこと。 */
-export const isNoveltyVoice = (identifier: string) =>
-  NOVELTY_VOICE_TOKENS.has(identifier.split('.').pop()?.toLowerCase() ?? '');
+/**
+ * ピッカーに出さない声か。
+ *
+ * ⚠️ **Eloquence は名前空間（`com.apple.eloquence.*`）でも弾く**＝そちらが本命で、
+ * **言語をまたいで全部**拾えるうえ Apple が声を足しても追随する。名前トークンとの併用は、
+ * identifier の形が端末や OS バージョンで違ったときの保険。
+ * ⚠️ 名前空間ごと弾いてよいのは Eloquence 専用の名前空間だからで、
+ * `com.apple.speech.synthesis.voice.*`（`Alex` が同居する）には同じことをしないこと。
+ */
+export const isExcludedVoice = (identifier: string) => {
+  const id = identifier.toLowerCase();
+  return id.includes('.eloquence.') || EXCLUDED_VOICE_TOKENS.has(id.split('.').pop() ?? '');
+};
 
 /**
  * 同時に走る `getAvailableVoicesAsync()` を1回にまとめる。
@@ -688,12 +707,12 @@ export function getCachedVoicesByLanguage(): Record<string, SpeechVoice[]> {
   return Object.fromEntries(lastVoicesByLang);
 }
 
-/** その言語で使える声の一覧（ピッカー用）。名前順で返す。**奇抜な声は除く**。 */
+/** その言語で使える声の一覧（ピッカー用）。名前順で返す。**除外する声は出さない**。 */
 export async function getVoicesForLanguage(language: string): Promise<SpeechVoice[]> {
   try {
     const voices = await loadVoices();
     const list = voices
-      .filter((v) => v.language === language && !isNoveltyVoice(v.identifier))
+      .filter((v) => v.language === language && !isExcludedVoice(v.identifier))
       .map((v) => ({
         identifier: v.identifier,
         name: v.name || v.identifier,
@@ -708,11 +727,17 @@ export async function getVoicesForLanguage(language: string): Promise<SpeechVoic
   }
 }
 
-/** 端末に実在する声の identifier 一式。`filterKnownVoices` に渡して検証に使う。 */
+/**
+ * **アプリが使ってよい声**の identifier 一式。`filterKnownVoices` に渡して検証に使う。
+ *
+ * ⚠️ **ピッカーと同じ除外を掛ける**（`isExcludedVoice`）＝掛けないと、一覧に出ない声が
+ * 設定に残っていたときに「一覧には無いのにその声で読まれ、設定行の表示は『自動』」という
+ * 画面と実際の食い違いになる（一覧から名前を引けないため）。除外した声は選べないし使わない。
+ */
 export async function getAvailableVoiceIds(): Promise<Set<string>> {
   try {
     const voices = await loadVoices();
-    return new Set(voices.map((v) => v.identifier).filter(Boolean));
+    return new Set(voices.map((v) => v.identifier).filter((id) => !!id && !isExcludedVoice(id)));
   } catch {
     return new Set();
   }

@@ -50,7 +50,7 @@ M._resolveFilename = function (request: string, ...rest: unknown[]) {
 const speech = require('@/lib/speech');
 const { splitByScript, resolveSpeechSegments, speakText } = speech;
 const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS, speechLanguageLabel } = speech;
-const { filterKnownVoices, voiceSampleText, isNoveltyVoice } = speech;
+const { filterKnownVoices, voiceSampleText, isExcludedVoice } = speech;
 const { mergeScriptLangs, parseScriptLangs, scriptLangsEqual } = speech;
 const { splitSentencesForPause } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -335,11 +335,22 @@ eq(voiceSampleText('bo-CN', 'Tenzin'), 'Tenzin', '表に無い言語は声の名
 
 // 奇抜な声（Bad News・Zarvox 等）はピッカーから外す。⚠️ **identifier のトークンで判定**する
 // （表示名は端末の言語で訳されることがある）。⚠️ 同じ接頭辞の `Alex` を巻き込まないこと。
-eq(isNoveltyVoice('com.apple.speech.synthesis.voice.BadNews'), true, '奇抜な声は外す');
-eq(isNoveltyVoice('com.apple.speech.synthesis.voice.Zarvox'), true, '大小文字を問わず判定する');
-eq(isNoveltyVoice('com.apple.speech.synthesis.voice.Alex'), false,
+eq(isExcludedVoice('com.apple.speech.synthesis.voice.BadNews'), true, '奇抜な声は外す');
+eq(isExcludedVoice('com.apple.speech.synthesis.voice.Zarvox'), true, '大小文字を問わず判定する');
+eq(isExcludedVoice('com.apple.speech.synthesis.voice.Alex'), false,
   '同じ接頭辞でも Alex はまともな声なので残す（接頭辞ごと弾かない根拠）');
-eq(isNoveltyVoice('com.apple.voice.compact.en-AU.Karen'), false, '通常の声は残す');
+eq(isExcludedVoice('com.apple.voice.compact.en-AU.Karen'), false, '通常の声は残す');
+
+// Eloquence（Eddy〜Shelley の8声）も外す。**名前空間で弾くのが本命**＝言語をまたいで全部拾い、
+// Apple が声を足しても追随する。名前トークンは identifier の形が違ったときの保険。
+eq(isExcludedVoice('com.apple.eloquence.en-US.Eddy'), true, 'Eloquence は名前空間で外す');
+eq(isExcludedVoice('com.apple.eloquence.ja-JP.Flo'), true, '言語が違っても名前空間で拾う');
+eq(isExcludedVoice('com.apple.eloquence.en-GB.Shelley'), true, '8声すべて同じ経路で外れる');
+eq(isExcludedVoice('com.apple.voice.compact.en-US.Rocko'), true,
+  '名前空間が違っても名前トークンで拾う（保険側の経路）');
+eq(isExcludedVoice('com.apple.voice.compact.en-US.Grandma'), true, 'Grandma/Grandpa も名前で拾う');
+eq(isExcludedVoice('com.apple.voice.enhanced.en-US.Evan'), false,
+  'Eloquence でない通常の声は残す（名前が似ていても巻き込まない）');
 
 // ---- 旧設定（049）からの移行 -------------------------------------------------
 

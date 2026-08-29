@@ -100,6 +100,14 @@ function ScheduleModal({
   }, [showInfo]);
   // シートを閉じたら畳む（次に開いたときは説明なしから始める）。
   useEffect(() => { if (!visible) setShowInfo(false); }, [visible]);
+  // ラベル欄にカーソルを置いたとき、末尾まで送ってキーボードの上へ出す。
+  // ⚠️ **キーボードのアニメーション（約250ms）を待ってから送る**＝余白（キーボード insets）が
+  // 増えるより先に送っても届かない。`automaticallyAdjustKeyboardInsets` 任せにせず明示的に
+  // 送るのは、どこまで自動で送られるかが端末・OS で揺れるため（送り先は同じ位置）。
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollToLabel = () => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
+  };
 
   const timeDate = new Date();
   timeDate.setHours(hour, minute, 0, 0);
@@ -140,7 +148,21 @@ function ScheduleModal({
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, gap: 20 }}>
+        {/* ⚠️ **キーボードでシートを動かさない**（`KeyboardAvoidingView` は使わない）。
+            シートごと持ち上げると下端固定の面が伸び縮みして目に付くので、**キーボードと
+            重なったぶんだけスクロールの余白を増やし、中身のスクロールだけで欄を出す**
+            （iOS のフォームと同じ挙動）。入力中は下部の ✓ がキーボードの裏に入るが、
+            それはデッキ編集・カード編集と同じ（Return＝完了で閉じてから保存する）。
+            ⚠️ iPad の分割表示で隣のアプリがキーボードを出したときの誤反応は、RN 本体への
+            パッチ（`patches/react-native+0.81.5.patch`）がこの prop の実装内で弾いている。
+            ⚠️ `keyboardShouldPersistTaps="handled"` ＝入力中でも曜日やトグルを1タップで
+            操作できる（無いと最初のタップがキーボードを閉じるだけで消える）。 */}
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, gap: 20 }}
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
+        >
           {/* 時刻 */}
           <View style={{ alignItems: 'center', paddingTop: 8 }}>
             <DateTimePicker
@@ -199,6 +221,7 @@ function ScheduleModal({
               style={[sheetStyles.labelInput, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, fontSize: theme.fontSize.md }]}
               maxLength={40}
               returnKeyType="done"
+              onFocus={scrollToLabel}
             />
           </View>
 
@@ -648,6 +671,10 @@ export default function NotificationSettingsScreen() {
 
 const sheetStyles = StyleSheet.create({
   sheet: {
+    // 高さの上限（キーボードとは無関係の安全弁）。時刻スピナー＋曜日＋ラベル＋トグルは
+    // 文字サイズを大きくすると画面を超えうるので、上限を置いて中の ScrollView に
+    // 縮んでもらう（無いとヘッダーのタイトル・✕ が画面の外へ出る）。
+    maxHeight: '90%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',

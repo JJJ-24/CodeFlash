@@ -473,7 +473,10 @@ export default function NewDeckScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { padding: 20, gap: 20 },
+  // 末尾の余白は編集画面と同じ量にする。新規作成にはアーカイブ行（＝ⓘ を開くための余白が
+  // 要る行）が無いので機能的には不要だが、**双子の画面で末尾の見え方を変えない**ため揃える
+  // （カードは new/edit で `BlockEditor` を共有していて、同じ理由で新規にも余白が付く）。
+  container: { padding: 20, gap: 20, paddingBottom: 140 },
   field: { gap: 6 },
   label: { fontWeight: '600' },
   input: {

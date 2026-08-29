@@ -146,7 +146,7 @@ export function DeckSpeechModal({ visible, langs, onChange, onClose }: Props) {
                     >
                       {override
                         ? speechLanguageLabel(override, t, scriptOptions?.[script] ?? [])
-                        : t('deck.speechInheritShort')}
+                        : t('deck.speechInherit')}
                     </Text>
                     <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
                   </Pressable>
@@ -214,7 +214,9 @@ export function deckSpeechSummary(
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
   const entries = Object.entries(langs).filter(([, lang]) => !!lang) as [SpeechScript, string][];
-  if (entries.length === 0) return t('deck.speechLangsNone');
+  // 上書きが1つも無い＝アプリ設定のまま。⚠️ ピッカーの先頭行と**同じキー**を使う
+  // （同じ意味の文字列を2本持つと、片方だけ直して食い違う）。
+  if (entries.length === 0) return t('deck.speechInherit');
   if (entries.length === 1) {
     const [script, lang] = entries[0];
     return t('deck.speechLangsOne', {

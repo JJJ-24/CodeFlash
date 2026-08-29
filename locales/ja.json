@@ -576,7 +576,6 @@
     "speechRateSlow": "遅い",
     "speechRateNormal": "標準",
     "speechRateFast": "速い",
-    "speechRateValue": "{{rate}}倍",
     "speechLanguage": "言語",
     "speechLangWithRegion": "{{language}}（{{region}}）",
     "speechVoice": "声",

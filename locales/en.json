@@ -597,7 +597,6 @@
     "speechRateSlow": "Slow",
     "speechRateNormal": "Normal",
     "speechRateFast": "Fast",
-    "speechRateValue": "{{rate}}×",
     "speechLanguage": "Lang",
     "speechLangWithRegion": "{{language}} ({{region}})",
     "speechVoice": "Voice",

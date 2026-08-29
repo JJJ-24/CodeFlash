@@ -25,6 +25,7 @@ import {
   clampSpeechRate,
   previewVoice,
   speechLanguageLabel,
+  speechRateLabel,
   stopSpeech,
   voiceSampleText,
   type SpeechScript,
@@ -288,7 +289,7 @@ export default function StudySettingsScreen() {
         title: t('settings.speechRate'),
         value: speechRate,
         min: SPEECH_RATE_MIN, max: SPEECH_RATE_MAX, step: SPEECH_RATE_STEP,
-        format: (v: number) => t('settings.speechRateValue', { rate: v.toFixed(2) }),
+        format: (v: number) => speechRateLabel(v, t),
         onChange: (v: number) => setSpeechRate(clampSpeechRate(v)),
       };
       case 'retention': return {
@@ -631,7 +632,7 @@ export default function StudySettingsScreen() {
                     <Ionicons name="play-circle-outline" size={Math.max(theme.fontSize.lg, 22)} color={theme.colors.primary} />
                   </Pressable>
                 </View>
-              ), t('settings.speechRateValue', { rate: speechRate.toFixed(2) }))}
+              ), speechRateLabel(speechRate, t))}
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {SPEECH_RATE_PRESETS.map((r, i) => {
                   const active = r === speechRate;

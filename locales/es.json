@@ -601,7 +601,6 @@
     "speechRateSlow": "Lenta",
     "speechRateNormal": "Normal",
     "speechRateFast": "Rápida",
-    "speechRateValue": "{{rate}}×",
     "speechLanguage": "Idioma",
     "speechLangWithRegion": "{{language}} ({{region}})",
     "speechVoice": "Voz",

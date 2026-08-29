@@ -596,6 +596,7 @@
     "speechVoicePreview": "Preview",
     "speechVoiceAuto": "Automatic",
     "speechVoiceEnhanced": "Enhanced",
+    "speechAddVoiceHint": "You can add voices in Settings → Accessibility → Read & Speak (\"Spoken Content\" on older iOS) → Voices. New voices appear here the next time you open this list.",
     "speechVoiceHint": "Chooses the voice used for {{name}}. \"Automatic\" follows the device setting.",
     "speechNoMixedSwitch": "Don't switch voices",
     "speechNoMixedSwitchHint": "Reads Latin words inside a sentence with the surrounding voice.\nCards written only in Latin letters are read in the language set above.",

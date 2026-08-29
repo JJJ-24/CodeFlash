@@ -575,6 +575,7 @@
     "speechVoicePreview": "試聴",
     "speechVoiceAuto": "自動",
     "speechVoiceEnhanced": "強化",
+    "speechAddVoiceHint": "声は端末の「設定」→「アクセシビリティ」→「リーダーと読み上げ」（以前の iOS では「読み上げコンテンツ」）→「声」から追加できます。追加すると、次にこの一覧を開いたときに出ます。",
     "speechVoiceHint": "{{name}}を読み上げる声を選びます。「自動」なら端末の設定に従います。",
     "speechNoMixedSwitch": "声を分けない",
     "speechNoMixedSwitchHint": "文中に混ざったアルファベットを、周りと同じ声で読みます。\nアルファベットだけのカードは設定言語で読み上げます。",

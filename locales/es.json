@@ -600,6 +600,7 @@
     "speechVoicePreview": "Escuchar",
     "speechVoiceAuto": "Automática",
     "speechVoiceEnhanced": "Mejorada",
+    "speechAddVoiceHint": "Puedes añadir voces en los ajustes del dispositivo: Accesibilidad → Lectura y voz (en iOS anteriores, «Contenido hablado») → Voces. Las voces nuevas aparecen aquí la próxima vez que abras esta lista.",
     "speechVoiceHint": "Elige la voz con la que se lee {{name}}. Con «Automática» se sigue el ajuste del dispositivo.",
     "speechNoMixedSwitch": "No cambiar de voz",
     "speechNoMixedSwitchHint": "Lee las palabras en alfabeto latino que aparecen dentro de una frase con la misma voz que el resto.\nLas tarjetas escritas solo en alfabeto latino se leen en el idioma elegido arriba.",

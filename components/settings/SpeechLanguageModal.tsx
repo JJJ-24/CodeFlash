@@ -156,6 +156,22 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
                 )}
               </Pressable>
             ))}
+            {/* 一覧の末尾に「増やし方」を置く。**ヘッダーではなく末尾**なのは、
+                ①知りたくなるのは一覧を見て「これだけしかない」と気づいた瞬間で、
+                  少ないときほど末尾がすぐ目に入る（多いときは増やす必要がない）
+                ②ヘッダーに足すと、文字サイズを大きくしたときに固定の見出し部が伸びて
+                  一覧そのものを圧迫する（シートは maxHeight 75% で頭打ちのため）。
+                ⚠️ 文言は**言語ピッカーと共用の1キー**（`speechAddVoiceHint`）＝Apple が
+                メニュー名を変えたときに直す場所を1つにする。 */}
+            <Text
+              style={{
+                color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, lineHeight: 18,
+                paddingHorizontal: 16, paddingVertical: 12,
+              }}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+            >
+              {t('settings.speechAddVoiceHint')}
+            </Text>
           </ScrollView>
         </View>
       </Animated.View>

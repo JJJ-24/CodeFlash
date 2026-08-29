@@ -30,10 +30,10 @@ type ValueSegment = { text: string; unit?: boolean };
 
 // 数値ブロックの表示モード（ソートトグルと同じ3アイコン切替）。回数・時間・目標に効き、日数は特別扱い。
 // 型と現在値は `store/settings.ts`（AsyncStorage 永続化＝**開き直しても選択が残る**）。
-const RECORD_MODES: { key: RecordSheetMode; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; labelKey: string; descKey: string }[] = [
-  { key: 'total', icon: 'sigma', labelKey: 'stats.recordModeTotal', descKey: 'stats.recordModeDescTotal' },
-  { key: 'max', icon: 'format-vertical-align-top', labelKey: 'stats.recordModeMax', descKey: 'stats.recordModeDescMax' },
-  { key: 'avg', icon: 'scale-balance', labelKey: 'stats.recordModeAvg', descKey: 'stats.recordModeDescAvg' },
+const RECORD_MODES: { key: RecordSheetMode; icon: React.ComponentProps<typeof MaterialCommunityIcons>['name']; labelKey: string }[] = [
+  { key: 'total', icon: 'sigma', labelKey: 'stats.recordModeTotal' },
+  { key: 'max', icon: 'format-vertical-align-top', labelKey: 'stats.recordModeMax' },
+  { key: 'avg', icon: 'scale-balance', labelKey: 'stats.recordModeAvg' },
 ];
 
 /** ローカル YYYY-MM-DD から今日までの経過日数（当日含む）。 */
@@ -208,31 +208,35 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const avgReviews = stats && stats.totalDays > 0 ? stats.totalReviews / stats.totalDays : 0;
   const avgTimeMs = stats && stats.totalDays > 0 ? stats.totalTimeMs / stats.totalDays : 0;
   const continuityPct = stats && elapsed != null && elapsed > 0 ? Math.min(100, Math.round((stats.totalDays / elapsed) * 100)) : null;
-  const rightBlocks: { segments: ValueSegment[]; label: string; color: string }[] = !stats
+  // ⚠️ **ラベルは短い語にしてある**（「回数」「回数/日」）＝どのモードかは**小見出し**が示す。
+  //    トグルはアイコンだけなので、モードを表す言葉は小見出しにしか無い。
+  // ⚠️ `descKey` はラベルの**すぐ隣**に置く＝ⓘ の説明は画面に出ている4ブロックから組むので、
+  //    片方だけ直して説明と表示が食い違うことがない。
+  const rightBlocks: { segments: ValueSegment[]; label: string; color: string; descKey: string }[] = !stats
     ? []
     : mode === 'max'
     ? [
-        { segments: plain(stats.maxDailyReviews.toLocaleString()), label: t('stats.recordMaxReviews'), color: REVIEW_COLOR },
-        { segments: formatDuration(stats.maxDailyTimeMs), label: t('stats.recordMaxTime'), color: FILTER_COLORS.due },
+        { segments: plain(stats.maxDailyReviews.toLocaleString()), label: t('stats.recordMaxReviews'), color: REVIEW_COLOR, descKey: 'stats.recordDescMaxReviews' },
+        { segments: formatDuration(stats.maxDailyTimeMs), label: t('stats.recordMaxTime'), color: FILTER_COLORS.due, descKey: 'stats.recordDescMaxTime' },
         // 日数の「最高」は暦月ごとの最高学習日数（1日の最高＝常に1で無意味なため月単位に）。
-        { segments: plain(stats.maxMonthlyDays.toLocaleString()), label: t('stats.recordMaxMonthlyDays'), color: DAYS_COLOR },
+        { segments: plain(stats.maxMonthlyDays.toLocaleString()), label: t('stats.recordMaxMonthlyDays'), color: DAYS_COLOR, descKey: 'stats.recordDescMaxMonthlyDays' },
       ]
     : mode === 'avg'
     ? [
-        { segments: plain(avgReviews.toFixed(1)), label: t('stats.recordAvgReviews'), color: REVIEW_COLOR },
-        { segments: formatDuration(avgTimeMs), label: t('stats.recordAvgTime'), color: FILTER_COLORS.due },
-        { segments: continuityPct != null ? [{ text: String(continuityPct) }, { text: '%', unit: true }] : plain('-'), label: t('stats.recordContinuity'), color: DAYS_COLOR },
+        { segments: plain(avgReviews.toFixed(1)), label: t('stats.recordAvgReviews'), color: REVIEW_COLOR, descKey: 'stats.recordDescAvgReviews' },
+        { segments: formatDuration(avgTimeMs), label: t('stats.recordAvgTime'), color: FILTER_COLORS.due, descKey: 'stats.recordDescAvgTime' },
+        { segments: continuityPct != null ? [{ text: String(continuityPct) }, { text: '%', unit: true }] : plain('-'), label: t('stats.recordContinuity'), color: DAYS_COLOR, descKey: 'stats.recordDescContinuity' },
       ]
     : [
-        { segments: plain(stats.totalReviews.toLocaleString()), label: t('stats.recordTotalReviews'), color: REVIEW_COLOR },
-        { segments: formatDuration(stats.totalTimeMs), label: t('stats.recordTotalTime'), color: FILTER_COLORS.due },
-        { segments: plain(stats.totalDays.toLocaleString()), label: t('stats.recordTotalDays'), color: DAYS_COLOR },
+        { segments: plain(stats.totalReviews.toLocaleString()), label: t('stats.recordTotalReviews'), color: REVIEW_COLOR, descKey: 'stats.recordDescTotalReviews' },
+        { segments: formatDuration(stats.totalTimeMs), label: t('stats.recordTotalTime'), color: FILTER_COLORS.due, descKey: 'stats.recordDescTotalTime' },
+        { segments: plain(stats.totalDays.toLocaleString()), label: t('stats.recordTotalDays'), color: DAYS_COLOR, descKey: 'stats.recordDescTotalDays' },
       ];
   // 目標達成（4軸目）。右列と同じモードに追従する（Σ=達成日数／最高=最長連続達成／平均=達成率）。
   const goalBlock = !stats || !goalStats || !studyGoalEnabled
     ? null
     : mode === 'max'
-    ? { segments: plain(goalStats.longestAchievedStreak.toLocaleString()), label: t('stats.recordGoalMaxStreak'), color: GOAL_COLOR }
+    ? { segments: plain(goalStats.longestAchievedStreak.toLocaleString()), label: t('stats.recordGoalMaxStreak'), color: GOAL_COLOR, descKey: 'stats.recordDescGoalMaxStreak' }
     : mode === 'avg'
     ? {
         segments: goalStats.achievementRate != null
@@ -240,8 +244,9 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           : plain('-'),
         label: t('stats.recordGoalRate'),
         color: GOAL_COLOR,
+        descKey: 'stats.recordDescGoalRate',
       }
-    : { segments: plain(goalStats.achievedDays.toLocaleString()), label: t('stats.recordGoalDays'), color: GOAL_COLOR };
+    : { segments: plain(goalStats.achievedDays.toLocaleString()), label: t('stats.recordGoalDays'), color: GOAL_COLOR, descKey: 'stats.recordDescGoalDays' };
   // 左下のセル：目標 ON なら目標達成、OFF なら開始からの日数（＝046 以前とまったく同じ見た目）。
   // ⚠️ **左列は常に2セルに保つ**：OFF のとき1セルにすると streakCell の `flexGrow` で
   // 右列3セル分の高さに伸び、実機で数字が間延びして見えた（Y案を実機確認して差し戻し）。
@@ -251,8 +256,14 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
         segments: plain(elapsed != null ? String(elapsed) : '-'),
         label: t('stats.recordElapsed'),
         color: theme.colors.textSecondary,
+        descKey: 'stats.recordDescElapsed',
       }
     : null);
+
+  // 小見出し（＝いまのモード名）と、ⓘ に出す説明の行。**画面に出ているブロックそのもの**から
+  // 組むので、モードを変えれば説明も一緒に入れ替わる。左下セル（目標／開始からの日数）も含める。
+  const activeModeLabel = t(RECORD_MODES.find((m) => m.key === mode)?.labelKey ?? 'stats.recordModeTotal');
+  const modeInfoRows = [...rightBlocks, ...(leftBottomBlock ? [leftBottomBlock] : [])];
 
   return (
     <View
@@ -288,17 +299,12 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           contentContainerStyle={styles.body}
           showsVerticalScrollIndicator={false}
         >
-          {/* 見出し＋iアイコン（左）＋右列3ブロックの表示モード切替（ソートトグルと同じ3アイコン・右）。 */}
+          {/* 見出し（左）＋表示モード切替（ソートトグルと同じ3アイコン・右）。ⓘ は下の小見出し側。 */}
           {stats && (
             <View style={styles.toggleRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md, flexShrink: 1 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('stats.recordSummaryTitle')}
-                </Text>
-                <Pressable onPress={() => setShowModeInfo(true)} hitSlop={8} accessibilityLabel={t('stats.recordModeInfoTitle')}>
-                  <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-                </Pressable>
-              </View>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md, flexShrink: 1 }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('stats.recordSummaryTitle')}
+              </Text>
               <View style={styles.modeButtons}>
                 {RECORD_MODES.map(({ key, icon, labelKey }) => {
                   const active = mode === key;
@@ -324,6 +330,22 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               </View>
             </View>
           )}
+          {/* 小見出し＝**いまのモード名**（合計／最高・最長／平均・比率）。トグルはアイコンだけなので、
+              何を見ているのかを言葉で示すのはこの行だけ（ラベルを短くしたぶんの受け皿でもある）。
+              ⓘ はこのモードの4ブロックの説明を出す＝表示中のものだけを説明するので読む量が少ない。 */}
+          {stats && (
+            <Pressable style={styles.modeHeadingRow} onPress={() => setShowModeInfo(true)} hitSlop={6}>
+              <Text
+                style={[styles.modeHeading, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {activeModeLabel}
+              </Text>
+              <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
+            </Pressable>
+          )}
+
           {/* 上部の数値ブロック：左列（最長連続・大＋目標達成）／右列（3つ縦積み） */}
           {stats && streakBlock && (
             <View style={styles.numberRow}>
@@ -473,25 +495,33 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
         </ScrollView>
       </Animated.View>
 
-      {/* 表示モードの説明（iアイコン）。ホームの情報モーダル風：[見出し]＋インラインアイコン＋一言。 */}
+      {/* いまのモードの数値ブロックの説明（小見出しの ⓘ）。**表示中の4ブロックだけ**を、
+          画面と同じラベル・同じ並びで説明する（3モード全部を並べると読む量が増えるうえ、
+          いま見ていないものの説明が混ざる）。 */}
       <InfoModal
         visible={showModeInfo}
-        title={t('stats.recordSummaryTitle')}
+        title={activeModeLabel}
         message={
           <View>
-            <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '700', marginBottom: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {`[${t('stats.recordModeInfoTitle')}]`}
-            </Text>
-            {RECORD_MODES.map(({ key, icon, descKey }) => (
-              <Text key={key} style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 24, paddingLeft: 14 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                <MaterialCommunityIcons name={icon} size={theme.fontSize.md} color={theme.colors.primary} />
-                {'  '}{t(descKey)}
+            {modeInfoRows.map(({ label, descKey }) => (
+              <Text
+                key={descKey}
+                style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 24 }}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {/* ラベルと説明のつなぎ（「：」/「: 」）は言語で変わるので翻訳キーに置く */}
+                {t('stats.recordInfoLine', { label, desc: t(descKey) })}
               </Text>
             ))}
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('stats.recordModeContinuityNote')}
-            </Text>
-            {/* 目標を使っている人にだけ、判定の基準（現在の目標枚数）と達成率の分母を説明する。 */}
+            {/* 平均・比率のときだけ、**2つの分母を並べて**添える。⚠️ 継続率だけ分母が違う
+                （学習日数 ÷ 経過日数）ので、行を短くするなら分母はここで示すしかない
+                ＝どこにも書かないと「学習した日のうち…」と読まれて逆の意味になる。 */}
+            {mode === 'avg' && (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('stats.recordModeAvgScopeNote')}
+              </Text>
+            )}
+            {/* 目標を使っている人にだけ、判定の基準（現在の目標枚数）を添える。 */}
             {studyGoalEnabled && (
               <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('stats.recordModeGoalNote', { count: studyGoalCount })}
@@ -526,7 +556,11 @@ const styles = StyleSheet.create({
   title: { fontWeight: '700', textAlign: 'center' },
   closeBtn: { position: 'absolute', top: 14, right: 16, zIndex: 1, padding: 4 },
   body: { paddingHorizontal: 16, paddingBottom: 16 },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, marginBottom: 10 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, marginBottom: 4 },
+  // 小見出し（モード名＋ⓘ）。**alignSelf: 'flex-start'** ＝行いっぱいに広げない（右のトグルの
+  // 真下まで伸ばすと、トグルを狙ったつもりのタップで説明が開く）。
+  modeHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 10 },
+  modeHeading: { fontWeight: '600' },
   modeButtons: { flexDirection: 'row', gap: 6 },
   modeBtn: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   numberRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },

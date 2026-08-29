@@ -18,8 +18,15 @@ import {
   getCachedVoicesByLanguage,
   getVoicesForLanguage,
   SCRIPT_DEFAULT_LANGS,
-  SPEECH_RATES,
+  SPEECH_RATE_MAX,
+  SPEECH_RATE_MIN,
+  SPEECH_RATE_PRESETS,
+  SPEECH_RATE_STEP,
+  clampSpeechRate,
+  previewVoice,
   speechLanguageLabel,
+  stopSpeech,
+  voiceSampleText,
   type SpeechScript,
   type SpeechVoice,
 } from '@/lib/speech';
@@ -55,7 +62,7 @@ import {
 const OTHER_SPEECH_SCRIPTS = CONFIGURABLE_SCRIPTS.filter((s) => s !== 'latin' && s !== 'han');
 
 export default function StudySettingsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const { isPro } = useProStore();
@@ -374,6 +381,16 @@ export default function StudySettingsScreen() {
     ? `${speechLanguageLabel(langOf('latin'), t, [])} / ${speechLanguageLabel(langOf('han'), t, [])}`
     : t('settings.sectionSummaryOff');
 
+  /** 速度の試聴に使う言語。**いまこの設定で実際に読まれる言語**のうち、アプリの表示言語と
+   *  一致するものを選ぶ（無ければラテン文字の言語）。速さの判断は何語でもできるが、
+   *  自分が読める言語で聞けたほうが速いか遅いか分かりやすいため。
+   *  ⚠️ 対応表は持たない＝比較は接頭辞（`ja-JP` と `ja`）だけで行う。 */
+  const speechPreviewLang = (() => {
+    const ui = i18n.language.split('-')[0].toLowerCase();
+    const langs = [langOf('han'), langOf('latin'), ...visibleOtherScripts.map(langOf)];
+    return langs.find((l) => l.split('-')[0].toLowerCase() === ui) ?? langOf('latin');
+  })();
+
   // 表示中の言語について声の一覧を読む（言語を変えたら読み直す）。
   // ⚠️ **声が1つしか無い言語では「声」の行を出さない**（言語の行と同じ規則）。
   const shownLangs = [langOf('latin'), langOf('han'), ...visibleOtherScripts.map(langOf)];
@@ -385,6 +402,19 @@ export default function StudySettingsScreen() {
       .catch(() => {});
     return () => { alive = false; };
   }, [shownLangsKey]);
+
+  /** 速度の試聴。**選んである声・いまの速度**そのままで短いサンプルを読む
+   *  （速さは数字では分からないので、その場で聞けないとスライダーを詰められない）。 */
+  const previewSpeechRate = () => {
+    previewVoice({
+      text: voiceSampleText(speechPreviewLang, voicesByLang[speechPreviewLang]?.[0]?.name ?? speechPreviewLang),
+      language: speechPreviewLang,
+      voice: speechVoices[speechPreviewLang],
+      rate: speechRate,
+    });
+  };
+  // ⚠️ 画面を離れたら必ず止める（試聴の途中で戻ると喋り続けるため。声のピッカーと同じ規則）。
+  useEffect(() => stopSpeech, []);
 
   /** 文字体系1つぶんの設定＝**見出し（文字体系の名前）＋インデントした行**（言語・声ほか）。
    *  言語の値は「上書きが無ければ既定」を出す（＝実際に読まれる言語）。
@@ -515,28 +545,66 @@ export default function StudySettingsScreen() {
 
         {speechEnabled && (
           <>
+            {/* 速度＝3択のプリセット＋スライダー（FSRS の保持率と同じ形）。
+                タップで決まる3つで足りる人はそれだけ、詰めたい人はスライダーで 0.05 刻み。
+                ⚠️ **▶ の試聴はここでは省略できない**＝保持率の「90%」と違って速度は
+                聞かないと分からず、その場で確かめられないとスライダーを詰められない
+                （声のピッカーまで開きに行く往復になる）。 */}
             <View style={{ gap: 6 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('settings.speechRate')}
-              </Text>
-              <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
-                {SPEECH_RATES.map((r) => (
-                  <Pressable
-                    key={r}
-                    style={[styles.segment, r === speechRate && { backgroundColor: theme.colors.surface }]}
-                    onPress={() => setSpeechRate(r)}
-                  >
-                    <Text
-                      style={[
-                        r === speechRate ? styles.segmentTextActive : styles.segmentText,
-                        { color: r === speechRate ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
-                      ]}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-                    >
-                      {r.toFixed(2)}
-                    </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('settings.speechRate')}
+                  </Text>
+                  <Pressable onPress={previewSpeechRate} hitSlop={8} accessibilityLabel={t('settings.speechVoicePreview')}>
+                    <Ionicons name="play-circle-outline" size={Math.max(theme.fontSize.lg, 22)} color={theme.colors.primary} />
                   </Pressable>
-                ))}
+                </View>
+                <Text style={[styles.fsrsRetentionValue, { color: theme.colors.primary, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t('settings.speechRateValue', { rate: speechRate.toFixed(2) })}
+                </Text>
+              </View>
+              <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
+                {SPEECH_RATE_PRESETS.map((r, i) => {
+                  const active = r === speechRate;
+                  const labelKey = (['settings.speechRateSlow', 'settings.speechRateNormal', 'settings.speechRateFast'] as const)[i];
+                  return (
+                    <Pressable
+                      key={r}
+                      style={[styles.segment, active && { backgroundColor: theme.colors.surface }]}
+                      onPress={() => setSpeechRate(r)}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          { color: active ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.sm },
+                          active && styles.segmentTextActive,
+                        ]}
+                        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                      >
+                        {t(labelKey)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Slider
+                minimumValue={SPEECH_RATE_MIN}
+                maximumValue={SPEECH_RATE_MAX}
+                step={SPEECH_RATE_STEP}
+                value={speechRate}
+                onValueChange={(v) => setSpeechRate(clampSpeechRate(v))}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor={theme.colors.iconSubtle}
+                thumbTintColor={theme.colors.primary}
+              />
+              <View style={styles.fsrsRetentionScale}>
+                <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                  {t('settings.speechRateValue', { rate: SPEECH_RATE_MIN.toFixed(2) })}
+                </Text>
+                <Text style={[styles.fsrsScaleText, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                  {t('settings.speechRateValue', { rate: SPEECH_RATE_MAX.toFixed(2) })}
+                </Text>
               </View>
             </View>
 

@@ -23,7 +23,39 @@ import * as Speech from 'expo-speech';
 
 /** 速度。1.0 が標準（実測で自然だったので既定値） */
 export const SPEECH_RATE_DEFAULT = 1.0;
-export const SPEECH_RATES = [0.7, 0.85, 1.0, 1.2];
+
+/**
+ * タップで選べる3段階（遅い／標準／速い）。細かい値はスライダーで決めるので、
+ * ここは「よく使う値」だけを置く（FSRS のプリセットとスライダーと同じ関係）。
+ *
+ * ⚠️ **値は4択だった頃のものをそのまま使う**（0.85 / 1.0 / 1.2）。プリセットを動かすと、
+ * いまその値を使っている人の設定が「プリセットのどれでもない＝無選択」に化けるため。
+ * 4択のうち 0.7 だけ落としたが、値は保持されスライダーに出る。
+ */
+export const SPEECH_RATE_PRESETS = [0.85, 1.0, 1.2];
+
+/**
+ * スライダーで選べる範囲と刻み。
+ *
+ * `expo-speech` は `utterance.rate = rate × AVSpeechUtteranceDefaultSpeechRate`（= 0.5）で
+ * 渡し、AVFoundation が `AVSpeechUtteranceMinimum/MaximumSpeechRate`（= 0.0 / 1.0）で
+ * クランプする。つまりアプリ側の倍率は **0.0〜2.0 が効く範囲**で、2.0 を超える値を選ばせると
+ * 「上げたのに速くならない」＝オンに見えるのに効いていない状態になる。
+ *
+ * ⚠️ **その効く範囲いっぱい（0.5〜2.0）ではなく 0.30〜1.80 にしてある。** 上は 1.8
+ * （AV 上限の 90%）より速いと実用にならず、下はもっと遅くまで要る、という実機判断。
+ * ⚠️ **端が丸い数でないのは意図的**（FSRS の 70〜99% と同じ）。この範囲だと標準の 1.00 が
+ * スライダーのほぼ中央（47%）に来る＝0.5〜2.0 では 33% で左に寄り、遅くする余地が狭く見えた。
+ */
+export const SPEECH_RATE_MIN = 0.3;
+export const SPEECH_RATE_MAX = 1.8;
+export const SPEECH_RATE_STEP = 0.05;
+
+/** 範囲内へ丸める（スライダーの浮動小数の誤差も刻みに揃える）。 */
+export function clampSpeechRate(v: number): number {
+  const stepped = Math.round(v / SPEECH_RATE_STEP) * SPEECH_RATE_STEP;
+  return Math.min(SPEECH_RATE_MAX, Math.max(SPEECH_RATE_MIN, Math.round(stepped * 100) / 100));
+}
 
 /**
  * この文字数以下のラテン片は隣の区間の言語へ倒す。

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import type { GradeRankingSortBy } from '@/lib/database/reviews';
 import i18n, { resolveSystemLanguage, SUPPORTED_LANGUAGE_CODES, type SupportedLanguage } from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
-import { scriptForLanguage, SPEECH_RATE_DEFAULT, SPEECH_RATES, type ScriptLangs, type SpeechScript, type VoiceByLang } from '@/lib/speech';
+import { clampSpeechRate, scriptForLanguage, SPEECH_RATE_DEFAULT, type ScriptLangs, type SpeechScript, type VoiceByLang } from '@/lib/speech';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
@@ -434,7 +434,9 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   speechRate: {
     key: '@codeflash_speech_rate',
     default: SPEECH_RATE_DEFAULT,
-    parse: (r) => { const v = Number(r); return SPEECH_RATES.includes(v) ? v : undefined; },
+    // ⚠️ **固定の選択肢ではなく範囲で受ける**（かつては4値のみ許可）＝スライダーで
+    // 任意の値を選べるようにしたため。範囲外・数値でない値は既定へ落とす。
+    parse: (r) => { const v = Number(r); return r.trim() !== '' && Number.isFinite(v) ? clampSpeechRate(v) : undefined; },
   },
   // BCP-47 は端末の音声一覧から選ぶので、ここでは値の妥当性を検査しない
   // （端末に無い言語が入っていても iOS 側が既定の声にフォールバックする）。

@@ -108,20 +108,24 @@ export default function DisplaySettingsScreen() {
       />
 
       {/* 言語はセグメントにしない＝対応言語が増えるたびに区画が増えて破綻するため
-          （他の設定は3択固定）。行に現在の言語を出し、タップで一覧（先頭が「システム」）。 */}
+          （他の設定は3択固定）。現在の言語を出し、タップで一覧（先頭が「システム」）。
+          ⚠️ **見出しと値は縦に積む**（1行に [見出し][値][>] を詰めない）＝`flex:1` の見出しが
+          折り返して値が消えるため（フォントサイズ「大」＋長い言語名／訳語で顕在化する。読み上げ
+          設定の文字体系の行と同じ理由）。この画面の他のカードと同じ「見出し → その下に
+          コントロール」の形にも揃う。 */}
       <Pressable
-        style={[styles.card, { backgroundColor: theme.colors.surface, flexDirection: 'row', alignItems: 'center' }]}
+        style={[styles.card, { backgroundColor: theme.colors.surface }]}
         onPress={() => setLangModal(true)}
       >
-        <View style={styles.dataRowText}>
-          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {t('settings.language')}
-          </Text>
-        </View>
-        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-          {languageValueLabel}
+        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {t('settings.language')}
         </Text>
-        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ flex: 1, color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {languageValueLabel}
+          </Text>
+          <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+        </View>
       </Pressable>
 
       <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

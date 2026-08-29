@@ -23,6 +23,7 @@ import {
   countSchedules, createSchedule, deleteSchedule, getAllSchedules,
   toggleScheduleEnabled, updateSchedule,
 } from '@/lib/database/notifications';
+import { pushEscDismiss, removeEscDismiss } from '@/lib/escStack';
 import {
   cancelAllScheduledNotifications, isPermissionGranted, requestPermission, scheduleFromDb,
 } from '@/lib/notifications';
@@ -89,6 +90,16 @@ function ScheduleModal({
   const { height: screenHeight } = useWindowDimensions();
   const sheetY = useSharedValue(screenHeight);
   const overlayOpacity = useSharedValue(0);
+  // 「目標未達成のみ」の説明（ⓘ でインライン展開）。設定サブ画面の ⓘ と同じ流儀で、
+  // 自前のキーは持たず escStack に積む＝Esc は「説明 → シート → 画面」の順に1段ずつ閉じる。
+  const [showInfo, setShowInfo] = useState(false);
+  useEffect(() => {
+    if (!showInfo) return;
+    const id = pushEscDismiss(() => setShowInfo(false));
+    return () => removeEscDismiss(id);
+  }, [showInfo]);
+  // シートを閉じたら畳む（次に開いたときは説明なしから始める）。
+  useEffect(() => { if (!visible) setShowInfo(false); }, [visible]);
 
   const timeDate = new Date();
   timeDate.setHours(hour, minute, 0, 0);
@@ -191,22 +202,53 @@ function ScheduleModal({
             />
           </View>
 
-          {/* 046: 目標が未達成のときだけ通知する。目標（設定→学習）が OFF のときは有効にしても
-              常に未達成扱いで毎日鳴る＝分かりにくいので、操作を塞いでヒントを出す。 */}
+          {/* 046: 目標が未達成のときだけ通知する。目標（設定→学習）が OFF のときは
+              `scheduleGoalReminders` が1件も予約しない＝絶対に鳴らないので、操作を塞いで理由を出す。
+              ⚠️ **理由の行（NoGoal）は常時表示にする**＝ⓘ の中に隠すと無効の理由が画面から消え、
+              「オンに見えるのに効いていない」になる。ⓘ に入れるのは機能の説明（Hint）のほうだけ。
+              ⚠️ **赤い ! はトグル ON のときだけ**＝OFF は前提を満たしていないだけで何も壊れておらず
+              （使えないことは disabled ＋ opacity で伝わる）、常時赤にすると `inactiveNotice`
+              （通知オフ＝全部鳴らない）の赤と意味が混ざって本物の警告の効きが落ちる。ON のときは
+              「予約したのに鳴らない」＝一覧の赤バッジ（`goalBadgeNoGoal`）と同じ状態なので色も揃える。 */}
           <View style={{ gap: 6, opacity: goalEnabled ? 1 : 0.5 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {/* ⓘ は**タイトルのすぐ右**に置く（データ管理の行と同じ形）＝
+                  ラベルを flex:1 で伸ばすとスイッチの隣まで飛んでいき、何の説明か分からなくなる。
+                  ラベルは flexShrink:1 ＝長い訳語（es）はスイッチを押し出さずに折り返す。 */}
+              <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('notification.onlyIfGoalUnmet')}
               </Text>
+              <Pressable onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
+                <Ionicons
+                  name={showInfo ? 'information-circle' : 'information-circle-outline'}
+                  size={Math.max(theme.fontSize.lg, 20)}
+                  color={theme.colors.textTertiary}
+                />
+              </Pressable>
+              <View style={{ flex: 1 }} />
               <AppSwitch
                 value={onlyIfGoalUnmet}
                 onValueChange={onChangeOnlyIfGoalUnmet}
                 disabled={!goalEnabled}
               />
             </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t(goalEnabled ? 'notification.onlyIfGoalUnmetHint' : 'notification.onlyIfGoalUnmetNoGoal')}
-            </Text>
+            {!goalEnabled && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {onlyIfGoalUnmet && (
+                  <Ionicons name="alert-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.danger} />
+                )}
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, lineHeight: 16, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('notification.onlyIfGoalUnmetNoGoal')}
+                </Text>
+              </View>
+            )}
+            {showInfo && (
+              <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('notification.onlyIfGoalUnmetHint')}
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
 

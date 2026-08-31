@@ -8,7 +8,8 @@
  *   エラー（`npm run verify:i18n` が失敗する）
  *     E1 キーの網羅 — どれかの言語にあってどれかに無いキー
  *     E2 補間トークン — 同じキーの `{{name}}` の集合が言語間で食い違う
- *     E3 行記法       — `■` / `[見出し]` / `>` / `| 表 |` の**行数**（表は列数も）が言語間で食い違う
+ *     E3 行記法       — `■` / `[見出し]` / `>` / `| 表 |` / 早見表の `@@`・タブ・`//` の**行数**
+ *                       （表は列数も）が言語間で食い違う
  *   警告（失敗はしない）
  *     W1 複数形 — `{{count}}` を含むのに `_one` が無いキー（単数形が「1 cards」になる）
  *     W2 複数形 — 補間の直後が複数形の名詞なのに `_one` が無いキー。数を `{{count}}` 以外の
@@ -83,13 +84,24 @@ function flatten(value: unknown, prefix = '', out: Flat = {}): Flat {
 const baseKey = (key: string) => key.replace(PLURAL_SUFFIX, '');
 const tokens = (s: string) => [...s.matchAll(/\{\{(\w+)/g)].map((m) => m[1]).sort();
 
-/** 説明モーダルの行記法（`components/InfoContent.tsx`）の数を数える。 */
+/**
+ * 説明モーダルの行記法の数を数える。2系統ある：
+ * - `components/InfoContent.tsx`（ⓘ 全般）… `■` / `[見出し]` / `>` / `| 表 |`
+ * - `components/editor/MarkdownHelpModal.tsx`（`editor.mdHelpBody` 専用）… `@@節` / タブ＝記法サンプル / `//` 補足
+ *
+ * ⚠️ 落とすのは**行末**の空白だけ（行頭のタブはサンプル行の目印そのもの）。
+ */
 function markupCounts(s: string) {
   const lines = s.split('\n').map((l) => l.replace(/\s+$/, ''));
   return {
     section: lines.filter((l) => l.startsWith('■')).length,
     header: lines.filter((l) => /^\[.+\]$/.test(l)).length,
     dense: lines.filter((l) => l.startsWith('>')).length,
+    // マークダウン早見表（`@@` 節見出し・タブ＝サンプル・`//` 補足）。
+    // 訳で `//` を1本落としても他の検査には掛からないため、行数だけ突き合わせる。
+    mdSection: lines.filter((l) => l.startsWith('@@')).length,
+    mdSample: lines.filter((l) => l.startsWith('\t')).length,
+    mdNote: lines.filter((l) => l.startsWith('//')).length,
     // 表（`| a | b |`）は行数と列数の両方を数える。列が1つ欠けると他言語だけ列がずれるため。
     rows: lines.filter((l) => /^\s*\|.*\|\s*$/.test(l)).length,
     cells: lines
@@ -97,6 +109,18 @@ function markupCounts(s: string) {
       .reduce((n, l) => n + l.trim().slice(1, -1).split('|').length, 0),
   };
 }
+
+/** エラー表示での記法の呼び名（`markupCounts` の全キーを網羅すること）。 */
+const NOTATION_LABELS: Record<keyof ReturnType<typeof markupCounts>, string> = {
+  section: '■',
+  header: '[…]',
+  dense: '>',
+  mdSection: '@@',
+  mdSample: 'タブ',
+  mdNote: '//',
+  rows: '|行',
+  cells: '|セル',
+};
 
 // ---- 読み込み ------------------------------------------------------------------
 
@@ -152,8 +176,11 @@ for (const k of Object.keys(data[REFERENCE])) {
     const other = data[lng][k];
     if (other === undefined) continue;
     const got = markupCounts(other);
-    if (ref.section !== got.section || ref.header !== got.header || ref.dense !== got.dense || ref.rows !== got.rows || ref.cells !== got.cells) {
-      const fmt = (c: typeof ref) => `■${c.section} […]${c.header} >${c.dense} |${c.rows}行${c.cells}セル`;
+    const fields = Object.keys(NOTATION_LABELS) as (keyof typeof ref)[];
+    if (fields.some((f) => ref[f] !== got[f])) {
+      // 双方 0 の記法は出さない（早見表の `@@` 等が全キーの表示に混ざると読みにくい）
+      const shown = fields.filter((f) => ref[f] || got[f]);
+      const fmt = (c: typeof ref) => shown.map((f) => `${NOTATION_LABELS[f]}${c[f]}`).join(' ');
       errors.push(`[行記法] ${k}: ${REFERENCE}=(${fmt(ref)}) / ${lng}=(${fmt(got)})`);
     }
   }
@@ -215,7 +242,7 @@ const label = (n: number, ok: string) => (n === 0 ? `✓ ${ok}` : `✗ ${n} 件`
 const byTag = (tag: string) => errors.filter((e) => e.startsWith(`[${tag}]`));
 console.log(`  キーの網羅        ${label(byTag('キー欠落').length, '欠落なし')}`);
 console.log(`  補間トークン      ${label(byTag('トークン不一致').length, '不一致なし')}`);
-console.log(`  行記法 ■ […] > |   ${label(byTag('行記法').length, '不一致なし')}`);
+console.log(`  行記法 ■ […] > | @@ ${label(byTag('行記法').length, '不一致なし')}`);
 console.log(`  複数形（警告）    ${warnings.length === 0 ? '✓ なし' : `⚠️ ${warnings.length} 件`}`);
 
 if (errors.length > 0) {

@@ -8,7 +8,7 @@
  *   エラー（`npm run verify:i18n` が失敗する）
  *     E1 キーの網羅 — どれかの言語にあってどれかに無いキー
  *     E2 補間トークン — 同じキーの `{{name}}` の集合が言語間で食い違う
- *     E3 行記法       — `■` / `[見出し]` / `>` の**行数**が言語間で食い違う
+ *     E3 行記法       — `■` / `[見出し]` / `>` / `| 表 |` の**行数**（表は列数も）が言語間で食い違う
  *   警告（失敗はしない）
  *     W1 複数形 — `{{count}}` を含むのに `_one` が無いキー（単数形が「1 cards」になる）
  *     W2 複数形 — 補間の直後が複数形の名詞なのに `_one` が無いキー。数を `{{count}}` 以外の
@@ -90,6 +90,11 @@ function markupCounts(s: string) {
     section: lines.filter((l) => l.startsWith('■')).length,
     header: lines.filter((l) => /^\[.+\]$/.test(l)).length,
     dense: lines.filter((l) => l.startsWith('>')).length,
+    // 表（`| a | b |`）は行数と列数の両方を数える。列が1つ欠けると他言語だけ列がずれるため。
+    rows: lines.filter((l) => /^\s*\|.*\|\s*$/.test(l)).length,
+    cells: lines
+      .filter((l) => /^\s*\|.*\|\s*$/.test(l))
+      .reduce((n, l) => n + l.trim().slice(1, -1).split('|').length, 0),
   };
 }
 
@@ -147,8 +152,8 @@ for (const k of Object.keys(data[REFERENCE])) {
     const other = data[lng][k];
     if (other === undefined) continue;
     const got = markupCounts(other);
-    if (ref.section !== got.section || ref.header !== got.header || ref.dense !== got.dense) {
-      const fmt = (c: typeof ref) => `■${c.section} […]${c.header} >${c.dense}`;
+    if (ref.section !== got.section || ref.header !== got.header || ref.dense !== got.dense || ref.rows !== got.rows || ref.cells !== got.cells) {
+      const fmt = (c: typeof ref) => `■${c.section} […]${c.header} >${c.dense} |${c.rows}行${c.cells}セル`;
       errors.push(`[行記法] ${k}: ${REFERENCE}=(${fmt(ref)}) / ${lng}=(${fmt(got)})`);
     }
   }
@@ -210,7 +215,7 @@ const label = (n: number, ok: string) => (n === 0 ? `✓ ${ok}` : `✗ ${n} 件`
 const byTag = (tag: string) => errors.filter((e) => e.startsWith(`[${tag}]`));
 console.log(`  キーの網羅        ${label(byTag('キー欠落').length, '欠落なし')}`);
 console.log(`  補間トークン      ${label(byTag('トークン不一致').length, '不一致なし')}`);
-console.log(`  行記法 ■ […] >    ${label(byTag('行記法').length, '不一致なし')}`);
+console.log(`  行記法 ■ […] > |   ${label(byTag('行記法').length, '不一致なし')}`);
 console.log(`  複数形（警告）    ${warnings.length === 0 ? '✓ なし' : `⚠️ ${warnings.length} 件`}`);
 
 if (errors.length > 0) {

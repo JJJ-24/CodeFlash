@@ -731,7 +731,7 @@
     "exportContinue": "Continuar",
     "exportTsv": "Exportar a TSV",
     "exportTsvInfo": "Exporta las tarjetas del mazo elegido en un archivo TSV (separado por tabulaciones). Puedes abrirlo y editarlo en hojas de cálculo como Numbers. No incluye el historial de estudio ni las imágenes (las imágenes se convierten en el texto [image]).",
-    "importTsvInfo": "Agrega o actualiza tarjetas desde un archivo TSV (.tsv) o un texto separado por tabulaciones (.txt). Si creas el archivo desde cero en Numbers o similar, pon en la primera fila los encabezados como se ve abajo (front＝anverso, back＝reverso, memo＝nota; en tags puedes poner varias etiquetas separadas por comas). Si dejas id en blanco se crea una tarjeta nueva; si lo conservas, se sobrescribe la tarjeta existente.\n| id | front | back | memo | tags |",
+    "importTsvInfo": "Agrega o actualiza tarjetas desde un archivo TSV (.tsv) o un texto separado por tabulaciones (.txt). Si creas el archivo desde cero en Numbers o similar, pon los encabezados en la primera fila.\n| id | front | back | memo | tags |\n|  | perro | dog | plural: dogs | animales,inglés |\nSi dejas id en blanco se crea una tarjeta nueva; si lo conservas, se sobrescribe.",
     "tsvExportNoteTitle": "Sobre la exportación a TSV",
     "tsvExportNoteMessage": "Ten en cuenta lo siguiente:\n\n■ No incluye el historial de estudio\n■ Los bloques de código se escriben entre ``` y se recuperan al reimportar\n■ Las imágenes se convierten en el texto [image] (no se recuperan)\n■ Los bloques de texto seguidos se unen en uno solo",
     "tsvExportLossTitle": "Lo que no se guarda de este mazo",

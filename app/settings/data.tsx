@@ -9,6 +9,7 @@ import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
+import { InfoContent } from '@/components/InfoContent';
 import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { settingsStyles as styles } from '@/components/settings/styles';
@@ -296,9 +297,7 @@ export default function DataSettingsScreen() {
       </Pressable>
       {row.showInfo && (
         <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-            {row.info}
-          </Text>
+          <InfoContent text={row.info} />
         </View>
       )}
     </View>

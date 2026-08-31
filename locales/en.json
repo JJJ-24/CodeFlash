@@ -729,7 +729,7 @@
     "exportContinue": "Continue",
     "exportTsv": "TSV Export",
     "exportTsvInfo": "Exports cards of the selected deck as a TSV (tab-separated) file. You can open and edit it in spreadsheet apps like Numbers. Study history and images are not included (images become the text [image]).",
-    "importTsvInfo": "Adds or updates cards from a TSV file (.tsv) or a tab-separated text file (.txt). To create a new file in Numbers or a similar app, lay out the header row as shown below (tags can be comma-separated for multiple tags). Leave id blank to add a new card, or keep it to overwrite an existing one.\n| id | front | back | memo | tags |",
+    "importTsvInfo": "Adds or updates cards from a TSV file (.tsv) or a tab-separated text file (.txt). To create a new file in Numbers or a similar app, make the first row the header.\n| id | front | back | memo | tags |\n|  | dog | perro | plural: perros | animals,spanish |\nLeave id blank to add a new card, or keep it to overwrite an existing one.",
     "tsvExportNoteTitle": "About TSV Export",
     "tsvExportNoteMessage": "Please note the following:\n\n■ Study history is not included\n■ Code blocks are written inside ``` fences and are restored on re-import\n■ Images become the text [image] (not restored)\n■ Consecutive text blocks are merged into one",
     "tsvExportLossTitle": "Not Saved in TSV",

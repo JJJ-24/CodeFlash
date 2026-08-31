@@ -694,7 +694,7 @@
     "exportContinue": "続ける",
     "exportTsv": "TSV エクスポート",
     "exportTsvInfo": "指定したデッキのカードを TSV（タブ区切り）ファイルとして書き出します。Numbers などの表計算ソフトで開いて編集できます。学習履歴と画像は含まれません（画像は [image] の文字になります）。",
-    "importTsvInfo": "TSVファイル(.tsv)やタブ区切りテキスト(.txt)からカードを追加・更新します。新たに Numbers などで作成する場合は、1行目は下記のように見出しを並べます（front＝表面、back＝裏面、memo＝メモ、tags はカンマ区切りでタグを複数指定できます）。id を空欄にすると新規カードになり、残せば既存カードへ上書きできます。\n| id | front | back | memo | tags |",
+    "importTsvInfo": "TSVファイル(.tsv)やタブ区切りテキスト(.txt)からカードを追加・更新します。新たに Numbers などで作成する場合は、1行目を見出しにします。\n| id | front | back | memo | tags |\n|  | 犬 | dog | 複数形は dogs | 動物,英単語 |\nid は空欄なら新規カード、残せば既存カードへの上書きです。",
     "tsvExportNoteTitle": "TSV エクスポートについて",
     "tsvExportNoteMessage": "以下の点にご注意ください\n\n■ 学習履歴は含まれません\n■ コードブロックは ``` で囲んで出力され、再インポートで復元されます\n■ 画像は [image] の文字になります（復元されません）\n■ 連続するテキストブロックは1つにまとまります",
     "tsvExportLossTitle": "このデッキで保存されない内容",

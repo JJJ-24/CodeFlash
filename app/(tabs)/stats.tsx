@@ -986,7 +986,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, gradeRankingRecordableOnly, setGradeRankingRecordableOnly, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のメイン
@@ -1083,6 +1083,48 @@ export default function StatsScreen() {
     return sortedDecks.map((d) => masteryByDeckId[d.id]).filter((m): m is MasteryItem => m != null);
   }, [deckMastery, sortedDecks]);
 
+  // 評価別ランキングの TOP10 取得は6箇所（初回読み込み・ブロック選択・表示モード循環・期間変更・
+  // デッキ絞り込み・デッキ全解除・記録対象の絞り込み）から同じ引数で呼ぶので、設定の読み出しを
+  // ここへまとめる。呼び出し側は「今まさに変えた値」だけを over で上書きする。
+  // ⚠️ 条件を1つでも渡し忘れると「ボタンは ON なのに効いていない」状態になるため、
+  //    getTopCardsByGrade を直接呼ばずこの関数を通すこと。
+  const fetchRankingCards = useCallback((
+    grade: 0 | 1 | 2 | 3,
+    over: { sortBy?: GradeRankingSortBy; period?: GradeRankingPeriod; deckIds?: string[] } = {},
+  ) => {
+    const s = useSettingsStore.getState();
+    const period = over.period ?? s.gradeRankingPeriod;
+    const deckIds = over.deckIds ?? s.gradeRankingDeckIds;
+    return getTopCardsByGrade(
+      db,
+      grade,
+      10,
+      over.sortBy ?? s.gradeRankingSortBy,
+      periodToSince(period),
+      deckIds.length > 0 ? deckIds : undefined,
+      GRADE_RANKING_RATE_MIN_TOTAL[period],
+      s.gradeRankingRecordableOnly,
+    );
+  }, [db]);
+
+  // 評価4ブロックの集計。⚠️ **評価率モードだけ母集団が一覧と同じ**（期間内に min 回以上評価された
+  // カード）になる＝全ログで数えると「数字はあるのにタップしても一覧が空」になるため。
+  // ⚠️ モードで母集団が変わるので、表示モードを切り替えたときもここを取り直すこと。
+  const fetchGradeTotals = useCallback((
+    over: { sortBy?: GradeRankingSortBy; period?: GradeRankingPeriod; deckIds?: string[] } = {},
+  ) => {
+    const s = useSettingsStore.getState();
+    const period = over.period ?? s.gradeRankingPeriod;
+    const sortBy = over.sortBy ?? s.gradeRankingSortBy;
+    const deckIds = over.deckIds ?? s.gradeRankingDeckIds;
+    return getGradeLogTotals(
+      db,
+      periodToSince(period),
+      deckIds.length > 0 ? deckIds : undefined,
+      sortBy === 'rate' ? GRADE_RANKING_RATE_MIN_TOTAL[period] : undefined,
+    );
+  }, [db]);
+
   const loadStats = useCallback(async () => {
     const heatmapStart = new Date();
     heatmapStart.setDate(heatmapStart.getDate() - HEATMAP_WEEKS * 7);
@@ -1105,7 +1147,7 @@ export default function StatsScreen() {
         getTodayCreatedCount(db),
         getDailyReviewCounts(db, heatmapStartStr),
         getMonthlyReviewCountsByGrade(db),
-        getGradeLogTotals(db, since, deckIdsFilter),
+        fetchGradeTotals(),
         getGradeAvgResponseTimes(db, since, deckIdsFilter),
       ]);
 
@@ -1137,12 +1179,9 @@ export default function StatsScreen() {
       monthlyReviewed: fillPast12MonthsByGrade(rawMonthly),
     });
     if (selectedGradeBlockRef.current !== null) {
-      const sortBy = useSettingsStore.getState().gradeRankingSortBy;
-      const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
-      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter, minTotal);
-      setGradeBlockCards(cards);
+      setGradeBlockCards(await fetchRankingCards(selectedGradeBlockRef.current));
     }
-  }, [db]);
+  }, [db, fetchGradeTotals, fetchRankingCards]);
 
   // 初期フィルターは「タブに入ったとき」に適用する設定であって、**自分が開いた子画面から
   // 戻ってきたとき**に適用するものではない（ユーザーはその場所を離れていない）。統計タブは
@@ -1379,30 +1418,28 @@ export default function StatsScreen() {
     pendingFocusRankingRef.current = true;
     setGradeBlockLoading(true);
     // カードをクリアしない → コンテンツ高さを維持してスクロール位置を保持
-    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
-    const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
-    const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
-    const cards = await getTopCardsByGrade(db, grade, 10, sortBy, since, deckIdsFilter, minTotal);
+    const cards = await fetchRankingCards(grade);
     setGradeBlockCards(cards);
     setGradeBlockLoading(false);
-  }, [db, selectedGradeBlock]);
+  }, [fetchRankingCards, selectedGradeBlock]);
 
-  // ソートモード切替（回数→平均時間→評価率の循環）：選択中のグレードブロックの TOP10 を再取得
+  // ソートモード切替（回数→平均時間→評価率の循環）：4ブロックと選択中グレードの TOP10 を再取得。
+  // ⚠️ ブロックも取り直すのは、評価率モードだけ母集団が変わるため（fetchGradeTotals のコメント参照）。
   const handleCycleRankingSort = useCallback(async () => {
     const next: Record<GradeRankingSortBy, GradeRankingSortBy> = { count: 'time', time: 'rate', rate: 'count' };
     const newValue = next[gradeRankingSortBy];
     setGradeRankingSortBy(newValue);
-    if (selectedGradeBlockRef.current !== null) {
-      setGradeBlockLoading(true);
-      const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-      const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
-      const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
-      const cards = await getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, newValue, since, deckIdsFilter, minTotal);
-      setGradeBlockCards(cards);
-      setGradeBlockLoading(false);
-    }
-  }, [db, gradeRankingSortBy, setGradeRankingSortBy]);
+    setGradeBlockLoading(true);
+    const [totals, cards] = await Promise.all([
+      fetchGradeTotals({ sortBy: newValue }),
+      selectedGradeBlockRef.current !== null
+        ? fetchRankingCards(selectedGradeBlockRef.current, { sortBy: newValue })
+        : Promise.resolve(null),
+    ]);
+    setStats((prev) => ({ ...prev, gradeTotals: totals }));
+    if (cards !== null) setGradeBlockCards(cards);
+    setGradeBlockLoading(false);
+  }, [fetchGradeTotals, fetchRankingCards, gradeRankingSortBy, setGradeRankingSortBy]);
 
   // 重点復習を開始（選択中グレードの TOP カードでセッション開始）。ボタンと Space キーで共用。
   const startFocusedReview = useCallback(() => {
@@ -1566,21 +1603,19 @@ export default function StatsScreen() {
   const handlePeriodChange = useCallback(async (newPeriod: GradeRankingPeriod) => {
     setGradeRankingPeriod(newPeriod);
     const since = periodToSince(newPeriod);
-    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
-    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[newPeriod];
     const deckIdsFilter = useSettingsStore.getState().gradeRankingDeckIds.length > 0 ? useSettingsStore.getState().gradeRankingDeckIds : undefined;
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
-      getGradeLogTotals(db, since, deckIdsFilter),
+      fetchGradeTotals({ period: newPeriod }),
       getGradeAvgResponseTimes(db, since, deckIdsFilter),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter, minTotal)
+        ? fetchRankingCards(selectedGradeBlockRef.current, { period: newPeriod })
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
     if (cards !== null) setGradeBlockCards(cards);
     setGradeBlockLoading(false);
-  }, [db, setGradeRankingPeriod]);
+  }, [db, fetchGradeTotals, fetchRankingCards, setGradeRankingPeriod]);
 
   // デッキ絞り込みトグル：4ブロック集計と TOP10 を即時再取得
   const handleDeckToggle = useCallback(async (deckId: string) => {
@@ -1588,40 +1623,60 @@ export default function StatsScreen() {
     const newIds = current.includes(deckId) ? current.filter((id) => id !== deckId) : [...current, deckId];
     setGradeRankingDeckIds(newIds);
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
-    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
     const deckIdsFilter = newIds.length > 0 ? newIds : undefined;
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
-      getGradeLogTotals(db, since, deckIdsFilter),
+      fetchGradeTotals({ deckIds: newIds }),
       getGradeAvgResponseTimes(db, since, deckIdsFilter),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, deckIdsFilter, minTotal)
+        ? fetchRankingCards(selectedGradeBlockRef.current, { deckIds: newIds })
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
     if (cards !== null) setGradeBlockCards(cards);
     setGradeBlockLoading(false);
-  }, [db, setGradeRankingDeckIds]);
+  }, [db, fetchGradeTotals, fetchRankingCards, setGradeRankingDeckIds]);
 
   // デッキ絞り込みクリア
   const handleDeckClearAll = useCallback(async () => {
     setGradeRankingDeckIds([]);
     const since = periodToSince(useSettingsStore.getState().gradeRankingPeriod);
-    const sortBy = useSettingsStore.getState().gradeRankingSortBy;
-    const minTotal = GRADE_RANKING_RATE_MIN_TOTAL[useSettingsStore.getState().gradeRankingPeriod];
     setGradeBlockLoading(true);
     const [totals, avgTimes, cards] = await Promise.all([
-      getGradeLogTotals(db, since, undefined),
+      fetchGradeTotals({ deckIds: [] }),
       getGradeAvgResponseTimes(db, since, undefined),
       selectedGradeBlockRef.current !== null
-        ? getTopCardsByGrade(db, selectedGradeBlockRef.current, 10, sortBy, since, undefined, minTotal)
+        ? fetchRankingCards(selectedGradeBlockRef.current, { deckIds: [] })
         : Promise.resolve(null),
     ]);
     setStats((prev) => ({ ...prev, gradeTotals: totals, gradeAvgTimes: avgTimes }));
     if (cards !== null) setGradeBlockCards(cards);
     setGradeBlockLoading(false);
-  }, [db, setGradeRankingDeckIds]);
+  }, [db, fetchGradeTotals, fetchRankingCards, setGradeRankingDeckIds]);
+
+  // 「学習履歴が残るカードのみ」の絞り込みトグル：選択中グレードの TOP10 を取り直す。
+  // ⚠️ 絞り込みは SQL の LIMIT の前に掛かる＝ON でも対象カードがあれば最大10件出る
+  //（取得済みの10件を後から間引く実装にすると、対象が何十枚あってもリストが数行になる）。
+  const handleToggleRecordableOnly = useCallback(async () => {
+    setGradeRankingRecordableOnly(!useSettingsStore.getState().gradeRankingRecordableOnly);
+    if (selectedGradeBlockRef.current === null) return;
+    // 行の中身が総入れ替えになるのでカードフォーカスは外す（グレード切替と同じ扱い）。
+    // ⚠️ pendingFocusRankingRef は立てない＝既にランキングを見ているのでスクロールは不要。
+    setFocusedItem(null);
+    setGradeBlockLoading(true);
+    const cards = await fetchRankingCards(selectedGradeBlockRef.current);
+    setGradeBlockCards(cards);
+    setGradeBlockLoading(false);
+  }, [fetchRankingCards, setGradeRankingRecordableOnly]);
+
+  // 4ブロックの元になる評価回数の合計と、選択中の評価のぶん。ランキングが空のときに
+  // 「下限や絞り込みのせい」なのか「そもそもデータが無い」のかを見分けるためにも使う。
+  // ⚠️ 評価率モードでは母集団が「期間内に min 回以上評価されたカード」に絞られている
+  //（fetchGradeTotals）＝合計0は「下限を満たすカードが1枚も無い」を意味する。
+  const gradeLogTotalSum = gradeTotals.again + gradeTotals.hard + gradeTotals.good + gradeTotals.easy;
+  const selectedGradeLogCount = selectedGradeBlock === null
+    ? 0
+    : [gradeTotals.again, gradeTotals.hard, gradeTotals.good, gradeTotals.easy][selectedGradeBlock];
 
   const hasData = learned > 0 || todayReviewed > 0;
   const total = learned + unlearned;
@@ -2112,9 +2167,11 @@ export default function StatsScreen() {
                 { grade: 2 as const, labelKey: 'grade.good',  color: GRADE_COLORS.good,  count: gradeTotals.good,  avgMs: gradeAvgTimes.good  },
                 { grade: 3 as const, labelKey: 'grade.easy',  color: GRADE_COLORS.easy,  count: gradeTotals.easy,  avgMs: gradeAvgTimes.easy  },
               ];
-              // rate モードの4ブロックは「全評価に占める各グレードの割合」を表示する
-              // （% は付けない。time モードの「秒」と同様、単位はキャプション側で示す）
-              const gradeTotalSum = gradeItems.reduce((sum, g) => sum + g.count, 0);
+              // rate モードの4ブロックは「各グレードの割合」を表示する（% は付けない。time モードの
+              // 「秒」と同様、単位はキャプション側で示す）。分母は**一覧と同じ母集団**＝期間内に
+              // min 回以上評価されたカードの評価だけ（fetchGradeTotals）なので、下限を満たすカードが
+              // 無ければ合計0＝4つとも「-」になり、「数字はあるのにタップしても空」が起きない。
+              const gradeTotalSum = gradeLogTotalSum;
               const displayValues = gradeItems.map(g => gradeRankingSortBy === 'time'
                 ? (g.avgMs != null ? (g.avgMs / 1000).toFixed(1) : '-')
                 : gradeRankingSortBy === 'rate'
@@ -2154,33 +2211,51 @@ export default function StatsScreen() {
                 onLayout={(e) => { sectionOffsets.current.rankingOuter = e.nativeEvent.layout.y; }}
               >
                 {gradeBlockCards.length > 0 && (
-                  <View>
-                    <Pressable
-                      onPress={startFocusedReview}
-                      style={({ pressed }) => [styles.focusedReviewBtn, { backgroundColor: FILTER_COLORS.due }, pressed && { opacity: 0.85 }]}
-                    >
-                      <Ionicons name="play" size={20} color="#FFF" />
-                      <Text style={[styles.focusedReviewBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                        {t('stats.focusedReviewStart')}
-                      </Text>
-                    </Pressable>
-                    {/* リスト側の操作（カードのタップ・重点復習）はこの小見出しの ⓘ が担当する。
-                        セクション見出しの ⓘ は評価ブロックのタップとヘッダーのボタンだけを説明する。
-                        重点復習ボタンと同じ条件（該当カードあり）で出す＝0件のときは説明する対象が無い。 */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-                      <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                        {t('stats.gradeRankingListTitle')}
-                      </Text>
-                      <Pressable
-                        onPress={() => setSectionInfoModal({ title: t('stats.gradeRankingListTitle'), message: <InfoContent text={t('stats.gradeRankingListInfoMessage')} /> })}
-                        hitSlop={8}
-                        accessibilityLabel={t('stats.gradeRankingListInfoLabel')}
-                      >
-                        <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
-                      </Pressable>
-                    </View>
-                  </View>
+                  <Pressable
+                    onPress={startFocusedReview}
+                    style={({ pressed }) => [styles.focusedReviewBtn, { backgroundColor: FILTER_COLORS.due }, pressed && { opacity: 0.85 }]}
+                  >
+                    <Ionicons name="play" size={20} color="#FFF" />
+                    <Text style={[styles.focusedReviewBtnText, { fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('stats.focusedReviewStart')}
+                    </Text>
+                  </Pressable>
                 )}
+                {/* リスト側の操作（カードのタップ・重点復習・記録対象の絞り込み）はこの小見出しの ⓘ が
+                    担当する。セクション見出しの ⓘ は評価ブロックのタップとヘッダーのボタンだけ。
+                    ⚠️ 0件でも出す＝絞り込みボタンごと消えると ON のまま解除できなくなる
+                    （重点復習ボタンだけは学習するものが無いので0件で隠す）。 */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {t('stats.gradeRankingListTitle')}
+                    </Text>
+                    <Pressable
+                      onPress={() => setSectionInfoModal({ title: t('stats.gradeRankingListTitle'), message: <InfoContent text={t('stats.gradeRankingListInfoMessage')} /> })}
+                      hitSlop={8}
+                      accessibilityLabel={t('stats.gradeRankingListInfoLabel')}
+                    >
+                      <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+                    </Pressable>
+                  </View>
+                  {/* 「学習履歴が残るカードのみ」＝評価が記録されるカードだけに絞る。ON にすれば
+                      重点復習で評価したカードは全部記録されるので、注意書きを読まなくても壊れない。 */}
+                  <Pressable
+                    onPress={handleToggleRecordableOnly}
+                    accessibilityLabel={t('stats.gradeRankingRecordableOnly')}
+                    style={[
+                      styles.rankingToggleBtn,
+                      { borderColor: gradeRankingRecordableOnly ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                      gradeRankingRecordableOnly && { backgroundColor: theme.colors.primary },
+                    ]}
+                  >
+                    <Ionicons
+                      name="funnel-outline"
+                      size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                      color={gradeRankingRecordableOnly ? theme.colors.primaryText : theme.colors.textSecondary}
+                    />
+                  </Pressable>
+                </View>
                 {gradeBlockLoading && gradeBlockCards.length === 0 ? (
                   // 初回：カードなしでローディング中
                   <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 20, alignItems: 'center' }]}>
@@ -2188,10 +2263,18 @@ export default function StatsScreen() {
                   </View>
                 ) : gradeBlockCards.length === 0 ? (
                   <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 20, alignItems: 'center' }]}>
-                    <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                      {gradeRankingSortBy === 'rate'
+                    <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, textAlign: 'center' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {/* 空の理由を書き分ける。⚠️ 順番が意味を持つ：まず「下限を満たすカードが
+                          1枚も無い」（評価率モードで合計0＝4ブロックが全部「-」）、次に「その評価が
+                          0件」、最後に絞り込み。逆順にすると「絞り込みを解除すれば出る」と読めるのに
+                          解除しても空、という案内になる。 */}
+                      {gradeRankingSortBy === 'rate' && gradeLogTotalSum === 0
                         ? t('stats.gradeRankingEmptyRate', { min: GRADE_RANKING_RATE_MIN_TOTAL[gradeRankingPeriod] })
-                        : t('stats.gradeRankingEmpty')}
+                        : selectedGradeLogCount === 0
+                          ? t('stats.gradeRankingEmpty')
+                          : gradeRankingRecordableOnly
+                            ? t('stats.gradeRankingEmptyRecordable')
+                            : t('stats.gradeRankingEmpty')}
                     </Text>
                   </View>
                 ) : (

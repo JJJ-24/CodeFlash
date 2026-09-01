@@ -532,20 +532,43 @@ export async function getMonthlyReviewCountsByGrade(
   );
 }
 
+/**
+ * 期間内の評価回数をグレード別に合計する（統計タブの4ブロックの元）。
+ *
+ * `minTotal` を渡すと「期間内に minTotal 回以上評価されたカード」の評価だけを数える＝
+ * **評価率モードのランキング（getTopCardsByGrade の `HAVING totalCount >= ?`）と同じ母集団**になる。
+ * ⚠️ ブロックだけ全ログで数えると「数字はあるのにタップしても一覧が空」になる（母集団が違うため）。
+ * 評価回数・平均回答時間モードは下限が無いので渡さないこと（全ログが正しい母集団）。
+ */
 export async function getGradeLogTotals(
   db: SQLiteDatabase,
   since?: string,
-  deckIds?: string[]
+  deckIds?: string[],
+  minTotal?: number
 ): Promise<{ again: number; hard: number; good: number; easy: number }> {
   const conds: string[] = [];
   const params: (string | number)[] = [];
+  const byDeck = !!(deckIds && deckIds.length > 0);
   if (since) { conds.push('gl.reviewedAt >= ?'); params.push(since); }
-  if (deckIds && deckIds.length > 0) {
-    conds.push(`c.deckId IN (${deckIds.map(() => '?').join(',')})`);
-    params.push(...deckIds);
+  if (byDeck) {
+    conds.push(`c.deckId IN (${deckIds!.map(() => '?').join(',')})`);
+    params.push(...deckIds!);
+  }
+  if (minTotal != null) {
+    // 母集団を絞る条件はランキング側と同じ並び（期間 → デッキ → 回数の下限）で組む。
+    const subConds: string[] = [];
+    if (since) subConds.push('gl2.reviewedAt >= ?');
+    if (byDeck) subConds.push(`c2.deckId IN (${deckIds!.map(() => '?').join(',')})`);
+    conds.push(
+      `gl.cardId IN (SELECT gl2.cardId FROM grade_logs gl2 ${byDeck ? 'JOIN cards c2 ON gl2.cardId = c2.id' : ''}` +
+      `${subConds.length > 0 ? ` WHERE ${subConds.join(' AND ')}` : ''} GROUP BY gl2.cardId HAVING COUNT(*) >= ?)`
+    );
+    if (since) params.push(since);
+    if (byDeck) params.push(...deckIds!);
+    params.push(minTotal);
   }
   const where = conds.length > 0 ? `WHERE ${conds.join(' AND ')}` : '';
-  const join = (deckIds && deckIds.length > 0) ? 'JOIN cards c ON gl.cardId = c.id' : '';
+  const join = byDeck ? 'JOIN cards c ON gl.cardId = c.id' : '';
   const row = await db.getFirstAsync<{ again: number; hard: number; good: number; easy: number }>(
     `SELECT
        SUM(CASE WHEN gl.grade = 0 THEN 1 ELSE 0 END) as again,
@@ -646,7 +669,8 @@ export async function getTopCardsByGrade(
   sortBy: GradeRankingSortBy = 'count',
   since?: string,
   deckIds?: string[],
-  minTotal = 1
+  minTotal = 1,
+  recordableOnly = false
 ): Promise<{ cardId: string; deckId: string; deckName: string; frontContent: string; gradeCount: number; totalCount: number; avgResponseTimeMs: number | null; archived: boolean }[]> {
   // count モード：評価回数の多い順。同数のときは grade 0/1 は時間 DESC（遅い順）、grade 2/3 は時間 ASC（早い順）。
   // time モード：平均回答時間の遅い順（全グレード共通）。同時間のときは評価回数の多い順。NULL は常に末尾。
@@ -667,6 +691,18 @@ export async function getTopCardsByGrade(
   if (deckIds && deckIds.length > 0) {
     conds.push(`c.deckId IN (${deckIds.map(() => '?').join(',')})`);
     params.push(...deckIds);
+  }
+  // recordableOnly：評価しても学習履歴が更新されないカードを落とす。条件は
+  // useStudySession.submitGrade の `isDue || reviewedToday` と同じ＝「reviews に行が無い（未学習）」
+  // 「次回復習日が今日以前」「今日学習済み」のどれか。
+  // ⚠️ 日付は JS の todayISO()（ローカル日付）を渡す＝SQLite の date('now') は UTC なので日付がずれる。
+  // ⚠️ 絞り込みは LIMIT の前に掛ける＝取得後に間引くと「TOP10 のうち対象の3件」になり、
+  //    対象カードが他に何十枚あってもリストが3行になってしまう。
+  const reviewJoin = recordableOnly ? 'LEFT JOIN reviews r ON r.cardId = c.id' : '';
+  if (recordableOnly) {
+    const today = todayISO();
+    conds.push(`(r.cardId IS NULL OR substr(r.nextReviewDate, 1, 10) <= ? OR substr(r.lastReviewDate, 1, 10) = ?)`);
+    params.push(today, today);
   }
   const where = conds.length > 0 ? `WHERE ${conds.join(' AND ')}` : '';
   // rate は分母（totalCount）が必要なため全グレードを条件付き集計で数え、対象グレード0件は
@@ -691,6 +727,7 @@ export async function getTopCardsByGrade(
      JOIN cards c ON gl.cardId = c.id
      JOIN card_contents cc ON c.id = cc.cardId
      JOIN decks d ON c.deckId = d.id
+     ${reviewJoin}
      ${where}
      GROUP BY c.id
      ${having}

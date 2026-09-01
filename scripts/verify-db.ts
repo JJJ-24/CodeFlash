@@ -34,7 +34,8 @@ const { shouldFireStudyGoal, isStudyGoalUnmet, computeGoalLookaheadDays, compute
   require('@/lib/studyGoal');
 const { getLifetimeStats } = require('@/lib/database/reviews');
 const { searchCards, SEARCH_RESULT_LIMIT, SEARCH_DATE_RESULT_LIMIT } = require('@/lib/database/cards');
-const { getActiveCardCount } = require('@/lib/database/reviews');
+const { getActiveCardCount, getTopCardsByGrade, getGradeLogTotals } = require('@/lib/database/reviews');
+const { localDateStr } = require('@/lib/database/utils');
 const { getAllSchedules, createSchedule, updateSchedule, MAX_SCHEDULES } = require('@/lib/database/notifications');
 
 const { check, eq, report } = createAsserts();
@@ -614,6 +615,95 @@ async function main() {
   check(
     `学習日の上限は文字検索より大きい（${SEARCH_DATE_RESULT_LIMIT} > ${SEARCH_RESULT_LIMIT}）`,
     SEARCH_DATE_RESULT_LIMIT > SEARCH_RESULT_LIMIT
+  );
+
+  // ===========================================================================
+  console.log('\n[T21] 評価別ランキングの「学習履歴が残るカードのみ」絞り込み');
+  // ===========================================================================
+  const db21 = makeDb();
+  await migrateDbIfNeeded(db21);
+  const deck21 = await createDeck(db21, { name: 'R', description: '', language: 'ja' });
+  const dayOf = (offset: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return localDateStr(d);
+  };
+  const today21 = dayOf(0);
+  const t21 = '2026-08-20T00:00:00.000Z';
+  // 評価回数は c1(4) > c3(3) > c2(2) > c4(1)＝**対象外の c3 を2位に置く**（絞り込みが
+  // LIMIT の前に掛かっているかを limit=2 で見分けるため）。
+  for (const [id, logs] of [['c1', 4], ['c3', 3], ['c2', 2], ['c4', 1]] as [string, number][]) {
+    await db21.runAsync(
+      `INSERT INTO cards (id,deckId,sortOrder,archived,createdAt,updatedAt) VALUES (?,?,0,0,?,?)`,
+      [id, deck21.id, t21, t21]
+    );
+    await db21.runAsync(
+      `INSERT INTO card_contents (cardId,frontContent,backContent,memoContent) VALUES (?,?,'[]','[]')`,
+      [id, JSON.stringify([{ id: 'b1', type: 'text', content: id }])]
+    );
+    for (let i = 0; i < logs; i++) {
+      await db21.runAsync(
+        'INSERT INTO grade_logs (cardId, grade, reviewedAt, responseTimeMs) VALUES (?,0,?,1000)',
+        [id, t21]
+      );
+    }
+  }
+  // c1=復習対象（次回が昨日）／c2=今日学習済み（次回は明日）／c3=どちらでもない／c4=reviews 行なし
+  for (const [id, next, last] of [
+    ['c1', `${dayOf(-1)}T09:00:00.000Z`, `${dayOf(-1)}T09:00:00.000Z`],
+    ['c2', `${dayOf(1)}T09:00:00.000Z`, `${today21}T09:00:00.000Z`],
+    ['c3', `${dayOf(1)}T09:00:00.000Z`, `${dayOf(-1)}T09:00:00.000Z`],
+  ] as [string, string, string][]) {
+    await db21.runAsync(
+      `INSERT INTO reviews (cardId,easeFactor,interval,repetitions,nextReviewDate,lastReviewDate) VALUES (?,2.5,0,1,?,?)`,
+      [id, next, last]
+    );
+  }
+  const ids21 = (rows: { cardId: string }[]) => rows.map((r) => r.cardId).join(',');
+  eq(
+    '絞り込みなしは評価回数の多い順に全部出る',
+    ids21(await getTopCardsByGrade(db21, 0, 10, 'count', undefined, undefined, 1, false)),
+    'c1,c3,c2,c4'
+  );
+  eq(
+    '絞り込むと「復習対象・今日学習済み・未学習」だけ残る（c3 が落ちる）',
+    ids21(await getTopCardsByGrade(db21, 0, 10, 'count', undefined, undefined, 1, true)),
+    'c1,c2,c4'
+  );
+  // 取得後に間引く実装だと TOP2（c1,c3）から c3 が消えて c1 だけになる
+  eq(
+    '絞り込みは LIMIT より前に掛かる（対象カードで10件まで埋まる）',
+    ids21(await getTopCardsByGrade(db21, 0, 2, 'count', undefined, undefined, 1, true)),
+    'c1,c2'
+  );
+  // 境界：次回復習日が「今日」なら対象（submitGrade の `nextReviewDate <= today` と同じ）
+  await db21.runAsync('UPDATE reviews SET nextReviewDate = ? WHERE cardId = ?', [`${today21}T23:00:00.000Z`, 'c3']);
+  eq(
+    '次回復習日が今日ちょうどのカードは対象に入る',
+    ids21(await getTopCardsByGrade(db21, 0, 10, 'count', undefined, undefined, 1, true)),
+    'c1,c3,c2,c4'
+  );
+  // 他の絞り込みと併用できる（デッキ指定と掛け合わせても条件が消えない）
+  eq(
+    'デッキ絞り込みと併用できる',
+    ids21(await getTopCardsByGrade(db21, 0, 10, 'count', undefined, [deck21.id], 1, true)).length > 0,
+    true
+  );
+
+  // 評価率モードの4ブロックは一覧と同じ母集団で数える（＝下限未満のカードの評価は入れない）。
+  // 入れてしまうと「ブロックに数字があるのにタップすると一覧が空」になる。
+  const sum21 = (t: { again: number; hard: number; good: number; easy: number }) => t.again + t.hard + t.good + t.easy;
+  eq('下限を渡さなければ全ログを数える（c1..c4 の 4+3+2+1）', (await getGradeLogTotals(db21)).again, 10);
+  eq('下限3なら3回以上評価されたカードのぶんだけ（c1+c3）', (await getGradeLogTotals(db21, undefined, undefined, 3)).again, 7);
+  eq(
+    '下限を満たすカードが1枚も無ければ合計0（＝ブロックが全部「-」になる）',
+    sum21(await getGradeLogTotals(db21, undefined, undefined, 5)),
+    0
+  );
+  eq(
+    'デッキ絞り込みと下限を併用できる',
+    (await getGradeLogTotals(db21, undefined, [deck21.id], 3)).again,
+    7
   );
 
   report();

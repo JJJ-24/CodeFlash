@@ -198,6 +198,8 @@ interface SettingsValues {
   gradeRankingSortBy: GradeRankingSortBy;
   gradeRankingPeriod: GradeRankingPeriod;
   gradeRankingDeckIds: string[];
+  // 評価別ランキングを「評価が学習履歴に反映されるカード」だけに絞るか（true=絞る）
+  gradeRankingRecordableOnly: boolean;
   // 統計タブで折りたたみ中のセクションID（'chart'|'heatmap'|'today'|'total'|'mastery'|'pro'）
   statsCollapsedSections: string[];
   // 統計「学習の記録」シートの表示モード（Σ／最高／平均）
@@ -337,6 +339,9 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
       else AsyncStorage.setItem(GRADE_RANKING_DECK_IDS_KEY, JSON.stringify(v));
     },
   },
+  // 評価別ランキングの「学習履歴が残るカードのみ」絞り込み。デッキ/期間/表示モードと同じで
+  // 直近の選択を覚える（ON のときは絞り込みボタンが青塗りなので理由は画面から読める）。
+  gradeRankingRecordableOnly: { key: '@codeflash_grade_ranking_recordable_only', default: false, parse: asBool },
   statsCollapsedSections: {
     key: STATS_COLLAPSED_SECTIONS_KEY,
     default: [],
@@ -505,6 +510,7 @@ interface SettingsState extends SettingsValues {
   setRecordSheetMode: (v: RecordSheetMode) => void;
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   setGradeRankingDeckIds: (v: string[]) => void;
+  setGradeRankingRecordableOnly: (v: boolean) => void;
   toggleStatsSection: (id: string) => void;
   toggleStudySection: (id: string) => void;
   setCardThemePreference: (v: CardThemeName) => void;
@@ -568,6 +574,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setRecordSheetMode: makeSetter('recordSheetMode'),
     setGradeRankingPeriod: makeSetter('gradeRankingPeriod'),
     setGradeRankingDeckIds: makeSetter('gradeRankingDeckIds'),
+    setGradeRankingRecordableOnly: makeSetter('gradeRankingRecordableOnly'),
     // 配列へのトグル追加/削除のため個別定義（永続化は DEFS の persist に従う）。
     toggleStudySection: (id) => {
       set((state) => {

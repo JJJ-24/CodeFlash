@@ -60,6 +60,7 @@ const PLURAL_NOUN_OK = new Set([
   'card.searchResultCountMax',   // "{{count}}+ results"（上限表示なので常に複数）
   'deck.htmlStagesAndImages',    // "{{stages}}, {{images}}"＝整形済みの断片を繋ぐだけ
   'study.historyInfoMessage',    // 説明モーダルの本文（数を差し込まない）
+  'stats.gradeRankingListInfoMessage', // 同上（`{{funnel}}` はアイコンで数ではない）
 ]);
 
 /** W2 で見る名詞。`{{token}} … cards` のように**補間のすぐ後ろ**に来るものだけを対象にする。 */

@@ -27,6 +27,8 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   // デッキIDの配列。別データへの merge では存在しないIDになりうるが、
   // 統計画面側で存在しないIDは実質無視されるため無害（replace では整合する）。
   '@codeflash_grade_ranking_deck_ids',
+  // 評価別ランキングを「学習履歴が残るカード」だけに絞るか
+  '@codeflash_grade_ranking_recordable_only',
   // 統計タブの折りたたみ中セクションID配列（'chart' 等の固定IDなので端末間で常に有効）
   '@codeflash_stats_collapsed_sections',
   // 「学習の記録」シートの表示モード（'total'|'max'|'avg'）

@@ -864,7 +864,7 @@
     "trialRemaining": "Prueba activa: quedan {{count}} días",
     "trialRemaining_one": "Prueba activa: queda 1 día",
     "trialConfirmTitle": "¿Empezar tu semana de prueba de Pro?",
-    "trialConfirmMessage": "La prueba gratuita solo se puede usar una vez. Tendrás todas las funciones Pro durante 7 días desde que empieces. Pasados los 7 días la app vuelve automáticamente al plan gratuito (tus datos se conservan).\n\nLas funciones Pro, como las estadísticas detalladas, son más útiles cuanto más historial de estudio tengas. Te recomendamos estudiar un tiempo antes de empezar la prueba.",
+    "trialConfirmMessage": "La prueba gratuita solo se puede usar una vez. Al empezarla tendrás todas las funciones Pro durante 7 días y después la app vuelve al plan gratuito automáticamente (tus datos se conservan).\n\nLas funciones Pro, como las estadísticas detalladas, son más útiles cuanto más historial tengas, así que te recomendamos estudiar un tiempo antes.",
     "trialConfirmAction": "Empezar la prueba",
     "trialStarted": "Tu prueba gratuita ha comenzado. Disfruta de todas las funciones Pro durante 7 días.",
     "trialAlreadyUsed": "La prueba gratuita ya se ha usado con este Apple ID."

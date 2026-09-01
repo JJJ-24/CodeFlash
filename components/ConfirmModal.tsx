@@ -35,7 +35,7 @@ export function ConfirmModal({ visible, title, message, actions, onClose }: Prop
   const { height } = useWindowDimensions();
   // 高さの上限＋本文スクロールは `InfoModal` と同じ理由（中央寄せなので溢れると上下**両方**が
   // 切れ、タイトルがダイナミックアイランドに隠れてボタンも画面外へ出る）。文字サイズ次第で
-  // 本文はいくらでも伸びる（`pro.trialConfirmMessage` はスペイン語で 377 字）。
+  // 本文はいくらでも伸びる（長い実例は `pro.trialConfirmMessage`）。
   const maxHeight = Math.max(200, height - insets.top - insets.bottom - 48);
   // 開くフェードは **JS 側でやる**（Modal は `animationType="none"`）。
   // ⚠️ iOS は **VC のトランジション中はタッチを配送しない**ので、`animationType="fade"` だと

@@ -80,6 +80,24 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
     setEditingId(stage.id);
   }
 
+  /**
+   * 編集面を閉じるときの後始末。**名前も中身も空なら、その土台は無かったことにする**
+   * ＝＋を押して何も入力せずに閉じたときに、一覧へ空の行だけが残るのを防ぐ。
+   *
+   * 中身が空の土台は保存時に落とされる（`deck/new.tsx` / `deck/[id]/edit.tsx` の
+   * `filter((s) => s.content.trim() !== '')`）ので、**空の行が見えるのはこの一覧だけ**
+   * ＝実態とズレていた。デッキ編集画面の件数表示も変更ありの判定も同じフィルター通し。
+   *
+   * ⚠️ 条件を「中身が空」に広げないこと：既存の土台を書き直そうと全消しして閉じただけで
+   * 行ごと消える（名前も失う）。両方空＝打った文字が1つも無いときだけなら失うものがない。
+   */
+  function closeEditor() {
+    if (editingStage && editingStage.name.trim() === '' && editingStage.content.trim() === '') {
+      onChange(stages.filter((s) => s.id !== editingStage.id));
+    }
+    setEditingId(null);
+  }
+
   function handleDelete(stage: DeckStage) {
     onChange(stages.filter((s) => s.id !== stage.id));
     setPendingDelete(null);
@@ -281,7 +299,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
           visible={editingStage !== null}
           value={editingStage?.content ?? ''}
           onChangeText={(v) => editingStage && updateStage(editingStage.id, { content: v })}
-          onClose={() => setEditingId(null)}
+          onClose={closeEditor}
           title={editingStage?.name ?? ''}
           onTitleChange={(v) => editingStage && updateStage(editingStage.id, { name: v })}
           titlePlaceholder={editingStage ? t(keys.defaultName, { n: editingIndex + 1 }) : undefined}

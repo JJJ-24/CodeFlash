@@ -2154,7 +2154,7 @@ export default function StatsScreen() {
                 onLayout={(e) => { sectionOffsets.current.rankingOuter = e.nativeEvent.layout.y; }}
               >
                 {gradeBlockCards.length > 0 && (
-                  <View style={{ marginBottom: 4 }}>
+                  <View>
                     <Pressable
                       onPress={startFocusedReview}
                       style={({ pressed }) => [styles.focusedReviewBtn, { backgroundColor: FILTER_COLORS.due }, pressed && { opacity: 0.85 }]}
@@ -2164,9 +2164,21 @@ export default function StatsScreen() {
                         {t('stats.focusedReviewStart')}
                       </Text>
                     </Pressable>
-                    <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, marginTop: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
-                      {t('stats.focusedReviewNote')}
-                    </Text>
+                    {/* リスト側の操作（カードのタップ・重点復習）はこの小見出しの ⓘ が担当する。
+                        セクション見出しの ⓘ は評価ブロックのタップとヘッダーのボタンだけを説明する。
+                        重点復習ボタンと同じ条件（該当カードあり）で出す＝0件のときは説明する対象が無い。 */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
+                      <Text style={[styles.proSubTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginBottom: 0 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                        {t('stats.gradeRankingListTitle')}
+                      </Text>
+                      <Pressable
+                        onPress={() => setSectionInfoModal({ title: t('stats.gradeRankingListTitle'), message: <InfoContent text={t('stats.gradeRankingListInfoMessage')} /> })}
+                        hitSlop={8}
+                        accessibilityLabel={t('stats.gradeRankingListInfoLabel')}
+                      >
+                        <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
+                      </Pressable>
+                    </View>
                   </View>
                 )}
                 {gradeBlockLoading && gradeBlockCards.length === 0 ? (

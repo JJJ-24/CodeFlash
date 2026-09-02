@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
+import { AppSwitch } from '@/components/AppSwitch';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import {
   CONFIGURABLE_SCRIPTS,
@@ -19,9 +20,12 @@ import { useSettingsStore } from '@/store/settings';
 
 interface Props {
   visible: boolean;
-  /** このデッキの上書き（未設定の文字体系はキーごと無い） */
+  /** このデッキの上書き（未設定の文字体系はキーごと無い）＝**表面**用 */
   langs: ScriptLangs;
+  /** 051：**裏面**用の上書き。空 = 表面と同じ（メモは裏面に従う） */
+  langsBack: ScriptLangs;
   onChange: (langs: ScriptLangs) => void;
+  onChangeBack: (langs: ScriptLangs) => void;
   onClose: () => void;
 }
 
@@ -33,25 +37,38 @@ interface Props {
  * 上書きは**設定した文字体系だけ**アプリ設定に重なる（`mergeScriptLangs`）。漢字だけ中国語に
  * したいデッキでラテン文字まで巻き込まれると、英語の技術用語が中国語読みになってしまうため。
  *
+ * 051：**「裏面を別の言語で読む」トグル**（既定 OFF）で裏面用の一覧を足せる。両面が同じ
+ * 文字体系で言語だけ違うデッキ（英語 ⇄ スペイン語）は文字体系では分けられないため。
+ * ⚠️ **[表面|裏面] のセグメントで常時2面にしない**＝1文字体系あたり3行あるので縦を食い尽くす。
+ * 既定 OFF のトグルなら、表裏を分けないデッキの見た目と操作は 050 のままになる。
+ * ⚠️ **OFF にしたら裏面の設定は消す**＝残すと「トグルは OFF なのに裏面だけ別の言語で読まれる」
+ * ＝画面に出ていない設定が効く状態になる（CLAUDE.md の鉄則）。
+ *
  * ⚠️ **Pro ゲートは付けない**（読み上げは無料機能）。HTML/SQL 土台の行とはここが違う。
  * ⚠️ 選択肢に出す文字体系は**設定画面とまったく同じ規則**（`CONFIGURABLE_SCRIPTS` かつ
  * 端末にその文字体系の音声が2つ以上ある）。1つしか無いものは選ばせても結果が変わらない。
  * ⚠️ 2枚目のモーダル（言語ピッカー）は**この Modal の children の中**に置く。兄弟に並べると
  * iOS が2枚目を提示できず、閉じた後に親画面がタップを受け付けなくなる（044 で踏んだ）。
  */
-export function DeckSpeechModal({ visible, langs, onChange, onClose }: Props) {
+export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeBack, onClose }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const appLangs = useSettingsStore((s) => s.speechScriptLangs);
   const [showInfo, setShowInfo] = useState(false);
-  /** 言語ピッカーを開いている文字体系（null＝閉じている） */
-  const [picking, setPicking] = useState<SpeechScript | null>(null);
+  /** 言語ピッカーを開いている文字体系と面（null＝閉じている） */
+  const [picking, setPicking] = useState<{ script: SpeechScript; back: boolean } | null>(null);
   /** 文字体系ごとに端末が持っている音声の言語。null＝未取得 */
   const [scriptOptions, setScriptOptions] = useState<Partial<Record<SpeechScript, string[]>> | null>(null);
+  /** 051：裏面を分けるか。開くたびに保存値から作り直す（＝設定済みなら ON で開く） */
+  const [splitSides, setSplitSides] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     getConfigurableScriptLanguages().then(setScriptOptions).catch(() => {});
+    // ⚠️ 依存に langsBack を入れない（編集のたびにトグルが作り直され、最後の1件を消した
+    //    瞬間に一覧ごと閉じてしまう）。開いた時点の保存値だけを見る。
+    setSplitSides(Object.keys(langsBack).length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // 表示中だけ Esc を担当する。⚠️ 言語ピッカーが上に乗っている間は**そちらが最上位**なので外す
@@ -66,13 +83,67 @@ export function DeckSpeechModal({ visible, langs, onChange, onClose }: Props) {
   /** 上書きが無いときに実際に読まれる言語（アプリ設定 → 文字体系の既定）。 */
   const inheritedLang = (script: SpeechScript) => appLangs[script] ?? SCRIPT_DEFAULT_LANGS[script];
 
-  const setLang = (script: SpeechScript, code: string | null) => {
-    const next = { ...langs };
+  const setLang = (script: SpeechScript, code: string | null, back: boolean) => {
+    const next = { ...(back ? langsBack : langs) };
     // null＝「アプリ設定に従う」＝**キーごと消す**（空文字を残すと未設定と区別できない）
     if (code === null) delete next[script];
     else next[script] = code;
-    onChange(next);
+    (back ? onChangeBack : onChange)(next);
   };
+
+  /** 051：裏面を分けるトグル。OFF は裏面の設定を消す（隠れて効く状態を作らない）。 */
+  const toggleSplit = (on: boolean) => {
+    setSplitSides(on);
+    if (!on) onChangeBack({});
+  };
+
+  /** 文字体系1つぶんの行（表面／裏面で同じ形）。 */
+  const renderRow = (script: SpeechScript, back: boolean) => {
+    const sideLangs = back ? langsBack : langs;
+    const override = sideLangs[script];
+    return (
+      <Pressable
+        key={`${back ? 'back' : 'front'}-${script}`}
+        style={[styles.row, { borderColor: theme.colors.border }]}
+        onPress={() => setPicking({ script, back })}
+      >
+        <Text
+          style={[styles.rowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+        >
+          {t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin')}
+        </Text>
+        {/* 上書きがあれば言語名（青）、無ければ「アプリ設定」（グレー）＝一覧で差が分かる。
+            ⚠️ 裏面で未設定のときは「表面と同じ」＝アプリ設定ではないので文言を変える。 */}
+        <Text
+          style={{
+            color: override ? theme.colors.primary : theme.colors.textSecondary,
+            fontSize: theme.fontSize.sm,
+            fontWeight: override ? '700' : '400',
+            flexShrink: 1,
+          }}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+        >
+          {override
+            ? speechLanguageLabel(override, t, scriptOptions?.[script] ?? [])
+            : back
+              ? t('deck.speechSameAsFront')
+              : t('deck.speechInherit')}
+        </Text>
+        <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+      </Pressable>
+    );
+  };
+
+  /** 面の見出し（トグル ON のときだけ出す＝OFF なら 050 と同じ見た目）。 */
+  const sideHeading = (label: string) => (
+    <Text
+      style={[styles.sideLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+    >
+      {label}
+    </Text>
+  );
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -120,49 +191,46 @@ export function DeckSpeechModal({ visible, langs, onChange, onClose }: Props) {
                 {t('deck.speechLangsNoOptions')}
               </Text>
             ) : (
-              scripts.map((script) => {
-                const override = langs[script];
-                return (
-                  <Pressable
-                    key={script}
-                    style={[styles.row, { borderColor: theme.colors.border }]}
-                    onPress={() => setPicking(script)}
+              <>
+                {/* 051：既定 OFF。ON のときだけ裏面の一覧が続く */}
+                <View style={[styles.toggleRow, { borderColor: theme.colors.border }]}>
+                  <Text
+                    style={[styles.rowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                   >
-                    <Text
-                      style={[styles.rowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                    >
-                      {t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin')}
-                    </Text>
-                    {/* 上書きがあれば言語名（青）、無ければ「アプリ設定」（グレー）＝一覧で差が分かる */}
-                    <Text
-                      style={{
-                        color: override ? theme.colors.primary : theme.colors.textSecondary,
-                        fontSize: theme.fontSize.sm,
-                        fontWeight: override ? '700' : '400',
-                        flexShrink: 1,
-                      }}
-                      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-                    >
-                      {override
-                        ? speechLanguageLabel(override, t, scriptOptions?.[script] ?? [])
-                        : t('deck.speechInherit')}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
-                  </Pressable>
-                );
-              })
+                    {t('deck.speechSplitSides')}
+                  </Text>
+                  <AppSwitch value={splitSides} onValueChange={toggleSplit} />
+                </View>
+                {splitSides && sideHeading(t('card.front'))}
+                {scripts.map((script) => renderRow(script, false))}
+                {splitSides && (
+                  <>
+                    {sideHeading(t('card.back'))}
+                    {scripts.map((script) => renderRow(script, true))}
+                  </>
+                )}
+              </>
             )}
           </ScrollView>
 
           {/* ⚠️ 言語ピッカーは**この Modal の中**（兄弟に並べない）。 */}
           <SpeechLanguageModal
             visible={picking !== null}
-            script={picking ?? 'latin'}
-            value={picking ? langs[picking] ?? null : null}
+            script={picking?.script ?? 'latin'}
+            value={picking ? (picking.back ? langsBack : langs)[picking.script] ?? null : null}
             allowInherit
-            inheritLang={picking ? inheritedLang(picking) : undefined}
-            onSelect={(code) => { if (picking) setLang(picking, code); }}
+            // 裏面の「上書きしない」は**表面と同じ**を意味する（アプリ設定ではない）＝
+            // 表示する言語も、表面に上書きがあればそれ、無ければアプリ設定になる。
+            inheritLabel={picking?.back ? t('deck.speechSameAsFront') : undefined}
+            inheritLang={
+              picking
+                ? picking.back
+                  ? (langs[picking.script] ?? inheritedLang(picking.script))
+                  : inheritedLang(picking.script)
+                : undefined
+            }
+            onSelect={(code) => { if (picking) setLang(picking.script, code, picking.back); }}
             onClose={() => setPicking(null)}
           />
         </View>
@@ -200,6 +268,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rowTitle: { flex: 1, fontWeight: '600' },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  sideLabel: { fontWeight: '700', marginBottom: 6 },
 });
 
 /**
@@ -210,6 +289,22 @@ const styles = StyleSheet.create({
  * ここで区別が要る場面（同じ言語の地域違い）はピッカーを開けば分かる。
  */
 export function deckSpeechSummary(
+  langs: ScriptLangs,
+  langsBack: ScriptLangs,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
+  // 051：裏面を分けていないデッキ（＝大多数）は 050 とまったく同じ文言のまま。
+  if (Object.keys(langsBack).length === 0) return sideSummary(langs, t);
+  // 分けているときは面ごとに**言語名だけ**を並べる（文字体系まで入れると行に収まらない。
+  // 両面が同じ文字体系で言語だけ違う、が本チケットの想定なので文字体系は自明）。
+  return t('deck.speechLangsSides', {
+    front: sideSummaryShort(langs, t),
+    back: sideSummaryShort(langsBack, t),
+  });
+}
+
+/** 片面ぶんの要約（050 までの文言そのもの）。 */
+function sideSummary(
   langs: ScriptLangs,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
@@ -224,5 +319,16 @@ export function deckSpeechSummary(
       language: speechLanguageLabel(lang, t, []),
     });
   }
+  return t('deck.speechLangsSet', { count: entries.length });
+}
+
+/** 表裏を並べるとき用の短い要約（1件なら言語名だけ）。 */
+function sideSummaryShort(
+  langs: ScriptLangs,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
+  const entries = Object.entries(langs).filter(([, lang]) => !!lang) as [SpeechScript, string][];
+  if (entries.length === 0) return t('deck.speechInherit');
+  if (entries.length === 1) return speechLanguageLabel(entries[0][1], t, []);
   return t('deck.speechLangsSet', { count: entries.length });
 }

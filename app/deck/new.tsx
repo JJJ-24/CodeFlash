@@ -100,8 +100,10 @@ export default function NewDeckScreen() {
   const filledSqlStages = sqlStages.filter((s) => s.content.trim() !== '').length;
   // 050 Phase 2: このデッキだけの読み上げ言語（文字体系 → 言語の上書き。未設定は {}）
   const [speechLangs, setSpeechLangs] = useState<ScriptLangs>({});
+  // 051: 裏面用の上書き（空 = 表面と同じ）
+  const [speechLangsBack, setSpeechLangsBack] = useState<ScriptLangs>({});
   const [showSpeechModal, setShowSpeechModal] = useState(false);
-  const speechConfigured = Object.keys(speechLangs).length > 0;
+  const speechConfigured = Object.keys(speechLangs).length > 0 || Object.keys(speechLangsBack).length > 0;
 
   const language = 'ja';
   const [saving, setSaving] = useState(false);
@@ -131,6 +133,7 @@ export default function NewDeckScreen() {
         htmlStages: htmlStages.filter((s) => s.content.trim() !== ''),
         htmlImages,
         speechLangs,
+        speechLangsBack,
       });
       addDeck(deck);
       // 一覧へ戻ったとき、作成したデッキへフォーカスを移す
@@ -418,7 +421,7 @@ export default function NewDeckScreen() {
                 <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
               </View>
               <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {deckSpeechSummary(speechLangs, t)}
+                {deckSpeechSummary(speechLangs, speechLangsBack, t)}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
             </Pressable>
@@ -452,7 +455,9 @@ export default function NewDeckScreen() {
       <DeckSpeechModal
         visible={showSpeechModal}
         langs={speechLangs}
+        langsBack={speechLangsBack}
         onChange={setSpeechLangs}
+        onChangeBack={setSpeechLangsBack}
         onClose={() => setShowSpeechModal(false)}
       />
       <DiscardConfirmModal

@@ -107,8 +107,10 @@ export default function EditDeckScreen() {
   const filledSqlStages = sqlStages.filter((s) => s.content.trim() !== '').length;
   // 050 Phase 2: このデッキだけの読み上げ言語（文字体系 → 言語の上書き。未設定は {}）
   const [speechLangs, setSpeechLangs] = useState<ScriptLangs>(deck?.speechLangs ?? {});
+  // 051: 裏面用の上書き（空 = 表面と同じ）
+  const [speechLangsBack, setSpeechLangsBack] = useState<ScriptLangs>(deck?.speechLangsBack ?? {});
   const [showSpeechModal, setShowSpeechModal] = useState(false);
-  const speechConfigured = Object.keys(speechLangs).length > 0;
+  const speechConfigured = Object.keys(speechLangs).length > 0 || Object.keys(speechLangsBack).length > 0;
 
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   // アーカイブの説明（常時表示をやめ、ⓘ タップでこの行の下にインライン展開する）
@@ -185,14 +187,14 @@ export default function EditDeckScreen() {
       // 044/045: 中身が空の土台は保存しない（名前だけ作って離脱した行が残らないように）
       const normalizedSqlStages = sqlStages.filter((s) => s.content.trim() !== '');
       const normalizedStages = htmlStages.filter((s) => s.content.trim() !== '');
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages, speechLangs });
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
       // 044/045: sqlInit / htmlInit は互換用ミラー。DB 側（updateDeck）と同じ値をストアにも入れて食い違わせない。
       updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex,
         sqlInit: legacyInitMirror(normalizedSqlStages), sqlStages: normalizedSqlStages,
-        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, speechLangs, archived });
+        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -223,6 +225,7 @@ export default function EditDeckScreen() {
     // ⚠️ キーの並び順は追加した順に決まるので、比較はキーを並べ替えてから行う
     //（`{han:..., latin:...}` と `{latin:..., han:...}` を「変更あり」と誤判定しないため）
     || !scriptLangsEqual(speechLangs, deck.speechLangs ?? {})
+    || !scriptLangsEqual(speechLangsBack, deck.speechLangsBack ?? {})
     || archived !== deck.archived;
 
   function handleClose() {
@@ -444,7 +447,7 @@ export default function EditDeckScreen() {
                 <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
               </View>
               <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {deckSpeechSummary(speechLangs, t)}
+                {deckSpeechSummary(speechLangs, speechLangsBack, t)}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
             </Pressable>
@@ -513,7 +516,9 @@ export default function EditDeckScreen() {
       <DeckSpeechModal
         visible={showSpeechModal}
         langs={speechLangs}
+        langsBack={speechLangsBack}
         onChange={setSpeechLangs}
+        onChangeBack={setSpeechLangsBack}
         onClose={() => setShowSpeechModal(false)}
       />
       <DiscardConfirmModal

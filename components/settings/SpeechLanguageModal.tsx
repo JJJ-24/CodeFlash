@@ -21,6 +21,8 @@ interface Props {
   allowInherit?: boolean;
   /** 「アプリ設定に従う」を選んだときに実際に読まれる言語（行の右に薄く出す）。 */
   inheritLang?: string;
+  /** その行の文言。既定は「アプリ設定」。051 の裏面では「表面と同じ」になる。 */
+  inheritLabel?: string;
 }
 
 /** 文字体系の表示名（設定画面と共用）。`CONFIGURABLE_SCRIPTS` のぶんだけあればよい。 */
@@ -40,7 +42,7 @@ export const SPEECH_SCRIPT_LABEL_KEYS: Partial<Record<SpeechScript, string>> = {
  * OS が音声を増やせば自動で増える＝言語追加のメンテがゼロになる。
  * 一覧はその文字体系を使う言語だけに絞る（漢字の設定にフランス語が並んでも意味が無い）。
  */
-export function SpeechLanguageModal({ visible, script, value, onSelect, onClose, allowInherit, inheritLang }: Props) {
+export function SpeechLanguageModal({ visible, script, value, onSelect, onClose, allowInherit, inheritLang, inheritLabel }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [languages, setLanguages] = useState<string[]>([]);
@@ -117,7 +119,7 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
-                  {t('deck.speechInherit')}
+                  {inheritLabel ?? t('deck.speechInherit')}
                 </Text>
                 {/* 実際に何語で読まれるかを添える＝「従う」だけだと結果が分からない */}
                 {inheritLang && (

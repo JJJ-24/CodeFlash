@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,6 +17,7 @@ import { BlockItemHeader } from './BlockItemHeader';
 import { InfoModal } from '@/components/InfoModal';
 import { pickAndSaveImage, resolveImageUri, imageMaxWidth, DEFAULT_IMAGE_SIZE, type ImageSizeKey } from '@/lib/image';
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import type { ImageBlock } from '@/types';
 
 interface Props {
@@ -40,8 +40,8 @@ interface Props {
 export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, onEditBlur, autoFocus, isFocused, onAutoFocused, blurTrigger, isPreview }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
 
-  const isPad = (Platform as any).isPad;
   const [picking, setPicking] = useState(false);
   const [focused, setFocused] = useState(false);
   const [sizeErrorVisible, setSizeErrorVisible] = useState(false);
@@ -173,7 +173,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                         <Pressable
                           key={s}
                           onPress={() => onChange({ size: s })}
-                          style={[styles.sizeBtn, { paddingHorizontal: isPad ? 24 : 16, minWidth: isPad ? 74 : 50 }, active && { backgroundColor: theme.colors.primary }]}
+                          style={[styles.sizeBtn, { paddingHorizontal: rs(16, 24), minWidth: rs(50, 74) }, active && { backgroundColor: theme.colors.primary }]}
                           hitSlop={4}
                         >
                           <Text style={{ color: active ? '#FFF' : theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
@@ -184,7 +184,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
                     })}
                   </View>
                   <Pressable
-                    style={[styles.changeBtn, { paddingHorizontal: isPad ? 44 : 20, backgroundColor: theme.colors.primaryLight }]}
+                    style={[styles.changeBtn, { paddingHorizontal: rs(20, 44), backgroundColor: theme.colors.primaryLight }]}
                     onPress={handlePick}
                     disabled={picking}
                   >

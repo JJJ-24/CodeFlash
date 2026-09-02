@@ -31,7 +31,8 @@ import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -99,6 +100,7 @@ function DeckCard({
   isFocused?: boolean;
 }) {
   const theme = useTheme();
+  const maxFont = useMaxFontMultiplier();
   const { color: iconColor, bg: iconBg } = resolveDeckIconColors(deck.colorHex, theme);
   // デッキアイコンを文字サイズ設定（fontScale）に連動させる
   const iconBoxSize = Math.round(32 * theme.fontScale);
@@ -136,7 +138,7 @@ function DeckCard({
           <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} style={{ marginRight: 4 }} />
         )}
         <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E', marginRight: 8 }]}>
-          <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{deck.cardCount}</Text>
+          <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{deck.cardCount}</Text>
         </View>
         <Pressable
           onPress={() => onEdit(deck.id)}
@@ -162,6 +164,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
   // ステータスバー文字色の復元は deps:[] の focus effect 内から参照するため、常に最新値を ref で渡す。
   const darkRef = useRef(theme.dark);
   darkRef.current = theme.dark;
@@ -381,13 +384,13 @@ export default function HomeScreen() {
             <Pressable
               // paddingVertical はソートチップ（styles.sortBtn の 4）に合わせる。大きいと
               // ロックがチップより背高になり、手動切替時に行の高さが増えて他アイコンが下にずれる。
-              style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 4, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
+              style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 4, paddingHorizontal: rs(6, 12) }}
               hitSlop={8}
               onPress={() => setDeckSortLocked(!deckSortLocked)}
             >
               <Ionicons
                 name={deckSortLocked ? 'lock-closed' : 'lock-open-outline'}
-                size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                size={Math.max(theme.fontSize.xl, rs(20, 22))}
                 color={deckSortLocked ? theme.colors.primary : theme.colors.textSecondary}
               />
             </Pressable>
@@ -400,13 +403,13 @@ export default function HomeScreen() {
                 onPress={() => setDeckSortOrder(key)}
                 style={[
                   styles.sortBtn,
-                  { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                  { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
                   active && { backgroundColor: theme.colors.primary },
                 ]}
               >
                 <Ionicons
                   name={icon}
-                  size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                  size={Math.max(theme.fontSize.xl, rs(20, 22))}
                   color={active ? theme.colors.primaryText : theme.colors.textSecondary}
                 />
               </Pressable>

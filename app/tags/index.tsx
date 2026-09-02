@@ -31,7 +31,8 @@ import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, useMaxFontMultiplier, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { resolveTagColor } from '@/lib/tagColors';
 import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
@@ -85,6 +86,8 @@ export default function TagsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
+  const maxFont = useMaxFontMultiplier();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
@@ -515,7 +518,7 @@ export default function TagsScreen() {
                       </View>
                     )}
                     <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{item.cardCount}</Text>
+                      <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{item.cardCount}</Text>
                     </View>
                     {!selectionMode && (
                       <>
@@ -628,13 +631,13 @@ export default function TagsScreen() {
               <Pressable
                 // paddingVertical はソートチップ（styles.sortBtn の 4）に合わせる。大きいと
                 // ロックがチップより背高になり、手動切替時に行の高さが増えて他アイコンが下にずれる。
-                style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 4, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
+                style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 4, paddingHorizontal: rs(6, 12) }}
                 hitSlop={8}
                 onPress={() => setTagSortLocked(!tagSortLocked)}
               >
                 <Ionicons
                   name={tagSortLocked ? 'lock-closed' : 'lock-open-outline'}
-                  size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                  size={Math.max(theme.fontSize.xl, rs(20, 22))}
                   color={tagSortLocked ? theme.colors.primary : theme.colors.textSecondary}
                 />
               </Pressable>
@@ -647,11 +650,11 @@ export default function TagsScreen() {
                   onPress={() => setTagSortOrder(key)}
                   style={[
                     styles.sortBtn,
-                    { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
                     active && { backgroundColor: theme.colors.primary },
                   ]}
                 >
-                  <Ionicons name={icon} size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)} color={active ? theme.colors.primaryText : theme.colors.textSecondary} />
+                  <Ionicons name={icon} size={Math.max(theme.fontSize.xl, rs(20, 22))} color={active ? theme.colors.primaryText : theme.colors.textSecondary} />
                 </Pressable>
               );
             })}

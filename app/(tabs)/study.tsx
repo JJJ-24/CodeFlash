@@ -23,7 +23,8 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { resolveTagColor } from '@/lib/tagColors';
 import {
   getDueCountPerDeck,
@@ -78,6 +79,8 @@ export default function StudyScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
+  const maxFont = useMaxFontMultiplier();
   // デッキアイコンを文字サイズ設定（fontScale）に連動させる（ホームと同じ算出）
   const iconBoxSize = Math.round(32 * theme.fontScale);
   const iconGlyphSize = Math.round(18 * theme.fontScale);
@@ -543,13 +546,13 @@ export default function StudyScreen() {
             }}
             style={[
               styles.shuffleBtn,
-              { borderColor: hideEmpty ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+              { borderColor: hideEmpty ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
               hideEmpty && { backgroundColor: theme.colors.primary },
             ]}
           >
             <Ionicons
               name="funnel-outline"
-              size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+              size={Math.max(theme.fontSize.xl, rs(20, 22))}
               color={hideEmpty ? theme.colors.primaryText : theme.colors.textSecondary}
             />
           </Pressable>
@@ -557,13 +560,13 @@ export default function StudyScreen() {
             onPress={() => setShuffleEnabled(!shuffleEnabled)}
             style={[
               styles.shuffleBtn,
-              { borderColor: shuffleEnabled ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+              { borderColor: shuffleEnabled ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
               shuffleEnabled && { backgroundColor: theme.colors.primary },
             ]}
           >
             <Ionicons
               name="shuffle-outline"
-              size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+              size={Math.max(theme.fontSize.xl, rs(20, 22))}
               color={shuffleEnabled ? theme.colors.primaryText : theme.colors.textSecondary}
             />
           </Pressable>
@@ -650,7 +653,7 @@ export default function StudyScreen() {
                   </View>
                   {count > 0 && (
                     <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && activeFilter !== 'new' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
+                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{count}</Text>
                     </View>
                   )}
                   <Ionicons
@@ -716,7 +719,7 @@ export default function StudyScreen() {
                   </View>
                   {count > 0 && (
                     <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && activeFilter !== 'new' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{count}</Text>
+                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{count}</Text>
                     </View>
                   )}
                   <Ionicons

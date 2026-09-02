@@ -25,6 +25,7 @@ import { InfoContent } from '@/components/InfoContent';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
@@ -85,6 +86,7 @@ export default function TagCardsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
@@ -561,7 +563,7 @@ export default function TagCardsScreen() {
                     <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
                   )}
                   {!selectionMode && (
-                    <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+                    <View style={[styles.cardActions, { gap: rs(8, 32) }]}>
                       {isPro && (
                         <Pressable onPress={() => { setFocusedCardIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={styles.iconBtn}>
                           <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />

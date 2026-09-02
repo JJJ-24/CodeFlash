@@ -13,6 +13,7 @@ import { monthLabel, weekdayLabels } from '@/lib/dateLabels';
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS, GRADE_RANKING_RATE_MIN_TOTAL } from '@/store/settings';
 import type { InitialFilterPreference, GradeRankingPeriod } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -986,6 +987,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
   const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, gradeRankingRecordableOnly, setGradeRankingRecordableOnly, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
@@ -2047,9 +2049,9 @@ export default function StatsScreen() {
                 onSelectMonth={openMonthSheet}
               />
               {/* グレード凡例 */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: (Platform as any).isPad ? 40 : 12, marginTop: (Platform as any).isPad ? 14 : 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: rs(12, 40), marginTop: rs(8, 14) }}>
                 {MONTH_GRADE_SEGMENTS.map(({ key, color }) => (
-                  <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: (Platform as any).isPad ? 6 : 4 }}>
+                  <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: rs(4, 6) }}>
                     <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: color }} />
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                       {t(`grade.${key}`)}
@@ -2081,13 +2083,13 @@ export default function StatsScreen() {
                   accessibilityLabel={t('stats.gradeRankingDeckOpen')}
                   style={[
                     styles.rankingToggleBtn,
-                    { borderColor: gradeRankingDeckIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: gradeRankingDeckIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
                     gradeRankingDeckIds.length > 0 && { backgroundColor: theme.colors.primary },
                   ]}
                 >
                   <Ionicons
                     name="albums-outline"
-                    size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                    size={Math.max(theme.fontSize.xl, rs(20, 22))}
                     color={gradeRankingDeckIds.length > 0 ? theme.colors.primaryText : theme.colors.textSecondary}
                   />
                 </Pressable>
@@ -2096,13 +2098,13 @@ export default function StatsScreen() {
                   accessibilityLabel={t('stats.gradeRankingPeriodOpen')}
                   style={[
                     styles.rankingToggleBtn,
-                    { borderColor: gradeRankingPeriod !== 'all' ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: gradeRankingPeriod !== 'all' ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
                     gradeRankingPeriod !== 'all' && { backgroundColor: theme.colors.primary },
                   ]}
                 >
                   <Ionicons
                     name="calendar-outline"
-                    size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                    size={Math.max(theme.fontSize.xl, rs(20, 22))}
                     color={gradeRankingPeriod !== 'all' ? theme.colors.primaryText : theme.colors.textSecondary}
                   />
                 </Pressable>
@@ -2117,12 +2119,12 @@ export default function StatsScreen() {
                     styles.rankingToggleBtn,
                     // ソートは絞り込みと違い OFF 状態が無い（常にどれかのモードが有効）ため常時青塗り。
                     // モードの区別はアイコンが担う。
-                    { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary, paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                    { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary, paddingHorizontal: rs(8, 32) },
                   ]}
                 >
                   <Ionicons
                     name={gradeRankingSortBy === 'rate' ? 'pie-chart-outline' : gradeRankingSortBy === 'time' ? 'timer-outline' : 'podium-outline'}
-                    size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                    size={Math.max(theme.fontSize.xl, rs(20, 22))}
                     color={theme.colors.primaryText}
                   />
                 </Pressable>
@@ -2245,13 +2247,13 @@ export default function StatsScreen() {
                     accessibilityLabel={t('stats.gradeRankingRecordableOnly')}
                     style={[
                       styles.rankingToggleBtn,
-                      { borderColor: gradeRankingRecordableOnly ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                      { borderColor: gradeRankingRecordableOnly ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
                       gradeRankingRecordableOnly && { backgroundColor: theme.colors.primary },
                     ]}
                   >
                     <Ionicons
                       name="funnel-outline"
-                      size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                      size={Math.max(theme.fontSize.xl, rs(20, 22))}
                       color={gradeRankingRecordableOnly ? theme.colors.primaryText : theme.colors.textSecondary}
                     />
                   </Pressable>
@@ -2336,7 +2338,7 @@ export default function StatsScreen() {
                             setStatsCardId(card.cardId);
                           }}
                           hitSlop={8}
-                          style={{ padding: 4, marginRight: (Platform as any).isPad ? 16 : 4 }}
+                          style={{ padding: 4, marginRight: rs(4, 16) }}
                         >
                           <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
                         </Pressable>

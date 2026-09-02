@@ -37,6 +37,7 @@ import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_
 import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
+import { useResponsiveSize } from "@/lib/useResponsiveSize";
 import { useSettingsStore } from "@/store/settings";
 import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
@@ -163,6 +164,7 @@ export function BlockEditor({
 }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
@@ -1107,7 +1109,7 @@ export function BlockEditor({
               key={tab.key}
               style={[
                 styles.tab,
-                (Platform as any).isPad && styles.tabPad,
+                { paddingHorizontal: rs(14, 28) },
                 activeTab === tab.key && styles.tabActive,
               ]}
               onPress={() => {
@@ -1127,7 +1129,7 @@ export function BlockEditor({
                   styles.tabText,
                   {
                     color: theme.colors.textTertiary,
-                    fontSize: (Platform as any).isPad ? Math.max(theme.fontSize.lg, 18) : Math.max(theme.fontSize.md, 16),
+                    fontSize: rs(Math.max(theme.fontSize.md, 16), Math.max(theme.fontSize.lg, 18)),
                   },
                   activeTab === tab.key && styles.tabTextActive,
                 ]}
@@ -1164,7 +1166,7 @@ export function BlockEditor({
                   styles.modeBtn,
                   {
                     backgroundColor: theme.colors.background,
-                    paddingHorizontal: (Platform as any).isPad ? 32 : 9,
+                    paddingHorizontal: rs(9, 32),
                   },
                   active && { backgroundColor: theme.colors.primary },
                 ]}
@@ -1180,7 +1182,7 @@ export function BlockEditor({
               >
                 <Ionicons
                   name={icon}
-                  size={(Platform as any).isPad ? Math.max(theme.fontSize.lg, 20) : Math.max(theme.fontSize.lg, 18)}
+                  size={Math.max(theme.fontSize.lg, rs(18, 20))}
                   color={active ? "#FFFFFF" : theme.colors.textSecondary}
                 />
               </Pressable>
@@ -1358,9 +1360,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
-  },
-  tabPad: {
-    paddingHorizontal: 28,
   },
   tabActive: { borderBottomColor: "#1976D2" },
   tabText: { fontWeight: "500" },

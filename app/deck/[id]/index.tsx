@@ -24,6 +24,7 @@ import { constants as KeyCommand } from 'react-native-key-command';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, type AppTheme } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import {
   deleteCard,
   deleteCardsBulk,
@@ -105,6 +106,7 @@ const CardRow = memo(function CardRow(props: CardRowProps) {
     item, drag, isFocused, isSelected, isSelMode, isNew, bulkDragCount, effectiveArchived, canStudyFromHere, swipeEnabled,
     isPro, theme, imageLabel, noTextLabel, onPress, onLongPress, onStats, onEdit, onDelete, onArchive, onStudyFromHere,
   } = props;
+  const rs = useResponsiveSize();
   const preview = getCardPreview(item.frontContent, imageLabel);
   return (
     <SwipeToDeleteRow
@@ -155,7 +157,7 @@ const CardRow = memo(function CardRow(props: CardRowProps) {
           <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} />
         )}
         {!isSelMode && (
-          <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+          <View style={[styles.cardActions, { gap: rs(8, 32) }]}>
             {isPro && (
               <Pressable onPress={() => onStats(item)} hitSlop={8} style={{ padding: 4 }}>
                 <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />
@@ -190,6 +192,7 @@ export default function DeckDetailScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
   // useTheme() は毎レンダー新しいオブジェクトを返すため、renderItem の deps に直接入れると
   // 毎レンダー renderItem が作り直され全セルが再描画される（並べ替えドロップ時のちらつき要因）。
   // ref 経由で参照し、テーマ変更時は extraData で再描画を促す。
@@ -1375,13 +1378,13 @@ export default function DeckDetailScreen() {
               {/* 手動ソート時のみ表示：ドラッグ並べ替えロック（ON=固定してスワイプ可）。左端・枠なしアイコンのみ。 */}
               {cardSortOrder === 'manual' && (
                 <Pressable
-                  style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 7, paddingHorizontal: (Platform as any).isPad ? 12 : 6 }}
+                  style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 7, paddingHorizontal: rs(6, 12) }}
                   hitSlop={8}
                   onPress={() => setManualSortLocked(!manualSortLocked)}
                 >
                   <Ionicons
                     name={manualSortLocked ? 'lock-closed' : 'lock-open-outline'}
-                    size={(Platform as any).isPad ? Math.max(theme.fontSize.lg, 20) : Math.max(theme.fontSize.lg, 18)}
+                    size={Math.max(theme.fontSize.lg, rs(18, 20))}
                     color={manualSortLocked ? theme.colors.primary : theme.colors.textSecondary}
                   />
                 </Pressable>
@@ -1393,12 +1396,12 @@ export default function DeckDetailScreen() {
                     key={key}
                     style={[
                       styles.sortBtn,
-                      { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+                      { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
                       active && { backgroundColor: theme.colors.primary },
                     ]}
                     onPress={() => setCardSortOrder(key)}
                   >
-                    <Ionicons name={icon} size={(Platform as any).isPad ? Math.max(theme.fontSize.lg, 20) : Math.max(theme.fontSize.lg, 18)} color={active ? '#FFF' : theme.colors.textSecondary} />
+                    <Ionicons name={icon} size={Math.max(theme.fontSize.lg, rs(18, 20))} color={active ? '#FFF' : theme.colors.textSecondary} />
                   </Pressable>
                 );
               })}

@@ -13,6 +13,7 @@ import { computeGoalDayStats } from '@/lib/studyGoal';
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore, type RecordSheetMode } from '@/store/settings';
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, themedFrameBorder, type AppTheme } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
@@ -72,6 +73,7 @@ const RECORD_LABEL_MAX_FONT = IS_PAD ? 2 : 1.3;
 const GOAL_COLOR = '#43A047';
 
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
+  const rs = useResponsiveSize();
   const { t } = useTranslation();
   const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const badgeLapStageSeen = useSettingsStore((s) => s.badgeLapStageSeen);
@@ -315,13 +317,13 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       accessibilityLabel={t(labelKey)}
                       style={[
                         styles.modeBtn,
-                        { borderColor: active ? theme.colors.primary : frameBorder, paddingHorizontal: (Platform as any).isPad ? 32 : 10 },
+                        { borderColor: active ? theme.colors.primary : frameBorder, paddingHorizontal: rs(10, 32) },
                         active && { backgroundColor: theme.colors.primary },
                       ]}
                     >
                       <MaterialCommunityIcons
                         name={icon}
-                        size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+                        size={Math.max(theme.fontSize.xl, rs(20, 22))}
                         color={active ? theme.colors.primaryText : theme.colors.textSecondary}
                       />
                     </Pressable>

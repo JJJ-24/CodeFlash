@@ -5,6 +5,7 @@ import { FONT_SCALE, useThemeStore } from '@/store/theme';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import { CARD_THEMES, FREE_CARD_THEMES, type CardThemePalette, type CardThemeName } from '@/lib/theme/cardThemes';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 
 const isPad = (Platform as any).isPad;
 
@@ -19,6 +20,30 @@ export const MAX_FONT_MULTIPLIER = {
   label:   isPad ? 2.3 : 1.4,
   content: isPad ? 2.5 : 1.5,
 } as const;
+
+/**
+ * 窓幅に追従する `MAX_FONT_MULTIPLIER`。
+ *
+ * 上の定数は `isPad`＝**端末**で倍率を決めているため、iPad の Split View / Stage Manager で
+ * 窓を iPhone 並みまで狭めても上限は 1.8/2.3/2.5 のまま残る。iOS の文字サイズを上げている端末では
+ * その上限まで実際に拡大されるので、狭い窓では数字やラベルが行を圧迫する
+ * （一覧行のカード数バッジが典型）。このフックは `useResponsiveSize` と同じ境界で
+ * **iPhone 側の上限 ⇄ iPad 側の上限**を補間する＝iPhone は完全に不変・iPad も全機種
+ * フルスクリーンは完全に不変で、狭めたときだけ上限が下がる。
+ *
+ * ⚠️ iOS の文字サイズが標準（倍率 1.0）のときは上限に当たらないので**見た目は変わらない**。
+ *   標準設定でも縮めたいなら実サイズ（`theme.fontSize.*`）側を `rs()` で補間する別の話になる。
+ * ⚠️ 定数版もそのまま残してある（`StyleSheet` の外・コンポーネント外からも参照されるため）。
+ *   幅で潰れる行のテキストから順に、このフックへ移していけばよい。
+ */
+export function useMaxFontMultiplier(): { ui: number; label: number; content: number } {
+  const rs = useResponsiveSize();
+  return useMemo(() => ({
+    ui:      rs(1.3, 1.8),
+    label:   rs(1.4, 2.3),
+    content: rs(1.5, 2.5),
+  }), [rs]);
+}
 
 export interface AppColors {
   background: string;

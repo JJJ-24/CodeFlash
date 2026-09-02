@@ -30,6 +30,7 @@ import { deleteKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/us
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
+import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { resolveTagColor } from '@/lib/tagColors';
 import { DeckIcon } from '@/components/DeckIcon';
 import { InfoModal } from '@/components/InfoModal';
@@ -351,6 +352,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
+  const rs = useResponsiveSize();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
@@ -674,13 +676,13 @@ export default function SearchScreen() {
           style={[
             styles.filterBtn,
             { borderColor: selectedDeckIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme) },
-            { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+            { paddingHorizontal: rs(8, 32) },
           ]}
           hitSlop={4}
         >
           <Ionicons
             name={selectedDeckIds.length > 0 ? 'albums' : 'albums-outline'}
-            size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+            size={Math.max(theme.fontSize.xl, rs(20, 22))}
             color={selectedDeckIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
@@ -689,13 +691,13 @@ export default function SearchScreen() {
           style={[
             styles.filterBtn,
             { borderColor: selectedTagIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme) },
-            { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+            { paddingHorizontal: rs(8, 32) },
           ]}
           hitSlop={4}
         >
           <Ionicons
             name={selectedTagIds.length > 0 ? 'pricetag' : 'pricetag-outline'}
-            size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+            size={Math.max(theme.fontSize.xl, rs(20, 22))}
             color={selectedTagIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
@@ -706,14 +708,14 @@ export default function SearchScreen() {
           style={[
             styles.filterBtn,
             { borderColor: studiedDate !== null ? theme.colors.primary : themedFrameBorder(theme) },
-            { paddingHorizontal: (Platform as any).isPad ? 32 : 8 },
+            { paddingHorizontal: rs(8, 32) },
           ]}
           hitSlop={4}
           accessibilityLabel={t('card.searchStudiedDate')}
         >
           <Ionicons
             name={studiedDate !== null ? 'calendar' : 'calendar-outline'}
-            size={(Platform as any).isPad ? Math.max(theme.fontSize.xl, 22) : Math.max(theme.fontSize.xl, 20)}
+            size={Math.max(theme.fontSize.xl, rs(20, 22))}
             color={studiedDate !== null ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
@@ -941,7 +943,7 @@ export default function SearchScreen() {
                     {deckName}
                   </Text>
                 </View>
-                <View style={[styles.cardActions, (Platform as any).isPad && { gap: 32 }]}>
+                <View style={[styles.cardActions, { gap: rs(8, 32) }]}>
                   {isPro && (
                     <Pressable onPress={() => { setFocusedIndex(index); setStatsCardId(item.id); }} hitSlop={8} style={{ padding: 4 }}>
                       <Ionicons name="analytics-sharp" size={theme.fontSize.xxl} color={theme.colors.primary} />

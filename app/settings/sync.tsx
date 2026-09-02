@@ -13,6 +13,7 @@ import { SettingsDetail } from "@/components/settings/SettingsDetail";
 import { settingsStyles as styles } from "@/components/settings/styles";
 import { useKeyCommands } from "@/lib/useKeyCommands";
 
+import { type BackupDiffCounts, inspectBackupReplace } from "@/lib/sync/deckMerge";
 import { syncErrorText } from "@/lib/sync/errorText";
 import { getRemoteStatus } from "@/lib/sync/icloud";
 import {
@@ -236,13 +237,54 @@ export default function SyncSettingsScreen() {
     });
   }
 
-  function confirmRestore(backup: LocalBackup) {
+  /** 差分件数を「カード 12 ・ 学習 3」の並びにする（0 の項目は出さない）。 */
+  function diffCountLabels(c: BackupDiffCounts): string[] {
+    const items: [number, string][] = [
+      [c.decks, "sync.mergeDiffDecks"],
+      [c.cards, "sync.mergeDiffCard"],
+      [c.contents, "sync.mergeDiffContent"],
+      [c.reviews, "sync.mergeDiffReview"],
+      [c.logs, "sync.mergeDiffLog"],
+      [c.tags, "sync.mergeDiffTag"],
+    ];
+    return items.filter(([n]) => n > 0).map(([n, key]) => t(key, { count: n }));
+  }
+
+  /**
+   * 置き換えの確認文に差分を挟む。**破壊的な操作なので「失うもの」が主役**
+   * （日時だけでは何が消えるか分からないまま実行することになる）。
+   * 差分が出せなかった場合（古いバックアップ・読み取り失敗）は黙って日時だけに戻す
+   * ＝復元そのものは実行できるべきなので、ここで操作を止めない。
+   */
+  async function buildRestoreDiffText(backup: LocalBackup): Promise<string> {
+    try {
+      const diff = await inspectBackupReplace(db, backup.path);
+      const restore = diffCountLabels(diff.restore);
+      const lose = diffCountLabels(diff.lose);
+      if (restore.length === 0 && lose.length === 0) {
+        return `\n\n${t("sync.restoreDiffNone")}`;
+      }
+      const sep = t("sync.diffSeparator");
+      const lines: string[] = [];
+      if (restore.length > 0) lines.push(t("sync.restoreDiffRestore", { items: restore.join(sep) }));
+      if (lose.length > 0) lines.push(t("sync.restoreDiffLose", { items: lose.join(sep) }));
+      return `\n\n${lines.join("\n")}\n${t("sync.restoreDiffNote")}`;
+    } catch {
+      return "";
+    }
+  }
+
+  async function confirmRestore(backup: LocalBackup) {
+    const diffText = await buildRestoreDiffText(backup);
     setModal({
       kind: "confirm",
       title: t("sync.restoreShort"),
-      message: t("sync.restoreConfirmMessage", {
-        datetime: formatBackupTime(backup.timestamp),
-      }),
+      message:
+        t("sync.restoreConfirmMessage", {
+          datetime: formatBackupTime(backup.timestamp),
+        }) +
+        diffText +
+        `\n\n${t("sync.restoreConfirmTail")}`,
       actions: [
         {
           label: t("sync.restoreConfirm"),

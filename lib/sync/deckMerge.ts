@@ -234,15 +234,111 @@ export async function listDecksInBackup(
   }
 }
 
+/** 片方向ぶんの差分件数（`inspectBackupReplace` が両方向で返す）。 */
+export interface BackupDiffCounts {
+  /** 相手側に無いデッキ */
+  decks: number;
+  /** 相手側に無いカード */
+  cards: number;
+  /** 両方にあるカードのうち、本文（`cards.updatedAt`）がこちらの方が新しいもの */
+  contents: number;
+  /** 両方にあるカードのうち、学習記録がこちらの方が新しいもの */
+  reviews: number;
+  /** 相手側に無い学習履歴（`review_logs`）の行 */
+  logs: number;
+  /** 相手側に無いタグ紐付け（`card_tags`） */
+  tags: number;
+}
+
+/** 「すべて置き換え」で何が戻り、何が失われるか。 */
+export interface BackupReplaceDiff {
+  /** 置き換えで**戻る**もの（バックアップにあって現データに無い／新しい） */
+  restore: BackupDiffCounts;
+  /** 置き換えで**失う**もの（現データにあってバックアップに無い／新しい） */
+  lose: BackupDiffCounts;
+}
+
+/** 片方向（from にあって to に無い／新しい）の件数を1クエリで数える。 */
+async function countOneWay(
+  db: SQLiteDatabase,
+  from: "main" | "backupdb",
+  to: "main" | "backupdb",
+  hasReviewLogs: boolean,
+): Promise<BackupDiffCounts> {
+  const logsSel = hasReviewLogs
+    ? `(SELECT COUNT(*) FROM ${from}.review_logs fl
+          JOIN ${from}.cards f ON f.id = fl.cardId
+          JOIN ${to}.cards tc ON tc.id = fl.cardId
+          WHERE NOT EXISTS (SELECT 1 FROM ${to}.review_logs tl
+                              WHERE tl.cardId = fl.cardId AND tl.reviewedDate = fl.reviewedDate))`
+    : "0";
+  const row = await db.getFirstAsync<BackupDiffCounts>(
+    `SELECT
+       (SELECT COUNT(*) FROM ${from}.decks f
+          WHERE NOT EXISTS (SELECT 1 FROM ${to}.decks t WHERE t.id = f.id)) AS decks,
+       (SELECT COUNT(*) FROM ${from}.cards f
+          WHERE NOT EXISTS (SELECT 1 FROM ${to}.cards t WHERE t.id = f.id)) AS cards,
+       (SELECT COUNT(*) FROM ${from}.cards f JOIN ${to}.cards t ON t.id = f.id
+          WHERE f.updatedAt > t.updatedAt) AS contents,
+       (SELECT COUNT(*) FROM ${from}.reviews fr
+          JOIN ${from}.cards f ON f.id = fr.cardId
+          JOIN ${to}.cards tc ON tc.id = fr.cardId
+          WHERE fr.lastReviewDate >
+                COALESCE((SELECT tr.lastReviewDate FROM ${to}.reviews tr
+                            WHERE tr.cardId = fr.cardId), '')) AS reviews,
+       ${logsSel} AS logs,
+       (SELECT COUNT(*) FROM ${from}.card_tags ft
+          JOIN ${from}.cards f ON f.id = ft.cardId
+          JOIN ${to}.cards tc ON tc.id = ft.cardId
+          WHERE NOT EXISTS (SELECT 1 FROM ${to}.card_tags tt
+                              WHERE tt.cardId = ft.cardId AND tt.tagId = ft.tagId)) AS tags;`,
+  );
+  return row ?? { decks: 0, cards: 0, contents: 0, reviews: 0, logs: 0, tags: 0 };
+}
+
+/**
+ * 「すべて置き換え」（`restoreFromLocalBackup`）の確認用に、バックアップと現データの
+ * 差分を**両方向**で数える。
+ *
+ * ⚠️ **片方向では足りない**：置き換えは破壊的なので、判断に要るのは「戻るもの」より
+ * **「失うもの」**（バックアップ以降にこの端末でやった作業）。デッキ別マージの画面が
+ * 出しているのは戻る側だけなので、こちらは両方向を出す。
+ * ⚠️ 比較系（本文・学習）は**両方に存在するカード**に限る＝片側にしか無いカードは
+ * `cards` に一本化して項目を重複させない（`listDecksInBackup` と同じ規約）。
+ */
+export async function inspectBackupReplace(
+  db: SQLiteDatabase,
+  backupPath: string,
+): Promise<BackupReplaceDiff> {
+  const escaped = backupPath.replace(/^file:\/\//, "").replace(/'/g, "''");
+  await db.execAsync(`ATTACH DATABASE '${escaped}' AS backupdb;`);
+  try {
+    // 古いバックアップに review_logs が無いことがある（`listDecksInBackup` と同じ扱い）。
+    const hasReviewLogs = await backupHasTable(db, "review_logs");
+    return {
+      restore: await countOneWay(db, "backupdb", "main", hasReviewLogs),
+      lose: await countOneWay(db, "main", "backupdb", hasReviewLogs),
+    };
+  } finally {
+    await db.execAsync("DETACH DATABASE backupdb;");
+  }
+}
+
 /**
  * バックアップから1デッキを現在のデータへ行単位マージする。
  * ATTACH＋テーブルコピー（replaceLocalDataFromDownloadedDb と同じ実績パターン）を
  * 単一接続の withTransactionAsync 内で行う。終了時に必ず DETACH する。
+ *
+ * @param opts.restoreOrder カードの並び順もバックアップのものへ戻す（既定 false）。
+ *   ⚠️ **これだけは加算マージではない**（相手端末の並べ替えを上書きしうる）ので、
+ *   呼び出し側で専用のボタンを押させること。既定の LWW では並び順は戻らない
+ *   ＝並べ替えは `updatedAt` を動かさないため上書き条件（backup > main）を満たさない。
  */
 export async function mergeDeckFromBackup(
   db: SQLiteDatabase,
   backupPath: string,
   deckId: string,
+  opts?: { restoreOrder?: boolean },
 ): Promise<void> {
   const escaped = backupPath.replace(/^file:\/\//, "").replace(/'/g, "''");
   // deckId は generateId() による UUID（hex とハイフンのみ）なので直接埋め込み可。
@@ -302,7 +398,28 @@ export async function mergeDeckFromBackup(
       // 8. card_tags：union（INSERT OR IGNORE）。
       await unionInsert(db, "card_tags", `WHERE cardId IN ${cardScope}`);
 
-      // 9. cardCount を再計算（マージで増減し得るため）。
+      // 9. 並び順（任意・既定オフ）。ここまでの LWW では戻らないので明示的に入れ替える。
+      //    ⚠️ 並び順は「リスト全体の性質」なので行ごとの LWW に馴染まない（両端末で
+      //    並べ替えていると番号が重複・欠落してどちらの意図でもない順序になる）。
+      //    そのため**バックアップの並びを丸ごと採用**し、バックアップに無いカード
+      //    （相手端末が追加したぶん）は相対順序を保ったまま後ろへ送る。
+      //    バックアップの sortOrder は 0 始まりなので、+MAX+1 すれば必ず後ろに出る。
+      if (opts?.restoreOrder && (await sharedColumns(db, "cards")).includes("sortOrder")) {
+        await db.execAsync(
+          `UPDATE main.cards SET sortOrder =
+             (SELECT bc.sortOrder FROM backupdb.cards bc WHERE bc.id = main.cards.id)
+           WHERE deckId = '${did}'
+             AND EXISTS (SELECT 1 FROM backupdb.cards bc WHERE bc.id = main.cards.id);`,
+        );
+        await db.execAsync(
+          `UPDATE main.cards SET sortOrder = sortOrder +
+             (SELECT COALESCE(MAX(bc2.sortOrder), 0) + 1 FROM backupdb.cards bc2 WHERE bc2.deckId = '${did}')
+           WHERE deckId = '${did}'
+             AND NOT EXISTS (SELECT 1 FROM backupdb.cards bc WHERE bc.id = main.cards.id);`,
+        );
+      }
+
+      // 10. cardCount を再計算（マージで増減し得るため）。
       await db.execAsync(
         `UPDATE main.decks SET cardCount = (SELECT COUNT(*) FROM main.cards WHERE deckId = '${did}') WHERE id = '${did}';`,
       );

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { DeckIcon } from '@/components/DeckIcon';
 import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
@@ -23,7 +23,7 @@ import { useSyncStore } from '@/store/sync';
 
 type ModalConfig =
   | { kind: 'info'; title?: string; message: string; backOnClose?: boolean }
-  | { kind: 'confirm'; title?: string; message: string; onConfirm: () => void };
+  | { kind: 'confirm'; title?: string; message: string; actions: ModalAction[] };
 
 function formatDateTime(ts: number): string {
   const d = new Date(ts);
@@ -108,21 +108,31 @@ export default function SyncMergeScreen() {
   }, []);
 
   function confirmMerge(deck: BackupDeckInfo) {
+    // 並び順が違うデッキだけ2つ目の選択肢を出す。既定（塗り）は従来どおりの加算マージで、
+    // 並び順の復元は**相手端末の並べ替えを上書きしうる**のでゴーストの副次選択肢にする。
+    const actions: ModalAction[] = [
+      { label: t('sync.mergeConfirm'), onPress: () => doMerge(deck, false) },
+    ];
+    if (deck.diffOrder > 0) {
+      actions.push({ label: t('sync.mergeConfirmOrder'), secondary: true, onPress: () => doMerge(deck, true) });
+    }
     setModal({
       kind: 'confirm',
       title: t('sync.mergeTitle'),
-      message: t('sync.mergeConfirmMessage', { name: deck.name }),
-      onConfirm: () => doMerge(deck),
+      message:
+        t('sync.mergeConfirmMessage', { name: deck.name }) +
+        (deck.diffOrder > 0 ? `\n\n${t('sync.mergeConfirmOrderNote')}` : ''),
+      actions,
     });
   }
 
-  async function doMerge(deck: BackupDeckInfo) {
+  async function doMerge(deck: BackupDeckInfo, restoreOrder: boolean) {
     const path = backupPathRef.current;
     if (!path) return;
     setModal(null);
     setProcessing(true);
     try {
-      await mergeDeckFromBackup(db, path, deck.id);
+      await mergeDeckFromBackup(db, path, deck.id, { restoreOrder });
       // フォーカス中の学習/統計/ホーム/カード一覧へ即反映。
       bumpDataRevision();
       // マージで localVersion が進むので、同期が有効なら相手端末へも反映する。
@@ -173,7 +183,7 @@ export default function SyncMergeScreen() {
           visible
           title={modal.title}
           message={modal.message}
-          actions={[{ label: t('sync.mergeConfirm'), onPress: modal.onConfirm }]}
+          actions={modal.actions}
           onClose={() => setModal(null)}
         />
       )}
@@ -204,12 +214,14 @@ export default function SyncMergeScreen() {
           </Text>
           {sortedDecks.map((deck) => {
             const diffLabels = restorableDiffLabels(deck, t);
-            // 戻せる差分が無いデッキは淡く（押してもデータは変わらない＝アーカイブ一覧と同じ流儀）
             const hasRestorable = diffLabels.length > 0;
+            // 何も戻せないデッキは淡く（押してもデータは変わらない＝アーカイブ一覧と同じ流儀）。
+            // 並び順だけが違うデッキは「並び順も戻す」で戻せるので淡くしない。
+            const actionable = hasRestorable || deck.diffOrder > 0;
             return (
             <Pressable
               key={deck.id}
-              style={[styles.card, { backgroundColor: theme.colors.surface, opacity: hasRestorable ? 1 : 0.55 }]}
+              style={[styles.card, { backgroundColor: theme.colors.surface, opacity: actionable ? 1 : 0.55 }]}
               onPress={() => confirmMerge(deck)}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

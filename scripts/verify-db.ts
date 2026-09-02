@@ -40,7 +40,7 @@ const { getAllSchedules, createSchedule, updateSchedule, MAX_SCHEDULES } = requi
 const { createCard, updateCard, updateCardSortOrders, deleteCard } = require('@/lib/database/cards');
 const { createTag, addTagToCard, updateTagSortOrders } = require('@/lib/database/tags');
 const { updateDeckSortOrders } = require('@/lib/database/decks');
-const { listDecksInBackup } = require('@/lib/sync/deckMerge');
+const { listDecksInBackup, mergeDeckFromBackup, inspectBackupReplace } = require('@/lib/sync/deckMerge');
 
 const { check, eq, report } = createAsserts();
 
@@ -808,7 +808,92 @@ async function main() {
   eq('削除されたカードは diffNewCards だけに数える（項目が重複しない）', [
     diff.diffNewerContents, diff.diffNewerReviews, diff.diffNewLogs, diff.diffNewTags,
   ], [1, 2, 1, 1]);
+  // ===========================================================================
+  console.log('\n[T24] マージの並び順復元（既定オフ／明示的に選んだときだけ）');
+  // ===========================================================================
+  const db24 = makeDb();
+  await migrateDbIfNeeded(db24);
+  const deck24 = await createDeck(db24, { name: '並び順の復元', description: '', language: 'ja' });
+  const m24 = [];
+  for (let i = 0; i < 3; i++) {
+    m24.push(await createCard(db24, { deckId: deck24.id, frontContent: [], backContent: [], memoContent: [] }));
+  }
+  const [a24, b24, c24] = m24.map((c: { id: string }) => c.id);
+  // この端末の並び（＝バックアップに退避される内容）を c,a,b にする
+  await updateCardSortOrders(db24, [c24, a24, b24]);
+  const backupPath24 = `${require('node:os').tmpdir()}/verify-db-order-${Date.now()}.db`;
+  require('node:fs').rmSync(backupPath24, { force: true });
+  db24.raw.exec(`VACUUM INTO '${backupPath24}'`);
+
+  // 相手端末の版で上書きされた状態に見立てる（並びが a,b,c に戻り、カードが1枚増えている）
+  await updateCardSortOrders(db24, [a24, b24, c24]);
+  const d24 = await createCard(db24, { deckId: deck24.id, frontContent: [], backContent: [], memoContent: [] });
+  const order24 = async () =>
+    (await db24.getAllAsync(`SELECT id FROM cards WHERE deckId = '${deck24.id}' ORDER BY sortOrder`))
+      .map((r: { id: string }) => r.id)
+      .join(',');
+
+  await mergeDeckFromBackup(db24, backupPath24, deck24.id);
+  eq('既定（オプションなし）では並び順は戻らない', await order24(), `${a24},${b24},${c24},${d24.id}`);
+
+  await mergeDeckFromBackup(db24, backupPath24, deck24.id, { restoreOrder: true });
+  eq('restoreOrder でバックアップの並びに戻る', await order24(), `${c24},${a24},${b24},${d24.id}`);
+  check(
+    'バックアップに無いカード（相手端末が追加）は消えずに末尾へ送られる',
+    (await order24()).endsWith(d24.id)
+  );
+  eq(
+    'カード枚数は変わらない（並び順の復元は加算も削除もしない）',
+    (await db24.getFirstAsync(`SELECT COUNT(*) AS n FROM cards WHERE deckId = '${deck24.id}'`)).n,
+    4
+  );
+  const dup24 = await db24.getAllAsync(
+    `SELECT sortOrder, COUNT(*) AS n FROM cards WHERE deckId = '${deck24.id}' GROUP BY sortOrder HAVING n > 1`
+  );
+  eq('sortOrder が重複しない（番号の衝突で順序が不定にならない）', dup24.length, 0);
+  require('node:fs').rmSync(backupPath24, { force: true });
+
+  // ===========================================================================
+  console.log('\n[T25] すべて置き換えの両方向差分（戻るもの／失うもの）');
+  // ===========================================================================
+  // 置き換えは破壊的なので、判断に要るのは「戻るもの」より「失うもの」。
+  // T23 の db23（バックアップ＝この端末の作業／現データ＝相手の版で上書きされた状態）を
+  // そのまま使い、さらに「バックアップ以降にこの端末で作った物」を足して両方向を作る。
+  const newDeck25 = await createDeck(db23, { name: '置き換えで失われる', description: '', language: 'ja' });
+  const newCard25 = await createCard(db23, {
+    deckId: newDeck25.id, frontContent: [], backContent: [], memoContent: [],
+  });
+  // k1 は両方に同じ学習記録がある状態なので、現データ側だけ新しくして「失う学習」を作る
+  await db23.runAsync("UPDATE reviews SET lastReviewDate = '2026-09-02T10:00:00.000Z' WHERE cardId = ?", [k1]);
+  const replace25 = await inspectBackupReplace(db23, backupPath);
+  eq('戻る側：バックアップにしか無いカード', replace25.restore.cards, 1);
+  eq('戻る側：本文が新しいカード', replace25.restore.contents, 1);
+  eq('戻る側：学習が新しいカード（k2 は巻き戻され k3 は未学習に戻っている）', replace25.restore.reviews, 2);
+  eq('戻る側：現データに無い履歴の行', replace25.restore.logs, 1);
+  eq('戻る側：現データに無いタグ紐付け', replace25.restore.tags, 1);
+  eq('失う側：バックアップ後に作ったデッキ', replace25.lose.decks, 1);
+  eq('失う側：バックアップ後に作ったカード', replace25.lose.cards, 1);
+  eq('失う側：バックアップ後の学習（k1）', replace25.lose.reviews, 1);
+  eq('失う側：本文の編集はしていないので 0（向きごとに独立して数えている）', replace25.lose.contents, 0);
+  eq('失う側：新デッキのカードは lose.cards に入る（restore 側には出ない）', [
+    replace25.lose.cards, (await db23.getAllAsync('SELECT id FROM cards WHERE id = ?', [newCard25.id])).length,
+  ], [1, 1]);
   require('node:fs').rmSync(backupPath, { force: true });
+
+  const db25 = makeDb();
+  await migrateDbIfNeeded(db25);
+  await createDeck(db25, { name: '無差分', description: '', language: 'ja' });
+  const samePath25 = `${require('node:os').tmpdir()}/verify-db-same-${Date.now()}.db`;
+  require('node:fs').rmSync(samePath25, { force: true });
+  db25.raw.exec(`VACUUM INTO '${samePath25}'`);
+  const same25 = await inspectBackupReplace(db25, samePath25);
+  eq('同じ内容なら両方向とも全部 0（＝置き換えても何も起きない）', [
+    same25.restore.decks, same25.restore.cards, same25.restore.contents,
+    same25.restore.reviews, same25.restore.logs, same25.restore.tags,
+    same25.lose.decks, same25.lose.cards, same25.lose.contents,
+    same25.lose.reviews, same25.lose.logs, same25.lose.tags,
+  ], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  require('node:fs').rmSync(samePath25, { force: true });
 
   report();
 }

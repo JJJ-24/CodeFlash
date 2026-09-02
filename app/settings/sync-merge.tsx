@@ -109,7 +109,7 @@ export default function SyncMergeScreen() {
 
   function confirmMerge(deck: BackupDeckInfo) {
     // 並び順が違うデッキだけ2つ目の選択肢を出す。既定（塗り）は従来どおりの加算マージで、
-    // 並び順の復元は**相手端末の並べ替えを上書きしうる**のでゴーストの副次選択肢にする。
+    // 並び順の復元は**この端末の現在の並びを上書きする**のでゴーストの副次選択肢にする。
     const actions: ModalAction[] = [
       { label: t('sync.mergeConfirm'), onPress: () => doMerge(deck, false) },
     ];

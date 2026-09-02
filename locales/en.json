@@ -847,8 +847,8 @@
     "mergeDiffOrder_one": "Order differs on 1 card",
     "mergeDiffOrderNote": "Card order is not restored by default (reordering does not change a card's updated time). To restore it, choose a deck and tap \"Also restore order\".",
     "mergeConfirmOrder": "Also restore order",
-    "mergeConfirmOrderNote": "\"Also restore order\" also puts this deck's cards back in the order they had in the backup (any reordering done on another device is overwritten).",
-    "mergeConfirmMessage": "Merge \"{{name}}\" into your current data. Existing data will not be deleted. Continue?",
+    "mergeConfirmOrderNote": "\"Also restore order\" restores the card order too (the current order is overwritten).",
+    "mergeConfirmMessage": "Merge \"{{name}}\" into your current data. Nothing is deleted.",
     "mergeConfirm": "Merge",
     "mergeSuccess": "Merged \"{{name}}\""
   },

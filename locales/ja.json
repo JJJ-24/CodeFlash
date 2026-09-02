@@ -804,8 +804,8 @@
     "mergeDiffOrder": "並び順 {{count}} 枚が違います",
     "mergeDiffOrderNote": "並び順は既定では戻りません（並べ替えはカードの更新日時を変えないため）。戻すにはデッキを選んで「並び順も戻す」を押してください。",
     "mergeConfirmOrder": "並び順も戻す",
-    "mergeConfirmOrderNote": "「並び順も戻す」を選ぶと、このデッキのカードの並びもバックアップの状態に戻します（別端末での並べ替えは上書きされます）。",
-    "mergeConfirmMessage": "「{{name}}」を現在のデータに追加・上書きします。既存データは削除されません。\n続けますか？",
+    "mergeConfirmOrderNote": "「並び順も戻す」を選ぶと、カードの並びも復元します（現在の並びは上書き）。",
+    "mergeConfirmMessage": "「{{name}}」のデータを追加・上書きします。既存データは削除されません。",
     "mergeConfirm": "追加・上書き",
     "mergeSuccess": "「{{name}}」を追加・上書きしました"
   },

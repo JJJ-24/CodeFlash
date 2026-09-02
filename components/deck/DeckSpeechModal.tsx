@@ -138,14 +138,34 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
     );
   };
 
-  /** 面の見出し（トグル ON のときだけ出す＝OFF なら 050 と同じ見た目）。 */
-  const sideHeading = (label: string) => (
-    <Text
-      style={[styles.sideLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
-      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+  /**
+   * 面の見出し（トグル ON のときだけ出す＝OFF なら 050 と同じ見た目）。
+   *
+   * 見た目は `ShortcutsModal` のカテゴリー小見出しと同じ「帯＋青文字」。素の
+   * `textSecondary` の太字だと、下に続く行タイトル（`text` の太字）と重さが変わらず
+   * 見出しに見えない＝どこから裏面なのかを目で追えなかった。
+   * ⚠️ 帯はシートの左右いっぱいに出す＝インセットのままだと角丸の行カードと同じ見え方になり、
+   *   「区切り」ではなくもう1枚のカードとして読める。そのため **sheet 側の
+   *   `paddingHorizontal` を外し、左右の余白は中の要素それぞれが持つ**（`ShortcutsModal`
+   *   と同じ構成）。⚠️ `marginHorizontal: -16` で外へはみ出させる手は使えない＝
+   *   RN の `ScrollView` は `overflow: 'scroll'`（`clipsToBounds = YES`）なので、
+   *   はみ出したぶんは描画されずテキストだけ右へずれる。
+   */
+  const sideHeading = (label: string, separated?: boolean) => (
+    <View
+      style={[
+        styles.sideLabelBand,
+        { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border },
+        separated && styles.sideLabelBandSeparated,
+      ]}
     >
-      {label}
-    </Text>
+      <Text
+        style={[styles.sideLabel, { color: theme.colors.primary, fontSize: theme.fontSize.sm }]}
+        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+      >
+        {label}
+      </Text>
+    </View>
   );
 
   return (
@@ -210,7 +230,7 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
                 {scripts.map((script) => renderRow(script, false))}
                 {splitSides && (
                   <>
-                    {sideHeading(t('common.back'))}
+                    {sideHeading(t('common.back'), true)}
                     {scripts.map((script) => renderRow(script, true))}
                   </>
                 )}
@@ -246,21 +266,22 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   closeArea: { flex: 1 },
+  // ⚠️ 左右パディングは持たせない（面の見出しの帯を端まで出すため）。左右 16 は
+  //    header/infoBox/empty/row/toggleRow がそれぞれ marginHorizontal で持つ。
   sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 12,
-    paddingHorizontal: 16,
     paddingBottom: 16,
     maxHeight: '75%',
   },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, marginHorizontal: 16 },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   title: { fontWeight: '700', flexShrink: 1 },
   headerBtn: { paddingHorizontal: 4 },
-  infoBox: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  infoBox: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, marginHorizontal: 16 },
   hint: { lineHeight: 20 },
-  empty: { paddingVertical: 24, textAlign: 'center' },
+  empty: { paddingVertical: 24, textAlign: 'center', marginHorizontal: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,6 +291,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     marginBottom: 8,
+    marginHorizontal: 16,
   },
   rowTitle: { flex: 1, fontWeight: '600' },
   toggleRow: {
@@ -281,8 +303,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 12,
+    marginHorizontal: 16,
   },
-  sideLabel: { fontWeight: '700', marginBottom: 6 },
+  sideLabel: { fontWeight: '700' },
+  sideLabelBand: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginBottom: 8,
+  },
+  // 2枚目（裏面）だけ上を空ける＝1枚目はトグル行の marginBottom:12 が既に空けているため。
+  sideLabelBandSeparated: { marginTop: 4 },
 });
 
 /**

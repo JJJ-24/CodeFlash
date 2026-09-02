@@ -225,6 +225,14 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN speechLangs TEXT;`);
   }
 
+  // === 051: 裏面用の読み上げ言語（表面と同じ形の ScriptLangs・JSON）===
+  // NULL/空 = 「表面と同じ」＝既存デッキの挙動は完全に不変。
+  // 両面が同じ文字体系のデッキ（英語 ⇄ スペイン語など）は文字体系では分けられないため、
+  // 面という外形的な手掛かりで分ける（詳細は docs/051）。
+  if (!cols.some((c) => c.name === 'speechLangsBack')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN speechLangsBack TEXT;`);
+  }
+
   // === 046 Phase 2: 未達成のときだけ通知するスケジュール（notification_schedules に列追加）===
   // スケジュール単位のフラグ（全体設定にしない）＝「朝は無条件・夜は未達成のときだけ」を使い分けられる。
   // 既定 0 ＝既存スケジュールの挙動は不変。

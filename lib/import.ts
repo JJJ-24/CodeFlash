@@ -56,7 +56,7 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
 
     await bulkInsert(
       db,
-      'INSERT OR REPLACE INTO decks (id,name,description,language,cardCount,sortOrder,iconName,colorHex,sqlInit,sqlStages,htmlInit,htmlImages,htmlStages,speechLangs,archived,createdAt,updatedAt) VALUES',
+      'INSERT OR REPLACE INTO decks (id,name,description,language,cardCount,sortOrder,iconName,colorHex,sqlInit,sqlStages,htmlInit,htmlImages,htmlStages,speechLangs,speechLangsBack,archived,createdAt,updatedAt) VALUES',
       data.decks.map((d) => [
         d.id as string,
         d.name as string,
@@ -79,6 +79,8 @@ export async function importDatabase(db: SQLiteDatabase, fileUri: string, mode: 
         // 050 Phase 2: 読み上げの上書き（JSON 文字列のまま往復）。050 以前のエクスポートには
         // 無いので null に吸収され、読み取り時に「未設定」＝アプリ設定に従う
         (d.speechLangs as string | null) ?? null,
+        // 051: 裏面用の上書き。051 以前のエクスポートには無いので null＝「表面と同じ」に吸収される
+        (d.speechLangsBack as string | null) ?? null,
         d.archived ? 1 : 0,
         d.createdAt as string,
         d.updatedAt as string,

@@ -231,7 +231,9 @@ export async function inspectTsvExport(db: SQLiteDatabase, deck: Deck): Promise<
     blockSqlInit,
     blockHtmlInit,
     images,
-    deckSpeechLangs: Object.keys(deck.speechLangs ?? {}).length,
+    // 051：裏面用の上書きも往復しないので一緒に数える（表裏の合計＝落ちる設定の件数）
+    deckSpeechLangs:
+      Object.keys(deck.speechLangs ?? {}).length + Object.keys(deck.speechLangsBack ?? {}).length,
   };
 }
 

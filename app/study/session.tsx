@@ -41,6 +41,7 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { useStudyTimer } from "@/hooks/useStudyTimer";
 import { blocksToSpeech } from "@/lib/blocksToSpeech";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
+import { scriptLangsForSide } from "@/lib/speech";
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { useLockedHeaderHeights } from "@/lib/useLockedTopInset";
 import { useStudySession } from "@/hooks/useStudySession";
@@ -264,11 +265,9 @@ export default function StudySessionScreen() {
   const currentDeckHtmlImages = currentCard
     ? decks.find((d) => d.id === currentCard.deckId)?.htmlImages
     : undefined;
-  // 現在のカードが属するデッキの読み上げ言語の上書き（050 Phase 2）。
+  // 現在のカードが属するデッキの読み上げ言語の上書き（050 Phase 2・051 で表裏に分岐）。
   // ⚠️ 土台と同じく**カードごとに引く**（タグ学習は複数デッキが混ざるため）。
-  const currentDeckSpeechLangs = currentCard
-    ? decks.find((d) => d.id === currentCard.deckId)?.speechLangs
-    : undefined;
+  const currentDeck = currentCard ? decks.find((d) => d.id === currentCard.deckId) : undefined;
   const sessionTitle = isFocusedReview
     ? t("study.focusedReviewTitle")
     : deckId
@@ -284,7 +283,10 @@ export default function StudySessionScreen() {
 
   // ---- 読み上げ（049）----------------------------------------------------
   // 読む対象は「いま表示している面」。裏面でメモを開いていればメモも続けて読む。
-  const speech = useSpeech(currentDeckSpeechLangs);
+  // 051：面によってデッキの上書きマップを選ぶ（裏面が未設定なら表面と同じ＝従来どおり）。
+  const speech = useSpeech(
+    scriptLangsForSide(currentDeck?.speechLangs, currentDeck?.speechLangsBack, isFlipped),
+  );
   const speechText = useMemo(() => {
     if (!currentCard) return "";
     if (!isFlipped) return blocksToSpeech(currentCard.frontContent);

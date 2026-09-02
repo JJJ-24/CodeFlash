@@ -6,13 +6,14 @@ import { parseScriptLangs, serializeScriptLangs } from '@/lib/speech';
 import type { Deck } from '@/types';
 import { generateId, isSameSortOrder } from './utils';
 
-// SQLite は archived を 0/1 の数値で、htmlImages / htmlStages / sqlStages / speechLangs を JSON 文字列で返すため型を分けて正規化する
-type RawDeck = Omit<Deck, 'archived' | 'htmlImages' | 'htmlStages' | 'sqlStages' | 'speechLangs'> & {
+// SQLite は archived を 0/1 の数値で、htmlImages / htmlStages / sqlStages / speechLangs(Back) を JSON 文字列で返すため型を分けて正規化する
+type RawDeck = Omit<Deck, 'archived' | 'htmlImages' | 'htmlStages' | 'sqlStages' | 'speechLangs' | 'speechLangsBack'> & {
   archived: number;
   htmlImages: string | null;
   htmlStages: string | null;
   sqlStages: string | null;
   speechLangs: string | null;
+  speechLangsBack: string | null;
 };
 
 /** DB 行を `Deck` に正規化する。**旧データの吸収（044: htmlInit → htmlStages／045: sqlInit → sqlStages）は
@@ -26,6 +27,8 @@ function toDeck(raw: RawDeck): Deck {
     sqlStages: normalizeDeckStages(raw.sqlStages, raw.sqlInit),
     // 050 Phase 2：知らないキー・空の値は捨てて「未設定」に倒す（壊れた値で読み上げを壊さない）
     speechLangs: parseScriptLangs(raw.speechLangs),
+    // 051：裏面用。空 = 表面と同じ（解決は lib/speech.ts の scriptLangsForSide に閉じる）
+    speechLangsBack: parseScriptLangs(raw.speechLangsBack),
   };
 }
 
@@ -67,7 +70,7 @@ export async function setDecksArchived(db: SQLiteDatabase, ids: string[], archiv
 export async function createDeck(
   db: SQLiteDatabase,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'sqlStages' | 'htmlInit' | 'htmlImages' | 'htmlStages' | 'speechLangs'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'sqlStages' | 'htmlInit' | 'htmlImages' | 'htmlStages' | 'speechLangs' | 'speechLangsBack'>>
 ): Promise<Deck> {
   const now = new Date().toISOString();
   const id = generateId();
@@ -83,8 +86,8 @@ export async function createDeck(
   const sqlStages = data.sqlStages;
   const sqlInit = sqlStages !== undefined ? legacyInitMirror(sqlStages) : (data.sqlInit ?? null);
   await db.runAsync(
-    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, sqlStages, htmlInit, htmlImages, htmlStages, speechLangs, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, serializeDeckStages(sqlStages), htmlInit, serializeDeckImages(htmlImages), serializeDeckStages(htmlStages), serializeScriptLangs(data.speechLangs), now, now]
+    'INSERT INTO decks (id, name, description, language, cardCount, sortOrder, iconName, colorHex, sqlInit, sqlStages, htmlInit, htmlImages, htmlStages, speechLangs, speechLangsBack, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, data.name, data.description, data.language, sortOrder, iconName, colorHex, sqlInit, serializeDeckStages(sqlStages), htmlInit, serializeDeckImages(htmlImages), serializeDeckStages(htmlStages), serializeScriptLangs(data.speechLangs), serializeScriptLangs(data.speechLangsBack), now, now]
   );
   return {
     id,
@@ -98,6 +101,7 @@ export async function createDeck(
     htmlInit,
     htmlImages,
     speechLangs: parseScriptLangs(serializeScriptLangs(data.speechLangs)),
+    speechLangsBack: parseScriptLangs(serializeScriptLangs(data.speechLangsBack)),
     // 読み直したときと同じ形にそろえる（配列未指定でも旧列から合成される）
     htmlStages: normalizeDeckStages(serializeDeckStages(htmlStages), htmlInit),
     sqlStages: normalizeDeckStages(serializeDeckStages(sqlStages), sqlInit),
@@ -112,7 +116,7 @@ export async function updateDeck(
   db: SQLiteDatabase,
   id: string,
   data: Pick<Deck, 'name' | 'description' | 'language'> &
-    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'sqlStages' | 'htmlInit' | 'htmlImages' | 'htmlStages' | 'speechLangs'>>
+    Partial<Pick<Deck, 'iconName' | 'colorHex' | 'sqlInit' | 'sqlStages' | 'htmlInit' | 'htmlImages' | 'htmlStages' | 'speechLangs' | 'speechLangsBack'>>
 ): Promise<void> {
   const now = new Date().toISOString();
   // htmlImages / htmlStages / sqlStages は「渡されたときだけ」更新する（他の任意項目と扱いが違う点に注意）。
@@ -123,6 +127,7 @@ export async function updateDeck(
   const updatesSqlStages = data.sqlStages !== undefined;
   // 050 Phase 2：読み上げの上書きも「渡されたときだけ」（他画面からの更新で黙って消さない）
   const updatesSpeechLangs = data.speechLangs !== undefined;
+  const updatesSpeechLangsBack = data.speechLangsBack !== undefined;
   // 044/045: 土台を更新するときは旧列（htmlInit / sqlInit）を先頭土台のミラーで上書きする（旧バージョン互換）。
   // **旧列も「渡されたときだけ」更新する**：無条件に `?? null` で書くと、土台を渡さない呼び出しで
   // ミラーだけが NULL になり、新バージョンでは気づけないまま**旧バージョン／旧エクスポートから土台が
@@ -132,7 +137,7 @@ export async function updateDeck(
   const htmlInit = updatesStages ? legacyInitMirror(data.htmlStages) : (data.htmlInit ?? null);
   const sqlInit = updatesSqlStages ? legacyInitMirror(data.sqlStages) : (data.sqlInit ?? null);
   await db.runAsync(
-    `UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?${updatesSqlInit ? ', sqlInit = ?' : ''}${updatesHtmlInit ? ', htmlInit = ?' : ''}${updatesImages ? ', htmlImages = ?' : ''}${updatesStages ? ', htmlStages = ?' : ''}${updatesSqlStages ? ', sqlStages = ?' : ''}${updatesSpeechLangs ? ', speechLangs = ?' : ''}, updatedAt = ? WHERE id = ?`,
+    `UPDATE decks SET name = ?, description = ?, language = ?, iconName = ?, colorHex = ?${updatesSqlInit ? ', sqlInit = ?' : ''}${updatesHtmlInit ? ', htmlInit = ?' : ''}${updatesImages ? ', htmlImages = ?' : ''}${updatesStages ? ', htmlStages = ?' : ''}${updatesSqlStages ? ', sqlStages = ?' : ''}${updatesSpeechLangs ? ', speechLangs = ?' : ''}${updatesSpeechLangsBack ? ', speechLangsBack = ?' : ''}, updatedAt = ? WHERE id = ?`,
     [
       data.name, data.description, data.language,
       data.iconName ?? null, data.colorHex ?? null,
@@ -142,6 +147,7 @@ export async function updateDeck(
       ...(updatesStages ? [serializeDeckStages(data.htmlStages)] : []),
       ...(updatesSqlStages ? [serializeDeckStages(data.sqlStages)] : []),
       ...(updatesSpeechLangs ? [serializeScriptLangs(data.speechLangs)] : []),
+      ...(updatesSpeechLangsBack ? [serializeScriptLangs(data.speechLangsBack)] : []),
       now, id,
     ]
   );

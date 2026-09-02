@@ -28,7 +28,7 @@ const { LEGACY_STAGE_ID, resolveDeckStageHtml, resolveDeckStageSql, legacyInitMi
 const { exportDatabase } = require('@/lib/export');
 const { importDatabase } = require('@/lib/import');
 const { inspectTsvExport, hasTsvExportLoss } = require('@/lib/tsv');
-const { parseScriptLangs } = require('@/lib/speech');
+const { parseScriptLangs, scriptLangsForSide } = require('@/lib/speech');
 const { getTodayReviewedCount } = require('@/lib/database/reviews');
 const { shouldFireStudyGoal, isStudyGoalUnmet, computeGoalLookaheadDays, computeGoalDayStats, PENDING_NOTIFICATION_LIMIT } =
   require('@/lib/studyGoal');
@@ -512,6 +512,72 @@ async function main() {
   await migrateDbIfNeeded(db18c);
   await importDatabase(db18c, '/cache/old_speech.json', 'replace');
   eq('050 以前のエクスポートは未設定として読める', (await getDeckById(db18c, deck18.id)).speechLangs, {});
+
+  // ===========================================================================
+  console.log('\n[T18b] 051・裏面用の読み上げ言語（speechLangsBack 列／空なら表面と同じ）');
+  // ===========================================================================
+  const db18d = makeDb();
+  await migrateDbIfNeeded(db18d);
+  // 051 以前の DB を再現（列を落として旧バージョンの状態に戻す）
+  db18d.raw.exec('ALTER TABLE decks DROP COLUMN speechLangsBack');
+  await db18d.runAsync(
+    `INSERT INTO decks (id,name,description,language,cardCount,sortOrder,speechLangs,createdAt,updatedAt)
+     VALUES ('d-old-side','旧デッキ','','ja',0,1,'{"latin":"en-US"}','2026-01-01','2026-01-01')`
+  );
+  await migrateDbIfNeeded(db18d);
+  const cols18d = await db18d.getAllAsync('PRAGMA table_info(decks)');
+  check('マイグレーションで speechLangsBack 列が追加される',
+    cols18d.some((c: { name: string }) => c.name === 'speechLangsBack'));
+  const oldSide = await getDeckById(db18d, 'd-old-side');
+  eq('既存デッキの裏面は未設定（{}）', oldSide.speechLangsBack, {});
+  eq('既存デッキの表面は無傷', oldSide.speechLangs, { latin: 'en-US' });
+
+  // 解決：裏面が空なら表面を使う（＝051 以前のデッキの挙動は完全に不変）
+  eq('表面はいつも表面の設定', scriptLangsForSide(oldSide.speechLangs, oldSide.speechLangsBack, false), { latin: 'en-US' });
+  eq('裏面が未設定なら表面に落ちる', scriptLangsForSide(oldSide.speechLangs, oldSide.speechLangsBack, true), { latin: 'en-US' });
+
+  const deck18d = await createDeck(db18d, {
+    name: '英⇄西', description: '', language: 'ja',
+    speechLangs: { latin: 'en-US' }, speechLangsBack: { latin: 'es-ES' },
+  });
+  eq('createDeck の戻り値に裏面が入る', deck18d.speechLangsBack, { latin: 'es-ES' });
+  const reread18d = await getDeckById(db18d, deck18d.id);
+  eq('読み直しても同じ', reread18d.speechLangsBack, { latin: 'es-ES' });
+  eq('裏面を指定すると裏面が使われる', scriptLangsForSide(reread18d.speechLangs, reread18d.speechLangsBack, true), { latin: 'es-ES' });
+  eq('表面は裏面に影響されない', scriptLangsForSide(reread18d.speechLangs, reread18d.speechLangsBack, false), { latin: 'en-US' });
+
+  // ⚠️ 044 の教訓：渡さない更新で黙って消えてはいけない
+  await updateDeck(db18d, deck18d.id, { name: '英⇄西', description: '', language: 'ja' });
+  eq('speechLangsBack を渡さない更新では消えない', (await getDeckById(db18d, deck18d.id)).speechLangsBack, { latin: 'es-ES' });
+  await updateDeck(db18d, deck18d.id, { name: '英⇄西', description: '', language: 'ja', speechLangsBack: {} });
+  eq('空を渡せば解除できる（表面と同じに戻る）', (await getDeckById(db18d, deck18d.id)).speechLangsBack, {});
+  eq('解除後は裏面も表面の設定を使う',
+    scriptLangsForSide((await getDeckById(db18d, deck18d.id)).speechLangs, (await getDeckById(db18d, deck18d.id)).speechLangsBack, true),
+    { latin: 'en-US' });
+
+  // TSV は往復しないので表裏の合計を警告に出す
+  await updateDeck(db18d, deck18d.id, { name: '英⇄西', description: '', language: 'ja', speechLangsBack: { latin: 'es-ES' } });
+  const loss18d = await inspectTsvExport(db18d, await getDeckById(db18d, deck18d.id));
+  eq('TSV 損失: 表裏の合計を数える', loss18d.deckSpeechLangs, 2);
+
+  // JSON エクスポート → インポート往復
+  for (const k of Object.keys(fsFiles)) if (k.endsWith('.json')) delete fsFiles[k];
+  await exportDatabase(db18d, false);
+  const sideUri = Object.keys(fsFiles).find((k) => k.endsWith('.json'))!;
+  const db18e = makeDb();
+  await migrateDbIfNeeded(db18e);
+  await importDatabase(db18e, sideUri, 'replace');
+  eq('replace インポートで裏面が復元', (await getDeckById(db18e, deck18d.id)).speechLangsBack, { latin: 'es-ES' });
+  // 051 以前のエクスポート（speechLangsBack キーなし）
+  const oldSideExport = JSON.parse(fsFiles[sideUri]);
+  for (const d of oldSideExport.decks) delete d.speechLangsBack;
+  fsFiles['/cache/old_side.json'] = JSON.stringify(oldSideExport);
+  const db18f = makeDb();
+  await migrateDbIfNeeded(db18f);
+  await importDatabase(db18f, '/cache/old_side.json', 'replace');
+  const imported18f = await getDeckById(db18f, deck18d.id);
+  eq('051 以前のエクスポートは裏面未設定として読める', imported18f.speechLangsBack, {});
+  eq('そのとき裏面は表面に落ちる', scriptLangsForSide(imported18f.speechLangs, imported18f.speechLangsBack, true), { latin: 'en-US' });
 
   // ===========================================================================
   console.log('\n[T19] 046 Phase 5・統計「学習の記録」の目標達成（現在の目標で過去も判定）');

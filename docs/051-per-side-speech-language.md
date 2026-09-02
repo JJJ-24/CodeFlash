@@ -1,7 +1,7 @@
 # 051 読み上げの面ごとの言語（表面／裏面）＋デッキ設定の Pro 化
 
 **フェーズ:** 将来
-**ステータス:** 未着手（設計合意 2026-09-01）
+**ステータス:** Phase 1 完了（2026-09-02）／Phase 2・3 未着手（設計合意 2026-09-01）
 **要ネイティブ再ビルド:** 不要（`expo-speech` は導入済み・DB 列の追加のみ）
 **依存:** 049（読み上げ本体）・050（Phase 2＝デッキ単位の上書き）
 **被依存:** なし
@@ -180,14 +180,14 @@ Pro になるのは**デッキに保存する設定だけ**）。
 
 ### Phase 1（データと解決）
 
-- [ ] `schema.ts` に `decks.speechLangsBack` の `ALTER TABLE`（050 の `speechLangs` と同型）
-- [ ] `types/index.ts` に `speechLangsBack: ScriptLangs`
-- [ ] `lib/database/decks.ts`：`RawDeck`・`toDeck`（`parseScriptLangs`）・`createDeck`・`updateDeck`
+- [x] `schema.ts` に `decks.speechLangsBack` の `ALTER TABLE`（050 の `speechLangs` と同型）
+- [x] `types/index.ts` に `speechLangsBack: ScriptLangs`
+- [x] `lib/database/decks.ts`：`RawDeck`・`toDeck`（`parseScriptLangs`）・`createDeck`・`updateDeck`
       （⚠️ **渡されたときだけ書く**＝`updatesSpeechLangsBack` を足す）
-- [ ] `lib/speech.ts` に「裏面が未設定なら表面を使う」ヘルパ（空判定を1か所に閉じる）
-- [ ] `app/study/session.tsx`：`isFlipped` で渡すマップを選ぶ
-- [ ] `lib/import.ts` の列リスト／`lib/tsv.ts` の欠落カウント
-- [ ] `verify:db` の T18 を拡張（列追加・往復・空で解除・裏面未設定なら表面に落ちる）
+- [x] `lib/speech.ts` に「裏面が未設定なら表面を使う」ヘルパ（空判定を1か所に閉じる）
+- [x] `app/study/session.tsx`：`isFlipped` で渡すマップを選ぶ
+- [x] `lib/import.ts` の列リスト／`lib/tsv.ts` の欠落カウント
+- [x] `verify:db` の T18 を拡張（**T18b として新設**・列追加・往復・空で解除・裏面未設定なら表面に落ちる・16 アサーション）
 
 ### Phase 2（UI）
 

@@ -319,6 +319,24 @@ export function parseScriptLangs(json: string | null | undefined): ScriptLangs {
 }
 
 /**
+ * 051：**いま読んでいる面**に効く上書きマップを選ぶ。
+ *
+ * 裏面の設定が**空なら表面と同じ**（＝051 以前のデッキ・裏面を分けないデッキは完全に不変）。
+ * ⚠️ **空判定をここに閉じる**＝画面側で `?? {}` だけを書くと「空オブジェクトを渡した」ことになり、
+ * 表面の設定にもアプリ設定にも落ちずに**既定へ落ちてしまう**（`mergeScriptLangs` は
+ * 空マップを「上書きなし」として扱うので、表面の設定が無視される）。
+ * ⚠️ メモは裏面に従う（学習画面は裏面とメモを1本のテキストにして読むため。詳細は docs/051）。
+ */
+export function scriptLangsForSide(
+  front: ScriptLangs | undefined,
+  back: ScriptLangs | undefined,
+  isBack: boolean,
+): ScriptLangs | undefined {
+  if (!isBack) return front;
+  return back && Object.keys(back).length > 0 ? back : front;
+}
+
+/**
  * 上書きマップが同じ内容か。**キーの並び順に依存しない**（`JSON.stringify` で比べると
  * `{han,latin}` と `{latin,han}` が別物になり、デッキ編集の「変更あり」判定が誤爆する）。
  */

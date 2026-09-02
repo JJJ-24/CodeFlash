@@ -66,6 +66,13 @@ const CURRENT_FEATURES: Feature[] = [
     titleKey: 'pro.featureWebPreview',
     descKey:  'pro.featureWebPreviewDesc',
   },
+  {
+    // 051：Pro なのは**デッキに保存する読み上げ設定**だけ（読み上げ本体・アプリ全体の
+    // 設定・声・速度は無料のまま）。説明文でもそこを明示する。
+    icon: 'volume-high-outline',
+    titleKey: 'pro.featureDeckSpeech',
+    descKey:  'pro.featureDeckSpeechDesc',
+  },
 ];
 
 export default function PaywallScreen() {

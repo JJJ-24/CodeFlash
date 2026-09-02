@@ -44,7 +44,10 @@ interface Props {
  * ⚠️ **OFF にしたら裏面の設定は消す**＝残すと「トグルは OFF なのに裏面だけ別の言語で読まれる」
  * ＝画面に出ていない設定が効く状態になる（CLAUDE.md の鉄則）。
  *
- * ⚠️ **Pro ゲートは付けない**（読み上げは無料機能）。HTML/SQL 土台の行とはここが違う。
+ * 051：**このシートを開けるのは Pro だけ**（デッキに保存する読み上げ設定＝050 のデッキ別言語も含めて）。
+ * ⚠️ ただし**ゲートは呼び出し側（デッキ編集の行）に置く**＝このシート自体は isPro を知らない。
+ * 非 Pro でも「設定済みの解除」は通す必要があり（受け取ったデッキを直す手段が消えるため）、
+ * その導線は行のダイアログが持つ。⚠️ **適用（学習画面）には isPro を入れない**（読み上げ本体は無料）。
  * ⚠️ 選択肢に出す文字体系は**設定画面とまったく同じ規則**（`CONFIGURABLE_SCRIPTS` かつ
  * 端末にその文字体系の音声が2つ以上ある）。1つしか無いものは選ばせても結果が変わらない。
  * ⚠️ 2枚目のモーダル（言語ピッカー）は**この Modal の children の中**に置く。兄弟に並べると
@@ -202,11 +205,12 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
                   </Text>
                   <AppSwitch value={splitSides} onValueChange={toggleSplit} />
                 </View>
-                {splitSides && sideHeading(t('card.front'))}
+                {/* 面の呼び名は `common.front` / `common.back`（カード編集のタブと同じ定義元）。 */}
+                {splitSides && sideHeading(t('common.front'))}
                 {scripts.map((script) => renderRow(script, false))}
                 {splitSides && (
                   <>
-                    {sideHeading(t('card.back'))}
+                    {sideHeading(t('common.back'))}
                     {scripts.map((script) => renderRow(script, true))}
                   </>
                 )}

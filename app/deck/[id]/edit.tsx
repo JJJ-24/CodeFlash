@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { AppSwitch } from '@/components/AppSwitch';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { InfoContent } from '@/components/InfoContent';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
@@ -110,6 +111,8 @@ export default function EditDeckScreen() {
   // 051: 裏面用の上書き（空 = 表面と同じ）
   const [speechLangsBack, setSpeechLangsBack] = useState<ScriptLangs>(deck?.speechLangsBack ?? {});
   const [showSpeechModal, setShowSpeechModal] = useState(false);
+  // 051: 非 Pro が設定済みデッキを開いたときの案内（解除だけは通す）
+  const [showSpeechProModal, setShowSpeechProModal] = useState(false);
   const speechConfigured = Object.keys(speechLangs).length > 0 || Object.keys(speechLangsBack).length > 0;
 
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
@@ -140,7 +143,20 @@ export default function EditDeckScreen() {
   // 034: ハードキーボードショートカット（フック規約上、早期 return より前で呼ぶ。
   // ハンドラが後方定義の値を参照するのはクロージャなので可＝キー押下時には初期化済み）。
   // サブモーダル（アイコン/SQL/削除確認/破棄確認）は RN Modal。開いている間は親のキーを無効化する。
-  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showSpeechModal || showDeleteModal || showDiscardModal;
+
+  /**
+   * 051：読み上げのデッキ設定を開く。**設定するのは Pro／見る・消すは無料**。
+   * 非 Pro でも設定済みなら解除だけは通す＝インポートや iCloud で受け取ったデッキを
+   * 直す手段が画面から無くなるのを防ぐ（デッキ設定はアプリ設定に勝つので打ち消せない）。
+   */
+  function openSpeechSettings() {
+    Keyboard.dismiss();
+    if (isPro) { setShowSpeechModal(true); return; }
+    if (speechConfigured) { setShowSpeechProModal(true); return; }
+    router.push('/paywall');
+  }
+
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showSpeechModal || showSpeechProModal || showDeleteModal || showDiscardModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },
@@ -153,7 +169,7 @@ export default function EditDeckScreen() {
     { input: 'q', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowSqlInitModal(true); } } },
     { input: 'h', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowHtmlInitModal(true); } } },
     // 050 Phase 2: 読み上げ（Read）。⚠️ Pro ゲートは無い（読み上げは無料機能）
-    { input: 'r', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowSpeechModal(true); } },
+    { input: 'r', handler: () => { if (subModalOpen()) return; openSpeechSettings(); } },
     { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setArchived((v) => !v); } }, // アーカイブ切替（全画面で E に統一）
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
@@ -434,14 +450,17 @@ export default function EditDeckScreen() {
             </View>
           )}
 
-          {/* 050 Phase 2: このデッキだけの読み上げ言語。⚠️ **Pro で囲まない**（読み上げは無料機能）。 */}
+          {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
+              設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
+              ⚠️ **適用（学習画面）には isPro を入れない**＝読み上げ自体は無料機能で、
+              止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.speechLangsLabel')}
             </Text>
             <Pressable
               style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-              onPress={() => { Keyboard.dismiss(); setShowSpeechModal(true); }}
+              onPress={openSpeechSettings}
             >
               <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
                 <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
@@ -449,6 +468,7 @@ export default function EditDeckScreen() {
               <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {deckSpeechSummary(speechLangs, speechLangsBack, t)}
               </Text>
+              {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
             </Pressable>
           </View>
@@ -506,6 +526,16 @@ export default function EditDeckScreen() {
         onChange={setHtmlStages}
         onClose={() => setShowHtmlInitModal(false)}
         listFooter={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
+      />
+      <ConfirmModal
+        visible={showSpeechProModal}
+        title={t('deck.speechLangsTitle')}
+        message={t('deck.speechProMessage')}
+        actions={[
+          { label: t('deck.speechProClear'), onPress: () => { setShowSpeechProModal(false); setSpeechLangs({}); setSpeechLangsBack({}); } },
+          { label: t('deck.speechProSeePro'), secondary: true, onPress: () => { setShowSpeechProModal(false); router.push('/paywall'); } },
+        ]}
+        onClose={() => setShowSpeechProModal(false)}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

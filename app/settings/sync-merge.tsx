@@ -38,6 +38,30 @@ function formatReviewDateTime(iso: string): string {
 }
 
 /**
+ * 「このデッキをマージすると何が戻るか」の内訳ラベル。
+ * 最終学習・最終編集の日時は端末をまたいで比べられる絶対値だが、**戻す価値があるか**は
+ * 読み取れない（並べ替えとタグは日時をまったく動かさないので、時刻上は差が無いのに
+ * 中身は違う、が起こる）。そこで現データと突き合わせた件数を出す。
+ * ⚠️ 並び順（diffOrder）は**マージでは戻らない**のでここには入れない（別行で出す）。
+ */
+function restorableDiffLabels(
+  deck: BackupDeckInfo,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string[] {
+  const items: { count: number; key: string }[] = [
+    { count: deck.diffNewerReviews, key: 'sync.mergeDiffReview' },
+    { count: deck.diffNewLogs, key: 'sync.mergeDiffLog' },
+    { count: deck.diffNewerContents, key: 'sync.mergeDiffContent' },
+    { count: deck.diffNewCards, key: 'sync.mergeDiffCard' },
+    { count: deck.diffNewTags, key: 'sync.mergeDiffTag' },
+  ];
+  const labels = items.filter((i) => i.count > 0).map((i) => t(i.key, { count: i.count }));
+  // デッキ自身（名前・アイコン・土台・読み上げ）は件数ではなく有無だけを示す
+  if (deck.diffDeckSettings > 0) labels.push(t('sync.mergeDiffDeckSettings'));
+  return labels;
+}
+
+/**
  * 029: 自動バックアップ内のデッキ一覧を表示し、1デッキを現在のデータにマージ復元する画面。
  * ConfirmModal（アラート）だとデッキが多いと収まらず説明が切れるため、スクロール可能な専用画面にする。
  * 遷移元（sync.tsx）はバックアップ選択（最大3件）だけ担い、選んだ世代の timestamp を `ts` で渡す。
@@ -178,10 +202,14 @@ export default function SyncMergeScreen() {
           <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginBottom: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('sync.mergeSelectDeckMessage')}
           </Text>
-          {sortedDecks.map((deck) => (
+          {sortedDecks.map((deck) => {
+            const diffLabels = restorableDiffLabels(deck, t);
+            // 戻せる差分が無いデッキは淡く（押してもデータは変わらない＝アーカイブ一覧と同じ流儀）
+            const hasRestorable = diffLabels.length > 0;
+            return (
             <Pressable
               key={deck.id}
-              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+              style={[styles.card, { backgroundColor: theme.colors.surface, opacity: hasRestorable ? 1 : 0.55 }]}
               onPress={() => confirmMerge(deck)}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -203,8 +231,38 @@ export default function SyncMergeScreen() {
                   {t('sync.mergeLastUpdated', { date: formatReviewDateTime(deck.lastUpdatedAt) })}
                 </Text>
               )}
+              {/* 現データとの差分。戻せるものだけを並べ、並び順は戻らないので別行にする。 */}
+              {hasRestorable ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 2, marginTop: 4 }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                    {t('sync.mergeDiffLabel')}
+                  </Text>
+                  {diffLabels.map((label) => (
+                    <Text key={label} style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {label}
+                    </Text>
+                  ))}
+                </View>
+              ) : deck.diffOrder === 0 ? (
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('sync.mergeDiffNone')}
+                </Text>
+              ) : null}
+              {deck.diffOrder > 0 && (
+                <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, marginTop: hasRestorable ? 2 : 4 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('sync.mergeDiffOrder', { count: deck.diffOrder })}
+                </Text>
+              )}
             </Pressable>
-          ))}
+            );
+          })}
+          {/* 並び順の差分があるデッキが1つでもあるときだけ、戻せない理由と代わりの手段を出す
+              （CLAUDE.md「オンに見えるのに効いていない状態を作らない」＝結果を書く）。 */}
+          {sortedDecks.some((d) => d.diffOrder > 0) && (
+            <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, lineHeight: 20, marginTop: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('sync.mergeDiffOrderNote')}
+            </Text>
+          )}
         </>
       )}
     </SettingsDetail>

@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Tag } from '@/types';
-import { generateId } from './utils';
+import { generateId, isSameSortOrder } from './utils';
 
 /** 全グローバルタグ一覧（使用枚数付き） */
 export async function getAllTags(db: SQLiteDatabase): Promise<(Tag & { cardCount: number })[]> {
@@ -43,6 +43,8 @@ export async function updateTag(
 
 export async function updateTagSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
   if (orderedIds.length === 0) return;
+  // 並びが変わっていないなら書かない（同じ位置に落としたドラッグで無意味な同期を起こさない）
+  if (await isSameSortOrder(db, 'tags', orderedIds)) return;
   // 単一 execAsync で BEGIN..COMMIT をまとめる（withTransactionAsync の await 間に
   // 他クエリが割り込むとトランザクションが入れ子になり落ちるため）。
   const sql =

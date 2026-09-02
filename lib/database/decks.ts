@@ -4,7 +4,7 @@ import { legacyInitMirror, normalizeDeckStages, serializeDeckStages } from '@/li
 import { deleteImagesInBlocks, parseDeckImages, serializeDeckImages } from '@/lib/image';
 import { parseScriptLangs, serializeScriptLangs } from '@/lib/speech';
 import type { Deck } from '@/types';
-import { generateId } from './utils';
+import { generateId, isSameSortOrder } from './utils';
 
 // SQLite は archived を 0/1 の数値で、htmlImages / htmlStages / sqlStages / speechLangs を JSON 文字列で返すため型を分けて正規化する
 type RawDeck = Omit<Deck, 'archived' | 'htmlImages' | 'htmlStages' | 'sqlStages' | 'speechLangs'> & {
@@ -149,6 +149,8 @@ export async function updateDeck(
 
 export async function updateDeckSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
   if (orderedIds.length === 0) return;
+  // 並びが変わっていないなら書かない（同じ位置に落としたドラッグで無意味な同期を起こさない）
+  if (await isSameSortOrder(db, 'decks', orderedIds)) return;
   // 単一 execAsync で BEGIN..COMMIT をまとめる（withTransactionAsync の await 間に
   // 他クエリが割り込むとトランザクションが入れ子になり落ちるため）。
   const sql =

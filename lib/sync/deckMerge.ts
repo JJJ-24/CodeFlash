@@ -38,6 +38,35 @@ export interface BackupDeckInfo {
   iconName: string | null;
   /** デッキカラー（同上） */
   colorHex: string | null;
+  /**
+   * 以下は「このデッキをマージすると現在のデータがどう変わるか」の件数（現データとの差分）。
+   * 日時（最終学習・最終編集）は端末をまたいで比べられる絶対値だが、「戻す価値があるか」は
+   * 読み取れない。とくに**並べ替えとタグは日時をまったく動かさない**ので、時刻だけでは
+   * 存在しない差分に見えてしまう。マージ規則（deckMerge のヘッダ参照）と同じ条件で数える。
+   *
+   * ⚠️ 数え方は「現データに**無い/古い**もの」だけ＝マージで実際に増える・上書きされる件数。
+   * 逆向き（現データにしか無いもの）は相手端末の作業なので数えない。
+   * ⚠️ 各項目は重複しない：現データに存在しないカードは diffNewCards にだけ数え、
+   * 比較系（学習/履歴/本文/タグ/並び順）は**両方に存在するカード**に限る。
+   */
+  /** バックアップにしか無いカード枚数（マージで追加される） */
+  diffNewCards: number;
+  /** 本文がバックアップの方が新しいカード枚数（マージで上書きされる） */
+  diffNewerContents: number;
+  /** 学習記録がバックアップの方が新しいカード枚数（reviews の LWW で置き換わる） */
+  diffNewerReviews: number;
+  /** 現データに無い学習履歴の行数（review_logs の union で増える＝ヒートマップ等が戻る） */
+  diffNewLogs: number;
+  /** 現データに無いタグ紐付けの件数（card_tags の union で増える） */
+  diffNewTags: number;
+  /** デッキ自身（名前・アイコン・土台・読み上げ等）がバックアップの方が新しいか（0/1） */
+  diffDeckSettings: number;
+  /**
+   * 並び順が違うカード枚数。**マージでは戻らない**（cards は updatedAt の LWW で、
+   * 並べ替えは updatedAt を動かさないため上書き条件を満たさない）。
+   * 「見えない差分」を無くすために数えるだけで、戻すには「すべて置き換え」を使う。
+   */
+  diffOrder: number;
 }
 
 /** PRAGMA table_info で指定スキーマ・テーブルのカラム名一覧を取得する。 */
@@ -118,7 +147,7 @@ async function unionInsert(
   );
 }
 
-/** バックアップDB（パス）を ATTACH して中のデッキ一覧（id/名前/枚数/最終学習日）を返す。 */
+/** バックアップDB（パス）を ATTACH して中のデッキ一覧（id/名前/枚数/最終学習日＋現データとの差分件数）を返す。 */
 export async function listDecksInBackup(
   db: SQLiteDatabase,
   backupPath: string,
@@ -133,9 +162,32 @@ export async function listDecksInBackup(
     const colorSel = deckCols.includes("colorHex") ? "d.colorHex" : "NULL";
     // デッキ選択画面（カード移動・TSV）と同じ「手動並べ替え順」(sortOrder) に揃える。
     // 古いバックアップに sortOrder 列が無い場合は名前順にフォールバック。
-    const orderBy = deckCols.includes("sortOrder")
+    const hasSortOrder = deckCols.includes("sortOrder");
+    const orderBy = hasSortOrder
       ? "d.sortOrder ASC"
       : "d.name COLLATE NOCASE ASC";
+    // 差分の計算も古いバックアップのスキーマ差異に耐えさせる（無い列/テーブルは 0 を返す）。
+    const backupCardCols = await tableColumns(db, "backupdb", "cards");
+    const canDiffOrder = backupCardCols.includes("sortOrder");
+    const hasReviewLogs = await backupHasTable(db, "review_logs");
+    // 差分の対象は「両方に存在するカード」に限る（バックアップにしか無いカードは
+    // diffNewCards に一本化＝項目が重複しない）。main.cards への JOIN が現データ側の存在確認。
+    const bothCardsFrom = "FROM backupdb.cards bc JOIN main.cards mc ON mc.id = bc.id";
+    /** 子テーブル（学習・履歴・タグ）を「両方に存在するカード」へ絞る JOIN 句。 */
+    const joinBothCards = (childCardId: string) =>
+      `JOIN backupdb.cards bc ON bc.id = ${childCardId}
+       JOIN main.cards mc ON mc.id = ${childCardId}`;
+    const diffOrderSel = canDiffOrder
+      ? `(SELECT COUNT(*) ${bothCardsFrom}
+            WHERE bc.deckId = d.id AND bc.sortOrder <> mc.sortOrder)`
+      : "0";
+    const diffLogsSel = hasReviewLogs
+      ? `(SELECT COUNT(*) FROM backupdb.review_logs bl
+            ${joinBothCards("bl.cardId")}
+            WHERE bc.deckId = d.id
+              AND NOT EXISTS (SELECT 1 FROM main.review_logs ml
+                                WHERE ml.cardId = bl.cardId AND ml.reviewedDate = bl.reviewedDate))`
+      : "0";
     return await db.getAllAsync<BackupDeckInfo>(
       `SELECT d.id AS id, d.name AS name,
          (SELECT COUNT(*) FROM backupdb.cards c WHERE c.deckId = d.id) AS cardCount,
@@ -150,7 +202,30 @@ export async function listDecksInBackup(
            COALESCE((SELECT MAX(c3.updatedAt) FROM backupdb.cards c3 WHERE c3.deckId = d.id), '')
          ) AS lastUpdatedAt,
          ${iconSel} AS iconName,
-         ${colorSel} AS colorHex
+         ${colorSel} AS colorHex,
+         -- === 現データとの差分（マージで実際に増える・上書きされる件数）===
+         (SELECT COUNT(*) FROM backupdb.cards bc WHERE bc.deckId = d.id
+            AND NOT EXISTS (SELECT 1 FROM main.cards mc WHERE mc.id = bc.id)) AS diffNewCards,
+         (SELECT COUNT(*) ${bothCardsFrom}
+            WHERE bc.deckId = d.id AND bc.updatedAt > mc.updatedAt) AS diffNewerContents,
+         -- COALESCE('') で「現データにカードはあるが未学習（reviews 行が無い）」も差分に数える。
+         (SELECT COUNT(*) FROM backupdb.reviews br
+            ${joinBothCards("br.cardId")}
+            WHERE bc.deckId = d.id
+              AND br.lastReviewDate >
+                  COALESCE((SELECT mr.lastReviewDate FROM main.reviews mr
+                              WHERE mr.cardId = br.cardId), '')) AS diffNewerReviews,
+         ${diffLogsSel} AS diffNewLogs,
+         (SELECT COUNT(*) FROM backupdb.card_tags bt
+            ${joinBothCards("bt.cardId")}
+            WHERE bc.deckId = d.id
+              AND NOT EXISTS (SELECT 1 FROM main.card_tags mt
+                                WHERE mt.cardId = bt.cardId AND mt.tagId = bt.tagId)) AS diffNewTags,
+         -- デッキ自身が現データに無い（相手端末で削除された）ときも COALESCE('') で 1 になる。
+         (CASE WHEN d.updatedAt >
+                    COALESCE((SELECT md.updatedAt FROM main.decks md WHERE md.id = d.id), '')
+               THEN 1 ELSE 0 END) AS diffDeckSettings,
+         ${diffOrderSel} AS diffOrder
        FROM backupdb.decks d
        ORDER BY ${orderBy};`,
     );

@@ -1,3 +1,5 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+
 export function generateId(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -48,6 +50,33 @@ export function localDateStr(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+/**
+ * すでに `orderedIds` の並び（＝配列の添字がそのまま sortOrder）になっているか。
+ *
+ * ドラッグは**同じ位置に落としたときも `onDragEnd` が走る**ので、素直に書くと順序が
+ * 1つも変わっていないのに全行を UPDATE することになる。行を書けば `sync_state` の
+ * トリガーが `localVersion` を進めるため、iCloud 同期（＝相手端末での自動バックアップ）が
+ * 発生し、しかも並べ替えは `updatedAt` を動かさないので復元画面からは
+ * 「何が変わったのか読めない差分」として残る。書く前にこれで確かめて、
+ * 変化が無ければ何もしない。
+ *
+ * @param table 呼び出し側の固定文字列のみ（外部入力を受けない＝SQL に直接埋めてよい）
+ */
+export async function isSameSortOrder(
+  db: SQLiteDatabase,
+  table: 'decks' | 'cards' | 'tags',
+  orderedIds: string[]
+): Promise<boolean> {
+  const inList = orderedIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',');
+  const rows = await db.getAllAsync<{ id: string; sortOrder: number }>(
+    `SELECT id, sortOrder FROM ${table} WHERE id IN (${inList})`
+  );
+  // 件数が合わない＝削除済み id が混ざっている等。判断できないので「変化あり」に倒す。
+  if (rows.length !== orderedIds.length) return false;
+  const current = new Map(rows.map((r) => [r.id, r.sortOrder]));
+  return orderedIds.every((id, i) => current.get(id) === i);
 }
 
 /** 2つの YYYY-MM-DD ローカル日付の日数差（b - a）。

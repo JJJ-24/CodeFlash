@@ -37,6 +37,10 @@ const { searchCards, SEARCH_RESULT_LIMIT, SEARCH_DATE_RESULT_LIMIT } = require('
 const { getActiveCardCount, getTopCardsByGrade, getGradeLogTotals } = require('@/lib/database/reviews');
 const { localDateStr } = require('@/lib/database/utils');
 const { getAllSchedules, createSchedule, updateSchedule, MAX_SCHEDULES } = require('@/lib/database/notifications');
+const { createCard, updateCard, updateCardSortOrders, deleteCard } = require('@/lib/database/cards');
+const { createTag, addTagToCard, updateTagSortOrders } = require('@/lib/database/tags');
+const { updateDeckSortOrders } = require('@/lib/database/decks');
+const { listDecksInBackup } = require('@/lib/sync/deckMerge');
 
 const { check, eq, report } = createAsserts();
 
@@ -705,6 +709,106 @@ async function main() {
     (await getGradeLogTotals(db21, undefined, [deck21.id], 3)).again,
     7
   );
+
+  // ===========================================================================
+  console.log('\n[T22] 並べ替えは「変化があるときだけ」書く（無意味な同期を起こさない）');
+  // ===========================================================================
+  // 同じ位置に落としたドラッグでも onDragEnd は走る。素直に全行 UPDATE すると
+  // sync_state のトリガーが localVersion を進め、iCloud 同期＋相手端末での自動バックアップが
+  // 発生する。しかも並べ替えは updatedAt を動かさないので復元画面から中身を読めない。
+  const db22 = makeDb();
+  await migrateDbIfNeeded(db22);
+  const deck22 = await createDeck(db22, { name: '並べ替え', description: '', language: 'ja' });
+  const c22a = await createCard(db22, { deckId: deck22.id, frontContent: [], backContent: [], memoContent: [] });
+  const c22b = await createCard(db22, { deckId: deck22.id, frontContent: [], backContent: [], memoContent: [] });
+  const c22c = await createCard(db22, { deckId: deck22.id, frontContent: [], backContent: [], memoContent: [] });
+  const version22 = async () =>
+    (await db22.getFirstAsync('SELECT localVersion FROM sync_state WHERE id = 1')).localVersion;
+  const order22 = async () =>
+    (await db22.getAllAsync(`SELECT id FROM cards WHERE deckId = '${deck22.id}' ORDER BY sortOrder`))
+      .map((r: { id: string }) => r.id)
+      .join(',');
+
+  await updateCardSortOrders(db22, [c22a.id, c22b.id, c22c.id]);
+  const baseline22 = await version22();
+  await updateCardSortOrders(db22, [c22a.id, c22b.id, c22c.id]);
+  eq('同じ並びで呼んでも localVersion が進まない', await version22(), baseline22);
+
+  await updateCardSortOrders(db22, [c22c.id, c22a.id, c22b.id]);
+  check('並びが変わったときは localVersion が進む', (await version22()) > baseline22);
+  eq('並べ替えは実際に反映される', await order22(), `${c22c.id},${c22a.id},${c22b.id}`);
+
+  // デッキ・タグも同じ扱い（3画面で対称）
+  const deck22b = await createDeck(db22, { name: 'もう1つ', description: '', language: 'ja' });
+  await updateDeckSortOrders(db22, [deck22.id, deck22b.id]);
+  const deckBaseline22 = await version22();
+  await updateDeckSortOrders(db22, [deck22.id, deck22b.id]);
+  eq('デッキも同じ並びなら書かない', await version22(), deckBaseline22);
+  const tag22a = await createTag(db22, { name: 'a', color: '#111111' });
+  const tag22b = await createTag(db22, { name: 'b', color: '#222222' });
+  await updateTagSortOrders(db22, [tag22a.id, tag22b.id]);
+  const tagBaseline22 = await version22();
+  await updateTagSortOrders(db22, [tag22a.id, tag22b.id]);
+  eq('タグも同じ並びなら書かない', await version22(), tagBaseline22);
+  await updateTagSortOrders(db22, [tag22b.id, tag22a.id]);
+  check('タグも並びが変われば書く', (await version22()) > tagBaseline22);
+
+  // ===========================================================================
+  console.log('\n[T23] 復元画面の差分件数（バックアップ ↔ 現データ）');
+  // ===========================================================================
+  // 日時（最終学習・最終編集）だけでは「戻す価値があるか」が読めない。とくに並べ替えとタグは
+  // updatedAt を動かさないので、時刻上は差が無いのに中身が違う状態が作れてしまう。
+  const db23 = makeDb();
+  await migrateDbIfNeeded(db23);
+  const deck23 = await createDeck(db23, { name: '差分', description: '', language: 'ja' });
+  const cards23 = [];
+  for (let i = 0; i < 4; i++) {
+    cards23.push(await createCard(db23, { deckId: deck23.id, frontContent: [], backContent: [], memoContent: [] }));
+  }
+  const [k1, k2, k3, k4] = cards23.map((c: { id: string }) => c.id);
+  const tag23 = await createTag(db23, { name: 'tag', color: '#333333' });
+  await addTagToCard(db23, k1, tag23.id);
+  for (const id of [k1, k2, k3]) {
+    await db23.runAsync(
+      `INSERT INTO reviews (cardId, easeFactor, interval, repetitions, nextReviewDate, lastReviewDate)
+       VALUES (?, 2.5, 1, 1, '2026-09-02', '2026-09-01T10:00:00.000Z')`,
+      [id]
+    );
+    await db23.runAsync('INSERT INTO review_logs (cardId, reviewedDate) VALUES (?, ?)', [id, '2026-09-01']);
+  }
+  // ここまでが「この端末の作業」＝バックアップに退避される内容
+  const backupPath = `${require('node:os').tmpdir()}/verify-db-backup-${Date.now()}.db`;
+  require('node:fs').rmSync(backupPath, { force: true });
+  db23.raw.exec(`VACUUM INTO '${backupPath}'`);
+
+  const noDiff = (await listDecksInBackup(db23, backupPath))[0];
+  eq('作った直後は全部 0（差分なし）', [
+    noDiff.diffNewCards, noDiff.diffNewerContents, noDiff.diffNewerReviews,
+    noDiff.diffNewLogs, noDiff.diffNewTags, noDiff.diffDeckSettings, noDiff.diffOrder,
+  ], [0, 0, 0, 0, 0, 0, 0]);
+
+  // 現データを「相手端末の版で上書きされた後」に見立てて崩す
+  await deleteCard(db23, k4, deck23.id);                                  // → diffNewCards
+  await db23.runAsync("UPDATE cards SET updatedAt = '2020-01-01' WHERE id = ?", [k1]); // → diffNewerContents
+  await db23.runAsync("UPDATE reviews SET lastReviewDate = '2020-01-01' WHERE cardId = ?", [k2]); // → diffNewerReviews
+  await db23.runAsync('DELETE FROM reviews WHERE cardId = ?', [k3]);      // → diffNewerReviews（未学習に戻る）
+  await db23.runAsync('DELETE FROM review_logs WHERE cardId = ?', [k3]);  // → diffNewLogs
+  await db23.runAsync('DELETE FROM card_tags WHERE cardId = ?', [k1]);    // → diffNewTags
+  await db23.runAsync("UPDATE decks SET updatedAt = '2020-01-01' WHERE id = ?", [deck23.id]); // → diffDeckSettings
+  await db23.runAsync('UPDATE cards SET sortOrder = 99 WHERE id = ?', [k2]); // → diffOrder
+
+  const diff = (await listDecksInBackup(db23, backupPath))[0];
+  eq('バックアップにしか無いカードを数える', diff.diffNewCards, 1);
+  eq('本文が新しいカードを数える', diff.diffNewerContents, 1);
+  eq('学習が新しい／現データが未学習のカードを数える', diff.diffNewerReviews, 2);
+  eq('現データに無い学習履歴の行を数える', diff.diffNewLogs, 1);
+  eq('現データに無いタグ紐付けを数える', diff.diffNewTags, 1);
+  eq('デッキ自身が新しいかを 0/1 で返す', diff.diffDeckSettings, 1);
+  eq('並び順が違うカードを数える（両方にあるカードだけ）', diff.diffOrder, 1);
+  eq('削除されたカードは diffNewCards だけに数える（項目が重複しない）', [
+    diff.diffNewerContents, diff.diffNewerReviews, diff.diffNewLogs, diff.diffNewTags,
+  ], [1, 2, 1, 1]);
+  require('node:fs').rmSync(backupPath, { force: true });
 
   report();
 }

@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { deleteImagesInBlocks } from '@/lib/image';
 import type { Block, Card } from '@/types';
-import { activeCardCond, generateId, localDateStr, todayLocalRange } from './utils';
+import { activeCardCond, generateId, isSameSortOrder, localDateStr, todayLocalRange } from './utils';
 import { addTagToCard, getTagsByCardId } from './tags';
 
 type RawCard = {
@@ -293,6 +293,8 @@ export async function updateCard(
 
 export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: string[]): Promise<void> {
   if (orderedIds.length === 0) return;
+  // 並びが変わっていないなら書かない（同じ位置に落としたドラッグで無意味な同期を起こさない）
+  if (await isSameSortOrder(db, 'cards', orderedIds)) return;
   // 単一 execAsync で BEGIN..COMMIT をまとめて実行する。withTransactionAsync は
   // await 間に他クエリ（連続ドラッグの次の並べ替え等）が割り込み、トランザクションが
   // 入れ子になって "cannot start a transaction within a transaction" で落ちるため。

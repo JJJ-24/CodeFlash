@@ -62,9 +62,9 @@ export interface BackupDeckInfo {
   /** デッキ自身（名前・アイコン・土台・読み上げ等）がバックアップの方が新しいか（0/1） */
   diffDeckSettings: number;
   /**
-   * 並び順が違うカード枚数。**マージでは戻らない**（cards は updatedAt の LWW で、
-   * 並べ替えは updatedAt を動かさないため上書き条件を満たさない）。
-   * 「見えない差分」を無くすために数えるだけで、戻すには「すべて置き換え」を使う。
+   * 並び順が違うカード枚数（`sortOrder` の**値**ではなく**順位**の違い＝`countOrderDiffs`）。
+   * 既定のマージでは戻らない（cards は `updatedAt` の LWW で、並べ替えは `updatedAt` を
+   * 動かさないため上書き条件を満たさない）ので、確認ダイアログの「並び順も戻す」で戻す。
    */
   diffOrder: number;
 }
@@ -147,6 +147,36 @@ async function unionInsert(
   );
 }
 
+/**
+ * デッキごとに「並び順が違うカードの枚数」を数える（要 ATTACH 済み）。
+ *
+ * ⚠️ **`sortOrder` の値の一致を見てはいけない**：カードの削除・移動で値には歯抜けができ
+ * （`createCard` は MAX+1・`moveCardsToDeck` は +offset）、ドラッグのたびに
+ * `updateCardSortOrders` が **0..N-1 へ振り直す**。そのため「1枚を隣へ動かしただけ」でも
+ * 歯抜けより後ろの全行の**値**が変わり、実測で 56 枚のデッキが「28 枚違う」と出た。
+ * 見たいのは値ではなく**並び**なので、`ROW_NUMBER()` で両方の順位を出して比べる。
+ * ⚠️ 順位は**両方に存在する同じデッキのカード**の中で計算する＝片側にしか無いカードで
+ * 順位がずれて全体が違って見えるのを防ぐ（増減は diffNewCards が担当）。
+ * ⚠️ 同順（`sortOrder` の重複は旧データで起こりうる）は `id` で決着させて安定させる。
+ */
+async function countOrderDiffs(db: SQLiteDatabase): Promise<Map<string, number>> {
+  const rows = await db.getAllAsync<{ deckId: string; n: number }>(
+    `WITH shared AS (
+       SELECT bc.deckId AS deckId, bc.id AS id, bc.sortOrder AS bso, mc.sortOrder AS mso
+       FROM backupdb.cards bc
+       JOIN main.cards mc ON mc.id = bc.id AND mc.deckId = bc.deckId
+     ),
+     ranked AS (
+       SELECT deckId, id,
+         ROW_NUMBER() OVER (PARTITION BY deckId ORDER BY bso, id) AS brank,
+         ROW_NUMBER() OVER (PARTITION BY deckId ORDER BY mso, id) AS mrank
+       FROM shared
+     )
+     SELECT deckId, COUNT(*) AS n FROM ranked WHERE brank <> mrank GROUP BY deckId;`,
+  );
+  return new Map(rows.map((r) => [r.deckId, r.n]));
+}
+
 /** バックアップDB（パス）を ATTACH して中のデッキ一覧（id/名前/枚数/最終学習日＋現データとの差分件数）を返す。 */
 export async function listDecksInBackup(
   db: SQLiteDatabase,
@@ -177,10 +207,6 @@ export async function listDecksInBackup(
     const joinBothCards = (childCardId: string) =>
       `JOIN backupdb.cards bc ON bc.id = ${childCardId}
        JOIN main.cards mc ON mc.id = ${childCardId}`;
-    const diffOrderSel = canDiffOrder
-      ? `(SELECT COUNT(*) ${bothCardsFrom}
-            WHERE bc.deckId = d.id AND bc.sortOrder <> mc.sortOrder)`
-      : "0";
     const diffLogsSel = hasReviewLogs
       ? `(SELECT COUNT(*) FROM backupdb.review_logs bl
             ${joinBothCards("bl.cardId")}
@@ -188,7 +214,7 @@ export async function listDecksInBackup(
               AND NOT EXISTS (SELECT 1 FROM main.review_logs ml
                                 WHERE ml.cardId = bl.cardId AND ml.reviewedDate = bl.reviewedDate))`
       : "0";
-    return await db.getAllAsync<BackupDeckInfo>(
+    const rows = await db.getAllAsync<BackupDeckInfo>(
       `SELECT d.id AS id, d.name AS name,
          (SELECT COUNT(*) FROM backupdb.cards c WHERE c.deckId = d.id) AS cardCount,
          (SELECT MAX(r.lastReviewDate) FROM backupdb.reviews r
@@ -225,10 +251,12 @@ export async function listDecksInBackup(
          (CASE WHEN d.updatedAt >
                     COALESCE((SELECT md.updatedAt FROM main.decks md WHERE md.id = d.id), '')
                THEN 1 ELSE 0 END) AS diffDeckSettings,
-         ${diffOrderSel} AS diffOrder
+         0 AS diffOrder
        FROM backupdb.decks d
        ORDER BY ${orderBy};`,
     );
+    const orderDiffs = canDiffOrder ? await countOrderDiffs(db) : new Map<string, number>();
+    return rows.map((r) => ({ ...r, diffOrder: orderDiffs.get(r.id) ?? 0 }));
   } finally {
     await db.execAsync("DETACH DATABASE backupdb;");
   }

@@ -804,10 +804,47 @@ async function main() {
   eq('現データに無い学習履歴の行を数える', diff.diffNewLogs, 1);
   eq('現データに無いタグ紐付けを数える', diff.diffNewTags, 1);
   eq('デッキ自身が新しいかを 0/1 で返す', diff.diffDeckSettings, 1);
-  eq('並び順が違うカードを数える（両方にあるカードだけ）', diff.diffOrder, 1);
+  // k2 を末尾へ動かしたので、k2 と、繰り上がった k3 の2枚の順位が変わる（順位で数えるため）
+  eq('並び順が違うカードを数える（両方にあるカードだけ）', diff.diffOrder, 2);
   eq('削除されたカードは diffNewCards だけに数える（項目が重複しない）', [
     diff.diffNewerContents, diff.diffNewerReviews, diff.diffNewLogs, diff.diffNewTags,
   ], [1, 2, 1, 1]);
+  // ===========================================================================
+  console.log('\n[T23b] 並び順の差分は「値」ではなく「順位」で数える（歯抜け対策）');
+  // ===========================================================================
+  // 実測で踏んだケース：56枚のデッキで一番上のカードを2番目へ動かしただけなのに
+  // 「並び順 28 枚が違います」と出た。削除・移動で sortOrder に歯抜けができており
+  // （createCard は MAX+1・moveCardsToDeck は +offset）、ドラッグのたびに
+  // updateCardSortOrders が 0..N-1 へ振り直すため、歯抜けより後ろの全行の「値」が動く。
+  const db23b = makeDb();
+  await migrateDbIfNeeded(db23b);
+  const deck23b = await createDeck(db23b, { name: '歯抜け', description: '', language: 'ja' });
+  const ids23b: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const c = await createCard(db23b, { deckId: deck23b.id, frontContent: [], backContent: [], memoContent: [] });
+    ids23b.push(c.id);
+  }
+  // 途中を削除したあとの歯抜けを再現（値は 1,2,4,5,7,8 のように飛ぶ）
+  const gappy = [1, 2, 4, 5, 7, 8];
+  for (let i = 0; i < ids23b.length; i++) {
+    await db23b.runAsync('UPDATE cards SET sortOrder = ? WHERE id = ?', [gappy[i], ids23b[i]]);
+  }
+  const gapPath = `${require('node:os').tmpdir()}/verify-db-gap-${Date.now()}.db`;
+  require('node:fs').rmSync(gapPath, { force: true });
+  db23b.raw.exec(`VACUUM INTO '${gapPath}'`);
+
+  // 見た目の順序は変えずに 0..5 へ振り直す（＝ドラッグで必ず起きる正規化）
+  await updateCardSortOrders(db23b, ids23b);
+  const renumbered = (await listDecksInBackup(db23b, gapPath))[0];
+  eq('値が全部変わっても、並びが同じなら 0 枚', renumbered.diffOrder, 0);
+
+  // 先頭を2番目へ動かす（＝ユーザーの操作そのもの）
+  const moved = [ids23b[1], ids23b[0], ...ids23b.slice(2)];
+  await updateCardSortOrders(db23b, moved);
+  const movedDiff = (await listDecksInBackup(db23b, gapPath))[0];
+  eq('先頭を2番目へ動かしたら、入れ替わった2枚だけ', movedDiff.diffOrder, 2);
+  require('node:fs').rmSync(gapPath, { force: true });
+
   // ===========================================================================
   console.log('\n[T24] マージの並び順復元（既定オフ／明示的に選んだときだけ）');
   // ===========================================================================

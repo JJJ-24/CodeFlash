@@ -241,16 +241,71 @@ export const SHADOW = {
   },
 } as const;
 
-/** 数値の桁数に応じて統計ブロックの数字フォントサイズを返す。
- *  allowFontScaling={false} と組み合わせて使い、iOS Dynamic Type の影響を受けない絶対サイズを保証する。
- *  アプリ内フォントサイズ設定（small/medium/large）は反映しつつ、最小・最大を桁数ごとにクランプする。 */
+/** 数値の桁数に応じて統計ブロックの数字フォントサイズを返す（桁が増えるほど小さい）。
+ *  基準は 1〜2桁 28 / 3桁 26 / 4桁 22 / 5桁以上 18 で、アプリ内フォントサイズ設定
+ *  （small/medium/large＝`fontScale` 0.85/1.0/1.2）を掛けるだけ。
+ *
+ *  ⚠️ **上限・下限でクランプしない**（かつて `Math.min(28, Math.max(24, …))` のように挟んでいた）＝
+ *  クランプすると小と大がほぼ同じ値に潰れ、**アプリの文字サイズ設定を変えても数字がほとんど変わらない**。
+ *  収まりは呼び出し側（`useBlockMetrics.valueSize`）が**ブロックの内側の幅**でクランプして保証する。
+ *
+ *  ⚠️ **呼び出し側は `isPad ? 1 : 桁数` のような出し分けをしない**＝全機種・全窓幅で実際の桁数を渡す。
+ *  かつて iPad だけ常に 1（＝最大サイズ）を渡していたが、Split View / Stage Manager で窓を狭めると
+ *  ブロックだけ縮んで字が残り3桁が「1…」に切れた。逆に狭窓だけ幅で補間すると、同じ3桁でも
+ *  上部フィルターブロックと評価ブロックで大きさが食い違う。桁数だけで決めるのが唯一揃う。
+ *  ⚠️ **桁数は行内の全ブロックの `Math.max` で取る**（1つだけ小さい字になるのを防ぐ）。
+ *
+ *  各段は「内側の幅 71.8pt（窓375pt・左右余白4のとき）に収まること」を上限に決めてある
+ *  （数字1文字の描画幅はおおよそフォントサイズ × 0.6）。 */
 export function fontSizeForDigits(theme: AppTheme, digits: number, scale = 1): number {
-  let size: number;
-  if (digits >= 5) size = Math.min(14, Math.max(14, theme.fontSize.sm));
-  else if (digits >= 4) size = Math.min(18, Math.max(18, theme.fontSize.lg));
-  else if (digits >= 3) size = Math.min(23, Math.max(20, theme.fontSize.xxl));
-  else size = Math.min(30, Math.max(26, theme.fontSize.xxxl));
-  return size * scale;
+  const base = digits >= 5 ? 18 : digits >= 4 ? 20 : digits >= 3 ? 22 : 24;
+  return Math.round(base * theme.fontScale) * scale;
+}
+
+/** 東アジアの全角文字（かな・漢字・ハングル・全角記号）か。幅の見積もりを 1em にする対象。 */
+const WIDE_CHAR = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/;
+
+/** 文字列の描画幅を em で見積もる（全角＝1em／それ以外＝0.55em）。 */
+function estimateEm(s: string): number {
+  let em = 0;
+  for (const ch of s) em += WIDE_CHAR.test(ch) ? 1 : 0.55;
+  return em;
+}
+
+/**
+ * フィルターブロックのラベル（数字の下の小さい文字）を**行内で1つの大きさに揃える**ためのサイズ。
+ *
+ * 素直に `adjustsFontSizeToFit` を付けると**そのブロックだけ**縮み、`Todo` は 14pt のまま
+ * `Tarjetas` だけ 13pt、のように行内で大小が混ざる。数字は `fontSizeForDigits` の1つの値を
+ * 全ブロックへ配って揃えているので、ラベルも同じ流儀にする（最長のラベルに全部を合わせる）。
+ *
+ * ⚠️ 呼び出し側は `allowFontScaling={false}` を付け、`adjustsFontSizeToFit` は外すこと。
+ *   RN に拡大させると幅の見積もりが崩れて揃わなくなるので、**iOS の文字サイズ倍率は
+ *   `fontScale` を受け取ってこちらで掛ける**（`allowFontScaling` に任せたときと同じ結果を、
+ *   行内で1つの値にして出す）。⚠️ **この引数を省いて固定サイズにしないこと**＝iPad で
+ *   最大 1.8 倍まで伸びていたラベルが xs 固定に落ち「急に小さくなった」になる（実際に踏んだ）。
+ * ⚠️ `innerWidth` は**ブロック幅 − 左右パディング**を渡す。
+ */
+export function uniformLabelFontSize(
+  theme: AppTheme,
+  labels: string[],
+  innerWidth: number,
+  /** iOS の文字サイズ倍率（`useWindowDimensions().fontScale`） */
+  fontScale: number,
+  /** その倍率の上限（`useMaxFontMultiplier().ui`） */
+  maxMultiplier: number,
+  /** 窓幅による拡大（`rs(1, 1.4)`） */
+  scale = 1,
+): number {
+  const maxEm = Math.max(...labels.map(estimateEm), 1);
+  const base = theme.fontSize.xs * scale * Math.min(fontScale, maxMultiplier);
+  return Math.min(base, innerWidth / maxEm);
+}
+
+/** フィルターブロック（4列）の1ブロック幅。コンテナ余白16・行 marginHorizontal:-2・
+ *  各ブロック margin:2・gap:4 の構成から算出する（flex:1 で並べている画面も実幅は同じ）。 */
+export function filterBlockWidth(windowWidth: number): number {
+  return (windowWidth - 56) / 4;
 }
 
 /** モード切替ボタンの非選択枠やバッジの未達成丸枠など「テーマに追従させたい薄枠」の色を返す。

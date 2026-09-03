@@ -13,7 +13,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -31,8 +30,9 @@ import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
+import { useBlockMetrics } from '@/lib/blockMetrics';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
 import { sortDecks } from '@/lib/sortDecks';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -165,16 +165,18 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const rs = useResponsiveSize();
+  const bm = useBlockMetrics();
   // ステータスバー文字色の復元は deps:[] の focus effect 内から参照するため、常に最新値を ref で渡す。
   const darkRef = useRef(theme.dark);
   darkRef.current = theme.dark;
   const { decks, setDecks, removeDeck, reorderDecks, updateDeck } = useDeckStore();
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
   const { deckSortOrder, setDeckSortOrder, deckSortLocked, setDeckSortLocked, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
-  const { width } = useWindowDimensions();
-  // 学習/統計タブの1ブロック実幅に一致させる（コンテナ余白16・行 marginHorizontal:-2・各ブロック margin:2・gap:4 の4列構成）
-  const blockWidth = (width - 56) / 4;
-  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+  // 幅・余白・文字サイズ・最小高さは useBlockMetrics に集約（7画面で同じ規則）。
+  const blockWidth = bm.blockWidth;
+  const blockPadH = bm.padH;
+  const homeLabelFontSize = bm.labelSize([t('common.all'), t('common.active')]);
+  const filterBlockMinHeight = bm.minHeightFor(homeLabelFontSize);
   // ホームのデッキ絞り込み（active=有効デッキのみ / all=アーカイブ含む全デッキ）。最後の選択を永続化。
   const selectedFilter = lastHomeFilter;
   const setSelectedFilter = setLastHomeFilter;
@@ -283,6 +285,10 @@ export default function HomeScreen() {
 
   const sortedDecks = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
   const activeDeckCount = useMemo(() => decks.filter((d) => !d.archived).length, [decks]);
+  // ⚠️ 桁数は2ブロックの**大きい方**で決める（ブロックごとに見ると「100 と 9」で
+  //    大小がバラつく＝全ブロックを同じ大きさにする仕様）。ラベルも同じく最長で揃える。
+  const homeBlockMaxDigits = Math.max(String(decks.length).length, String(activeDeckCount).length);
+  const homeValueFontSize = bm.valueSize(homeBlockMaxDigits);
   const displayedDecks = useMemo(
     () => (selectedFilter === 'active' ? sortedDecks.filter((d) => !d.archived) : sortedDecks),
     [sortedDecks, selectedFilter]
@@ -341,25 +347,25 @@ export default function HomeScreen() {
         <Pressable
           style={[
             styles.statItem,
-            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
             selectedFilter === 'all' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
           ]}
           onPress={() => setSelectedFilter('all')}
         >
-          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(decks.length).length) }]}>{decks.length}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: homeValueFontSize }]}>{decks.length}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: homeLabelFontSize }]}>{t('common.all')}</Text>
         </Pressable>
         {/* 有効（既定選択・グレー数字。どちらを開いているかは青の選択枠で示す） */}
         <Pressable
           style={[
             styles.statItem,
-            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
             selectedFilter === 'active' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
           ]}
           onPress={() => setSelectedFilter('active')}
         >
-          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeDeckCount).length) }]}>{activeDeckCount}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.active')}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: homeValueFontSize }]}>{activeDeckCount}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: homeLabelFontSize }]}>{t('common.active')}</Text>
         </Pressable>
       </View>
       <View style={styles.sectionRow}>
@@ -729,9 +735,12 @@ const styles = StyleSheet.create({
   fixedHeader: { paddingHorizontal: 16, paddingTop: 16 },
   statsHeader: { paddingTop: 0, paddingBottom: 8, gap: 24 },
   statsRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },
+  // ⚠️ 左右のパディングは `paddingHorizontal: blockPadH`（= rs(4, 16)）を**呼び出し側でインラインに**当てる
+  //    （窓を狭めると数字の桁が入らず「1…」に切れるため。評価ブロックの 4 まで詰める）。
+  //    上下は minHeight の算出（32 = 16×2）と対になっているので 16 で固定。
   statItem: {
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     margin: 2,

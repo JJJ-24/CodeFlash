@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -23,8 +22,9 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
+import { useBlockMetrics } from '@/lib/blockMetrics';
 import { resolveTagColor } from '@/lib/tagColors';
 import {
   getDueCountPerDeck,
@@ -80,6 +80,7 @@ export default function StudyScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const rs = useResponsiveSize();
+  const bm = useBlockMetrics();
   const maxFont = useMaxFontMultiplier();
   // デッキアイコンを文字サイズ設定（fontScale）に連動させる（ホームと同じ算出）
   const iconBoxSize = Math.round(32 * theme.fontScale);
@@ -432,8 +433,11 @@ export default function StudyScreen() {
   ];
 
   const filterBlockMaxDigits = Math.max(...filterBlocks.map(b => String(b.value).length));
-  const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterBlockMaxDigits);
-  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+  // ⚠️ 桁数もラベルの長さも**行内の最大**で決める（1つだけ小さい字になるのを防ぐ仕様）。
+  const filterValueFontSize = bm.valueSize(filterBlockMaxDigits);
+  const blockPadH = bm.padH;
+  const filterLabelFontSize = bm.labelSize(filterBlocks.map((b) => b.label));
+  const filterBlockMinHeight = bm.minHeightFor(filterLabelFontSize);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -459,13 +463,13 @@ export default function StudyScreen() {
                 key={block.key}
                 style={[
                   styles.summaryCard,
-                  { backgroundColor: theme.colors.surface, minHeight: filterBlockMinHeight },
+                  { backgroundColor: theme.colors.surface, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
                   selected && { margin: 0, borderWidth: 2, borderColor: block.color },
                 ]}
                 onPress={() => { setActiveFilter(block.key); }}
               >
                 <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: block.color, fontSize: filterValueFontSize }]}>{block.value}</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{block.label}</Text>
+                <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryLabel, { color: theme.colors.textSecondary, fontSize: filterLabelFontSize }]}>{block.label}</Text>
               </Pressable>
             );
           })}
@@ -760,10 +764,13 @@ const styles = StyleSheet.create({
   filterSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 24 },
   summaryGroup: { gap: 12 },
   summaryRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },
+  // ⚠️ 左右のパディングは `paddingHorizontal: blockPadH`（= rs(4, 16)）を**呼び出し側でインラインに**当てる
+  //    （窓を狭めると数字の桁が入らず「1…」に切れるため。評価ブロックの 4 まで詰める）。
+  //    上下は minHeight の算出（32 = 16×2）と対になっているので 16 で固定。
   summaryCard: {
     flex: 1,
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     margin: 2,

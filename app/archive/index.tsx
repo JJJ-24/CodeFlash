@@ -6,7 +6,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -27,7 +26,8 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { getCardPreview } from '@/lib/cardPreview';
 import { deleteCardsBulk, getArchivedCards, setCardsArchived } from '@/lib/database/cards';
 import { deleteDecksBulk, getAllDecks, setDecksArchived } from '@/lib/database/decks';
-import { fontSizeForDigits, MAX_FONT_MULTIPLIER, SHADOW, useTheme } from '@/lib/theme';
+import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from '@/lib/theme';
+import { useBlockMetrics } from '@/lib/blockMetrics';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
@@ -97,6 +97,7 @@ export default function ArchiveScreen() {
   const lastFocusTimeRef = useRef(0);
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const bm = useBlockMetrics();
   const { decks, setDecks, updateDeck, removeDeck } = useDeckStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const dataRevision = useSyncStore((s) => s.dataRevision);
@@ -347,14 +348,22 @@ export default function ArchiveScreen() {
   ], showShortcutsModal || showInfoModal);
 
   // ホームのフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
-  const blockWidth = (screenWidth - 56) / 4;
-  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+  const blockWidth = bm.blockWidth;
+  const blockPadH = bm.padH;
+  const tabLabelFontSize = bm.labelSize([t('archive.decks'), t('archive.cards')]);
+  const filterBlockMinHeight = bm.minHeightFor(tabLabelFontSize);
+
+  // ⚠️ 桁数は2ブロックの**大きい方**で決める（ブロックごとに見ると「100 と 9」で
+  //    大小がバラつく＝4ブロック画面と同じ「全部同じ大きさ」の仕様に揃える）。
+  // ⚠️ 桁数もラベルの長さも**行内の最大**で決める（1つだけ小さい字になるのを防ぐ仕様）。
+  const tabBlockMaxDigits = Math.max(String(archivedDecks.length).length, String(archivedCards.length).length);
+  const tabValueFontSize = bm.valueSize(tabBlockMaxDigits);
 
   const renderTabBlock = (key: ArchiveTab, count: number, label: string) => (
     <Pressable
       style={[
         styles.statItem,
-        { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+        { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
         tab === key && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
         selectionMode && { opacity: 0.5 },
       ]}
@@ -363,11 +372,11 @@ export default function ArchiveScreen() {
       <Text
         numberOfLines={1}
         allowFontScaling={false}
-        style={[styles.statValue, { color: tab === key ? theme.colors.primary : theme.colors.text, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(count).length) }]}
+        style={[styles.statValue, { color: tab === key ? theme.colors.primary : theme.colors.text, fontSize: tabValueFontSize }]}
       >
         {count}
       </Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+      <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: tabLabelFontSize }]}>
         {label}
       </Text>
     </Pressable>
@@ -639,9 +648,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
+  // ⚠️ 左右のパディングは `paddingHorizontal: blockPadH`（= rs(4, 16)）を**呼び出し側でインラインに**当てる
+  //    （窓を狭めると数字の桁が入らず「1…」に切れるため。評価ブロックの 4 まで詰める）。
+  //    上下は minHeight の算出（32 = 16×2）と対になっているので 16 で固定。
   statItem: {
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     margin: 2,

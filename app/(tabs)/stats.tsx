@@ -14,6 +14,7 @@ import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } 
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
+import { useBlockMetrics } from '@/lib/blockMetrics';
 import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS, GRADE_RANKING_RATE_MIN_TOTAL } from '@/store/settings';
 import type { InitialFilterPreference, GradeRankingPeriod } from '@/store/settings';
 import { getAllDecks } from '@/lib/database/decks';
@@ -988,6 +989,7 @@ export default function StatsScreen() {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const rs = useResponsiveSize();
+  const bm = useBlockMetrics();
   const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, gradeRankingRecordableOnly, setGradeRankingRecordableOnly, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
@@ -1741,15 +1743,18 @@ export default function StatsScreen() {
       {(() => {
         const statNums = [streak, todayReviewed, todayDue, todayCreated];
         const maxDigits = Math.max(...statNums.map(n => String(n).length));
-        const statValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : maxDigits);
-        const statBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+        // ⚠️ 桁数もラベルの長さも**行内の最大**で決める（1つだけ小さい字になるのを防ぐ仕様）。
+        const statValueFontSize = bm.valueSize(maxDigits);
+        const blockPadH = bm.padH;
+        const statLabelFontSize = bm.labelSize([t('stats.streak'), t('common.learned'), t('common.due'), t('common.new')]);
+        const statBlockMinHeight = bm.minHeightFor(statLabelFontSize);
         return (
       <Pressable style={[styles.summarySection, { backgroundColor: theme.colors.background }]} onPress={() => setFocusedItem(null)}>
         <View style={styles.summaryRow}>
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.primary, minHeight: statBlockMinHeight },
+            { backgroundColor: theme.colors.primary, minHeight: statBlockMinHeight, paddingHorizontal: blockPadH },
             selectedBlock === 'streak' && { margin: 0, borderWidth: 2, borderColor: blockColors.streak },
           ]}
           onPress={() => { setSelectedBlock('streak'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
@@ -1757,7 +1762,7 @@ export default function StatsScreen() {
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: '#FFF', fontSize: statValueFontSize }]}>
             {streak}
           </Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryLabel, { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: statLabelFontSize }]}>
             {t('stats.streak')}
           </Text>
           {(() => { const m = getStreakMedal(streak); return m ? <Ionicons name={m.name} size={(Platform as any).isPad ? theme.fontSize.xxxl : theme.fontSize.xl} color={m.color} style={[styles.streakMedalBadge, (Platform as any).isPad && styles.streakMedalBadgePad]} /> : null; })()}
@@ -1765,35 +1770,35 @@ export default function StatsScreen() {
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight },
+            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight, paddingHorizontal: blockPadH },
             selectedBlock === 'learned' && { margin: 0, borderWidth: 2, borderColor: blockColors.learned },
           ]}
           onPress={() => { setSelectedBlock('learned'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: FILTER_COLORS.learned, fontSize: statValueFontSize }]}>{todayReviewed}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.learned')}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: statLabelFontSize }]}>{t('common.learned')}</Text>
         </Pressable>
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight },
+            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight, paddingHorizontal: blockPadH },
             selectedBlock === 'due' && { margin: 0, borderWidth: 2, borderColor: blockColors.due },
           ]}
           onPress={() => { setSelectedBlock('due'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: FILTER_COLORS.due, fontSize: statValueFontSize }]}>{todayDue}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.due')}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: statLabelFontSize }]}>{t('common.due')}</Text>
         </Pressable>
         <Pressable
           style={[
             styles.summaryCard,
-            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight },
+            { backgroundColor: theme.colors.surface, minHeight: statBlockMinHeight, paddingHorizontal: blockPadH },
             selectedBlock === 'new' && { margin: 0, borderWidth: 2, borderColor: blockColors.new },
           ]}
           onPress={() => { setSelectedBlock('new'); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
         >
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryValue, { color: theme.colors.textSecondary, fontSize: statValueFontSize }]}>{todayCreated}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.new')}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.summaryLabel, { color: theme.colors.textSecondary, textAlign: 'center', fontSize: statLabelFontSize }]}>{t('common.new')}</Text>
         </Pressable>
         </View>
       </Pressable>
@@ -2180,9 +2185,14 @@ export default function StatsScreen() {
                   ? (gradeTotalSum > 0 ? String(Math.round((g.count / gradeTotalSum) * 100)) : '-')
                   : String(g.count));
               const gradeMaxDigits = Math.max(...displayValues.map(v => v.length));
-              const gradeCountFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : gradeMaxDigits);
+              // ⚠️ 上部フィルターブロックと**同じ関数**で決める（桁数・窓幅・アプリ/iOS の文字サイズ・
+              //    幅のクランプまで全部そろう）。片方だけ規則を変えると、同じ3桁でも画面内で
+              //    大きさが食い違う＝実際に踏んだ。評価ブロックは上部より少しだけ内側が広いので、
+              //    上部に合わせておけば必ず収まる。
+              const gradeCountFontSize = bm.valueSize(gradeMaxDigits);
+              const gradeBlockLabelFontSize = bm.labelSize(gradeItems.map((g) => t(g.labelKey)));
               // モード切替で高さがブレないよう、最大想定フォント（1桁時）でブロック高さを固定
-              const gradeBlockMinHeight = 20 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+              const gradeBlockMinHeight = 20 + Math.ceil(bm.valueSize(1) * 1.35) + 2 + Math.ceil(gradeBlockLabelFontSize * 1.35);
               return (
             <View style={styles.gradeBlockRow}>
               {gradeItems.map(({ grade, labelKey, color }, i) => {
@@ -2197,7 +2207,7 @@ export default function StatsScreen() {
                     <Text style={[styles.gradeBlockCount, { color: isSelected ? '#fff' : color, fontSize: gradeCountFontSize }]} allowFontScaling={false} numberOfLines={1}>
                       {value}
                     </Text>
-                    <Text style={[styles.gradeBlockLabel, { color: isSelected ? 'rgba(255,255,255,0.85)' : theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    <Text style={[styles.gradeBlockLabel, { color: isSelected ? 'rgba(255,255,255,0.85)' : theme.colors.textSecondary, fontSize: gradeBlockLabelFontSize }]} allowFontScaling={false}>
                       {t(labelKey)}
                     </Text>
                   </Pressable>
@@ -2466,10 +2476,13 @@ const styles = StyleSheet.create({
 
   // Summary row
   summaryRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2, marginBottom: 8 },
+  // ⚠️ 左右のパディングは `paddingHorizontal: blockPadH`（= rs(4, 16)）を**呼び出し側でインラインに**当てる
+  //    （窓を狭めると数字の桁が入らず「1…」に切れるため。評価ブロックの 4 まで詰める）。
+  //    上下は minHeight の算出（32 = 16×2）と対になっているので 16 で固定。
   summaryCard: {
     flex: 1,
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     margin: 2,

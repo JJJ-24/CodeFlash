@@ -13,7 +13,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -31,8 +30,9 @@ import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, useMaxFontMultiplier, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, useMaxFontMultiplier, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
+import { useBlockMetrics } from '@/lib/blockMetrics';
 import { resolveTagColor } from '@/lib/tagColors';
 import { deleteTag, deleteTagsBulk, getAllTags, updateTagSortOrders, updateTagsColor } from '@/lib/database/tags';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
@@ -87,14 +87,16 @@ export default function TagsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const rs = useResponsiveSize();
+  const bm = useBlockMetrics();
   const maxFont = useMaxFontMultiplier();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
-  const { width: screenWidth } = useWindowDimensions();
   // ホーム/タグカード一覧のフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
-  const blockWidth = (screenWidth - 56) / 4;
-  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+  const blockWidth = bm.blockWidth;
+  const blockPadH = bm.padH;
+  const blockLabelFontSize = bm.labelSize([t('common.all')]);
+  const filterBlockMinHeight = bm.minHeightFor(blockLabelFontSize);
   // カラーピッカーの開くフェード（Modal は `animationType="none"`）。iOS は VC のトランジション中に
   // タッチを配送しないので、`fade` のままだと開いた直後の操作が空振りする（CLAUDE.md の中央ダイアログの項）。
   const colorPickerFade = useRef(new Animated.Value(0)).current;
@@ -585,9 +587,9 @@ export default function TagsScreen() {
           余白タップでフォーカス解除は、リストの祖先 Pressable だと押せる要素のない場所からの
           ドラッグでスクロールが始まらない不具合があるため、固定部とリスト内フッターに分ける（統計参照）。 */}
       <Pressable style={styles.filterRow} onPress={() => setFocusedTagIndex(null)}>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, margin: 0, borderWidth: 2, borderColor: theme.colors.primary }]}>
-          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(tags.length).length) }]}>{tags.length}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, margin: 0, borderWidth: 2, borderColor: theme.colors.primary, paddingHorizontal: blockPadH }]}>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: bm.valueSize(String(tags.length).length) }]}>{tags.length}</Text>
+          <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: blockLabelFontSize }]}>{t('common.all')}</Text>
         </View>
       </Pressable>
       <View style={[styles.sectionRow, { paddingHorizontal: 16, paddingTop: 16, backgroundColor: theme.colors.background }]}>
@@ -909,9 +911,12 @@ const styles = StyleSheet.create({
   list: { padding: 16, gap: 8, paddingBottom: 96 },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   filterRow: { flexDirection: 'row', paddingHorizontal: 14, paddingTop: 16, paddingBottom: 4 },
+  // ⚠️ 左右のパディングは `paddingHorizontal: blockPadH`（= rs(4, 16)）を**呼び出し側でインラインに**当てる
+  //    （窓を狭めると数字の桁が入らず「1…」に切れるため。評価ブロックの 4 まで詰める）。
+  //    上下は minHeight の算出（32 = 16×2）と対になっているので 16 で固定。
   statItem: {
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     margin: 2,

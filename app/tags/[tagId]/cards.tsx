@@ -7,7 +7,6 @@ import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -24,8 +23,9 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
+import { useBlockMetrics } from '@/lib/blockMetrics';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
@@ -87,6 +87,7 @@ export default function TagCardsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const rs = useResponsiveSize();
+  const bm = useBlockMetrics();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
@@ -135,8 +136,15 @@ export default function TagCardsScreen() {
     [cards, deferredFilter, isEffectivelyArchived],
   );
   // ホームのフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
-  const blockWidth = (screenWidth - 56) / 4;
-  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+  const blockWidth = bm.blockWidth;
+  const blockPadH = bm.padH;
+  const tagCardLabelFontSize = bm.labelSize([t('common.all'), t('common.active')]);
+  const filterBlockMinHeight = bm.minHeightFor(tagCardLabelFontSize);
+  // ⚠️ 桁数は2ブロックの**大きい方**で決める（ブロックごとに見ると「100 と 9」で
+  //    大小がバラつく＝4ブロック画面と同じ「全部同じ大きさ」の仕様に揃える）。
+  // ⚠️ 桁数もラベルの長さも**行内の最大**で決める（1つだけ小さい字になるのを防ぐ仕様）。
+  const tagCardBlockMaxDigits = Math.max(String(cards.length).length, String(activeCardCount).length);
+  const tagCardValueFontSize = bm.valueSize(tagCardBlockMaxDigits);
 
   const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, setFocusId, listRef, moveFocus } = useListNavigation(displayedCards, (c) => c.id);
   const { archivePill, showArchivePill } = useArchivePill();
@@ -452,26 +460,26 @@ export default function TagCardsScreen() {
           <Pressable
             style={[
               styles.statItem,
-              { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+              { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
               lastTagCardFilter === 'all' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
               selectionMode && { opacity: 0.5 },
             ]}
             onPress={() => { if (!selectionMode) setLastTagCardFilter('all'); }}
           >
-            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(cards.length).length) }]}>{cards.length}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.all')}</Text>
+            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.primary, fontSize: tagCardValueFontSize }]}>{cards.length}</Text>
+            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: tagCardLabelFontSize }]}>{t('common.all')}</Text>
           </Pressable>
           <Pressable
             style={[
               styles.statItem,
-              { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight },
+              { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
               lastTagCardFilter === 'active' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
               selectionMode && { opacity: 0.5 },
             ]}
             onPress={() => { if (!selectionMode) setLastTagCardFilter('active'); }}
           >
-            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: fontSizeForDigits(theme, (Platform as any).isPad ? 1 : String(activeCardCount).length) }]}>{activeCardCount}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.active')}</Text>
+            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: tagCardValueFontSize }]}>{activeCardCount}</Text>
+            <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: tagCardLabelFontSize }]}>{t('common.active')}</Text>
           </Pressable>
         </Pressable>
         {displayedCards.length === 0 ? (
@@ -699,9 +707,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontWeight: '700', marginBottom: 12, marginHorizontal: 20 },
   filterRow: { flexDirection: 'row', gap: 4, marginHorizontal: 18, paddingTop: 16, paddingBottom: 4 },
+  // ⚠️ 左右のパディングは `paddingHorizontal: blockPadH`（= rs(4, 16)）を**呼び出し側でインラインに**当てる
+  //    （窓を狭めると数字の桁が入らず「1…」に切れるため。評価ブロックの 4 まで詰める）。
+  //    上下は minHeight の算出（32 = 16×2）と対になっているので 16 で固定。
   statItem: {
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     margin: 2,

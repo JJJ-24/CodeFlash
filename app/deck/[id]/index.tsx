@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   FlatList,
   Keyboard,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -23,8 +22,9 @@ import { constants as KeyCommand } from 'react-native-key-command';
 
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder, type AppTheme } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, type AppTheme } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
+import { useBlockMetrics } from '@/lib/blockMetrics';
 import {
   deleteCard,
   deleteCardsBulk,
@@ -193,6 +193,7 @@ export default function DeckDetailScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const rs = useResponsiveSize();
+  const bm = useBlockMetrics();
   // useTheme() は毎レンダー新しいオブジェクトを返すため、renderItem の deps に直接入れると
   // 毎レンダー renderItem が作り直され全セルが再描画される（並べ替えドロップ時のちらつき要因）。
   // ref 経由で参照し、テーマ変更時は extraData で再描画を促す。
@@ -1187,8 +1188,11 @@ export default function DeckDetailScreen() {
   ];
 
   const filterItemMaxDigits = Math.max(...filterItems.map(f => f.count != null ? String(f.count).length : 1));
-  const filterValueFontSize = fontSizeForDigits(theme, (Platform as any).isPad ? 1 : filterItemMaxDigits);
-  const filterBlockMinHeight = 32 + Math.ceil(fontSizeForDigits(theme, 1) * 1.35) + 2 + Math.ceil(theme.fontSize.xs * 1.35);
+  // ⚠️ 桁数もラベルの長さも**行内の最大**で決める（1つだけ小さい字になるのを防ぐ仕様）。
+  const filterValueFontSize = bm.valueSize(filterItemMaxDigits);
+  const blockPadH = bm.padH;
+  const filterLabelFontSize = bm.labelSize(filterItems.map((f) => f.label));
+  const filterBlockMinHeight = bm.minHeightFor(filterLabelFontSize);
 
   const cardSortDesc = cardSortOrder === 'newest' ? t('card.sortDescNewest')
     : cardSortOrder === 'oldest' ? t('card.sortDescOldest')
@@ -1309,7 +1313,7 @@ export default function DeckDetailScreen() {
                 key={key}
                 style={[
                   styles.statItem,
-                  { backgroundColor: theme.colors.surface, minHeight: filterBlockMinHeight },
+                  { backgroundColor: theme.colors.surface, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
                   isSelected && { margin: 0, borderWidth: 2, borderColor: color },
                   selectionMode && { opacity: 0.5 },
                 ]}
@@ -1320,7 +1324,7 @@ export default function DeckDetailScreen() {
                 }}
               >
                 <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color, fontSize: filterValueFontSize }]}>{count ?? '—'}</Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{label}</Text>
+                <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: filterLabelFontSize }]}>{label}</Text>
               </Pressable>
             );
           })}
@@ -1684,10 +1688,13 @@ const styles = StyleSheet.create({
   descToggleBtn: { paddingTop: 4, paddingBottom: 8 },
   descToggleText: { fontWeight: '600' },
   statsRow: { flexDirection: 'row', gap: 4, marginHorizontal: -2 },
+  // ⚠️ 左右のパディングは `paddingHorizontal: blockPadH`（= rs(4, 16)）を**呼び出し側でインラインに**当てる
+  //    （窓を狭めると数字の桁が入らず「1…」に切れるため。評価ブロックの 4 まで詰める）。
+  //    上下は minHeight の算出（32 = 16×2）と対になっているので 16 で固定。
   statItem: {
     flex: 1,
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     margin: 2,

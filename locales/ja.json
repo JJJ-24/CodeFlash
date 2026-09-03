@@ -830,6 +830,8 @@
     "featureSQLDesc": "SQL・C++ のコードブロックをその場で実行",
     "featureWebPreview": "HTML / CSS プレビュー",
     "featureWebPreviewDesc": "HTML・CSS・JavaScript の実行結果を見た目で確認。全画面なら実際に操作でき、デッキに登録した画像も HTML から使えます",
+    "featureDeckSpeech": "デッキごとの読み上げ言語",
+    "featureDeckSpeechDesc": "アプリの読み上げ設定は英語だけど、このデッキはスペイン語、という読み分けが可能です。表面と裏面で別の言語にも分けられます",
     "featureCustomization": "配色",
     "featureCustomizationDesc": "全10種類の配色プリセットをアンロック × ライト／ダークでカードと画面を彩る",
     "featureTimer": "学習タイマー",

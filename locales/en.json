@@ -873,6 +873,8 @@
     "featureSQLDesc": "Run SQL and C++ code blocks inline",
     "featureWebPreview": "HTML / CSS Preview",
     "featureWebPreviewDesc": "See HTML, CSS, and JavaScript render as an actual page — go full screen to interact with it, and use images you registered on the deck",
+    "featureDeckSpeech": "Per-Deck Speech Language",
+    "featureDeckSpeechDesc": "Keep the app's speech language as English but read this one deck in Spanish. You can also use a different language for the front and the back",
     "featureCustomization": "Color Themes",
     "featureCustomizationDesc": "Unlock all 10 color presets × light/dark to color your cards and screen",
     "featureTimer": "Study Timer",

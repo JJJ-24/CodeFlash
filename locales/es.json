@@ -875,6 +875,8 @@
     "featureSQLDesc": "Ejecuta bloques de código SQL y C++ ahí mismo",
     "featureWebPreview": "Vista previa de HTML / CSS",
     "featureWebPreviewDesc": "Comprueba cómo se ve el resultado de HTML, CSS y JavaScript. A pantalla completa puedes interactuar con él y usar desde el HTML las imágenes que registres en el mazo",
+    "featureDeckSpeech": "Idioma de lectura por mazo",
+    "featureDeckSpeechDesc": "Aunque la lectura de la app esté en español, este mazo puede leerse en inglés. También puedes usar un idioma distinto para el anverso y el reverso",
     "featureCustomization": "Combinaciones de color",
     "featureCustomizationDesc": "Desbloquea las 10 combinaciones de color × claro/oscuro para dar color a tus tarjetas y a la pantalla",
     "featureTimer": "Temporizador de estudio",

@@ -29,10 +29,6 @@ App Store Connect の「概要」欄に貼り付け用。上限 4000 字（改�
 カードに書いたコードをすぐ実行し、結果を確認できます。
 JavaScript・TypeScript・Python・HTML・CSS・SQL・C++ に対応。読むだけでなく、手を動かして学習できます。
 
-■ HTML・CSS は「見た目」で確認（Pro）
-実行結果がそのままページとして表示されます。全画面にすれば、ボタンや入力も実際に動かせます。
-JavaScript から DOM を操作する練習にも使えます。
-
 ■ カードを読み上げ
 表示中の面を読み上げます。日本語と英語が混ざった文も、文字の種類ごとに声を切り替えて読みます。声と速さも選べるので、語学の暗記や耳での復習に便利です。
 
@@ -41,9 +37,6 @@ JavaScript から DOM を操作する練習にも使えます。
 
 ■ 効率的な間隔反復学習
 FSRS アルゴリズムが理解度に応じて次の復習日を自動調整。無理なく記憶を定着させます。
-
-■ タグで整理・タグで学習
-「基礎」「応用」「要復習」など、自分だけの分類でデッキを横断して学習できます。
 
 ■ 学習履歴・統計グラフで進捗確認
 ヒートマップ（草グラフ）で学習量を、グラフでデッキごとの習熟率や評価の内訳を確認できます。
@@ -61,7 +54,7 @@ FSRS アルゴリズムが理解度に応じて次の復習日を自動調整。
 買い切りです。7日間の無料体験もあります。
 
 ・iCloud 同期：同じ Apple ID の端末とデータを同期。機種変更や端末追加も、トグルをオンにするだけ。
-・HTML / CSS プレビュー：実行結果を見た目で確認。デッキ共通の HTML や画像も登録できます。
+・HTML / CSS プレビュー：実行結果がそのままページとして表示されます。全画面ならボタンや入力も動かせ、JavaScript から DOM を操作する練習にも。デッキ共通の HTML や画像も登録できます。
 ・SQL / C++ の実行：デッキ共通の SQL を登録すれば、どのカードからも同じデータベースを操作できます。
 ・デッキごとの読み上げ言語：デッキ単位で読む言語を指定でき、表面と裏面で分けることもできます。
 ・詳細統計：月別の学習量、評価別ランキング（上位10枚）、カードごとの成績を確認できます。
@@ -71,6 +64,7 @@ FSRS アルゴリズムが理解度に応じて次の復習日を自動調整。
 
 【その他の機能】
 ・カード検索、カード複製、カードのデッキ移動
+・タグで整理し、デッキを横断して学習
 ・カードシャッフル学習
 ・1日の目標枚数設定
 ・デッキ・カードのアーカイブ（学習対象・統計から除外）
@@ -109,10 +103,6 @@ It also works as a standard flashcard app, and it now reads your cards aloud —
 Type code into your cards and run it instantly to check the output.
 Supports JavaScript, TypeScript, Python, HTML, CSS, SQL, and C++ — learn by doing, not just reading.
 
-■ See HTML and CSS as an actual page (Pro)
-Your code renders as a real page right inside the card. Go full screen and you can click buttons and type into inputs for real.
-It's also a great way to practice DOM manipulation from JavaScript.
-
 ■ Read your cards aloud
 Hear the side you are looking at. Sentences that mix writing systems are read with the right voice for each part, and you can pick the voice and the speed — handy for memorizing vocabulary or reviewing with your ears.
 
@@ -121,9 +111,6 @@ Combine text, code, and image blocks freely. Text blocks support Markdown — he
 
 ■ Efficient spaced repetition learning
 The FSRS algorithm adjusts each card's next review to your understanding, for effortless, lasting memorization.
-
-■ Organize and study with tags
-Create your own categories like "Basics", "Advanced", or "Review" and study across decks.
 
 ■ Track progress with stats and graphs
 See your study activity on a contribution graph, plus overall progress, deck mastery, and rating breakdown.
@@ -141,7 +128,7 @@ Your learning data is stored on your device (and in your own iCloud when sync is
 A one-time purchase. A 7-day free trial is available.
 
 • iCloud Sync: sync your data across devices on the same Apple ID. On a new device, just toggle it on to restore everything
-• HTML / CSS Preview: see the result as a real page. You can also register shared HTML and images on a deck
+• HTML / CSS Preview: your code renders as a real page right inside the card. Go full screen to click buttons and type into inputs, or practice DOM manipulation from JavaScript. You can also register shared HTML and images on a deck
 • SQL / C++ Execution: register deck-wide setup SQL and query the same database from every card
 • Per-Deck Speech Language: set the reading language for each deck, and a different one for the front and the back
 • Detailed Statistics: monthly study volume, per-grade rankings (top 10), and per-card performance
@@ -151,6 +138,7 @@ A one-time purchase. A 7-day free trial is available.
 
 [ Other Features ]
 • Card search, card duplication, and card transfer between decks
+• Organize with tags and study across decks
 • Shuffle cards to study
 • Set a daily card goal
 • Archive decks and cards (excluded from study and stats)
@@ -189,10 +177,6 @@ También sirve como app de tarjetas de memoria y ahora las lee en voz alta: úti
 Escribe código en tus tarjetas y ejecútalo al instante para ver el resultado.
 Compatible con JavaScript, TypeScript, Python, HTML, CSS, SQL y C++: aprende haciendo, no solo leyendo.
 
-■ Ve el HTML y el CSS como una página real (Pro)
-Tu código se muestra como una página real dentro de la tarjeta. A pantalla completa puedes tocar botones y escribir en los campos.
-También sirve para practicar la manipulación del DOM desde JavaScript.
-
 ■ Escucha tus tarjetas en voz alta
 La app lee la cara que estás viendo. Cada sistema de escritura suena con la voz que le corresponde, y puedes elegir la voz y la velocidad: útil para memorizar vocabulario o repasar de oído.
 
@@ -201,9 +185,6 @@ Combina bloques de texto, código e imagen. El texto admite Markdown: encabezado
 
 ■ Repetición espaciada eficaz
 El algoritmo FSRS ajusta el próximo repaso de cada tarjeta a tu comprensión, para memorizar sin esfuerzo y de forma duradera.
-
-■ Organiza y estudia con etiquetas
-Crea tus propias categorías, como "Básico" o "Repasar", y estudia tarjetas de varios mazos a la vez.
 
 ■ Sigue tu progreso con estadísticas y gráficos
 Consulta tu actividad en un mapa de calor, el progreso general, el dominio por mazo y el desglose por evaluación.
@@ -221,7 +202,7 @@ Tus datos se guardan en el dispositivo (y en tu iCloud si activas la sincronizac
 Compra única. Incluye 7 días de prueba gratis.
 
 • Sincronización con iCloud: sincroniza entre dispositivos con el mismo Apple ID. En uno nuevo, basta con activarla
-• Vista previa de HTML / CSS: mira el resultado como una página real. Registra también HTML e imágenes compartidos en el mazo
+• Vista previa de HTML / CSS: tu código se muestra como una página real dentro de la tarjeta. A pantalla completa puedes tocar botones y escribir en los campos, o practicar la manipulación del DOM desde JavaScript. Registra también HTML e imágenes compartidos en el mazo
 • Ejecución de SQL / C++: registra la inicialización SQL del mazo y consulta la misma base de datos desde cualquier tarjeta
 • Idioma de lectura por mazo: elige el idioma de cada mazo, y uno distinto para el anverso y el reverso
 • Estadísticas detalladas: estudio por mes, ranking por evaluación (top 10) y resultados por tarjeta
@@ -231,6 +212,7 @@ Compra única. Incluye 7 días de prueba gratis.
 
 [ Otras funciones ]
 • Búsqueda, duplicación y traslado de tarjetas entre mazos
+• Organiza con etiquetas y estudia entre varios mazos
 • Estudio en orden aleatorio
 • Objetivo diario de tarjetas
 • Archivar mazos y tarjetas (fuera del estudio y las estadísticas)

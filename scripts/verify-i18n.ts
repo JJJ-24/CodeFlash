@@ -10,12 +10,16 @@
  *     E2 補間トークン — 同じキーの `{{name}}` の集合が言語間で食い違う
  *     E3 行記法       — `■` / `[見出し]` / `>` / `| 表 |` / 早見表の `@@`・タブ・`//` の**行数**
  *                       （表は列数も）が言語間で食い違う
+ *     E4 コード側の参照 — ソースに書かれた翻訳キーが `ja.json` に無い（＝画面にキー名が出る）
  *   警告（失敗はしない）
  *     W1 複数形 — `{{count}}` を含むのに `_one` が無いキー（単数形が「1 cards」になる）
  *     W2 複数形 — 補間の直後が複数形の名詞なのに `_one` が無いキー。数を `{{count}}` 以外の
  *                名前で渡している文（`{{reviewed}} / {{total}} cards`）は**そもそも複数形が
  *                効かない**ので、名詞に掛かる数を `count` に改名するところから直す
  *
+ * ⚠️ **E1〜E3 は言語間の突き合わせなので「全言語で欠けているキー」は見つけられない**。
+ *    実際 `pro.featureDeckSpeech` が3言語とも無く、ペイウォールにキー名がそのまま出ていた。
+ *    E4 はソース側から見るのでこれを捕まえる。
  * ⚠️ **複数形サフィックスを畳んでから比較する**：en にだけ `pro.trialRemaining_one` が
  *    あるのは**正常な差分**（日本語に単数形は無い）。素朴にキー集合を比べると誤検知する。
  * ⚠️ **`{{count}}` は数値とは限らない**：`InfoContent` のアイコントークンにも `count`
@@ -187,6 +191,77 @@ for (const k of Object.keys(data[REFERENCE])) {
   }
 }
 
+// ---- E4 コード側の参照 ----------------------------------------------------------
+// E1〜E3 は言語間の突き合わせなので、**全言語で欠けているキー**は素通りする（実際に
+// `pro.featureDeckSpeech` が3言語とも無く、ペイウォールにキー名が出ていた）。ここだけ
+// ソース側から見る＝コードに書かれた「翻訳キーらしき文字列リテラル」を ja.json と突き合わせる。
+//
+// ⚠️ **`t('...')` の形だけを探さない**：paywall は `titleKey: 'pro.featureDeckSpeech'` の
+//    ようにオブジェクトへ入れてから `t(f.titleKey)` で引く。まさにこれが漏れた形なので、
+//    「名前空間で始まるドット区切りの文字列リテラル」を広く拾う方式にしてある。
+// ⚠️ **テンプレートリテラルは対象外**（`` t(`grade.${key}`) `` のような動的キーは静的に追えない）。
+// ⚠️ コメントは先に落とす（説明文に書いたキー名を拾わないため）。
+
+/** 文字列リテラル（' と "）だけを取り出す。コメントとテンプレートリテラルは飛ばす。 */
+function stringLiterals(src: string): string[] {
+  const out: string[] = [];
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '/' && src[i + 1] === '/') { while (i < src.length && src[i] !== '\n') i++; continue; }
+    if (c === '/' && src[i + 1] === '*') { i += 2; while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++; i += 2; continue; }
+    if (c === '`') { i++; while (i < src.length && src[i] !== '`') { if (src[i] === '\\') i++; i++; } i++; continue; }
+    if (c === "'" || c === '"') {
+      const quote = c; let buf = ''; i++;
+      while (i < src.length && src[i] !== quote) {
+        if (src[i] === '\\') { buf += src[i + 1] ?? ''; i += 2; continue; }
+        if (src[i] === '\n') break; // 未終端（型定義の中の < > など）は捨てる
+        buf += src[i]; i++;
+      }
+      i++; out.push(buf); continue;
+    }
+    i++;
+  }
+  return out;
+}
+
+const SOURCE_DIRS = ['app', 'components', 'lib', 'hooks', 'store'];
+/** 拡張子に見える末尾（`stats.tsx` のようなファイル名を翻訳キーと誤認しない）。 */
+const FILE_EXT = /\.(tsx?|jsx?|json|md|mjs|cjs|png|jpe?g|svg|db|sql|html?|css|patch|lock)$/;
+/** 名前空間で始まるドット区切り＝翻訳キーの形。 */
+const KEY_SHAPE = /^[a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_]+)+$/;
+
+const NAMESPACES = new Set(Object.keys(JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, `${REFERENCE}.json`), 'utf8'))));
+const refBase = new Set(Object.keys(data[REFERENCE]).map(baseKey));
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) walk(full, out);
+    else if (/\.tsx?$/.test(e.name)) out.push(full);
+  }
+  return out;
+}
+
+const repoRoot = path.join(__dirname, '..');
+const seen = new Map<string, string>(); // キー → 最初に見つけたファイル
+for (const dir of SOURCE_DIRS) {
+  const abs = path.join(repoRoot, dir);
+  if (!fs.existsSync(abs)) continue;
+  for (const file of walk(abs)) {
+    for (const lit of stringLiterals(fs.readFileSync(file, 'utf8'))) {
+      if (!KEY_SHAPE.test(lit)) continue;
+      if (!NAMESPACES.has(lit.split('.')[0])) continue;
+      if (FILE_EXT.test(lit)) continue;
+      if (!seen.has(lit)) seen.set(lit, path.relative(repoRoot, file));
+    }
+  }
+}
+for (const [key, file] of [...seen].sort()) {
+  if (refBase.has(baseKey(key))) continue;
+  errors.push(`[コード参照] ${REFERENCE}.json に無いキーをソースが参照: ${key}（${file}）`);
+}
+
 // ---- W1 複数形 ------------------------------------------------------------------
 // その言語に 'one' の区分があるなら、数を差し込むキーには `_one` が要る。
 // 規約は「サフィックス無しのキー＝other／`_one` を別に置く」（CLAUDE.md）。
@@ -244,6 +319,7 @@ const byTag = (tag: string) => errors.filter((e) => e.startsWith(`[${tag}]`));
 console.log(`  キーの網羅        ${label(byTag('キー欠落').length, '欠落なし')}`);
 console.log(`  補間トークン      ${label(byTag('トークン不一致').length, '不一致なし')}`);
 console.log(`  行記法 ■ […] > | @@ ${label(byTag('行記法').length, '不一致なし')}`);
+console.log(`  コード側の参照    ${label(byTag('コード参照').length, `未定義なし（${seen.size} キー参照）`)}`);
 console.log(`  複数形（警告）    ${warnings.length === 0 ? '✓ なし' : `⚠️ ${warnings.length} 件`}`);
 
 if (errors.length > 0) {

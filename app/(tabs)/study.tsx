@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
+import { CountBadge } from '@/components/CountBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
@@ -22,7 +23,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
-import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
+import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -81,7 +82,6 @@ export default function StudyScreen() {
   const theme = useTheme();
   const rs = useResponsiveSize();
   const bm = useBlockMetrics();
-  const maxFont = useMaxFontMultiplier();
   // デッキアイコンを文字サイズ設定（fontScale）に連動させる（ホームと同じ算出）
   const iconBoxSize = Math.round(32 * theme.fontScale);
   const iconGlyphSize = Math.round(18 * theme.fontScale);
@@ -656,9 +656,10 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && activeFilter !== 'new' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{count}</Text>
-                    </View>
+                    <CountBadge
+                      value={count}
+                      backgroundColor={activeFilter === 'review' || activeFilter === 'new' ? theme.colors.primary : theme.dark ? '#4B5563' : '#8B949E'}
+                    />
                   )}
                   <Ionicons
                     name="play"
@@ -722,9 +723,10 @@ export default function StudyScreen() {
                     )}
                   </View>
                   {count > 0 && (
-                    <View style={[styles.dueChip, { backgroundColor: theme.colors.primary }, activeFilter !== 'review' && activeFilter !== 'new' && { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.dueChipText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{count}</Text>
-                    </View>
+                    <CountBadge
+                      value={count}
+                      backgroundColor={activeFilter === 'review' || activeFilter === 'new' ? theme.colors.primary : theme.dark ? '#4B5563' : '#8B949E'}
+                    />
                   )}
                   <Ionicons
                     name="play"
@@ -810,14 +812,6 @@ const styles = StyleSheet.create({
   deckRowDimmed: { opacity: 0.5 },
   deckInfo: { flex: 1, gap: 3 },
   deckName: { fontWeight: '600' },
-  dueChip: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    minWidth: 28,
-    alignItems: 'center',
-  },
-  dueChipText: { fontWeight: '700', color: '#FFF' },
   tagColorDot: { width: 16, height: 16, borderRadius: 8 },
   deckIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   filterDesc: {},

@@ -20,6 +20,7 @@ import { constants as KeyCommand } from 'react-native-key-command';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { CountBadge } from '@/components/CountBadge';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
@@ -30,7 +31,7 @@ import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, useMaxFontMultiplier, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -88,7 +89,6 @@ export default function TagsScreen() {
   const theme = useTheme();
   const rs = useResponsiveSize();
   const bm = useBlockMetrics();
-  const maxFont = useMaxFontMultiplier();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
@@ -515,13 +515,9 @@ export default function TagsScreen() {
                     <Text numberOfLines={1} style={[styles.tagName, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{item.name}</Text>
                     {/* 038: まとめ移動ドラッグ中の「×N」バッジ（枚数バッジと同形状・primary 色） */}
                     {bulkDragCount != null && (
-                      <View style={[styles.countBadge, { backgroundColor: theme.colors.primary }]}>
-                        <Text allowFontScaling={false} style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]}>{`×${bulkDragCount}`}</Text>
-                      </View>
+                      <CountBadge value={`×${bulkDragCount}`} backgroundColor={theme.colors.primary} />
                     )}
-                    <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E' }]}>
-                      <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{item.cardCount}</Text>
-                    </View>
+                    <CountBadge value={item.cardCount} backgroundColor={theme.dark ? '#4B5563' : '#8B949E'} />
                     {!selectionMode && (
                       <>
                         <Pressable onPress={() => { const idx = index; if (idx !== undefined) setFocusedTagIndex(idx); router.push(`/tags/${item.id}/edit`); }} hitSlop={8} style={styles.editBtn}>
@@ -939,14 +935,6 @@ const styles = StyleSheet.create({
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
   tagName: { flex: 1, fontWeight: '500' },
-  countBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    minWidth: 28,
-    alignItems: 'center',
-  },
-  countBadgeText: { fontWeight: '700', color: '#FFF' },
   editBtn: { padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   fab: {

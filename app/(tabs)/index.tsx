@@ -19,6 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
+import { CountBadge } from '@/components/CountBadge';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
@@ -30,7 +31,7 @@ import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, useMaxFontMultiplier } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { deleteDeck, getAllDecks, setDeckArchived, updateDeckSortOrders } from '@/lib/database/decks';
@@ -100,7 +101,6 @@ function DeckCard({
   isFocused?: boolean;
 }) {
   const theme = useTheme();
-  const maxFont = useMaxFontMultiplier();
   const { color: iconColor, bg: iconBg } = resolveDeckIconColors(deck.colorHex, theme);
   // デッキアイコンを文字サイズ設定（fontScale）に連動させる
   const iconBoxSize = Math.round(32 * theme.fontScale);
@@ -137,9 +137,7 @@ function DeckCard({
         {deck.archived && (
           <Ionicons name="archive" size={theme.fontSize.lg} color={theme.colors.textTertiary} style={{ marginRight: 4 }} />
         )}
-        <View style={[styles.countBadge, { backgroundColor: theme.dark ? '#4B5563' : '#8B949E', marginRight: 8 }]}>
-          <Text style={[styles.countBadgeText, { fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={maxFont.ui}>{deck.cardCount}</Text>
-        </View>
+        <CountBadge value={deck.cardCount} backgroundColor={theme.dark ? '#4B5563' : '#8B949E'} style={{ marginRight: 8 }} />
         <Pressable
           onPress={() => onEdit(deck.id)}
           hitSlop={8}
@@ -786,14 +784,6 @@ const styles = StyleSheet.create({
   deckDesc: { marginBottom: 4 },
   cardActions: { flexDirection: 'row', gap: 8, marginLeft: 12, alignItems: 'center' },
   iconBtn: { padding: 4 },
-  countBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    minWidth: 28,
-    alignItems: 'center',
-  },
-  countBadgeText: { fontWeight: '700', color: '#FFF' },
   fab: {
     position: 'absolute',
     right: 24,

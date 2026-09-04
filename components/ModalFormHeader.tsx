@@ -15,9 +15,16 @@ interface Props {
   onTitlePress?: () => void;
   /** タイトル横のキーボードアイコン表示（keyboardShortcutsEnabled を渡す）。 */
   showKeyboardIcon: boolean;
-  /** タイトルの最大幅。指定時は 1 行省略表示になる（カードエディタ＝画面幅の 50%）。 */
+  /**
+   * タイトルの最大幅。指定時は 1 行省略表示になる。
+   * カードエディタは `screenWidth - 112`＝左右の ×／✓（各 42pt＝アイコン 26 ＋ 左右パディング 4
+   * ＋ 外側パディング 8）とゆとり 14pt を引いた幅。中央寄せなので左右対称に見積もる。
+   */
   titleMaxWidth?: number;
 }
+
+/** タイトル横のキーボードアイコンが占める幅（アイコン 20 ＋ gap 4）。 */
+const TITLE_ICON_SPACE = 24;
 
 /**
  * 入力系モーダル（fullScreenModal）共通の自前固定ヘッダー。
@@ -34,6 +41,14 @@ interface Props {
 export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress, showKeyboardIcon, titleMaxWidth }: Props) {
   const theme = useTheme();
   const lockedTopInset = useLockedTopInset();
+  // ⚠️ タイトルの省略は Text の **maxWidth** で行う（`flexShrink: 1` にしない）。
+  // 行が溢れたときの flexShrink は Yoga がテキストを測り直すが、**日本語はどの文字間でも
+  // 改行できるので最小幅が「1文字」になり**、箱は縮んだ幅のまま中身だけ `カ…` に潰れる
+  // （字とアイコンのあいだが大きく空く）。英語は最小幅が単語単位なうえ、そもそも収まって
+  // 縮める経路に入らないため露見しない＝「（コピー）」付きの日本語で実際に踏んだ。
+  // maxWidth なら測定は AtMost の1回で決まり、箱の幅と省略位置が必ず一致する。
+  const titleTextMaxWidth =
+    titleMaxWidth == null ? undefined : Math.max(0, titleMaxWidth - (showKeyboardIcon ? TITLE_ICON_SPACE : 0));
   return (
     <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
@@ -46,7 +61,7 @@ export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress,
             style={[{ flexDirection: 'row', alignItems: 'center', gap: 4 }, titleMaxWidth != null && { maxWidth: titleMaxWidth }]}
           >
             <Text
-              style={[{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }, titleMaxWidth != null && { flexShrink: 1 }]}
+              style={[{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }, titleTextMaxWidth != null && { maxWidth: titleTextMaxWidth }]}
               numberOfLines={titleMaxWidth != null ? 1 : undefined}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             >

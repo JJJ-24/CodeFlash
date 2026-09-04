@@ -208,7 +208,7 @@ export default function EditCardScreen() {
           canSave={!(saving || frontEmpty)}
           showKeyboardIcon={keyboardShortcutsEnabled}
           onTitlePress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-          titleMaxWidth={screenWidth * 0.5}
+          titleMaxWidth={screenWidth - 112}
         />
         <BlockEditor
           ref={editorRef}

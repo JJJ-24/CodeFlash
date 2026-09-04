@@ -7,6 +7,7 @@ import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from 'react-
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
@@ -29,6 +30,9 @@ import type { Card } from '@/types';
 
 export default function EditCardScreen() {
   const { id, cardId, tab, copied } = useLocalSearchParams<{ id: string; cardId: string; tab?: string; copied?: string }>();
+  // 複製直後の画面。この画面で作られたカードなので、✕ は「編集内容の破棄」ではなく
+  // 「この複製をやめる（カードごと削除）」を意味する（下の handleClose / handleDiscardCopy）。
+  const isCopy = copied === '1';
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
@@ -163,7 +167,9 @@ export default function EditCardScreen() {
     const current = editorRef.current?.getData();
     const snapshot = initialSnapshotRef.current;
     const archivedChanged = !!card && archived !== card.archived;
-    if (!archivedChanged && (!current || !snapshot || JSON.stringify(current) === snapshot)) {
+    // 複製直後は変更が無くても必ず確認する。そのまま閉じると、やめたつもりでも
+    // 複製カードが残る（画面を開いた時点で DB に作成済みのため）。
+    if (!isCopy && !archivedChanged && (!current || !snapshot || JSON.stringify(current) === snapshot)) {
       editorRef.current?.prepareForNavigation();
       router.back();
       return;
@@ -182,6 +188,13 @@ export default function EditCardScreen() {
     const deck = decks.find((d) => d.id === id);
     if (deck) updateDeck({ ...deck, cardCount: Math.max(deck.cardCount - 1, 0) });
     router.back();
+  }
+
+  // 複製画面の ✕ →「複製を削除」。この画面で作られたカードごと消して一覧へ戻る。
+  // コピー元への編集は複製時に保存済みなので、ここで消えるのは複製したカードだけ。
+  async function handleDiscardCopy() {
+    setShowDiscardModal(false);
+    await handleDeleteConfirm();
   }
 
   if (!card) {
@@ -240,7 +253,7 @@ export default function EditCardScreen() {
         <FormBottomBar
           onSave={() => editorRef.current?.save()}
           saveDisabled={saving || frontEmpty}
-          onDelete={confirmDelete}
+          onDelete={isCopy ? undefined : confirmDelete}
           onDuplicate={handleDuplicate}
           duplicateDisabled={saving || frontEmpty}
           horizontalPadding={16}
@@ -264,13 +277,28 @@ export default function EditCardScreen() {
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
       />
-      <DiscardConfirmModal
-        visible={showDiscardModal}
-        canSave={!frontEmpty}
-        onSave={() => { setShowDiscardModal(false); editorRef.current?.save(); }}
-        onDiscard={() => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); }}
-        onClose={() => setShowDiscardModal(false)}
-      />
+      {/* 複製直後だけ専用の確認にする。通常の破棄は編集内容だけを捨てればよいが、
+          複製は画面が開いた時点でカードが DB にできているので、同じ扱いにすると
+          「破棄したのにカードが増えている」＝取り消したはずの操作が残る。 */}
+      {isCopy ? (
+        <ConfirmModal
+          visible={showDiscardModal}
+          message={t('card.copyCloseMessage')}
+          actions={[
+            ...(frontEmpty ? [] : [{ label: t('card.copyKeep'), onPress: () => { setShowDiscardModal(false); editorRef.current?.save(); } }]),
+            { label: t('card.copyDelete'), destructive: true, onPress: handleDiscardCopy },
+          ]}
+          onClose={() => setShowDiscardModal(false)}
+        />
+      ) : (
+        <DiscardConfirmModal
+          visible={showDiscardModal}
+          canSave={!frontEmpty}
+          onSave={() => { setShowDiscardModal(false); editorRef.current?.save(); }}
+          onDiscard={() => { setShowDiscardModal(false); editorRef.current?.prepareForNavigation(); router.back(); }}
+          onClose={() => setShowDiscardModal(false)}
+        />
+      )}
     </>
   );
 }

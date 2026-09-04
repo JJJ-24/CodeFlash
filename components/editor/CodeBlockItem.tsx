@@ -259,6 +259,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     if (isPreview) {
       setFocused(false);
       codeInputRef.current?.blur();
+      // 土台/初期化のセクションはプレビューでは描画しないので、フォーカス状態も戻す。
+      // アンマウントでは onBlur が確実には来ず、編集へ戻したとき入力欄が開いたままに見えるため。
+      setInitSqlFocused(false);
+      setInitHtmlFocused(false);
     }
   }, [isPreview]);
 
@@ -430,8 +434,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             theme={theme}
           />
 
-          {/* SQL ブロック固有の初期化SQL（クエリ本体の前にデッキ共通の後で流す）。SQL は Pro 機能のため非Proでは非表示 */}
-          {block.language === 'sql' && isPro && (
+          {/* SQL ブロック固有の初期化SQL（クエリ本体の前にデッキ共通の後で流す）。SQL は Pro 機能のため非Proでは非表示。
+              プレビューでは非表示＝学習画面（CodeRunnerView）は土台を使うだけで表示しないため（下の4セクションも同じ） */}
+          {block.language === 'sql' && isPro && !isPreview && (
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
               <Pressable style={styles.initSqlHeader} onPress={() => setShowInitSql((v) => !v)} hitSlop={6}>
                 <Ionicons name={showInitSql ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />
@@ -466,17 +471,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 </View>
               )}
               {showInitSql && (
-                isPreview ? (
-                  block.sqlInit ? (
-                    <GHScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <SyntaxHighlightedCode code={block.sqlInit} language="sql" wrap={false} />
-                    </GHScrollView>
-                  ) : (
-                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                      {t('editor.sqlInitEmpty')}
-                    </Text>
-                  )
-                ) : initSqlFocused ? (
+                initSqlFocused ? (
                   <>
                     <TextInput
                       ref={initSqlInputRef}
@@ -516,7 +511,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
           {/* web 系ブロック：どのデッキ HTML/CSS 土台を積むか。デッキに土台が無ければ選ぶ対象が
               無いので出さない。Pro 機能のため非Proでは非表示（土台自体も積まれない） */}
-          {isWebLang && isPro && deckStages.length > 0 && (
+          {isWebLang && isPro && !isPreview && deckStages.length > 0 && (
             <DeckStagePicker
               kind="html"
               stages={deckStages}
@@ -529,7 +524,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
           {/* SQL ブロック：どのデッキ初期化SQLを流すか（045）。HTML と同じ部品・同じ規則。
               SQL は言語自体が Pro 限定なので、表示条件も Pro のみで揃えてある */}
-          {block.language === 'sql' && isPro && sqlStages.length > 0 && (
+          {block.language === 'sql' && isPro && !isPreview && sqlStages.length > 0 && (
             <DeckStagePicker
               kind="sql"
               stages={sqlStages}
@@ -541,7 +536,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           )}
 
           {/* web 系ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後・本文の前に積む）。Pro 機能のため非Proでは非表示 */}
-          {isWebLang && isPro && (
+          {isWebLang && isPro && !isPreview && (
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
               <Pressable style={styles.initSqlHeader} onPress={() => setShowInitHtml((v) => !v)} hitSlop={6}>
                 <Ionicons name={showInitHtml ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />
@@ -574,17 +569,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 </View>
               )}
               {showInitHtml && (
-                isPreview ? (
-                  block.htmlInit ? (
-                    <GHScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <SyntaxHighlightedCode code={block.htmlInit} language="html" wrap={false} />
-                    </GHScrollView>
-                  ) : (
-                    <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                      {t('editor.htmlInitEmpty')}
-                    </Text>
-                  )
-                ) : initHtmlFocused ? (
+                initHtmlFocused ? (
                   <>
                     <TextInput
                       ref={initHtmlInputRef}
@@ -625,7 +610,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
           {/* html ブロック：実行前プレビューに本文も描画するか（土台に書き足して完成させる出題向け）。
               既定 OFF＝「表示結果を予想させる」出題の答えを先に見せない。Pro 機能のため非Proでは非表示 */}
-          {block.language === 'html' && isPro && (
+          {block.language === 'html' && isPro && !isPreview && (
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
               <View style={styles.initSqlHeader}>
                 <Ionicons name={block.previewInit ? 'eye' : 'eye-off-outline'} size={theme.fontSize.sm} color="#C9C9C9" />

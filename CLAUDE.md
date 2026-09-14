@@ -27,6 +27,9 @@ npm run verify:timer
 
 # 翻訳ファイルの突き合わせ（047：キー欠落・補間トークン・行記法＋ソースが参照するキーの実在確認。locales/*.json を全部読むので es.json を足せば自動で対象）
 npm run verify:i18n
+
+# テキストブロックの Markdown 拡張の検証（==ハイライト==・++下線++・CJK-friendly な flanking 規則。markdown-it を上げたときの退行検知）
+npm run verify:markdown
 ```
 
 **テストフレームワークは未導入**。代わりに `scripts/db-harness.ts` が「Node 上でアプリの DB 層をそのまま実行する」土台を提供する：`node:sqlite`（同期）を **expo-sqlite 互換の非同期 API** でくるみ、`Module._resolveFilename` を差し替えて expo/RN モジュールをスタブし `@/` を解決する。これで `migrateDbIfNeeded`・`lib/database/*`・`lib/export.ts`・`lib/import.ts`・`lib/tsv.ts` を**本物のまま**呼べるので、カラム追加マイグレーション・旧DBの正規化・旧エクスポートの読み込み・エクスポート/インポート往復（`docs/db-migration-checklist.md` の確認項目）を実機なしで検証できる。実例は `scripts/verify-db.ts`（044/045 の土台＋046 の目標枚数と未達成リマインダー＋050 Phase 2 のデッキ単位の読み上げ言語＋並べ替えの無変化ガード・復元画面の差分件数・並び順の復元・置き換えの両方向差分〈T22〜T25〉・172 アサーション）。**新しい検証を書くときの注意**：①アプリのモジュールは `import` ではなく **`require()`** で読む（`import` は先頭へ巻き上げられ、スタブを入れる前に expo モジュールが解決されて落ちる）②旧スキーマの再現には `makeDb().raw`（生の同期 DB）で `ALTER TABLE ... DROP COLUMN` を使う。RN コンポーネントは描画できないので UI は対象外。
@@ -248,6 +251,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 #### テーマ・UI スタイル
 
 - **テーマ**: `useTheme()` を呼び出すだけで現在のテーマ（`AppTheme`）が取得できる。テーマ色は `theme.colors.*`、フォントサイズは `theme.fontSize.*` で参照する（StyleSheet に直書きしない）。セクションタイトル文字色は `theme.colors.textSecondary` で統一。⚠️ **`useTheme()` の戻り値は `useMemo` で参照を固定してある。外さないこと**（`lib/theme/index.ts`）。ほぼ全コンポーネントが呼ぶので、毎回新しいオブジェクトを返すと `useMemo(..., [theme])` が全部空振りし、そこから作るスタイルを props に渡している `React.memo` のコンポーネントの memo まで外れる。実際に **`Markdown` が毎レンダー再描画され、テキストブロック内のコードフェンスの横スクロール位置が毎秒失われる**不具合になった（下の項）。依存は `[base, scale, effectiveCardTheme, cardPalette]`＝すべて安定参照かプリミティブ。
+- **テキストブロックの装飾記法は CJK-friendly な flanking 規則で判定する（`lib/editor/markdownItCjkFriendly.ts`）**: markdown-it 標準の CommonMark 規則は「直後が約物なら直前が空白か約物でないと開けない」ため、`「」（）、。` が Unicode 上の約物である日本語では `あいうえお==「かきくけこ」==` が効かず（`==「あいうえお」==` と行頭に置いたときだけ効く）、`**`・`*`・`~~`・`++` も同じだった。CJK-friendly Markdown 仕様（tats-u/markdown-cjk-friendly）に沿って **`md.inline.State.prototype.scanDelims` を差し替える**プラグインで解決＝①CJK の約物は約物に数えない ②直前/直後が CJK 文字なら反対側が英語の約物でも開ける/閉じられる。5つの記法が共有する1メソッドなので全部に同じ規則が効き、英語だけのテキストの結果は変わらない。`BlocksView`（学習画面）と `TextBlockItem`（編集プレビュー）の両方で `.use()` する（片方だけだとプレビューと本番で食い違う）。⚠️ 記法ごとにローカルコピーして直さない（不揃いになる）。触ったら `npm run verify:markdown`。
 - **`react-native-markdown-display` に渡す props は参照を安定させる（重要）**: このライブラリは**再レンダーのたびに AST を作り直し、ノードの `key` をグローバル連番（`getUniqueID`）で振り直す**。React から見ると全ノードが別物なので、**再レンダー＝subtree ごと再マウント**になり、子が持っていた状態（コードフェンスの横スクロール位置など）が消える。`Markdown` 本体は `React.memo` なので、**props の参照さえ安定していれば再レンダー自体が起きない**。`onLinkPress={() => false}` のようなインライン関数を渡すと毎回 memo が外れるので、モジュール定数にする（`BlocksView` の `denyLinkPress`）。学習タイマー作動中は1秒ごとに再レンダーが走るため、この手の取りこぼしが「毎秒スクロールが先頭へ戻る」形で露見する。
 - **フォントサイズシステム**: `AppFontSize` は `xs(12)/sm(14)/md(16)/lg(18)/xl(20)/xxl(26)` の6段階（medium設定時）。`store/theme.ts` の `fontSizePreference`（small=0.85×/medium=1.0×/large=1.2×）で全体スケールされる。StyleSheet の静的 fontSize は使わず、必ずインラインスタイルで `{ fontSize: theme.fontSize.md }` のように指定する。
 - **テーマ hydration ガード**: `app/_layout.tsx` は `useThemeStore` の `hydrated` が `true` になるまで `<RootStack />` を描画しない。

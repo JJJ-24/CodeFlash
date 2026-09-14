@@ -14,12 +14,18 @@ import { MarkdownPalette } from './MarkdownPalette';
 import { MarkdownHelpModal } from './MarkdownHelpModal';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
+import { markdownItCjkFriendly } from '@/lib/editor/markdownItCjkFriendly';
 import { markdownFenceRule } from '@/lib/editor/markdownFenceRule';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
 
 // linkify: 生URL を自動リンク化 / markdownItMark: ==文字== をハイライト（<mark>）化 /
-// markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（複数色ハイライト）
-const markdownItLinkify = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor).use(markdownItIns);
+// markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（複数色ハイライト）/
+// markdownItCjkFriendly: CJK の約物（`「」` 等）に隣接した記法も効かせる（学習画面と同じ設定にする）
+const markdownItLinkify = MarkdownIt({ linkify: true })
+  .use(markdownItMark)
+  .use(markdownItHighlightColor)
+  .use(markdownItIns)
+  .use(markdownItCjkFriendly);
 // linkify の fuzzyLink（スキーマ無しの「それっぽい文字列」を自動リンク化）は切る。
 // `.id` `.io` `.co` `.dev` などは実在の TLD なので、`dataset.id` のようなコード片が
 // ドメインと誤判定されてリンクになってしまうため。https:// 付きの URL は従来どおりリンク化される。

@@ -13,6 +13,7 @@ import { isRemoteKeyboardEvent } from '@/lib/keyboardEvent';
 import { resolveImageUri, imageMaxWidth } from '@/lib/image';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
+import { markdownItCjkFriendly } from '@/lib/editor/markdownItCjkFriendly';
 import { markdownFenceRule } from '@/lib/editor/markdownFenceRule';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
@@ -24,7 +25,12 @@ import { ZoomableImage } from './ZoomableImage';
 // （Pressable を使わない）、本文と同じフォントサイズで流れて表示がズレない。
 // markdownItMark: ==文字== をハイライト（<mark>）化（編集プレビューと表示を揃える）。
 // markdownItHighlightColor: ==g|…== ==p|…== の色プレフィックスを解釈（編集プレビューと揃える）。
-const mdInstance = MarkdownIt({ linkify: true }).use(markdownItMark).use(markdownItHighlightColor).use(markdownItIns);
+// markdownItCjkFriendly: `あいうえお==「かきくけこ」==` のように CJK の約物に隣接した記法も効かせる。
+const mdInstance = MarkdownIt({ linkify: true })
+  .use(markdownItMark)
+  .use(markdownItHighlightColor)
+  .use(markdownItIns)
+  .use(markdownItCjkFriendly);
 // linkify の fuzzyLink（スキーマ無しの「それっぽい文字列」を自動リンク化）は切る。
 // `.id` `.io` `.co` `.dev` などは実在の TLD なので、`dataset.id` のようなコード片が
 // ドメインと誤判定されてリンクになってしまうため。https:// 付きの URL は従来どおりリンク化される。

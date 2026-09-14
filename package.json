@@ -14,6 +14,7 @@
     "verify:i18n": "sucrase-node scripts/verify-i18n.ts",
     "verify:speech": "sucrase-node scripts/verify-speech.ts",
     "verify:timer": "sucrase-node scripts/verify-timer.ts",
+    "verify:markdown": "sucrase-node scripts/verify-markdown.ts",
     "postinstall": "patch-package"
   },
   "dependencies": {

@@ -33,6 +33,8 @@ export const SETTINGS_ASYNC_STORAGE_KEYS = [
   '@codeflash_stats_collapsed_sections',
   // 「学習の記録」シートの表示モード（'total'|'max'|'avg'）
   '@codeflash_record_sheet_mode',
+  // 「学習履歴」（草グラフ）の表示モード（'volume'|'goal'）
+  '@codeflash_heatmap_mode',
   // 学習設定の折りたたみ中セクションID配列（同上）
   '@codeflash_study_collapsed_sections',
   '@codeflash_card_theme',

@@ -15,6 +15,12 @@ interface Props {
   infoOpen?: boolean;
   /** タイトルの右に並べる要素（Pro バッジ等）。 */
   badge?: ReactNode;
+  /**
+   * chevron の**左**に並べる操作（表示モードの切替ボタン等・統計「学習履歴」の学習量/目標達成）。
+   * 学習タブの「学習一覧」行のボタン群と同じ位置づけ。⚠️ 値や文言は置かない（下の注記）＝
+   * アイコンボタンは幅が固定でタイトルが折り返すだけだが、値は押し出されて消える。
+   */
+  actions?: ReactNode;
   /** **折りたたみ中だけ**タイトルの下に出す要約（例「25分 × 4回・休憩5分」）。 */
   summary?: string;
   /** タイトルの文字スタイル（既定は統計タブの見出し＝lg・700）。 */
@@ -44,7 +50,7 @@ interface Props {
  * フォントサイズ「大」で見出しが折り返して値が消える（読み上げ設定で踏んだ・CLAUDE.md 参照）。
  */
 export function CollapsibleSectionTitle({
-  title, collapsed, onToggle, onInfo, infoLabel, infoOpen, badge, summary, titleStyle, wrapStyle, blankTapToggles,
+  title, collapsed, onToggle, onInfo, infoLabel, infoOpen, badge, summary, titleStyle, wrapStyle, blankTapToggles, actions,
 }: Props) {
   const theme = useTheme();
   return (
@@ -75,6 +81,7 @@ export function CollapsibleSectionTitle({
         {blankTapToggles
           ? <Pressable style={{ flex: 1, alignSelf: 'stretch' }} onPress={onToggle} accessibilityRole="button" accessibilityLabel={title} />
           : <View style={{ flex: 1 }} />}
+        {actions}
         <Pressable onPress={onToggle} hitSlop={8} accessibilityRole="button">
           <Ionicons
             name={collapsed ? 'chevron-forward' : 'chevron-down'}
@@ -98,6 +105,8 @@ export function CollapsibleSectionTitle({
 const styles = StyleSheet.create({
   wrap: { marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  titleTap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { fontWeight: '700' },
+  // flexShrink: actions（切替ボタン）と chevron の幅を先に確保し、余った幅でタイトルを折り返す。
+  // 無いとタイトルが行幅を超えたとき右側の要素ごと画面外へ押し出される。
+  titleTap: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+  title: { fontWeight: '700', flexShrink: 1 },
 });

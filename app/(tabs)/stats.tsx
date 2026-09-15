@@ -68,6 +68,7 @@ const STATS_SHORTCUT_GROUPS = [
     sections: [
       { titleKey: 'shortcut.catDisplay', items: [
         { key: '1–4', descKey: 'shortcut.cycleChart' },
+        { key: 'G',   descKey: 'shortcut.heatmapModeToggle' },
       ] },
       { titleKey: 'shortcut.catFocus', items: [
         { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
@@ -990,7 +991,7 @@ export default function StatsScreen() {
   const theme = useTheme();
   const rs = useResponsiveSize();
   const bm = useBlockMetrics();
-  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, gradeRankingRecordableOnly, setGradeRankingRecordableOnly, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount } = useSettingsStore();
+  const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, gradeRankingRecordableOnly, setGradeRankingRecordableOnly, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount, heatmapMode, setHeatmapMode } = useSettingsStore();
   const { isPro } = useProStore();
   const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面のメイン
@@ -1550,6 +1551,8 @@ export default function StatsScreen() {
     { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setPeriodPickerVisible(true); } },
     { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) handleCycleRankingSort(); } },
+    // G = 草グラフの学習量/目標達成の切替（目標 OFF・折りたたみ中は無効＝トグルが見えていないときは効かせない）
+    { input: 'g', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('heatmap')) return; toggleHeatmapMode(); } },
     // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約。j/k と同じガードを適用）
     // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（4ブロック切替）。タブ切替は Tab/Shift+Tab。
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
@@ -1721,6 +1724,16 @@ export default function StatsScreen() {
   // 「新規」は作成枚数で、いずれも1日の目標枚数と比べる意味が無いため。
   const chartGoal = studyGoalEnabled && selectedBlock === 'learned' ? studyGoalCount : undefined;
 
+  // 046 Phase 7: 草グラフの表示モード。目標 OFF のあいだは保存値に関わらず学習量へ倒す
+  //（トグルも出さない＝046 以前と同じ見た目。値は残すので再び ON にすれば前の選択に戻る）。
+  // 判定は棒グラフの目標ライン・「学習の記録」の達成日数と同じ**現在の目標枚数**（A案）。
+  const heatmapGoal = studyGoalEnabled && heatmapMode === 'goal' ? studyGoalCount : undefined;
+  // early return（読み込み中）の後なので useCallback にしない（フック順が崩れる）。キー押下時に呼ばれるだけ。
+  const toggleHeatmapMode = () => {
+    if (!useSettingsStore.getState().studyGoalEnabled) return;
+    setHeatmapMode(useSettingsStore.getState().heatmapMode === 'goal' ? 'volume' : 'goal');
+  };
+
   // 030: 「済み」の棒＝その日に学習したカードなので、タップで検索画面の学習日フィルターを開く
   //（棒の数字＝結果の件数になり、一覧は検索画面のものをそのまま再利用できる）。
   // ⚠️ 他の3ブロックには渡さない（＝棒を押せなくする）：
@@ -1875,8 +1888,41 @@ export default function StatsScreen() {
           title={t('stats.activityHeatmap')}
           collapsed={isSectionCollapsed('heatmap')}
           onToggle={() => toggleStatsSection('heatmap')}
-          onInfo={() => setSectionInfoModal({ title: t('stats.activityHeatmap'), message: <InfoContent text={t('stats.activityHeatmapInfoMessage') + collapseHint} /> })}
+          // 目標 ON のときだけ目標達成表示の説明を継ぎ足す（凡例は常時グリッドの下に出るので、
+          // ここは「現在の目標で過去も判定する」という読み方の注意が主）。
+          onInfo={() => setSectionInfoModal({
+            title: t('stats.activityHeatmap'),
+            message: <InfoContent text={t('stats.activityHeatmapInfoMessage') + (studyGoalEnabled ? '\n\n' + t('stats.activityHeatmapGoalInfo', { count: studyGoalCount }) : '') + collapseHint} />,
+          })}
           infoLabel={t('stats.activityHeatmapInfoLabel')}
+          // 046 Phase 7: 学習量／目標達成の切替。学習の記録シートの Σ/最高/平均と同じ「アイコン＋選択中は塗り」。
+          // 目標 OFF のときは出さない（切替先が無いのに押せる状態＝「オンに見えて効かない」を作らない）。
+          actions={studyGoalEnabled && !isSectionCollapsed('heatmap') ? (
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {([['volume', 'bar-chart-outline', 'stats.heatmapModeVolume'], ['goal', 'flag-outline', 'stats.heatmapModeGoal']] as const).map(([mode, icon, labelKey]) => {
+                const active = heatmapMode === mode;
+                return (
+                  <Pressable
+                    key={mode}
+                    onPress={() => setHeatmapMode(mode)}
+                    accessibilityLabel={t(labelKey)}
+                    accessibilityState={{ selected: active }}
+                    style={[
+                      styles.rankingToggleBtn,
+                      { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 16) },
+                      active && { backgroundColor: theme.colors.primary },
+                    ]}
+                  >
+                    <Ionicons
+                      name={icon}
+                      size={Math.max(theme.fontSize.md, rs(16, 18))}
+                      color={active ? theme.colors.primaryText : theme.colors.textSecondary}
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : undefined}
         />
         {!isSectionCollapsed('heatmap') && (
           <Pressable
@@ -1888,7 +1934,7 @@ export default function StatsScreen() {
             ]}
             onPress={() => { setFocusedItem({ kind: 'heatmap' }); openRecordSheet(); }}
           >
-            <ActivityHeatmap data={heatmapData} />
+            <ActivityHeatmap data={heatmapData} goal={heatmapGoal} />
           </Pressable>
         )}
       </View>

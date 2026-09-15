@@ -148,6 +148,16 @@ export const FILTER_COLORS = {
   due: '#F57C00',
 } as const;
 
+/** 統計「学習履歴」（草グラフ）の色。`ActivityHeatmap` と `InfoContent` の `{{heatscale}}` が共用する。 */
+export const HEATMAP_COLORS = {
+  /** 学習量の4段階（薄→濃）。3段目は FILTER_COLORS.learned と同じ緑 */
+  scale: ['#C8E6C9', '#A5D6A7', '#4CAF50', '#2E7D32'],
+  /** 目標達成（046 Phase 7）＝学習タブの旗・「学習の記録」の達成日数と同じ緑 */
+  goalReached: '#43A047',
+  /** 学習したが目標に届かなかった日＝学習量の最も薄い段と同じ（「薄い＝足りない」の読みを揃える） */
+  goalMissed: '#C8E6C9',
+} as const;
+
 // テキストハイライトの背景色（3色）。カードテーマ（paper/sky/rose…）の上に乗るため半透明にして
 // 下地に色を混ぜ、全テーマで「マーカーでなぞった」見た目を保つ。文字色は変えない（描画側で Text の
 // color を指定せず親から継承させる）。ライトは文字が濃いのでアルファ高め、ダークは明るい文字を潰さ

@@ -106,7 +106,7 @@ components/
 ├── editor/              # BlockEditor, TextBlockItem, CodeBlockItem, ImageBlockItem, TagSelector
 │   └── BlockItemHeader.tsx  # ブロックの共通ヘッダー（並び替えハンドル・削除ボタン）。各 *BlockItem が使用
 ├── stats/
-│   └── ActivityHeatmap.tsx  # 学習履歴ヒートマップ（草グラフ）。weeks props で表示週数を制御
+│   └── ActivityHeatmap.tsx  # 学習履歴ヒートマップ（草グラフ）。weeks props で表示週数を制御。`goal` を渡すと目標達成表示（046 Phase 7＝達成/学習あり未達成/学習なしの3状態＋グリッド下の凡例。判定は現在の目標枚数・色は `lib/theme` の `HEATMAP_COLORS`）。切替はセクションのタイトル行（`CollapsibleSectionTitle` の `actions`）で、目標 OFF のときは出さず学習量に倒す
 ├── study/               # FlipCard（reanimated）, BlocksView, CodeRunnerView, SyntaxHighlightedCode, ZoomableImage, LinksSheet, ShortcutsModal
 ├── ConfirmDeleteModal.tsx  # 削除確認モーダル（単一メッセージ + 確認/キャンセル）
 ├── ConfirmModal.tsx        # 汎用確認モーダル（複数アクション対応）
@@ -320,7 +320,7 @@ iPadOS は**ハードキーボードの「修飾なし矢印」と Tab を OS �
 
 - **ホームキー（デッキ一覧）**: J/K（↑/↓）= フォーカス移動、Return = フォーカスデッキを開く、P = デッキ編集、Delete = デッキ削除、N = 新規デッキ、M = ソート切替、⌘L = 並べ替えロック切替（手動ソート時のみ）、U/D = フォーカスデッキを手動並べ替え（上へ/下へ・手動ソート＋未ロック時のみ）、`,`/`.`・`←`/`→`・H/L = フィルター切替（すべて/有効）、1/2 = フィルター直接選択、F = 検索、T = タグ管理、Tab/Shift+Tab = タブ切替
 - **学習タブキー**: 1–4 = フィルター直接選択、`,`/`.`・`←`/`→`・H/L = フィルター切替（すべて/学習済み/復習/新規）、J/K（↑/↓）= フォーカス移動、Return = フォーカス項目で学習開始、S = シャッフル切替、E = 対象カードなし行の表示/非表示トグル（旧 H）、D = デッキ表示 / T = タグ表示（旧 M トグル）、Tab/Shift+Tab = タブ切替
-- **統計タブキー**: 1–4 = 上部ブロック直接選択、`,`/`.`・`←`/`→`・H/L = 上部4ブロック切替（連続/学習済み/復習/新規）、J/K（↑/↓）= フォーカス移動、Return = フォーカスデッキのグラフ開閉（シート表示中は Return で閉じる）、6–9/0 = 評価別ランキング選択/解除（Pro・横移動の循環には含めない）、Tab/Shift+Tab = タブ切替
+- **統計タブキー**: 1–4 = 上部ブロック直接選択、`,`/`.`・`←`/`→`・H/L = 上部4ブロック切替（連続/学習済み/復習/新規）、J/K（↑/↓）= フォーカス移動、Return = フォーカスデッキのグラフ開閉（シート表示中は Return で閉じる）、G = 学習履歴（草グラフ）の学習量/目標達成の切替（046 Phase 7・目標 ON かつ展開中のみ）、6–9/0 = 評価別ランキング選択/解除（Pro・横移動の循環には含めない）、Tab/Shift+Tab = タブ切替
 - **設定タブキー**: J/K（↑/↓）= フォーカス移動（Proカード＋各カテゴリ・青枠・自動スクロール）、Return = フォーカス項目を開く、Esc = フォーカス解除、Tab/Shift+Tab = タブ切替（フィルターが無いため `,`/`.`・`←`/`→` は不使用）。値の変更はタップ限定（誤操作防止）でキーはナビのみ
 - **設定サブ画面キー**（display/study/notifications/sync/data/sync-merge/about/paywall）: Esc / B = 戻る（モーダルを開いていれば先に閉じる）。共通シェル `components/settings/SettingsDetail.tsx` に Esc/B＝戻るを集約し、モーダルを持つ画面は `onBack` prop で「先に閉じる」を渡す。SettingsDetail 非使用の about/paywall は各画面で `useKeyCommands` を直接持つ
   - ⚠️ **自前で Esc を持つモーダルを出す画面は `SettingsDetail` に `suspendKeys` を渡す**。`useKeyCommands` は**登録ごとに listener を張る**ので、親（常時 Esc）と子（表示中 Esc）の両方が登録していると**両方のハンドラが発火**して「モーダルを閉じる＋画面ごと戻る」になる。`suspendKeys` で親がキーを手放せば、034 の「今そのキーを担当するのは誰か」どおり最上位だけが受ける。適用済み＝`display`（`LanguagePickerModal`）・`study`（`SpeechLanguageModal`/`SpeechVoiceModal`）・`data`（`DeckPickerModal`）。⚠️ 一方 **`SegmentedCard` のインライン説明のように自前でキーを持たない一時表示は `lib/escStack.ts`**（`pushEscDismiss`／`popEscDismiss`）で、`SettingsDetail` の Esc が最前面から1つずつ閉じる＝こちらは `suspendKeys` の対象ではない（キーを持つ＝`suspendKeys` ／ 持たない＝`escStack` の二本立て）

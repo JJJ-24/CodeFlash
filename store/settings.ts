@@ -94,6 +94,13 @@ export type StudyGoalReachedBehavior = 'alert' | 'pill' | 'none';
 export type RecordSheetMode = 'total' | 'max' | 'avg';
 
 /**
+ * 統計「学習履歴」（草グラフ）の表示モード（046 Phase 7）。
+ * 'volume'＝学習量（日ごとの枚数を濃淡で）／'goal'＝目標達成（達成・未達成・学習なしの3状態）。
+ * 目標 OFF のあいだは画面側で 'volume' に倒す（値は残す＝再び ON にすれば前の選択に戻る）。
+ */
+export type HeatmapMode = 'volume' | 'goal';
+
+/**
  * 学習タイマーの表示要素（円・残り時間）の表示モード。
  * - 'on'    : 常に表示
  * - 'start' : 開始時（＋タップ時のピーク）に数秒だけ表示→フェードアウト
@@ -204,6 +211,8 @@ interface SettingsValues {
   statsCollapsedSections: string[];
   // 統計「学習の記録」シートの表示モード（Σ／最高／平均）
   recordSheetMode: RecordSheetMode;
+  // 統計「学習履歴」（草グラフ）の表示モード（学習量／目標達成）
+  heatmapMode: HeatmapMode;
   // 学習設定で折りたたみ中のセクションID（'goal'|'speech'|'fsrs'|'timer'）
   studyCollapsedSections: string[];
   cardThemePreference: CardThemeName;
@@ -323,6 +332,7 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
   // 同じで直近の選択を覚える（4軸すべてに効くので「平均で見たい」等の好みが固定されうる）。
   // 誤読の心配が小さいのは、モードを変えると数字だけでなくラベルも変わるため。
   recordSheetMode: { key: '@codeflash_record_sheet_mode', default: 'total', parse: oneOf(['total', 'max', 'avg'] as const) },
+  heatmapMode: { key: '@codeflash_heatmap_mode', default: 'volume', parse: oneOf(['volume', 'goal'] as const) },
   gradeRankingPeriod: { key: '@codeflash_grade_ranking_period', default: 'all', parse: oneOf(['all', '90d', '30d', '7d'] as const) },
   gradeRankingDeckIds: {
     key: GRADE_RANKING_DECK_IDS_KEY,
@@ -508,6 +518,7 @@ interface SettingsState extends SettingsValues {
   setStudyHideEmpty: (v: boolean) => void;
   setGradeRankingSortBy: (v: GradeRankingSortBy) => void;
   setRecordSheetMode: (v: RecordSheetMode) => void;
+  setHeatmapMode: (v: HeatmapMode) => void;
   setGradeRankingPeriod: (v: GradeRankingPeriod) => void;
   setGradeRankingDeckIds: (v: string[]) => void;
   setGradeRankingRecordableOnly: (v: boolean) => void;
@@ -572,6 +583,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
     setStudyHideEmpty: makeSetter('studyHideEmpty'),
     setGradeRankingSortBy: makeSetter('gradeRankingSortBy'),
     setRecordSheetMode: makeSetter('recordSheetMode'),
+    setHeatmapMode: makeSetter('heatmapMode'),
     setGradeRankingPeriod: makeSetter('gradeRankingPeriod'),
     setGradeRankingDeckIds: makeSetter('gradeRankingDeckIds'),
     setGradeRankingRecordableOnly: makeSetter('gradeRankingRecordableOnly'),

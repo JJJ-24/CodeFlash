@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { HEATMAP_COLORS, useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 // マークアップ文字列の {{token}} を Ionicons に対応づける
 const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -35,10 +35,21 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   analytics: 'analytics-sharp',
   podium: 'podium-outline',
   piechart: 'pie-chart-outline',
+  // 統計「学習履歴」の表示モード切替ボタン（学習量／目標達成）。実物と同じアイコン。
+  barChart: 'bar-chart-outline',
+  flag: 'flag-outline',
 };
 
-// {{heatscale}} 用：ヒートマップ（草グラフ）と同じ4段階の緑
-const HEAT_COLORS = ['#C8E6C9', '#A5D6A7', '#4CAF50', '#2E7D32'];
+// 色見本トークン（■ を1つ）。統計「学習履歴」の目標達成表示の3状態＝ {{heatscale}} と同じ描き方で
+// 1色ずつ出す。goalNone は空セル（枠色）なので描画側の emptyColor を使う。
+const SWATCH_TOKENS: Record<string, string | null> = {
+  goalReached: HEATMAP_COLORS.goalReached,
+  goalMissed: HEATMAP_COLORS.goalMissed,
+  goalNone: null,
+};
+
+// {{heatscale}} 用：ヒートマップ（草グラフ）と同じ4段階の緑（定義元は lib/theme の HEATMAP_COLORS）
+const HEAT_COLORS = HEATMAP_COLORS.scale;
 
 // 破壊的な操作のアイコンだけ実物のボタンと同じ赤（theme.colors.danger）で描く。
 // 他は一律 primary＝説明文の中で「押すと消える操作」だけが色で立つ。
@@ -105,6 +116,9 @@ function renderInline(text: string, iconColor: string, iconSize: number, keyBase
       );
     }
     const m = part.match(/^\{\{(\w+)\}\}$/);
+    if (m && m[1] in SWATCH_TOKENS) {
+      return <Text key={`${keyBase}-${i}`} style={{ color: SWATCH_TOKENS[m[1]] ?? emptyColor, fontSize: iconSize }}>■</Text>;
+    }
     const name = m && ICON_TOKENS[m[1]];
     if (name) {
       const color = m && DANGER_ICON_TOKENS.has(m[1]) ? dangerColor : iconColor;

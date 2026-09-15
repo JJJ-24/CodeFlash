@@ -274,7 +274,7 @@
     "topBlocksInfoLabel": "上部ブロックと棒グラフの説明",
     "topBlocksInfoMessage": "ブロックは今日の数字、グラフは1週間の推移です。\n\n連続：連続学習日数\n済み：学習したカード数\n復習：学習が必要なカード数\n新規：作成したカード数\n\n※学習タブ・カード一覧の「新規」（未学習カード）とは意味が異なります",
     "goalLineLegend": "目標 {{count}}枚/日",
-    "barTapInfoMessage": "※「済み」の棒をタップすると、その日の学習済み一覧を検索画面で開けます",
+    "barTapInfoMessage": "[棒をタップ]\n  学習済み一覧を表示\nその日に学習したカードを、検索画面の「学習した日」で開きます。",
     "activityHeatmap": "学習履歴",
     "recordTitle": "学習の記録",
     "recordSummaryTitle": "これまでの歩み",

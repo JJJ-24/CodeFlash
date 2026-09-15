@@ -290,7 +290,7 @@
     "topBlocksInfoLabel": "About top blocks and bar chart",
     "topBlocksInfoMessage": "Blocks show today's numbers; the chart shows one week.\n\nStreak: consecutive study days\nDone: cards studied\nDue: cards to study\nNew: cards created\n\nNote: \"New\" in the Study tab and card lists means unlearned cards — a different meaning.",
     "goalLineLegend": "Goal {{count}}/day",
-    "barTapInfoMessage": "* Tap a bar on \"Done\" to open that day's studied cards in Search.",
+    "barTapInfoMessage": "[Tap a bar]\n  Show studied cards\nOpens the cards studied that day in Search, under \"Studied on\".",
     "activityHeatmap": "Activity",
     "recordTitle": "Learning Record",
     "recordSummaryTitle": "Journey",

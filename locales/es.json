@@ -292,7 +292,7 @@
     "topBlocksInfoLabel": "Sobre los bloques superiores y el gráfico de barras",
     "topBlocksInfoMessage": "Los bloques muestran los números de hoy; el gráfico, una semana.\n\nRacha: días seguidos estudiando\nHechas: tarjetas estudiadas\nRepaso: tarjetas que toca estudiar\nNuevas: tarjetas creadas\n\n※ En la pestaña Estudio y en las listas de tarjetas, «Nuevas» significa otra cosa: tarjetas sin estudiar",
     "goalLineLegend": "Objetivo {{count}}/día",
-    "barTapInfoMessage": "※ Toca una barra de «Hechas» para abrir en la búsqueda las tarjetas estudiadas ese día.",
+    "barTapInfoMessage": "[Tocar una barra]\n  Ver tarjetas estudiadas\nAbre en Búsqueda las tarjetas estudiadas ese día, con el filtro «Día de estudio».",
     "activityHeatmap": "Historial",
     "recordTitle": "Tu registro de estudio",
     "recordSummaryTitle": "El camino recorrido",

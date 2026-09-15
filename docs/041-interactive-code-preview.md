@@ -144,6 +144,7 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 | `title` 属性のツールチップ（`<abbr title>` 等） | ✕ | **✕**（iOS/iPadOS の WebKit がツールチップ UI 自体を持たない。属性は生きているので `content: attr(title)` ＋ `:active`/`:focus` で自作する＝docs/040） |
 | `<noscript>`・`<base target>` | ✕ | **✕** |
 | `window.open('https://…')`・`<a target="_blank">`（タップから） | ✕（操作できない＝常に `null`） | **Safari で開く**（`onOpenWindow` → `Linking.openURL`。別窓は作れないので戻り値は `null`＝`w.close()` 等は不可。詳細は docs/040「window.open」） |
+| `window.close()` | ✕（閉じる対象が無い＝無反応） | **モーダルが閉じる**（✕ と同じ。下記） |
 | `<video>`/`<audio>` | ✕ | **✕**（`allowsInlineMediaPlayback={false}`＋要ユーザー操作＋ソースが無い） |
 | リンクのタップ | 押せない | **遷移してしまう**（`onShouldStartLoadWithRequest` ガード無し・⟲ で復帰） |
 
@@ -166,6 +167,26 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
   枠の中に出すと「本文に表示される要素」だと誤って覚えてしまう。
 - 「他の言語と揃わない」問題は起きない：**全画面モーダルは web 系（html/css/js・ts）でしか
   開けない**（`canExpand`）ため、python/sql/cpp と比較される場面が無い。
+
+---
+
+## `window.close()` でモーダルを閉じる（2026-09-15 追加）
+
+`<title>` と同じ比喩＝**全画面モーダルはブラウザの窓**なので、ページが自分を閉じる `window.close()` は
+モーダルを閉じる（✕ と同じ `onClose`）。`<button onclick="window.close()">閉じる</button>` が
+ブラウザと同じに動く。
+
+- WebKit 自身は履歴1件の文書を script-closable（HTML 仕様＝script が開いた窓 **または** 履歴1件）と
+  判定して `window.closed = true` にし、ホストへ `webViewDidClose:` を通知する（macOS の WKWebView で
+  実測。読み込み時でもユーザー操作の中でも同じ）。**react-native-webview がこのデリゲートを実装して
+  いない**ので、そのままでは画面が残る。
+- そこでサンドボックス（`buildInteractiveWebSandboxHtml`）が `window.close` をラップし、
+  `{ type:'close' }` を postMessage してから元の `close` も呼ぶ（`window.closed` の意味は保つ）。
+  モーダルの `handleMessage` が `onClose()` を呼ぶ。
+- 読み込み時に `window.close()` を呼ぶカードは ⛶ を押した瞬間に閉じる＝ブラウザでタブが自分を
+  閉じるのと同じ挙動なので、ガードは入れない。
+- インライン（040）は閉じる対象が無いので無反応のまま（エラーにもならない）。
+- ⚠️ `w = window.open(); w.close()`（開いた窓を閉じる）は `w` が `null` なので書けない（docs/040）。
 
 ---
 

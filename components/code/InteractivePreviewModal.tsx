@@ -131,6 +131,12 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
         setPageTitle(typeof data.title === 'string' ? data.title.trim() : '');
         return;
       }
+      // window.close()：ブラウザでタブが自分を閉じるのと同じ＝モーダルを閉じる（✕ と同じ経路）。
+      // 読み込み時に呼ぶカードは ⛶ を押した瞬間に閉じるが、それもブラウザと同じ挙動。
+      if (data.type === 'close') {
+        onClose();
+        return;
+      }
       if (data.type === 'log' && data.entry) {
         setLogs((prev) => {
           const next = [...prev, data.entry as LogEntry];
@@ -140,7 +146,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
     } catch {
       // 破損メッセージは無視
     }
-  }, []);
+  }, [onClose]);
 
   // window.open / <a target="_blank">：WKWebView は別窓を作れないので、ブラウザの「新しいタブ」に
   // いちばん近い Safari へ渡す（onOpenWindow が付いていると遷移自体はキャンセルされるので

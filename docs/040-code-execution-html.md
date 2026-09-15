@@ -211,7 +211,8 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 | `window.open(url, '_blank', 'width=400,height=300')` | ポップアップの寸法 | 第3引数は無視 |
 | `window.open()`（引数なし＝`about:blank`）・`data:` | 空の窓 | Safari でも開けないので console に `code.openWindowUnsupported` を1行出す（WebKit は引数なしを**空 URL** で通知してくる＝実測。表示だけ `about:blank` に置き換える） |
 | `window.open('apple.com')`（スキーム無し） | 相対 URL として解決 | `about:blank` 基準では解決できず **SyntaxError**「The string did not match the expected pattern.」（`href="apple.com"` が無反応なのと同じ根） |
-| `const w = window.open(...); w.focus()` | 動く | `w` が `null` で TypeError。**未捕捉なら「Script error.」とだけ出る**（下記） |
+| `const w = window.open(...); w.focus()`／`w.close()` | 動く | `w` が `null` で TypeError。**未捕捉なら「Script error.」とだけ出る**（下記） |
+| `window.close()`（自分自身を閉じる） | 履歴1件のタブ／script が開いた窓なら閉じる | **041 全画面：モーダルが閉じる**（✕ と同じ）。040 インラインは閉じる対象が無く無反応（エラーなし）。仕組みは docs/041「`window.close()` でモーダルを閉じる」 |
 | 040 インライン枠 | — | `pointerEvents="none"` で操作できない＝ユーザー操作が起きず常に `null`（TypeError にはしない＝ブロックされたのと同じ見え方） |
 
 ⚠️ **未捕捉例外の文言は「Script error.」に潰れる（既存の制約・2026-09-15 実測）**：`baseUrl='about:blank'`＝opaque origin の文書では、WebKit が `window.onerror` に渡す**未捕捉**例外の詳細（メッセージ・行番号・error オブジェクト）を同一オリジン扱いでないとして隠す（macOS の WKWebView でも `setTimeout(() => { throw new Error('boom') })` → `onerror` は `Script error.`／`error` は `null` を確認）。040 の `<script>` 直書き・041 の `addEventListener` 内・`onclick` 属性のいずれも同じ。**`try/catch` で受けて `console.error(e.message)` すれば全文出る**し、`setTimeout`/`setInterval` のコールバックはサンドボックスが try/catch で包んでいるので全文出る。`unhandledrejection` の `reason.message` も隠されない（実測）。`window.open` とは無関係で、**`w.focus()` のような null 参照が「Script error.」に見えたのはこれ**。

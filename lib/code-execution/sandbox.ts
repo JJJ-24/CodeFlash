@@ -727,6 +727,7 @@ ${style}
  * - 完了判定・タイムアウトを持たない（ユーザーが閉じるまで動き続ける＝onclick/scroll/input 等を体験できる）
  * - console.log/warn/error を **1 行ごとに逐次 postMessage** する（イベントで出たログをライブ表示するため）
  * - 未捕捉例外（window.onerror）・未処理 rejection も逐次 error として送る
+ * - window.close() は {type:'close'} を送り、モーダルが閉じる（<title> と同じ「モーダル＝ブラウザの窓」の比喩）
  * - ネットワーク遮断は 040 と同じ
  *
  * 合成（土台＋本文/script）は `buildWebSandboxHtml` と同一。
@@ -786,6 +787,16 @@ export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js' | 'css', body
   }
   document.addEventListener('DOMContentLoaded', postTitle);
   window.addEventListener('load', postTitle);
+
+  // window.close()：<title> と同じ「全画面モーダル＝ブラウザの窓」の比喩で、モーダルを閉じる（✕ と同じ）。
+  // WebKit 自身は履歴1件の文書を「閉じてよい窓」と判定して window.closed = true にし、ホストへ
+  // webViewDidClose を通知するが、react-native-webview がそれを実装していないので画面は残る。
+  // そこで postMessage で RN 側に閉じてもらう。元の close も呼んで window.closed の意味は保つ。
+  var _origClose = window.close;
+  window.close = function() {
+    try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'close' })); } catch (e) {}
+    try { _origClose.call(window); } catch (e) {}
+  };
 
   // 全画面プレビューで、要素をタップ後に Space（や矢印/PageUp 等）を押すとページの既定スクロールが
   // 走り、短い土台では画面が上下に揺れる。これらスクロール系キーの「既定動作だけ」を止める。

@@ -439,7 +439,8 @@
     "proTitle": "Pro Feature",
     "proMessage": "Running SQL, C++, HTML, and CSS requires a Pro plan.",
     "proStageHint": "Previewing on an HTML/CSS stage is a Pro feature. This block ran without the stage.",
-    "noResponse": "No result was received (the page may have navigated to another URL, or the code may be stuck in an infinite loop)."
+    "noResponse": "No result was received (the page may have navigated to another URL, or the code may be stuck in an infinite loop).",
+    "openWindowUnsupported": "window.open: this preview cannot create a new window. Only http(s) URLs can be opened in Safari ({{url}})"
   },
   "common": {
     "save": "Save",

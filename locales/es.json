@@ -441,7 +441,8 @@
     "proTitle": "Función Pro",
     "proMessage": "Ejecutar SQL, C++, HTML y CSS requiere el plan Pro.",
     "proStageHint": "La vista previa sobre una base HTML/CSS es una función Pro. Este bloque se ejecutó sin la base.",
-    "noResponse": "No se recibió ningún resultado (puede que la página haya ido a otra URL o que el código se haya quedado en un bucle infinito)."
+    "noResponse": "No se recibió ningún resultado (puede que la página haya ido a otra URL o que el código se haya quedado en un bucle infinito).",
+    "openWindowUnsupported": "window.open: esta vista previa no puede crear una ventana nueva. Solo las URL http(s) se abren en Safari ({{url}})"
   },
   "common": {
     "save": "Guardar",

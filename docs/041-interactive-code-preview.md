@@ -142,7 +142,8 @@ ScrollView・FlipCard、編集画面の `NestableDraggableFlatList` と**タッ�
 | 後出しログ（イベント発火時の console） | 完了後は届かない | **逐次 postMessage でライブ表示** |
 | `:hover`/`:focus-visible` | ✕ | **✕**（指にホバーが無い＝全画面でも無意味） |
 | `title` 属性のツールチップ（`<abbr title>` 等） | ✕ | **✕**（iOS/iPadOS の WebKit がツールチップ UI 自体を持たない。属性は生きているので `content: attr(title)` ＋ `:active`/`:focus` で自作する＝docs/040） |
-| `<noscript>`・`target="_blank"`・`<base target>` | ✕ | **✕** |
+| `<noscript>`・`<base target>` | ✕ | **✕** |
+| `window.open('https://…')`・`<a target="_blank">`（タップから） | ✕（操作できない＝常に `null`） | **Safari で開く**（`onOpenWindow` → `Linking.openURL`。別窓は作れないので戻り値は `null`＝`w.close()` 等は不可。詳細は docs/040「window.open」） |
 | `<video>`/`<audio>` | ✕ | **✕**（`allowsInlineMediaPlayback={false}`＋要ユーザー操作＋ソースが無い） |
 | リンクのタップ | 押せない | **遷移してしまう**（`onShouldStartLoadWithRequest` ガード無し・⟲ で復帰） |
 

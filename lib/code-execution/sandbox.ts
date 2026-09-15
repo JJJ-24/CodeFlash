@@ -459,6 +459,8 @@ function buildJsSandboxHtml(code: string): string {
   window.fetch = undefined;
   window.XMLHttpRequest = undefined;
   window.WebSocket = undefined;
+  // window.open はコンソール実行だけ止める：隠し WebView には onOpenWindow が無く、
+  // ユーザー操作も起きないので開く先が無い（web 系サンドボックスでは生かしてある＝下記）。
   window.open = undefined;
 
   var _logs = [];
@@ -596,7 +598,10 @@ function buildWebSandboxHtml(mode: 'html' | 'js' | 'css', body: string, htmlInit
   window.fetch = undefined;
   window.XMLHttpRequest = undefined;
   window.WebSocket = undefined;
-  window.open = undefined;
+  // window.open は止めない（web 系3サンドボックス共通）。WKWebView は既定でユーザー操作の中からの
+  // 呼び出ししか通さず（Safari のポップアップブロックと同じ）、通った分は 041 全画面の
+  // onOpenWindow が Safari へ渡す。インラインは pointerEvents="none" で操作できないため
+  // 常に null が返る＝ブロックされたのと同じ見え方で、TypeError にはしない。
 
   var _logs = [];
   function fmt(args) {
@@ -745,7 +750,8 @@ export function buildInteractiveWebSandboxHtml(mode: 'html' | 'js' | 'css', body
   window.fetch = undefined;
   window.XMLHttpRequest = undefined;
   window.WebSocket = undefined;
-  window.open = undefined;
+  // window.open は止めない：タップから呼ばれたものはモーダルの onOpenWindow が Safari で開く
+  // （WKWebView は別窓を作れないので戻り値は常に null＝別窓の操作はできない）。
 
   // console は 1 行ごとに逐次ポストする（貯めない）。イベントで出た後出しログをライブ表示するため。
   function post(entryType, args) {
@@ -829,7 +835,6 @@ export function buildStaticPreviewHtml(htmlInits?: string[]): string {
   window.fetch = undefined;
   window.XMLHttpRequest = undefined;
   window.WebSocket = undefined;
-  window.open = undefined;
 <\/script>
 </head>
 <body>

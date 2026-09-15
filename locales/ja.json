@@ -420,7 +420,8 @@
     "proTitle": "Pro 機能",
     "proMessage": "SQL・C++・HTML・CSS の実行は Pro プランの機能です。",
     "proStageHint": "HTML/CSS 土台を使うプレビューは Pro 機能です。このブロックは土台なしで実行しました。",
-    "noResponse": "実行結果を受け取れませんでした（ページが別のURLへ移動した、無限ループで停止した、などの可能性があります）"
+    "noResponse": "実行結果を受け取れませんでした（ページが別のURLへ移動した、無限ループで停止した、などの可能性があります）",
+    "openWindowUnsupported": "window.open: このプレビューは別窓を作れません。Safari で開けるのは http(s) の URL だけです（{{url}}）"
   },
   "common": {
     "save": "保存",

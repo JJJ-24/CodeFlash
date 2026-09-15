@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as KeyCommand from 'react-native-key-command';
@@ -142,6 +142,24 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
     }
   }, []);
 
+  // window.open / <a target="_blank">：WKWebView は別窓を作れないので、ブラウザの「新しいタブ」に
+  // いちばん近い Safari へ渡す（onOpenWindow が付いていると遷移自体はキャンセルされるので
+  // サンドボックス文書は残る＝⟲ 不要）。ユーザー操作の中からの呼び出しだけがここへ届く
+  // （javaScriptCanOpenWindowsAutomatically は既定 false＝Safari のポップアップブロックと同じ）。
+  // http(s) 以外（about:blank・data: など）は Safari でも開けないので console に理由を出す。
+  // `window.open()`（引数なし）は WebKit が空 URL で通知してくる（実測）ので about:blank と表示する。
+  const handleOpenWindow = useCallback((event: { nativeEvent: { targetUrl: string } }) => {
+    const url = event.nativeEvent.targetUrl;
+    if (/^https?:\/\//i.test(url)) {
+      Linking.openURL(url).catch(() => {});
+      return;
+    }
+    setLogs((prev) => {
+      const next = [...prev, { type: 'warn' as const, text: t('code.openWindowUnsupported', { url: url || 'about:blank' }) }];
+      return next.length > MAX_LOGS ? next.slice(next.length - MAX_LOGS) : next;
+    });
+  }, [t]);
+
   // ▶ 実行：本文を実行した状態にする。実行中に押せば「初期状態から再実行」（DOM も console も戻る）。
   const runNow = useCallback(() => {
     setRan(true);
@@ -205,6 +223,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
               source={{ html, baseUrl: 'about:blank' }}
               onMessage={handleMessage}
               onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+              onOpenWindow={handleOpenWindow}
               javaScriptEnabled
               originWhitelist={['*']}
               scrollEnabled

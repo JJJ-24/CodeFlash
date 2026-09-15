@@ -92,7 +92,7 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 
 ### Phase 2: 実行系（サンドボックス）
 - [x] `lib/code-execution/sandbox.ts`：`buildWebSandboxHtml(mode, body, htmlInits)` を新設
-  - [x] `<head>` に**ネットワーク遮断**（fetch/XHR/WebSocket/window.open）＋ **console キャプチャ** ＋ **完了判定機構**（保留タイマー追跡・マクロタスク境界での finish・現行 JS サンドボックス踏襲）＋ **`window.onerror`**（インライン script の未捕捉例外を error として拾う）を設置
+  - [x] `<head>` に**ネットワーク遮断**（fetch/XHR/WebSocket。window.open は 2026-09-15 に解除＝下記「window.open」）＋ **console キャプチャ** ＋ **完了判定機構**（保留タイマー追跡・マクロタスク境界での finish・現行 JS サンドボックス踏襲）＋ **`window.onerror`**（インライン script の未捕捉例外を error として拾う）を設置
   - [x] html は `<body>{deck土台}{本文}</body>`、js/ts は `<body>{deck土台}{ブロック土台}<script>{本文}</script></body>` を合成（ts は `useCodeExecution` 側で sucrase 済み・本文中の `</script>` は無害化）
   - [x] 完了判定は `DOMContentLoaded` 後に `_settled=true` → `scheduleFinishCheck`（後出しログ対応・全体 5 秒上限）
   - [x] `buildSandboxHtml` に web 系分岐を追加（html は常に／js・ts は土台がある時のみ）
@@ -194,7 +194,29 @@ SQL 共通初期化（018）の「加算型ハイブリッド」土台を HTML/C
 
 ### 両プレビューで等しく無意味なもの
 
-`:hover`/`:focus-visible`（指にホバーが無い）・**`title` 属性のツールチップ**（下記）・`<noscript>`（JS 常時有効）・`target="_blank"`（`window.open` 無効で別窓を開けない）・`<base target>`・`<video>`/`<audio>`（`allowsInlineMediaPlayback={false}` ＋要ユーザー操作 ＋ ソースが無い＝実質使えない）。
+`:hover`/`:focus-visible`（指にホバーが無い）・**`title` 属性のツールチップ**（下記）・`<noscript>`（JS 常時有効）・`<base target>`・`<video>`/`<audio>`（`allowsInlineMediaPlayback={false}` ＋要ユーザー操作 ＋ ソースが無い＝実質使えない）。`window.open`／`target="_blank"` は**別窓は作れない**が 041 では Safari へ渡す（下記）。
+
+#### `window.open` と `target="_blank"`（2026-09-15 解除）
+
+`window.open = undefined` は 009（コンソール実行）の遮断リストが web 系サンドボックスへそのまま引き継がれていたもので、web 系3つ（`buildWebSandboxHtml`・`buildStaticPreviewHtml`・`buildInteractiveWebSandboxHtml`）からは外した。**コンソール実行（`buildJsSandboxHtml`）だけは据え置き**＝隠し WebView には開く先が無く、開けば harness ごと遷移して固着するため。
+
+解除しても**ブラウザと同じにはならない**。WKWebView は「別窓」を持たず、`window.open()` は `WKUIDelegate` に新しい WebView を頼むだけで、react-native-webview は作らない：
+
+| 書き方 | ブラウザ | 本アプリ |
+|---|---|---|
+| ボタンの `onclick` で `window.open('https://…')` | 新しいタブ | **041 全画面：Safari で開く**（`onOpenWindow` → `Linking.openURL`。遷移はキャンセルされるのでサンドボックス文書は残る） |
+| `<a target="_blank" href="https://…">` のタップ | 新しいタブ | 同上（同じ `targetFrame == nil` の経路） |
+| 本文直書き・タイマー内の `window.open` | ポップアップブロック | **同じくブロック**（`javaScriptCanOpenWindowsAutomatically` が iOS 既定 false＝ユーザー操作の中からしか届かない。立てない＝▶ を押したら Safari に飛ばされるカードを作らせない） |
+| `const w = window.open(); w.document.write(…)`／`w.close()`／`w.postMessage()`／`window.opener` | 窓どうしの連携 | **不可**。戻り値は常に `null` なので `w.` で TypeError |
+| `window.open(url, '_blank', 'width=400,height=300')` | ポップアップの寸法 | 第3引数は無視 |
+| `window.open()`（引数なし＝`about:blank`）・`data:` | 空の窓 | Safari でも開けないので console に `code.openWindowUnsupported` を1行出す（WebKit は引数なしを**空 URL** で通知してくる＝実測。表示だけ `about:blank` に置き換える） |
+| `window.open('apple.com')`（スキーム無し） | 相対 URL として解決 | `about:blank` 基準では解決できず **SyntaxError**「The string did not match the expected pattern.」（`href="apple.com"` が無反応なのと同じ根） |
+| `const w = window.open(...); w.focus()` | 動く | `w` が `null` で TypeError。**未捕捉なら「Script error.」とだけ出る**（下記） |
+| 040 インライン枠 | — | `pointerEvents="none"` で操作できない＝ユーザー操作が起きず常に `null`（TypeError にはしない＝ブロックされたのと同じ見え方） |
+
+⚠️ **未捕捉例外の文言は「Script error.」に潰れる（既存の制約・2026-09-15 実測）**：`baseUrl='about:blank'`＝opaque origin の文書では、WebKit が `window.onerror` に渡す**未捕捉**例外の詳細（メッセージ・行番号・error オブジェクト）を同一オリジン扱いでないとして隠す（macOS の WKWebView でも `setTimeout(() => { throw new Error('boom') })` → `onerror` は `Script error.`／`error` は `null` を確認）。040 の `<script>` 直書き・041 の `addEventListener` 内・`onclick` 属性のいずれも同じ。**`try/catch` で受けて `console.error(e.message)` すれば全文出る**し、`setTimeout`/`setInterval` のコールバックはサンドボックスが try/catch で包んでいるので全文出る。`unhandledrejection` の `reason.message` も隠されない（実測）。`window.open` とは無関係で、**`w.focus()` のような null 参照が「Script error.」に見えたのはこれ**。
+
+⚠️ **`javaScriptCanOpenWindowsAutomatically` は立てない**（上表）。⚠️ **`onOpenWindow` で2枚目の `InteractivePreviewModal` を開く案は不採用**＝RN `Modal` の入れ子の罠に加え、開いた先と元の文書のあいだで `opener`/`postMessage` が繋がらないので「別窓」の教材にならず、Safari のほうが実物に近い。
 
 #### `title` 属性のツールチップは出ない（2026-08-08 追記）
 

@@ -376,6 +376,10 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           contentContainerStyle={styles.body}
           showsVerticalScrollIndicator={false}
         >
+        {/* 余白タップでバッジの選択を解除する。⚠️ Pressable は ScrollView の**内側**に置く
+            （祖先に置くと余白から始めたドラッグでスクロールが始まらない＝CLAUDE.md の配置ルール）。
+            選択が無いときは disabled にしてタッチを取らない。 */}
+        <Pressable disabled={selectedBadge === null} onPress={() => setSelectedBadge(null)}>
           {/* 見出し（左）＋表示モード切替（ソートトグルと同じ3アイコン・右）。ⓘ は下の小見出し側。 */}
           {stats && (
             <View style={styles.toggleRow}>
@@ -589,6 +593,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
             </View>
             );
           })}
+        </Pressable>
         </ScrollView>
       </Animated.View>
 

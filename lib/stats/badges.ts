@@ -7,6 +7,7 @@
 // 連続日数バッジは統計フィルターブロックの常設メダル（getStreakMedal）と同じアイコン・色を使う
 // ため STREAK_MEDALS を唯一の定義元とし、フィルターブロック側もこれを参照する。
 import type { LifetimeStats } from '@/lib/database/reviews';
+import { localDateDiffDays } from '@/lib/database/utils';
 
 export type BadgeKind = 'streak' | 'reviews' | 'time' | 'days';
 
@@ -173,4 +174,75 @@ export function badgeStage(s: LifetimeStats): number {
 /** 表示上の総バッジ数（段階開放）：stage 1=50 / 2=80 / 3=110。 */
 export function badgeTotal(stage: number): number {
   return BADGES.reduce((n, b) => n + (b.kind === 'streak' ? 1 : Math.min(stage, BADGE_MAX_LAP)), 0);
+}
+
+// ---- 獲得日（バッジをタップしたときの詳細行）----
+// 獲得日は**保存していない**。指標はすべて単調増加なので、日別の系列を先頭から積み上げて
+// 「初めて閾値を超えた日」を拾えば、過去の獲得もインポートしたデータも遡って出せる（保存が要らない）。
+// 周回（2周目・3周目）も同じ計算で別の日が出る。
+// ⚠️ 学習時間は grade_logs の responseTimeMs（024）から出すので、それより前の期間の獲得日は
+//    実際より後（記録が始まってから累計が閾値を超えた日）になる。
+
+/** バッジ id → 周回ごとの獲得日（index 0 = 1周目・未獲得の周回は含まない）。 */
+export type BadgeEarnedDates = Record<string, string[]>;
+
+/** そのバッジの周回 `lap`（1〜）の獲得閾値（累計値がこれ以上で獲得）。streak は 1周のみ。 */
+export function badgeThresholdForLap(b: BadgeDef, lap: number): number {
+  if (b.kind === 'streak') return b.threshold;
+  return (lap - 1) * LAP_SIZE[b.kind] + b.threshold;
+}
+
+/** そのバッジが見る指標の現在値（`badgeLevel` と同じ取り方）。 */
+export function badgeMetricValue(b: BadgeDef, s: LifetimeStats): number {
+  if (b.kind === 'streak') return s.longestStreak;
+  return b.kind === 'reviews' ? s.totalReviews : b.kind === 'time' ? s.totalTimeMs : s.totalDays;
+}
+
+/**
+ * 日別の系列（`LifetimeStats.dailyCounts` / `dailyTimeMs`）から全バッジ・全周回の獲得日を出す。
+ * 連続日数は「暦日が連続する run の長さが初めて閾値に達した日」（`getLifetimeStats` の
+ * longestStreak と同じ判定＝`localDateDiffDays === 1`）。
+ */
+export function badgeEarnedDates(
+  dailyCounts: { date: string; count: number }[],
+  dailyTimeMs: { date: string; timeMs: number }[],
+): BadgeEarnedDates {
+  const out: BadgeEarnedDates = {};
+  // 日付の和集合を昇順に（回数の無い日に時間だけ、は通常無いが、片方しか無い日も落とさない）
+  const countByDate = new Map(dailyCounts.map((r) => [r.date, r.count]));
+  const timeByDate = new Map(dailyTimeMs.map((r) => [r.date, r.timeMs]));
+  const dates = Array.from(new Set([...countByDate.keys(), ...timeByDate.keys()])).sort();
+
+  let reviews = 0;
+  let days = 0;
+  let time = 0;
+  let run = 0;
+  let longest = 0;
+  let prev: string | null = null;
+  // 「次に取るべき周回」をバッジごとに持ち、超えた瞬間に日付を記録して次の周回へ進める。
+  const nextLap: Record<string, number> = {};
+  for (const b of BADGES) nextLap[b.id] = 1;
+  const maxLapOf = (b: BadgeDef) => (b.kind === 'streak' ? 1 : BADGE_MAX_LAP);
+
+  for (const date of dates) {
+    const count = countByDate.get(date) ?? 0;
+    reviews += count;
+    time += timeByDate.get(date) ?? 0;
+    if (count > 0) {
+      days += 1;
+      if (prev !== null && localDateDiffDays(prev, date) === 1) run++;
+      else run = 1;
+      if (run > longest) longest = run;
+      prev = date;
+    }
+    for (const b of BADGES) {
+      const value = b.kind === 'streak' ? longest : b.kind === 'reviews' ? reviews : b.kind === 'time' ? time : days;
+      // 1日で複数の周回を跨ぐこともある（インポート直後など）ので while で進める
+      while (nextLap[b.id] <= maxLapOf(b) && value >= badgeThresholdForLap(b, nextLap[b.id])) {
+        (out[b.id] ??= []).push(date);
+        nextLap[b.id] += 1;
+      }
+    }
+  }
+  return out;
 }

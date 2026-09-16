@@ -40,3 +40,13 @@ export function monthLabel(locale: string, monthIndex: number): string {
   }
   return labels[monthIndex];
 }
+
+/** `YYYY-MM-DD`（ローカル日付の文字列）を「2025年3月1日」「Mar 1, 2025」の形にする（バッジの獲得日など）。
+ *  文字列を UTC の日付として作り `timeZone: 'UTC'` で整形する＝端末のタイムゾーンで1日ずれない。
+ *  壊れた文字列はそのまま返す（一覧を壊さない）。 */
+export function formatDateLabel(locale: string, dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return dateStr;
+  return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(y, m - 1, d)));
+}

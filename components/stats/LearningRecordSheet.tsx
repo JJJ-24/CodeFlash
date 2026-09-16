@@ -17,7 +17,8 @@ import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
-import { BADGES, BADGE_MAX_LAP, BADGE_SECTIONS, LAP_GOLD, LAP_SILVER, badgeLevel, badgeStage, badgeTotal, earnedBadgeCount } from '@/lib/stats/badges';
+import { formatDateLabel } from '@/lib/dateLabels';
+import { BADGES, BADGE_MAX_LAP, BADGE_SECTIONS, LAP_GOLD, LAP_SILVER, badgeEarnedDates, badgeLevel, badgeMetricValue, badgeStage, badgeThresholdForLap, badgeTotal, earnedBadgeCount, type BadgeDef } from '@/lib/stats/badges';
 
 interface Props {
   visible: boolean;
@@ -74,7 +75,7 @@ const GOAL_COLOR = '#43A047';
 
 export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const rs = useResponsiveSize();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const badgeLapStageSeen = useSettingsStore((s) => s.badgeLapStageSeen);
   const setBadgeLapStageSeen = useSettingsStore((s) => s.setBadgeLapStageSeen);
@@ -107,8 +108,20 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   // 周回の段階開放（分母 50→80→110）の案内。シートを閉じたら一緒に閉じる。
   const [showUnlockInfo, setShowUnlockInfo] = useState(false);
-  // 閉じたら上に載っていたモーダルを畳む（表示モードは永続化するのでここでは触らない）。
-  useEffect(() => { if (!visible) { setShowModeInfo(false); setShowShortcutsModal(false); setShowUnlockInfo(false); } }, [visible]);
+  // バッジの説明（ⓘ）。タップで獲得日が見られることはアイコンだけでは分からないのでここで伝える。
+  const [showBadgeInfo, setShowBadgeInfo] = useState(false);
+  // タップで選んだバッジ（id）。そのセクションのグリッド直下に獲得日／残りの詳細行を出す。
+  // 吹き出しではなく行の下への展開＝位置計算も端で切れる心配も無く、隣のバッジを覆わない
+  //（ⓘ のインライン展開と同じ流儀）。同じバッジをもう一度タップ・詳細行のタップで消える。
+  // ⚠️ Esc は親 stats がシートごと閉じる（選択は一時的な強調で、閉じる階層には数えない）。
+  const [selectedBadge, setSelectedBadge] = useState<string | null>(null);
+  // 閉じたら上に載っていたモーダルと選択を畳む（表示モードは永続化するのでここでは触らない）。
+  useEffect(() => { if (!visible) { setShowModeInfo(false); setShowShortcutsModal(false); setShowUnlockInfo(false); setShowBadgeInfo(false); setSelectedBadge(null); } }, [visible]);
+  // 獲得日は保存していない＝日別の系列から導出する（`badgeEarnedDates`）。stats が変わるまで使い回す。
+  const earnedDates = useMemo(
+    () => (stats ? badgeEarnedDates(stats.dailyCounts, stats.dailyTimeMs) : {}),
+    [stats],
+  );
 
   // 画面スクロール（U/D・PgUp/PgDn＝段階、⇧U/⇧D・Home/End＝最上部/最下部）用。
   const scrollRef = useRef<ScrollView>(null);
@@ -147,7 +160,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
     { input: KEY_END, handler: scrollToBottom },
     // ?（Shift+/）でショートカット一覧を開く。閉じるは一覧側の ? が担当（一覧表示中は下の gate で解除）。
     { input: '/', modifierFlags: KeyCommand.constants.keyModifierShift, handler: () => setShowShortcutsModal(true) },
-  ], visible && !showModeInfo && !showShortcutsModal && !showUnlockInfo);
+  ], visible && !showModeInfo && !showShortcutsModal && !showUnlockInfo && !showBadgeInfo);
 
   // 数値＋単位を片に分解する（単位は unit:true）。h があるときのみ h を出す（従来の 1h23m / 45m を踏襲）。
   function formatDuration(ms: number): ValueSegment[] {
@@ -163,6 +176,68 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
 
   // モード切替ボタンの非選択枠・未達成バッジの丸枠に使うテーマ追従の枠線色。
   const frameBorder = themedFrameBorder(theme);
+
+  /** バッジの指標の値を「320回」「2h 30m」「12日」の形にする（詳細行の「あと N」用） */
+  const formatBadgeValue = (b: BadgeDef, value: number): string => {
+    if (b.kind === 'time') return formatDuration(value).map((seg) => seg.text).join('');
+    // `count` は複数形の判定用・表示は桁区切りつきの `n`
+    return t(b.kind === 'reviews' ? 'stats.badgeValueReviews' : 'stats.badgeValueDays', { count: value, n: value.toLocaleString() });
+  };
+
+  /** バッジの名前（「連続 100日」「累計 1,000回」「学習時間 10時間」「累計 100日」）。 */
+  const badgeName = (b: BadgeDef): string => {
+    if (b.kind === 'time') {
+      const hours = Math.round(b.threshold / (60 * 60 * 1000));
+      return t('stats.badgeNameTime', { count: hours, n: hours.toLocaleString() });
+    }
+    const key = b.kind === 'streak' ? 'stats.badgeNameStreak' : b.kind === 'reviews' ? 'stats.badgeNameReviews' : 'stats.badgeNameDays';
+    return t(key, { count: b.threshold, n: b.threshold.toLocaleString() });
+  };
+
+  /**
+   * 選択中バッジの詳細行（そのセクションのグリッド直下）。
+   * 1行目＝名前、続けて周回ごとの獲得日、最後に「あと N」（次に取れる周回まで）。
+   * ⚠️ 「あと N」は**開放済みの周回まで**しか出さない（`stage`）＝1周目の人に「2周目まで
+   *    あと 9,900回」と出すと、分母の段階開放（50→80）で初めて明かす周回の概念が先に漏れる。
+   * ⚠️ 連続日数の「あと N」は最長ではなく**現在の連続**からの残り（続けないと取れないため）。
+   */
+  const renderBadgeDetail = (b: BadgeDef) => {
+    if (!stats) return null;
+    const level = badgeLevel(b, stats);
+    const dates = earnedDates[b.id] ?? [];
+    const lines: string[] = [];
+    for (let lap = 1; lap <= level; lap++) {
+      const date = dates[lap - 1];
+      const dateText = date ? t('stats.badgeDetailEarned', { date: formatDateLabel(i18n.language, date) }) : t('stats.badgeDetailDateUnknown');
+      lines.push(lap === 1 ? dateText : t('stats.badgeDetailLap', { lap, text: dateText }));
+    }
+    const maxLap = b.kind === 'streak' ? 1 : Math.min(stage, BADGE_MAX_LAP);
+    if (level < maxLap) {
+      const nextLap = level + 1;
+      const current = b.kind === 'streak' ? stats.currentStreak : badgeMetricValue(b, stats);
+      const remaining = Math.max(0, badgeThresholdForLap(b, nextLap) - current);
+      const remText = t('stats.badgeDetailRemaining', { value: formatBadgeValue(b, remaining) });
+      lines.push(nextLap === 1 ? remText : t('stats.badgeDetailLap', { lap: nextLap, text: remText }));
+    }
+    return (
+      <Pressable
+        // 枠線で囲む（背景色だけの箱だとシートの面と差が小さく、どこまでが詳細か読めない）。
+        // 枠色はモード切替ボタン・未獲得バッジの丸と同じテーマ追従の色。
+        style={[styles.badgeDetail, { backgroundColor: theme.colors.surface, borderColor: frameBorder }]}
+        onPress={() => setSelectedBadge(null)}
+        accessibilityLabel={badgeName(b)}
+      >
+        <Text style={[styles.badgeDetailTitle, { color: theme.colors.text, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {badgeName(b)}
+        </Text>
+        {lines.map((line, i) => (
+          <Text key={i} style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+            {line}
+          </Text>
+        ))}
+      </Pressable>
+    );
+  };
 
   const elapsed = stats ? elapsedDaysSince(stats.firstDate) : null;
   const earned = stats ? earnedBadgeCount(stats) : 0;
@@ -421,9 +496,15 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
 
           {/* バッジ */}
           <View style={styles.badgeHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {t('stats.badges')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t('stats.badges')}
+              </Text>
+              {/* ⓘ はアイコンだけで開く（アプリ全体の規約） */}
+              <Pressable onPress={() => setShowBadgeInfo(true)} hitSlop={8} accessibilityLabel={t('stats.badgeInfoLabel')}>
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
+              </Pressable>
+            </View>
             <Text style={[{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('stats.badgeEarnedCount', { earned, total })}
             </Text>
@@ -471,8 +552,14 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                         ? { borderColor: b.color, backgroundColor: b.color + '22' }
                         : { borderColor: frameBorder, backgroundColor: 'transparent' };
                   const labelHidden = isStreak && !got;
+                  const selected = selectedBadge === b.id;
                   return (
-                    <View key={b.id} style={[styles.badgeCell, IS_PAD && { width: 76 }]}>
+                    <Pressable
+                      key={b.id}
+                      style={[styles.badgeCell, IS_PAD && { width: 76 }, selected && { backgroundColor: theme.colors.primary + '1A' }]}
+                      onPress={() => setSelectedBadge((cur) => (cur === b.id ? null : b.id))}
+                      accessibilityLabel={badgeName(b)}
+                    >
                       <View style={[styles.badgeIconWrap, circleStyle, !got && { opacity: isStreak ? 1 : 0.6 }]}>
                         {showIcon ? (
                           b.iconSet === 'ionicons' ? (
@@ -490,10 +577,15 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
                       >
                         {labelHidden ? ' ' : b.short}
                       </Text>
-                    </View>
+                    </Pressable>
                   );
                 })}
               </View>
+              {/* 選択中のバッジがこのセクションにあれば、グリッドの直下に詳細行 */}
+              {selectedBadge !== null && (() => {
+                const sel = visibleBadges.find((b) => b.id === selectedBadge);
+                return sel ? renderBadgeDetail(sel) : null;
+              })()}
             </View>
             );
           })}
@@ -537,6 +629,14 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
         onClose={() => setShowModeInfo(false)}
       />
 
+      {/* バッジの説明（ⓘ）。タップで獲得日／次までの残りが見られることを伝える。 */}
+      <InfoModal
+        visible={showBadgeInfo}
+        title={t('stats.badges')}
+        message={t('stats.badgeInfoMessage')}
+        onClose={() => setShowBadgeInfo(false)}
+      />
+
       {/* 周回の段階開放の案内（分母 50→80→110 を初めて跨いだときに一度だけ） */}
       <InfoModal
         visible={showUnlockInfo}
@@ -578,12 +678,16 @@ const styles = StyleSheet.create({
   numberValue: { fontWeight: '700' },
   numberLabel: { textAlign: 'center' },
   elapsedLine: { marginTop: 10 },
-  badgeHeaderRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 20, marginBottom: 4 },
+  badgeHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 4 },
   sectionTitle: { fontWeight: '700' },
   badgeSection: { marginTop: 12 },
   badgeSectionLabel: { fontWeight: '600', marginBottom: 6 },
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  badgeCell: { alignItems: 'center', width: 52, gap: 3 },
+  // 選択中は薄いプライマリで塗る（丸の枠色は獲得状態で決まっているので、セル全体の背景で区別する）
+  badgeCell: { alignItems: 'center', width: 52, gap: 3, borderRadius: 10, paddingVertical: 4 },
+  // 選択中バッジの詳細行（ⓘ のインライン展開と同じ見せ方）
+  badgeDetail: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 8, gap: 2 },
+  badgeDetailTitle: { fontWeight: '700' },
   badgeIconWrap: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   badgeShort: { fontWeight: '600' },
 });

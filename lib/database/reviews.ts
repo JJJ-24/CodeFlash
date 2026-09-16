@@ -831,6 +831,10 @@ export interface LifetimeStats {
    *  ⚠️ 過去実績なので `activeCardCond` は掛けない（アーカイブしても実績は消さない規約）＝
    *  今日ぶんだけ学習画面の進捗（アーカイブ除外）と数枚ズレうる。 */
   dailyCounts: { date: string; count: number }[];
+  /** 日別の学習時間（ミリ秒・学習した日だけ・日付昇順・**クリップなし**＝`totalTimeMs` と同じ定義）。
+   *  バッジの獲得日（`badgeEarnedDates`）が「累計時間が閾値を超えた日」を求めるのに使う。
+   *  回答時間の記録（024）より前の日は行が無い＝その期間の獲得日は出せない。 */
+  dailyTimeMs: { date: string; timeMs: number }[];
 }
 
 /** 「1日の最高学習時間」を求めるときに、1回答あたりの時間を丸める上限（放置=AFK 対策）。5分。 */
@@ -908,6 +912,14 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
   const timeRow = await db.getFirstAsync<{ t: number | null }>(
     `SELECT SUM(responseTimeMs) AS t FROM grade_logs`
   );
+  // 日別の学習時間（クリップなし・ローカル日付）。バッジ獲得日の導出用＝合計は totalTimeMs と一致する。
+  const dailyTimeMs = await db.getAllAsync<{ date: string; timeMs: number }>(
+    `SELECT date(reviewedAt, 'localtime') AS date, SUM(responseTimeMs) AS timeMs
+     FROM grade_logs
+     WHERE responseTimeMs IS NOT NULL
+     GROUP BY date(reviewedAt, 'localtime')
+     ORDER BY date`
+  );
   // 1日の最高学習回数：日別 COUNT の最大値。
   const maxCntRow = await db.getFirstAsync<{ m: number | null }>(
     `SELECT MAX(c) AS m FROM (SELECT COUNT(*) AS c FROM review_logs GROUP BY reviewedDate)`
@@ -943,5 +955,6 @@ export async function getLifetimeStats(db: SQLiteDatabase): Promise<LifetimeStat
     maxMonthlyDays: maxMonthRow?.m ?? 0,
     firstDate: dates[0] ?? null,
     dailyCounts,
+    dailyTimeMs,
   };
 }

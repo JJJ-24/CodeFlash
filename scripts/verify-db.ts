@@ -730,7 +730,43 @@ async function main() {
     { date: '2026-02-02', count: 1 },
   ]);
   eq('totalDays は dailyCounts の行数と一致', life19.totalDays, life19.dailyCounts.length);
+  eq('dailyTimeMs は回答時間の記録が無ければ空', life19.dailyTimeMs, []);
   eq('目標2枚なら達成は 2/1 の1日だけ', computeGoalDayStats(life19.dailyCounts, 2).achievedDays, 1);
+
+  // ===========================================================================
+  console.log('\n[T19b] バッジの獲得日（日別の系列から導出・周回・時間だけの日・1日で複数周回）');
+  // ===========================================================================
+  const { badgeEarnedDates, badgeThresholdForLap, BADGES } = require('@/lib/stats/badges');
+  const rev100 = BADGES.find((b: { id: string }) => b.id === 'rev100');
+  const streak3 = BADGES.find((b: { id: string }) => b.id === 'streak3');
+  eq('周回2の閾値＝周回サイズ＋閾値', badgeThresholdForLap(rev100, 2), 10100);
+  eq('連続日数は周回を持たない', badgeThresholdForLap(streak3, 3), 3);
+
+  // 1/1〜1/12 は毎日 30 枚（連続 12 日）→ 1/13 は時間だけ（学習なし）→ 1/14 に 200 枚
+  const counts19 = Array.from({ length: 12 }, (_, i) => ({ date: `2026-01-${String(i + 1).padStart(2, '0')}`, count: 30 }));
+  counts19.push({ date: '2026-01-14', count: 200 });
+  const times19 = [
+    { date: '2026-01-01', timeMs: 30 * 60000 },
+    { date: '2026-01-02', timeMs: 40 * 60000 },   // 累計 70 分 ≧ 1h
+    { date: '2026-01-13', timeMs: 10 * 60000 },   // 学習枚数の無い日（回答時間だけ）
+  ];
+  const earned19 = badgeEarnedDates(counts19, times19);
+  eq('連続 3 日は 3 日目', earned19.streak3, ['2026-01-03']);
+  eq('連続 10 日は 10 日目', earned19.streak10, ['2026-01-10']);
+  eq('累計 10 日は 10 日目', earned19.days10, ['2026-01-10']);
+  eq('累計 100 回は 4 日目（30×4=120）', earned19.rev100, ['2026-01-04']);
+  eq('累計 300 回は 10 日目（30×10=300）', earned19.rev300, ['2026-01-10']);
+  eq('累計 500 回は 1/14（360+200）', earned19.rev500, ['2026-01-14']);
+  eq('学習時間 1h は累計が 60 分を超えた 1/2', earned19.time1h, ['2026-01-02']);
+  eq('時間だけの日は学習日に数えない（累計 30 日は未獲得）', earned19.days30, undefined);
+  eq('時間だけの日を挟むと連続は切れる（連続 30 は未獲得）', earned19.streak30, undefined);
+  eq('未獲得のバッジはキーが無い', earned19.rev1000, undefined);
+
+  // 1日で複数の周回を跨ぐ（インポート直後など）：25,000 回を一気に足すと rev100 の 2・3 周目が同じ日
+  const earned19b = badgeEarnedDates([...counts19, { date: '2026-02-01', count: 25000 }], times19);
+  eq('1周目の日付は変わらない', earned19b.rev100[0], '2026-01-04');
+  eq('2周目と3周目が同じ日に付く', earned19b.rev100.slice(1), ['2026-02-01', '2026-02-01']);
+  eq('周回は上限 3 で止まる', earned19b.rev100.length, 3);
 
   // ===========================================================================
   console.log('\n[T20] 検索の「学習した日」フィルター（1日単位・学習順・上限別建て）');

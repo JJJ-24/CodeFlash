@@ -1888,11 +1888,15 @@ export default function StatsScreen() {
           title={t('stats.activityHeatmap')}
           collapsed={isSectionCollapsed('heatmap')}
           onToggle={() => toggleStatsSection('heatmap')}
-          // 目標 ON のときだけ目標達成表示の説明を継ぎ足す（凡例は常時グリッドの下に出るので、
-          // ここは「現在の目標で過去も判定する」という読み方の注意が主）。
+          // 目標 ON のときは「表示モード → 学習量 → 目標達成 → 操作」の順の本文（見出し＋項目の型）。
+          // 目標 OFF は切替ボタン自体が無いので [表示モード] を出さず、見出しなしの短い形のまま
+          //（無い操作を案内しない＝ⓘ の規約）。[タップ] は両方に共通なので別キーで後ろに継ぎ足す。
           onInfo={() => setSectionInfoModal({
             title: t('stats.activityHeatmap'),
-            message: <InfoContent text={t('stats.activityHeatmapInfoMessage') + (studyGoalEnabled ? '\n\n' + t('stats.activityHeatmapGoalInfo', { count: studyGoalCount }) : '') + collapseHint} />,
+            message: <InfoContent text={
+              (studyGoalEnabled ? t('stats.activityHeatmapInfoMessageGoal', { count: studyGoalCount }) : t('stats.activityHeatmapInfoMessage'))
+              + '\n\n' + t('stats.activityHeatmapTapHint') + collapseHint
+            } />,
           })}
           infoLabel={t('stats.activityHeatmapInfoLabel')}
           // 046 Phase 7: 学習量／目標達成の切替。学習の記録シートの Σ/最高/平均と同じ「アイコン＋選択中は塗り」。

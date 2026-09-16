@@ -9,6 +9,7 @@ import { CollapsibleSectionTitle } from '@/components/CollapsibleSectionTitle';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { InfoContent } from '@/components/InfoContent';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { SPEECH_AUTO_LABEL_KEYS, SpeechAutoModal } from '@/components/settings/SpeechAutoModal';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import { SpeechVoiceModal } from '@/components/settings/SpeechVoiceModal';
 import { ValueSliderModal } from '@/components/settings/ValueSliderModal';
@@ -84,8 +85,14 @@ export default function StudySettingsScreen() {
     speechScriptLangs, setSpeechScriptLang,
     speechVoices, setSpeechVoice,
     speechNoMixedSwitch, setSpeechNoMixedSwitch,
+    speechAuto, setSpeechAuto,
     studyCollapsedSections, toggleStudySection,
   } = useSettingsStore();
+  // 052：自動読み上げの一覧モーダル（Pro）。
+  const [speechAutoModal, setSpeechAutoModal] = useState(false);
+  // 非 Pro は設定値が残っていても常に「オフ」＝適用側（session.tsx）の `isPro` ガードと同じ値を見せる
+  //（体験終了後に「オンに見えるのに効かない」を作らない）。
+  const effectiveSpeechAuto = isPro ? speechAuto : 'off';
   // 開いている言語ピッカー（null＝閉じている）。行は複数あるがモーダルは1つを使い回す。
   const [speechLangModal, setSpeechLangModal] = useState<SpeechScript | null>(null);
   // 「その他の文字体系」（キリル・アラビア・デーヴァナーガリー）の展開状態。
@@ -154,7 +161,7 @@ export default function StudySettingsScreen() {
   }
   // 各設定の情報 i アイコン。行ごとに独立して開閉する（同時に何個でも開ける）。
   // キー: general/cycles/break/ring/time/end/goal/goalReached/retention/speech/
-  //       speechNoMixed/speechScriptOthers
+  //       speechAuto/speechNoMixed/speechScriptOthers
   // ⚠️ 「1つだけ開く」方式に戻さないこと：別の行が閉じることで**タップした行が上へジャンプ**し、
   // 画面外の行のアイコンが勝手に outline へ戻る（見えないところで状態が変わる）。
   // iCloud同期（app/settings/sync.tsx）・データ管理（app/settings/data.tsx）とも同じ流儀。
@@ -448,9 +455,13 @@ export default function StudySettingsScreen() {
    *  設定で、行としても常に見えている2つ。他の文字体系は端末に選択肢が2つ以上あるときだけ行が
    *  出るので要約には入れない）。⚠️ **地域名は出さない**（`peers` に空配列を渡す）＝
    *  「英語（アメリカ）/ 日本語」は見出し下の1行には長すぎる。 */
-  const speechSummary = speechEnabled
-    ? `${speechLanguageLabel(langOf('latin'), t, [])} / ${speechLanguageLabel(langOf('han'), t, [])}`
-    : t('settings.sectionSummaryOff');
+  const speechLangsSummary = `${speechLanguageLabel(langOf('latin'), t, [])} / ${speechLanguageLabel(langOf('han'), t, [])}`;
+  const speechSummary = !speechEnabled
+    ? t('settings.sectionSummaryOff')
+    // 052：自動読み上げが効いているときだけ面を添える（オフなら従来どおり言語だけ）
+    : effectiveSpeechAuto !== 'off'
+      ? t('settings.speechSummaryWithAuto', { langs: speechLangsSummary, mode: t(SPEECH_AUTO_LABEL_KEYS[effectiveSpeechAuto]) })
+      : speechLangsSummary;
 
   /** 速度の試聴に使う言語。**いまこの設定で実際に読まれる言語**のうち、アプリの表示言語と
    *  一致するものを選ぶ（無ければラテン文字の言語）。速さの判断は何語でもできるが、
@@ -616,6 +627,33 @@ export default function StudySettingsScreen() {
 
         {speechEnabled && (
           <>
+            {/* 052：自動読み上げ（Pro）。行タップで4択（オフ／表面／裏面／両面）の一覧を開く。
+                非 Pro は鍵アイコン＋値は常に「オフ」＋タップで paywall（デッキ編集の読み上げ行と同じ形）。
+                ⚠️ 値の表示は `effectiveSpeechAuto`＝適用側と同じ判定を使う（保存値をそのまま出すと、
+                体験終了後に「両面」と出ているのに読まれない＝オンに見えるのに効いていない状態になる）。 */}
+            <Pressable
+              style={styles.dataRow}
+              onPress={() => { if (isPro) setSpeechAutoModal(true); else router.push('/paywall'); }}
+            >
+              {/* ⚠️ ⓘ の Pressable は**アイコンだけ**に留める（「その他の文字体系」の行と同じ形）＝ラベルは
+                  行の一部なのでタップで一覧が開く。「声を分けない」のようにラベルまで ⓘ に含めるのは、
+                  行の残りがスイッチで、ラベルのタップに他の役目が無い行だけ。 */}
+              <View style={[styles.dataRowText, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                <Text style={[styles.dataRowTitle, { flexShrink: 1, color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {t('settings.speechAuto')}
+                </Text>
+                <Pressable onPress={() => toggleInfo('speechAuto')} hitSlop={8}>
+                  {infoIcon('speechAuto')}
+                </Pressable>
+              </View>
+              <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {t(SPEECH_AUTO_LABEL_KEYS[effectiveSpeechAuto])}
+              </Text>
+              {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+            </Pressable>
+            {infoBox('speechAuto', 'settings.speechAutoHint')}
+
             {/* 速度＝3択のプリセット＋値の行（FSRS の保持率と同じ形）。タップで決まる3つで
                 足りる人はそれだけ、詰めたい人は値の行から 0.05 刻みのスライダーを開く。
                 ⚠️ **▶ の試聴はここでは省略できない**＝保持率の「90%」と違って速度は
@@ -696,6 +734,16 @@ export default function StudySettingsScreen() {
       </View>
   );
 
+  // 052：自動読み上げの一覧（アプリ設定側なので「アプリ設定に従う」の行は出さない）
+  const speechAutoModalEl = (
+    <SpeechAutoModal
+      visible={speechAutoModal}
+      value={speechAuto}
+      onSelect={(mode) => { if (mode) setSpeechAuto(mode); }}
+      onClose={() => setSpeechAutoModal(false)}
+    />
+  );
+
   const speechVoiceModalEl = (
     <SpeechVoiceModal
       visible={speechVoiceModal !== null}
@@ -742,7 +790,7 @@ export default function StudySettingsScreen() {
         title={t('settings.studySettings')}
         // 読み上げの言語/声のモーダルは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
         // （両方が登録すると Esc でモーダルが閉じると同時に画面まで戻る）
-        suspendKeys={speechLangModal !== null || speechVoiceModal !== null || sliderModal !== null}
+        suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
         // 非 Pro でも目標枚数・読み上げ（ともに無料）の i アイコンが開けるので、
         // Pro 側と同じく「開いている説明があれば先に閉じる」を渡す
         onBack={(direct) => {
@@ -778,6 +826,7 @@ export default function StudySettingsScreen() {
         {goalConflictModal}
         {speechLangModalEl}
         {speechVoiceModalEl}
+        {speechAutoModalEl}
         {sliderModalEl}
       </SettingsDetail>
     );
@@ -787,7 +836,7 @@ export default function StudySettingsScreen() {
     <SettingsDetail
       title={t('settings.studySettings')}
       // 上（非 Pro 分岐）と同じ理由でモーダル表示中はキーを手放す
-      suspendKeys={speechLangModal !== null || speechVoiceModal !== null || sliderModal !== null}
+      suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
       onBack={(direct) => {
         if (!direct && goalConflict) { dismissGoalConflict(); return; }
         if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
@@ -1028,6 +1077,7 @@ export default function StudySettingsScreen() {
       {goalConflictModal}
       {speechLangModalEl}
       {speechVoiceModalEl}
+      {speechAutoModalEl}
       {sliderModalEl}
     </SettingsDetail>
   );

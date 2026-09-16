@@ -41,7 +41,7 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { useStudyTimer } from "@/hooks/useStudyTimer";
 import { blocksToSpeech } from "@/lib/blocksToSpeech";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
-import { scriptLangsForSide } from "@/lib/speech";
+import { autoSpeaksSide, scriptLangsForSide, type SpeechAutoMode } from "@/lib/speech";
 import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { useLockedHeaderHeights } from "@/lib/useLockedTopInset";
 import { useStudySession } from "@/hooks/useStudySession";
@@ -241,6 +241,7 @@ export default function StudySessionScreen() {
     studyGoalCount,
     studyGoalReachedBehavior,
     speechEnabled,
+    speechAuto,
   } = useSettingsStore();
   const { isPro } = useProStore();
   const { width: screenWidth } = useWindowDimensions();
@@ -304,8 +305,9 @@ export default function StudySessionScreen() {
   const [bottomBarHeight, setBottomBarHeight] = useState(0);
   // **止め忘れ防止**：カード送り・表裏反転・メモ開閉のたびに個別へ stop() を書くと必ず漏れるので、
   // 「いま読んでいる対象を決める値」が変わったら止める、という1箇所に集約する。
+  // ⚠️ その effect は休憩の開始（`onBreak`・052）も見るため、`onBreak` の定義の後＝下の
+  //    「自動読み上げ」の節に置いてある（この節ではない）。
   const stopSpeaking = speech.stop;
-  useEffect(() => { stopSpeaking(); }, [currentCard?.id, isFlipped, showMemo, stopSpeaking]);
   // 画面を離れるとき（カード編集モーダルへ push した場合を含む）も止める。
   useFocusEffect(useCallback(() => () => stopSpeaking(), [stopSpeaking]));
 
@@ -592,6 +594,41 @@ export default function StudySessionScreen() {
   // タイマー長押しメニュー（スキップ/終了）・Q/B/Esc キーは生かす。
   const onBreak = timer.mode === "break" && timer.phase === "running";
   swipe.panGesture.enabled(isScreenFocused && !onBreak);
+
+  // ---- 自動読み上げ（052・Pro）------------------------------------------
+  // カードの表示・表裏の反転のたびに、設定された面を自動で読む。
+  // ⚠️ **`isPro` はここで入れる**（051 のデッキ別言語は「適用は通す」だが、自動読み上げは**それ自体が
+  //    Pro 機能**なので、同期・インポートで受け取ったデッキの値を非 Pro に適用すると漏れる＝
+  //    HTML 土台の「非 Pro には積まない」・学習タイマーの `isPro && studyTimerEnabled` と同じ構造）。
+  // ⚠️ 自動で読むのは**面の本文だけ**（メモは含めない）＝メモを開くたびに裏面が読み直されないように。
+  //    手動のボタンは従来どおり裏面＋メモを読む。
+  // ⚠️ 休憩中は読まない（カードはオーバーレイの下に隠れている）。
+  //
+  // 「表示が変わったら止める」effect（049）はここに置く＝依存に休憩の開始（`onBreak`）を足すため。
+  // 休憩中はカードが隠れ、読み上げ FAB（zIndex がオーバーレイより下）も S キー（Q/B 以外を弾く）も
+  // 効かない＝**読んでいる途中で休憩に入ると止める手段が画面から無くなる**ので、開始の瞬間に止める。
+  // ⚠️ 休憩が明けても読み直さない（カードは変わっていない＝表示・反転のどちらでもない。休憩前に
+  //    読み終えていた人には二度読みになる。途中で切られた人はスピーカーボタンで読み直せる）。
+  //    `onBreak` が false へ戻るときもこの effect は走るが、鳴っていないので stop() は無害。
+  useEffect(() => { stopSpeaking(); }, [currentCard?.id, isFlipped, showMemo, onBreak, stopSpeaking]);
+  const autoMode: SpeechAutoMode = isPro ? speechAuto : "off";
+  const autoText = currentCard
+    ? blocksToSpeech(isFlipped ? currentCard.backContent : currentCard.frontContent)
+    : "";
+  const autoSpeakNow =
+    canSpeak && !onBreak && autoText.trim() !== "" && autoSpeaksSide(autoMode, isFlipped);
+  // 読む内容は ref で最新値を参照し、effect の依存には入れない（入れると設定変更・声の一覧取得
+  // （`knownVoiceIds`）・速度変更のたびに同じカードを読み直す）。
+  const autoSpeakRef = useRef({ autoSpeakNow, autoText, speak: speech.speak });
+  autoSpeakRef.current = { autoSpeakNow, autoText, speak: speech.speak };
+  // ⚠️ 依存は「上の stop effect と同じ値のうち、面が変わるもの」だけ（`showMemo`・`onBreak` は含めない）。
+  //    stop effect（直前に宣言）→ この effect の順で同じコミットに走るので
+  //    「止める → 自動なら読む」になり、メモの開閉・休憩の開始/終了では止める側だけが走る。
+  //    経路ごと（`,`/`.`・スワイプ・FAB・評価）に speak() を書かない（049 の止め忘れと同じ罠）。
+  useEffect(() => {
+    const { autoSpeakNow: now, autoText: text, speak } = autoSpeakRef.current;
+    if (now) speak(text);
+  }, [currentCard?.id, isFlipped]);
   // 円が非表示（ring=start/off）でもマウントはする（開始時の表示→フェードアウトと終了通知は
   // コンポーネント側の ringMode が担当）。カード内上部の余白は円非表示でも確保する
   // （フェードアウト後もゴースト円が常時タップ対象として残るため、1行目右側のボタン類と競合させない）。

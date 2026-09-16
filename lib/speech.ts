@@ -336,6 +336,31 @@ export function scriptLangsForSide(
   return back && Object.keys(back).length > 0 ? back : front;
 }
 
+// ---------------------------------------------------------------------------
+// 052：自動読み上げ（Pro）
+// ---------------------------------------------------------------------------
+
+/**
+ * 052：自動読み上げの面。カードの表示・表裏の反転のたびに、その面を自動で読む。
+ * 4択なのは「表面だけ」「裏面だけ」がどちらも本命の使い方だから＝EN→JA デッキ（表が英単語）は
+ * 表面だけ聞きたく、JA→EN デッキ（裏が英単語）は答えの裏面だけ聞きたい。
+ * ⚠️ 並び順は UI の一覧の順（`SPEECH_AUTO_MODES`）。
+ */
+export type SpeechAutoMode = 'off' | 'front' | 'back' | 'both';
+export const SPEECH_AUTO_MODES: readonly SpeechAutoMode[] = ['off', 'front', 'back', 'both'];
+
+/** 保存値・DB 値の妥当性検査（知らない値は `undefined`＝既定へ落とす）。 */
+export function parseSpeechAutoMode(raw: unknown): SpeechAutoMode | undefined {
+  return typeof raw === 'string' && (SPEECH_AUTO_MODES as readonly string[]).includes(raw)
+    ? (raw as SpeechAutoMode)
+    : undefined;
+}
+
+/** その面を自動で読むか。`isBack` は学習画面の `isFlipped` そのもの（メモは裏面に含めない）。 */
+export function autoSpeaksSide(mode: SpeechAutoMode, isBack: boolean): boolean {
+  return mode === 'both' || mode === (isBack ? 'back' : 'front');
+}
+
 /**
  * 上書きマップが同じ内容か。**キーの並び順に依存しない**（`JSON.stringify` で比べると
  * `{han,latin}` と `{latin,han}` が別物になり、デッキ編集の「変更あり」判定が誤爆する）。

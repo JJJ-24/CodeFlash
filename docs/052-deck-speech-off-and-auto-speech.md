@@ -1,7 +1,7 @@
 # 052 デッキごとの読み上げ OFF ＋ 自動読み上げ（アプリ設定／デッキ上書き）
 
 **フェーズ:** 将来
-**ステータス:** Phase 1 実装済み（2026-09-16・実機確認待ち）／Phase 2・3 未着手（設計合意 2026-09-16）
+**ステータス:** Phase 1 完了（`aa3e507`・2026-09-16・実機確認済み）／Phase 2 完了（2026-09-16・実機確認済み）／Phase 3 未着手（設計合意 2026-09-16）
 **要ネイティブ再ビルド:** 不要（`expo-speech` は導入済み・DB 列の追加と設定キーの追加のみ）
 **依存:** 049（読み上げ本体・Phase 2 が本チケットへ移った）・050（デッキ単位の上書き＝`DeckSpeechModal`）・051（デッキ設定の Pro 化）
 **被依存:** なし
@@ -39,7 +39,7 @@
 | 言語行の要約 | **常に言語名だけ**（1件「中国語」／2件「英語 / 中国語」／表裏「表 英語・中国語／裏 スペイン語」）＝学習設定の要約と同じ形。かつては「ラテン文字：英語」「2件を上書き」「言語名だけ」の3通りが混在していた（052 で同時に直した・`speechLangsOne`/`speechLangsSet` は削除） |
 | ② 自動読み上げの面 | **4択**＝オフ／表面／裏面／両面（`SpeechAutoMode = 'off' \| 'front' \| 'back' \| 'both'`）。3択セグメントには収まらないので**行タップ → 一覧モーダル** |
 | ② の保存 | `useSettingsStore.speechAuto`（既定 `'off'`・AsyncStorage・`lib/settings-keys.ts` にも追加） |
-| ② の発火 | **カードの表示と表裏の反転**のたび。**メモの開閉では発火しない**（自動で読むのは面の本文だけ）。閲覧モードでも読む |
+| ② の発火 | **カードの表示と表裏の反転**のたび。**メモの開閉では発火しない**（自動で読むのは面の本文だけ）。閲覧モードでも読む。**休憩中は読み始めず、読んでいる途中で休憩に入ったら止める**（休憩中は FAB も S キーも効かず止める手段が無いため。休憩明けに読み直しはしない＝カードは変わっていない） |
 | ③ デッキ上書き | `decks.speechAuto`（TEXT・NULL＝アプリ設定に従う／`off`/`front`/`back`/`both`）。`DeckSpeechModal` の先頭行。ピッカー先頭「アプリ設定に従う」が唯一の解除手段（050 の流儀） |
 | Pro ゲート | ①無料 ／ ②③ **Pro**。⚠️ **051 と違い、適用側（`session.tsx`）にも `isPro` を入れる**（下記「Pro ゲートの深さ」） |
 | 声・速度・言語 | 変更なし（無料のまま）。自動読み上げは手動と**同じ経路**（`useSpeech.speak`）で読む＝読み方は不変 |
@@ -266,19 +266,20 @@ OFF は**モード**であって設定の有無ではない（051 の裏面ト�
 - [x] ショートカット一覧に `⇧R`
 - [x] `ja.json`／`en.json`／`es.json` ＋ `npm run verify:i18n`
 - [x] `verify:db` に T18c（列追加・既定 0・往復・渡さない更新で変わらない・boolean 正規化・12 アサーション＝合計 200）
-- [ ] 実機：OFF のデッキで FAB と `S` が消える／タグ学習で OFF デッキのカードだけ消える／ON に戻すと復活する
+- [x] 実機：OFF のデッキで FAB と `S` が消える／タグ学習で OFF デッキのカードだけ消える／ON に戻すと復活する
 
 ### Phase 2（自動読み上げ・アプリ設定・Pro）
 
-- [ ] `lib/speech.ts` に `SpeechAutoMode` と「この面で自動か」の判定ヘルパ
-- [ ] `store/settings.ts` の DEFS に `speechAuto`（既定 `'off'`）＋ setter、**`lib/settings-keys.ts` に追加**
-- [ ] 一覧モーダル（`SpeechAutoModal`・中央ダイアログの規約・`allowInherit`）
-- [ ] `app/settings/study.tsx`：行＋モーダル・非 Pro は鍵＋「オフ」＋paywall・`suspendKeys`・要約と ⓘ の1文
-- [ ] `app/study/session.tsx`：読む effect（`[currentCard?.id, isFlipped]`・ref 参照・**`isPro`**・メモ除外）
-- [ ] paywall：`pro.featureDeckSpeech` を「自動読み上げ・デッキごとの読み上げ言語」に改稿（3言語）
-- [ ] 実機：表面／裏面／両面で発火する面が合う・メモ開閉で読み直さない・評価連打で被らない・編集から戻って読み直さない・閲覧モードでも読む
-- [ ] 実機：**非 Pro では設定値が残っていても読まない**（体験終了後の確認）
-- [ ] 実機：反転アニメーションとの間合い（300ms 遅延の要否）
+- [x] `lib/speech.ts` に `SpeechAutoMode` と「この面で自動か」の判定ヘルパ（`autoSpeaksSide`・`parseSpeechAutoMode`・`verify:speech` に 13 アサーション＝合計 172）
+- [x] `store/settings.ts` の DEFS に `speechAuto`（既定 `'off'`）＋ setter、**`lib/settings-keys.ts` に追加**
+- [x] 一覧モーダル（`SpeechAutoModal`・中央ダイアログの規約・`allowInherit`）
+- [x] `app/settings/study.tsx`：行＋モーダル・非 Pro は鍵＋「オフ」＋paywall・`suspendKeys`・要約と ⓘ の1文
+- [x] `app/study/session.tsx`：読む effect（`[currentCard?.id, isFlipped]`・ref 参照・**`isPro`**・メモ除外・休憩中は読まない）。**049 の stop effect も `onBreak` の定義の後へ移し、依存に `onBreak` を足す**（読んでいる途中で休憩に入ったら止める。実機で発覚＝当初は「読み始めない」だけだった）
+- [x] paywall：`pro.featureDeckSpeech` を「自動読み上げ・デッキごとの読み上げ言語」に改稿（3言語）
+- [x] 実機：表面／裏面／両面で発火する面が合う・メモ開閉で読み直さない・評価連打で被らない・編集から戻って読み直さない・閲覧モードでも読む
+- [x] 実機：読んでいる途中で休憩に入ったら止まる（休憩明けに読み直さない）
+- [x] 実機：**非 Pro では設定値が残っていても読まない**（体験終了後の確認）
+- [x] 実機：反転アニメーションとの間合い（遅延なしで OK）
 
 ### Phase 3（自動読み上げ・デッキ上書き・Pro）
 

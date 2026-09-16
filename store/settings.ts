@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import type { GradeRankingSortBy } from '@/lib/database/reviews';
 import i18n, { resolveSystemLanguage, SUPPORTED_LANGUAGE_CODES, type SupportedLanguage } from '@/lib/i18n';
 import { cancelBreakEndNotification } from '@/lib/notifications';
-import { clampSpeechRate, scriptForLanguage, SPEECH_RATE_DEFAULT, type ScriptLangs, type SpeechScript, type VoiceByLang } from '@/lib/speech';
+import { clampSpeechRate, parseSpeechAutoMode, scriptForLanguage, SPEECH_RATE_DEFAULT, type ScriptLangs, type SpeechAutoMode, type SpeechScript, type VoiceByLang } from '@/lib/speech';
 import { CARD_THEME_NAMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useStudyTimerStore } from '@/store/studyTimer';
 
@@ -250,6 +250,12 @@ interface SettingsValues {
    * 「英語の技術用語の発音を聞く」という本命の使い道が失われるため。
    */
   speechNoMixedSwitch: boolean;
+  /**
+   * 052：自動読み上げ（Pro）。カードの表示・表裏の反転のたびに、その面を自動で読む。
+   * ⚠️ **適用側（学習画面）が `isPro` で止める**＝非 Pro は設定値が残っていても常に 'off' 扱い
+   * （体験終了後に「オンに見えるのに効かない」を作らないため、設定画面の表示も同じ値にする）。
+   */
+  speechAuto: SpeechAutoMode;
   // 学習の記録バッジ：周回の段階開放（分母 50→80→110）の既読段階。案内メッセージを一度だけ出すために保存
   badgeLapStageSeen: number;
 }
@@ -471,6 +477,8 @@ const DEFS: { [K in keyof SettingsValues]: SettingDef<SettingsValues[K]> } = {
     },
   },
   speechNoMixedSwitch: { key: '@codeflash_speech_no_mixed_switch', default: false, parse: asBool },
+  // 052: 自動読み上げの面（off/front/back/both）。知らない値は既定（off）へ
+  speechAuto: { key: '@codeflash_speech_auto', default: 'off', parse: parseSpeechAutoMode },
   speechVoices: {
     key: SPEECH_VOICES_KEY,
     default: {},
@@ -543,6 +551,7 @@ interface SettingsState extends SettingsValues {
   /** 文字体系1つぶんの言語を上書きする（他の文字体系はそのまま） */
   setSpeechScriptLang: (script: SpeechScript, lang: string) => void;
   setSpeechNoMixedSwitch: (v: boolean) => void;
+  setSpeechAuto: (v: SpeechAutoMode) => void;
   /** 言語1つぶんの声を選ぶ。`null` で「自動」（端末の既定に任せる）へ戻す */
   setSpeechVoice: (language: string, identifier: string | null) => void;
   setBadgeLapStageSeen: (v: number) => void;
@@ -633,6 +642,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
       });
     },
     setSpeechNoMixedSwitch: makeSetter('speechNoMixedSwitch'),
+    setSpeechAuto: makeSetter('speechAuto'),
     // 「自動」（null）は言語ごと消す＝声を選び直せる状態に戻す。
     setSpeechVoice: (language, identifier) => {
       set((state) => {

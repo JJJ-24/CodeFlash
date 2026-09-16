@@ -53,6 +53,7 @@ const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS, speechLanguag
 const { filterKnownVoices, voiceSampleText, isExcludedVoice } = speech;
 const { mergeScriptLangs, parseScriptLangs, scriptLangsEqual } = speech;
 const { splitSentencesForPause } = speech;
+const { parseSpeechAutoMode, autoSpeaksSide, SPEECH_AUTO_MODES } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { blocksToSpeech, stripMarkdown } = require('@/lib/blocksToSpeech');
 
@@ -457,6 +458,23 @@ eq(blocksToSpeech([
 eq(blocksToSpeech([
   { type: 'image', uri: 'local://images/a.png', alt: '' },
 ]), '', 'alt が無い画像は何も足さない');
+
+// ---- 052：自動読み上げの面 ----------------------------------------------------
+// 4択（off/front/back/both）。「表面だけ」「裏面だけ」がどちらも本命（EN→JA は表・JA→EN は裏）。
+
+eq(SPEECH_AUTO_MODES.join(','), 'off,front,back,both', '一覧の順は off/front/back/both');
+eq(parseSpeechAutoMode('both'), 'both', '正しい値はそのまま');
+eq(parseSpeechAutoMode('memo'), undefined, '知らない値は undefined（既定へ落とす）');
+eq(parseSpeechAutoMode(null), undefined, 'null も undefined');
+eq(parseSpeechAutoMode(''), undefined, '空文字も undefined');
+eq(autoSpeaksSide('off', false), false, 'off は表面を読まない');
+eq(autoSpeaksSide('off', true), false, 'off は裏面を読まない');
+eq(autoSpeaksSide('front', false), true, 'front は表面を読む');
+eq(autoSpeaksSide('front', true), false, 'front は裏面を読まない');
+eq(autoSpeaksSide('back', false), false, 'back は表面を読まない');
+eq(autoSpeaksSide('back', true), true, 'back は裏面を読む');
+eq(autoSpeaksSide('both', false), true, 'both は表面を読む');
+eq(autoSpeaksSide('both', true), true, 'both は裏面を読む');
 
 // ---- 結果 --------------------------------------------------------------------
 

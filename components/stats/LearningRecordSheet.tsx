@@ -14,6 +14,7 @@ import { KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from '@
 import { useSettingsStore, type RecordSheetMode } from '@/store/settings';
 import { MAX_FONT_MULTIPLIER, FILTER_COLORS, themedFrameBorder, type AppTheme } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
+import { InfoContent } from '@/components/InfoContent';
 import { InfoModal } from '@/components/InfoModal';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
@@ -602,13 +603,39 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           いま見ていないものの説明が混ざる）。 */}
       <InfoModal
         visible={showModeInfo}
-        title={activeModeLabel}
+        // タイトルはセクション名（本文が [表示モード]＋[いまのモード] の2見出しになったので、
+        // モード名をタイトルにすると同じ語が見出しと二重に出る。学習履歴の ⓘ と同じ「タイトル＝セクション名」）
+        title={t('stats.recordSummaryTitle')}
         message={
           <View>
+            {/* [表示モード]：右上の3つのアイコンが何かを、実物と同じアイコンで並べる（学習履歴の ⓘ と同じ型）。
+                InfoContent の見出し／項目と同じ見た目を JSX で再現する（アイコンが MaterialCommunityIcons で
+                ICON_TOKENS〈Ionicons〉に載らないため、この本文だけ自前で組んでいる）。 */}
+            <Text
+              style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '700', marginBottom: 2 }}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
+              {t('stats.viewModeHeading')}
+            </Text>
+            {RECORD_MODES.map(({ key, icon, labelKey }) => (
+              <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 14, minHeight: 24 }}>
+                <MaterialCommunityIcons name={icon} size={theme.fontSize.md} color={theme.colors.primary} />
+                <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 24 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                  {t(labelKey)}
+                </Text>
+              </View>
+            ))}
+            {/* 以下＝いま選んでいるモードの4ブロックの説明（見出しはモード名） */}
+            <Text
+              style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '700', marginTop: 8, marginBottom: 2 }}
+              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+            >
+              {t('stats.infoHeading', { text: activeModeLabel })}
+            </Text>
             {modeInfoRows.map(({ label, descKey }) => (
               <Text
                 key={descKey}
-                style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 24 }}
+                style={{ color: theme.colors.text, fontSize: theme.fontSize.md, lineHeight: 24, paddingLeft: 14 }}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
                 {/* ラベルと説明のつなぎ（「：」/「: 」）は言語で変わるので翻訳キーに置く */}
@@ -638,7 +665,8 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
       <InfoModal
         visible={showBadgeInfo}
         title={t('stats.badges')}
-        message={t('stats.badgeInfoMessage')}
+        // ⚠️ 記法（[見出し]・>）を解釈させるため InfoContent に通す（素の文字列だと記号がそのまま出る）
+        message={<InfoContent text={t('stats.badgeInfoMessage')} />}
         onClose={() => setShowBadgeInfo(false)}
       />
 

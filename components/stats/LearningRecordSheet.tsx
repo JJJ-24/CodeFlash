@@ -334,9 +334,10 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
           )}
           {/* 小見出し＝**いまのモード名**（合計／最高・最長／平均・比率）。トグルはアイコンだけなので、
               何を見ているのかを言葉で示すのはこの行だけ（ラベルを短くしたぶんの受け皿でもある）。
-              ⓘ はこのモードの4ブロックの説明を出す＝表示中のものだけを説明するので読む量が少ない。 */}
+              ⓘ はこのモードの4ブロックの説明を出す＝表示中のものだけを説明するので読む量が少ない。
+              ⓘ はアイコンだけで開く（ラベルのタップには何も持たせない＝アプリ全体の規約。CLAUDE.md の UI パターン）。 */}
           {stats && (
-            <Pressable style={styles.modeHeadingRow} onPress={() => setShowModeInfo(true)} hitSlop={6}>
+            <View style={styles.modeHeadingRow}>
               <Text
                 style={[styles.modeHeading, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
                 numberOfLines={1}
@@ -344,8 +345,10 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
               >
                 {activeModeLabel}
               </Text>
-              <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
-            </Pressable>
+              <Pressable onPress={() => setShowModeInfo(true)} hitSlop={8}>
+                <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
+              </Pressable>
+            </View>
           )}
 
           {/* 上部の数値ブロック：左列（最長連続・大＋目標達成）／右列（3つ縦積み） */}

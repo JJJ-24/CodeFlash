@@ -393,12 +393,12 @@ export default function StudySettingsScreen() {
                 **「なし」でも学習画面の残り枚数バッジは出る**ので、オンに見えて何も無い
                 状態にはならない（説明文にもその1行を入れてある）。 */}
             <View style={{ gap: 6, paddingTop: 6 }}>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('goalReached')} hitSlop={6}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyGoalReachedBehavior')}
                 </Text>
-                {infoIcon('goalReached')}
-              </Pressable>
+                <Pressable onPress={() => toggleInfo('goalReached')} hitSlop={8}>{infoIcon('goalReached')}</Pressable>
+              </View>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {(['alert', 'pill', 'none'] as StudyGoalReachedBehavior[]).map((behavior) => {
                   const active = behavior === studyGoalReachedBehavior;
@@ -538,20 +538,16 @@ export default function StudySettingsScreen() {
       {script === 'latin' && (
         <>
           <View style={[styles.notificationRow, { paddingLeft: 16 }]}>
-            {/* ⚠️ ⓘ の Pressable は**ラベルまで**に留める（スイッチに重ねるとトグルの誤操作になる）。 */}
-            <Pressable
-              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}
-              onPress={() => toggleInfo('speechNoMixed')}
-              hitSlop={6}
-            >
+            {/* ⓘ はアイコンだけで開く（ラベルのタップには何も持たせない＝アプリ全体の規約。CLAUDE.md の UI パターン） */}
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text
                 style={[styles.dataRowTitle, { flexShrink: 1, color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {t('settings.speechNoMixedSwitch')}
               </Text>
-              {infoIcon('speechNoMixed')}
-            </Pressable>
+              <Pressable onPress={() => toggleInfo('speechNoMixed')} hitSlop={8}>{infoIcon('speechNoMixed')}</Pressable>
+            </View>
             <AppSwitch
               value={speechNoMixedSwitch}
               onValueChange={setSpeechNoMixedSwitch}
@@ -885,16 +881,12 @@ export default function StudySettingsScreen() {
         {/* 目標保持率 */}
         <View style={{ gap: 6 }}>
           {sliderRow('retention', (
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
-              onPress={() => toggleInfo('retention')}
-              hitSlop={6}
-            >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
               <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.fsrsRetention')}
               </Text>
-              {infoIcon('retention')}
-            </Pressable>
+              <Pressable onPress={() => toggleInfo('retention')} hitSlop={8}>{infoIcon('retention')}</Pressable>
+            </View>
           ), `${Math.round(fsrsDesiredRetention * 100)}%`)}
           {infoBox('retention', 'settings.fsrsRetentionInfo')}
         </View>
@@ -942,12 +934,12 @@ export default function StudySettingsScreen() {
             {/* 繰り返し回数（039 ポモドーロ・1〜12回。1回＝従来の単発タイマー） */}
             <View style={{ gap: 6 }}>
               {sliderRow('cycles', (
-                <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }} onPress={() => toggleInfo('cycles')} hitSlop={6}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
                   <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('settings.studyTimerCycles')}
                   </Text>
-                  {infoIcon('cycles')}
-                </Pressable>
+                  <Pressable onPress={() => toggleInfo('cycles')} hitSlop={8}>{infoIcon('cycles')}</Pressable>
+                </View>
               ), t('settings.studyTimerCyclesValue', { n: studyTimerCycles }))}
               {infoBox('cycles', 'settings.studyTimerCyclesInfo')}
             </View>
@@ -956,12 +948,12 @@ export default function StudySettingsScreen() {
             {studyTimerCycles >= 2 && (
               <View style={{ gap: 6 }}>
                 {sliderRow('breakMinutes', (
-                  <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }} onPress={() => toggleInfo('break')} hitSlop={6}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                       {t('settings.studyTimerBreakMinutes')}
                     </Text>
-                    {infoIcon('break')}
-                  </Pressable>
+                    <Pressable onPress={() => toggleInfo('break')} hitSlop={8}>{infoIcon('break')}</Pressable>
+                  </View>
                 ), studyTimerBreakMinutes === 0
                   ? t('settings.studyTimerBreakNone')
                   : t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes }))}
@@ -971,12 +963,12 @@ export default function StudySettingsScreen() {
 
             {/* 円の表示（常に / 開始時 / オフ） */}
             <View style={{ gap: 6 }}>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('ring')} hitSlop={6}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerRingVisible')}
                 </Text>
-                {infoIcon('ring')}
-              </Pressable>
+                <Pressable onPress={() => toggleInfo('ring')} hitSlop={8}>{infoIcon('ring')}</Pressable>
+              </View>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {STUDY_TIMER_ELEMENT_MODES.map((mode) => {
                   const active = mode === studyTimerRing;
@@ -1002,12 +994,12 @@ export default function StudySettingsScreen() {
 
             {/* 残り時間の表示（常に / 開始時 / オフ） */}
             <View style={{ gap: 6 }}>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('time')} hitSlop={6}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerShowTime')}
                 </Text>
-                {infoIcon('time')}
-              </Pressable>
+                <Pressable onPress={() => toggleInfo('time')} hitSlop={8}>{infoIcon('time')}</Pressable>
+              </View>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {STUDY_TIMER_ELEMENT_MODES.map((mode) => {
                   const active = mode === studyTimerTime;
@@ -1035,12 +1027,12 @@ export default function StudySettingsScreen() {
                 **「なし」でも満円だけは残る**ので、円/残り時間を両方「なし」にしても
                 時間切れの合図が画面から消えることはない（説明文にもその1行を入れてある）。 */}
             <View style={{ gap: 6 }}>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => toggleInfo('end')} hitSlop={6}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerEndBehavior')}
                 </Text>
-                {infoIcon('end')}
-              </Pressable>
+                <Pressable onPress={() => toggleInfo('end')} hitSlop={8}>{infoIcon('end')}</Pressable>
+              </View>
               <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
                 {(['alert', 'blink', 'none'] as StudyTimerEndBehavior[]).map((behavior) => {
                   const active = behavior === studyTimerEndBehavior;

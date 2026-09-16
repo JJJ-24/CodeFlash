@@ -969,7 +969,7 @@
     "pickIcon": "アイコン選択",
     "sqlInit": "SQL初期化",
     "deckSpeechLangs": "読み上げの言語",
-    "toggleDeckSpeech": "このデッキの読み上げ切替",
+    "toggleDeckSpeech": "読み上げ切替",
     "htmlInit": "HTML/CSS 土台",
     "toggleArchive": "アーカイブ切替",
     "deleteDeck": "デッキ削除",

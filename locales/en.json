@@ -1013,7 +1013,7 @@
     "pickIcon": "Pick icon",
     "sqlInit": "SQL setup",
     "deckSpeechLangs": "Speech language",
-    "toggleDeckSpeech": "Toggle speech for this deck",
+    "toggleDeckSpeech": "Toggle read aloud",
     "htmlInit": "HTML/CSS stages",
     "toggleArchive": "Toggle archive",
     "deleteDeck": "Delete deck",

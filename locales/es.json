@@ -1015,7 +1015,7 @@
     "pickIcon": "Elegir icono",
     "sqlInit": "Inicialización SQL",
     "deckSpeechLangs": "Idioma de lectura",
-    "toggleDeckSpeech": "Activar o desactivar la lectura del mazo",
+    "toggleDeckSpeech": "Activar o desactivar la lectura",
     "htmlInit": "Bases HTML/CSS",
     "toggleArchive": "Archivar o desarchivar",
     "deleteDeck": "Eliminar el mazo",

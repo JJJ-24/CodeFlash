@@ -271,7 +271,7 @@
     "searchDateYesterday": "Ayer",
     "searchDatePrev": "Día anterior",
     "searchDateNext": "Día siguiente",
-    "searchInfoMessage": "■ Búsqueda\nSepara varias palabras con espacios (búsqueda Y).\n※ Todo / Anverso / Reverso / Nota = el lado en el que se busca. La lista también muestra ese lado.\n\n■ Filtros\n  {{albums}} Mazo\n  {{pricetag}} Etiqueta\n  {{calendar}} Día de estudio\n※ Puedes elegir varios mazos y etiquetas\n>[Día de estudio]\n>  Funciona sin escribir nada\n>  Tocar la fecha → Elegir en el calendario\n>  {{prev}} {{next}} → Día anterior / siguiente",
+    "searchInfoMessage": "[Búsqueda]\nSepara varias palabras con espacios (búsqueda Y).\n※ Todo / Anverso / Reverso / Nota = el lado en el que se busca. La lista también muestra ese lado.\n\n[Filtros]\n  {{albums}} Mazo\n  {{pricetag}} Etiqueta\n  {{calendar}} Día de estudio\n※ Puedes elegir varios mazos y etiquetas\n\n[Día de estudio]\n>Funciona sin escribir nada\n\n[Tocar]\n  Fecha: elegir en el calendario\n  {{prev}} {{next}}: día anterior / siguiente",
     "filterByDeck": "Filtrar por mazo",
     "filterByTag": "Filtrar por etiqueta",
     "allDecks": "Todos los mazos",

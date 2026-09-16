@@ -254,7 +254,7 @@
     "searchDateYesterday": "昨日",
     "searchDatePrev": "前の日",
     "searchDateNext": "次の日",
-    "searchInfoMessage": "■ 検索\n複数のキーワードはスペース区切りで指定（AND検索）。\n※ すべて/表面/裏面/メモ＝検索する面。一覧にもその面が出ます。\n\n■ 絞り込み\n  {{albums}} デッキ\n  {{pricetag}} タグ\n  {{calendar}} 学習した日\n※ デッキとタグは複数選択可\n>[学習した日]\n>  キーワードなしで表示できます\n>  日付タップ → カレンダーで選ぶ\n>  {{prev}} {{next}} → 前の日・次の日へ移動",
+    "searchInfoMessage": "[検索]\n複数のキーワードはスペース区切りで指定（AND検索）。\n※ すべて/表面/裏面/メモ＝検索する面。一覧にもその面が出ます。\n\n[絞り込み]\n  {{albums}} デッキ\n  {{pricetag}} タグ\n  {{calendar}} 学習した日\n※ デッキとタグは複数選択可\n\n[学習した日]\n>キーワードなしで表示できます\n\n[タップ]\n  日付：カレンダーで選ぶ\n  {{prev}} {{next}}：前日・翌日へ",
     "filterByDeck": "デッキで絞り込む",
     "filterByTag": "タグで絞り込む",
     "allDecks": "すべてのデッキ",

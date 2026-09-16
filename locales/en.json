@@ -266,7 +266,7 @@
     "searchDateYesterday": "Yesterday",
     "searchDatePrev": "Previous day",
     "searchDateNext": "Next day",
-    "searchInfoMessage": "■ Search\nSeparate multiple keywords with spaces (AND search).\n※ All / Front / Back / Memo = which side is searched. The list shows that side too.\n\n■ Filter\n  {{albums}} Deck\n  {{pricetag}} Tag\n  {{calendar}} Studied date\n※ Decks and tags allow multiple selections\n>[Studied date]\n>  Works with no keywords\n>  Tap the date → Pick from a calendar\n>  {{prev}} {{next}} → Previous / next day",
+    "searchInfoMessage": "[Search]\nSeparate multiple keywords with spaces (AND search).\n※ All / Front / Back / Memo = which side is searched. The list shows that side too.\n\n[Filter]\n  {{albums}} Deck\n  {{pricetag}} Tag\n  {{calendar}} Studied date\n※ Decks and tags allow multiple selections\n\n[Studied date]\n>Works with no keywords\n\n[Tap]\n  Date: pick from a calendar\n  {{prev}} {{next}}: previous / next day",
     "filterByDeck": "Filter by Deck",
     "filterByTag": "Filter by Tag",
     "allDecks": "All Decks",

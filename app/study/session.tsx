@@ -296,7 +296,9 @@ export default function StudySessionScreen() {
   }, [currentCard, isFlipped, showMemo]);
   // 読む文字が無いカード（コードブロックだけ等）ではボタンも S キーも出さない。
   // 押しても無音＝「オンに見えるのに効いていない」状態を作らないため（CLAUDE.md の鉄則）。
-  const canSpeak = speechEnabled && speechText.trim() !== "";
+  // 052：デッキごとの OFF（`speechDisabled`）もここで畳む＝ボタン・S キー・自動読み上げが一括で消える。
+  // ⚠️ 見るのは**いま読むカードの所属デッキ**（タグ学習は1セッションに複数デッキが混ざる）。
+  const canSpeak = speechEnabled && !currentDeck?.speechDisabled && speechText.trim() !== "";
   // 読み上げ FAB は下段（表面＝前後送り列／裏面＝評価ボタン列）の**すぐ上**に浮かせる。
   // 下段の高さは表裏で違うので固定値だとズレる＝実測して追従させる。
   const [bottomBarHeight, setBottomBarHeight] = useState(0);

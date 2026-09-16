@@ -106,6 +106,10 @@ export interface Deck {
    *  両面が同じ文字体系で言語だけ違うデッキ（英語 ⇄ スペイン語など）のためのもので、
    *  文字体系が違う組み合わせは 049/050 が設定なしで読み分ける。メモは裏面に従う */
   speechLangsBack: ScriptLangs;
+  /** 052：このデッキでは読み上げを使わない（学習画面のスピーカーボタン・S キー・自動読み上げが消える）。
+   *  ラベルは肯定形「このデッキで読み上げを使う」・既定 ON・保存値は否定形（`noDeckHtmlInit` と同じ流儀）。
+   *  無料機能。SQLite は 0/1 で返すため `toDeck` で boolean に正規化する（`archived` と同じ） */
+  speechDisabled: boolean;
   /** アーカイブ済み（学習サイクル・将来指標から除外）。配下カードも含めて除外される */
   archived: boolean;
 }

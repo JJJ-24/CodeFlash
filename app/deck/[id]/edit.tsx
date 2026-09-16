@@ -52,11 +52,12 @@ const DECK_EDIT_SHORTCUT_SECTIONS = [
     { key: 'M', descKey: 'shortcut.focusDeckDesc' },
     { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
     { key: 'I', descKey: 'shortcut.pickIcon' },
-    // 並びは画面の行順（HTML/CSS 土台 → SQL 初期化）に合わせる
+    // 並びは画面の行順（読み上げ → 読み上げの言語 → HTML/CSS 土台 → SQL 初期化 → アーカイブ）に合わせる。
+    // 読み上げは無料機能なので pro フラグを付けない
+    { key: '⇧R', descKey: 'shortcut.toggleDeckSpeech' },
+    { key: 'R', descKey: 'shortcut.deckSpeechLangs' },
     { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
     { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
-    // 読み上げは無料機能なので pro フラグを付けない
-    { key: 'R', descKey: 'shortcut.deckSpeechLangs' },
     { key: 'E', descKey: 'shortcut.toggleArchive' },
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'Delete', descKey: 'shortcut.deleteDeck' },
@@ -83,7 +84,7 @@ export default function EditDeckScreen() {
   useRestoreStatusBar();
   const { decks, updateDeck: updateStore, removeDeck } = useDeckStore();
   const isPro = useProStore((s) => s.isPro);
-  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { keyboardShortcutsEnabled, speechEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   useDismissKeyboardOnLeave();
 
@@ -114,6 +115,10 @@ export default function EditDeckScreen() {
   // 051: 非 Pro が設定済みデッキを開いたときの案内（解除だけは通す）
   const [showSpeechProModal, setShowSpeechProModal] = useState(false);
   const speechConfigured = Object.keys(speechLangs).length > 0 || Object.keys(speechLangsBack).length > 0;
+  // 052: このデッキで読み上げを使うか（無料・既定 ON）。保存値は否定形＝トグルの value は `!speechDisabled`
+  const [speechDisabled, setSpeechDisabled] = useState<boolean>(deck?.speechDisabled ?? false);
+  // 読み上げの説明（アーカイブと同じく ⓘ タップで行の下にインライン展開する）
+  const [showSpeechInfo, setShowSpeechInfo] = useState(false);
 
   const [archived, setArchived] = useState<boolean>(deck?.archived ?? false);
   // アーカイブの説明（常時表示をやめ、ⓘ タップでこの行の下にインライン展開する）
@@ -170,6 +175,8 @@ export default function EditDeckScreen() {
     { input: 'h', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowHtmlInitModal(true); } } },
     // 050 Phase 2: 読み上げ（Read）。⚠️ Pro ゲートは無い（読み上げは無料機能）
     { input: 'r', handler: () => { if (subModalOpen()) return; openSpeechSettings(); } },
+    // 052: ⇧R = このデッキの読み上げ ON/OFF（R＝読み上げの設定を開く、の Shift 版。E＝アーカイブと同じ「トグルはキー1つ」）
+    { input: 'r', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setSpeechDisabled((v) => !v); } },
     { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setArchived((v) => !v); } }, // アーカイブ切替（全画面で E に統一）
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
@@ -179,7 +186,7 @@ export default function EditDeckScreen() {
       handler: () => {
         if (subModalOpen()) return; // モーダル側の Esc に委ねる
         // 開いているインライン説明を先に閉じる（設定サブ画面の Esc と同じ流儀）
-        if (showArchiveInfo) { setShowArchiveInfo(false); return; }
+        if (showArchiveInfo || showSpeechInfo) { setShowArchiveInfo(false); setShowSpeechInfo(false); return; }
         if (editingRef.current) { Keyboard.dismiss(); return; }
         handleClose();
       },
@@ -203,14 +210,14 @@ export default function EditDeckScreen() {
       // 044/045: 中身が空の土台は保存しない（名前だけ作って離脱した行が残らないように）
       const normalizedSqlStages = sqlStages.filter((s) => s.content.trim() !== '');
       const normalizedStages = htmlStages.filter((s) => s.content.trim() !== '');
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack });
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, speechDisabled });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
       // 044/045: sqlInit / htmlInit は互換用ミラー。DB 側（updateDeck）と同じ値をストアにも入れて食い違わせない。
       updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex,
         sqlInit: legacyInitMirror(normalizedSqlStages), sqlStages: normalizedSqlStages,
-        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, archived });
+        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, speechDisabled, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -242,6 +249,7 @@ export default function EditDeckScreen() {
     //（`{han:..., latin:...}` と `{latin:..., han:...}` を「変更あり」と誤判定しないため）
     || !scriptLangsEqual(speechLangs, deck.speechLangs ?? {})
     || !scriptLangsEqual(speechLangsBack, deck.speechLangsBack ?? {})
+    || speechDisabled !== deck.speechDisabled
     || archived !== deck.archived;
 
   function handleClose() {
@@ -393,6 +401,79 @@ export default function EditDeckScreen() {
             )}
           </View>
 
+          {/* 052: このデッキで読み上げを使うか（無料・既定 ON）。OFF で学習画面のスピーカーボタン・
+              S キー・自動読み上げが一括で消える。保存値は否定形 `speechDisabled`（`noDeckHtmlInit` と同じ流儀）。
+              行の形はアーカイブ行と同じ（テキスト＋ⓘ＋スイッチ・小見出しなし）＝スイッチは行のテキストが
+              項目名を兼ねるので、上に小見出しを置くと同じ語が2段に並ぶ。
+              ⚠️ OFF でも下の言語設定は**隠さず淡くする**＝OFF はモードであって設定の有無ではないので、
+              一時的に OFF にしただけで Pro で組んだ言語設定が失われない／「設定したのに行が無い」にもならない。
+              アプリ設定で読み上げが OFF なら両方の行を淡くし、注記はそちらを優先する（CLAUDE.md の
+              「オンに見えるのに効いていない状態を作らない」＝なぜ効かないかを画面に出す）。
+              並びは 読み上げ → 読み上げの言語 → HTML/CSS 土台 → SQL 初期化 → アーカイブ＝全員に出る行を先・
+              Pro だけの行を後にして、非 Pro と Pro で読み上げの位置が変わらないようにする。 */}
+          <View style={styles.field}>
+            <View style={[styles.archiveCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, !speechEnabled && styles.inactive]}>
+              <View style={styles.archiveRow}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {t('deck.speechLabel')}
+                  </Text>
+                  <Pressable onPress={() => { Keyboard.dismiss(); setShowSpeechInfo((v) => !v); }} hitSlop={8} accessibilityLabel={t('deck.speechInfoLabel')}>
+                    <Ionicons
+                      name={showSpeechInfo ? 'information-circle' : 'information-circle-outline'}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
+                    />
+                  </Pressable>
+                </View>
+                <AppSwitch
+                  value={!speechDisabled}
+                  onValueChange={(v) => { Keyboard.dismiss(); setSpeechDisabled(!v); }}
+                  thumbColor="#FFF"
+                />
+              </View>
+              {showSpeechInfo && (
+                <View style={[styles.archiveInfoBox, { backgroundColor: theme.colors.background }]}>
+                  <InfoContent text={t('deck.speechUseHint')} />
+                </View>
+              )}
+            </View>
+            {!speechEnabled && (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.speechAppOffNote')}
+              </Text>
+            )}
+          </View>
+
+          {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
+              設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
+              ⚠️ **適用（学習画面）には isPro を入れない**＝読み上げ自体は無料機能で、
+              止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('deck.speechLangsLabel')}
+            </Text>
+            <Pressable
+              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, (!speechEnabled || speechDisabled) && styles.inactive]}
+              onPress={openSpeechSettings}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
+                <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
+              </View>
+              <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {deckSpeechSummary(speechLangs, speechLangsBack, t)}
+              </Text>
+              {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </Pressable>
+            {/* 052: デッキ OFF のときだけ（アプリ OFF は上のトグル行の注記が担当＝二重に出さない） */}
+            {speechEnabled && speechDisabled && (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.speechDeckOffNote')}
+              </Text>
+            )}
+          </View>
+
           {/* HTML/CSS 土台を先に置く：土台を使う言語は html/css/js/ts の4つ（js/ts は無料言語）で、
               SQL ブロックだけが使う SQL 初期化より触る頻度が高いため。キー割り当て（H/Q）は
               頭文字由来なのでこの並びとは独立。 */}
@@ -449,29 +530,6 @@ export default function EditDeckScreen() {
               </Pressable>
             </View>
           )}
-
-          {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
-              設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
-              ⚠️ **適用（学習画面）には isPro を入れない**＝読み上げ自体は無料機能で、
-              止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.speechLangsLabel')}
-            </Text>
-            <Pressable
-              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-              onPress={openSpeechSettings}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
-                <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
-              </View>
-              <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {deckSpeechSummary(speechLangs, speechLangsBack, t)}
-              </Text>
-              {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </Pressable>
-          </View>
 
           <View style={styles.field}>
             {/* 白枠（カード）の中に行＋インライン説明を収める（設定画面の card + syncInfoBox と同じ形） */}
@@ -625,6 +683,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  // 052: 効かない状態（アプリ設定 OFF／デッキ OFF）を淡く見せる（一覧のアーカイブ済みと同じ 0.55）
+  inactive: { opacity: 0.55 },
   // ⓘ タップで開くインライン説明（設定サブ画面の syncInfoBox と同じ見せ方）
   archiveInfoBox: {
     borderRadius: 8,

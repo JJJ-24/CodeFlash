@@ -580,6 +580,57 @@ async function main() {
   eq('そのとき裏面は表面に落ちる', scriptLangsForSide(imported18f.speechLangs, imported18f.speechLangsBack, true), { latin: 'en-US' });
 
   // ===========================================================================
+  console.log('\n[T18c] 052 Phase 1・デッキごとの読み上げ OFF（speechDisabled 列／既定 0＝読む）');
+  // ===========================================================================
+  const db18g = makeDb();
+  await migrateDbIfNeeded(db18g);
+  // 052 以前の DB を再現（列を落として旧バージョンの状態に戻す）
+  db18g.raw.exec('ALTER TABLE decks DROP COLUMN speechDisabled');
+  await db18g.runAsync(
+    `INSERT INTO decks (id,name,description,language,cardCount,sortOrder,createdAt,updatedAt)
+     VALUES ('d-old-spk','旧デッキ','','ja',0,1,'2026-01-01','2026-01-01')`
+  );
+  await migrateDbIfNeeded(db18g);
+  const cols18g = await db18g.getAllAsync('PRAGMA table_info(decks)');
+  check('マイグレーションで speechDisabled 列が追加される',
+    cols18g.some((c: { name: string }) => c.name === 'speechDisabled'));
+  const oldSpk = await getDeckById(db18g, 'd-old-spk');
+  eq('既存デッキは読み上げ ON（0 → false に正規化）', oldSpk.speechDisabled, false);
+
+  const deck18g = await createDeck(db18g, { name: 'プログラミング', description: '', language: 'ja', speechDisabled: true });
+  eq('createDeck の戻り値に入る', deck18g.speechDisabled, true);
+  eq('読み直しても true（1 → boolean）', (await getDeckById(db18g, deck18g.id)).speechDisabled, true);
+  const deck18g2 = await createDeck(db18g, { name: '既定', description: '', language: 'ja' });
+  eq('省略時は false（既定＝読む）', deck18g2.speechDisabled, false);
+  eq('DB 上は 0/1 の整数', (await db18g.getFirstAsync('SELECT speechDisabled AS v FROM decks WHERE id = ?', [deck18g.id])).v, 1);
+
+  // ⚠️ 044 の教訓：渡さない更新で黙って変わってはいけない（OFF が勝手に解ける）
+  await updateDeck(db18g, deck18g.id, { name: 'プログラミング', description: '', language: 'ja' });
+  eq('speechDisabled を渡さない更新では変わらない', (await getDeckById(db18g, deck18g.id)).speechDisabled, true);
+  await updateDeck(db18g, deck18g.id, { name: 'プログラミング', description: '', language: 'ja', speechDisabled: false });
+  eq('false を渡せば ON に戻る', (await getDeckById(db18g, deck18g.id)).speechDisabled, false);
+  await updateDeck(db18g, deck18g.id, { name: 'プログラミング', description: '', language: 'ja', speechDisabled: true });
+  eq('true を渡せば OFF になる', (await getDeckById(db18g, deck18g.id)).speechDisabled, true);
+
+  // JSON エクスポート → インポート往復
+  for (const k of Object.keys(fsFiles)) if (k.endsWith('.json')) delete fsFiles[k];
+  await exportDatabase(db18g, false);
+  const spkOffUri = Object.keys(fsFiles).find((k) => k.endsWith('.json'))!;
+  const db18h = makeDb();
+  await migrateDbIfNeeded(db18h);
+  await importDatabase(db18h, spkOffUri, 'replace');
+  eq('replace インポートで OFF が復元', (await getDeckById(db18h, deck18g.id)).speechDisabled, true);
+  eq('ON のデッキは ON のまま', (await getDeckById(db18h, deck18g2.id)).speechDisabled, false);
+  // 052 以前のエクスポート（speechDisabled キーなし）
+  const oldSpkOffExport = JSON.parse(fsFiles[spkOffUri]);
+  for (const d of oldSpkOffExport.decks) delete d.speechDisabled;
+  fsFiles['/cache/old_spk_off.json'] = JSON.stringify(oldSpkOffExport);
+  const db18i = makeDb();
+  await migrateDbIfNeeded(db18i);
+  await importDatabase(db18i, '/cache/old_spk_off.json', 'replace');
+  eq('052 以前のエクスポートは ON（読む）として読める', (await getDeckById(db18i, deck18g.id)).speechDisabled, false);
+
+  // ===========================================================================
   console.log('\n[T19] 046 Phase 5・統計「学習の記録」の目標達成（現在の目標で過去も判定）');
   // ===========================================================================
   // 日別の枚数から「達成日数・最長連続達成・達成率」を出す純粋関数。

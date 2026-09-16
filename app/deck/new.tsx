@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
+import { AppSwitch } from '@/components/AppSwitch';
+import { InfoContent } from '@/components/InfoContent';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
@@ -49,11 +51,12 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
     { key: 'M', descKey: 'shortcut.focusDeckDesc' },
     { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
     { key: 'I', descKey: 'shortcut.pickIcon' },
-    // 並びは画面の行順（HTML/CSS 土台 → SQL 初期化）に合わせる
+    // 並びは画面の行順（読み上げ → 読み上げの言語 → HTML/CSS 土台 → SQL 初期化）に合わせる。
+    // 読み上げは無料機能なので pro フラグを付けない
+    { key: '⇧R', descKey: 'shortcut.toggleDeckSpeech' },
+    { key: 'R', descKey: 'shortcut.deckSpeechLangs' },
     { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
     { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
-    // 読み上げは無料機能なので pro フラグを付けない
-    { key: 'R', descKey: 'shortcut.deckSpeechLangs' },
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'X', descKey: 'shortcut.close' },
   ] },
@@ -78,7 +81,7 @@ export default function NewDeckScreen() {
   const { addDeck } = useDeckStore();
   const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const isPro = useProStore((s) => s.isPro);
-  const { keyboardShortcutsEnabled } = useSettingsStore();
+  const { keyboardShortcutsEnabled, speechEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   useDismissKeyboardOnLeave();
 
@@ -107,6 +110,10 @@ export default function NewDeckScreen() {
   // 051: 非 Pro が設定済みデッキを開いたときの案内（解除だけは通す）
   const [showSpeechProModal, setShowSpeechProModal] = useState(false);
   const speechConfigured = Object.keys(speechLangs).length > 0 || Object.keys(speechLangsBack).length > 0;
+  // 052: このデッキで読み上げを使うか（無料・既定 ON）。保存値は否定形＝トグルの value は `!speechDisabled`
+  const [speechDisabled, setSpeechDisabled] = useState(false);
+  // 読み上げの説明（ⓘ タップで行の下にインライン展開する。編集画面のアーカイブ行と同じ形）
+  const [showSpeechInfo, setShowSpeechInfo] = useState(false);
 
   const language = 'ja';
   const [saving, setSaving] = useState(false);
@@ -137,6 +144,7 @@ export default function NewDeckScreen() {
         htmlImages,
         speechLangs,
         speechLangsBack,
+        speechDisabled,
       });
       addDeck(deck);
       // 一覧へ戻ったとき、作成したデッキへフォーカスを移す
@@ -148,7 +156,7 @@ export default function NewDeckScreen() {
   }
 
   const canSave = !!name.trim() && !saving;
-  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || filledSqlStages > 0 || filledStages > 0 || htmlImages.length > 0 || speechConfigured;
+  const isDirty = name.trim() !== '' || description.trim() !== '' || iconName !== null || colorHex !== PRIMARY_COLOR || filledSqlStages > 0 || filledStages > 0 || htmlImages.length > 0 || speechConfigured || speechDisabled;
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   function handleClose() {
@@ -197,6 +205,8 @@ export default function NewDeckScreen() {
     { input: 'h', handler: () => { if (subModalOpen()) return; if (isPro) { Keyboard.dismiss(); setShowHtmlInitModal(true); } } },
     // 050 Phase 2: 読み上げ（Read）。⚠️ Pro ゲートは無い（読み上げは無料機能）
     { input: 'r', handler: () => { if (subModalOpen()) return; openSpeechSettings(); } },
+    // 052: ⇧R = このデッキの読み上げ ON/OFF（R＝読み上げの設定を開く、の Shift 版）
+    { input: 'r', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setSpeechDisabled((v) => !v); } },
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
     ...scrollKeySpecs({ scrollRef, scrollYRef, guard: subModalOpen }),
     // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
@@ -206,6 +216,8 @@ export default function NewDeckScreen() {
       handler: () => {
         if (showShortcutsModal) { setShowShortcutsModal(false); return; } // ショートカット一覧を閉じる
         if (subModalOpen()) return; // 他モーダル側の Esc に委ねる
+        // 開いているインライン説明を先に閉じる（設定サブ画面の Esc と同じ流儀）
+        if (showSpeechInfo) { setShowSpeechInfo(false); return; }
         // 編集中は Esc でカーソル解除のみ。非編集なら閉じる（変更あれば破棄確認）。
         if (editingRef.current) { Keyboard.dismiss(); return; }
         handleClose();
@@ -367,6 +379,70 @@ export default function NewDeckScreen() {
             )}
           </View>
 
+          {/* 052: このデッキで読み上げを使うか（無料・既定 ON）。編集画面と同じ行（説明と並び順の理由はそちらのコメント）。 */}
+          <View style={styles.field}>
+            <View style={[styles.toggleCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, !speechEnabled && styles.inactive]}>
+              <View style={styles.toggleRow}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {t('deck.speechLabel')}
+                  </Text>
+                  <Pressable onPress={() => { Keyboard.dismiss(); setShowSpeechInfo((v) => !v); }} hitSlop={8} accessibilityLabel={t('deck.speechInfoLabel')}>
+                    <Ionicons
+                      name={showSpeechInfo ? 'information-circle' : 'information-circle-outline'}
+                      size={Math.max(theme.fontSize.lg, 20)}
+                      color={theme.colors.textTertiary}
+                    />
+                  </Pressable>
+                </View>
+                <AppSwitch
+                  value={!speechDisabled}
+                  onValueChange={(v) => { Keyboard.dismiss(); setSpeechDisabled(!v); }}
+                  thumbColor="#FFF"
+                />
+              </View>
+              {showSpeechInfo && (
+                <View style={[styles.toggleInfoBox, { backgroundColor: theme.colors.background }]}>
+                  <InfoContent text={t('deck.speechUseHint')} />
+                </View>
+              )}
+            </View>
+            {!speechEnabled && (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.speechAppOffNote')}
+              </Text>
+            )}
+          </View>
+
+          {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
+              設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
+              ⚠️ **適用（学習画面）には isPro を入れない**＝読み上げ自体は無料機能で、
+              止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+              {t('deck.speechLangsLabel')}
+            </Text>
+            <Pressable
+              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, (!speechEnabled || speechDisabled) && styles.inactive]}
+              onPress={openSpeechSettings}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
+                <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
+              </View>
+              <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {deckSpeechSummary(speechLangs, speechLangsBack, t)}
+              </Text>
+              {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </Pressable>
+            {/* 052: デッキ OFF のときだけ（アプリ OFF は上のトグル行の注記が担当＝二重に出さない） */}
+            {speechEnabled && speechDisabled && (
+              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('deck.speechDeckOffNote')}
+              </Text>
+            )}
+          </View>
+
           {/* HTML/CSS 土台を先に置く：土台を使う言語は html/css/js/ts の4つ（js/ts は無料言語）で、
               SQL ブロックだけが使う SQL 初期化より触る頻度が高いため。キー割り当て（H/Q）は
               頭文字由来なのでこの並びとは独立。 */}
@@ -423,29 +499,6 @@ export default function NewDeckScreen() {
               </Pressable>
             </View>
           )}
-
-          {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
-              設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
-              ⚠️ **適用（学習画面）には isPro を入れない**＝読み上げ自体は無料機能で、
-              止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.speechLangsLabel')}
-            </Text>
-            <Pressable
-              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-              onPress={openSpeechSettings}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
-                <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
-              </View>
-              <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {deckSpeechSummary(speechLangs, speechLangsBack, t)}
-              </Text>
-              {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </Pressable>
-          </View>
 
         </ScrollView>
         <FormBottomBar onSave={handleCreate} saveDisabled={!canSave} />
@@ -537,6 +590,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // 052: トグル行の白枠（編集画面の archiveCard / archiveRow と同じ寸法）
+  toggleCard: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  // ⓘ タップで開くインライン説明（編集画面の archiveInfoBox と同じ見せ方）
+  toggleInfoBox: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  // 052: 効かない状態（アプリ設定 OFF／デッキ OFF）を淡く見せる（一覧のアーカイブ済みと同じ 0.55）
+  inactive: { opacity: 0.55 },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

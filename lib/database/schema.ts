@@ -233,6 +233,14 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN speechLangsBack TEXT;`);
   }
 
+  // === 052 Phase 1: デッキごとの読み上げ OFF（decks に speechDisabled カラム）===
+  // 既定 0 ＝既存デッキは従来どおり読み上げる。1 のデッキは学習画面のスピーカーボタン・S キー
+  // （・052 Phase 2 の自動読み上げ）が一括で消える。無料機能＝「減らす方向」を Pro にすると
+  // 非 Pro がプログラミングデッキのボタンを消せず逃げ場がない（詳細は docs/052）。
+  if (!cols.some((c) => c.name === 'speechDisabled')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN speechDisabled INTEGER NOT NULL DEFAULT 0;`);
+  }
+
   // === 046 Phase 2: 未達成のときだけ通知するスケジュール（notification_schedules に列追加）===
   // スケジュール単位のフラグ（全体設定にしない）＝「朝は無条件・夜は未達成のときだけ」を使い分けられる。
   // 既定 0 ＝既存スケジュールの挙動は不変。

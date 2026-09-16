@@ -320,50 +320,43 @@ const styles = StyleSheet.create({
  * デッキ編集/新規作成の行に出す要約。**中身をそのまま出す**（「設定済み」の一語だと
  * 何語で読まれるのか分からず、開くまで確認できない＝043 の行で同じ失敗をしている）。
  *
+ * 052：**常に言語名だけ**を並べる（1件「中国語」／2件「英語 / 中国語」）。学習設定の読み上げ
+ * セクションの要約（`英語 / 日本語`）と同じ形で、かつ 1件・2件以上・表裏を分けたとき の3通りで
+ * 書き方が変わらない（かつては「ラテン文字：英語」「2件を上書き」「言語名だけ」が混在していた）。
+ * 文字体系を出さないのは、上書きする言語はたいてい文字体系を含意する（中国語＝漢字・ロシア語＝キリル）
+ * うえ、全部出すと行に収まらないため。並びは `CONFIGURABLE_SCRIPTS` の順＝ピッカーの行順。
+ *
  * ⚠️ 言語名は地域を省いた短い形にする（`peers` に `[]` を渡す）＝行は幅が限られており、
  * ここで区別が要る場面（同じ言語の地域違い）はピッカーを開けば分かる。
+ * ⚠️ 表裏を分けたときは面の中を `deck.speechLangsJoin`（ja「・」／en「, 」）で結ぶ＝面の区切り
+ * （`speechLangsSides` の「／」「 / 」）と同じ記号を使うとどこまでが表面か読めなくなる。
  */
 export function deckSpeechSummary(
   langs: ScriptLangs,
   langsBack: ScriptLangs,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
-  // 051：裏面を分けていないデッキ（＝大多数）は 050 とまったく同じ文言のまま。
-  if (Object.keys(langsBack).length === 0) return sideSummary(langs, t);
-  // 分けているときは面ごとに**言語名だけ**を並べる（文字体系まで入れると行に収まらない。
-  // 両面が同じ文字体系で言語だけ違う、が本チケットの想定なので文字体系は自明）。
+  // 051：裏面を分けていないデッキ（＝大多数）は学習設定の要約と同じ区切り（' / '）。
+  if (Object.keys(langsBack).length === 0) return sideSummary(langs, t, ' / ');
   return t('deck.speechLangsSides', {
-    front: sideSummaryShort(langs, t),
-    back: sideSummaryShort(langsBack, t),
+    front: sideSummary(langs, t, t('deck.speechLangsJoin')),
+    back: sideSummary(langsBack, t, t('deck.speechLangsJoin')),
   });
 }
 
-/** 片面ぶんの要約（050 までの文言そのもの）。 */
+/** 片面ぶんの要約＝上書きした言語名を `sep` で結ぶ。上書きが無ければ「アプリ設定」。 */
 function sideSummary(
   langs: ScriptLangs,
   t: (key: string, opts?: Record<string, unknown>) => string,
+  sep: string,
 ): string {
-  const entries = Object.entries(langs).filter(([, lang]) => !!lang) as [SpeechScript, string][];
+  // ⚠️ `Object.entries` の順は代入順で揺れるので、ピッカーと同じ `CONFIGURABLE_SCRIPTS` の順に固定する
+  const names = CONFIGURABLE_SCRIPTS
+    .map((script) => langs[script])
+    .filter((lang): lang is string => !!lang)
+    .map((lang) => speechLanguageLabel(lang, t, []));
   // 上書きが1つも無い＝アプリ設定のまま。⚠️ ピッカーの先頭行と**同じキー**を使う
   // （同じ意味の文字列を2本持つと、片方だけ直して食い違う）。
-  if (entries.length === 0) return t('deck.speechInherit');
-  if (entries.length === 1) {
-    const [script, lang] = entries[0];
-    return t('deck.speechLangsOne', {
-      script: t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin'),
-      language: speechLanguageLabel(lang, t, []),
-    });
-  }
-  return t('deck.speechLangsSet', { count: entries.length });
-}
-
-/** 表裏を並べるとき用の短い要約（1件なら言語名だけ）。 */
-function sideSummaryShort(
-  langs: ScriptLangs,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): string {
-  const entries = Object.entries(langs).filter(([, lang]) => !!lang) as [SpeechScript, string][];
-  if (entries.length === 0) return t('deck.speechInherit');
-  if (entries.length === 1) return speechLanguageLabel(entries[0][1], t, []);
-  return t('deck.speechLangsSet', { count: entries.length });
+  if (names.length === 0) return t('deck.speechInherit');
+  return names.join(sep);
 }

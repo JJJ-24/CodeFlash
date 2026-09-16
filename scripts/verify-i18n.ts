@@ -52,7 +52,7 @@ const COUNT_INVARIANT = new Set([
   'dataManagement.tsvLossBlockSqlInit',
   'dataManagement.tsvLossBlockHtmlInit',
   'dataManagement.tsvLossImages',
-  'dataManagement.tsvLossDeckSpeechLangs',
+  'dataManagement.tsvLossDeckSpeech',
 ]);
 
 /**

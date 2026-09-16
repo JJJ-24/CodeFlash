@@ -611,7 +611,8 @@ export default function StudySessionScreen() {
   //    読み終えていた人には二度読みになる。途中で切られた人はスピーカーボタンで読み直せる）。
   //    `onBreak` が false へ戻るときもこの effect は走るが、鳴っていないので stop() は無害。
   useEffect(() => { stopSpeaking(); }, [currentCard?.id, isFlipped, showMemo, onBreak, stopSpeaking]);
-  const autoMode: SpeechAutoMode = isPro ? speechAuto : "off";
+  // 052 Phase 3：デッキの上書き（`decks.speechAuto`・null＝従う）→ アプリ設定。⚠️ isPro の内側で解決する。
+  const autoMode: SpeechAutoMode = isPro ? (currentDeck?.speechAuto ?? speechAuto) : "off";
   const autoText = currentCard
     ? blocksToSpeech(isFlipped ? currentCard.backContent : currentCard.frontContent)
     : "";

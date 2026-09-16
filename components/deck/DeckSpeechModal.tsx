@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { AppSwitch } from '@/components/AppSwitch';
+import { SPEECH_AUTO_LABEL_KEYS, SpeechAutoModal } from '@/components/settings/SpeechAutoModal';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import {
   CONFIGURABLE_SCRIPTS,
@@ -12,6 +13,7 @@ import {
   SCRIPT_DEFAULT_LANGS,
   speechLanguageLabel,
   type ScriptLangs,
+  type SpeechAutoMode,
   type SpeechScript,
 } from '@/lib/speech';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
@@ -24,8 +26,11 @@ interface Props {
   langs: ScriptLangs;
   /** 051：**裏面**用の上書き。空 = 表面と同じ（メモは裏面に従う） */
   langsBack: ScriptLangs;
+  /** 052：このデッキの自動読み上げの面。`null` = アプリ設定に従う */
+  auto: SpeechAutoMode | null;
   onChange: (langs: ScriptLangs) => void;
   onChangeBack: (langs: ScriptLangs) => void;
+  onChangeAuto: (mode: SpeechAutoMode | null) => void;
   onClose: () => void;
 }
 
@@ -53,13 +58,16 @@ interface Props {
  * ⚠️ 2枚目のモーダル（言語ピッカー）は**この Modal の children の中**に置く。兄弟に並べると
  * iOS が2枚目を提示できず、閉じた後に親画面がタップを受け付けなくなる（044 で踏んだ）。
  */
-export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeBack, onClose }: Props) {
+export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onChangeBack, onChangeAuto, onClose }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const appLangs = useSettingsStore((s) => s.speechScriptLangs);
+  const appAuto = useSettingsStore((s) => s.speechAuto);
   const [showInfo, setShowInfo] = useState(false);
   /** 言語ピッカーを開いている文字体系と面（null＝閉じている） */
   const [picking, setPicking] = useState<{ script: SpeechScript; back: boolean } | null>(null);
+  /** 052：自動読み上げの一覧を開いているか */
+  const [pickingAuto, setPickingAuto] = useState(false);
   /** 文字体系ごとに端末が持っている音声の言語。null＝未取得 */
   const [scriptOptions, setScriptOptions] = useState<Partial<Record<SpeechScript, string[]>> | null>(null);
   /** 051：裏面を分けるか。開くたびに保存値から作り直す（＝設定済みなら ON で開く） */
@@ -76,7 +84,7 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
 
   // 表示中だけ Esc を担当する。⚠️ 言語ピッカーが上に乗っている間は**そちらが最上位**なので外す
   // （両方が登録すると Esc で2枚とも閉じる）。
-  useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible && picking === null);
+  useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible && picking === null && !pickingAuto);
 
   /** 選べる文字体系（未取得のあいだは設定画面と同じく全部出しておく＝取得後に減る） */
   const scripts = CONFIGURABLE_SCRIPTS.filter(
@@ -179,7 +187,7 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
                 style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
-                {t('deck.speechLangsTitle')}
+                {t('deck.speechSettingsTitle')}
               </Text>
               <Pressable onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
                 <Ionicons
@@ -206,6 +214,31 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
           )}
 
           <ScrollView>
+            {/* 052：自動読み上げの上書き（先頭行）。言語と違って端末の音声一覧に依存しないので、
+                選べる文字体系が無くてもこの行は出す。ピッカー先頭の「アプリ設定」が唯一の解除手段。 */}
+            <Pressable
+              style={[styles.row, { borderColor: theme.colors.border }]}
+              onPress={() => setPickingAuto(true)}
+            >
+              <Text
+                style={[styles.rowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {t('settings.speechAuto')}
+              </Text>
+              <Text
+                style={{
+                  color: auto ? theme.colors.primary : theme.colors.textSecondary,
+                  fontSize: theme.fontSize.sm,
+                  fontWeight: auto ? '700' : '400',
+                  flexShrink: 1,
+                }}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {auto ? t(SPEECH_AUTO_LABEL_KEYS[auto]) : t('deck.speechInherit')}
+              </Text>
+              <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
+            </Pressable>
             {scripts.length === 0 ? (
               <Text
                 style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
@@ -256,6 +289,15 @@ export function DeckSpeechModal({ visible, langs, langsBack, onChange, onChangeB
             }
             onSelect={(code) => { if (picking) setLang(picking.script, code, picking.back); }}
             onClose={() => setPicking(null)}
+          />
+          {/* 052：自動読み上げの一覧も**この Modal の中**に置く（兄弟に並べると iOS が提示できない） */}
+          <SpeechAutoModal
+            visible={pickingAuto}
+            value={auto}
+            allowInherit
+            inheritValue={appAuto}
+            onSelect={onChangeAuto}
+            onClose={() => setPickingAuto(false)}
           />
         </View>
       </View>
@@ -334,14 +376,22 @@ const styles = StyleSheet.create({
 export function deckSpeechSummary(
   langs: ScriptLangs,
   langsBack: ScriptLangs,
+  auto: SpeechAutoMode | null,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
+  const hasLangs = Object.keys(langs).length > 0 || Object.keys(langsBack).length > 0;
   // 051：裏面を分けていないデッキ（＝大多数）は学習設定の要約と同じ区切り（' / '）。
-  if (Object.keys(langsBack).length === 0) return sideSummary(langs, t, ' / ');
-  return t('deck.speechLangsSides', {
-    front: sideSummary(langs, t, t('deck.speechLangsJoin')),
-    back: sideSummary(langsBack, t, t('deck.speechLangsJoin')),
-  });
+  const langsPart = Object.keys(langsBack).length === 0
+    ? sideSummary(langs, t, ' / ')
+    : t('deck.speechLangsSides', {
+      front: sideSummary(langs, t, t('deck.speechLangsJoin')),
+      back: sideSummary(langsBack, t, t('deck.speechLangsJoin')),
+    });
+  // 052：自動読み上げの上書きがあれば「自動 両面」を添える。言語の上書きが無ければそれだけ
+  //（「アプリ設定・自動 両面」だと言語がアプリ設定なのか全体がそうなのか読めない）。
+  if (!auto) return langsPart;
+  const autoPart = t('deck.speechAutoSummary', { mode: t(SPEECH_AUTO_LABEL_KEYS[auto]) });
+  return hasLangs ? t('deck.speechSummaryParts', { langs: langsPart, auto: autoPart }) : autoPart;
 }
 
 /** 片面ぶんの要約＝上書きした言語名を `sep` で結ぶ。上書きが無ければ「アプリ設定」。 */

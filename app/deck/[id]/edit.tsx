@@ -11,7 +11,7 @@ import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { IconPickerModal } from '@/components/IconPickerModal';
 import { DeckSpeechModal, deckSpeechSummary } from '@/components/deck/DeckSpeechModal';
-import { scriptLangsEqual, type ScriptLangs } from '@/lib/speech';
+import { scriptLangsEqual, type ScriptLangs, type SpeechAutoMode } from '@/lib/speech';
 import { DeckStagesModal } from '@/components/deck/DeckStagesModal';
 import { HtmlImageLibrary } from '@/components/deck/HtmlImageLibrary';
 import { useTranslation } from 'react-i18next';
@@ -55,7 +55,7 @@ const DECK_EDIT_SHORTCUT_SECTIONS = [
     // 並びは画面の行順（読み上げ → 読み上げの言語 → HTML/CSS 土台 → SQL 初期化 → アーカイブ）に合わせる。
     // 読み上げは無料機能なので pro フラグを付けない
     { key: '⇧R', descKey: 'shortcut.toggleDeckSpeech' },
-    { key: 'R', descKey: 'shortcut.deckSpeechLangs' },
+    { key: 'R', descKey: 'shortcut.deckSpeechSettings' },
     { key: 'H', descKey: 'shortcut.htmlInit', pro: true },
     { key: 'Q', descKey: 'shortcut.sqlInit', pro: true },
     { key: 'E', descKey: 'shortcut.toggleArchive' },
@@ -114,7 +114,9 @@ export default function EditDeckScreen() {
   const [showSpeechModal, setShowSpeechModal] = useState(false);
   // 051: 非 Pro が設定済みデッキを開いたときの案内（解除だけは通す）
   const [showSpeechProModal, setShowSpeechProModal] = useState(false);
-  const speechConfigured = Object.keys(speechLangs).length > 0 || Object.keys(speechLangsBack).length > 0;
+  // 052: このデッキの自動読み上げの面（null＝アプリ設定に従う・Pro）
+  const [speechAuto, setSpeechAuto] = useState<SpeechAutoMode | null>(deck?.speechAuto ?? null);
+  const speechConfigured = Object.keys(speechLangs).length > 0 || Object.keys(speechLangsBack).length > 0 || speechAuto !== null;
   // 052: このデッキで読み上げを使うか（無料・既定 ON）。保存値は否定形＝トグルの value は `!speechDisabled`
   const [speechDisabled, setSpeechDisabled] = useState<boolean>(deck?.speechDisabled ?? false);
   // 読み上げの説明（アーカイブと同じく ⓘ タップで行の下にインライン展開する）
@@ -210,14 +212,14 @@ export default function EditDeckScreen() {
       // 044/045: 中身が空の土台は保存しない（名前だけ作って離脱した行が残らないように）
       const normalizedSqlStages = sqlStages.filter((s) => s.content.trim() !== '');
       const normalizedStages = htmlStages.filter((s) => s.content.trim() !== '');
-      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, speechDisabled });
+      await updateDeck(db, id, { name: trimmed, description: description.trim(), language, iconName, colorHex, sqlStages: normalizedSqlStages, htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, speechAuto, speechDisabled });
       if (archived !== deck.archived) {
         await setDeckArchived(db, id, archived);
       }
       // 044/045: sqlInit / htmlInit は互換用ミラー。DB 側（updateDeck）と同じ値をストアにも入れて食い違わせない。
       updateStore({ ...deck, name: trimmed, description: description.trim(), language, iconName, colorHex,
         sqlInit: legacyInitMirror(normalizedSqlStages), sqlStages: normalizedSqlStages,
-        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, speechDisabled, archived });
+        htmlInit: legacyInitMirror(normalizedStages), htmlStages: normalizedStages, htmlImages, speechLangs, speechLangsBack, speechAuto, speechDisabled, archived });
       router.back();
     } finally {
       setSaving(false);
@@ -249,6 +251,7 @@ export default function EditDeckScreen() {
     //（`{han:..., latin:...}` と `{latin:..., han:...}` を「変更あり」と誤判定しないため）
     || !scriptLangsEqual(speechLangs, deck.speechLangs ?? {})
     || !scriptLangsEqual(speechLangsBack, deck.speechLangsBack ?? {})
+    || speechAuto !== (deck.speechAuto ?? null)
     || speechDisabled !== deck.speechDisabled
     || archived !== deck.archived;
 
@@ -451,7 +454,7 @@ export default function EditDeckScreen() {
               止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.speechLangsLabel')}
+              {t('deck.speechSettingsLabel')}
             </Text>
             <Pressable
               style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, (!speechEnabled || speechDisabled) && styles.inactive]}
@@ -461,7 +464,7 @@ export default function EditDeckScreen() {
                 <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
               </View>
               <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {deckSpeechSummary(speechLangs, speechLangsBack, t)}
+                {deckSpeechSummary(speechLangs, speechLangsBack, speechAuto, t)}
               </Text>
               {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
@@ -587,10 +590,10 @@ export default function EditDeckScreen() {
       />
       <ConfirmModal
         visible={showSpeechProModal}
-        title={t('deck.speechLangsTitle')}
+        title={t('deck.speechSettingsTitle')}
         message={t('deck.speechProMessage')}
         actions={[
-          { label: t('deck.speechProClear'), onPress: () => { setShowSpeechProModal(false); setSpeechLangs({}); setSpeechLangsBack({}); } },
+          { label: t('deck.speechProClear'), onPress: () => { setShowSpeechProModal(false); setSpeechLangs({}); setSpeechLangsBack({}); setSpeechAuto(null); } },
           { label: t('deck.speechProSeePro'), secondary: true, onPress: () => { setShowSpeechProModal(false); router.push('/paywall'); } },
         ]}
         onClose={() => setShowSpeechProModal(false)}
@@ -605,8 +608,10 @@ export default function EditDeckScreen() {
         visible={showSpeechModal}
         langs={speechLangs}
         langsBack={speechLangsBack}
+        auto={speechAuto}
         onChange={setSpeechLangs}
         onChangeBack={setSpeechLangsBack}
+        onChangeAuto={setSpeechAuto}
         onClose={() => setShowSpeechModal(false)}
       />
       <DiscardConfirmModal

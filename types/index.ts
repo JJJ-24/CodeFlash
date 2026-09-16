@@ -1,6 +1,6 @@
 // ---- Block types ----
 
-import type { ScriptLangs } from '@/lib/speech';
+import type { ScriptLangs, SpeechAutoMode } from '@/lib/speech';
 
 export interface TextBlock {
   type: 'text';
@@ -110,6 +110,10 @@ export interface Deck {
    *  ラベルは肯定形「このデッキで読み上げを使う」・既定 ON・保存値は否定形（`noDeckHtmlInit` と同じ流儀）。
    *  無料機能。SQLite は 0/1 で返すため `toDeck` で boolean に正規化する（`archived` と同じ） */
   speechDisabled: boolean;
+  /** 052：このデッキの自動読み上げの面（Pro）。`null`＝アプリ設定（`speechAuto`）に従う。
+   *  ⚠️ 適用は学習画面が `isPro` で止める（自動読み上げ自体が Pro 機能＝同期・インポートで
+   *  受け取った値を非 Pro に適用すると漏れる。051 の `speechLangs` とは逆） */
+  speechAuto: SpeechAutoMode | null;
   /** アーカイブ済み（学習サイクル・将来指標から除外）。配下カードも含めて除外される */
   archived: boolean;
 }

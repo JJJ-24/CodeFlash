@@ -493,7 +493,7 @@ async function main() {
   // TSV は往復しないので件数を警告に出す
   await updateDeck(db18, deck18.id, { name: '中国語', description: '', language: 'ja', speechLangs: { han: 'zh-CN' } });
   const loss18 = await inspectTsvExport(db18, await getDeckById(db18, deck18.id));
-  eq('TSV 損失: 上書きの件数を数える', loss18.deckSpeechLangs, 1);
+  eq('TSV 損失: 上書きの件数を数える', loss18.deckSpeech, 1);
   check('上書きだけでも警告を出す', hasTsvExportLoss(loss18));
 
   // JSON エクスポート → インポート往復
@@ -558,7 +558,7 @@ async function main() {
   // TSV は往復しないので表裏の合計を警告に出す
   await updateDeck(db18d, deck18d.id, { name: '英⇄西', description: '', language: 'ja', speechLangsBack: { latin: 'es-ES' } });
   const loss18d = await inspectTsvExport(db18d, await getDeckById(db18d, deck18d.id));
-  eq('TSV 損失: 表裏の合計を数える', loss18d.deckSpeechLangs, 2);
+  eq('TSV 損失: 表裏の合計を数える', loss18d.deckSpeech, 2);
 
   // JSON エクスポート → インポート往復
   for (const k of Object.keys(fsFiles)) if (k.endsWith('.json')) delete fsFiles[k];
@@ -629,6 +629,57 @@ async function main() {
   await migrateDbIfNeeded(db18i);
   await importDatabase(db18i, '/cache/old_spk_off.json', 'replace');
   eq('052 以前のエクスポートは ON（読む）として読める', (await getDeckById(db18i, deck18g.id)).speechDisabled, false);
+
+  // ---- 052 Phase 3：デッキごとの自動読み上げ（speechAuto 列／NULL＝アプリ設定に従う）----
+  const db18j = makeDb();
+  await migrateDbIfNeeded(db18j);
+  db18j.raw.exec('ALTER TABLE decks DROP COLUMN speechAuto');
+  await db18j.runAsync(
+    `INSERT INTO decks (id,name,description,language,cardCount,sortOrder,createdAt,updatedAt)
+     VALUES ('d-old-auto','旧デッキ','','ja',0,1,'2026-01-01','2026-01-01')`
+  );
+  await migrateDbIfNeeded(db18j);
+  const cols18j = await db18j.getAllAsync('PRAGMA table_info(decks)');
+  check('マイグレーションで speechAuto 列が追加される',
+    cols18j.some((c: { name: string }) => c.name === 'speechAuto'));
+  eq('既存デッキは null（アプリ設定に従う）', (await getDeckById(db18j, 'd-old-auto')).speechAuto, null);
+
+  const deck18j = await createDeck(db18j, { name: '語学', description: '', language: 'ja', speechAuto: 'both' });
+  eq('createDeck の戻り値に入る', deck18j.speechAuto, 'both');
+  eq('読み直しても同じ', (await getDeckById(db18j, deck18j.id)).speechAuto, 'both');
+  eq('省略時は null', (await createDeck(db18j, { name: '既定', description: '', language: 'ja' })).speechAuto, null);
+
+  await updateDeck(db18j, deck18j.id, { name: '語学', description: '', language: 'ja' });
+  eq('speechAuto を渡さない更新では消えない', (await getDeckById(db18j, deck18j.id)).speechAuto, 'both');
+  await updateDeck(db18j, deck18j.id, { name: '語学', description: '', language: 'ja', speechAuto: null });
+  eq('null を渡せば解除できる（アプリ設定に従う）', (await getDeckById(db18j, deck18j.id)).speechAuto, null);
+  await updateDeck(db18j, deck18j.id, { name: '語学', description: '', language: 'ja', speechAuto: 'back' });
+  eq('別の面へ変えられる', (await getDeckById(db18j, deck18j.id)).speechAuto, 'back');
+
+  // 壊れた値（将来の値・手で書き換えた DB）は null に倒す＝アプリ設定に従う
+  await db18j.runAsync("UPDATE decks SET speechAuto = 'memo' WHERE id = ?", [deck18j.id]);
+  eq('知らない値は null に正規化される', (await getDeckById(db18j, deck18j.id)).speechAuto, null);
+  await updateDeck(db18j, deck18j.id, { name: '語学', description: '', language: 'ja', speechAuto: 'front', speechDisabled: true });
+
+  // TSV は往復しない：自動読み上げと OFF も「デッキの読み上げ設定」として1件ずつ数える
+  const loss18j = await inspectTsvExport(db18j, await getDeckById(db18j, deck18j.id));
+  eq('TSV 損失: 自動読み上げ＋OFF で 2 件', loss18j.deckSpeech, 2);
+
+  // JSON エクスポート → インポート往復
+  for (const k of Object.keys(fsFiles)) if (k.endsWith('.json')) delete fsFiles[k];
+  await exportDatabase(db18j, false);
+  const autoUri = Object.keys(fsFiles).find((k) => k.endsWith('.json'))!;
+  const db18k = makeDb();
+  await migrateDbIfNeeded(db18k);
+  await importDatabase(db18k, autoUri, 'replace');
+  eq('replace インポートで speechAuto が復元', (await getDeckById(db18k, deck18j.id)).speechAuto, 'front');
+  const oldAutoExport = JSON.parse(fsFiles[autoUri]);
+  for (const d of oldAutoExport.decks) delete d.speechAuto;
+  fsFiles['/cache/old_auto.json'] = JSON.stringify(oldAutoExport);
+  const db18l = makeDb();
+  await migrateDbIfNeeded(db18l);
+  await importDatabase(db18l, '/cache/old_auto.json', 'replace');
+  eq('052 以前のエクスポートは null（アプリ設定に従う）として読める', (await getDeckById(db18l, deck18j.id)).speechAuto, null);
 
   // ===========================================================================
   console.log('\n[T19] 046 Phase 5・統計「学習の記録」の目標達成（現在の目標で過去も判定）');

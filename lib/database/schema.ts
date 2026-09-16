@@ -241,6 +241,13 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     await db.execAsync(`ALTER TABLE decks ADD COLUMN speechDisabled INTEGER NOT NULL DEFAULT 0;`);
   }
 
+  // === 052 Phase 3: デッキごとの自動読み上げ（decks に speechAuto カラム・Pro）===
+  // 'off' | 'front' | 'back' | 'both' の文字列。NULL＝アプリ設定に従う（既存デッキは NULL のまま不変）。
+  // ⚠️ 適用側（学習画面）が isPro で止める＝非 Pro には NULL 相当（自動読み上げ自体が Pro 機能のため）。
+  if (!cols.some((c) => c.name === 'speechAuto')) {
+    await db.execAsync(`ALTER TABLE decks ADD COLUMN speechAuto TEXT;`);
+  }
+
   // === 046 Phase 2: 未達成のときだけ通知するスケジュール（notification_schedules に列追加）===
   // スケジュール単位のフラグ（全体設定にしない）＝「朝は無条件・夜は未達成のときだけ」を使い分けられる。
   // 既定 0 ＝既存スケジュールの挙動は不変。

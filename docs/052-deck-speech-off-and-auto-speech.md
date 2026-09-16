@@ -1,7 +1,7 @@
 # 052 デッキごとの読み上げ OFF ＋ 自動読み上げ（アプリ設定／デッキ上書き）
 
 **フェーズ:** 将来
-**ステータス:** Phase 1 完了（`aa3e507`・2026-09-16・実機確認済み）／Phase 2 完了（2026-09-16・実機確認済み）／Phase 3 未着手（設計合意 2026-09-16）
+**ステータス:** 完了（Phase 1 `aa3e507`・Phase 2 `4cbb267`・Phase 3＋仕上げ 2026-09-16・すべて実機確認済み／設計合意 2026-09-16）
 **要ネイティブ再ビルド:** 不要（`expo-speech` は導入済み・DB 列の追加と設定キーの追加のみ）
 **依存:** 049（読み上げ本体・Phase 2 が本チケットへ移った）・050（デッキ単位の上書き＝`DeckSpeechModal`）・051（デッキ設定の Pro 化）
 **被依存:** なし
@@ -146,8 +146,10 @@ SQL 初期化（Pro）
 
 #### ③ `DeckSpeechModal`（デッキ上書き）
 
-先頭に **「自動読み上げ　アプリ設定に従う ›」** の行（文字体系の一覧の上）。タップで②と
-同じモーダルを `allowInherit` で開く。
+先頭に **「自動読み上げ　アプリ設定 ›」** の行（文字体系の一覧の上。端末の音声一覧に依存しないので、
+選べる文字体系が無くてもこの行は出す）。タップで②と同じモーダルを `allowInherit` で開く。
+デッキ編集の行のラベルとシートのタイトルは「読み上げの言語」→ **「読み上げの設定」** に改名
+（`deck.speechSettingsLabel` / `speechSettingsTitle`・ショートカット一覧も）＝言語以外も入ったため。
 
 - `deckSpeechSummary` に自動読み上げを足す（例：「自動:両面 ／ 表:英語」）。
   `speechConfigured`（鍵つき行の「設定済み」判定）にも `speechAuto !== null` を足す
@@ -283,19 +285,19 @@ OFF は**モード**であって設定の有無ではない（051 の裏面ト�
 
 ### Phase 3（自動読み上げ・デッキ上書き・Pro）
 
-- [ ] `schema.ts` に `decks.speechAuto`（TEXT・NULL）の `ALTER TABLE`
-- [ ] `types/index.ts` に `speechAuto: SpeechAutoMode | null`
-- [ ] `lib/database/decks.ts`：`RawDeck`・`toDeck`（不正値は `null` に落とす）・`createDeck`・`updateDeck`（**渡されたときだけ書く**）
-- [x] `lib/import.ts` の列リスト／`lib/tsv.ts` の件数（`tsvLossDeckSpeechLangs` の文言を「読み上げの設定」へ）
-- [ ] `DeckSpeechModal`：先頭行＋`allowInherit` のモーダル（**この Modal の children の中**に置く）
-- [ ] `deckSpeechSummary`・`speechConfigured` に `speechAuto` を含める／非 Pro の［設定を解除］で `null` に戻す
-- [ ] `session.tsx`：`currentDeck?.speechAuto ?? speechAuto`（`isPro` の内側）
+- [x] `schema.ts` に `decks.speechAuto`（TEXT・NULL）の `ALTER TABLE`
+- [x] `types/index.ts` に `speechAuto: SpeechAutoMode | null`
+- [x] `lib/database/decks.ts`：`RawDeck`・`toDeck`（不正値は `null` に落とす）・`createDeck`・`updateDeck`（**渡されたときだけ書く**）
+- [x] `lib/import.ts` の列リスト／`lib/tsv.ts` の件数（`deckSpeech` に改名し、言語＋表裏＋自動＋OFF を数える。文言は `tsvLossDeckSpeech`「読み上げの設定（デッキ設定）N件」）
+- [x] `DeckSpeechModal`：先頭行＋`allowInherit` のモーダル（**この Modal の children の中**に置く）
+- [x] `deckSpeechSummary`・`speechConfigured` に `speechAuto` を含める／非 Pro の［設定を解除］で `null` に戻す
+- [x] `session.tsx`：`currentDeck?.speechAuto ?? speechAuto`（`isPro` の内側）
 - [x] `ja.json`／`en.json`／`es.json` ＋ `npm run verify:i18n`
-- [ ] `verify:db` の T18c を拡張（`speechAuto` の往復・NULL＝従う・不正値の正規化）
-- [ ] 実機：アプリ「オフ」＋デッキ「両面」で読む／アプリ「両面」＋デッキ「オフ」で読まない／「アプリ設定に従う」に戻すとアプリ側に落ちる／非 Pro は解除だけできる
+- [x] `verify:db` の T18c を拡張（`speechAuto` の往復・NULL＝従う・不正値の正規化・TSV 件数＝12 アサーション追加・合計 212）
+- [x] 実機：アプリ「オフ」＋デッキ「両面」で読む／アプリ「両面」＋デッキ「オフ」で読まない／「アプリ設定に従う」に戻すとアプリ側に落ちる／非 Pro は解除だけできる
 
 ### 仕上げ
 
-- [ ] `CLAUDE.md`：読み上げの節（デッキごと OFF・自動読み上げ・**適用側の `isPro` が 051 と違う理由**）・`store/settings.ts` の一覧・DB 列
-- [ ] `docs/049` の Phase 2 を「052 で実装」に更新
-- [ ] release-notes に1行
+- [x] `CLAUDE.md`：読み上げの節（デッキごと OFF・自動読み上げ・**適用側の `isPro` が 051 と違う理由**）・`store/settings.ts` の一覧・DB 列
+- [x] `docs/049` の Phase 2 を「052 で実装」に更新
+- [x] release-notes に1行

@@ -148,6 +148,32 @@ function RootStack() {
       .finally(() => { syncBreakEndNotification().catch(() => {}); });
   }, [i18n.language, notificationEnabled, db]);
 
+  // 046: **iCloud のダウンロードで DB が入れ替わったら通知を組み直す**。
+  // 未達成リマインダーは数日分を前倒し予約しておき、当日分が消えるのは「その端末で目標を達成した
+  // 瞬間（cancelTodayGoalReminders）」と「scheduleFromDb が組み直すとき（達成済みなら当日分を
+  // 予約しない）」の2経路しかない。別端末で達成したデータを取り込んでもどちらも走らないため、
+  // 達成済みなのに当日分の予約が残って鳴っていた。
+  // ⚠️ 復帰時の再スケジュール（上の AppState）では間に合わない：同期と再スケジュールは別々の
+  //    リスナーで、後者は即座に DB を読むので、ダウンロード完了前の「まだ相手の学習が入っていない」
+  //    DB を見て未達成と判断し、当日分を予約し直してしまう。取り込み完了まで待つ必要がある。
+  // ⚠️ 上の2箇所と**同じ組み合わせ**にすること（cancel-all を含むので直後に syncBreakEndNotification()）。
+  // ⚠️ dataRevision が実際に進んだときだけ動かす（初回マウントや notificationEnabled の変化で
+  //    cancel-all を挟むと、予約済みの休憩終了通知が一瞬消える）。
+  // バッジも同じ穴＝ダウンロードで due が変わっても次の前面復帰まで古い数字のままだった。
+  const dataRevision = useSyncStore((s) => s.dataRevision);
+  const prevRevRef = useRef(dataRevision);
+  useEffect(() => {
+    if (prevRevRef.current === dataRevision) return;
+    prevRevRef.current = dataRevision;
+    const reschedule = notificationEnabled
+      ? scheduleFromDb(db)
+      : cancelAllScheduledNotifications();
+    reschedule
+      .catch(() => {})
+      .finally(() => { syncBreakEndNotification().catch(() => {}); });
+    updateBadgeCount(db).catch(() => {});
+  }, [dataRevision, notificationEnabled, db]);
+
   return (
     <ThemeProvider value={navigationTheme}>
     {/* アプリ全体のステータスバー文字色の基準（ダーク=白/ライト=黒）。

@@ -1450,10 +1450,18 @@ export default function StatsScreen() {
 
   // ソートモード切替（回数→平均時間→評価率の循環）：4ブロックと選択中グレードの TOP10 を再取得。
   // ⚠️ ブロックも取り直すのは、評価率モードだけ母集団が変わるため（fetchGradeTotals のコメント参照）。
+  // ⚠️ モードの切替は**取り直した数字と同時に**反映する（先に切り替えない）。先に切り替えると取得待ちの間
+  //   「新しいモード × 前のモード用の gradeTotals」で描かれ、評価率⇄評価回数で一瞬別の数字が出る
+  //   （平均回答時間は gradeAvgTimes を使うので出ない）。await の後の setState とストア更新は1回の描画にまとまる。
+  // 連打に備えて「次の切替先」は sortTargetRef で先に進め（ストアはまだ古い）、遅れて届いた古い結果は
+  // sortSeqRef で捨てる。
+  const sortTargetRef = useRef<GradeRankingSortBy | null>(null);
+  const sortSeqRef = useRef(0);
   const handleCycleRankingSort = useCallback(async () => {
     const next: Record<GradeRankingSortBy, GradeRankingSortBy> = { count: 'time', time: 'rate', rate: 'count' };
-    const newValue = next[gradeRankingSortBy];
-    setGradeRankingSortBy(newValue);
+    const newValue = next[sortTargetRef.current ?? useSettingsStore.getState().gradeRankingSortBy];
+    sortTargetRef.current = newValue;
+    const seq = ++sortSeqRef.current;
     setGradeBlockLoading(true);
     const [totals, cards] = await Promise.all([
       fetchGradeTotals({ sortBy: newValue }),
@@ -1461,10 +1469,13 @@ export default function StatsScreen() {
         ? fetchRankingCards(selectedGradeBlockRef.current, { sortBy: newValue })
         : Promise.resolve(null),
     ]);
+    if (seq !== sortSeqRef.current) return;
+    sortTargetRef.current = null;
+    setGradeRankingSortBy(newValue);
     setStats((prev) => ({ ...prev, gradeTotals: totals }));
     if (cards !== null) setGradeBlockCards(cards);
     setGradeBlockLoading(false);
-  }, [fetchGradeTotals, fetchRankingCards, gradeRankingSortBy, setGradeRankingSortBy]);
+  }, [fetchGradeTotals, fetchRankingCards, setGradeRankingSortBy]);
 
   // 重点復習を開始（選択中グレードの TOP カードでセッション開始）。ボタンと Space キーで共用。
   // fromIdx を渡すと「ここから学習」＝そのカードから末尾まで（行の右スワイプ・⇧Space。カード一覧と同じ操作）。

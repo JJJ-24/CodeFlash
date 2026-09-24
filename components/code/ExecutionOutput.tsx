@@ -31,13 +31,14 @@ const MAX_PREVIEW_HEIGHT_RATIO = 0.6;
  */
 function buildCopyText(result: ExecResult, timeoutMessage: string): string {
   const lines: string[] = [];
-  if (result.status === 'timeout') lines.push(timeoutMessage);
-  if (result.errorMessage) lines.push(result.errorMessage);
   result.tables?.forEach(t => {
     lines.push(t.columns.join('\t'));
     t.rows.forEach(row => lines.push(row.map(v => v === null ? 'NULL' : String(v)).join('\t')));
   });
   result.logs.forEach(l => lines.push(l.text));
+  // 画面と同じ順（ログ → エラー/タイムアウト）
+  if (result.status === 'timeout') lines.push(timeoutMessage);
+  if (result.errorMessage) lines.push(result.errorMessage);
   return lines.join('\n');
 }
 
@@ -315,13 +316,6 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
             </GestureDetector>
           </View>
           <View style={styles.outputContent}>
-            {(result.status === 'error' && result.errorMessage) || result.status === 'timeout' ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false}>
-                <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                  {result.status === 'timeout' ? t('code.timeoutMessage', { seconds: timeoutSeconds }) : result.errorMessage}
-                </Text>
-              </ScrollView>
-            ) : null}
             {result.tables?.map((table, ti) => (
               <SqlTable key={ti} table={table} />
             ))}
@@ -329,6 +323,15 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
               <Text style={[styles.emptyOutput, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('code.empty')}</Text>
             )}
             {result.logs.length > 0 && <LogLines logs={result.logs} />}
+            {/* エラー/タイムアウトはログの**後**に出す＝起きた順（ターミナル・ブラウザの開発者ツールと同じ）。
+                先に出すと、失敗より前に出力したログが下に並び「どこまで進んで失敗したか」が逆順に読める。 */}
+            {(result.status === 'error' && result.errorMessage) || result.status === 'timeout' ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false}>
+                <Text style={[styles.errorMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {result.status === 'timeout' ? t('code.timeoutMessage', { seconds: timeoutSeconds }) : result.errorMessage}
+                </Text>
+              </ScrollView>
+            ) : null}
             {/* 非 Pro で土台を落として実行したブロック。DOM を触るコードはここで null 参照エラーに
                 なるので、「壊れた」ではなく Pro 機能だと分かるよう理由を1行添える（実行は止めない）。 */}
             {proStageHint && (

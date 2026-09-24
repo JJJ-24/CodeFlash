@@ -462,6 +462,8 @@
     "error": "✕ Error",
     "timeout": "⏱ Tiempo agotado ({{seconds}} s)",
     "timeoutMessage": "La ejecución se detuvo tras {{seconds}} segundos",
+    "stopped": "■ Cancelado",
+    "stoppedMessage": "Se canceló la ejecución",
     "serverBusy": "El servidor de ejecución de C++ está saturado. Espera un momento y vuelve a ejecutar (tu código no tiene ningún problema).",
     "empty": "(sin salida)",
     "preview": "Vista previa",

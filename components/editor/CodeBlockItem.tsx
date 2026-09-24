@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Modal,
   Pressable,
@@ -22,6 +21,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { BlockItemHeader } from './BlockItemHeader';
 import { AppSwitch } from '@/components/AppSwitch';
 import { ExecutionOutput } from '@/components/code/ExecutionOutput';
+import { RUN_STOP_BG, RunButtonIcon } from '@/components/code/RunButtonIcon';
 import { InteractivePreviewModal } from '@/components/code/InteractivePreviewModal';
 import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
@@ -75,7 +75,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const { setOpen: setPreviewOpen } = useInteractivePreview();
   const isPro = useProStore(s => s.isPro);
   const { width } = useWindowDimensions();
-  const { result, liveLogs, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, handleMessage } = useCodeExecution(onRunStart);
+  const { result, liveLogs, htmlSource, baseUrl, previewMode, runNonce, isRunning, run, clear, reset, stop, handleMessage } = useCodeExecution(onRunStart);
   const isEmpty = block.content.trim() === '';
   // 削除確認（✕）の空判定は本文だけでなくブロック固有の初期化SQL / HTML 土台も見る。
   // 土台のみ入力済みのブロックを ✕ で消すとき確認アラートを出すため。
@@ -244,6 +244,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
   useEffect(() => {
     if ((runTrigger ?? 0) > 0 && block.executable) {
+      // R キーを実行中にもう一度押したら中止（実行ボタンと同じ）
+      if (isRunning) {
+        stop();
+        return;
+      }
       if (PRO_LANGUAGES.includes(block.language) && !isPro) {
         setProModalVisible(true);
         return;
@@ -342,8 +347,13 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
           {!collapsed && block.executable && (
             <TouchableOpacity
-              style={[styles.runBtn, { paddingHorizontal: Math.round(theme.fontSize.sm * 1.5) }, isRunning && styles.runBtnDisabled]}
+              style={[styles.runBtn, { paddingHorizontal: Math.round(theme.fontSize.sm * 1.5) }, isRunning && { backgroundColor: RUN_STOP_BG }]}
               onPress={() => {
+                // 実行中にもう一度押したら中止（開始直後の誤操作は stop() 側で無視する）
+                if (isRunning) {
+                  stop();
+                  return;
+                }
                 if (PRO_LANGUAGES.includes(block.language) && !isPro) {
                   setProModalVisible(true);
                   return;
@@ -356,12 +366,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 onRunButtonPress?.();
                 run(block.content, block.language, sqlInits, htmlInits, deckHtmlImages);
               }}
-              disabled={isRunning}
             >
-              {isRunning
-                ? <ActivityIndicator size="small" color="#FFF" style={styles.spinner} />
-                : <Ionicons name="caret-forward" size={Math.round(theme.fontSize.lg)} color="#FFF" />
-              }
+              <RunButtonIcon running={isRunning} size={Math.round(theme.fontSize.lg)} />
             </TouchableOpacity>
           )}
         </View>
@@ -750,9 +756,7 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     alignItems: 'center',
     gap: 4,
   },
-  runBtnDisabled: { backgroundColor: '#555' },
   runBtnText: { color: '#FFF', fontWeight: '600' },
-  spinner: { marginHorizontal: 4 },
   codeArea: {
     position: 'relative',
   },

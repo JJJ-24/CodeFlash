@@ -1,5 +1,6 @@
 export type LogEntry = { type: 'log' | 'error' | 'warn'; text: string };
-export type ExecStatus = 'idle' | 'running' | 'success' | 'error' | 'timeout';
+// stopped＝実行中に利用者が実行ボタン（R キー）で中止した
+export type ExecStatus = 'idle' | 'running' | 'success' | 'error' | 'timeout' | 'stopped';
 export type SqlTableResult = {
   columns: string[];
   rows: (string | number | null)[][];

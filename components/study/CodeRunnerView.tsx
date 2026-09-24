@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +17,7 @@ import { runOnJS } from "react-native-reanimated";
 
 import { ExecutionOutput } from "@/components/code/ExecutionOutput";
 import { InteractivePreviewModal } from "@/components/code/InteractivePreviewModal";
+import { RUN_STOP_BG, RunButtonIcon } from "@/components/code/RunButtonIcon";
 import { SymbolPalette } from "@/components/code/SymbolPalette";
 import { SyntaxHighlightedCode } from "@/components/study/SyntaxHighlightedCode";
 import { InfoModal } from "@/components/InfoModal";
@@ -95,6 +95,7 @@ export function CodeRunnerView({
     clear,
     handleMessage,
     reset,
+    stop,
   } = useCodeExecution(onRunStart);
   const isPro = useProStore(s => s.isPro);
   // Web 系4言語（html / js・ts / css）で body 先頭に加算する HTML/CSS 土台（デッキ土台 → ブロック固有）。
@@ -258,11 +259,16 @@ export function CodeRunnerView({
   // isEditingRef / anotherBlockEditingRef を使って stale closure を回避する。
   // 編集中の場合は編集終了 → 300ms 後に実行（keyboardRef の focus 復元を待つ）。
   const handleRun = useCallback(() => {
+    // 実行中にもう一度押したら中止（開始直後の誤操作は stop() 側で無視する）
+    if (isRunning) {
+      suppress?.(); // カードフリップを抑制
+      stop();
+      return;
+    }
     if (PRO_LANGUAGES.includes(block.language) && !isPro) {
       setProModalVisible(true);
       return;
     }
-    if (isRunning) return;
     suppress?.(); // カードフリップを抑制
     const wasThisEditing = isEditingRef.current;
     if (wasThisEditing) {
@@ -295,6 +301,7 @@ export function CodeRunnerView({
     }
   }, [
     isRunning,
+    stop,
     isPro,
     suppress,
     editable,
@@ -348,9 +355,8 @@ export function CodeRunnerView({
     () =>
       Gesture.Tap()
         .maxDistance(10)
-        .enabled(!isRunning)
         .onEnd(() => runOnJS(callHandleRun)()),
-    [isRunning, callHandleRun],
+    [callHandleRun],
   );
 
   const copyGesture = useMemo(
@@ -429,20 +435,11 @@ export function CodeRunnerView({
                 style={[
                   styles.runBtn,
                   { paddingVertical: Math.round(theme.fontSize.xs * 0.58), paddingHorizontal: Math.round(theme.fontSize.sm * 1.5) },
-                  isRunning && styles.runBtnDisabled,
+                  isRunning && { backgroundColor: RUN_STOP_BG },
                 ]}
                 activeOpacity={0.7}
-                disabled={isRunning}
               >
-                {isRunning ? (
-                  <ActivityIndicator
-                    size="small"
-                    color="#FFF"
-                    style={styles.spinner}
-                  />
-                ) : (
-                  <Ionicons name="caret-forward" size={Math.round(theme.fontSize.lg)} color="#FFF" />
-                )}
+                <RunButtonIcon running={isRunning} size={Math.round(theme.fontSize.lg)} />
               </TouchableOpacity>
             </GestureDetector>
           )}
@@ -613,12 +610,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-  },
-  runBtnDisabled: {
-    backgroundColor: "#555",
-  },
-  spinner: {
-    marginHorizontal: 4,
   },
   codeArea: {
     position: "relative",

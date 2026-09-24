@@ -435,6 +435,8 @@
     "error": "✕ エラー",
     "timeout": "⏱ タイムアウト（{{seconds}}秒）",
     "timeoutMessage": "実行が{{seconds}}秒を超えたため中断されました",
+    "stopped": "■ 中止",
+    "stoppedMessage": "実行を中止しました",
     "serverBusy": "C++実行サーバが混雑しています。少し待ってから再実行してください（コードに問題はありません）",
     "empty": "（出力なし）",
     "preview": "プレビュー",

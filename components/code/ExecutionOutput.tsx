@@ -15,6 +15,7 @@ import { buildStaticPreviewHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import i18n from '@/lib/i18n';
 import type { DeckImage } from '@/types';
 
 /** インラインプレビューの高さ（下限）。中身がこれより低くても箱は縮めない。 */
@@ -39,6 +40,7 @@ function buildCopyText(result: ExecResult, timeoutMessage: string): string {
   // 画面と同じ順（ログ → エラー/タイムアウト）
   if (result.status === 'timeout') lines.push(timeoutMessage);
   if (result.errorMessage) lines.push(result.errorMessage);
+  if (result.status === 'stopped') lines.push(i18n.t('code.stoppedMessage'));
   return lines.join('\n');
 }
 
@@ -297,7 +299,7 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
           </View>
         </View>
       )}
-      {result && (!previewMode || result.logs.length > 0 || result.status === 'error' || result.status === 'timeout') && (
+      {result && (!previewMode || result.logs.length > 0 || result.status === 'error' || result.status === 'timeout' || result.status === 'stopped') && (
         <View
           style={[
             styles.output,
@@ -307,7 +309,8 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
           <View style={styles.outputHeader}>
             <Text style={[styles.outputTitle, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {result.status === 'timeout' ? t('code.timeout', { seconds: timeoutSeconds }) :
-               result.status === 'error'   ? t('code.error') : t('code.output')}
+               result.status === 'error'   ? t('code.error') :
+               result.status === 'stopped' ? t('code.stopped') : t('code.output')}
             </Text>
             <GestureDetector gesture={clearGesture}>
               <View style={styles.clearBtnWrapper}>
@@ -332,6 +335,12 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
                 </Text>
               </ScrollView>
             ) : null}
+            {/* 利用者が中止した＝エラーではないので赤くしない（途中までのログはこの上に残る） */}
+            {result.status === 'stopped' && (
+              <Text style={[styles.stoppedMessage, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                {t('code.stoppedMessage')}
+              </Text>
+            )}
             {/* 非 Pro で土台を落として実行したブロック。DOM を触るコードはここで null 参照エラーに
                 なるので、「壊れた」ではなく Pro 機能だと分かるよう理由を1行添える（実行は止めない）。 */}
             {proStageHint && (
@@ -482,6 +491,11 @@ const styles = StyleSheet.create({
   errorMessage: {
     fontFamily: 'monospace',
     color: '#F87171',
+    lineHeight: 20,
+  },
+  stoppedMessage: {
+    fontFamily: 'monospace',
+    color: '#9CA3AF',
     lineHeight: 20,
   },
   emptyOutput: {

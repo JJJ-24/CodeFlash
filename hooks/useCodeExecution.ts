@@ -65,6 +65,13 @@ function watchdogMsFor(language: string): number | null {
   return EXEC_TIMEOUT_BASE_MS + WATCHDOG_MARGIN_MS;
 }
 
+/**
+ * 実行開始からこの時間内の中止要求は無視する。実行ボタンは実行中も押せる（＝中止）ので、
+ * 反応が無いと思ってもう一度押しただけで止まってしまう事故を防ぐ。
+ * 逆向き（中止の直後の実行）にも同じ時間を使う＝止めたか不安で2回押すと再実行が始まってしまうため。
+ */
+const STOP_GUARD_MS = 500;
+
 /** abort で即座にキャンセルできる待機。abort 時は name='AbortError' の Error で reject する。 */
 function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -87,7 +94,16 @@ function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
  * 言語を追加する際は run() 内の言語判定を拡張する。
  */
 export function useCodeExecution(onResult?: () => void) {
-  const [status, setStatus] = useState<ExecStatus>('idle');
+  const [status, setStatusState] = useState<ExecStatus>('idle');
+  // stop() とメッセージ受信（stale closure）から最新の状態を読むための控え
+  const statusRef = useRef<ExecStatus>('idle');
+  function setStatus(next: ExecStatus) {
+    statusRef.current = next;
+    setStatusState(next);
+  }
+  // 誤操作ガード（STOP_GUARD_MS）の起点：実行開始（→中止を無視）と中止（→実行を無視）
+  const runStartedAtRef = useRef(0);
+  const stoppedAtRef = useRef(0);
   const [result, setResult] = useState<ExecResult | null>(null);
   // 実行中に届いた途中経過のログ（サンドボックスが 100ms ごとに送る `{type:'logs'}`）。
   // result には入れない：result の変化は onResult（学習画面の結果へのスクロール）を呼ぶので、
@@ -182,6 +198,7 @@ export function useCodeExecution(onResult?: () => void) {
         }
 
         clearTimeout(timer);
+        if (cppAbortRef.current !== controller) return; // 中止/リセット済み＝結果は捨てる
         cppAbortRef.current = null;
 
         // リトライしても混雑が解消しなかった場合は、コードの実行時エラーと区別して案内する。
@@ -224,6 +241,9 @@ export function useCodeExecution(onResult?: () => void) {
       }
     } catch (e: unknown) {
       clearTimeout(timer);
+      // stop()/reset() は cppAbortRef を外してから abort する。外れていれば利用者の中止なので、
+      // ここで「タイムアウト」を上書きしない（30秒の打ち切りは ref を残したまま abort する）。
+      if (cppAbortRef.current !== controller) return;
       cppAbortRef.current = null;
       if (e instanceof Error && e.name === 'AbortError') {
         setStatus('timeout');
@@ -242,7 +262,10 @@ export function useCodeExecution(onResult?: () => void) {
    * @param deckImages デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決するのに使う
    */
   function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[], deckImages?: DeckImage[]) {
+    // 中止の直後の実行は無視する（■ の2度押しで再実行が始まらないように・STOP_GUARD_MS）
+    if (statusRef.current === 'stopped' && Date.now() - stoppedAtRef.current < STOP_GUARD_MS) return;
     setStatus('running');
+    runStartedAtRef.current = Date.now();
     setResult(null);
     setLiveLogs([]);
     liveLogsRef.current = [];
@@ -338,6 +361,8 @@ export function useCodeExecution(onResult?: () => void) {
       if (Number.isFinite(remaining) && remaining >= 0) armWatchdog(remaining + WATCHDOG_MARGIN_MS);
       return;
     }
+    // 中止した後に、破棄する直前の WebView から完了が届いても「中止」を上書きしない
+    if (statusRef.current === 'stopped') return;
     clearWatchdog();
     const newResult: ExecResult = {
       status: data.type as ExecStatus,
@@ -352,9 +377,35 @@ export function useCodeExecution(onResult?: () => void) {
     if (!previewModeRef.current) setHtmlSource(null);
   }
 
+  /**
+   * 実行中の処理を中止する（実行ボタン・R キーを実行中に押したとき）。
+   * 実行はすべてアプリから切り離された WebView（C++ は Wandbox）の中なので、WebView を破棄すれば
+   * 実行ごと消え、書きかけのデータも残らない。C++ はサーバー側では最後まで走るが受け取らない。
+   * 途中までのログは結果に残す（見張りの打ち切りと同じ＝どこまで進んだかが分かる）。
+   * Web プレビューは実行前（土台だけ）の表示へ戻す。
+   * @returns 中止したら true（実行中でない／開始直後の誤操作ガード中は false）
+   */
+  function stop(): boolean {
+    if (statusRef.current !== 'running') return false;
+    if (Date.now() - runStartedAtRef.current < STOP_GUARD_MS) return false;
+    const controller = cppAbortRef.current;
+    cppAbortRef.current = null; // 先に外す＝runCppViaWandbox の catch が「タイムアウト」と誤認しない
+    controller?.abort();
+    clearWatchdog();
+    runSeqRef.current++; // 画像参照の解決待ちが後から htmlSource を蘇らせないように無効化する
+    stoppedAtRef.current = Date.now();
+    setStatus('stopped');
+    setResult({ status: 'stopped', logs: liveLogsRef.current });
+    setHtmlSource(null);
+    setPreviewMode(false);
+    previewModeRef.current = false;
+    return true;
+  }
+
   function reset() {
-    cppAbortRef.current?.abort();
-    cppAbortRef.current = null;
+    const controller = cppAbortRef.current;
+    cppAbortRef.current = null; // stop() と同じく先に外す
+    controller?.abort();
     clearWatchdog();
     setStatus('idle');
     setResult(null);
@@ -379,5 +430,6 @@ export function useCodeExecution(onResult?: () => void) {
     clear,
     handleMessage,
     reset,
+    stop,
   };
 }

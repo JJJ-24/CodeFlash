@@ -201,7 +201,7 @@ export default function NewTagScreen() {
           </View>
         </ScrollView>
 
-        <FormBottomBar onSave={handleSave} saveDisabled={!canSave} />
+        <FormBottomBar onClose={handleClose} onSave={handleSave} saveDisabled={!canSave} />
       </View>
       <DiscardConfirmModal
         visible={showDiscardModal}

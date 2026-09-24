@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/lib/theme';
 
 interface Props {
+  /** 閉じる（左端の青い丸 ×）。ヘッダーの × と同じ関数を渡す（未保存なら破棄確認）。 */
+  onClose: () => void;
   onSave: () => void;
   saveDisabled: boolean;
   /** 削除ボタン（ゴミ箱・danger）。編集画面のみ渡す。 */
@@ -18,14 +20,20 @@ interface Props {
 
 /**
  * 入力系モーダル（デッキ/タグ/カードの新規・編集）共通の底部アクションバー。
- * 並び: 削除（danger・任意）→ 複製（アウトライン・任意）→ 保存（primary）。
+ * 並び: 閉じる（青い丸）→ 削除（danger・任意）→ 複製（アウトライン・任意）→ 保存（primary）。
  * ボタンはアイコンのみ（言語/フォントサイズ非依存＝CLAUDE.md の方針）。
+ *
+ * 閉じるは他画面の左下フローティング「＜」（56pt の青い丸・left 20）と同じ形・ほぼ同じ位置に置く
+ * ＝「左下の丸で抜ける」慣れがそのまま通じ、左下に削除（赤）が来て誤タップされるのも防ぐ。
  */
-export function FormBottomBar({ onSave, saveDisabled, onDelete, onDuplicate, duplicateDisabled, horizontalPadding = 20 }: Props) {
+export function FormBottomBar({ onClose, onSave, saveDisabled, onDelete, onDuplicate, duplicateDisabled, horizontalPadding = 20 }: Props) {
   const theme = useTheme();
   const { bottom: bottomInset } = useSafeAreaInsets();
   return (
     <View style={[styles.bottomBar, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingHorizontal: horizontalPadding, paddingBottom: Math.max(bottomInset, 16) + 12 }]}>
+      <TouchableOpacity style={[styles.closeBtn, { backgroundColor: theme.colors.primary }]} onPress={onClose} hitSlop={6}>
+        <Ionicons name="close" size={28} color="#FFF" />
+      </TouchableOpacity>
       {onDelete && (
         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.danger }]} onPress={onDelete}>
           <Ionicons name="trash-outline" size={26} color="#FFF" />
@@ -57,6 +65,14 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+  },
+  closeBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionBtn: {
     flex: 1,

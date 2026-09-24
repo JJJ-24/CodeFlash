@@ -504,7 +504,7 @@ export default function NewDeckScreen() {
           )}
 
         </ScrollView>
-        <FormBottomBar onSave={handleCreate} saveDisabled={!canSave} />
+        <FormBottomBar onClose={handleClose} onSave={handleCreate} saveDisabled={!canSave} />
       </View>
       <IconPickerModal
         visible={showIconPicker}

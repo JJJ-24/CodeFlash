@@ -251,6 +251,7 @@ export default function EditCardScreen() {
           suspendKeys={blockingModalOpen}
         />
         <FormBottomBar
+          onClose={handleClose}
           onSave={() => editorRef.current?.save()}
           saveDisabled={saving || frontEmpty}
           onDelete={isCopy ? undefined : confirmDelete}

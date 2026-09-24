@@ -564,7 +564,7 @@ export default function EditDeckScreen() {
             </View>
           </View>
         </ScrollView>
-        <FormBottomBar onSave={handleSave} saveDisabled={!canSave} onDelete={confirmDelete} />
+        <FormBottomBar onClose={handleClose} onSave={handleSave} saveDisabled={!canSave} onDelete={confirmDelete} />
       </View>
       <IconPickerModal
         visible={showIconPicker}

@@ -119,7 +119,7 @@ components/
 ├── SwipeToDeleteRow.tsx    # 左スワイプで [アーカイブ/解除][削除] を出す共通ラッパー（onArchive は任意）
 ├── ModalFormHeader.tsx     # 入力系モーダル（デッキ/タグ/カードの新規・編集6画面）共通の自前固定ヘッダー（×・中央タイトル＋キーボードアイコン・✓。useLockedTopInset 内蔵）
 ├── DiscardConfirmModal.tsx # 「変更を破棄しますか？」確認（保存/破棄 actions。ConfirmModal のラッパー）
-├── FormBottomBar.tsx       # 入力系モーダル共通の底部バー（削除?・複製?・保存。アイコンのみ）
+├── FormBottomBar.tsx       # 入力系モーダル共通の底部バー（閉じる・削除?・複製?・保存。アイコンのみ。閉じるは他画面の左下「＜」と同じ 56pt の青い丸＝左下で抜ける慣れを保つ）
 └── EmptyState.tsx          # 空状態表示（アイコン＋タイトル＋サブタイトル）
 
 hooks/

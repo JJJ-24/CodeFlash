@@ -136,7 +136,7 @@ export default function NewCardScreen() {
           titleMaxWidth={screenWidth - 112}
         />
         <BlockEditor ref={editorRef} onSave={handleSave} onFrontEmptyChange={setFrontEmpty} saving={saving} isNewCard initialData={tagId ? { tagIds: [tagId] } : undefined} deckName={currentDeck?.name} deckIconName={currentDeck?.iconName} deckColorHex={currentDeck?.colorHex} deckSqlStages={currentDeck?.sqlStages} deckHtmlStages={currentDeck?.htmlStages} deckHtmlImages={currentDeck?.htmlImages} onCancel={handleClose} onShowShortcuts={() => setShowShortcutsModal((v) => !v)} onModeChange={setEditorMode} suspendKeys={blockingModalOpen} />
-        <FormBottomBar onSave={() => editorRef.current?.save()} saveDisabled={saving || frontEmpty} horizontalPadding={16} />
+        <FormBottomBar onClose={handleClose} onSave={() => editorRef.current?.save()} saveDisabled={saving || frontEmpty} horizontalPadding={16} />
       </View>
       <ShortcutsModal
         visible={showShortcutsModal}

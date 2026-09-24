@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
 /**
  * iOS標準「ステータスバータップで先頭へスクロール」(scrollsToTop) を安全に有効化するフック。
@@ -26,6 +27,13 @@ import { useCallback, useRef, useState } from 'react';
  * 「戻さないから誤発火しない」と言い切れる形にしている。失うのは「選択モードを使った後、
  * 画面を離れて戻るまでのあいだのステータスバータップ」だけ。
  * **落とすのはレンダー中**であることも重要：effect で落とすと 1 フレーム遅れる。
+ *
+ * ---- iPad は常に false（2026-09-25）----
+ * iPadOS 26 は OS がヘッダー付近のタップにも scrollsToTop を発火させ、しかもヘッダーの
+ * ボタンの上でも区別しない（ショートカット一覧のアイコンを押すと裏の一覧が先頭へ戻っていた）。
+ * ボタンだけ除外する手段が OS 側に無いので、iPad では OS の scrollsToTop を使わず、
+ * ヘッダーのタップはアプリ側（components/HeaderTapToTop.tsx）で先頭へ戻す。
+ * iPhone は OS がステータスバーにしか反応せず問題が無いので従来どおり有効にする。
  */
 export function useSafeScrollsToTop(disarmKey?: unknown): boolean {
   const [armed, setArmed] = useState(false);
@@ -48,5 +56,5 @@ export function useSafeScrollsToTop(disarmKey?: unknown): boolean {
     }, [])
   );
 
-  return armed;
+  return armed && !(Platform as any).isPad;
 }

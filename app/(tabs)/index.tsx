@@ -18,6 +18,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 
+import { HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { CountBadge } from '@/components/CountBadge';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -306,6 +307,11 @@ export default function HomeScreen() {
   }
 
   const { focusedIndex: focusedDeckIndex, setFocusedIndex: setFocusedDeckIndex, setFocusId: setFocusDeckId, listRef, moveFocus: moveDeckFocus } = useListNavigation(displayedDecks, (deck) => deck.id);
+  // ヘッダーの何も無いところのタップで先頭へ（components/HeaderTapToTop.tsx）。
+  const scrollToTopFromHeader = () => {
+    restorationEndTimeRef.current = 0; // 位置復元の窓が開いていると先頭へ戻す動きが引き戻される
+    (listRef.current as any)?.scrollToOffset({ offset: 0, animated: true });
+  };
   const { archivePill, showArchivePill } = useArchivePill();
   // フォーカス effect（deps 空）から最新の一覧を参照するための ref
   const displayedDecksRef = useRef(displayedDecks);
@@ -555,7 +561,7 @@ export default function HomeScreen() {
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
           <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
             <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
@@ -573,7 +579,7 @@ export default function HomeScreen() {
             </Pressable>
           )}
         </View>
-      </View>
+      </HeaderTapToTop>
       {/* 余白タップでフォーカス解除。Pressable を ScrollView/FlatList の祖先に置くと
           押せる要素のない場所からのドラッグでスクロールが始まらない（統計のフリーズの原因）ため、
           固定ヘッダー部とリスト内（フッター）に分けて配置する。 */}

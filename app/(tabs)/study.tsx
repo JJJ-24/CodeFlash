@@ -135,7 +135,8 @@ export default function StudyScreen() {
   const deckListRef = useRef<FlatList<any>>(null);
   const tagListRef = useRef<FlatList<any>>(null);
 
-  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
+  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true), () =>
+    (activeTab === 'decks' ? deckListRef : tagListRef).current?.scrollToOffset({ offset: 0, animated: true }));
 
   useEffect(() => {
     if (activeTab === 'decks') {

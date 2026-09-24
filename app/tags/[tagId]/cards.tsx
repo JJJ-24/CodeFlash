@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
+import { HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -147,6 +148,8 @@ export default function TagCardsScreen() {
   const tagCardValueFontSize = bm.valueSize(tagCardBlockMaxDigits);
 
   const { focusedIndex: focusedCardIndex, setFocusedIndex: setFocusedCardIndex, setFocusId, listRef, moveFocus } = useListNavigation(displayedCards, (c) => c.id);
+  // ヘッダーの何も無いところのタップで先頭へ（components/HeaderTapToTop.tsx）。
+  const scrollToTopFromHeader = () => listRef.current?.scrollToOffset({ offset: 0, animated: true });
   const { archivePill, showArchivePill } = useArchivePill();
   // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
   const pendingFocusCardRef = useRef<{ id: string; scroll: boolean } | null>(null);
@@ -396,30 +399,30 @@ export default function TagCardsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
-          <Pressable
-            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-            style={{
-              position: 'absolute', left: 0, right: 0,
-              alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
-              paddingHorizontal: 56, gap: 4,
-            }}
-          >
-            <Text
-              style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1, maxWidth: screenWidth * 0.46 }}
-              numberOfLines={1}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          {/* 中央の帯全体ではなく文字とアイコンの幅だけを押せるようにする＝左右の空きはヘッダータップ（先頭へ）。
+              ショートカット一覧が OFF のときは文字も先頭へ戻す側に回す。 */}
+          <View style={{ position: 'absolute', left: 0, right: 0, paddingHorizontal: 56, alignItems: 'center', pointerEvents: 'box-none' }}>
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : scrollToTopFromHeader}
+              style={{ maxWidth: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
             >
-              {selectionMode ? t('shortcut.selectMode') : (tag?.name ?? '')}
-            </Text>
-            {keyboardShortcutsEnabled && (
-              <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-            )}
-          </Pressable>
+              <Text
+                style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1, maxWidth: screenWidth * 0.46 }}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {selectionMode ? t('shortcut.selectMode') : (tag?.name ?? '')}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          </View>
           <Pressable
             onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
             style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
@@ -441,7 +444,7 @@ export default function TagCardsScreen() {
             <View style={{ width: 36 }} />
           )}
         </View>
-      </View>
+      </HeaderTapToTop>
 
       {/* 余白タップ解除は固定部（フィルター行）とリスト内フッターに分けて配置。
           リストの祖先 Pressable はスクロール不能の原因になる（統計参照）。 */}

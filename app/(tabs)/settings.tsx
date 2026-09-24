@@ -52,7 +52,8 @@ export default function SettingsScreen() {
     : 0;
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
-  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
+  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true), () =>
+    scrollRef.current?.scrollTo({ y: 0, animated: true }));
 
   const navItems: NavItem[] = [
     { key: 'display', label: t('settings.display'), icon: 'color-palette-outline', onPress: () => router.push('/settings/display') },

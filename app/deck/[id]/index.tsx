@@ -43,6 +43,7 @@ import {
   getTodayReviewedCardIdsByDeckId,
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
+import { HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
@@ -267,6 +268,11 @@ export default function DeckDetailScreen() {
   const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 10 });
   useEffect(() => () => clearJumpTimers(), []);
   const listRef = useRef<FlatList<Card>>(null);
+  // ヘッダーの何も無いところのタップで先頭へ（components/HeaderTapToTop.tsx）。
+  const scrollToTopFromHeader = () => {
+    restorationEndTimeRef.current = 0; // 位置復元の窓が開いていると先頭へ戻す動きが引き戻される
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
 
   const [selectionMode, setSelectionMode] = useState(false);
   // ステータスバータップで先頭へ（iOS標準 scrollsToTop）。フォーカス中の画面だけ有効にする
@@ -1243,37 +1249,37 @@ export default function DeckDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
-          <Pressable
-            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-            style={{
-              position: 'absolute', left: 0, right: 0,
-              alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
-              paddingHorizontal: 56, gap: 4,
-            }}
-          >
-            {!selectionMode && deck?.iconName && (
-              <Ionicons
-                name={deck.iconName as any}
-                size={20}
-                color={resolveDeckIconColors(deck.colorHex, theme).color}
-              />
-            )}
-            <Text
-              style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
-              numberOfLines={1}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          {/* 中央の帯全体ではなく文字とアイコンの幅だけを押せるようにする＝左右の空きはヘッダータップ（先頭へ）。
+              ショートカット一覧が OFF のときは文字も先頭へ戻す側に回す。 */}
+          <View style={{ position: 'absolute', left: 0, right: 0, paddingHorizontal: 56, alignItems: 'center', pointerEvents: 'box-none' }}>
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : scrollToTopFromHeader}
+              style={{ maxWidth: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
             >
-              {selectionMode ? t('shortcut.selectMode') : (deck?.name ?? '')}
-            </Text>
-            {keyboardShortcutsEnabled && (
-              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-            )}
-          </Pressable>
+              {!selectionMode && deck?.iconName && (
+                <Ionicons
+                  name={deck.iconName as any}
+                  size={20}
+                  color={resolveDeckIconColors(deck.colorHex, theme).color}
+                />
+              )}
+              <Text
+                style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, maxWidth: screenWidth * 0.46, flexShrink: 1 }}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {selectionMode ? t('shortcut.selectMode') : (deck?.name ?? '')}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          </View>
           <Pressable
             onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
             style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
@@ -1301,7 +1307,7 @@ export default function DeckDetailScreen() {
             />
           </Pressable>
         </View>
-      </View>
+      </HeaderTapToTop>
 
       {/* 固定ヘッダー: 統計・学習ボタン・セクションタイトル */}
       <View style={[styles.fixedHeader, { backgroundColor: theme.colors.background }]}>

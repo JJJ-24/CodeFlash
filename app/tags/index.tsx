@@ -19,6 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CountBadge } from '@/components/CountBadge';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
@@ -139,6 +140,11 @@ export default function TagsScreen() {
   const tagListDraggable = tagSortOrder === 'manual';
 
   const { focusedIndex: focusedTagIndex, setFocusedIndex: setFocusedTagIndex, setFocusId, listRef, moveFocus } = useListNavigation(sortedTags, (tag) => tag.id);
+  // ヘッダーの何も無いところのタップで先頭へ（components/HeaderTapToTop.tsx）。
+  const scrollToTopFromHeader = () => {
+    restorationEndTimeRef.current = 0; // 位置復元の窓が開いていると先頭へ戻す動きが引き戻される
+    (listRef.current as any)?.scrollToOffset({ offset: 0, animated: true });
+  };
   // 新規作成から戻った直後、その項目が一覧に現れたらフォーカス＋スクロールする用の保留 ID
   const pendingFocusTagIdRef = useRef<string | null>(null);
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
@@ -535,25 +541,26 @@ export default function TagsScreen() {
     <GestureHandlerRootView style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
-          <Pressable
-            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-            style={{
-              position: 'absolute', left: 0, right: 0,
-              alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
-            }}
-          >
-            <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-              {selectionMode ? t('shortcut.selectMode') : t('tag.title')}
-            </Text>
-            {keyboardShortcutsEnabled && (
-              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
-            )}
-          </Pressable>
+          {/* 中央の帯全体ではなく文字とアイコンの幅だけを押せるようにする＝左右の空きはヘッダータップ（先頭へ）。
+              ショートカット一覧が OFF のときは文字も先頭へ戻す側に回す。 */}
+          <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', pointerEvents: 'box-none' }}>
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : scrollToTopFromHeader}
+              style={{ maxWidth: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+            >
+              <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                {selectionMode ? t('shortcut.selectMode') : t('tag.title')}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          </View>
           <Pressable
             onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
             style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
@@ -575,7 +582,7 @@ export default function TagsScreen() {
             />
           </Pressable>
         </View>
-      </View>
+      </HeaderTapToTop>
 
       <View style={{ flex: 1 }}>
       {/* 総数ブロック（他画面のフィルターブロックと統一）。タグにアーカイブ概念は

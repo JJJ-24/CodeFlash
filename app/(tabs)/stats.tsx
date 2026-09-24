@@ -1064,7 +1064,8 @@ export default function StatsScreen() {
   if (sectionInfoModal) lastSectionInfoRef.current = sectionInfoModal;
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
-  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true));
+  useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true), () =>
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true }));
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
           deckMastery, decks, heatmapData, gradeTotals, gradeAvgTimes, monthlyReviewed } = stats;

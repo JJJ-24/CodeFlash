@@ -55,7 +55,7 @@ export default function TabsLayout() {
         name="study"
         options={{
           title: t('tabs.study'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.study')}</Text>,
+          headerTitle: () => <Text pointerEvents="none" style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.study')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="book-outline" color={color} size={size} />
           ),
@@ -65,7 +65,7 @@ export default function TabsLayout() {
         name="stats"
         options={{
           title: t('tabs.stats'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.stats')}</Text>,
+          headerTitle: () => <Text pointerEvents="none" style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.stats')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="bar-chart-outline" color={color} size={size} />
           ),
@@ -75,7 +75,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: t('tabs.settings'),
-          headerTitle: () => <Text style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.settings')}</Text>,
+          headerTitle: () => <Text pointerEvents="none" style={{ fontSize: theme.fontSize.lg, fontWeight: '600', color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('tabs.settings')}</Text>,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="settings-outline" color={color} size={size} />
           ),

@@ -15,6 +15,7 @@ import {
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DeckIcon } from '@/components/DeckIcon';
@@ -125,6 +126,8 @@ export default function ArchiveScreen() {
   const items: (Deck | Card)[] = tab === 'decks' ? archivedDecks : archivedCards;
 
   const { focusedIndex, setFocusedIndex, listRef, moveFocus } = useListNavigation(items, (item) => item.id);
+  // ヘッダーの何も無いところのタップで先頭へ（components/HeaderTapToTop.tsx）。
+  const scrollToTopFromHeader = () => listRef.current?.scrollToOffset({ offset: 0, animated: true });
 
   const reloadCards = useCallback(() => {
     getArchivedCards(db).then(setArchivedCards).catch(() => {});
@@ -447,30 +450,30 @@ export default function ArchiveScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー（push 遷移画面の慣習。CLAUDE.md 参照） */}
-      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{
           position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
-          <Pressable
-            onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
-            style={{
-              position: 'absolute', left: 0, right: 0,
-              alignItems: 'center', flexDirection: 'row', justifyContent: 'center',
-              paddingHorizontal: 56, gap: 4,
-            }}
-          >
-            <Text
-              style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1, maxWidth: screenWidth * 0.46 }}
-              numberOfLines={1}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          {/* 中央の帯全体ではなく文字とアイコンの幅だけを押せるようにする＝左右の空きはヘッダータップ（先頭へ）。
+              ショートカット一覧が OFF のときは文字も先頭へ戻す側に回す。 */}
+          <View style={{ position: 'absolute', left: 0, right: 0, paddingHorizontal: 56, alignItems: 'center', pointerEvents: 'box-none' }}>
+            <Pressable
+              onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : scrollToTopFromHeader}
+              style={{ maxWidth: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
             >
-              {selectionMode ? t('shortcut.selectMode') : t('archive.title')}
-            </Text>
-            {keyboardShortcutsEnabled && (
-              <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
-            )}
-          </Pressable>
+              <Text
+                style={{ color: theme.colors.text, fontSize: theme.fontSize.lg, fontWeight: '600', flexShrink: 1, maxWidth: screenWidth * 0.46 }}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              >
+                {selectionMode ? t('shortcut.selectMode') : t('archive.title')}
+              </Text>
+              {keyboardShortcutsEnabled && (
+                <MaterialIcons name="keyboard" size={20} color={theme.colors.primary} />
+              )}
+            </Pressable>
+          </View>
           <Pressable
             onPress={() => { if (Date.now() - lastFocusTimeRef.current >= 350) router.back(); }}
             style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
@@ -492,7 +495,7 @@ export default function ArchiveScreen() {
             <View style={{ width: 36 }} />
           )}
         </View>
-      </View>
+      </HeaderTapToTop>
 
       <View style={{ flex: 1 }}>
         {/* 余白タップでのフォーカス解除は「固定部」と「リスト内フッター」に分ける。

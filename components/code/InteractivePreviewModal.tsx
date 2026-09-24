@@ -3,9 +3,9 @@ import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as KeyCommand from 'react-native-key-command';
 import { transform } from 'sucrase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 import { LANG_LABELS } from '@/lib/code-execution/constants';
@@ -14,6 +14,7 @@ import type { LogEntry } from '@/lib/code-execution/types';
 import { useSandboxReload } from '@/hooks/useSandboxReload';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useKeyCommands } from '@/lib/useKeyCommands';
+import { useWindowControlsTopInset } from '@/lib/useLockedTopInset';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import type { DeckImage } from '@/types';
 
@@ -47,6 +48,8 @@ interface Props {
 export function InteractivePreviewModal({ visible, onClose, language, body, previewBody, initialRan, stages, deckImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  // iPad のウィンドウ表示では ✕ が赤黄青のウィンドウ操作ボタンに重ならないよう下げる
+  const topInset = useWindowControlsTopInset();
   const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [nonce, setNonce] = useState(0);
@@ -194,7 +197,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <View style={[styles.root, { paddingTop: insets.top }]}>
+      <View style={[styles.root, { paddingTop: topInset }]}>
         {/* ヘッダー（左右のグループを同じ最小幅にしてタイトルを中央に保つ） */}
         <View style={styles.header}>
           <View style={styles.headerSide}>

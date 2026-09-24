@@ -1,6 +1,36 @@
 import { getDefaultHeaderHeight } from '@react-navigation/elements';
 import { useEffect, useMemo, useState } from 'react';
+import { Dimensions, Platform } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+/**
+ * iPadOS 26 のウィンドウ表示（ステージマネージャ／ウィンドウ表示のアプリ）で、左上の
+ * 赤黄青のウィンドウ操作ボタンを避けるための上端の最小値。
+ *
+ * ⚠️ iOS はこのボタンのぶんを safe area に**含めない**（実機 iPad Pro 13" で実測：
+ * フルスクリーン・最大化＝top 32／ウィンドウ表示＝top 10。ボタンの下端はウィンドウ上端から約 43pt）。
+ * そのまま `10 + 50` で自前ヘッダーを組むと、左端の戻る/閉じるボタンがウィンドウ操作ボタンに重なる。
+ * 32 はフルスクリーンと同じ値＝ヘッダー行（50）の中央が 57pt でボタンの下端を越える。
+ */
+const WINDOW_CONTROLS_TOP_INSET = 32;
+
+/**
+ * safe area の上端に、iPad のウィンドウ表示ならウィンドウ操作ボタンのぶんを足した値を返す。
+ *
+ * ウィンドウ表示の判定は「ウィンドウが画面より小さい **かつ** 上端が 20 未満」。
+ * - 最大化したウィンドウは画面と同じ大きさでステータスバーも出る（top 32）＝ボタンはステータスバー側にあり補正不要
+ * - 上端だけで判定しない：フルスクリーンでステータスバーを隠す（学習の全画面・WKWebView の後始末）と top が 0 になる
+ * - 大きさだけで判定しない：iPadOS 18 以前の Split View は画面より小さいがボタンが無く、top はステータスバーの 24
+ */
+export function useWindowControlsTopInset() {
+  const insets = useSafeAreaInsets();
+  const frame = useSafeAreaFrame();
+  if (!(Platform as any).isPad) return insets.top;
+  const screen = Dimensions.get('screen');
+  const smallerThanScreen = frame.width < screen.width - 1 || frame.height < screen.height - 1;
+  const windowed = smallerThanScreen && insets.top < 20;
+  return windowed ? Math.max(insets.top, WINDOW_CONTROLS_TOP_INSET) : insets.top;
+}
 
 /**
  * カスタムヘッダーの高さ計算に使う「上端 safe area（ステータスバー）」を返す。
@@ -18,11 +48,11 @@ import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-cont
  *   （＝従来 `useRef` でロックしていた「ヘッダー高さを変えない」意図もそのまま満たす）
  */
 export function useLockedTopInset() {
-  const insets = useSafeAreaInsets();
-  const [top, setTop] = useState(insets.top);
+  const rawTop = useWindowControlsTopInset();
+  const [top, setTop] = useState(rawTop);
   useEffect(() => {
-    if (insets.top > top) setTop(insets.top);
-  }, [insets.top, top]);
+    if (rawTop > top) setTop(rawTop);
+  }, [rawTop, top]);
   return top;
 }
 

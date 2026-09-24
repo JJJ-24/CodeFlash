@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text } from 'react-native';
 
+import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -21,10 +22,17 @@ export default function TabsLayout() {
   // 遅れて発火するため、単発の復元では負けて学習タブ等のヘッダーが縮んだままになる）。
   useRestoreStatusBar();
 
+  // 標準ヘッダー（学習/統計/設定）の上端を、ホームの自前ヘッダーと同じ値にそろえる。
+  // 既定の insets.top のままだと、iPad のウィンドウ表示で赤黄青ボタンのぶん（useWindowControlsTopInset）を
+  // 足さないためホームだけ高くなり、タブを切り替えるたびにヘッダーの下端が跳ねる。
+  // 縮まない値なので、WKWebView の後始末でステータスバーが消えてもヘッダーが縮まない。
+  const headerTopInset = useLockedTopInset();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
+        headerStatusBarHeight: headerTopInset,
         headerStyle: { backgroundColor: theme.colors.surface },
         headerTintColor: theme.colors.text,
         headerShadowVisible: false,

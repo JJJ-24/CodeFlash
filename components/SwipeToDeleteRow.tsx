@@ -57,10 +57,13 @@ function LeftAction({ drag, width, color, onPress }: {
 
 interface Props {
   children: ReactNode;
-  /** 削除アクション（ゴミ箱）タップ時。呼び出し側で確認ダイアログを出す想定。 */
-  onDelete: () => void;
   /**
-   * 右スワイプで現れる「ここから学習」アクション。渡したときだけ左側に表示する（カード一覧専用・opt-in）。
+   * 削除アクション（ゴミ箱）タップ時。呼び出し側で確認ダイアログを出す想定。
+   * 渡さなければ左スワイプ自体を出さない（統計の評価別ランキング＝「ここから学習」だけ使う画面）。
+   */
+  onDelete?: () => void;
+  /**
+   * 右スワイプで現れる「ここから学習」アクション。渡したときだけ左側に表示する（opt-in・カード一覧と統計の評価別ランキング）。
    * このカードから一覧末尾までを学習する想定。
    */
   onStudyFromHere?: () => void;
@@ -116,7 +119,7 @@ export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, onArchiv
           onPress={() => { swipeable.close(); onStudyFromHere(); }}
         />
       ) : undefined}
-      renderRightActions={(_progress, drag, swipeable: SwipeableMethods) => (
+      renderRightActions={onDelete ? (_progress, drag, swipeable: SwipeableMethods) => (
         <RightActions
           drag={drag}
           totalWidth={totalWidth}
@@ -132,7 +135,7 @@ export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, onArchiv
             onArchive();
           } : undefined}
         />
-      )}
+      ) : undefined}
     >
       {children}
     </ReanimatedSwipeable>

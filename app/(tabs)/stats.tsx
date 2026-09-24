@@ -54,6 +54,7 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { EmptyState } from '@/components/EmptyState';
+import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { getCardPreview } from '@/lib/cardPreview';
 import { getPast7DaysCreatedCount, getTodayCreatedCount } from '@/lib/database/cards';
 import { useProStore } from '@/store/pro';
@@ -98,6 +99,7 @@ const STATS_SHORTCUT_GROUPS = [
       ] },
       { titleKey: 'shortcut.catNavigate', items: [
         { key: 'Space', descKey: 'shortcut.startFocusedReview', pro: true },
+        { key: '⇧Space', descKey: 'shortcut.startFocusedReviewFromFocus', pro: true },
       ] },
     ],
   },
@@ -1447,10 +1449,12 @@ export default function StatsScreen() {
   }, [fetchGradeTotals, fetchRankingCards, gradeRankingSortBy, setGradeRankingSortBy]);
 
   // 重点復習を開始（選択中グレードの TOP カードでセッション開始）。ボタンと Space キーで共用。
-  const startFocusedReview = useCallback(() => {
-    if (gradeBlockCards.length === 0) return;
+  // fromIdx を渡すと「ここから学習」＝そのカードから末尾まで（行の右スワイプ・⇧Space。カード一覧と同じ操作）。
+  const startFocusedReview = useCallback((fromIdx = 0) => {
+    const ids = gradeBlockCards.slice(fromIdx).map((c) => c.cardId);
+    if (ids.length === 0) return;
     // 順序指定の cardIds はストア経由で渡す（URLパラメータに載せない）。
-    setStudyCardIds(gradeBlockCards.map((c) => c.cardId));
+    setStudyCardIds(ids);
     pushChild({ pathname: '/study/session', params: { mode: 'focused', order: '1' } });
   }, [gradeBlockCards, pushChild, setStudyCardIds]);
 
@@ -1483,6 +1487,15 @@ export default function StatsScreen() {
         else if (focusedItem?.kind === 'deck') { openSheet(focusedItem.idx); }
         else if (focusedItem?.kind === 'monthly') { openCurrentMonthSheet(); }
         else if (isPro && selectedGradeBlock !== null && gradeBlockCards.length > 0) { startFocusedReview(); }
+      },
+    },
+    {
+      // ⇧Space ＝フォーカス中のランキングのカードから重点復習（カード一覧の「フォーカスから学習」と同じ）
+      input: ' ',
+      modifierFlags: KeyCommand.keyModifierShift,
+      handler: () => {
+        if (statsCardId !== null || activeSheet !== null) return;
+        if (isPro && selectedGradeBlock !== null && focusedItem?.kind === 'card') startFocusedReview(focusedItem.idx);
       },
     },
     {
@@ -2274,7 +2287,7 @@ export default function StatsScreen() {
               >
                 {gradeBlockCards.length > 0 && (
                   <Pressable
-                    onPress={startFocusedReview}
+                    onPress={() => startFocusedReview()}
                     style={({ pressed }) => [styles.focusedReviewBtn, { backgroundColor: FILTER_COLORS.due }, pressed && { opacity: 0.85 }]}
                   >
                     <Ionicons name="play" size={20} color="#FFF" />
@@ -2350,7 +2363,8 @@ export default function StatsScreen() {
                     const badgeColor = [GRADE_COLORS.again, GRADE_COLORS.hard, GRADE_COLORS.good, GRADE_COLORS.easy][selectedGradeBlock];
                     const isCardFocused = focusedItem?.kind === 'card' && focusedItem.idx === idx;
                     return (
-                      <Pressable
+                      // onLayout は外側の View で取る（Swipeable の内側だと y が常に 0 になりフォーカスの自動スクロールが狂う）
+                      <View
                         key={card.cardId}
                         onLayout={(e) => {
                           cardLayoutMap.current.set(card.cardId, {
@@ -2358,6 +2372,10 @@ export default function StatsScreen() {
                             h: e.nativeEvent.layout.height,
                           });
                         }}
+                      >
+                      {/* 右スワイプ＝ここから学習（カード一覧と同じ）。統計画面なので削除/アーカイブの左スワイプは出さない */}
+                      <SwipeToDeleteRow onStudyFromHere={() => { setFocusedItem({ kind: 'card', idx }); startFocusedReview(idx); }}>
+                      <Pressable
                         style={({ pressed }) => [
                           styles.card,
                           styles.weakCardRow,
@@ -2412,6 +2430,8 @@ export default function StatsScreen() {
                           </Text>
                         </View>
                       </Pressable>
+                      </SwipeToDeleteRow>
+                      </View>
                     );
                   })}
                   </View>

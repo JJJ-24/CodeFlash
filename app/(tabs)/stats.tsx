@@ -1006,6 +1006,7 @@ export default function StatsScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<{
     heatmap: number;
+    heatmapHeight: number;
     today: number;
     total: number;
     decks: number[];
@@ -1015,7 +1016,7 @@ export default function StatsScreen() {
     rankingHeight: number;
     rankingOuter: number;
     rankingInner: number;
-  }>({ heatmap: 0, today: 0, total: 0, decks: [], proSection: 0, monthly: 0, ranking: 0, rankingHeight: 0, rankingOuter: 0, rankingInner: 0 });
+  }>({ heatmap: 0, heatmapHeight: 0, today: 0, total: 0, decks: [], proSection: 0, monthly: 0, ranking: 0, rankingHeight: 0, rankingOuter: 0, rankingInner: 0 });
   const pendingFocusRankingRef = useRef(false);
   const shouldScrollAfterLoadRef = useRef(false);
   const cardLayoutMap = useRef<Map<string, { y: number; h: number }>>(new Map());
@@ -1245,20 +1246,29 @@ export default function StatsScreen() {
     scrollViewRef.current?.scrollTo({ y: Math.max(y, 0), animated: true });
   }
 
-  // D/T/M（評価別ランキングの表示設定）用：ランキングが見えていないときだけ先頭へスクロールする。
-  // 1〜4・6〜9 と同じ「効果が見える場所へ連れて行ってから効かせる」だが、既に見ている人を動かさない
-  // （展開したカード一覧の途中で M を押しても見出しへ引き戻さない）ため、見えていれば何もしない。
-  // 「見えている」＝ランキング（見出し＋評価ブロック＋展開中のカード）の半分以上、または画面の半分以上を占めている。
+  // キー操作の切替（D/T/M＝評価別ランキング・G＝草グラフ）用：対象のセクションが見えていないときだけ
+  // そこへスクロールする。1〜4・6〜9 と同じ「効果が見える場所へ連れて行ってから効かせる」だが、既に見ている人を
+  // 動かさない（展開したカード一覧の途中で M を押しても見出しへ引き戻さない）ため、見えていれば何もしない。
+  // 「見えている」＝セクションの半分以上、または画面の半分以上を占めている。
   // ⚠️ 未計測（ビューポート高 0・セクション高 0）のときは動かさない＝従来どおりその場で効かせる。
-  function scrollToRankingIfHidden() {
+  function isSectionInView(top: number, h: number) {
     const vh = scrollViewHeightRef.current;
-    const h = sectionOffsets.current.rankingHeight;
-    if (vh <= 0 || h <= 0) return;
-    const top = sectionOffsets.current.proSection + sectionOffsets.current.ranking;
+    if (vh <= 0 || h <= 0) return true;
     const curY = currentScrollYRef.current;
     const visible = Math.min(top + h, curY + vh) - Math.max(top, curY);
-    if (visible >= Math.min(h, vh) / 2) return;
+    return visible >= Math.min(h, vh) / 2;
+  }
+
+  function scrollToRankingIfHidden() {
+    const top = sectionOffsets.current.proSection + sectionOffsets.current.ranking;
+    if (isSectionInView(top, sectionOffsets.current.rankingHeight)) return;
     scrollToRankingTop();
+  }
+
+  function scrollToHeatmapIfHidden() {
+    const top = sectionOffsets.current.heatmap;
+    if (isSectionInView(top, sectionOffsets.current.heatmapHeight)) return;
+    scrollViewRef.current?.scrollTo({ y: Math.max(top, 0), animated: true });
   }
 
   function scrollToCardIfNeeded(cardId: string) {
@@ -1593,8 +1603,9 @@ export default function StatsScreen() {
     { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); setPeriodPickerVisible(true); } },
     { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); handleCycleRankingSort(); } },
-    // G = 草グラフの学習量/目標達成の切替（目標 OFF・折りたたみ中は無効＝トグルが見えていないときは効かせない）
-    { input: 'g', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('heatmap')) return; toggleHeatmapMode(); } },
+    // G = 草グラフの学習量/目標達成の切替（目標 OFF・折りたたみ中は無効＝トグルが見えていないときは効かせない）。
+    // 草グラフが画面外なら先にスクロールする（D/T/M と同じ）。目標 OFF のときはスクロールもしない。
+    { input: 'g', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('heatmap')) return; if (!useSettingsStore.getState().studyGoalEnabled) return; scrollToHeatmapIfHidden(); toggleHeatmapMode(); } },
     // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約。j/k と同じガードを適用）
     // 矢印キー: 上下=K/J（フォーカス移動）、左右=,/.（4ブロック切替）。タブ切替は Tab/Shift+Tab。
     { input: KeyCommand.keyInputUpArrow, handler: () => { if (statsCardId !== null || activeSheet !== null) return; moveFocus('prev'); } },
@@ -1925,7 +1936,7 @@ export default function StatsScreen() {
       </Pressable>
 
       {/* 学習履歴（草グラフ） */}
-      <View style={styles.section} onLayout={(e) => { sectionOffsets.current.heatmap = e.nativeEvent.layout.y; }}>
+      <View style={styles.section} onLayout={(e) => { sectionOffsets.current.heatmap = e.nativeEvent.layout.y; sectionOffsets.current.heatmapHeight = e.nativeEvent.layout.height; }}>
         <CollapsibleSectionTitle
           title={t('stats.activityHeatmap')}
           collapsed={isSectionCollapsed('heatmap')}
@@ -1955,7 +1966,9 @@ export default function StatsScreen() {
                     accessibilityState={{ selected: active }}
                     style={[
                       styles.rankingToggleBtn,
-                      { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 16) },
+                      // 横の余白は評価別ランキングの切替ボタンと同じ（iPad で窓幅に追従して縮む）。
+                      // アイコンの大きさは従来のまま（iPhone の見た目を変えないため）
+                      { borderColor: active ? theme.colors.primary : themedFrameBorder(theme), paddingHorizontal: rs(8, 32) },
                       active && { backgroundColor: theme.colors.primary },
                     ]}
                   >

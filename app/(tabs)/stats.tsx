@@ -1012,9 +1012,10 @@ export default function StatsScreen() {
     proSection: number;
     monthly: number;
     ranking: number;
+    rankingHeight: number;
     rankingOuter: number;
     rankingInner: number;
-  }>({ heatmap: 0, today: 0, total: 0, decks: [], proSection: 0, monthly: 0, ranking: 0, rankingOuter: 0, rankingInner: 0 });
+  }>({ heatmap: 0, today: 0, total: 0, decks: [], proSection: 0, monthly: 0, ranking: 0, rankingHeight: 0, rankingOuter: 0, rankingInner: 0 });
   const pendingFocusRankingRef = useRef(false);
   const shouldScrollAfterLoadRef = useRef(false);
   const cardLayoutMap = useRef<Map<string, { y: number; h: number }>>(new Map());
@@ -1242,6 +1243,22 @@ export default function StatsScreen() {
   function scrollToRankingTop() {
     const y = sectionOffsets.current.proSection + sectionOffsets.current.ranking;
     scrollViewRef.current?.scrollTo({ y: Math.max(y, 0), animated: true });
+  }
+
+  // D/T/M（評価別ランキングの表示設定）用：ランキングが見えていないときだけ先頭へスクロールする。
+  // 1〜4・6〜9 と同じ「効果が見える場所へ連れて行ってから効かせる」だが、既に見ている人を動かさない
+  // （展開したカード一覧の途中で M を押しても見出しへ引き戻さない）ため、見えていれば何もしない。
+  // 「見えている」＝ランキング（見出し＋評価ブロック＋展開中のカード）の半分以上、または画面の半分以上を占めている。
+  // ⚠️ 未計測（ビューポート高 0・セクション高 0）のときは動かさない＝従来どおりその場で効かせる。
+  function scrollToRankingIfHidden() {
+    const vh = scrollViewHeightRef.current;
+    const h = sectionOffsets.current.rankingHeight;
+    if (vh <= 0 || h <= 0) return;
+    const top = sectionOffsets.current.proSection + sectionOffsets.current.ranking;
+    const curY = currentScrollYRef.current;
+    const visible = Math.min(top + h, curY + vh) - Math.max(top, curY);
+    if (visible >= Math.min(h, vh) / 2) return;
+    scrollToRankingTop();
   }
 
   function scrollToCardIfNeeded(cardId: string) {
@@ -1562,9 +1579,9 @@ export default function StatsScreen() {
         }
       },
     },
-    { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setDeckPickerVisible(true); } },
-    { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) setPeriodPickerVisible(true); } },
-    { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (isPro) handleCycleRankingSort(); } },
+    { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); setDeckPickerVisible(true); } },
+    { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); setPeriodPickerVisible(true); } },
+    { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); handleCycleRankingSort(); } },
     // G = 草グラフの学習量/目標達成の切替（目標 OFF・折りたたみ中は無効＝トグルが見えていないときは効かせない）
     { input: 'g', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('heatmap')) return; toggleHeatmapMode(); } },
     // 矢印キー: 上下=K/J（タブ切替は ,/. と Tab に集約。j/k と同じガードを適用）
@@ -2131,7 +2148,7 @@ export default function StatsScreen() {
             </View>
 
             {/* グレード別ランキング */}
-            <View onLayout={(e) => { sectionOffsets.current.ranking = e.nativeEvent.layout.y; }}>
+            <View onLayout={(e) => { sectionOffsets.current.ranking = e.nativeEvent.layout.y; sectionOffsets.current.rankingHeight = e.nativeEvent.layout.height; }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               {/* 右端は表示切替ボタン群のため、ⓘ はタイトルの隣に置く */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

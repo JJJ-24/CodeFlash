@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  AppState,
   Keyboard,
   Platform,
   Pressable,
@@ -594,6 +595,35 @@ export default function StudySessionScreen() {
   // タイマー長押しメニュー（スキップ/終了）・Q/B/Esc キーは生かす。
   const onBreak = timer.mode === "break" && timer.phase === "running";
   swipe.panGesture.enabled(isScreenFocused && !onBreak);
+
+  // ---- 背面化した時間を回答時間（responseTimeMs）から除く ----------------------
+  // カードの計時は `cardShownAtRef`（壁時計）なので、素だとアプリを離れていた時間まで
+  // 「そのカードを見ていた時間」に入り、統計の平均回答時間と総学習時間が伸びる。
+  // 休憩の除外とまったく同じ口（`shiftCardShownAt`）へ、離れていた実時間を渡して前へずらす。
+  // ⚠️ 判定は学習タイマーと**同じ基準**にする（`hooks/useStudyTimer.ts` の `appActive`）＝
+  //    `active` 以外（`inactive` も）で止める。iPad の Split View で隣のアプリをタップすると
+  //    `inactive`＝カードは見えたままでも止まるが、タイマーが既にそう振る舞っているので、
+  //    「タイマーは止まったのに回答時間だけ進む」という食い違いを作らない方を採る。
+  // ⚠️ **休憩中に離れたぶんは記録しない**＝休憩の実時間（`endBreak` の `now - breakStartedAt`）は
+  //    壁時計なので背面化ぶんを既に含んでおり、両方引くと二重に引いて `Math.min` の clamp に
+  //    当たり、休憩前の閲覧時間まで消える。
+  // ⚠️ カードが無いとき（完了画面など）に引いても無害＝次のカードで `goNext`/`loadSession` が
+  //    `cardShownAt` を引き直すため、ずれは持ち越されない。
+  const onBreakRef = useRef(onBreak);
+  onBreakRef.current = onBreak;
+  const awayAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") {
+        const awayAt = awayAtRef.current;
+        awayAtRef.current = null;
+        if (awayAt !== null) shiftCardShownAt(Date.now() - awayAt);
+      } else if (awayAtRef.current === null && !onBreakRef.current) {
+        awayAtRef.current = Date.now();
+      }
+    });
+    return () => sub.remove();
+  }, [shiftCardShownAt]);
 
   // ---- 自動読み上げ（052・Pro）------------------------------------------
   // カードの表示・表裏の反転のたびに、設定された面を自動で読む。

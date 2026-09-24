@@ -377,12 +377,44 @@ function buildPythonSandboxHtml(code: string): string {
     window.ReactNativeWebView.postMessage(JSON.stringify(payload));
   }
 
+  var pyodide = null;
+
+  // StringIO に溜めた stdout / stderr を読み出す（読めなければ空文字）
+  function readBuf(name) {
+    if (!pyodide) return '';
+    try { return String(pyodide.runPython(name + '.getvalue()') || ''); } catch (_) { return ''; }
+  }
+  function pushLines(text, type) {
+    text.split('\\n').forEach(function(line) {
+      if (line !== '') _logs.push({ type: type, text: line });
+    });
+  }
+
+  // Pyodide 内部（/lib/python3xx.zip/_pyodide/ 等）のフレームを取り除く。
+  // フレーム＝「  File "...」行とそれに続く4字下げの行（ソース行・^ の行）。
+  // <exec>（ユーザーのコード）と pip で入れたライブラリのフレームは Python の通常表示どおり残す。
+  function trimTraceback(tb) {
+    var out = [];
+    var skipping = false;
+    tb.split('\\n').forEach(function(line) {
+      if (/^  File "/.test(line)) {
+        skipping = /\\/_?pyodide\\//.test(line);
+        if (!skipping) out.push(line);
+        return;
+      }
+      if (skipping && /^    /.test(line)) return;
+      skipping = false;
+      out.push(line);
+    });
+    return out.join('\\n').replace(/\\s+$/, '');
+  }
+
   try {
     if (typeof loadPyodide === 'undefined') {
       throw new Error('Pyodide の読み込みに失敗しました（インターネット接続を確認してください）');
     }
 
-    var pyodide = await loadPyodide({ indexURL: '${PYODIDE_CDN}' });
+    pyodide = await loadPyodide({ indexURL: '${PYODIDE_CDN}' });
 
     // stdout / stderr を StringIO でキャプチャ
     pyodide.runPython(
@@ -421,22 +453,27 @@ function buildPythonSandboxHtml(code: string): string {
     clearTimeout(_execTimer);
 
     // 出力取得・ログ変換
-    var stdout = pyodide.runPython('_out.getvalue()');
-    var stderr = pyodide.runPython('_err.getvalue()');
-    if (stdout) {
-      stdout.split('\\n').forEach(function(line) {
-        if (line !== '') _logs.push({ type: 'log', text: line });
-      });
-    }
-    if (stderr) {
-      stderr.split('\\n').forEach(function(line) {
-        if (line !== '') _logs.push({ type: 'error', text: line });
-      });
-    }
+    pushLines(readBuf('_out'), 'log');
+    pushLines(readBuf('_err'), 'error');
 
     finish('success');
   } catch(e) {
-    finish('error', (e && e.message) ? e.message : String(e));
+    // ⚠️ sys.stderr を StringIO に差し替えているため、Pyodide はトレースバックを _err へ書き
+    //    e.message は空になる（素のままだと String(e) ＝「PythonError」の1語しか出なかった）。
+    //    エラーの前に print した内容も _out に残ったままなので、成功時と同じく読み出して出す。
+    pushLines(readBuf('_out'), 'log');
+    var stderr = readBuf('_err');
+    var tbAt = stderr.lastIndexOf('Traceback (most recent call last):');
+    var message = '';
+    if (tbAt >= 0) {
+      // トレースバックより前は print(..., file=sys.stderr) などユーザーの出力
+      pushLines(stderr.slice(0, tbAt), 'error');
+      message = trimTraceback(stderr.slice(tbAt));
+    } else {
+      pushLines(stderr, 'error');
+    }
+    if (!message) message = (e && e.message) ? e.message : String(e);
+    finish('error', message);
   }
 })();
 <\/script></body></html>`;

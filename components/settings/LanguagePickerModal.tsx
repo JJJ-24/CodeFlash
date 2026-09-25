@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
@@ -46,8 +46,31 @@ export function LanguagePickerModal({ visible, value, onSelect, onClose, resolve
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   }, [visible, fade]);
 
-  // 表示中だけ Esc を担当する（親は suspendKeys で手放している）。
-  useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
+  // 053：J/K（↑/↓）で行を移動・Return/Space で選んで閉じる（`DeckPickerModal` と同じ単一選択の流儀）。
+  // 開いたときのフォーカスは**いま選ばれている行**（どこから動かせばよいかが一目で分かる）。
+  // 行は数行しか無いので自動スクロールは持たない。
+  // 矢印は iPad でも登録する（入力欄が無い＝CLAUDE.md「編集が無い画面は両方で登録」）。
+  const rows: LanguagePreference[] = ['system', ...SUPPORTED_LANGUAGE_CODES];
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  useEffect(() => {
+    if (visible) setFocusedIndex(Math.max(0, rows.indexOf(value)));
+    // 開いた瞬間の値だけを使う（rows は毎回作り直すが中身は固定）。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+  const move = (dir: 1 | -1) => setFocusedIndex((p) => (p + dir + rows.length) % rows.length);
+  const pick = (v: LanguagePreference) => { onSelect(v); onClose(); };
+  const pickFocused = () => { const v = rows[focusedIndex]; if (v !== undefined) pick(v); };
+
+  // 表示中だけキーを担当する（親は suspendKeys で手放している）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: onClose },
+    { input: 'j', handler: () => move(1) },
+    { input: 'k', handler: () => move(-1) },
+    { input: KeyCommand.keyInputDownArrow, handler: () => move(1) },
+    { input: KeyCommand.keyInputUpArrow, handler: () => move(-1) },
+    { input: KeyCommand.keyInputEnter, handler: pickFocused },
+    { input: ' ', handler: pickFocused },
+  ], visible);
 
   const rowStyle = {
     flexDirection: 'row' as const,
@@ -85,7 +108,7 @@ export function LanguagePickerModal({ visible, value, onSelect, onClose, resolve
             {/* 「システム」は独立した部品ではなく一覧の先頭行。
                 ⚠️ 実際に何語になるかを添える＝「システム」だけだと結果が分からない
                 （読み上げの「アプリ設定に従う」行と同じ理由）。 */}
-            <Pressable onPress={() => { onSelect('system'); onClose(); }} style={rowStyle}>
+            <Pressable onPress={() => pick('system')} style={[rowStyle, focusedIndex === 0 && { backgroundColor: theme.colors.primaryLight }]}>
               <Text
                 style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
@@ -102,8 +125,8 @@ export function LanguagePickerModal({ visible, value, onSelect, onClose, resolve
                 <Ionicons name="checkmark" size={theme.fontSize.lg} color={theme.colors.primary} />
               )}
             </Pressable>
-            {SUPPORTED_LANGUAGE_CODES.map((code) => (
-              <Pressable key={code} onPress={() => { onSelect(code); onClose(); }} style={rowStyle}>
+            {SUPPORTED_LANGUAGE_CODES.map((code, i) => (
+              <Pressable key={code} onPress={() => pick(code)} style={[rowStyle, focusedIndex === i + 1 && { backgroundColor: theme.colors.primaryLight }]}>
                 <Text
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}

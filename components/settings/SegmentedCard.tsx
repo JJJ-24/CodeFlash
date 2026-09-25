@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { pushEscDismiss, removeEscDismiss } from '@/lib/escStack';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
+import { SettingsFocusRing, stepOption, useSettingsFocusItem } from './settingsFocus';
 import { settingsStyles as styles } from './styles';
 
 interface SegmentedCardProps<T extends string> {
@@ -16,10 +17,22 @@ interface SegmentedCardProps<T extends string> {
   info?: string;
 }
 
-/** ラベル＋セグメント切替を1枚のカードにまとめた設定行（テーマ・文字サイズ等で使用）。 */
+/**
+ * ラベル＋セグメント切替を1枚のカードにまとめた設定行（テーマ・文字サイズ等で使用）。
+ * 053：キー操作に対応した詳細画面では J/K でフォーカスでき、H/L 等で左右（端で止める）・
+ * 1〜n で直接選べる。ⓘ はタップのみ（「ⓘ＝指の操作」の規約）。
+ */
 export function SegmentedCard<T extends string>({ label, options, value, onChange, info }: SegmentedCardProps<T>) {
   const theme = useTheme();
   const [showInfo, setShowInfo] = useState(false);
+  const values = options.map((o) => o.value);
+  // 値が変わらないとき（端で止まった・同じ番号）は onChange を呼ばない＝設定の保存を無駄に走らせない。
+  const change = (v: T | undefined) => { if (v !== undefined && v !== value) onChange(v); };
+  const { focused, onLayout } = useSettingsFocusItem({
+    onLeft: () => change(stepOption(values, value, -1)),
+    onRight: () => change(stepOption(values, value, 1)),
+    onSelect: (i) => change(values[i]),
+  });
   // インライン info 展開中は Esc スタックへ閉じる処理を登録（SettingsDetail の Esc/戻るが先に閉じる）。
   useEffect(() => {
     if (!showInfo) return;
@@ -27,7 +40,7 @@ export function SegmentedCard<T extends string>({ label, options, value, onChang
     return () => removeEscDismiss(id);
   }, [showInfo]);
   return (
-    <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+    <View style={[styles.card, { backgroundColor: theme.colors.surface }]} onLayout={onLayout}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{label}</Text>
         {info && (
@@ -67,6 +80,7 @@ export function SegmentedCard<T extends string>({ label, options, value, onChang
           </Text>
         </View>
       )}
+      <SettingsFocusRing visible={focused} />
     </View>
   );
 }

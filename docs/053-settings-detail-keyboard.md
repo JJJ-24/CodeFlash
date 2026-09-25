@@ -1,7 +1,7 @@
 # 053 設定の詳細画面のキーボード操作
 
 **フェーズ:** Phase 1（共通の仕組み＋表示）→ Phase 2 以降（1画面ずつ）
-**ステータス:** 未着手
+**ステータス:** Phase 1 完了（実機確認済み 2026-09-25）／Phase 2 以降 未着手
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **依存:** 034（ネイティブ UIKeyCommand）
 **被依存:** なし
@@ -124,17 +124,17 @@ Phase 2 以降は、画面ごとに部品の操作（スライダー・時刻ピ
 
 ### Phase 1（共通＋表示）
 
-- [ ] `SettingsDetail`：フォーカス管理（J/K・矢印・ヌルサイクル・青枠・自動スクロール）と、フォーカス中の行へ H/L・数字・Return/Space を委譲する仕組み
-- [ ] `SettingsDetail`：Esc を「escStack → フォーカス解除 → 戻る」の1ハンドラに
-- [ ] `SettingsDetail`：`?` でショートカット一覧（`ShortcutsModal`）を開く枠。画面ごとに一覧の中身を渡す
-- [ ] `SegmentedCard`：フォーカス対応（青枠・左右は端で止める・`1`〜`n` で直接）
-- [ ] トグル行：フォーカス対応（Return/Space で切替）
-- [ ] 表示：表示言語の行（Return/Space で `LanguagePickerModal`）
-- [ ] `LanguagePickerModal`：J/K・Return/Space（選んで閉じる）・Esc。`active=visible`
-- [ ] 表示：カラーテーマの H/L（非 Pro は鍵付きを飛ばす・横スクロール追従）
-- [ ] ショートカット一覧の文言（ja/en/es）＋ `npm run verify:i18n`
-- [ ] CLAUDE.md：設定タブ／設定サブ画面のキーの項を更新（方針転換を明記）
-- [ ] 実機確認：iPhone／iPad（フルスクリーン・ウィンドウ）で J/K・H/L・矢印・Esc の順序・文字サイズ変更後のフォーカス位置
+- [x] `SettingsDetail`：フォーカス管理（J/K・矢印・ヌルサイクル・青枠・自動スクロール）と、フォーカス中の行へ H/L・数字・Return/Space を委譲する仕組み
+- [x] `SettingsDetail`：Esc を「escStack → フォーカス解除 → 戻る」の1ハンドラに
+- [x] `SettingsDetail`：`?` でショートカット一覧（`ShortcutsModal`）を開く枠。画面ごとに一覧の中身を渡す
+- [x] `SegmentedCard`：フォーカス対応（青枠・左右は端で止める・`1`〜`n` で直接）
+- [x] トグル行：フォーカス対応（Return/Space で切替）
+- [x] 表示：表示言語の行（Return/Space で `LanguagePickerModal`）
+- [x] `LanguagePickerModal`：J/K・Return/Space（選んで閉じる）・Esc。`active=visible`
+- [x] 表示：カラーテーマの H/L（非 Pro は鍵付きを飛ばす・横スクロール追従）
+- [x] ショートカット一覧の文言（ja/en/es）＋ `npm run verify:i18n`
+- [x] CLAUDE.md：設定タブ／設定サブ画面のキーの項を更新（方針転換を明記）
+- [x] 実機確認：iPhone／iPad（フルスクリーン・ウィンドウ）で J/K・H/L・矢印・Esc の順序・文字サイズ変更後のフォーカス位置
 
 ### Phase 2 以降
 

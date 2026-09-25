@@ -8,6 +8,7 @@ import { AppSwitch } from '@/components/AppSwitch';
 import { LanguagePickerModal } from '@/components/settings/LanguagePickerModal';
 import { SegmentedCard } from '@/components/settings/SegmentedCard';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { SettingsFocusCard } from '@/components/settings/settingsFocus';
 import { settingsStyles as styles } from '@/components/settings/styles';
 
 import { resolveSystemLanguage, SUPPORTED_LANGUAGES } from '@/lib/i18n';
@@ -48,12 +49,49 @@ export default function DisplaySettingsScreen() {
 
   const palette = CARD_THEMES[theme.dark ? 'dark' : 'light'];
 
+  // 053：カラーテーマの H/L。⚠️ 非 Pro は鍵付き（Pro 限定）を飛ばす＝タップでは paywall へ移るが、
+  // 送るたびに paywall が開くとキー操作が成立しない。鍵付きへはタップで到達できる。端で止める。
+  const swatchViewportWRef = useRef(0);
+  function stepCardTheme(dir: 1 | -1) {
+    const i = CARD_THEME_NAMES.indexOf(cardThemePreference);
+    for (let j = i + dir; j >= 0 && j < CARD_THEME_NAMES.length; j += dir) {
+      const name = CARD_THEME_NAMES[j];
+      if (!isPro && !FREE_CARD_THEMES.includes(name)) continue;
+      setCardThemePreference(name);
+      // 選んだ見本が見えるよう、横スクロールをその見本が中央に来る位置へ。
+      const x = j * SWATCH_ITEM_TOTAL_WIDTH - (swatchViewportWRef.current - SWATCH_ITEM_WIDTH) / 2;
+      swatchScrollRef.current?.scrollTo({ x: Math.max(0, x), animated: true });
+      return;
+    }
+  }
+
+  const shortcutSections = [
+    { title: t('shortcut.catFocus'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    ] },
+    { title: t('shortcut.catAction'), items: [
+      { key: 'H / L', descKey: 'shortcut.settingValueStep' },
+      { key: '1–3', descKey: 'shortcut.settingValueDirect' },
+      { key: 'Return', descKey: 'shortcut.settingActivate' },
+    ] },
+    { title: t('shortcut.catLanguagePicker'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+      { key: 'Return', descKey: 'shortcut.pickAndClose' },
+    ] },
+    { title: t('shortcut.catOther'), items: [
+      { key: 'ESC', descKey: 'shortcut.esc' },
+      { key: 'B', descKey: 'shortcut.back' },
+      { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
+
   // 選択中テーマがスクロール領域の右半分にある場合、初期表示でその近くまで自動スクロール。
   // useState の init 関数でマウント時の値だけを使うことで、後続のタップ→再レンダリングでも
   // contentOffset の参照が変わらず、iOS の ScrollView がスクロール位置をリセットしない。
   const swatchScrollRef = useRef<ScrollView>(null);
+  const SWATCH_ITEM_WIDTH = 104;
+  const SWATCH_ITEM_TOTAL_WIDTH = SWATCH_ITEM_WIDTH + 8; // width + gap
   const [initialContentOffset] = useState(() => {
-    const SWATCH_ITEM_TOTAL_WIDTH = 104 + 8; // width + gap
     const idx = CARD_THEME_NAMES.indexOf(cardThemePreference);
     const x = idx >= 3 ? (idx - 2) * SWATCH_ITEM_TOTAL_WIDTH : 0;
     return { x, y: 0 };
@@ -72,6 +110,7 @@ export default function DisplaySettingsScreen() {
       title={t('settings.display')}
       // 言語ピッカーは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
       suspendKeys={langModal}
+      shortcuts={shortcutSections}
     >
       <SegmentedCard
         label={t('settings.theme')}
@@ -113,10 +152,7 @@ export default function DisplaySettingsScreen() {
           折り返して値が消えるため（フォントサイズ「大」＋長い言語名／訳語で顕在化する。読み上げ
           設定の文字体系の行と同じ理由）。この画面の他のカードと同じ「見出し → その下に
           コントロール」の形にも揃う。 */}
-      <Pressable
-        style={[styles.card, { backgroundColor: theme.colors.surface }]}
-        onPress={() => setLangModal(true)}
-      >
+      <SettingsFocusCard onPress={() => setLangModal(true)} onActivate={() => setLangModal(true)}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {t('settings.language')}
         </Text>
@@ -126,9 +162,9 @@ export default function DisplaySettingsScreen() {
           </Text>
           <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
         </View>
-      </Pressable>
+      </SettingsFocusCard>
 
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusCard onLeft={() => stepCardTheme(-1)} onRight={() => stepCardTheme(1)}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.colorTheme')}
@@ -147,6 +183,7 @@ export default function DisplaySettingsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={cardThemeStyles.swatchRow}
           contentOffset={initialContentOffset}
+          onLayout={(e) => { swatchViewportWRef.current = e.nativeEvent.layout.width; }}
         >
           {CARD_THEME_NAMES.map((name) => {
             const p = palette[name];
@@ -195,9 +232,11 @@ export default function DisplaySettingsScreen() {
             );
           })}
         </ScrollView>
-      </View>
+      </SettingsFocusCard>
 
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      {/* 053：Return/Space で切替。⚠️ OFF にするとキー操作が全部止まる（戻すのはタップ）が、
+          フォーカスした行で明示的に押しているので確認は挟まない（docs/053 の案 a）。 */}
+      <SettingsFocusCard onActivate={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {t('settings.keyboard')}
         </Text>
@@ -210,7 +249,7 @@ export default function DisplaySettingsScreen() {
             onValueChange={setKeyboardShortcutsEnabled}
           />
         </View>
-      </View>
+      </SettingsFocusCard>
 
       <LanguagePickerModal
         visible={langModal}

@@ -1,15 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { popEscDismiss } from '@/lib/escStack';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
+import { SettingsFocusContext, type SettingsFocusHandlers, type SettingsFocusRegistry } from './settingsFocus';
 import { settingsStyles } from './styles';
 
 interface Props {
@@ -32,6 +35,14 @@ interface Props {
    * `escStack` 経由で下の `handleEsc` が閉じる（そちらは suspendKeys の対象ではない）。
    */
   suspendKeys?: boolean;
+  /**
+   * 053：渡すと**この画面の中の設定項目をキーボードで操作できる**ようになる（渡さない画面は従来どおり
+   * Esc / B だけ）。中身は `?` で開くショートカット一覧。項目側は `SettingsFocusCard` /
+   * `useSettingsFocusItem`（`settingsFocus.tsx`）で登録する。
+   * ⚠️ 渡さない画面ではフォーカス系のキーを一切登録しない＝その画面が自前で持つ Return（情報
+   * モーダルの OK 等）と二重に発火しないように。
+   */
+  shortcuts?: ComponentProps<typeof ShortcutsModal>['sections'];
 }
 
 /**
@@ -39,16 +50,70 @@ interface Props {
  * push 遷移時の戻るボタン残像を防ぐため headerShown:false ＋ インラインカスタムヘッダー
  * （CLAUDE.md のカスタムヘッダーパターン。about.tsx と同形）。
  */
-export function SettingsDetail({ title, children, overlay, onBack, suspendKeys }: Props) {
+export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, shortcuts }: Props) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const lockedTopInset = useLockedTopInset();
+  const keyNav = shortcuts != null;
 
-  // Esc = 階層ディスマス。まず最前面のインライン展開（SegmentedCard の info 等）を閉じ、
-  // 無ければ onBack（モーダル→インライン info→戻る）または router.back()。
+  // ---- 053：項目のフォーカス（J/K）と、フォーカス中の項目への操作の委譲 ----
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const focusedIdRef = useRef<string | null>(null);
+  focusedIdRef.current = focusedId;
+  const handlersMap = useRef(new Map<string, { current: SettingsFocusHandlers }>());
+  const layoutMap = useRef(new Map<string, { y: number; h: number }>());
+  const register = useCallback((id: string, handlers: { current: SettingsFocusHandlers }) => {
+    handlersMap.current.set(id, handlers);
+    return () => {
+      handlersMap.current.delete(id);
+      layoutMap.current.delete(id);
+      if (focusedIdRef.current === id) setFocusedId(null);
+    };
+  }, []);
+  const setLayout = useCallback((id: string, y: number, h: number) => {
+    layoutMap.current.set(id, { y, h });
+  }, []);
+  const registry = useMemo<SettingsFocusRegistry>(() => ({ register, setLayout, focusedId }), [register, setLayout, focusedId]);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const viewportHRef = useRef(0);
+  // 自動スクロール（設定タブと同じ：上下 8pt の余白を残して見える位置まで）。
+  // ⚠️ 位置は毎回 layoutMap から読む＝文字サイズの変更などでレイアウトが動いても最新の値で測る。
+  function scrollIntoView(id: string) {
+    const l = layoutMap.current.get(id);
+    if (!l) return;
+    const top = scrollYRef.current;
+    const vh = viewportHRef.current;
+    if (l.y < top + 8) scrollRef.current?.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
+    else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
+  }
+  // 並び＝画面上の縦位置の順（条件つきで出る行があっても順序が崩れない）。ヌルサイクル。
+  function moveFocus(dir: 1 | -1) {
+    const ids = [...handlersMap.current.keys()]
+      .filter((id) => layoutMap.current.has(id))
+      .sort((a, b) => layoutMap.current.get(a)!.y - layoutMap.current.get(b)!.y);
+    if (ids.length === 0) return;
+    const cur = focusedIdRef.current;
+    const i = cur === null ? -1 : ids.indexOf(cur);
+    let next: string | null;
+    if (dir > 0) next = i === -1 ? (cur === null ? ids[0] : null) : i === ids.length - 1 ? null : ids[i + 1];
+    else next = i === -1 ? (cur === null ? ids[ids.length - 1] : null) : i === 0 ? null : ids[i - 1];
+    setFocusedId(next);
+    if (next !== null) scrollIntoView(next);
+  }
+  const focused = () => (focusedIdRef.current ? handlersMap.current.get(focusedIdRef.current)?.current : undefined);
+
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Esc = 階層ディスマス。ショートカット一覧 → 最前面のインライン展開（SegmentedCard の info 等）→
+  // フォーカス解除 → onBack（モーダル→インライン info→戻る）または router.back()。
+  // ⚠️ フォーカス解除もこの1ハンドラに入れる＝別フックで登録すると両方発火して戻ってしまう。
   const handleEsc = () => {
+    if (showShortcuts) { setShowShortcuts(false); return; }
     if (popEscDismiss()) return;
+    if (focusedIdRef.current !== null) { setFocusedId(null); return; }
     if (onBack) onBack(false); else router.back();
   };
   // 戻るボタン / FAB / B = 直接戻る。インライン info 展開は消費しない
@@ -57,9 +122,37 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys }
     if (onBack) onBack(true); else router.back();
   };
   useKeyCommands([
-    { input: 'b', handler: handleBack },
+    { input: 'b', handler: () => { if (!showShortcuts) handleBack(); } },
     { input: KeyCommand.keyInputEscape, handler: handleEsc },
   ], !suspendKeys);
+
+  // 053：項目の操作。キー操作に対応した画面（shortcuts を渡した画面）だけ登録する。
+  // 矢印は iPad でも登録する（詳細画面に文字の入力欄が無い＝CLAUDE.md「編集が無い画面は両方で登録」）。
+  // ⚠️ 入力欄を持つ画面に広げるときは、その画面だけ矢印を iPhone のみに落とすこと。
+  const left = () => focused()?.onLeft?.();
+  const right = () => focused()?.onRight?.();
+  const activate = () => focused()?.onActivate?.();
+  useKeyCommands([
+    { input: 'j', handler: () => moveFocus(1) },
+    { input: 'k', handler: () => moveFocus(-1) },
+    { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus(1) },
+    { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus(-1) },
+    { input: 'h', handler: left },
+    { input: ',', handler: left },
+    { input: KeyCommand.keyInputLeftArrow, handler: left },
+    { input: 'l', handler: right },
+    { input: '.', handler: right },
+    { input: KeyCommand.keyInputRightArrow, handler: right },
+    { input: KeyCommand.keyInputEnter, handler: activate },
+    { input: ' ', handler: activate },
+    ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ input: String(n), handler: () => focused()?.onSelect?.(n - 1) })),
+    { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcuts(true) },
+  ], keyNav && !suspendKeys && !showShortcuts);
+
+  // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる（Esc は上の handleEsc）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcuts(false) },
+  ], keyNav && !suspendKeys && showShortcuts);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -90,8 +183,16 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys }
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={[settingsStyles.container, { paddingBottom: 32 + 56 + 24 + insets.bottom }]}>
-        {children}
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[settingsStyles.container, { paddingBottom: 32 + 56 + 24 + insets.bottom }]}
+        onLayout={(e) => { viewportHRef.current = e.nativeEvent.layout.height; }}
+        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
+        <SettingsFocusContext.Provider value={keyNav ? registry : null}>
+          {children}
+        </SettingsFocusContext.Provider>
       </ScrollView>
 
       {/* 左下フローティング戻るボタン（カード一覧・タグ管理と同パターン） */}
@@ -104,6 +205,9 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys }
       </Pressable>
 
       {overlay}
+      {keyNav && (
+        <ShortcutsModal visible={showShortcuts} onClose={() => setShowShortcuts(false)} sections={shortcuts} />
+      )}
     </View>
   );
 }

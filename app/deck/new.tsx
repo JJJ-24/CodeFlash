@@ -20,8 +20,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { SettingsFocusContext, SettingsFocusRow, useFocusRegistry } from '@/components/settings/settingsFocus';
-import { AppSwitch } from '@/components/AppSwitch';
-import { InfoContent } from '@/components/InfoContent';
+import { DeckFormCard, DeckFormDivider, DeckFormNavRow, DeckFormSectionTitle, DeckFormToggleRow } from '@/components/deck/DeckFormParts';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
@@ -46,6 +45,7 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
   // 055：J/K で項目を選んで操作する（文字キーは下の「操作」のまま使える）
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: '⇧J / ⇧K', descKey: 'shortcut.sectionNextPrev' },
     { key: 'Return', descKey: 'shortcut.formActivate' },
     { key: 'Space', descKey: 'shortcut.settingToggle' },
     { key: ', / .', descKey: 'shortcut.formColorStep' },
@@ -59,7 +59,7 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
     { key: 'M', descKey: 'shortcut.focusDeckDesc' },
     { key: 'C / ⇧C', descKey: 'shortcut.cycleColor' },
     { key: 'I', descKey: 'shortcut.pickIcon' },
-    // 並びは画面の行順（読み上げ → 読み上げの言語 → HTML/CSS 土台 → SQL 初期化）に合わせる。
+    // 並びは画面の行順（057：基本 → 読み上げ → 読み上げの設定 → HTML/CSS 土台 → SQL 初期化）に合わせる。
     // 読み上げは無料機能なので pro フラグを付けない
     { key: '⇧R', descKey: 'shortcut.toggleDeckSpeech' },
     { key: 'R', descKey: 'shortcut.deckSpeechSettings' },
@@ -228,6 +228,9 @@ export default function NewDeckScreen() {
     //（H/L は使わない＝H は「HTML/CSS 土台を開く」。矢印も使わない＝この画面は iPad のフォーカスエンジン対策で不使用）
     { input: 'j', handler: () => { if (subModalOpen()) return; nav.moveFocus(1); } },
     { input: 'k', handler: () => { if (subModalOpen()) return; nav.moveFocus(-1); } },
+    // 057：⇧J/⇧K＝前後のセクション（基本／読み上げ／コード実行）の先頭の項目へ（学習設定の見出し移動と同じ）
+    { input: 'j', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; nav.moveSection(1); } },
+    { input: 'k', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; nav.moveSection(-1); } },
     { input: ',', handler: () => { if (subModalOpen()) return; nav.focused()?.onLeft?.(); } },
     { input: '.', handler: () => { if (subModalOpen()) return; nav.focused()?.onRight?.(); } },
     { input: KeyCommand.keyInputEnter, handler: () => { if (subModalOpen()) return; nav.focused()?.onActivate?.(); } },
@@ -313,7 +316,9 @@ export default function NewDeckScreen() {
           automaticallyAdjustKeyboardInsets
         >
           <SettingsFocusContext.Provider value={nav.registry}>
-          <SettingsFocusRow style={styles.field} claim={inputFocus === 'name'} onActivate={() => nameRef.current?.focus()}>
+          {/* 057：見出しで「基本／読み上げ／コード実行」に区切る（タブ分けは不採用＝docs/057） */}
+          <DeckFormSectionTitle title={t('deck.sectionBasic')} />
+          <SettingsFocusRow style={styles.field} section claim={inputFocus === 'name'} onActivate={() => nameRef.current?.focus()}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.name')}
             </Text>
@@ -405,93 +410,62 @@ export default function NewDeckScreen() {
             )}
           </SettingsFocusRow>
 
-          {/* 052: このデッキで読み上げを使うか（無料・既定 ON）。編集画面と同じ行（説明と並び順の理由はそちらのコメント）。 */}
-          <SettingsFocusRow style={styles.field} onToggle={() => { Keyboard.dismiss(); setSpeechDisabled((v) => !v); }}>
-            <View style={[styles.toggleCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, !speechEnabled && styles.inactive]}>
-              <View style={styles.toggleRow}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                    {t('deck.speechLabel')}
-                  </Text>
-                  <Pressable onPress={() => { Keyboard.dismiss(); setShowSpeechInfo((v) => !v); }} hitSlop={8} accessibilityLabel={t('deck.speechInfoLabel')}>
-                    <Ionicons
-                      name={showSpeechInfo ? 'information-circle' : 'information-circle-outline'}
-                      size={Math.max(theme.fontSize.lg, 20)}
-                      color={theme.colors.textTertiary}
-                    />
-                  </Pressable>
-                </View>
-                <AppSwitch
-                  value={!speechDisabled}
-                  onValueChange={(v) => { Keyboard.dismiss(); setSpeechDisabled(!v); }}
-                  thumbColor="#FFF"
-                />
-              </View>
-              {showSpeechInfo && (
-                <View style={[styles.toggleInfoBox, { backgroundColor: theme.colors.background }]}>
-                  <InfoContent text={t('deck.speechUseHint')} />
-                </View>
-              )}
-            </View>
-            {!speechEnabled && (
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('deck.speechAppOffNote')}
-              </Text>
-            )}
-          </SettingsFocusRow>
 
-          {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
-              設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
-              ⚠️ **適用（学習画面）には isPro を入れない**＝読み上げ自体は無料機能で、
-              止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
-          <SettingsFocusRow style={styles.field} onActivate={openSpeechSettings}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.speechSettingsLabel')}
-            </Text>
-            <Pressable
-              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, (!speechEnabled || speechDisabled) && styles.inactive]}
+          {/* 052: このデッキで読み上げを使うか（無料・既定 ON）。OFF で学習画面のスピーカーボタン・
+              S キー・自動読み上げが一括で消える。保存値は否定形 `speechDisabled`。
+              ⚠️ OFF でも下の「読み上げの設定」は**隠さず淡くする**＝OFF はモードであって設定の有無ではない。
+              アプリ設定で読み上げが OFF なら両方の行を淡くし、注記はそちらを優先する（CLAUDE.md の
+              「オンに見えるのに効いていない状態を作らない」）。
+              057：セクションの並びは 基本 → 読み上げ → コード実行（Pro だけの行を後にして、非 Pro と Pro で
+              読み上げの位置が変わらないようにする）。 */}
+          <DeckFormSectionTitle title={t('deck.sectionSpeech')} />
+          <DeckFormCard>
+            <DeckFormToggleRow
+              section
+              icon="volume-high-outline"
+              label={t('deck.speechLabel')}
+              value={!speechDisabled}
+              onValueChange={(v) => { Keyboard.dismiss(); setSpeechDisabled(!v); }}
+              infoLabel={t('deck.speechInfoLabel')}
+              infoText={t('deck.speechUseHint')}
+              showInfo={showSpeechInfo}
+              onToggleInfo={() => { Keyboard.dismiss(); setShowSpeechInfo((v) => !v); }}
+              dim={!speechEnabled}
+              note={!speechEnabled ? t('deck.speechAppOffNote') : null}
+            />
+            <DeckFormDivider />
+            {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
+                設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
+                ⚠️ **適用（学習画面）には isPro を入れない**。 */}
+            <DeckFormNavRow
+              icon="language"
+              configured={speechConfigured}
+              label={t('deck.speechSettingsLabel')}
+              summary={deckSpeechSummary(speechLangs, speechLangsBack, speechAuto, t)}
+              locked={!isPro}
+              dim={!speechEnabled || speechDisabled}
+              // 052: デッキ OFF のときだけ（アプリ OFF は上のスイッチ行の注記が担当＝二重に出さない）
+              note={speechEnabled && speechDisabled ? t('deck.speechDeckOffNote') : null}
               onPress={openSpeechSettings}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: speechConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
-                <Ionicons name={speechConfigured ? 'volume-high' : 'volume-high-outline'} size={20} color={speechConfigured ? theme.colors.primary : theme.colors.textSecondary} />
-              </View>
-              <Text style={{ color: speechConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                {deckSpeechSummary(speechLangs, speechLangsBack, speechAuto, t)}
-              </Text>
-              {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </Pressable>
-            {/* 052: デッキ OFF のときだけ（アプリ OFF は上のトグル行の注記が担当＝二重に出さない） */}
-            {speechEnabled && speechDisabled && (
-              <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('deck.speechDeckOffNote')}
-              </Text>
-            )}
-          </SettingsFocusRow>
+            />
+          </DeckFormCard>
 
           {/* HTML/CSS 土台を先に置く：土台を使う言語は html/css/js/ts の4つ（js/ts は無料言語）で、
               SQL ブロックだけが使う SQL 初期化より触る頻度が高いため。キー割り当て（H/Q）は
               頭文字由来なのでこの並びとは独立。 */}
           {isPro && (
-            <SettingsFocusRow style={styles.field} onActivate={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}>
-              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('deck.htmlInitLabel')}
-              </Text>
-              <Pressable
-                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-                onPress={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: htmlConfigured ? theme.colors.primaryLight : theme.colors.background }]}>
-                  <Ionicons name={htmlConfigured ? 'globe' : 'globe-outline'} size={20} color={htmlConfigured ? theme.colors.primary : theme.colors.textSecondary} />
-                </View>
-                <Text style={{ color: htmlConfigured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {/* この行は土台と画像ライブラリの両方への入口なので、**中にある物をそのまま出す**。
-                      「設定済み」の一語だと中身が分からず、土台0件で開くと空の一覧が出て矛盾に見えた。 */}
-                  {filledStages > 0
+            <>
+              <DeckFormSectionTitle title={t('deck.sectionCode')} />
+              <DeckFormCard>
+                <DeckFormNavRow
+                  section
+                  icon="globe"
+                  configured={htmlConfigured}
+                  label={t('deck.htmlInitLabel')}
+                  // この行は土台と画像ライブラリの両方への入口なので、**中にある物をそのまま出す**。
+                  // 047 Phase 0: 1文に count が2つあると複数形が効かないので、各々複数形つきで作ってから繋ぐ。
+                  summary={filledStages > 0
                     ? htmlImages.length > 0
-                      // 047 Phase 0: 1文に count が2つあると複数形が効かないので、
-                      //   「土台 N件」「画像 N枚」を各々複数形つきで作ってから繋ぐ
-                      //   （繋ぎ方（区切り文字）も言語で変わるので翻訳キーに残す）。
                       ? t('deck.htmlStagesAndImages', {
                         stages: t('deck.htmlStagesSet', { count: filledStages }),
                         images: t('deck.htmlImagesSet', { count: htmlImages.length }),
@@ -500,32 +474,19 @@ export default function NewDeckScreen() {
                     : htmlImages.length > 0
                       ? t('deck.htmlImagesOnly', { count: htmlImages.length })
                       : t('deck.htmlInitNone')}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-              </Pressable>
-            </SettingsFocusRow>
+                  onPress={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}
+                />
+                <DeckFormDivider />
+                <DeckFormNavRow
+                  icon="server"
+                  configured={filledSqlStages > 0}
+                  label={t('deck.sqlInitLabel')}
+                  summary={filledSqlStages > 0 ? t('deck.sqlStagesSet', { count: filledSqlStages }) : t('deck.sqlInitNone')}
+                  onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
+                />
+              </DeckFormCard>
+            </>
           )}
-
-          {isPro && (
-            <SettingsFocusRow style={styles.field} onActivate={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}>
-              <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {t('deck.sqlInitLabel')}
-              </Text>
-              <Pressable
-                style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-                onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: filledSqlStages > 0 ? theme.colors.primaryLight : theme.colors.background }]}>
-                  <Ionicons name={filledSqlStages > 0 ? 'server' : 'server-outline'} size={20} color={filledSqlStages > 0 ? theme.colors.primary : theme.colors.textSecondary} />
-                </View>
-                <Text style={{ color: filledSqlStages > 0 ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.md, flex: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {filledSqlStages > 0 ? t('deck.sqlStagesSet', { count: filledSqlStages }) : t('deck.sqlInitNone')}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-              </Pressable>
-            </SettingsFocusRow>
-          )}
-
           </SettingsFocusContext.Provider>
         </ScrollView>
         <FormBottomBar onClose={handleClose} onSave={handleCreate} saveDisabled={!canSave} />
@@ -590,9 +551,8 @@ export default function NewDeckScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  // 末尾の余白は編集画面と同じ量にする。新規作成にはアーカイブ行（＝ⓘ を開くための余白が
-  // 要る行）が無いので機能的には不要だが、**双子の画面で末尾の見え方を変えない**ため揃える
-  // （カードは new/edit で `BlockEditor` を共有していて、同じ理由で新規にも余白が付く）。
+  // 末尾の余白は編集画面と同じ量にする（非 Pro は最下部が ⓘ を持つ「読み上げ」の行＝説明を開いたとき
+  // スクロールせずに見えるための余白。理由の詳細は編集画面のコメント）。
   container: { padding: 20, gap: 20, paddingBottom: 140 },
   field: { gap: 6 },
   label: { fontWeight: '600' },
@@ -619,27 +579,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // 052: トグル行の白枠（編集画面の archiveCard / archiveRow と同じ寸法）
-  toggleCard: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  // ⓘ タップで開くインライン説明（編集画面の archiveInfoBox と同じ見せ方）
-  toggleInfoBox: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 8,
-  },
-  // 052: 効かない状態（アプリ設定 OFF／デッキ OFF）を淡く見せる（一覧のアーカイブ済みと同じ 0.55）
-  inactive: { opacity: 0.55 },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -1,20 +1,22 @@
 // カードエディタ（新規/編集）のショートカット一覧。6カテゴリー分類。
-// 新規作成時は「カード複製(C)」「アーカイブ(E・フォーカスなし)」を new.tsx の filterForNew が除外する。
+// 新規作成時は「カード複製(C)」「アーカイブ(E・フォーカスなし／Space)」を new.tsx の filterForNew が除外する。
+// 056：編集モードの J/K はブロックの後ろ（＋ブロック追加・タグ・アーカイブ）まで巡回する。並べ替えモードはブロックだけ。
 export const CARD_EDITOR_SECTIONS_EDIT = [
   { titleKey: 'shortcut.catDisplay', items: [
     { key: '1-3',      descKey: 'shortcut.tabSelectCard' },
     { key: 'U / D',    descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
-    { key: 'T',        descKey: 'shortcut.scrollToTags' },
-    { key: 'M / ⇧M',        descKey: 'shortcut.cycleMode' },
+        { key: 'M / ⇧M',        descKey: 'shortcut.cycleMode' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K',    descKey: 'shortcut.focusNextPrev' },
+    { key: 'T',        descKey: 'shortcut.scrollToTags' },
     { key: 'E',        descKey: 'shortcut.editArchiveCombo' },
     { key: 'R',        descKey: 'shortcut.runFocused' },
     { key: 'Delete',   descKey: 'shortcut.delete' },
     { key: 'A',        descKey: 'shortcut.toggleAddMenu' },
-    { key: 'Return',   descKey: 'shortcut.addBlock' },
+    { key: 'Return',   descKey: 'shortcut.editorReturn' },
+    { key: 'Space',    descKey: 'shortcut.settingToggle' },
   ] },
   { titleKey: 'shortcut.catAction', items: [
     { key: '⇧E',       descKey: 'shortcut.archiveToggle' },

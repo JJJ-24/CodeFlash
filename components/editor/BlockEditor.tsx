@@ -21,6 +21,8 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
 } from "react-native";
 
 import { constants as KeyCommand } from "react-native-key-command";
@@ -30,6 +32,7 @@ import { ArchivePill, useArchivePill } from "@/components/ArchivePill";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { InfoContent } from "@/components/InfoContent";
+import { MultiSelectPickerModal } from "@/components/MultiSelectPickerModal";
 import { registerAlertRestoreProvider } from "@/lib/alertFocus";
 import { hasBlockContent } from "@/lib/cardPreview";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
@@ -39,7 +42,9 @@ import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
 import { useResponsiveSize } from "@/lib/useResponsiveSize";
+import { resolveTagColor } from "@/lib/tagColors";
 import { useSettingsStore } from "@/store/settings";
+import { useTagStore } from "@/store/tags";
 import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from "@/types";
 import { CodeBlockItem } from "./CodeBlockItem";
 import { ImageBlockItem } from "./ImageBlockItem";
@@ -51,6 +56,13 @@ export type EditorMode = "edit" | "sort" | "preview";
 
 // エディタ内部でブロックを一意に識別するためのローカルキー付き型
 type EditBlock = Block & { _key: string };
+
+/**
+ * 056：ブロックの後ろに並ぶ J/K の止まり先（編集モードのみ）。巡回は
+ * 「ブロック0…n → ＋ブロック追加 → タグ → アーカイブ → フォーカスなし」。
+ * ブロックのフォーカス（focusedBlockIndex）とは同時に立たない。デッキ名の行は表示だけなので止めない。
+ */
+type FooterFocus = "add" | "tags" | "archive";
 
 /**
  * 末尾に確保する余白。最下部のアーカイブ行で ⓘ を開いたとき、説明は行とこの余白のあいだに
@@ -209,6 +221,9 @@ export function BlockEditor({
   const addMenuFocusIndexRef = useRef(0);
   const editingBlockKeyRef = useRef<string | null>(null);
   const addAreaYRef = useRef(0);
+  // 056：末尾の止まり先の位置（スクロールの中身から見た y・高さ）。画面外なら見える位置までスクロールする。
+  const footerLayoutRef = useRef<Partial<Record<FooterFocus, { y: number; h: number }>>>({});
+  const footerFocusRef = useRef<FooterFocus | null>(null);
 
   // 編集中ブロックのキーを記録（keyboardWillShow 時のスクロール・ESC での編集解除に使用）。
   const setEditingBlockKey = (key: string | null) => {
@@ -239,6 +254,14 @@ export function BlockEditor({
   const [autoFocusedKeys, setAutoFocusedKeys] = useState<Set<string>>(new Set());
   const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(
     null,
+  );
+  const [footerFocus, setFooterFocus] = useState<FooterFocus | null>(null);
+  // 056：タグ選択のシート（J/K・Space・Return で選ぶ。検索のタグ絞り込みと同じ部品）
+  const [tagPickerVisible, setTagPickerVisible] = useState(false);
+  const tags = useTagStore((s) => s.tags);
+  const tagPickerItems = useMemo(
+    () => tags.map((tag) => ({ id: tag.id, name: tag.name, color: resolveTagColor(tag.color, theme) })),
+    [tags, theme],
   );
   // アーカイブ欄が画面外でも結果が分かるよう、E/⇧E でのアーカイブ切替時に中央ピルで通知する。
   const { archivePill, showArchivePill } = useArchivePill();
@@ -305,6 +328,7 @@ export function BlockEditor({
     setterByTab[activeTab]((prev) => [...prev, block]);
     setNewBlockKey(block._key);
     setAddMenuVisible(false);
+    setFooterFocus(null);
   }
 
   // メニューフォーカスインデックスに対応するブロックを追加（またはキャンセル）
@@ -356,6 +380,63 @@ export function BlockEditor({
   focusedBlockIndexRef.current = focusedBlockIndex;
   addMenuVisibleRef.current = addMenuVisible;
   addMenuFocusIndexRef.current = addMenuFocusIndex;
+  footerFocusRef.current = footerFocus;
+
+  // 056：末尾の止まり先。タグが1つも無ければタグ欄には止めない（選べるものが無い）・アーカイブは編集時のみ。
+  const footerStops: FooterFocus[] = [
+    "add",
+    ...(tags.length > 0 ? (["tags"] as const) : []),
+    ...(onArchivedChange ? (["archive"] as const) : []),
+  ];
+
+  // ブロックにフォーカスが移ったら末尾の青枠は外す（同時に2か所に立てない）
+  useEffect(() => {
+    if (focusedBlockIndex !== null) setFooterFocus(null);
+  }, [focusedBlockIndex]);
+
+  // 並べ替え・プレビューでは末尾に止めない（並べ替えの J/K は「動かすブロックを選ぶ」ため）
+  useEffect(() => {
+    if (editorMode !== "edit") setFooterFocus(null);
+  }, [editorMode]);
+
+  // ショートカットを OFF にしたら青枠を消す（055 と同じ）
+  useEffect(() => {
+    if (!keyboardShortcutsEnabled) setFooterFocus(null);
+  }, [keyboardShortcutsEnabled]);
+
+  // 末尾の止まり先へフォーカスが来たら、画面外のときだけ見える位置までスクロールする（055 と同じ上下 8pt の余白）
+  useEffect(() => {
+    if (!footerFocus) return;
+    const l = footerLayoutRef.current[footerFocus];
+    if (!l || !scrollRef.current) return;
+    const top = scrollPosRef.current[activeTabRef.current] ?? 0;
+    const vh = scrollViewHeightRef.current;
+    if (l.y < top + 8) scrollRef.current.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
+    else if (l.y + l.h > top + vh - 8) scrollRef.current.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
+  }, [footerFocus]);
+
+  function focusFooter(stop: FooterFocus | null) {
+    setFocusedBlockIndex(null);
+    setFooterFocus(stop);
+  }
+
+  // 055 と同じ：項目の中をタップしたら青枠をそこへ移す（ショートカット ON のときだけ・スクロールの指は除く）
+  const footerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const tapToClaimFooter = (stop: FooterFocus) => ({
+    onTouchStart: (e: GestureResponderEvent) => {
+      footerTouchStartRef.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
+    },
+    onTouchEnd: (e: GestureResponderEvent) => {
+      const s = footerTouchStartRef.current;
+      footerTouchStartRef.current = null;
+      if (!s || !keyboardShortcutsEnabled || isSortModeRef.current || isPreviewRef.current) return;
+      if (Math.abs(e.nativeEvent.pageX - s.x) < 10 && Math.abs(e.nativeEvent.pageY - s.y) < 10) focusFooter(stop);
+    },
+    onTouchCancel: () => { footerTouchStartRef.current = null; },
+  });
+  const footerLayout = (stop: FooterFocus) => (e: LayoutChangeEvent) => {
+    footerLayoutRef.current[stop] = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height };
+  };
 
   const isFrontEmpty = frontBlocks.every((b) => {
     if (b.type === "image") return !b.uri;
@@ -390,6 +471,7 @@ export function BlockEditor({
   // タブ切替でブロックフォーカスをリセット＋スクロール位置を個別に復元
   useEffect(() => {
     setFocusedBlockIndex(null);
+    setFooterFocus(null);
     scrollRef.current?.scrollTo({
       y: scrollPosRef.current[activeTab],
       animated: false,
@@ -431,6 +513,7 @@ export function BlockEditor({
   function handleBlockTapFocus(blockKey: string) {
     setEditingBlockKey(blockKey);
     setFocusedBlockIndex(null);
+    setFooterFocus(null);
   }
 
   function handleCodeBlockRunButtonPress(blockKey: string) {
@@ -597,16 +680,36 @@ export function BlockEditor({
       return;
     }
 
+    // 056：末尾の止まり先（＋ブロック追加・タグ・アーカイブ）にフォーカス中は、ブロック単位の Delete は効かせない
+    //（フォーカスなし＝カード削除にも倒さない。タグを選んでいるつもりで押してカード削除の確認に繋がらないように）。
+    const ff = footerFocusRef.current;
+    if (ff && k === KEY_DELETE) return;
+
+    // J/K：ブロック0…n → 末尾の止まり先 → フォーカスなし（ヌルサイクル）。末尾へは編集モードだけ延ばす
+    //（並べ替えモードは上の inSort 分岐＝ブロックだけ）。
     if (k === "j") {
-      setFocusedBlockIndex((prev) => {
-        if (prev === null) return blocks.length > 0 ? 0 : null;
-        return prev < blocks.length - 1 ? prev + 1 : null;
-      });
+      if (ff) {
+        const i = footerStops.indexOf(ff);
+        focusFooter(i >= 0 ? footerStops[i + 1] ?? null : null);
+      } else if (idx === null) {
+        if (blocks.length > 0) setFocusedBlockIndex(0);
+        else focusFooter(footerStops[0]);
+      } else if (idx < blocks.length - 1) {
+        setFocusedBlockIndex(idx + 1);
+      } else {
+        focusFooter(footerStops[0]);
+      }
     } else if (k === "k") {
-      setFocusedBlockIndex((prev) => {
-        if (prev === null) return blocks.length > 0 ? blocks.length - 1 : null;
-        return prev > 0 ? prev - 1 : null;
-      });
+      if (ff) {
+        const i = footerStops.indexOf(ff);
+        if (i > 0) focusFooter(footerStops[i - 1]);
+        else if (blocks.length > 0) { setFooterFocus(null); setFocusedBlockIndex(blocks.length - 1); }
+        else focusFooter(null);
+      } else if (idx === null) {
+        focusFooter(footerStops[footerStops.length - 1]);
+      } else {
+        setFocusedBlockIndex(idx > 0 ? idx - 1 : null);
+      }
     } else if (k === "m") {
       cycleMode();
     } else if (k === "m_rev") {
@@ -626,7 +729,9 @@ export function BlockEditor({
         setAddMenuVisible((v) => {
           if (!v) {
             // メニューを開く: ブロックフォーカス解除・メニュー先頭を選択
+            //（＋ブロック追加にフォーカス中なら残す＝メニューを閉じたらそこへ戻る）
             setFocusedBlockIndex(null);
+            if (ff !== "add") setFooterFocus(null);
             setAddMenuFocusIndex(0);
           }
           return !v;
@@ -651,7 +756,9 @@ export function BlockEditor({
     } else if (k === "e") {
       startEditFocusedBlock();
     } else if (k === "t") {
-      scrollRef.current?.scrollToEnd({ animated: true });
+      // 056：タグ欄へフォーカス（画面外ならスクロール）。Return で選択シートを開く。タグが無ければ従来どおり末尾へ。
+      if (footerStops.includes("tags")) focusFooter("tags");
+      else scrollRef.current?.scrollToEnd({ animated: true });
     } else if (k === "u") {
       // 編集/プレビューモードの U/D は画面スクロール（並べ替えモードはブロック移動で上の inSort 分岐が処理）。
       scrollByStep(-SCROLL_STEP);
@@ -699,6 +806,12 @@ export function BlockEditor({
     { key: "memo", label: t("common.memo") },
   ];
 
+  // 056：末尾の止まり先の青枠（レイアウトを変えないよう絶対配置で重ねる）
+  const focusRing = (stop: FooterFocus, style: object) =>
+    footerFocus === stop ? (
+      <View pointerEvents="none" style={[styles.focusRing, { borderColor: theme.colors.primary }, style]} />
+    ) : null;
+
   const footerContent = (
     <>
       {/* ブロック追加ボタン */}
@@ -707,7 +820,9 @@ export function BlockEditor({
           style={styles.addArea}
           onLayout={(e) => {
             addAreaYRef.current = e.nativeEvent.layout.y;
+            footerLayout("add")(e);
           }}
+          {...tapToClaimFooter("add")}
         >
           {addMenuVisible ? (
             <View
@@ -851,13 +966,14 @@ export function BlockEditor({
               </Text>
             </Pressable>
           )}
+          {!addMenuVisible && focusRing("add", styles.focusRingCard)}
         </View>
       )}
 
       {/* タグ選択・デッキ名（プレビュー時は非表示） */}
       {!isPreview && (
         <>
-          <View style={styles.tagSection}>
+          <View style={styles.tagSection} onLayout={footerLayout("tags")} {...tapToClaimFooter("tags")}>
             <Text
               style={[
                 styles.tagLabel,
@@ -871,6 +987,7 @@ export function BlockEditor({
               {t("tag.title")}
             </Text>
             <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
+            {focusRing("tags", styles.focusRingRow)}
           </View>
 
           {deckName != null && (
@@ -910,7 +1027,11 @@ export function BlockEditor({
               説明は常時表示せず、ⓘ タップで白枠の中にインライン展開する
               （設定画面の card + syncInfoBox と同じ形。デッキ編集も同じ）。 */}
           {onArchivedChange && (
-            <View style={[styles.archiveCard, { borderColor: theme.colors.inputBorder, backgroundColor: theme.colors.surface }]}>
+            <View
+              style={[styles.archiveCard, { borderColor: theme.colors.inputBorder, backgroundColor: theme.colors.surface }]}
+              onLayout={footerLayout("archive")}
+              {...tapToClaimFooter("archive")}
+            >
               <View style={styles.archiveRow}>
                 <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text
@@ -942,6 +1063,7 @@ export function BlockEditor({
                   <InfoContent text={t("deck.archiveHint")} />
                 </View>
               )}
+              {focusRing("archive", styles.focusRingCardBordered)}
             </View>
           )}
         </>
@@ -1063,7 +1185,32 @@ export function BlockEditor({
           selectAddMenuItem(addMenuFocusIndexRef.current);
           return;
         }
+        // 056：末尾の止まり先は Return＝開く（＋ブロック追加＝メニュー／タグ＝選択シート）。アーカイブは Space。
+        const ff = footerFocusRef.current;
+        if (ff === "add") {
+          Keyboard.dismiss();
+          setAddMenuFocusIndex(0);
+          setAddMenuVisible(true);
+          return;
+        }
+        if (ff === "tags") {
+          Keyboard.dismiss();
+          setTagPickerVisible(true);
+          return;
+        }
+        if (ff) return;
         startEditFocusedBlock();
+      },
+    },
+    // 056：Space＝スイッチ（アーカイブにフォーカス中だけ。053/055 と同じ「Return＝開く／Space＝スイッチ」）。
+    //   欄が見えているので中央ピルは出さない（E/⇧E は欄が画面外でもピルで分かる）。
+    {
+      input: " ",
+      handler: () => {
+        if (!keyboardShortcutsEnabled) return;
+        if (footerFocusRef.current === "archive" && onArchivedChange && !isPreviewRef.current) {
+          onArchivedChange(!archived);
+        }
       },
     },
     // 矢印は iPhone のみ登録（上下=K/J ブロック移動、左右=,/. タブ切替）。iPhone はフォーカスエンジンが
@@ -1076,7 +1223,8 @@ export function BlockEditor({
     ]) as { input: string; handler: () => void }[]),
   // 親モーダル（ショートカット一覧）・全画面プレビュー表示中はナビ系を解除（背景キー抑止）。
   // 削除確認・破棄確認（アラート）は表示中にキーを独占する（054）ので含めない。
-  ], !suspendKeys && !interactivePreviewOpen);
+  // タグ選択シート（056）は自前でキーを持つので、表示中は手放す。
+  ], !suspendKeys && !interactivePreviewOpen && !tagPickerVisible);
 
   // ESC は編集中も含めて常時有効（編集中ブロックを抜ける／キャンセル）。
   // ただし親モーダル表示中は親側が Esc を処理するため解除する。
@@ -1097,10 +1245,13 @@ export function BlockEditor({
           Keyboard.dismiss();
           return;
         }
+        // 056：フォーカス（青枠）があれば先に外す（055 のデッキ/タグ編集・053 の設定と同じ Esc の順）
+        if (footerFocusRef.current) { setFooterFocus(null); return; }
+        if (focusedBlockIndexRef.current !== null) { setFocusedBlockIndex(null); return; }
         onCancel?.();
       },
     },
-  ], !suspendKeys && !interactivePreviewOpen);
+  ], !suspendKeys && !interactivePreviewOpen && !tagPickerVisible);
 
   return (
     <InteractivePreviewContext.Provider value={interactivePreviewCtx}>
@@ -1362,6 +1513,15 @@ export function BlockEditor({
         }}
         onClose={() => setPendingDeleteBlock(null)}
       />
+      {/* 056：タグ選択シート（タグ欄にフォーカスして Return）。タップのチップ選択はそのまま */}
+      <MultiSelectPickerModal
+        visible={tagPickerVisible}
+        title={t("editor.tagPickerTitle")}
+        items={tagPickerItems}
+        selectedIds={tagIds}
+        onToggle={(id) => setTagIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))}
+        onClose={() => setTagPickerVisible(false)}
+      />
       <ArchivePill archived={archivePill} />
     </KeyboardAvoidingView>
     </InteractivePreviewContext.Provider>
@@ -1468,5 +1628,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   deckName: { fontWeight: "600" },
+  focusRing: { position: "absolute", borderWidth: 2 },
+  // ＋ブロック追加のボタンにぴったり重ねる（addArea は余白なし・ボタンの角丸 10）
+  focusRingCard: { top: 0, bottom: 0, left: 0, right: 0, borderRadius: 10 },
+  // タグ欄は枠の無い行＝文字に触れないよう外側へ少しはみ出す（SettingsFocusRow の row と同じ）
+  focusRingRow: { top: -5, bottom: -5, left: -8, right: -8, borderRadius: 8 },
+  // アーカイブのカード（枠線 1）の縁に重ねる＝絶対配置は枠線の内側基準なので 1 だけ外へ
+  focusRingCardBordered: { top: -1, bottom: -1, left: -1, right: -1, borderRadius: 10 },
   validationError: { textAlign: "center" },
 });

@@ -1,7 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ import { popEscDismiss } from '@/lib/escStack';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useSettingsStore } from '@/store/settings';
 
 import { SettingsFocusContext, type SettingsFocusHandlers, type SettingsFocusRegistry } from './settingsFocus';
 import { settingsStyles } from './styles';
@@ -64,6 +66,8 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const insets = useSafeAreaInsets();
   const lockedTopInset = useLockedTopInset();
   const keyNav = shortcuts != null;
+  const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
+  const { t } = useTranslation();
 
   // ---- 053：項目のフォーカス（J/K）と、フォーカス中の項目への操作の委譲 ----
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -234,7 +238,21 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
             <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           </Pressable>
           <View style={{ flex: 1 }} />
-          <View style={{ width: 36 }} />
+          {/* 053：ショートカット一覧を開く（`?` と同じ）。設定タブのヘッダー右端と同じアイコン。
+              キー操作に対応した画面（shortcuts を渡した画面）で、キーボードショートカットが ON のときだけ出す
+              （OFF のときは一覧のキーがどれも効かない＝押せても意味が無い）。 */}
+          {keyNav && keyboardShortcutsEnabled ? (
+            <Pressable
+              onPress={() => setShowShortcuts(true)}
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
+              hitSlop={4}
+              accessibilityLabel={t('settings.keyboardShortcuts')}
+            >
+              <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
+            </Pressable>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
         </View>
       </View>
 

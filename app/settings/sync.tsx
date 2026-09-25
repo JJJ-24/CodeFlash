@@ -426,10 +426,6 @@ export default function SyncSettingsScreen() {
       { key: "Return", descKey: "shortcut.settingActivateSync" },
       { key: "Space", descKey: "shortcut.settingToggle" },
     ] },
-    { title: t("shortcut.catConfirmDialog"), items: [
-      { key: "J / K", descKey: "shortcut.confirmChoose" },
-      { key: "Return", descKey: "shortcut.confirmRun" },
-    ] },
     { title: t("shortcut.catOther"), items: [
       { key: "ESC", descKey: "shortcut.esc" },
       { key: "B", descKey: "shortcut.back" },

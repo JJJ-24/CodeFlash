@@ -270,9 +270,9 @@ export default function StudySettingsScreen() {
     { title: t('shortcut.catAction'), items: [
       { key: 'Return', descKey: 'shortcut.settingActivateStudy' },
       { key: 'Space', descKey: 'shortcut.settingToggle' },
-      { key: 'H / L', descKey: 'shortcut.settingValueStep' },
+      { key: '1–3', descKey: 'shortcut.settingValueChoice' },
+      { key: 'H / L', descKey: 'shortcut.settingValueNumber' },
       { key: '⇧H / ⇧L', descKey: 'shortcut.settingValueBig' },
-      { key: '1–3', descKey: 'shortcut.settingValueDirect' },
       { key: 'S', descKey: 'shortcut.settingPreview' },
     ] },
     { title: t('shortcut.catPickerList'), items: [

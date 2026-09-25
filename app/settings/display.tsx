@@ -70,8 +70,7 @@ export default function DisplaySettingsScreen() {
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     ] },
     { title: t('shortcut.catAction'), items: [
-      { key: 'H / L', descKey: 'shortcut.settingValueStep' },
-      { key: '1–3', descKey: 'shortcut.settingValueDirect' },
+      { key: '1–3', descKey: 'shortcut.settingValueChoice' },
       { key: 'Return', descKey: 'shortcut.settingActivate' },
       { key: 'Space', descKey: 'shortcut.settingToggle' },
     ] },

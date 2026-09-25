@@ -637,15 +637,12 @@ export default function NotificationSettingsScreen() {
     ] },
     { title: t('shortcut.catScheduleSheet'), items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-      { key: 'H / L', descKey: 'shortcut.scheduleTimeStep' },
-      { key: '⇧H / ⇧L', descKey: 'shortcut.scheduleTimeBig' },
       { key: '0–9', descKey: 'shortcut.scheduleTimeDigits' },
       { key: '1–7', descKey: 'shortcut.scheduleWeekday' },
       { key: 'Return', descKey: 'shortcut.scheduleLabel' },
       { key: 'Space', descKey: 'shortcut.settingToggle' },
       { key: 'S', descKey: 'shortcut.save' },
       { key: 'Delete', descKey: 'shortcut.deleteSchedule' },
-      { key: 'ESC', descKey: 'shortcut.close' },
     ] },
     { title: t('shortcut.catOther'), items: [
       { key: 'ESC', descKey: 'shortcut.esc' },

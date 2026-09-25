@@ -916,7 +916,7 @@
     "speak": "読み上げ/停止",
     "pencil": "カード編集",
     "startStudy": "学習開始",
-    "startStudyFromFocus": "学習開始\n（フォーカスから開始）",
+    "startStudyFromFocus": "学習開始\n（フォーカスから）",
     "startStudyFocused": "学習開始（フォーカス項目）\n[Return]でも可",
     "switchFilter": "フィルター切替\n（すべて/済み/復習/新規）\n[H/L][,/.]でも可",
     "switchFilterAllActive": "フィルター切替\n（すべて/有効）\n[H/L][,/.]でも可",

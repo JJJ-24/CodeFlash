@@ -968,7 +968,7 @@
     "speak": "Leer en voz alta / parar",
     "pencil": "Editar la tarjeta",
     "startStudy": "Empezar a estudiar",
-    "startStudyFromFocus": "Empezar a estudiar\n(desde el elemento con foco)",
+    "startStudyFromFocus": "Empezar a estudiar\n(desde el foco)",
     "startStudyFocused": "Estudiar el elemento con foco\n[Return] también",
     "switchFilter": "Cambiar filtro\n(Todo/Hechas/Repaso/Nuevas)\n[H/L][,/.] también",
     "switchFilterAllActive": "Cambiar filtro\n(Todo/En uso)\n[H/L][,/.] también",

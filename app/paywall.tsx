@@ -94,17 +94,11 @@ export default function PaywallScreen() {
   const lastInfoModalRef = useRef<{ message: string; onClose?: () => void } | null>(null);
   if (infoModal) lastInfoModalRef.current = infoModal;
 
-  // Esc / B = 戻る（体験開始確認・情報モーダル表示中は先に閉じる）。
-  const goBack = () => {
-    if (trialConfirmVisible) { setTrialConfirmVisible(false); return; }
-    if (infoModal) { const cb = infoModal.onClose; setInfoModal(null); cb?.(); return; }
-    router.back();
-  };
+  // Esc / B = 戻る。体験開始確認・情報モーダル（アラート）の Return/Esc はアラート自身が受け持つ（054＝表示中はキーを独占）。
+  const goBack = () => router.back();
   useKeyCommands([
     { input: 'b', handler: goBack },
     { input: KeyCommand.keyInputEscape, handler: goBack },
-    // 情報モーダル（OK のみ・購入/復元の結果）表示中は Return=OK で閉じる。
-    { input: KeyCommand.keyInputEnter, handler: () => { if (infoModal) { const cb = infoModal.onClose; setInfoModal(null); cb?.(); } } },
   ]);
 
   useEffect(() => {

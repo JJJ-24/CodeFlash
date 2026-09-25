@@ -26,13 +26,11 @@ export default function AboutScreen() {
 
   const appVersion = Constants.expoConfig?.version ?? '';
 
-  // Esc / B = 戻る（エラー表示中は先に閉じる）。
-  const goBack = () => { if (errorVisible) { setErrorVisible(false); return; } router.back(); };
+  // Esc / B = 戻る。エラー情報モーダル（アラート）の Return/Esc は InfoModal 自身が受け持つ（054＝表示中はキーを独占）。
+  const goBack = () => router.back();
   useKeyCommands([
     { input: 'b', handler: goBack },
     { input: KeyCommand.keyInputEscape, handler: goBack },
-    // エラー情報モーダル（OK のみ）表示中は Return=OK で閉じる。
-    { input: KeyCommand.keyInputEnter, handler: () => { if (errorVisible) setErrorVisible(false); } },
   ]);
 
   async function openExternalLink(url: string) {

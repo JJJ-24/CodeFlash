@@ -95,22 +95,20 @@ export default function EditTagScreen() {
   }
 
   // 034: ハードキーボードショートカット。文字キーはテキスト欄フォーカス中は入力に消費される（住み分け）。
-  // 削除確認/破棄確認モーダル表示中は親キーを無効化。
-  const subModalOpen = () => showDeleteModal || showDiscardModal;
+  // 削除・破棄の確認（アラート）は表示中にキーを独占する（054）ので、ここでキーを止める必要は無い。
   useKeyCommands([
-    { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
-    { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
-    { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
-    { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
-    { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
-    { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
-    ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
+    { input: 'n', handler: () => { nameRef.current?.focus(); } },
+    { input: 'c', handler: () => { cycleColor(); } },
+    { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { cycleColor(-1); } },
+    { input: 's', handler: () => { if (canSave) handleSave(); } },
+    { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (canSave) handleSave(); } },
+    { input: 'x', handler: () => { handleClose(); } },
+    ...deleteKeySpecs(() => { confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
-    ...scrollKeySpecs({ scrollRef, scrollYRef, guard: subModalOpen }),
+    ...scrollKeySpecs({ scrollRef, scrollYRef }),
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
-        if (subModalOpen()) return;
         if (editingRef.current) { Keyboard.dismiss(); return; }
         handleClose();
       },
@@ -122,7 +120,7 @@ export default function EditTagScreen() {
   // ?（Shift+/）= ショートカット一覧を開く／表示中は Esc・Return で閉じる（共通フック）。
   useShortcutsToggleKeys(
     showShortcutsModal,
-    () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowShortcutsModal(true); },
+    () => { Keyboard.dismiss(); setShowShortcutsModal(true); },
     () => setShowShortcutsModal(false),
   );
 

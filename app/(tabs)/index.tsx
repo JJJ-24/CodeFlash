@@ -504,35 +504,25 @@ export default function HomeScreen() {
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)/settings') },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
-  // アラート（削除確認/情報/ショートカット一覧）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
-  ], !showDeleteModal && !showShortcutsModal && !showDeckListInfo && !reorderInfo);
+  // ショートカット一覧の表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
+  // アラート（削除確認・情報）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
+  ], !showShortcutsModal);
 
-  // ESC は常時有効：開いているオーバーレイを閉じる → フォーカス解除（ホームはタブなので戻るは無し）。
-  // 削除確認は「削除」操作のため Return は割り当てない（タップのみ）。Esc/タップでキャンセル。
+  // ESC は常時有効：ショートカット一覧を閉じる → フォーカス解除（ホームはタブなので戻るは無し）。
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-        if (showDeckListInfo) { setShowDeckListInfo(false); return; }
-        if (reorderInfo) { setReorderInfo(null); return; }
-        if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteDeck(null); return; }
         if (focusedDeckIndex !== null) setFocusedDeckIndex(null);
       },
     },
   ]);
 
-  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK。表示中のみ有効（main は解除済み）。
+  // ショートカット一覧（OK のみ）は Return でも閉じる。表示中のみ有効（main は解除済み）。
   useKeyCommands([
-    {
-      input: KeyCommand.keyInputEnter,
-      handler: () => {
-        if (showDeckListInfo) { setShowDeckListInfo(false); return; }
-        if (reorderInfo) { setReorderInfo(null); return; }
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-      },
-    },
-  ], showDeckListInfo || showShortcutsModal || Boolean(reorderInfo));
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   // デッキ行の共通レンダラー（DraggableFlatList / 素の FlatList 両分岐で共用）。
   // ScaleDecorator はドラッグ有効時のみ呼び出し側で被せる。

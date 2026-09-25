@@ -5,7 +5,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
@@ -14,7 +13,6 @@ import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SettingsFocusGroup, SettingsFocusRow } from '@/components/settings/settingsFocus';
 import { settingsStyles as styles } from '@/components/settings/styles';
-import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { createDeck, getAllDecks } from '@/lib/database/decks';
 import { getAllTags } from '@/lib/database/tags';
@@ -43,11 +41,6 @@ export default function DataSettingsScreen() {
   const [tsvAction, setTsvAction] = useState<'export' | 'import' | null>(null);
   const pendingTsvUriRef = useRef<string | null>(null);
 
-  // 「OK のみ」情報モーダル表示中は Return=OK で閉じる（確認モーダルは複数アクションのため Return 非割当）。
-  // Esc/B は SettingsDetail の onBack が閉じる。
-  useKeyCommands([
-    { input: KeyCommand.keyInputEnter, handler: () => { if (modal?.kind === 'info') setModal(null); } },
-  ], modal?.kind === 'info');
   const tsvProcessingRef = useRef(false);
 
   async function doExport(includeImages: boolean) {
@@ -356,10 +349,8 @@ export default function DataSettingsScreen() {
       // DeckPickerModal は自前で Esc を持つ＝開いている間はこの画面のキーを手放す
       suspendKeys={tsvDeckPickerVisible}
       shortcuts={shortcutSections}
-      // 確認/情報ダイアログの表示中は背後の項目操作を止める（ダイアログの J/K・Return と二重にしない）
-      blockNav={modal !== null}
+      // 確認/情報ダイアログ（アラート）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない
       onBack={(direct) => {
-        if (modal) { setModal(null); return; }
         if (tsvDeckPickerVisible) { setTsvDeckPickerVisible(false); return; }
         if (!direct && (showExportInfo || showImportInfo || showTsvExportInfo || showTsvImportInfo)) {
           setShowExportInfo(false); setShowImportInfo(false); setShowTsvExportInfo(false); setShowTsvImportInfo(false);

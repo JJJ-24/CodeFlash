@@ -80,8 +80,6 @@ interface ScheduleModalProps {
   onSave: () => void;
   onDelete: () => void;
   onClose: () => void;
-  /** 053：シートがキーを受け持つか（上に削除の確認が出ている間は false＝確認側に譲る） */
-  keysActive: boolean;
 }
 
 /** 053：シートの中でフォーカスできる項目（上から順）。目標 OFF のときは「目標未達成」を外す（押しても効かないため）。 */
@@ -90,7 +88,7 @@ type SheetFocus = 'hour' | 'minute' | 'weekdays' | 'label' | 'goal';
 function ScheduleModal({
   visible, isNew, hour, minute, weekdays, label, theme, bottomInset,
   onChangeTime, onToggleWeekday, onChangeLabel, onSave, onDelete, onClose,
-  onlyIfGoalUnmet, onChangeOnlyIfGoalUnmet, goalEnabled, keysActive,
+  onlyIfGoalUnmet, onChangeOnlyIfGoalUnmet, goalEnabled,
 }: ScheduleModalProps) {
   const { t } = useTranslation();
   const { height: screenHeight } = useWindowDimensions();
@@ -204,7 +202,7 @@ function ScheduleModal({
     { input: 's', handler: onSave },
     { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: onSave },
     ...(isNew ? [] : deleteKeySpecs(onDelete)),
-  ], visible && keysActive);
+  ], visible);
   // Esc は入力中も発火する（修飾なしでも入力欄が消費しない）＝入力中ならまずカーソルを外す。
   // 次に開いている ⓘ の説明（escStack）→ シートを閉じる（従来の SettingsDetail の Esc と同じ順）。
   useKeyCommands([
@@ -213,7 +211,7 @@ function ScheduleModal({
       if (popEscDismiss()) return;
       onClose();
     } },
-  ], visible && keysActive);
+  ], visible);
   const focusRing = (on: boolean) => on ? (
     <View
       pointerEvents="none"
@@ -489,11 +487,6 @@ export default function NotificationSettingsScreen() {
   // 一切鳴らなくなる＝アプリからは分からない沈黙になるので、画面を開くたびに確認する。
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
-  // 権限拒否情報（OK のみ）表示中は Return=OK で閉じる。スケジュール編集モーダルは入力欄が消費、
-  // 削除確認は確定操作のため Return 非割当。Esc/B は SettingsDetail の onBack が閉じる。
-  useKeyCommands([
-    { input: KeyCommand.keyInputEnter, handler: () => { if (permissionDenied) setPermissionDenied(false); } },
-  ], permissionDenied);
 
   const loadSchedules = useCallback(async () => {
     const rows = await getAllSchedules(db);
@@ -668,16 +661,12 @@ export default function NotificationSettingsScreen() {
       title={t('notification.title')}
       shortcuts={shortcutSections}
       // 編集シートは自前でキー（Esc 含む）を持つ＝開いている間はこの画面のキーを手放す。
-      // ただしシートの上に削除の確認が出ている間は、確認を閉じる Esc をこちら（onBack）が受け持つ。
-      suspendKeys={modalVisible && !showDeleteModal}
-      // キーを持たないダイアログ（削除の確認・権限の案内）の表示中は背後の項目操作を止める
-      blockNav={showDeleteModal || swipeDeleteId !== null || permissionDenied}
+      // 削除の確認・権限の案内（アラート）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
+      suspendKeys={modalVisible}
       // N＝追加（一覧の新規＝N の流儀。上限に達していれば openAddModal が何もしない）
       extraKeys={[{ input: 'n', handler: () => void openAddModal() }]}
       onBack={() => {
-        if (showDeleteModal || swipeDeleteId !== null) { setShowDeleteModal(false); setSwipeDeleteId(null); return; }
         if (modalVisible) { closeModal(); return; }
-        if (permissionDenied) { setPermissionDenied(false); return; }
         router.back();
       }}
       overlay={
@@ -708,7 +697,6 @@ export default function NotificationSettingsScreen() {
             onSave={handleSave}
             onDelete={handleDelete}
             onClose={closeModal}
-            keysActive={!showDeleteModal}
           />
           <ConfirmDeleteModal
             visible={showDeleteModal || swipeDeleteId !== null}

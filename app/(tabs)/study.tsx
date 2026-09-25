@@ -334,31 +334,25 @@ export default function StudyScreen() {
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => router.navigate('/(tabs)') },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
-  // 情報/ショートカット一覧（OK のみのアラート）表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
-  ], !infoModal && !showShortcutsModal);
+  // ショートカット一覧の表示中は背景のショートカットを解除（Esc は別フックで常時有効）。
+  // アラート（削除確認・情報）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
+  ], !showShortcutsModal);
 
-  // ESC は常時有効：オーバーレイを閉じる → フォーカス解除（タブなので戻るは無し）。
+  // ESC は常時有効：ショートカット一覧を閉じる → フォーカス解除（タブなので戻るは無し）。
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
-        if (infoModal) { setInfoModal(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (focusedItemIndex !== null) clearFocus();
       },
     },
   ]);
 
-  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK。表示中のみ有効（main は解除済み）。
+  // ショートカット一覧（OK のみ）は Return でも閉じる。表示中のみ有効（main は解除済み）。
   useKeyCommands([
-    {
-      input: KeyCommand.keyInputEnter,
-      handler: () => {
-        if (infoModal) { setInfoModal(null); return; }
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-      },
-    },
-  ], Boolean(infoModal) || showShortcutsModal);
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   // アーカイブ済みデッキは学習対象から除外する
   const sortedDecks = useMemo(() => sortDecks(decks.filter((d) => !d.archived), deckSortOrder), [decks, deckSortOrder]);

@@ -889,13 +889,10 @@ export default function StudySettingsScreen() {
         // （両方が登録すると Esc でモーダルが閉じると同時に画面まで戻る）
         suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
         shortcuts={shortcutSections}
-        // 目標 OFF の確認ダイアログ（キーを持たない）の表示中は背後の項目操作を止める
-        blockNav={goalConflict !== null}
         // 非 Pro でも目標枚数・読み上げ（ともに無料）の i アイコンが開けるので、
         // Pro 側と同じく「開いている説明があれば先に閉じる」を渡す
+        // （目標 OFF の確認ダイアログ＝アラートは表示中にキーを独占する＝054 ので、ここでは閉じない）
         onBack={(direct) => {
-          // 確認ダイアログ → 説明の順に閉じる（階層ディスマス）
-          if (!direct && goalConflict) { dismissGoalConflict(); return; }
           if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
           router.back();
         }}
@@ -935,9 +932,7 @@ export default function StudySettingsScreen() {
       // 上（非 Pro 分岐）と同じ理由でモーダル表示中はキーを手放す
       suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
       shortcuts={shortcutSections}
-      blockNav={goalConflict !== null}
       onBack={(direct) => {
-        if (!direct && goalConflict) { dismissGoalConflict(); return; }
         if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
         router.back();
       }}

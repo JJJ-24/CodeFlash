@@ -548,7 +548,8 @@ export default function SearchScreen() {
   }
 
   // ピッカー/シート表示中は親キーを無効化（Esc は階層処理するので個別に判定）。
-  const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showSearchInfo || showShortcutsModal || datePickerVisible;
+  // 情報モーダル（アラート）は表示中にキーを独占する（054）ので含めない。
+  const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showShortcutsModal || datePickerVisible;
   useKeyCommands([
     { input: 'd', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setTagPickerVisible(true); } },
@@ -579,8 +580,8 @@ export default function SearchScreen() {
     { input: 'p', handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
     // B＝戻る（ホーム）。入力欄フォーカス中は TextInput が消費するため「カーソル無し時のみ」発火。
     { input: 'b', handler: () => { if (overlayOpen() || editingRef.current) return; router.back(); } },
-    // 情報/ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。他オーバーレイ表示中は無効。
-    { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) { setShowShortcutsModal(false); return; } if (showSearchInfo) { setShowSearchInfo(false); return; } if (overlayOpen()) return; openFocusedCard(); } },
+    // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。他オーバーレイ表示中は無効。
+    { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) { setShowShortcutsModal(false); return; } if (overlayOpen()) return; openFocusedCard(); } },
     // Delete＝検索文字クリア＆入力欄へカーソル（Backspace/前方Delete 両対応）。
     ...deleteKeySpecs(() => { if (overlayOpen()) return; setQuery(''); inputRef.current?.focus(); }),
     // / ＝検索欄へカーソル（文字は消さず編集開始）。入力欄フォーカス中は TextInput が '/' を
@@ -597,7 +598,6 @@ export default function SearchScreen() {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-        if (showSearchInfo) { setShowSearchInfo(false); return; }
         if (statsCardId !== null) { setStatsCardId(null); return; }
         // カレンダーは自前のキーを持たない（ネイティブの UI なのでキー操作を渡せない）ため
         // ここで閉じる。デッキ/タグのピッカーは自分で Esc を処理するので委ねる。

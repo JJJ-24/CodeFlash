@@ -194,7 +194,8 @@ export default function NewDeckScreen() {
     router.push('/paywall');
   }
 
-  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showSpeechModal || showSpeechProModal || showDiscardModal || showShortcutsModal;
+  // アラート（削除・破棄・Pro の案内）は表示中にキーを独占する（054）ので含めない。
+  const subModalOpen = () => showIconPicker || showSqlInitModal || showHtmlInitModal || showSpeechModal || showShortcutsModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'm', handler: () => { if (subModalOpen()) return; descRef.current?.focus(); } },

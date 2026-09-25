@@ -1623,9 +1623,9 @@ export default function StatsScreen() {
     { input: '\t', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; router.navigate('/(tabs)/study'); } },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; setShowShortcutsModal((v) => !v); } },
-  // デッキ/期間ピッカー・月別シート・ショートカット一覧・情報モーダル表示中は背景ナビを解除（各シートの
-  // 多重発火防止＋アラート背後で 1-4/j/k 等が効かないように）。statsCardId/activeSheet は個別ガード済みで除外。
-  ], !deckPickerVisible && !periodPickerVisible && !monthlySheetData && !recordSheetVisible && !showShortcutsModal && !showDetailStatsInfo && sectionInfoModal === null);
+  // デッキ/期間ピッカー・月別シート・ショートカット一覧の表示中は背景ナビを解除（各シートの多重発火防止）。
+  // statsCardId/activeSheet は個別ガード済みで除外。情報モーダル（アラート）は表示中にキーを独占する（054）ので含めない。
+  ], !deckPickerVisible && !periodPickerVisible && !monthlySheetData && !recordSheetVisible && !showShortcutsModal);
 
   // ESC は常時有効：開いているオーバーレイ/シートを上から順に閉じる → フォーカス解除（タブなので戻るは無し）。
   // ピッカーは各シート側の Esc に委ねる。
@@ -1639,24 +1639,16 @@ export default function StatsScreen() {
         if (deckPickerVisible || periodPickerVisible) return; // ピッカー側の Esc に委ねる
         if (monthlySheetData) { setMonthlySheetData(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-        if (showDetailStatsInfo) { setShowDetailStatsInfo(false); return; }
-        if (sectionInfoModal) { setSectionInfoModal(null); return; }
         if (focusedItem !== null) setFocusedItem(null);
       },
     },
   ]);
 
-  // 「OK のみ」アラート（ショートカット一覧/詳細統計情報/セクション情報）は Return=OK。表示中のみ有効（main は解除済み）。
+  // ショートカット一覧（OK のみ）は Return でも閉じる。表示中のみ有効（main は解除済み）。
+  // 情報モーダル（アラート）の Return/Esc は InfoModal 自身が受け持つ（054）。
   useKeyCommands([
-    {
-      input: KeyCommand.keyInputEnter,
-      handler: () => {
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-        if (showDetailStatsInfo) { setShowDetailStatsInfo(false); return; }
-        if (sectionInfoModal) { setSectionInfoModal(null); return; }
-      },
-    },
-  ], showShortcutsModal || showDetailStatsInfo || sectionInfoModal !== null);
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   // 月別シート表示中は main キーが active ゲートで解除されるため、閉じる（Space/Return）を専用フックで受ける
   //（他のドーナツシート＝activeSheet は main キー側の分岐で閉じている。Esc は上の常時フックが担当）。

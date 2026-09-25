@@ -62,17 +62,15 @@ export default function NewCardScreen() {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>('edit');
 
-  // 親モーダル（破棄確認/ショートカット一覧）表示中はエディタのキーを止め、Esc で閉じる（破棄は Return 非割当）。
-  const blockingModalOpen = showDiscardModal || showShortcutsModal;
+  // ショートカット一覧の表示中はエディタのキーを止め、Esc/Return で閉じる。
+  // 破棄の確認（アラート）は表示中にキーを独占する（054）ので含めない。
+  const blockingModalOpen = showShortcutsModal;
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
-      handler: () => {
-        if (showDiscardModal) { setShowDiscardModal(false); return; }
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-      },
+      handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); },
     },
-    // ショートカット一覧（OK のみ）は Return でも閉じる。破棄確認は確定操作のため Return 非割当。
+    // ショートカット一覧（OK のみ）は Return でも閉じる。
     {
       input: KeyCommand.keyInputEnter,
       handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); },

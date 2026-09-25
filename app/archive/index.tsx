@@ -299,7 +299,8 @@ export default function ArchiveScreen() {
   }
 
   // ---- キーボード（034）----
-  const overlayOpen = showDeleteModal || showShortcutsModal || showInfoModal;
+  // ショートカット一覧の表示中は背景のキーを止める。アラート（削除確認・情報）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
+  const overlayOpen = showShortcutsModal;
   useKeyCommands([
     { input: 'j', handler: () => moveFocus('next') },
     { input: 'k', handler: () => moveFocus('prev') },
@@ -331,13 +332,11 @@ export default function ArchiveScreen() {
   // 削除確認/ショートカット一覧の表示中は背景ナビを解除。Esc は別フックで常時有効。
   ], !overlayOpen);
 
-  // ESC は常時有効：オーバーレイ → 選択モード解除 → 戻る（削除確認は確定操作なので Return 非割当）
+  // ESC は常時有効：ショートカット一覧 → 選択モード解除 → 戻る
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
-        if (showDeleteModal) { setShowDeleteModal(false); pendingDeleteRef.current = null; return; }
-        if (showInfoModal) { setShowInfoModal(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (selectionMode) { exitSelectionMode(); return; }
         router.back();
@@ -345,10 +344,10 @@ export default function ArchiveScreen() {
     },
   ]);
 
-  // 「OK のみ」アラート（ショートカット一覧・説明）は Return=閉じる。表示中のみ有効（main は解除済み）。
+  // ショートカット一覧（OK のみ）は Return でも閉じる。表示中のみ有効（main は解除済み）。
   useKeyCommands([
-    { input: KeyCommand.keyInputEnter, handler: () => { setShowInfoModal(false); setShowShortcutsModal(false); } },
-  ], showShortcutsModal || showInfoModal);
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   // ホームのフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
   const blockWidth = bm.blockWidth;

@@ -431,20 +431,16 @@ export default function TagsScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => { if (showColorPicker) return; moveFocus('next'); } },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (showColorPicker) return; setShowShortcutsModal((v) => !v); } },
-  // 削除確認/一括削除/情報/ショートカット一覧の表示中は背景ナビを解除（カラーピッカーは C/Shift+C/Return を
-  // 使うので除外＝main 有効のまま。各ナビは showColorPicker を個別ガード済み）。
-  ], !showDeleteModal && !showBulkDeleteModal && !showTagListInfo && !showShortcutsModal && !reorderInfo);
+  // ショートカット一覧の表示中は背景ナビを解除（カラーピッカーは C/Shift+C/Return を使うので除外＝main 有効のまま。
+  // 各ナビは showColorPicker を個別ガード済み）。アラート（削除・確認・情報）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
+  ], !showShortcutsModal);
 
-  // ESC は常時有効：オーバーレイ → 選択モード解除 → 戻る。削除系は Return 非割当（タップのみ）。
+  // ESC は常時有効：カラーピッカー・ショートカット一覧 → 選択モード解除 → 戻る。
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (showColorPicker) { setShowColorPicker(false); return; }
-        if (showBulkDeleteModal) { setShowBulkDeleteModal(false); return; }
-        if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteTag(null); return; }
-        if (showTagListInfo) { setShowTagListInfo(false); return; }
-        if (reorderInfo) { setReorderInfo(null); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (selectionMode) { exitSelectionMode(); return; }
         router.back();
@@ -452,17 +448,10 @@ export default function TagsScreen() {
     },
   ]);
 
-  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK（閉じる）。表示中のみ有効（main は解除済み）。
+  // ショートカット一覧（OK のみ）は Return でも閉じる。表示中のみ有効（main は解除済み）。
   useKeyCommands([
-    {
-      input: KeyCommand.keyInputEnter,
-      handler: () => {
-        if (showTagListInfo) { setShowTagListInfo(false); return; }
-        if (reorderInfo) { setReorderInfo(null); return; }
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-      },
-    },
-  ], showTagListInfo || showShortcutsModal || Boolean(reorderInfo));
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   // タグ行の共通レンダラー（DraggableFlatList / 素の FlatList 両分岐で共用）。
   // ScaleDecorator はドラッグ有効時のみ呼び出し側で被せる。

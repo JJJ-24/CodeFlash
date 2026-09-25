@@ -3,7 +3,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { constants as KeyCommand } from 'react-native-key-command';
 
 import { ConfirmModal, type ModalAction } from '@/components/ConfirmModal';
 import { DeckIcon } from '@/components/DeckIcon';
@@ -12,7 +11,6 @@ import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
 import { SettingsFocusRow } from '@/components/settings/settingsFocus';
 import { settingsStyles as styles } from '@/components/settings/styles';
-import { useKeyCommands } from '@/lib/useKeyCommands';
 
 import { type BackupDeckInfo, listDecksInBackup, mergeDeckFromBackup } from '@/lib/sync/deckMerge';
 import { syncErrorText } from '@/lib/sync/errorText';
@@ -154,11 +152,6 @@ export default function SyncMergeScreen() {
     if (backOnClose) router.back();
   }
 
-  // 「OK のみ」情報モーダル表示中は Return=OK で閉じる（backOnClose も onModalClose 経由で維持）。
-  // 確認モーダルは Return 非割当。Esc/B は SettingsDetail の onBack が閉じる。
-  useKeyCommands([
-    { input: KeyCommand.keyInputEnter, handler: () => { if (modal?.kind === 'info') onModalClose(); } },
-  ], modal?.kind === 'info');
 
   const overlay = (
     <>
@@ -214,9 +207,9 @@ export default function SyncMergeScreen() {
       title={t('sync.mergeTitle')}
       overlay={overlay}
       shortcuts={shortcutSections}
-      // ダイアログの表示中・マージの処理中は背後の項目操作を止める
-      blockNav={modal !== null || processing}
-      onBack={() => { if (modal) { onModalClose(); return; } router.back(); }}
+      // マージの処理中は背後の項目操作を止める（ダイアログ＝アラートは表示中にキーを独占する＝054）
+      blockNav={processing}
+      onBack={() => router.back()}
     >
       {loading ? (
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

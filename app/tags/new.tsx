@@ -84,8 +84,9 @@ export default function NewTagScreen() {
   }
 
   // 034: ハードキーボードショートカット。文字キーはテキスト欄フォーカス中は入力に消費される（住み分け）。
-  // Tab/矢印は不使用（iPad 対策）。破棄確認モーダル表示中は親キーを無効化。
-  const subModalOpen = () => showDiscardModal || showShortcutsModal;
+  // Tab/矢印は不使用（iPad 対策）。
+  // アラート（削除・破棄・Pro の案内）は表示中にキーを独占する（054）ので含めない。
+  const subModalOpen = () => showShortcutsModal;
   useKeyCommands([
     { input: 'n', handler: () => { if (subModalOpen()) return; nameRef.current?.focus(); } },
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },

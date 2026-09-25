@@ -134,16 +134,16 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
     { input: 'n', handler: handleAdd },
     { input: KeyCommand.keyInputEnter, handler: () => { if (focusedStage) setEditingId(focusedStage.id); } },
     ...deleteKeySpecs(() => { if (focusedStage) setPendingDelete(focusedStage); }),
-  ], visible && editingId === null && pendingDelete === null);
+  // 削除確認（アラート）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
+  ], visible && editingId === null);
 
-  // Esc は階層ディスマス（削除確認 → 編集面は自前の Esc に委譲 → フォーカス解除 → 一覧を閉じる）。
+  // Esc は階層ディスマス（編集面は自前の Esc に委譲 → フォーカス解除 → 一覧を閉じる）。
   // 親のデッキ編集画面は subModalOpen() でキーを止めているので、ここが最上位になる。
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (!visible) return;
-        if (pendingDelete) { setPendingDelete(null); return; }
         if (editingId) return; // SqlInitModal 側の Esc が閉じる
         if (focusedIndex != null) { setFocusedIndex(null); return; }
         onClose();

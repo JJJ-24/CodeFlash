@@ -363,20 +363,17 @@ export default function TagCardsScreen() {
     { input: KeyCommand.keyInputRightArrow, handler: () => cycleTagCardFilter('next') },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (statsCardId !== null) return; setShowShortcutsModal((v) => !v); } },
-  // 削除確認/タグ外し確認/情報/ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため
-  // 除外＝各ナビは statsCardId を個別ガード済み）。Esc は別フックで常時有効。
-  ], !showDeckPicker && !showDeleteModal && !showRemoveTagModal && !showTagCardsInfo && !showShortcutsModal);
+  // ショートカット/デッキ選択 表示中は背景ナビを解除（統計シートは A トグルのため除外＝各ナビは statsCardId を
+  // 個別ガード済み）。Esc は別フックで常時有効。アラート（削除・確認・情報）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
+  ], !showDeckPicker && !showShortcutsModal);
 
-  // ESC は常時有効：デッキ選択はピッカー側に委譲、以降オーバーレイ → 選択モード解除 → 戻る。削除系は Return 非割当。
+  // ESC は常時有効：デッキ選択はピッカー側に委譲、以降 統計シート・ショートカット一覧 → 選択モード解除 → 戻る。
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (showDeckPicker) return; // DeckPickerModal 側の Esc が閉じる
         if (statsCardId !== null) { setStatsCardId(null); return; }
-        if (showDeleteModal) { setShowDeleteModal(false); setPendingDeleteCard(null); return; }
-        if (showRemoveTagModal) { setShowRemoveTagModal(false); return; }
-        if (showTagCardsInfo) { setShowTagCardsInfo(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
         if (selectionMode) { exitSelectionMode(); return; }
         router.back();
@@ -384,16 +381,10 @@ export default function TagCardsScreen() {
     },
   ]);
 
-  // 「OK のみ」アラート（情報/ショートカット一覧）は Return=OK（閉じる）。表示中のみ有効（main は解除済み）。
+  // ショートカット一覧（OK のみ）は Return でも閉じる。表示中のみ有効（main は解除済み）。
   useKeyCommands([
-    {
-      input: KeyCommand.keyInputEnter,
-      handler: () => {
-        if (showTagCardsInfo) { setShowTagCardsInfo(false); return; }
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-      },
-    },
-  ], showTagCardsInfo || showShortcutsModal);
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

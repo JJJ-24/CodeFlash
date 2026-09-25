@@ -1092,10 +1092,10 @@ export default function StudySessionScreen() {
     ]) as { input: string; handler: () => void }[]),
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
-  // リンク一覧/タグシート/終了確認/ショートカット一覧/タイマー系モーダルの表示中は背景のショートカットを解除する
-  // （アラート背後で ,/.・P・Space 等が効かないように。LinksSheet/TagSheet/専用 Return は別フックが担当）。
-  // タイマー終了/メニューは確定操作を含むため Return は割り当てない（タップ/Esc のみ）。
-  ], !showLinksModal && !showTagSheet && !showFinishModal && !showShortcutsModal && !showTimerEndModal && !showGoalModal && !showTimerMenu && !interactivePreviewOpen);
+  // リンク一覧/タグシート/ショートカット一覧/全画面プレビューの表示中は背景のショートカットを解除する
+  // （LinksSheet/TagSheet/専用 Return は別フックが担当）。終了確認・タイマー系・目標達成（アラート）は
+  // 表示中にキーを独占する（054）ので含めない。
+  ], !showLinksModal && !showTagSheet && !showShortcutsModal && !interactivePreviewOpen);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
   useKeyCommands([
@@ -1111,11 +1111,7 @@ export default function StudySessionScreen() {
         if (showLinksModal) { setShowLinksModal(false); return; }
         // タグシートの Esc はシート側が担当（新規作成中=キャンセル/それ以外=閉じる の二段階のため）
         if (showTagSheet) return;
-        if (showFinishModal) { setShowFinishModal(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-        if (showTimerEndModal) { setShowTimerEndModal(false); timer.stop(); return; }
-        if (showGoalModal) { setShowGoalModal(false); return; }
-        if (showTimerMenu) { setShowTimerMenu(false); return; }
         if (isFullscreen) {
           setCodeEditing(false);
           setIsFullscreen(false);
@@ -1128,17 +1124,11 @@ export default function StudySessionScreen() {
     },
   ]);
 
-  // 終了確認/ショートカット一覧（OK のみのアラート）表示中の Return = OK。
-  // active ゲートで「アラート表示中のみ」登録（main は同時に解除されているので Return 重複しない）。
+  // ショートカット一覧（OK のみ）表示中の Return = 閉じる（main は同時に解除されているので Return 重複しない）。
+  // 終了確認（アラート）の Return は ConfirmModal 自身が受け持つ（054）。
   useKeyCommands([
-    {
-      input: KeyCommand.keyInputEnter,
-      handler: () => {
-        if (showFinishModal) { setShowFinishModal(false); finishSession(); return; }
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-      },
-    },
-  ], showFinishModal || showShortcutsModal);
+    { input: KeyCommand.keyInputEnter, handler: () => setShowShortcutsModal(false) },
+  ], showShortcutsModal);
 
   // iPhone 用インラインカスタムヘッダー（headerShown:false のため全状態で共通利用）
   const iPhoneHeader = !(Platform as any).isPad ? (
@@ -1796,7 +1786,7 @@ export default function StudySessionScreen() {
 
   // タイマーの長押しメニューと終了アラート（通常/全画面の両モードで描画する。
   // 全画面に置かないと、gate オフのままモーダルが出ず操作不能になる＝? / Q モーダルと同じ理由）。
-  // 終了アラートは確定操作なので Return は割り当てない（タップ/Esc のみ・既存慣習）。
+  // キーは J/K で選んでから Return・Esc（054＝開いた時点では未選択なので連打で確定しない）。
   const timerModals = (
     <>
       <ConfirmModal

@@ -1074,10 +1074,11 @@ export function BlockEditor({
       { input: KeyCommand.keyInputLeftArrow, handler: () => handleKeyPress(",") },
       { input: KeyCommand.keyInputRightArrow, handler: () => handleKeyPress(".") },
     ]) as { input: string; handler: () => void }[]),
-  // ブロック削除確認中・親モーダル（カード削除/破棄確認）・全画面プレビュー表示中はナビ系を解除（背景キー抑止）。
-  ], !suspendKeys && pendingDeleteBlock === null && !interactivePreviewOpen);
+  // 親モーダル（ショートカット一覧）・全画面プレビュー表示中はナビ系を解除（背景キー抑止）。
+  // 削除確認・破棄確認（アラート）は表示中にキーを独占する（054）ので含めない。
+  ], !suspendKeys && !interactivePreviewOpen);
 
-  // ESC は編集中も含めて常時有効（編集中ブロックを抜ける／削除確認を閉じる／キャンセル）。
+  // ESC は編集中も含めて常時有効（編集中ブロックを抜ける／キャンセル）。
   // ただし親モーダル表示中は親側が Esc を処理するため解除する。
   useKeyCommands([
     {
@@ -1096,7 +1097,6 @@ export function BlockEditor({
           Keyboard.dismiss();
           return;
         }
-        if (pendingDeleteBlock) { setPendingDeleteBlock(null); return; }
         onCancel?.();
       },
     },

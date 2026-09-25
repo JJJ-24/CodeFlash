@@ -38,6 +38,7 @@ import type { DeckImage, DeckStage } from '@/types';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { deleteKeySpecs, scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
+import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useDeckStore } from '@/store/decks';
 import { useProStore } from '@/store/pro';
@@ -148,6 +149,8 @@ export default function EditDeckScreen() {
   const scrollYRef = useRef(0);
   // 055：J/K で項目を選び Return/Space/`,`/`.` で操作する（053 の設定の詳細画面と同じ仕組み）。文字キー（N/M/C/I/R/H/Q/E）は残す。
   const nav = useFocusRegistry(scrollRef, scrollYRef);
+  // E でアーカイブを切り替えたとき、欄が画面外でも分かるよう中央ピルで通知する（カード編集と同じ）
+  const { archivePill, showArchivePill } = useArchivePill();
   // 055：どの入力欄にカーソルがあるか（Return で説明欄へ移ったとき・タップで入れたときも青枠を追従させる）
   const [inputFocus, setInputFocus] = useState<'name' | 'desc' | null>(null);
 
@@ -192,7 +195,8 @@ export default function EditDeckScreen() {
     { input: 'r', handler: () => { if (subModalOpen()) return; openSpeechSettings(); } },
     // 052: ⇧R = このデッキの読み上げ ON/OFF（R＝読み上げの設定を開く、の Shift 版。E＝アーカイブと同じ「トグルはキー1つ」）
     { input: 'r', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setSpeechDisabled((v) => !v); } },
-    { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setArchived((v) => !v); } }, // アーカイブ切替（全画面で E に統一）
+    // アーカイブ切替（全画面で E に統一）。欄が画面外でも分かるよう中央ピルで通知＋ヘッダーにアイコン（ModalFormHeader）
+    { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); const next = !archived; setArchived(next); showArchivePill(next); } },
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
     // 055：J/K＝項目のフォーカス・Return＝開く/入力を始める・Space＝スイッチ・`,`/`.`＝色を送る
@@ -327,6 +331,7 @@ export default function EditDeckScreen() {
           canSave={canSave}
           showKeyboardIcon={keyboardShortcutsEnabled}
           onTitlePress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+          archived={archived}
         />
         <ScrollView
           ref={scrollRef}
@@ -591,6 +596,7 @@ export default function EditDeckScreen() {
           </SettingsFocusContext.Provider>
         </ScrollView>
         <FormBottomBar onClose={handleClose} onSave={handleSave} saveDisabled={!canSave} onDelete={confirmDelete} />
+        <ArchivePill archived={archivePill} />
       </View>
       <IconPickerModal
         visible={showIconPicker}

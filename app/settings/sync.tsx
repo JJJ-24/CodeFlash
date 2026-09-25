@@ -10,6 +10,7 @@ import { AppSwitch } from "@/components/AppSwitch";
 import { ConfirmModal, type ModalAction } from "@/components/ConfirmModal";
 import { InfoModal } from "@/components/InfoModal";
 import { SettingsDetail } from "@/components/settings/SettingsDetail";
+import { SettingsFocusCard, SettingsFocusGroup, SettingsFocusRow } from "@/components/settings/settingsFocus";
 import { settingsStyles as styles } from "@/components/settings/styles";
 import { useKeyCommands } from "@/lib/useKeyCommands";
 
@@ -412,10 +413,33 @@ export default function SyncSettingsScreen() {
           message={modal.message}
           actions={modal.actions}
           onClose={() => setModal(null)}
+          // 053 Phase 4：選択肢を J/K で選び Return で実行（最初はフォーカスなし）
+          keyboard
         />
       )}
     </>
   );
+
+  // 053 Phase 4：キーボード操作のショートカット一覧
+  const shortcutSections = [
+    { title: t("shortcut.catFocus"), items: [
+      { key: "J / K", descKey: "shortcut.focusNextPrev" },
+      { key: "⇧J / ⇧K", descKey: "shortcut.sectionNextPrev" },
+    ] },
+    { title: t("shortcut.catAction"), items: [
+      { key: "Return", descKey: "shortcut.settingActivateSync" },
+      { key: "Space", descKey: "shortcut.settingToggle" },
+    ] },
+    { title: t("shortcut.catConfirmDialog"), items: [
+      { key: "J / K", descKey: "shortcut.confirmChoose" },
+      { key: "Return", descKey: "shortcut.confirmRun" },
+    ] },
+    { title: t("shortcut.catOther"), items: [
+      { key: "ESC", descKey: "shortcut.esc" },
+      { key: "B", descKey: "shortcut.back" },
+      { key: "?", descKey: "shortcut.showShortcuts" },
+    ] },
+  ];
 
   // 「OK のみ」情報モーダル表示中は Return=OK で閉じる（確認モーダルは複数アクションのため Return 非割当）。
   // Esc/B は SettingsDetail の onBack が閉じる。早期 return より前で呼ぶ（フック規約）。
@@ -434,10 +458,10 @@ export default function SyncSettingsScreen() {
   // 非 Pro でも直接到達しうるので、ロック状態はここでも提示する（ペイウォールへ誘導）。
   if (!isPro) {
     return (
-      <SettingsDetail title={t("sync.title")}>
-        <Pressable
-          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+      <SettingsDetail title={t("sync.title")} shortcuts={shortcutSections}>
+        <SettingsFocusCard
           onPress={() => router.push("/paywall")}
+          onActivate={() => router.push("/paywall")}
         >
           <View style={styles.proRow}>
             <View style={{ flex: 1, gap: 2 }}>
@@ -476,7 +500,7 @@ export default function SyncSettingsScreen() {
               color={theme.colors.iconSubtle}
             />
           </View>
-        </Pressable>
+        </SettingsFocusCard>
       </SettingsDetail>
     );
   }
@@ -494,6 +518,9 @@ export default function SyncSettingsScreen() {
     <SettingsDetail
       title={t("sync.title")}
       overlay={overlay}
+      shortcuts={shortcutSections}
+      // 確認/情報ダイアログの表示中は背後の項目操作を止める（ダイアログの J/K・Return と二重にしない）
+      blockNav={modal !== null}
       onBack={(direct) => {
         if (modal) {
           setModal(null);
@@ -527,8 +554,8 @@ export default function SyncSettingsScreen() {
       }}
     >
       {/* セクション1: iCloud 同期カード */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        <View style={styles.notificationRow}>
+      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <SettingsFocusRow style={styles.notificationRow} onToggle={() => { if (!syncing) void handleSyncToggle(!syncEnabled); }}>
           <View
             style={{
               flexDirection: "row",
@@ -566,7 +593,7 @@ export default function SyncSettingsScreen() {
             onValueChange={handleSyncToggle}
             disabled={syncing}
           />
-        </View>
+        </SettingsFocusRow>
         {/* ⓘ タップ時のみ詳細説明を展開（タグラインは廃止し、タイトル＋ⓘ に集約）。
             同期 ON/OFF で内容が同じなので分岐せず Switch 行の直下に置く。
             時刻ラベルの用語説明は「最新の時刻」見出しのⓘが持つ（自分の直下を説明する）。 */}
@@ -701,6 +728,7 @@ export default function SyncSettingsScreen() {
             )}
 
             {/* 主ボタン: 今すぐ同期 */}
+            <SettingsFocusRow onActivate={() => { if (!syncing) void handleManualSync(); }}>
             <Pressable
               style={[
                 styles.syncPrimaryButton,
@@ -727,8 +755,10 @@ export default function SyncSettingsScreen() {
                 {syncing ? getSyncStatusText() : t("sync.syncNow")}
               </Text>
             </Pressable>
+            </SettingsFocusRow>
 
             {/* データ復元の折りたたみヘッダー（復旧順: 今すぐ同期 → データ復元 → 詳細操作） */}
+            <SettingsFocusRow section onActivate={() => setShowRestore((v) => !v)}>
             <Pressable
               style={styles.syncAdvancedHeader}
               onPress={() => setShowRestore((v) => !v)}
@@ -766,6 +796,7 @@ export default function SyncSettingsScreen() {
                 />
               </Pressable>
             </Pressable>
+            </SettingsFocusRow>
             {showRestoreSectionInfo && (
               <View
                 style={[
@@ -789,6 +820,7 @@ export default function SyncSettingsScreen() {
             {showRestore && (
               <>
                 {/* すべて置き換え */}
+                <SettingsFocusRow onActivate={() => { if (!syncing) void handleRestore(); }}>
                 <Pressable
                   style={[
                     styles.syncAdvancedItem,
@@ -821,6 +853,7 @@ export default function SyncSettingsScreen() {
                     />
                   </Pressable>
                 </Pressable>
+                </SettingsFocusRow>
                 {showRestoreInfo && (
                   <View
                     style={[
@@ -842,6 +875,7 @@ export default function SyncSettingsScreen() {
                 )}
 
                 {/* デッキ別追加・上書き */}
+                <SettingsFocusRow onActivate={() => { if (!syncing) void handleMergeStart(); }}>
                 <Pressable
                   style={[
                     styles.syncAdvancedItem,
@@ -874,6 +908,7 @@ export default function SyncSettingsScreen() {
                     />
                   </Pressable>
                 </Pressable>
+                </SettingsFocusRow>
                 {showMergeInfo && (
                   <View
                     style={[
@@ -897,6 +932,7 @@ export default function SyncSettingsScreen() {
             )}
 
             {/* 詳細操作の折りたたみヘッダー（最終手段） */}
+            <SettingsFocusRow section onActivate={() => setShowAdvanced((v) => !v)}>
             <Pressable
               style={styles.syncAdvancedHeader}
               onPress={() => setShowAdvanced((v) => !v)}
@@ -934,6 +970,7 @@ export default function SyncSettingsScreen() {
                 />
               </Pressable>
             </Pressable>
+            </SettingsFocusRow>
             {showAdvancedInfo && (
               <View
                 style={[
@@ -957,6 +994,7 @@ export default function SyncSettingsScreen() {
             {showAdvanced && (
               <>
                 {/* 強制アップロード */}
+                <SettingsFocusRow onActivate={() => { if (!syncing) void handleForceUpload(); }}>
                 <Pressable
                   style={[
                     styles.syncAdvancedItem,
@@ -989,6 +1027,7 @@ export default function SyncSettingsScreen() {
                     />
                   </Pressable>
                 </Pressable>
+                </SettingsFocusRow>
                 {showUploadInfo && (
                   <View
                     style={[
@@ -1010,6 +1049,7 @@ export default function SyncSettingsScreen() {
                 )}
 
                 {/* 強制ダウンロード */}
+                <SettingsFocusRow onActivate={() => { if (!syncing) void handleForceDownload(); }}>
                 <Pressable
                   style={[
                     styles.syncAdvancedItem,
@@ -1042,6 +1082,7 @@ export default function SyncSettingsScreen() {
                     />
                   </Pressable>
                 </Pressable>
+                </SettingsFocusRow>
                 {showDownloadInfo && (
                   <View
                     style={[
@@ -1063,6 +1104,7 @@ export default function SyncSettingsScreen() {
                 )}
 
                 {/* リモートをリセット（最終手段） */}
+                <SettingsFocusRow onActivate={() => { if (!syncing) void handleResetRemote(); }}>
                 <Pressable
                   style={[
                     styles.syncAdvancedItem,
@@ -1098,6 +1140,7 @@ export default function SyncSettingsScreen() {
                     />
                   </Pressable>
                 </Pressable>
+                </SettingsFocusRow>
                 {showResetInfo && (
                   <View
                     style={[
@@ -1121,7 +1164,7 @@ export default function SyncSettingsScreen() {
             )}
           </>
         )}
-      </View>
+      </SettingsFocusGroup>
     </SettingsDetail>
   );
 }

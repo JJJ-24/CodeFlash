@@ -10,6 +10,7 @@ import { DeckIcon } from '@/components/DeckIcon';
 import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { SettingsFocusRow } from '@/components/settings/settingsFocus';
 import { settingsStyles as styles } from '@/components/settings/styles';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 
@@ -185,15 +186,38 @@ export default function SyncMergeScreen() {
           message={modal.message}
           actions={modal.actions}
           onClose={() => setModal(null)}
+          // 053 Phase 4：「戻す」/「並び順も戻す」を J/K で選び Return で実行（最初はフォーカスなし）
+          keyboard
         />
       )}
     </>
   );
 
+  const shortcutSections = [
+    { title: t('shortcut.catFocus'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    ] },
+    { title: t('shortcut.catAction'), items: [
+      { key: 'Return', descKey: 'shortcut.settingActivateMerge' },
+    ] },
+    { title: t('shortcut.catConfirmDialog'), items: [
+      { key: 'J / K', descKey: 'shortcut.confirmChoose' },
+      { key: 'Return', descKey: 'shortcut.confirmRun' },
+    ] },
+    { title: t('shortcut.catOther'), items: [
+      { key: 'ESC', descKey: 'shortcut.esc' },
+      { key: 'B', descKey: 'shortcut.back' },
+      { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
+
   return (
     <SettingsDetail
       title={t('sync.mergeTitle')}
       overlay={overlay}
+      shortcuts={shortcutSections}
+      // ダイアログの表示中・マージの処理中は背後の項目操作を止める
+      blockNav={modal !== null || processing}
       onBack={() => { if (modal) { onModalClose(); return; } router.back(); }}
     >
       {loading ? (
@@ -219,8 +243,9 @@ export default function SyncMergeScreen() {
             // 並び順だけが違うデッキは「並び順も戻す」で戻せるので淡くしない。
             const actionable = hasRestorable || deck.diffOrder > 0;
             return (
+            // 053 Phase 4：Return＝確認ダイアログ（戻せるものが無い淡い行にも止める＝タップと同じ反応）
+            <SettingsFocusRow key={deck.id} variant="card" onActivate={() => confirmMerge(deck)}>
             <Pressable
-              key={deck.id}
               style={[styles.card, { backgroundColor: theme.colors.surface, opacity: actionable ? 1 : 0.55 }]}
               onPress={() => confirmMerge(deck)}
             >
@@ -266,6 +291,7 @@ export default function SyncMergeScreen() {
                 </Text>
               )}
             </Pressable>
+            </SettingsFocusRow>
             );
           })}
           {/* 並び順の差分があるデッキが1つでもあるときだけ、戻せない理由と代わりの手段を出す

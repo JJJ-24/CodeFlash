@@ -12,6 +12,7 @@ import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { InfoContent } from '@/components/InfoContent';
 import { InfoModal } from '@/components/InfoModal';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { SettingsFocusGroup, SettingsFocusRow } from '@/components/settings/settingsFocus';
 import { settingsStyles as styles } from '@/components/settings/styles';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 
@@ -281,8 +282,10 @@ export default function DataSettingsScreen() {
   // バックアップ(export)＋復元(import)、TSVエクスポート＋インポートを、それぞれ1カードに2行でまとめる
   const rowPairs = [[rows[0], rows[1]], [rows[2], rows[3]]];
 
+  // 053 Phase 4：各行は Return だけ（専用キーは付けない＝文字キーは手が触れて押しうる。Return は右端で押し間違えにくい）
   const renderRow = (row: (typeof rows)[number]) => (
-    <View key={row.title}>
+    <SettingsFocusGroup key={row.title}>
+      <SettingsFocusRow onActivate={row.onPress}>
       <Pressable style={styles.dataRow} onPress={row.onPress}>
         <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md, flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{row.title}</Text>
         <Pressable onPress={() => row.setShowInfo(!row.showInfo)} hitSlop={8}>
@@ -295,13 +298,32 @@ export default function DataSettingsScreen() {
         <View style={{ flex: 1 }} />
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>
+      </SettingsFocusRow>
       {row.showInfo && (
         <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
           <InfoContent text={row.info} />
         </View>
       )}
-    </View>
+    </SettingsFocusGroup>
   );
+
+  const shortcutSections = [
+    { title: t('shortcut.catFocus'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    ] },
+    { title: t('shortcut.catAction'), items: [
+      { key: 'Return', descKey: 'shortcut.settingActivateData' },
+    ] },
+    { title: t('shortcut.catConfirmDialog'), items: [
+      { key: 'J / K', descKey: 'shortcut.confirmChoose' },
+      { key: 'Return', descKey: 'shortcut.confirmRun' },
+    ] },
+    { title: t('shortcut.catOther'), items: [
+      { key: 'ESC', descKey: 'shortcut.esc' },
+      { key: 'B', descKey: 'shortcut.back' },
+      { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
 
   const overlay = (
     <>
@@ -322,7 +344,7 @@ export default function DataSettingsScreen() {
         <InfoModal visible title={modal.title} message={modal.message} onClose={() => setModal(null)} />
       )}
       {modal?.kind === 'confirm' && (
-        <ConfirmModal visible title={modal.title} message={modal.message} actions={modal.actions} onClose={() => setModal(null)} />
+        <ConfirmModal visible title={modal.title} message={modal.message} actions={modal.actions} onClose={() => setModal(null)} keyboard />
       )}
     </>
   );
@@ -333,6 +355,9 @@ export default function DataSettingsScreen() {
       overlay={overlay}
       // DeckPickerModal は自前で Esc を持つ＝開いている間はこの画面のキーを手放す
       suspendKeys={tsvDeckPickerVisible}
+      shortcuts={shortcutSections}
+      // 確認/情報ダイアログの表示中は背後の項目操作を止める（ダイアログの J/K・Return と二重にしない）
+      blockNav={modal !== null}
       onBack={(direct) => {
         if (modal) { setModal(null); return; }
         if (tsvDeckPickerVisible) { setTsvDeckPickerVisible(false); return; }
@@ -349,11 +374,11 @@ export default function DataSettingsScreen() {
         </View>
       ) : (
         rowPairs.map((pair, i) => (
-          <View key={i} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <SettingsFocusGroup key={i} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             {renderRow(pair[0])}
             <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: 8 }} />
             {renderRow(pair[1])}
-          </View>
+          </SettingsFocusGroup>
         ))
       )}
     </SettingsDetail>

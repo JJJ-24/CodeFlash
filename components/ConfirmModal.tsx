@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useKeyCommands } from '@/lib/useKeyCommands';
 
 const isPad = (Platform as any).isPad;
 
@@ -27,9 +29,21 @@ interface Props {
   message: string;
   actions: ModalAction[];
   onClose: () => void;
+  /**
+   * 053 Phase 4：J/K（↑/↓）で選択肢のボタンを選び、Return で実行できるようにする（使う側が指定したときだけ）。
+   * **開いた時点ではどのボタンにもフォーカスが無い**＝Return 単独では何も起きず、選ぶ操作が必ず1回挟まる
+   * （「削除系の確認は Return を割り当てない」の狙い＝連打でうっかり実行しない、を保ったまま削除系も実行できる）。
+   * ⚠️ **Esc はここでは持たない**＝閉じるのは従来どおり呼び出し側（`SettingsDetail` の `onBack` 等）。
+   *   ここでも登録すると両方のハンドラが発火する（`useKeyCommands` は登録ごとに listener を張る）。
+   * ⚠️ 呼び出し側は表示中、背後の J/K・Return を止めること（`SettingsDetail` の `blockNav`）。
+   * 既定は off＝アプリ全体の確認ダイアログは画面ごとに Return の扱いが違うので、一度に変えない（docs/053）。
+   * ⚠️ `actions` は **state に持った配列をそのまま渡す**（毎レンダー作り直すと、差し替わったと見なして
+   *   フォーカスが毎回外れる）。
+   */
+  keyboard?: boolean;
 }
 
-export function ConfirmModal({ visible, title, message, actions, onClose }: Props) {
+export function ConfirmModal({ visible, title, message, actions, onClose, keyboard }: Props) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -49,6 +63,25 @@ export function ConfirmModal({ visible, title, message, actions, onClose }: Prop
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   }, [visible, fade]);
+
+  // ---- 053：キーボードで選ぶ（keyboard 指定時のみ）----
+  // 開いたとき・中身が差し替わったとき（「バックアップを選ぶ → 確認」のように連続するダイアログ）は
+  // 必ずフォーカスなしに戻す＝前のダイアログで選んだ位置のまま Return で次を実行しない。
+  const [focused, setFocused] = useState<number | null>(null);
+  useEffect(() => { setFocused(null); }, [visible, actions]);
+  const move = (dir: 1 | -1) => {
+    const n = actions.length;
+    if (n === 0) return;
+    setFocused((p) => (p === null ? (dir > 0 ? 0 : n - 1) : (p + dir + n) % n));
+  };
+  useKeyCommands([
+    { input: 'j', handler: () => move(1) },
+    { input: 'k', handler: () => move(-1) },
+    { input: KeyCommand.keyInputDownArrow, handler: () => move(1) },
+    { input: KeyCommand.keyInputUpArrow, handler: () => move(-1) },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (focused !== null) actions[focused]?.onPress(); } },
+  ], !!keyboard && visible);
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.overlay, { opacity: fade }]}>
@@ -79,8 +112,8 @@ export function ConfirmModal({ visible, title, message, actions, onClose }: Prop
           </ScrollView>
           <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
           {actions.map((action, i) => (
+            <View key={i}>
             <Pressable
-              key={i}
               style={[
                 styles.actionBtn,
                 action.secondary
@@ -99,6 +132,18 @@ export function ConfirmModal({ visible, title, message, actions, onClose }: Prop
                 {action.label}
               </Text>
             </Pressable>
+            {/* 053：キーで選んでいるボタンの枠（ボタンの外側に少し離して描く＝塗りのボタンでも見える） */}
+            {focused === i && (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute', left: -5, right: -5, bottom: -5,
+                  top: (i === 0 ? 8 : 18) - 5,
+                  borderRadius: 15, borderWidth: 2, borderColor: theme.colors.primary,
+                }}
+              />
+            )}
+            </View>
           ))}
           <View style={{ height: 20 }} />
         </View>

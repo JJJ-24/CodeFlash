@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
+import { SettingsFocusContext, SettingsFocusRow, useFocusRegistry } from '@/components/settings/settingsFocus';
 import { AppSwitch } from '@/components/AppSwitch';
 import { InfoContent } from '@/components/InfoContent';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -42,6 +43,13 @@ import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 
 const DECK_NEW_SHORTCUT_SECTIONS = [
+  // 055：J/K で項目を選んで操作する（文字キーは下の「操作」のまま使える）
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'Return', descKey: 'shortcut.formActivate' },
+    { key: 'Space', descKey: 'shortcut.settingToggle' },
+    { key: ', / .', descKey: 'shortcut.formColorStep' },
+  ] },
   { titleKey: 'shortcut.catDisplay', items: [
     { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
@@ -128,6 +136,10 @@ export default function NewDeckScreen() {
   // 画面スクロール（U/D・PgUp/PgDn・Home/End）用。
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
+  // 055：J/K で項目を選び Return/Space/`,`/`.` で操作する（053 の設定の詳細画面と同じ仕組み）。文字キー（N/M/C/I/R/H/Q/E）は残す。
+  const nav = useFocusRegistry(scrollRef, scrollYRef);
+  // 055：どの入力欄にカーソルがあるか（Return で説明欄へ移ったとき・タップで入れたときも青枠を追従させる）
+  const [inputFocus, setInputFocus] = useState<'name' | 'desc' | null>(null);
 
   async function handleCreate() {
     const trimmed = name.trim();
@@ -212,9 +224,15 @@ export default function NewDeckScreen() {
     // 052: ⇧R = このデッキの読み上げ ON/OFF（R＝読み上げの設定を開く、の Shift 版）
     { input: 'r', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setSpeechDisabled((v) => !v); } },
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
+    // 055：J/K＝項目のフォーカス・Return＝開く/入力を始める・Space＝スイッチ・`,`/`.`＝色を送る
+    //（H/L は使わない＝H は「HTML/CSS 土台を開く」。矢印も使わない＝この画面は iPad のフォーカスエンジン対策で不使用）
+    { input: 'j', handler: () => { if (subModalOpen()) return; nav.moveFocus(1); } },
+    { input: 'k', handler: () => { if (subModalOpen()) return; nav.moveFocus(-1); } },
+    { input: ',', handler: () => { if (subModalOpen()) return; nav.focused()?.onLeft?.(); } },
+    { input: '.', handler: () => { if (subModalOpen()) return; nav.focused()?.onRight?.(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (subModalOpen()) return; nav.focused()?.onActivate?.(); } },
+    { input: ' ', handler: () => { if (subModalOpen()) return; nav.focused()?.onToggle?.(); } },
     ...scrollKeySpecs({ scrollRef, scrollYRef, guard: subModalOpen }),
-    // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
-    { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); } },
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
@@ -224,6 +242,8 @@ export default function NewDeckScreen() {
         if (showSpeechInfo) { setShowSpeechInfo(false); return; }
         // 編集中は Esc でカーソル解除のみ。非編集なら閉じる（変更あれば破棄確認）。
         if (editingRef.current) { Keyboard.dismiss(); return; }
+        // 055：フォーカス（青枠）があれば先に外す
+        if (nav.focusedIdRef.current !== null) { nav.setFocusedId(null); return; }
         handleClose();
       },
     },
@@ -286,12 +306,14 @@ export default function NewDeckScreen() {
         <ScrollView
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          onLayout={nav.onViewportLayout}
           scrollEventThrottle={16}
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.field}>
+          <SettingsFocusContext.Provider value={nav.registry}>
+          <SettingsFocusRow style={styles.field} claim={inputFocus === 'name'} onActivate={() => nameRef.current?.focus()}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.name')}
             </Text>
@@ -305,15 +327,15 @@ export default function NewDeckScreen() {
               maxLength={50}
               autoFocus
               returnKeyType="next"
-              onFocus={() => { editingRef.current = true; }}
-              onBlur={() => { editingRef.current = false; }}
+              onFocus={() => { editingRef.current = true; setInputFocus('name'); }}
+              onBlur={() => { editingRef.current = false; setInputFocus((f) => (f === 'name' ? null : f)); }}
               onSubmitEditing={() => descRef.current?.focus()}
               autoCorrect={false}
               spellCheck={false}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
-          </View>
-          <View style={styles.field}>
+          </SettingsFocusRow>
+          <SettingsFocusRow style={styles.field} claim={inputFocus === 'desc'} onActivate={() => descRef.current?.focus()}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.description')}
             </Text>
@@ -326,15 +348,15 @@ export default function NewDeckScreen() {
               onChangeText={setDescription}
               multiline
               numberOfLines={3}
-              onFocus={() => { editingRef.current = true; }}
-              onBlur={() => { editingRef.current = false; }}
+              onFocus={() => { editingRef.current = true; setInputFocus('desc'); }}
+              onBlur={() => { editingRef.current = false; setInputFocus((f) => (f === 'desc' ? null : f)); }}
               autoCorrect={false}
               spellCheck={false}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
             />
-          </View>
+          </SettingsFocusRow>
 
-          <View style={styles.field}>
+          <SettingsFocusRow style={styles.field} onActivate={() => { Keyboard.dismiss(); setShowIconPicker(true); }}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.icon')}
             </Text>
@@ -361,9 +383,9 @@ export default function NewDeckScreen() {
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
             </Pressable>
-          </View>
+          </SettingsFocusRow>
 
-          <View style={styles.field}>
+          <SettingsFocusRow style={styles.field} onLeft={() => cycleColor(-1)} onRight={() => cycleColor(1)}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.color')}
             </Text>
@@ -381,10 +403,10 @@ export default function NewDeckScreen() {
                 <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(7).map(colorSwatch)}{themeSwatch}{clearSwatch}</View>
               </View>
             )}
-          </View>
+          </SettingsFocusRow>
 
           {/* 052: このデッキで読み上げを使うか（無料・既定 ON）。編集画面と同じ行（説明と並び順の理由はそちらのコメント）。 */}
-          <View style={styles.field}>
+          <SettingsFocusRow style={styles.field} onToggle={() => { Keyboard.dismiss(); setSpeechDisabled((v) => !v); }}>
             <View style={[styles.toggleCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, !speechEnabled && styles.inactive]}>
               <View style={styles.toggleRow}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -416,13 +438,13 @@ export default function NewDeckScreen() {
                 {t('deck.speechAppOffNote')}
               </Text>
             )}
-          </View>
+          </SettingsFocusRow>
 
           {/* 051: デッキに保存する読み上げ設定は Pro。⚠️ **行ごと隠さない**（土台の行と違う）＝
               設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
               ⚠️ **適用（学習画面）には isPro を入れない**＝読み上げ自体は無料機能で、
               止めても守られる Pro 機能が無く、配布デッキが作者の意図と違う言語で読まれるだけ。 */}
-          <View style={styles.field}>
+          <SettingsFocusRow style={styles.field} onActivate={openSpeechSettings}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('deck.speechSettingsLabel')}
             </Text>
@@ -445,13 +467,13 @@ export default function NewDeckScreen() {
                 {t('deck.speechDeckOffNote')}
               </Text>
             )}
-          </View>
+          </SettingsFocusRow>
 
           {/* HTML/CSS 土台を先に置く：土台を使う言語は html/css/js/ts の4つ（js/ts は無料言語）で、
               SQL ブロックだけが使う SQL 初期化より触る頻度が高いため。キー割り当て（H/Q）は
               頭文字由来なのでこの並びとは独立。 */}
           {isPro && (
-            <View style={styles.field}>
+            <SettingsFocusRow style={styles.field} onActivate={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}>
               <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('deck.htmlInitLabel')}
               </Text>
@@ -481,11 +503,11 @@ export default function NewDeckScreen() {
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>
-            </View>
+            </SettingsFocusRow>
           )}
 
           {isPro && (
-            <View style={styles.field}>
+            <SettingsFocusRow style={styles.field} onActivate={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}>
               <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('deck.sqlInitLabel')}
               </Text>
@@ -501,9 +523,10 @@ export default function NewDeckScreen() {
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
               </Pressable>
-            </View>
+            </SettingsFocusRow>
           )}
 
+          </SettingsFocusContext.Provider>
         </ScrollView>
         <FormBottomBar onClose={handleClose} onSave={handleCreate} saveDisabled={!canSave} />
       </View>

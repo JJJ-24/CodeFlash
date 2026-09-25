@@ -1,6 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -14,7 +14,7 @@ import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 
-import { SettingsFocusContext, type SettingsFocusHandlers, type SettingsFocusRegistry } from './settingsFocus';
+import { SettingsFocusContext, useFocusRegistry } from './settingsFocus';
 import { settingsStyles } from './styles';
 
 interface Props {
@@ -69,84 +69,10 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const { t } = useTranslation();
 
-  // ---- 053：項目のフォーカス（J/K）と、フォーカス中の項目への操作の委譲 ----
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  const focusedIdRef = useRef<string | null>(null);
-  focusedIdRef.current = focusedId;
-  const handlersMap = useRef(new Map<string, { current: SettingsFocusHandlers }>());
-  const layoutMap = useRef(new Map<string, { y: number; h: number; getOffset: () => number }>());
-  const register = useCallback((id: string, handlers: { current: SettingsFocusHandlers }) => {
-    handlersMap.current.set(id, handlers);
-    return () => {
-      handlersMap.current.delete(id);
-      layoutMap.current.delete(id);
-      if (focusedIdRef.current === id) setFocusedId(null);
-    };
-  }, []);
-  const setLayout = useCallback((id: string, y: number, h: number, getOffset: () => number) => {
-    layoutMap.current.set(id, { y, h, getOffset });
-  }, []);
-  /** スクロールの中身から見た位置（親の `SettingsFocusGroup` の位置を足す）。毎回計算し直す。 */
-  const absLayout = (id: string) => {
-    const l = layoutMap.current.get(id);
-    return l ? { y: l.getOffset() + l.y, h: l.h } : undefined;
-  };
-  const registry = useMemo<SettingsFocusRegistry>(() => ({ register, setLayout, focusedId }), [register, setLayout, focusedId]);
-
+  // ---- 053：項目のフォーカス（J/K）と、フォーカス中の項目への操作の委譲（055 で useFocusRegistry に切り出し） ----
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
-  const viewportHRef = useRef(0);
-  // 自動スクロール（設定タブと同じ：上下 8pt の余白を残して見える位置まで）。
-  // ⚠️ 位置は毎回 layoutMap から読む＝文字サイズの変更などでレイアウトが動いても最新の値で測る。
-  function scrollIntoView(id: string) {
-    const l = absLayout(id);
-    if (!l) return;
-    const top = scrollYRef.current;
-    const vh = viewportHRef.current;
-    if (l.y < top + 8) scrollRef.current?.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
-    else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
-  }
-  // 並び＝画面上の縦位置の順（条件つきで出る行があっても順序が崩れない）。ヌルサイクル。
-  function orderedIds() {
-    return [...handlersMap.current.keys()]
-      .map((id) => ({ id, l: absLayout(id) }))
-      .filter((e): e is { id: string; l: { y: number; h: number } } => e.l !== undefined)
-      .sort((a, b) => a.l.y - b.l.y)
-      .map((e) => e.id);
-  }
-  function moveFocus(dir: 1 | -1) {
-    const ids = orderedIds();
-    if (ids.length === 0) return;
-    const cur = focusedIdRef.current;
-    const i = cur === null ? -1 : ids.indexOf(cur);
-    let next: string | null;
-    if (dir > 0) next = i === -1 ? (cur === null ? ids[0] : null) : i === ids.length - 1 ? null : ids[i + 1];
-    else next = i === -1 ? (cur === null ? ids[ids.length - 1] : null) : i === 0 ? null : ids[i - 1];
-    setFocusedId(next);
-    if (next !== null) scrollIntoView(next);
-  }
-  // ⇧J/⇧K：前後のセクション見出しへ（学習設定など、見出しを持つ画面）。
-  // 基準は「いまフォーカスしている行の位置」＝セクションの中の行からでも次の見出しへ跳べる。
-  // フォーカスが無ければ ⇧J＝最初の見出し／⇧K＝最後の見出し。
-  // **端では反対の端の見出しへ巡回する**（J/K と同じく巡回＝最下部から ⇧J 1回で最上部へ）。
-  // ⚠️ J/K と違い「フォーカスなし」は挟まない＝見出しへ跳ぶキーで何も無い状態に着いても意味が無い
-  //   （外したいときは Esc）。
-  function moveSection(dir: 1 | -1) {
-    const ids = orderedIds();
-    const isSection = (id: string) => handlersMap.current.get(id)?.current.section === true;
-    const sections = ids.filter(isSection);
-    if (sections.length === 0) return;
-    const cur = focusedIdRef.current;
-    const i = cur === null ? -1 : ids.indexOf(cur);
-    let next: string | undefined;
-    if (i === -1) next = dir > 0 ? sections[0] : sections[sections.length - 1];
-    else if (dir > 0) next = ids.slice(i + 1).find(isSection) ?? sections[0];
-    else next = ids.slice(0, i).reverse().find(isSection) ?? sections[sections.length - 1];
-    if (next === cur) return;
-    setFocusedId(next);
-    scrollIntoView(next);
-  }
-  const focused = () => (focusedIdRef.current ? handlersMap.current.get(focusedIdRef.current)?.current : undefined);
+  const { registry, focusedIdRef, setFocusedId, moveFocus, moveSection, focused, onViewportLayout } = useFocusRegistry(scrollRef, scrollYRef);
 
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -259,7 +185,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={[settingsStyles.container, { paddingBottom: 32 + 56 + 24 + insets.bottom }]}
-        onLayout={(e) => { viewportHRef.current = e.nativeEvent.layout.height; }}
+        onLayout={onViewportLayout}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={16}
       >

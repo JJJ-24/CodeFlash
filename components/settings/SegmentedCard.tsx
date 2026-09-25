@@ -28,7 +28,7 @@ export function SegmentedCard<T extends string>({ label, options, value, onChang
   const values = options.map((o) => o.value);
   // 値が変わらないとき（端で止まった・同じ番号）は onChange を呼ばない＝設定の保存を無駄に走らせない。
   const change = (v: T | undefined) => { if (v !== undefined && v !== value) onChange(v); };
-  const { focused, onLayout } = useSettingsFocusItem({
+  const { focused, onLayout, tapToClaim } = useSettingsFocusItem({
     onLeft: () => change(stepOption(values, value, -1)),
     onRight: () => change(stepOption(values, value, 1)),
     onSelect: (i) => change(values[i]),
@@ -40,7 +40,7 @@ export function SegmentedCard<T extends string>({ label, options, value, onChang
     return () => removeEscDismiss(id);
   }, [showInfo]);
   return (
-    <View style={[styles.card, { backgroundColor: theme.colors.surface }]} onLayout={onLayout}>
+    <View style={[styles.card, { backgroundColor: theme.colors.surface }]} onLayout={onLayout} {...tapToClaim}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{label}</Text>
         {info && (

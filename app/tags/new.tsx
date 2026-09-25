@@ -15,6 +15,7 @@ import {
 import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR, TAG_PRESET_COLORS } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { resolveTagColor, TAG_THEME_COLOR, TAG_MONO_COLOR } from '@/lib/tagColors';
+import { SettingsFocusContext, SettingsFocusRow, useFocusRegistry } from '@/components/settings/settingsFocus';
 import { TagColorPicker } from '@/components/TagColorPicker';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
@@ -28,6 +29,12 @@ import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 
 const TAG_NEW_SHORTCUT_SECTIONS = [
+  // 055：J/K で項目を選んで操作する（文字キーは下の「操作」のまま使える）
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'Return', descKey: 'shortcut.formEdit' },
+    { key: ', / .', descKey: 'shortcut.formColorStep' },
+  ] },
   { titleKey: 'shortcut.catDisplay', items: [
     { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
@@ -69,6 +76,10 @@ export default function NewTagScreen() {
   const editingRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
+  // 055：J/K で項目を選び Return/`,`/`.` で操作する（デッキの新規・編集画面と同じ）。文字キー（N/C）は残す。
+  const nav = useFocusRegistry(scrollRef, scrollYRef);
+  // 055：名前欄にカーソルがあるか（タップで入れたときも青枠を追従させる）
+  const [nameFocused, setNameFocused] = useState(false);
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }
@@ -95,15 +106,21 @@ export default function NewTagScreen() {
     { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
+    // 055：J/K＝項目のフォーカス・Return＝入力を始める・`,`/`.`＝色を送る（デッキ画面とそろえて H/L・矢印は使わない）
+    { input: 'j', handler: () => { if (subModalOpen()) return; nav.moveFocus(1); } },
+    { input: 'k', handler: () => { if (subModalOpen()) return; nav.moveFocus(-1); } },
+    { input: ',', handler: () => { if (subModalOpen()) return; nav.focused()?.onLeft?.(); } },
+    { input: '.', handler: () => { if (subModalOpen()) return; nav.focused()?.onRight?.(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (subModalOpen()) return; nav.focused()?.onActivate?.(); } },
     ...scrollKeySpecs({ scrollRef, scrollYRef, guard: subModalOpen }),
-    // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。
-    { input: KeyCommand.keyInputEnter, handler: () => { if (showShortcutsModal) setShowShortcutsModal(false); } },
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (showShortcutsModal) { setShowShortcutsModal(false); return; } // ショートカット一覧を閉じる
         if (subModalOpen()) return;
         if (editingRef.current) { Keyboard.dismiss(); return; }
+        // 055：フォーカス（青枠）があれば先に外す
+        if (nav.focusedIdRef.current !== null) { nav.setFocusedId(null); return; }
         handleClose();
       },
     },
@@ -153,12 +170,14 @@ export default function NewTagScreen() {
         <ScrollView
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          onLayout={nav.onViewportLayout}
           scrollEventThrottle={16}
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.field}>
+          <SettingsFocusContext.Provider value={nav.registry}>
+          <SettingsFocusRow style={styles.field} claim={nameFocused} onActivate={() => nameRef.current?.focus()}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.name')}
             </Text>
@@ -170,8 +189,8 @@ export default function NewTagScreen() {
               value={name}
               onChangeText={(v) => { setName(v); setError(''); }}
               autoFocus
-              onFocus={() => { editingRef.current = true; }}
-              onBlur={() => { editingRef.current = false; }}
+              onFocus={() => { editingRef.current = true; setNameFocused(true); }}
+              onBlur={() => { editingRef.current = false; setNameFocused(false); }}
               autoCorrect={false}
               spellCheck={false}
               maxLength={50}
@@ -180,14 +199,14 @@ export default function NewTagScreen() {
             {!!error && (
               <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{error}</Text>
             )}
-          </View>
+          </SettingsFocusRow>
 
-          <View style={styles.field}>
+          <SettingsFocusRow style={styles.field} onLeft={() => cycleColor(-1)} onRight={() => cycleColor(1)}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.color')}
             </Text>
             <TagColorPicker color={color} onChange={setColor} />
-          </View>
+          </SettingsFocusRow>
 
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -200,6 +219,7 @@ export default function NewTagScreen() {
               </Text>
             </View>
           </View>
+          </SettingsFocusContext.Provider>
         </ScrollView>
 
         <FormBottomBar onClose={handleClose} onSave={handleSave} saveDisabled={!canSave} />

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { SettingsFocusContext, SettingsFocusRow, useFocusRegistry } from '@/components/settings/settingsFocus';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
@@ -28,6 +29,12 @@ import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 
 const TAG_EDIT_SHORTCUT_SECTIONS = [
+  // 055：J/K で項目を選んで操作する（文字キーは下の「操作」のまま使える）
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    { key: 'Return', descKey: 'shortcut.formEdit' },
+    { key: ', / .', descKey: 'shortcut.formColorStep' },
+  ] },
   { titleKey: 'shortcut.catDisplay', items: [
     { key: 'U / D', descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
@@ -80,6 +87,10 @@ export default function EditTagScreen() {
   const editingRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
+  // 055：J/K で項目を選び Return/`,`/`.` で操作する（デッキの新規・編集画面と同じ）。文字キー（N/C）は残す。
+  const nav = useFocusRegistry(scrollRef, scrollYRef);
+  // 055：名前欄にカーソルがあるか（タップで入れたときも青枠を追従させる）
+  const [nameFocused, setNameFocused] = useState(false);
 
   function handleClose() {
     if (!isDirty) { router.back(); return; }
@@ -105,11 +116,19 @@ export default function EditTagScreen() {
     { input: 'x', handler: () => { handleClose(); } },
     ...deleteKeySpecs(() => { confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
+    // 055：J/K＝項目のフォーカス・Return＝入力を始める・`,`/`.`＝色を送る（デッキ画面とそろえて H/L・矢印は使わない）
+    { input: 'j', handler: () => { nav.moveFocus(1); } },
+    { input: 'k', handler: () => { nav.moveFocus(-1); } },
+    { input: ',', handler: () => { nav.focused()?.onLeft?.(); } },
+    { input: '.', handler: () => { nav.focused()?.onRight?.(); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { nav.focused()?.onActivate?.(); } },
     ...scrollKeySpecs({ scrollRef, scrollYRef }),
     {
       input: KeyCommand.keyInputEscape,
       handler: () => {
         if (editingRef.current) { Keyboard.dismiss(); return; }
+        // 055：フォーカス（青枠）があれば先に外す
+        if (nav.focusedIdRef.current !== null) { nav.setFocusedId(null); return; }
         handleClose();
       },
     },
@@ -170,12 +189,14 @@ export default function EditTagScreen() {
         <ScrollView
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          onLayout={nav.onViewportLayout}
           scrollEventThrottle={16}
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.field}>
+          <SettingsFocusContext.Provider value={nav.registry}>
+          <SettingsFocusRow style={styles.field} claim={nameFocused} onActivate={() => nameRef.current?.focus()}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.name')}
             </Text>
@@ -186,8 +207,8 @@ export default function EditTagScreen() {
               placeholderTextColor={theme.colors.textTertiary}
               value={name}
               onChangeText={(v) => { setName(v); setError(''); }}
-              onFocus={() => { editingRef.current = true; }}
-              onBlur={() => { editingRef.current = false; }}
+              onFocus={() => { editingRef.current = true; setNameFocused(true); }}
+              onBlur={() => { editingRef.current = false; setNameFocused(false); }}
               autoCorrect={false}
               spellCheck={false}
               maxLength={50}
@@ -196,14 +217,14 @@ export default function EditTagScreen() {
             {!!error && (
               <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{error}</Text>
             )}
-          </View>
+          </SettingsFocusRow>
 
-          <View style={styles.field}>
+          <SettingsFocusRow style={styles.field} onLeft={() => cycleColor(-1)} onRight={() => cycleColor(1)}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
               {t('tag.color')}
             </Text>
             <TagColorPicker color={color} onChange={setColor} />
-          </View>
+          </SettingsFocusRow>
 
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -216,6 +237,7 @@ export default function EditTagScreen() {
               </Text>
             </View>
           </View>
+          </SettingsFocusContext.Provider>
         </ScrollView>
 
         <FormBottomBar onClose={handleClose} onSave={handleSave} saveDisabled={!canSave} onDelete={confirmDelete} />

@@ -73,6 +73,7 @@ export default function DisplaySettingsScreen() {
       { key: 'H / L', descKey: 'shortcut.settingValueStep' },
       { key: '1–3', descKey: 'shortcut.settingValueDirect' },
       { key: 'Return', descKey: 'shortcut.settingActivate' },
+      { key: 'Space', descKey: 'shortcut.settingToggle' },
     ] },
     { title: t('shortcut.catLanguagePicker'), items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
@@ -234,9 +235,9 @@ export default function DisplaySettingsScreen() {
         </ScrollView>
       </SettingsFocusCard>
 
-      {/* 053：Return/Space で切替。⚠️ OFF にするとキー操作が全部止まる（戻すのはタップ）が、
+      {/* 053：Space で切替（トグルは Space だけ＝Return は「開く」側）。⚠️ OFF にするとキー操作が全部止まる（戻すのはタップ）が、
           フォーカスした行で明示的に押しているので確認は挟まない（docs/053 の案 a）。 */}
-      <SettingsFocusCard onActivate={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)}>
+      <SettingsFocusCard onToggle={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)}>
         <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
           {t('settings.keyboard')}
         </Text>

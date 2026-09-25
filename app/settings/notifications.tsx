@@ -5,7 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
+  Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
@@ -17,18 +17,19 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { InfoModal } from '@/components/InfoModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { SettingsFocusCard, SettingsFocusGroup, SettingsFocusRow } from '@/components/settings/settingsFocus';
 import { settingsStyles as styles } from '@/components/settings/styles';
 import {
   MAX_SCHEDULES,
   countSchedules, createSchedule, deleteSchedule, getAllSchedules,
   toggleScheduleEnabled, updateSchedule,
 } from '@/lib/database/notifications';
-import { pushEscDismiss, removeEscDismiss } from '@/lib/escStack';
+import { popEscDismiss, pushEscDismiss, removeEscDismiss } from '@/lib/escStack';
 import {
   cancelAllScheduledNotifications, isPermissionGranted, requestPermission, scheduleFromDb,
 } from '@/lib/notifications';
 import { useTheme, MAX_FONT_MULTIPLIER, themedFrameBorder } from '@/lib/theme';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore } from '@/store/settings';
 import type { NotificationSchedule } from '@/types';
 
@@ -79,12 +80,17 @@ interface ScheduleModalProps {
   onSave: () => void;
   onDelete: () => void;
   onClose: () => void;
+  /** 053：シートがキーを受け持つか（上に削除の確認が出ている間は false＝確認側に譲る） */
+  keysActive: boolean;
 }
+
+/** 053：シートの中でフォーカスできる項目（上から順）。目標 OFF のときは「目標未達成」を外す（押しても効かないため）。 */
+type SheetFocus = 'hour' | 'minute' | 'weekdays' | 'label' | 'goal';
 
 function ScheduleModal({
   visible, isNew, hour, minute, weekdays, label, theme, bottomInset,
   onChangeTime, onToggleWeekday, onChangeLabel, onSave, onDelete, onClose,
-  onlyIfGoalUnmet, onChangeOnlyIfGoalUnmet, goalEnabled,
+  onlyIfGoalUnmet, onChangeOnlyIfGoalUnmet, goalEnabled, keysActive,
 }: ScheduleModalProps) {
   const { t } = useTranslation();
   const { height: screenHeight } = useWindowDimensions();
@@ -105,6 +111,116 @@ function ScheduleModal({
   // 増えるより先に送っても届かない。`automaticallyAdjustKeyboardInsets` 任せにせず明示的に
   // 送るのは、どこまで自動で送られるかが端末・OS で揺れるため（送り先は同じ位置）。
   const scrollRef = useRef<ScrollView>(null);
+
+  // ---- 053：キーボード操作（docs/053「通知画面」の編集シート） ----
+  const focusOrder: SheetFocus[] = ['hour', 'minute', 'weekdays', 'label', ...(goalEnabled ? ['goal' as const] : [])];
+  const [focus, setFocus] = useState<SheetFocus | null>(null);
+  useEffect(() => { if (visible) setFocus(null); }, [visible]);
+  const labelRef = useRef<TextInput>(null);
+  const [labelEditing, setLabelEditing] = useState(false);
+  const scrollYRef = useRef(0);
+  const viewportHRef = useRef(0);
+  const sectionLayouts = useRef<Partial<Record<'time' | 'weekdays' | 'label' | 'goal', { y: number; h: number }>>>({});
+  const sectionOf = (f: SheetFocus) => (f === 'hour' || f === 'minute' ? 'time' : f);
+  const scrollIntoView = (f: SheetFocus) => {
+    const l = sectionLayouts.current[sectionOf(f)];
+    if (!l) return;
+    const top = scrollYRef.current;
+    const vh = viewportHRef.current;
+    if (l.y < top + 8) scrollRef.current?.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
+    else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
+  };
+  // ヌルサイクル（末尾の次はフォーカスなし）＝一覧画面と同じ
+  const moveFocus = (dir: 1 | -1) => {
+    const i = focus === null ? -1 : focusOrder.indexOf(focus);
+    let next: SheetFocus | null;
+    if (dir > 0) next = i === -1 ? focusOrder[0] : i === focusOrder.length - 1 ? null : focusOrder[i + 1];
+    else next = i === -1 ? focusOrder[focusOrder.length - 1] : i === 0 ? null : focusOrder[i - 1];
+    setFocus(next);
+    if (next) scrollIntoView(next);
+  };
+  // 時と分は独立して回り込む（回転式ピッカーの列と同じ＝分を回しても時は変わらない）
+  const stepTime = (dir: 1 | -1, big: boolean) => {
+    if (focus === 'hour') onChangeTime((hour + dir * (big ? 3 : 1) + 24) % 24, minute);
+    else if (focus === 'minute') onChangeTime(hour, (minute + dir * (big ? 10 : 1) + 60) % 60);
+  };
+  // 時刻の数字入力（時/分にフォーカス中）。入力は常に24時間表記（下の「07 : 30」と一致させる）。
+  // 1桁目で即その値になり、1.5秒以内の2桁目で2桁の値にする（2桁にすると範囲を超えるなら新しい1桁目）。
+  // 時は2桁打ち終えたら（または2桁にできない 3〜9 を打ったら）分へ移る＝時にフォーカスして 0730 で 07:30。
+  const digitRef = useRef<{ part: 'hour' | 'minute'; d: number; at: number } | null>(null);
+  const DIGIT_JOIN_MS = 1500;
+  const typeTimeDigit = (d: number) => {
+    if (focus !== 'hour' && focus !== 'minute') return;
+    const now = Date.now();
+    const p = digitRef.current;
+    const max = focus === 'hour' ? 23 : 59;
+    if (p && p.part === focus && now - p.at < DIGIT_JOIN_MS && p.d * 10 + d <= max) {
+      const v = p.d * 10 + d;
+      digitRef.current = null;
+      if (focus === 'hour') { onChangeTime(v, minute); setFocus('minute'); }
+      else onChangeTime(hour, v);
+      return;
+    }
+    if (focus === 'hour') onChangeTime(d, minute); else onChangeTime(hour, d);
+    // 1桁目のままで確定する数字（時は 3〜9・分は 6〜9）は2桁目を待たない
+    if (d * 10 > max) {
+      digitRef.current = null;
+      if (focus === 'hour') setFocus('minute');
+    } else {
+      digitRef.current = { part: focus, d, at: now };
+    }
+  };
+
+  const shift = KeyCommand.keyModifierShift;
+  const isPadDevice = (Platform as any).isPad;
+  // ⚠️ シートには入力欄（ラベル）があるので矢印は iPhone のみ（iPad は H/L・J/K で操作する）。
+  //    ラベルの入力中は入力欄が文字キーを受け取るので、ここの文字キーは自然と発火しない。
+  useKeyCommands([
+    { input: 'j', handler: () => moveFocus(1) },
+    { input: 'k', handler: () => moveFocus(-1) },
+    { input: 'h', handler: () => stepTime(-1, false) },
+    { input: ',', handler: () => stepTime(-1, false) },
+    { input: 'l', handler: () => stepTime(1, false) },
+    { input: '.', handler: () => stepTime(1, false) },
+    { input: 'h', modifierFlags: shift, handler: () => stepTime(-1, true) },
+    { input: ',', modifierFlags: shift, handler: () => stepTime(-1, true) },
+    { input: 'l', modifierFlags: shift, handler: () => stepTime(1, true) },
+    { input: '.', modifierFlags: shift, handler: () => stepTime(1, true) },
+    ...(isPadDevice ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus(1) },
+      { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus(-1) },
+      { input: KeyCommand.keyInputLeftArrow, handler: () => stepTime(-1, false) },
+      { input: KeyCommand.keyInputRightArrow, handler: () => stepTime(1, false) },
+      { input: KeyCommand.keyInputLeftArrow, modifierFlags: shift, handler: () => stepTime(-1, true) },
+      { input: KeyCommand.keyInputRightArrow, modifierFlags: shift, handler: () => stepTime(1, true) },
+    ]),
+    // 数字：曜日にフォーカス中＝表示の並び順（左から）で 1〜7 を ON/OFF／時・分にフォーカス中＝時刻の直接入力
+    ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ input: String(n), handler: () => {
+      if (focus === 'weekdays') { if (n >= 1 && n <= 7) onToggleWeekday(n - 1); return; }
+      typeTimeDigit(n);
+    } })),
+    { input: KeyCommand.keyInputEnter, handler: () => { if (focus === 'label') labelRef.current?.focus(); } },
+    { input: ' ', handler: () => { if (focus === 'goal' && goalEnabled) onChangeOnlyIfGoalUnmet(!onlyIfGoalUnmet); } },
+    { input: 's', handler: onSave },
+    { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: onSave },
+    ...(isNew ? [] : deleteKeySpecs(onDelete)),
+  ], visible && keysActive);
+  // Esc は入力中も発火する（修飾なしでも入力欄が消費しない）＝入力中ならまずカーソルを外す。
+  // 次に開いている ⓘ の説明（escStack）→ シートを閉じる（従来の SettingsDetail の Esc と同じ順）。
+  useKeyCommands([
+    { input: KeyCommand.keyInputEscape, handler: () => {
+      if (labelEditing) { labelRef.current?.blur(); return; }
+      if (popEscDismiss()) return;
+      onClose();
+    } },
+  ], visible && keysActive);
+  const focusRing = (on: boolean) => on ? (
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', top: -6, bottom: -6, left: -8, right: -8, borderRadius: 8, borderWidth: 2, borderColor: theme.colors.primary }}
+    />
+  ) : null;
+
   const scrollToLabel = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
   };
@@ -159,12 +275,18 @@ function ScheduleModal({
             操作できる（無いと最初のタップがキーボードを閉じるだけで消える）。 */}
         <ScrollView
           ref={scrollRef}
+          onLayout={(e) => { viewportHRef.current = e.nativeEvent.layout.height; }}
+          onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, gap: 20 }}
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
         >
           {/* 時刻 */}
-          <View style={{ alignItems: 'center', paddingTop: 8 }}>
+          <View style={{ alignItems: 'center', paddingTop: 8 }} onLayout={(e) => { sectionLayouts.current.time = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}>
+            {/* 053：枠はピッカー全体に付け、どちらを動かしているかは下の小さな文字で示す
+                （12時間表記の言語は列が3つ＝列の位置が言語で変わるので、列の上に枠を重ねない）。 */}
+            <View>
             <DateTimePicker
               value={timeDate}
               mode="time"
@@ -176,10 +298,41 @@ function ScheduleModal({
               themeVariant={theme.dark ? 'dark' : 'light'}
               style={{ width: 220 }}
             />
+            {focusRing(focus === 'hour' || focus === 'minute')}
+            </View>
+            {/* 時刻にフォーカスしているときだけ「07 : 30」を出し、動かしている側の数字にだけ枠を付ける。
+                ⚠️ 枠をピッカーの列に重ねない＝列の数・位置は 12/24 時間表記や右から左の言語で変わり、
+                アプリからは分からない。自前で描く数字なら必ず正しい位置に付く。 */}
+            {(focus === 'hour' || focus === 'minute') && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                {([['hour', hour], ['minute', minute]] as const).map(([part, v], i) => (
+                  <View key={part} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {i === 1 && (
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.lg, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>:</Text>
+                    )}
+                    <View
+                      accessibilityLabel={t(part === 'hour' ? 'notification.timeFocusHour' : 'notification.timeFocusMinute')}
+                      style={{
+                        paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 2,
+                        borderColor: focus === part ? theme.colors.primary : 'transparent',
+                      }}
+                    >
+                      <Text
+                        style={{ color: focus === part ? theme.colors.primary : theme.colors.textSecondary, fontSize: theme.fontSize.lg, fontWeight: '700', fontVariant: ['tabular-nums'] }}
+                        maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+                      >
+                        {String(v).padStart(2, '0')}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* 曜日選択 */}
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 8 }} onLayout={(e) => { sectionLayouts.current.weekdays = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}>
+            {focusRing(focus === 'weekdays')}
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('notification.weekdays')}
             </Text>
@@ -187,11 +340,14 @@ function ScheduleModal({
               {dayNames.map((name, i) => {
                 const sel = weekdays.includes(i);
                 return (
+                  // 053：曜日にフォーカスしている間だけ、押す数字（1〜7・左から）を各曜日の下に出す
+                  <View key={i} style={{ flex: 1, minWidth: 36, alignItems: 'stretch', gap: 4 }}>
                   <Pressable
-                    key={i}
                     onPress={() => onToggleWeekday(i)}
                     style={[
                       sheetStyles.dayBtn,
+                      // 幅は外側の View が flex:1 で受け持つ（ボタン自身は縦に伸びない）
+                      { flex: 0 },
                       { borderColor: sel ? theme.colors.primary : themedFrameBorder(theme) },
                       sel && { backgroundColor: theme.colors.primary },
                     ]}
@@ -200,6 +356,12 @@ function ScheduleModal({
                       {name}
                     </Text>
                   </Pressable>
+                  {focus === 'weekdays' && (
+                    <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.xs, fontWeight: '700', textAlign: 'center' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                      {i + 1}
+                    </Text>
+                  )}
+                  </View>
                 );
               })}
             </View>
@@ -209,11 +371,13 @@ function ScheduleModal({
           </View>
 
           {/* ラベル */}
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 8 }} onLayout={(e) => { sectionLayouts.current.label = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}>
+            {focusRing(focus === 'label')}
             <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('notification.label')}
             </Text>
             <TextInput
+              ref={labelRef}
               value={label}
               onChangeText={onChangeLabel}
               placeholder={t('notification.labelPlaceholder')}
@@ -221,7 +385,8 @@ function ScheduleModal({
               style={[sheetStyles.labelInput, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, fontSize: theme.fontSize.md }]}
               maxLength={40}
               returnKeyType="done"
-              onFocus={scrollToLabel}
+              onFocus={() => { setLabelEditing(true); scrollToLabel(); }}
+              onBlur={() => setLabelEditing(false)}
             />
           </View>
 
@@ -233,7 +398,8 @@ function ScheduleModal({
               （使えないことは disabled ＋ opacity で伝わる）、常時赤にすると `inactiveNotice`
               （通知オフ＝全部鳴らない）の赤と意味が混ざって本物の警告の効きが落ちる。ON のときは
               「予約したのに鳴らない」＝一覧の赤バッジ（`goalBadgeNoGoal`）と同じ状態なので色も揃える。 */}
-          <View style={{ gap: 6, opacity: goalEnabled ? 1 : 0.5 }}>
+          <View style={{ gap: 6, opacity: goalEnabled ? 1 : 0.5 }} onLayout={(e) => { sectionLayouts.current.goal = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}>
+            {focusRing(focus === 'goal')}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {/* ⓘ は**タイトルのすぐ右**に置く（データ管理の行と同じ形）＝
                   ラベルを flex:1 で伸ばすとスイッチの隣まで飛んでいき、何の説明か分からなくなる。
@@ -466,11 +632,48 @@ export default function NotificationSettingsScreen() {
 
   const dayNames = getWeekdayShort(t);
 
+  const shortcutSections = [
+    { title: t('shortcut.catFocus'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+    ] },
+    { title: t('shortcut.catAction'), items: [
+      { key: 'Return', descKey: 'shortcut.settingActivateNotif' },
+      { key: 'Space', descKey: 'shortcut.settingToggle' },
+      { key: 'Delete', descKey: 'shortcut.deleteFocused' },
+      { key: 'N', descKey: 'shortcut.addSchedule' },
+    ] },
+    { title: t('shortcut.catScheduleSheet'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+      { key: 'H / L', descKey: 'shortcut.scheduleTimeStep' },
+      { key: '⇧H / ⇧L', descKey: 'shortcut.scheduleTimeBig' },
+      { key: '0–9', descKey: 'shortcut.scheduleTimeDigits' },
+      { key: '1–7', descKey: 'shortcut.scheduleWeekday' },
+      { key: 'Return', descKey: 'shortcut.scheduleLabel' },
+      { key: 'Space', descKey: 'shortcut.settingToggle' },
+      { key: 'S', descKey: 'shortcut.save' },
+      { key: 'Delete', descKey: 'shortcut.deleteSchedule' },
+      { key: 'ESC', descKey: 'shortcut.close' },
+    ] },
+    { title: t('shortcut.catOther'), items: [
+      { key: 'ESC', descKey: 'shortcut.esc' },
+      { key: 'B', descKey: 'shortcut.back' },
+      { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
+
   return (
     // 行スワイプ（SwipeToDeleteRow）は RNGH のため、push 画面ごとの GestureHandlerRootView が必須
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SettingsDetail
       title={t('notification.title')}
+      shortcuts={shortcutSections}
+      // 編集シートは自前でキー（Esc 含む）を持つ＝開いている間はこの画面のキーを手放す。
+      // ただしシートの上に削除の確認が出ている間は、確認を閉じる Esc をこちら（onBack）が受け持つ。
+      suspendKeys={modalVisible && !showDeleteModal}
+      // キーを持たないダイアログ（削除の確認・権限の案内）の表示中は背後の項目操作を止める
+      blockNav={showDeleteModal || swipeDeleteId !== null || permissionDenied}
+      // N＝追加（一覧の新規＝N の流儀。上限に達していれば openAddModal が何もしない）
+      extraKeys={[{ input: 'n', handler: () => void openAddModal() }]}
       onBack={() => {
         if (showDeleteModal || swipeDeleteId !== null) { setShowDeleteModal(false); setSwipeDeleteId(null); return; }
         if (modalVisible) { closeModal(); return; }
@@ -505,6 +708,7 @@ export default function NotificationSettingsScreen() {
             onSave={handleSave}
             onDelete={handleDelete}
             onClose={closeModal}
+            keysActive={!showDeleteModal}
           />
           <ConfirmDeleteModal
             visible={showDeleteModal || swipeDeleteId !== null}
@@ -516,7 +720,13 @@ export default function NotificationSettingsScreen() {
       }
     >
       {/* グローバルトグル */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      {/* 053：カード全体で1つのフォーカス（枠はカードの縁）。Space＝ON/OFF、OS が未許可のときだけ
+          Return＝設定アプリ（注意行のタップと同じ）。注意行に2つ目のフォーカスは作らない
+          （「大元が OFF」の注意行は押せない＝止めても何も起きない）。 */}
+      <SettingsFocusCard
+        onToggle={() => void handleGlobalToggle(!notificationEnabled)}
+        onActivate={inactiveReason === 'permission' ? () => Linking.openSettings().catch(() => {}) : undefined}
+      >
         <View style={styles.notificationRow}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('notification.dailyReminder')}
@@ -548,7 +758,7 @@ export default function NotificationSettingsScreen() {
             )}
           </Pressable>
         )}
-      </View>
+      </SettingsFocusCard>
 
       {/* スケジュール一覧 */}
       <Text style={[localStyles.sectionTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -558,7 +768,7 @@ export default function NotificationSettingsScreen() {
       {/* 鳴らない状態のときは一覧を淡くする。**操作は妨げない**（通知をオンにする前に
           スケジュールを準備できるようにするため）。opacity 0.55 はアーカイブ済みの
           デッキ/カード一覧と同じ値＝「データはあるが今は効いていない」の既存表現。 */}
-      <View style={{ opacity: inactiveReason ? 0.55 : 1 }}>
+      <SettingsFocusGroup style={{ opacity: inactiveReason ? 0.55 : 1 }}>
       {schedules.length === 0 ? (
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, textAlign: 'center', paddingVertical: 8 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -567,7 +777,15 @@ export default function NotificationSettingsScreen() {
         </View>
       ) : (
         schedules.map((s) => (
-          <SwipeToDeleteRow key={s.id} onDelete={() => setSwipeDeleteId(s.id)}>
+          // 053：Return＝編集シート／Space＝有効/無効／Delete＝削除（確認あり）
+          <SettingsFocusRow
+            key={s.id}
+            variant="card"
+            onActivate={() => openEditModal(s)}
+            onToggle={() => void handleToggleEnabled(s.id, !s.enabled)}
+            onDelete={() => setSwipeDeleteId(s.id)}
+          >
+          <SwipeToDeleteRow onDelete={() => setSwipeDeleteId(s.id)}>
           <Pressable
             onPress={() => openEditModal(s)}
             style={({ pressed }) => [
@@ -638,13 +856,15 @@ export default function NotificationSettingsScreen() {
             </View>
           </Pressable>
           </SwipeToDeleteRow>
+          </SettingsFocusRow>
         ))
       )}
 
-      </View>
+      </SettingsFocusGroup>
 
       {/* 追加ボタン */}
       {schedules.length < MAX_SCHEDULES && (
+        <SettingsFocusRow variant="card" onActivate={() => void openAddModal()}>
         <Pressable
           onPress={openAddModal}
           style={({ pressed }) => [
@@ -658,6 +878,7 @@ export default function NotificationSettingsScreen() {
             {t('notification.addSchedule')}
           </Text>
         </Pressable>
+        </SettingsFocusRow>
       )}
       {schedules.length >= MAX_SCHEDULES && (
         <Text style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.xs, textAlign: 'center' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>

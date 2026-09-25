@@ -269,6 +269,7 @@ export default function StudySettingsScreen() {
     ] },
     { title: t('shortcut.catAction'), items: [
       { key: 'Return', descKey: 'shortcut.settingActivateStudy' },
+      { key: 'Space', descKey: 'shortcut.settingToggle' },
       { key: 'H / L', descKey: 'shortcut.settingValueStep' },
       { key: '⇧H / ⇧L', descKey: 'shortcut.settingValueBig' },
       { key: '1–3', descKey: 'shortcut.settingValueDirect' },
@@ -446,7 +447,7 @@ export default function StudySettingsScreen() {
         </SettingsFocusRow>
         {infoBox('goal', 'settings.studyGoalInfo')}
         {!isCollapsed('goal') && (<>
-        <SettingsFocusRow style={styles.notificationRow} onActivate={() => void handleGoalEnabledChange(!studyGoalEnabled)}>
+        <SettingsFocusRow style={styles.notificationRow} onToggle={() => void handleGoalEnabledChange(!studyGoalEnabled)}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyGoalEnable')}
           </Text>
@@ -622,7 +623,7 @@ export default function StudySettingsScreen() {
           ⓘ の説明で**効かない場面まで書く**＝書かないと「オンにしたのに効かない＝壊れている」に見える。 */}
       {script === 'latin' && (
         <>
-          <SettingsFocusRow style={[styles.notificationRow, { paddingLeft: 16 }]} onActivate={() => setSpeechNoMixedSwitch(!speechNoMixedSwitch)}>
+          <SettingsFocusRow style={[styles.notificationRow, { paddingLeft: 16 }]} onToggle={() => setSpeechNoMixedSwitch(!speechNoMixedSwitch)}>
             {/* ⓘ はアイコンだけで開く（ラベルのタップには何も持たせない＝アプリ全体の規約。CLAUDE.md の UI パターン） */}
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text
@@ -700,7 +701,7 @@ export default function StudySettingsScreen() {
         </SettingsFocusRow>
         {infoBox('speech', 'settings.speechHint')}
         {!isCollapsed('speech') && (<>
-        <SettingsFocusRow style={styles.notificationRow} onActivate={() => setSpeechEnabled(!speechEnabled)}>
+        <SettingsFocusRow style={styles.notificationRow} onToggle={() => setSpeechEnabled(!speechEnabled)}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.speechEnable')}
           </Text>
@@ -1016,7 +1017,7 @@ export default function StudySettingsScreen() {
         </SettingsFocusRow>
         {infoBox('general', 'settings.studyTimerInfo')}
         {!isCollapsed('timer') && (<>
-        <SettingsFocusRow style={styles.notificationRow} onActivate={() => setStudyTimerEnabled(!studyTimerEnabled)}>
+        <SettingsFocusRow style={styles.notificationRow} onToggle={() => setStudyTimerEnabled(!studyTimerEnabled)}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyTimerEnable')}
           </Text>

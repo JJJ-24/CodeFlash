@@ -20,8 +20,12 @@ export interface SettingsFocusHandlers {
   onLeftBig?: () => void;
   /** ⇧L・⇧`.`・⇧→ */
   onRightBig?: () => void;
-  /** Return・Space（トグルの切替・一覧を開く・折りたたみ開閉） */
+  /** Return＝**開く・入る**（一覧・スライダー・シートを開く・折りたたみ開閉） */
   onActivate?: () => void;
+  /** Space＝**スイッチの ON/OFF**（Phase 3 で Return と分けた＝1行が「開く」と「スイッチ」を両方持てる） */
+  onToggle?: () => void;
+  /** Delete（Backspace）＝削除（確認は呼び出し側で出す） */
+  onDelete?: () => void;
   /** 1〜9（0 始まりの番号で渡す）。選択肢型の直接選択 */
   onSelect?: (index: number) => void;
   /** S（試聴） */
@@ -130,9 +134,11 @@ export function SettingsFocusCard({ children, style, onPress, ...handlers }: Set
  * 中身をそのまま包むだけ（自身は素の View＝レイアウトは変えない）。青枠は行の外側へ少しはみ出して描く
  * （行はカードの内側の余白に接しているので、枠を行ぴったりにすると文字に触れて読みにくい）。
  */
-export function SettingsFocusRow({ children, style, ...handlers }: SettingsFocusHandlers & {
+export function SettingsFocusRow({ children, style, variant = 'row', ...handlers }: SettingsFocusHandlers & {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** `card`＝中身がカード1枚（通知のスケジュール行など）＝枠をカードの縁にぴったり重ねる */
+  variant?: 'row' | 'card';
 }) {
   const theme = useTheme();
   const { focused, onLayout } = useSettingsFocusItem(handlers);
@@ -142,10 +148,12 @@ export function SettingsFocusRow({ children, style, ...handlers }: SettingsFocus
       {focused && (
         <View
           pointerEvents="none"
-          style={{
-            position: 'absolute', top: -5, bottom: -5, left: -8, right: -8,
-            borderRadius: 8, borderWidth: 2, borderColor: theme.colors.primary,
-          }}
+          style={variant === 'card'
+            ? { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, borderRadius: 12, borderWidth: 2, borderColor: theme.colors.primary }
+            : {
+              position: 'absolute', top: -5, bottom: -5, left: -8, right: -8,
+              borderRadius: 8, borderWidth: 2, borderColor: theme.colors.primary,
+            }}
         />
       )}
     </View>

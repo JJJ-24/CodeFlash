@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { popEscDismiss } from '@/lib/escStack';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -49,6 +49,8 @@ interface Props {
    * （＝ダイアログを閉じる）。`suspendKeys` と違い Esc / B は手放さない。
    */
   blockNav?: boolean;
+  /** 053：画面固有のキー（通知の N＝追加など）。項目の操作と同じ条件（フォーカス系が有効なとき）で登録する。 */
+  extraKeys?: { input: string; modifierFlags?: number; handler: () => void }[];
 }
 
 /**
@@ -56,7 +58,7 @@ interface Props {
  * push 遷移時の戻るボタン残像を防ぐため headerShown:false ＋ インラインカスタムヘッダー
  * （CLAUDE.md のカスタムヘッダーパターン。about.tsx と同形）。
  */
-export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, shortcuts, blockNav }: Props) {
+export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, shortcuts, blockNav, extraKeys }: Props) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -171,6 +173,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const leftBig = () => focused()?.onLeftBig?.();
   const rightBig = () => focused()?.onRightBig?.();
   const activate = () => focused()?.onActivate?.();
+  const toggle = () => focused()?.onToggle?.();
   const shift = KeyCommand.keyModifierShift;
   useKeyCommands([
     { input: 'j', handler: () => moveFocus(1) },
@@ -192,8 +195,11 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
     { input: '.', modifierFlags: shift, handler: rightBig },
     { input: KeyCommand.keyInputRightArrow, modifierFlags: shift, handler: rightBig },
     { input: 's', handler: () => focused()?.onPreview?.() },
+    // Return＝開く・入る／Space＝スイッチの ON/OFF（Phase 3 で分けた。docs/053「トグルは Space だけ」）
     { input: KeyCommand.keyInputEnter, handler: activate },
-    { input: ' ', handler: activate },
+    { input: ' ', handler: toggle },
+    ...deleteKeySpecs(() => focused()?.onDelete?.()),
+    ...(extraKeys ?? []),
     ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ input: String(n), handler: () => focused()?.onSelect?.(n - 1) })),
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcuts(true) },
   ], keyNav && !suspendKeys && !showShortcuts && !blockNav);

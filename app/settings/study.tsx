@@ -9,10 +9,11 @@ import { CollapsibleSectionTitle } from '@/components/CollapsibleSectionTitle';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { InfoContent } from '@/components/InfoContent';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
+import { SettingsFocusCard, SettingsFocusGroup, SettingsFocusRow, stepOption, type SettingsFocusHandlers } from '@/components/settings/settingsFocus';
 import { SPEECH_AUTO_LABEL_KEYS, SpeechAutoModal } from '@/components/settings/SpeechAutoModal';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import { SpeechVoiceModal } from '@/components/settings/SpeechVoiceModal';
-import { ValueSliderModal } from '@/components/settings/ValueSliderModal';
+import { nudgeStepValue, ValueSliderModal } from '@/components/settings/ValueSliderModal';
 import {
   CONFIGURABLE_SCRIPTS,
   getConfigurableScriptLanguages,
@@ -242,6 +243,49 @@ export default function StudySettingsScreen() {
   // 見出しの文字は各カードの sectionLabel（sm・600）のまま＝共通部品の既定（lg・700）を上書きする。
   const sectionTitleStyle = [styles.sectionLabel, { fontSize: theme.fontSize.sm }];
 
+  // 053：FSRS のプリセット（長期/標準/試験前＝保持率の昇順に並ぶ）。いまの保持率がプリセットに無い
+  // （スライダーで細かく決めた）ときは、H＝それより小さい中で最も近いプリセット／L＝大きい中で最も近いプリセット。
+  const FSRS_PRESET_ORDER: FsrsPreset[] = ['longTerm', 'standard', 'exam'];
+  const fsrsPresetKeys: SettingsFocusHandlers = {
+    onLeft: () => {
+      const p = fsrsPreset
+        ? stepOption(FSRS_PRESET_ORDER, fsrsPreset, -1)
+        : [...FSRS_PRESET_ORDER].reverse().find((k) => FSRS_PRESET_RETENTION[k] < fsrsDesiredRetention);
+      if (p && p !== fsrsPreset) handleFsrsPresetSelect(p);
+    },
+    onRight: () => {
+      const p = fsrsPreset
+        ? stepOption(FSRS_PRESET_ORDER, fsrsPreset, 1)
+        : FSRS_PRESET_ORDER.find((k) => FSRS_PRESET_RETENTION[k] > fsrsDesiredRetention);
+      if (p && p !== fsrsPreset) handleFsrsPresetSelect(p);
+    },
+    onSelect: (i) => { const p = FSRS_PRESET_ORDER[i]; if (p && p !== fsrsPreset) handleFsrsPresetSelect(p); },
+  };
+
+  const shortcutSections = [
+    { title: t('shortcut.catFocus'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+      { key: '⇧J / ⇧K', descKey: 'shortcut.sectionNextPrev' },
+    ] },
+    { title: t('shortcut.catAction'), items: [
+      { key: 'Return', descKey: 'shortcut.settingActivateStudy' },
+      { key: 'H / L', descKey: 'shortcut.settingValueStep' },
+      { key: '⇧H / ⇧L', descKey: 'shortcut.settingValueBig' },
+      { key: '1–3', descKey: 'shortcut.settingValueDirect' },
+      { key: 'S', descKey: 'shortcut.settingPreview' },
+    ] },
+    { title: t('shortcut.catPickerList'), items: [
+      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+      { key: 'Return', descKey: 'shortcut.pickAndClose' },
+      { key: 'S', descKey: 'shortcut.settingPreviewVoice' },
+    ] },
+    { title: t('shortcut.catOther'), items: [
+      { key: 'ESC', descKey: 'shortcut.esc' },
+      { key: 'B', descKey: 'shortcut.back' },
+      { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
+
   // 046: 目標 ON/OFF に伴う未達成リマインダーの確認ダイアログ（無料機能なので非 Pro 分岐にも出す）。
   const goalConflictModal = (
     <ConfirmModal
@@ -281,55 +325,87 @@ export default function StudySettingsScreen() {
   type SliderKey = 'goalCount' | 'speechRate' | 'retention' | 'timerMinutes' | 'cycles' | 'breakMinutes';
   const [sliderModal, setSliderModal] = useState<SliderKey | null>(null);
 
-  /** ダイアログの中身（開いているキーで決まる）。⚠️ 書式は行と同じ関数を使い回す。 */
-  const sliderConfig = (() => {
-    switch (sliderModal) {
+  /** スライダーの中身（キーごと）。⚠️ 書式は行と同じ関数を使い回す。
+   *  `bigStep`＝053 の ⇧H/⇧L で動かす幅（範囲の約1/10）。 */
+  const sliderConfigFor = (key: SliderKey) => {
+    switch (key) {
       case 'goalCount': return {
         title: t('settings.studyGoalCount'),
         // ⚠️ 上限を超える保存値（インポート等で 999 まで入りうる）はスライダーの上限で頭打ちにする。
         value: Math.min(studyGoalCount, STUDY_GOAL_SLIDER_MAX),
-        min: STUDY_GOAL_COUNT_MIN, max: STUDY_GOAL_SLIDER_MAX, step: 1,
+        min: STUDY_GOAL_COUNT_MIN, max: STUDY_GOAL_SLIDER_MAX, step: 1, bigStep: 10,
         format: (v: number) => t('settings.studyGoalCountValue', { count: v }),
         onChange: handleGoalCountChange,
       };
       case 'speechRate': return {
         title: t('settings.speechRate'),
         value: speechRate,
-        min: SPEECH_RATE_MIN, max: SPEECH_RATE_MAX, step: SPEECH_RATE_STEP,
+        min: SPEECH_RATE_MIN, max: SPEECH_RATE_MAX, step: SPEECH_RATE_STEP, bigStep: 0.25,
         format: (v: number) => speechRateLabel(v, t),
         onChange: (v: number) => setSpeechRate(clampSpeechRate(v)),
       };
       case 'retention': return {
         title: t('settings.fsrsRetention'),
         value: fsrsDesiredRetention,
-        min: FSRS_RETENTION_MIN, max: FSRS_RETENTION_MAX, step: 0.01,
+        min: FSRS_RETENTION_MIN, max: FSRS_RETENTION_MAX, step: 0.01, bigStep: 0.05,
         format: (v: number) => `${Math.round(v * 100)}%`,
         onChange: handleFsrsRetentionChange,
       };
       case 'timerMinutes': return {
         title: t('settings.studyTimerMinutes'),
         value: studyTimerMinutes,
-        min: STUDY_TIMER_MINUTES_MIN, max: STUDY_TIMER_MINUTES_MAX, step: 1,
+        min: STUDY_TIMER_MINUTES_MIN, max: STUDY_TIMER_MINUTES_MAX, step: 1, bigStep: 5,
         format: (v: number) => t('settings.studyTimerMinutesValue', { n: v }),
         onChange: setStudyTimerMinutes,
       };
       case 'cycles': return {
         title: t('settings.studyTimerCycles'),
         value: studyTimerCycles,
-        min: STUDY_TIMER_CYCLES_MIN, max: STUDY_TIMER_CYCLES_MAX, step: 1,
+        min: STUDY_TIMER_CYCLES_MIN, max: STUDY_TIMER_CYCLES_MAX, step: 1, bigStep: 2,
         format: (v: number) => t('settings.studyTimerCyclesValue', { n: v }),
         onChange: handleCyclesChange,
       };
       case 'breakMinutes': return {
         title: t('settings.studyTimerBreakMinutes'),
         value: studyTimerBreakMinutes,
-        min: STUDY_TIMER_BREAK_MINUTES_MIN, max: STUDY_TIMER_BREAK_MINUTES_MAX, step: 1,
+        min: STUDY_TIMER_BREAK_MINUTES_MIN, max: STUDY_TIMER_BREAK_MINUTES_MAX, step: 1, bigStep: 5,
         format: (v: number) => (v === 0 ? t('settings.studyTimerBreakNone') : t('settings.studyTimerMinutesValue', { n: v })),
         onChange: setStudyTimerBreakMinutes,
       };
-      default: return null;
     }
-  })();
+  };
+  const sliderConfig = sliderModal ? sliderConfigFor(sliderModal) : null;
+
+  // ---- 053：キーボード操作（1段のフォーカス。docs/053「学習画面」） ----
+  /** スライダーの行：H/L＝1目盛り・⇧H/⇧L＝大きく・Return/Space＝ダイアログを開く。
+   *  ⚠️ 基準は**保存値そのもの**（目標枚数はスライダーの上限 100 を超えて保存されうる＝
+   *  上限で頭打ちにした値から動かすと、L を押しただけで 500 → 100 に下がる）。 */
+  const sliderKeys = (key: SliderKey): SettingsFocusHandlers => {
+    const nudge = (dir: 1 | -1, big: boolean) => {
+      const c = sliderConfigFor(key);
+      const base = key === 'goalCount' ? studyGoalCount : c.value;
+      const next = nudgeStepValue(base, dir, big ? c.bigStep : c.step, c.step, c.min, Math.max(c.max, base));
+      if (next !== base) c.onChange(next);
+    };
+    return {
+      onLeft: () => nudge(-1, false),
+      onRight: () => nudge(1, false),
+      onLeftBig: () => nudge(-1, true),
+      onRightBig: () => nudge(1, true),
+      onActivate: () => setSliderModal(key),
+    };
+  };
+  /** 3択の行：H/L（端で止める）・1〜3。値が変わらなければ何もしない。 */
+  const segmentKeys = <T,>(options: readonly T[], value: T, set: (v: T) => void): SettingsFocusHandlers => {
+    const change = (v: T | undefined) => { if (v !== undefined && v !== value) set(v); };
+    return {
+      onLeft: () => change(stepOption(options, value, -1)),
+      onRight: () => change(stepOption(options, value, 1)),
+      onSelect: (i) => change(options[i]),
+    };
+  };
+  /** セクションの見出し：Return/Space＝折りたたみ開閉・⇧J/⇧K の行き先。 */
+  const sectionKeys = (id: string): SettingsFocusHandlers => ({ section: true, onActivate: () => toggleStudySection(id) });
 
   /** スライダーを開く値の行。**ラベル＋値＋シェブロン**で、行のどこをタップしても開く。
    *  ⚠️ ⓘ つきのラベルは Pressable を入れ子にする＝内側が先にタッチを取るので
@@ -354,7 +430,8 @@ export default function StudySettingsScreen() {
   // **無料機能**なので Pro ロック時の画面にも出す＝JSX を変数に切り出して両方の分岐から描画する
   // （FSRS・学習タイマーは Pro のまま）。
   const goalCard = (
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <SettingsFocusRow {...sectionKeys('goal')}>
         <CollapsibleSectionTitle
           title={t('settings.studyGoal')}
           titleStyle={sectionTitleStyle}
@@ -366,9 +443,10 @@ export default function StudySettingsScreen() {
           infoOpen={openInfos.has('goal')}
           summary={goalSummary}
         />
+        </SettingsFocusRow>
         {infoBox('goal', 'settings.studyGoalInfo')}
         {!isCollapsed('goal') && (<>
-        <View style={styles.notificationRow}>
+        <SettingsFocusRow style={styles.notificationRow} onActivate={() => void handleGoalEnabledChange(!studyGoalEnabled)}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyGoalEnable')}
           </Text>
@@ -376,23 +454,28 @@ export default function StudySettingsScreen() {
             value={studyGoalEnabled}
             onValueChange={handleGoalEnabledChange}
           />
-        </View>
+        </SettingsFocusRow>
 
         {studyGoalEnabled && (
-          <View style={{ gap: 6 }}>
+          <SettingsFocusGroup style={{ gap: 6 }}>
             {/* スライダーは実用域（1〜100枚）だけを覆う。100 超は上限 999 まで設定値としては
                 保持できるが、スライダーでは 100 で頭打ちになる（それ以上は刻みが粗くなり
                 かえって合わせにくいため）。 */}
+            <SettingsFocusRow {...sliderKeys('goalCount')}>
             {sliderRow('goalCount', (
               <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyGoalCount')}
               </Text>
             ), t('settings.studyGoalCountValue', { count: studyGoalCount }))}
+            </SettingsFocusRow>
 
             {/* 達成時の動作。タイマーの「終了時の動作」（alert/blink）と同じセグメント。
                 **「なし」でも学習画面の残り枚数バッジは出る**ので、オンに見えて何も無い
                 状態にはならない（説明文にもその1行を入れてある）。 */}
-            <View style={{ gap: 6, paddingTop: 6 }}>
+            <SettingsFocusRow
+              style={{ gap: 6, paddingTop: 6 }}
+              {...segmentKeys(['alert', 'pill', 'none'] as StudyGoalReachedBehavior[], studyGoalReachedBehavior, setStudyGoalReachedBehavior)}
+            >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyGoalReachedBehavior')}
@@ -424,11 +507,11 @@ export default function StudySettingsScreen() {
                 })}
               </View>
               {infoBox('goalReached', 'settings.studyGoalReachedInfo')}
-            </View>
-          </View>
+            </SettingsFocusRow>
+          </SettingsFocusGroup>
         )}
         </>)}
-      </View>
+      </SettingsFocusGroup>
   );
 
   // 読み上げ（049/050）。**無料機能**なので Pro ロック時の画面にも出す（目標枚数と同じ扱い）。
@@ -503,7 +586,7 @@ export default function StudySettingsScreen() {
    *  ⚠️ **説明の ⓘ は置かない**＝タップして開くピッカーの上部に同じ文言が出るため
    *  （行に置くと二重になり、行の中に入れ子の Pressable ができて誤タップの余地も増える）。 */
   const speechScriptRow = (script: SpeechScript) => (
-    <View key={script} style={{ gap: 2 }}>
+    <SettingsFocusGroup key={script} style={{ gap: 2 }}>
       {/* ⚠️ **文字体系の名前と言語名を同じ行に置かない**＝「デーヴァナーガリー文字」と
           「スウェーデン語（スウェーデン）」が1行に収まらず、`dataRowText` が `flex:1`
           （＝残り幅にだけ収まる）なので見出しが折り返し、値ははみ出して切れる。
@@ -517,6 +600,7 @@ export default function StudySettingsScreen() {
       {/* 子の行はインデントして「声」と同じ形（ラベル左・値右）に揃える。
           ⚠️ ラベルは**専用キー**（英語は `Lang`＝隣の `Voice`/`Speed` と長さを揃える）。
           表示設定のアプリ言語（`settings.language`＝「表示言語」/`Display Language`）とは別物。 */}
+      <SettingsFocusRow onActivate={() => setSpeechLangModal(script)}>
       <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechLangModal(script)}>
         <View style={styles.dataRowText}>
           <Text style={[styles.dataRowTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -532,12 +616,13 @@ export default function StudySettingsScreen() {
         </Text>
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>
+      </SettingsFocusRow>
       {/* 「声を分けない」はラテン文字にしか意味が無いので latin の行にだけ出す。
           ⚠️ 英語だけのカードには効かない（`resolveSpeechSegments` が混在文だけに適用する）ので、
           ⓘ の説明で**効かない場面まで書く**＝書かないと「オンにしたのに効かない＝壊れている」に見える。 */}
       {script === 'latin' && (
         <>
-          <View style={[styles.notificationRow, { paddingLeft: 16 }]}>
+          <SettingsFocusRow style={[styles.notificationRow, { paddingLeft: 16 }]} onActivate={() => setSpeechNoMixedSwitch(!speechNoMixedSwitch)}>
             {/* ⓘ はアイコンだけで開く（ラベルのタップには何も持たせない＝アプリ全体の規約。CLAUDE.md の UI パターン） */}
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text
@@ -552,7 +637,7 @@ export default function StudySettingsScreen() {
               value={speechNoMixedSwitch}
               onValueChange={setSpeechNoMixedSwitch}
             />
-          </View>
+          </SettingsFocusRow>
           {/* 説明は子の行に合わせてインデントする。⚠️ 閉じているときに空の View を残さない
               （親が `gap` を持つので、中身が無くても隙間だけ空いてしまう）。 */}
           {openInfos.has('speechNoMixed') && (
@@ -563,7 +648,7 @@ export default function StudySettingsScreen() {
         </>
       )}
       {speechVoiceRow(langOf(script), script)}
-    </View>
+    </SettingsFocusGroup>
   );
 
   /** その言語を読む声の行。**声が1つしか無いと分かったら**引っ込める（選ぶ意味が無いため）。
@@ -581,6 +666,7 @@ export default function StudySettingsScreen() {
       : !list && speechVoices[language] ? ''
       : t('settings.speechVoiceAuto');
     return (
+      <SettingsFocusRow onActivate={() => setSpeechVoiceModal({ language, script })}>
       <Pressable style={[styles.dataRow, { paddingLeft: 16 }]} onPress={() => setSpeechVoiceModal({ language, script })}>
         <View style={styles.dataRowText}>
           <Text style={[styles.dataRowTitle, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -592,12 +678,14 @@ export default function StudySettingsScreen() {
         </Text>
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>
+      </SettingsFocusRow>
     );
   };
 
   const speechCard = (
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         {/* 説明は ⓘ に畳む（目標・タイマーの各カードと同じ形）。常時表示だとここだけ浮く。 */}
+        <SettingsFocusRow {...sectionKeys('speech')}>
         <CollapsibleSectionTitle
           title={t('settings.speech')}
           titleStyle={sectionTitleStyle}
@@ -609,9 +697,10 @@ export default function StudySettingsScreen() {
           infoOpen={openInfos.has('speech')}
           summary={speechSummary}
         />
+        </SettingsFocusRow>
         {infoBox('speech', 'settings.speechHint')}
         {!isCollapsed('speech') && (<>
-        <View style={styles.notificationRow}>
+        <SettingsFocusRow style={styles.notificationRow} onActivate={() => setSpeechEnabled(!speechEnabled)}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.speechEnable')}
           </Text>
@@ -619,7 +708,7 @@ export default function StudySettingsScreen() {
             value={speechEnabled}
             onValueChange={setSpeechEnabled}
           />
-        </View>
+        </SettingsFocusRow>
 
         {speechEnabled && (
           <>
@@ -627,6 +716,7 @@ export default function StudySettingsScreen() {
                 非 Pro は鍵アイコン＋値は常に「オフ」＋タップで paywall（デッキ編集の読み上げ行と同じ形）。
                 ⚠️ 値の表示は `effectiveSpeechAuto`＝適用側と同じ判定を使う（保存値をそのまま出すと、
                 体験終了後に「両面」と出ているのに読まれない＝オンに見えるのに効いていない状態になる）。 */}
+            <SettingsFocusRow onActivate={() => { if (isPro) setSpeechAutoModal(true); else router.push('/paywall'); }}>
             <Pressable
               style={styles.dataRow}
               onPress={() => { if (isPro) setSpeechAutoModal(true); else router.push('/paywall'); }}
@@ -648,6 +738,7 @@ export default function StudySettingsScreen() {
               {!isPro && <Ionicons name="lock-closed" size={theme.fontSize.sm} color={theme.colors.primary} />}
               <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
             </Pressable>
+            </SettingsFocusRow>
             {infoBox('speechAuto', 'settings.speechAutoHint')}
 
             {/* 速度＝3択のプリセット＋値の行（FSRS の保持率と同じ形）。タップで決まる3つで
@@ -655,7 +746,13 @@ export default function StudySettingsScreen() {
                 ⚠️ **▶ の試聴はここでは省略できない**＝保持率の「90%」と違って速度は
                 聞かないと分からず、その場で確かめられないとスライダーを詰められない
                 （声のピッカーまで開きに行く往復になる）。 */}
-            <View style={{ gap: 6 }}>
+            {/* 053：速度は1フォーカスにまとめる＝H/L で 0.05 刻み・1/2/3 でプリセット・S で試聴 */}
+            <SettingsFocusRow
+              style={{ gap: 6 }}
+              {...sliderKeys('speechRate')}
+              onSelect={(i) => { const r = SPEECH_RATE_PRESETS[i]; if (r !== undefined && r !== speechRate) setSpeechRate(r); }}
+              onPreview={previewSpeechRate}
+            >
               {sliderRow('speechRate', (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
                   <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -691,7 +788,7 @@ export default function StudySettingsScreen() {
                   );
                 })}
               </View>
-            </View>
+            </SettingsFocusRow>
 
             {/* 050：文字体系ごとに言語を決める。ハングル・タイ文字などは1対1で決まるので
                 行を出さない（選ばせる意味が無く設定画面が無駄に伸びる）。
@@ -705,6 +802,7 @@ export default function StudySettingsScreen() {
             {/* 端末に選択肢が2つ以上ある文字体系が1つも無ければ、この行ごと出さない */}
             {visibleOtherScripts.length > 0 && (
               <>
+                <SettingsFocusRow onActivate={() => setSpeechOtherScriptsOpen((v) => !v)}>
                 <Pressable style={styles.dataRow} onPress={() => setSpeechOtherScriptsOpen((v) => !v)}>
                   <View style={[styles.dataRowText, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
                     <Text style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -720,6 +818,7 @@ export default function StudySettingsScreen() {
                     color={theme.colors.iconSubtle}
                   />
                 </Pressable>
+                </SettingsFocusRow>
                 {infoBox('speechScriptOthers', 'settings.speechScriptOthersHint')}
                 {speechOtherScriptsOpen && visibleOtherScripts.map((s) => speechScriptRow(s))}
               </>
@@ -727,7 +826,7 @@ export default function StudySettingsScreen() {
           </>
         )}
         </>)}
-      </View>
+      </SettingsFocusGroup>
   );
 
   // 052：自動読み上げの一覧（アプリ設定側なので「アプリ設定に従う」の行は出さない）
@@ -761,6 +860,7 @@ export default function StudySettingsScreen() {
       min={sliderConfig.min}
       max={sliderConfig.max}
       step={sliderConfig.step}
+      bigStep={sliderConfig.bigStep}
       format={sliderConfig.format}
       onChange={sliderConfig.onChange}
       onClose={() => setSliderModal(null)}
@@ -787,6 +887,9 @@ export default function StudySettingsScreen() {
         // 読み上げの言語/声のモーダルは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
         // （両方が登録すると Esc でモーダルが閉じると同時に画面まで戻る）
         suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
+        shortcuts={shortcutSections}
+        // 目標 OFF の確認ダイアログ（キーを持たない）の表示中は背後の項目操作を止める
+        blockNav={goalConflict !== null}
         // 非 Pro でも目標枚数・読み上げ（ともに無料）の i アイコンが開けるので、
         // Pro 側と同じく「開いている説明があれば先に閉じる」を渡す
         onBack={(direct) => {
@@ -796,10 +899,7 @@ export default function StudySettingsScreen() {
           router.back();
         }}
       >
-        <Pressable
-          style={[styles.card, { backgroundColor: theme.colors.surface }]}
-          onPress={() => router.push('/paywall')}
-        >
+        <SettingsFocusCard onPress={() => router.push('/paywall')} onActivate={() => router.push('/paywall')}>
           <View style={styles.proRow}>
             <View style={{ flex: 1, gap: 2 }}>
               <View style={styles.proTitleRow}>
@@ -816,7 +916,7 @@ export default function StudySettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
           </View>
-        </Pressable>
+        </SettingsFocusCard>
         {goalCard}
         {speechCard}
         {goalConflictModal}
@@ -833,6 +933,8 @@ export default function StudySettingsScreen() {
       title={t('settings.studySettings')}
       // 上（非 Pro 分岐）と同じ理由でモーダル表示中はキーを手放す
       suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
+      shortcuts={shortcutSections}
+      blockNav={goalConflict !== null}
       onBack={(direct) => {
         if (!direct && goalConflict) { dismissGoalConflict(); return; }
         if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
@@ -840,7 +942,8 @@ export default function StudySettingsScreen() {
       }}
     >
       {/* FSRSカスタマイズ */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <SettingsFocusRow {...sectionKeys('fsrs')}>
         <CollapsibleSectionTitle
           title={t('settings.fsrs')}
           titleStyle={sectionTitleStyle}
@@ -850,8 +953,10 @@ export default function StudySettingsScreen() {
           onToggle={() => toggleStudySection('fsrs')}
           summary={fsrsSummary}
         />
+        </SettingsFocusRow>
         {!isCollapsed('fsrs') && (<>
         {/* プリセット */}
+        <SettingsFocusRow {...fsrsPresetKeys}>
         <View style={[styles.segmented, { backgroundColor: theme.colors.background }]}>
           {(['longTerm', 'standard', 'exam'] as FsrsPreset[]).map((preset) => {
             const active = FSRS_PRESET_RETENTION[preset] === fsrsDesiredRetention;
@@ -877,9 +982,10 @@ export default function StudySettingsScreen() {
             );
           })}
         </View>
+        </SettingsFocusRow>
 
         {/* 目標保持率 */}
-        <View style={{ gap: 6 }}>
+        <SettingsFocusRow style={{ gap: 6 }} {...sliderKeys('retention')}>
           {sliderRow('retention', (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
               <Text style={[styles.fsrsSubLabel, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -889,12 +995,13 @@ export default function StudySettingsScreen() {
             </View>
           ), `${Math.round(fsrsDesiredRetention * 100)}%`)}
           {infoBox('retention', 'settings.fsrsRetentionInfo')}
-        </View>
+        </SettingsFocusRow>
         </>)}
-      </View>
+      </SettingsFocusGroup>
 
       {/* 学習タイマー（036・Pro）。説明は常時表示せず、i アイコンのタップで展開（目標保持率と同じ流儀） */}
-      <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <SettingsFocusRow {...sectionKeys('timer')}>
         <CollapsibleSectionTitle
           title={t('settings.studyTimer')}
           titleStyle={sectionTitleStyle}
@@ -906,9 +1013,10 @@ export default function StudySettingsScreen() {
           infoOpen={openInfos.has('general')}
           summary={timerSummary}
         />
+        </SettingsFocusRow>
         {infoBox('general', 'settings.studyTimerInfo')}
         {!isCollapsed('timer') && (<>
-        <View style={styles.notificationRow}>
+        <SettingsFocusRow style={styles.notificationRow} onActivate={() => setStudyTimerEnabled(!studyTimerEnabled)}>
           <Text style={[styles.notificationLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {t('settings.studyTimerEnable')}
           </Text>
@@ -916,7 +1024,7 @@ export default function StudySettingsScreen() {
             value={studyTimerEnabled}
             onValueChange={setStudyTimerEnabled}
           />
-        </View>
+        </SettingsFocusRow>
 
         {studyTimerEnabled && (
           <>
@@ -925,14 +1033,16 @@ export default function StudySettingsScreen() {
                 （スペイン語の「休憩」＝`Duración del descanso` で実際に起きた）。ⓘ つきのラベルは
                 Pressable ごと縮ませないと中の Text が折り返せない。 */}
             {/* 時間（1〜60分） */}
+            <SettingsFocusRow {...sliderKeys('timerMinutes')}>
             {sliderRow('timerMinutes', (
               <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('settings.studyTimerMinutes')}
               </Text>
             ), t('settings.studyTimerMinutesValue', { n: studyTimerMinutes }))}
+            </SettingsFocusRow>
 
             {/* 繰り返し回数（039 ポモドーロ・1〜12回。1回＝従来の単発タイマー） */}
-            <View style={{ gap: 6 }}>
+            <SettingsFocusRow style={{ gap: 6 }} {...sliderKeys('cycles')}>
               {sliderRow('cycles', (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
                   <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -942,11 +1052,11 @@ export default function StudySettingsScreen() {
                 </View>
               ), t('settings.studyTimerCyclesValue', { n: studyTimerCycles }))}
               {infoBox('cycles', 'settings.studyTimerCyclesInfo')}
-            </View>
+            </SettingsFocusRow>
 
             {/* 休憩時間（1〜30分）＋通知注記。繰り返し2回以上のときだけ意味を持つ */}
             {studyTimerCycles >= 2 && (
-              <View style={{ gap: 6 }}>
+              <SettingsFocusRow style={{ gap: 6 }} {...sliderKeys('breakMinutes')}>
                 {sliderRow('breakMinutes', (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
                     <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
@@ -958,11 +1068,11 @@ export default function StudySettingsScreen() {
                   ? t('settings.studyTimerBreakNone')
                   : t('settings.studyTimerMinutesValue', { n: studyTimerBreakMinutes }))}
                 {infoBox('break', 'settings.studyTimerBreakNotice')}
-              </View>
+              </SettingsFocusRow>
             )}
 
             {/* 円の表示（常に / 開始時 / オフ） */}
-            <View style={{ gap: 6 }}>
+            <SettingsFocusRow style={{ gap: 6 }} {...segmentKeys(STUDY_TIMER_ELEMENT_MODES, studyTimerRing, setStudyTimerRing)}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerRingVisible')}
@@ -990,10 +1100,10 @@ export default function StudySettingsScreen() {
                 })}
               </View>
               {infoBox('ring', 'settings.studyTimerRingInfo')}
-            </View>
+            </SettingsFocusRow>
 
             {/* 残り時間の表示（常に / 開始時 / オフ） */}
-            <View style={{ gap: 6 }}>
+            <SettingsFocusRow style={{ gap: 6 }} {...segmentKeys(STUDY_TIMER_ELEMENT_MODES, studyTimerTime, setStudyTimerTime)}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerShowTime')}
@@ -1021,12 +1131,12 @@ export default function StudySettingsScreen() {
                 })}
               </View>
               {infoBox('time', 'settings.studyTimerTimeInfo')}
-            </View>
+            </SettingsFocusRow>
 
             {/* 終了時の動作。046 の「達成時の動作」と同じ3択セグメント。
                 **「なし」でも満円だけは残る**ので、円/残り時間を両方「なし」にしても
                 時間切れの合図が画面から消えることはない（説明文にもその1行を入れてある）。 */}
-            <View style={{ gap: 6 }}>
+            <SettingsFocusRow style={{ gap: 6 }} {...segmentKeys(['alert', 'blink', 'none'] as StudyTimerEndBehavior[], studyTimerEndBehavior, setStudyTimerEndBehavior)}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                   {t('settings.studyTimerEndBehavior')}
@@ -1058,11 +1168,11 @@ export default function StudySettingsScreen() {
                 })}
               </View>
               {infoBox('end', 'settings.studyTimerEndInfo')}
-            </View>
+            </SettingsFocusRow>
           </>
         )}
         </>)}
-      </View>
+      </SettingsFocusGroup>
 
       {goalCard}
       {speechCard}

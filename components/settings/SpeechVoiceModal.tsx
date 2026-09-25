@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { constants as KeyCommand } from 'react-native-key-command';
 
 import {
   getVoicesForLanguage,
@@ -12,9 +11,10 @@ import {
   voiceSampleText,
   type SpeechVoice,
 } from '@/lib/speech';
-import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
+
+import { usePickerKeys } from './usePickerKeys';
 
 interface Props {
   visible: boolean;
@@ -94,8 +94,15 @@ export function SpeechVoiceModal({ visible, language, value, peers, onSelect, on
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   }, [visible, fade]);
 
-  // 表示中だけ Esc を担当する（非表示のあいだ登録を持たない＝034 の住み分け）。
-  useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
+  // 053：J/K・Return/Space（選んで閉じる）・Esc・**S＝フォーカス中の声を試聴**（行の左端の ▶ と同じ）。
+  // 表示中だけ担当する（非表示のあいだ登録を持たない）。試聴を Space にしないのは、聞き比べて
+  // いるときに選ぶつもりのない声を選んでしまわないため。
+  const items: (string | null)[] = [null, ...voices.map((v) => v.identifier)];
+  const keys = usePickerKeys({
+    visible, items, value, onPick: onSelect, onClose,
+    onPreview: (id) => preview(id === null ? undefined : voices.find((v) => v.identifier === id)),
+  });
+  const focusBg = (i: number) => (keys.focusedIndex === i ? { backgroundColor: theme.colors.primaryLight } : null);
 
   const rowStyle = {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
@@ -131,9 +138,9 @@ export function SpeechVoiceModal({ visible, language, value, peers, onSelect, on
               {t('settings.speechVoiceHint', { name: speechLanguageLabel(language, t, peers) })}
             </Text>
           </View>
-          <ScrollView>
+          <ScrollView ref={keys.scrollRef} {...keys.scrollProps}>
             {/* 「自動」＝端末の既定に任せる（選択の取り消し） */}
-            <Pressable onPress={() => { onSelect(null); onClose(); }} style={rowStyle}>
+            <Pressable onPress={() => { onSelect(null); onClose(); }} style={[rowStyle, focusBg(0)]} onLayout={keys.rowLayout(0)}>
               {previewButton()}
               <Text
                 style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
@@ -147,11 +154,12 @@ export function SpeechVoiceModal({ visible, language, value, peers, onSelect, on
                 )}
               </View>
             </Pressable>
-            {voices.map((v) => (
+            {voices.map((v, i) => (
               <Pressable
                 key={v.identifier}
                 onPress={() => { onSelect(v.identifier); onClose(); }}
-                style={rowStyle}
+                style={[rowStyle, focusBg(i + 1)]}
+                onLayout={keys.rowLayout(i + 1)}
               >
                 {previewButton(v)}
                 <Text

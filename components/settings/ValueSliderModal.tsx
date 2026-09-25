@@ -23,6 +23,19 @@ interface Props {
   /** ドラッグ中も逐次呼ばれる（インラインのスライダーと同じ＝設定は即反映・確定/取り消しは無い）。 */
   onChange: (v: number) => void;
   onClose: () => void;
+  /** 053：⇧H/⇧L（⇧←/⇧→）で動かす幅。渡さなければ `step` と同じ。 */
+  bigStep?: number;
+}
+
+/** 刻みに揃えて範囲へ収める。⚠️ 浮動小数の誤差を落とす（0.05 刻みは 1.2000000000000002 になる）。 */
+export function normalizeStepValue(v: number, step: number, min: number, max: number) {
+  const stepped = Math.round(v / step) * step;
+  return Math.min(max, Math.max(min, Math.round(stepped * 1e6) / 1e6));
+}
+
+/** 053：キー操作で値を動かす（ダイアログと、学習設定の値の行で共用）。`by` は動かす幅（step の倍数）。 */
+export function nudgeStepValue(value: number, dir: 1 | -1, by: number, step: number, min: number, max: number) {
+  return normalizeStepValue(value + dir * by, step, min, max);
 }
 
 /**
@@ -53,7 +66,7 @@ interface Props {
  * （説明文は置かない＝ⓘ の説明はページ側の行に残す）。同じ理由で `maxHeight` も付けない
  * （スクロールが無いのに上限を付けると、溢れたときに ✓ ボタンが切れて閉じられなくなる）。
  */
-export function ValueSliderModal({ visible, title, value, min, max, step, format, onChange, onClose }: Props) {
+export function ValueSliderModal({ visible, title, value, min, max, step, format, onChange, onClose, bigStep }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -67,17 +80,33 @@ export function ValueSliderModal({ visible, title, value, min, max, step, format
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   }, [visible, fade]);
 
-  // 表示中だけ Esc / Return を担当する（親は `suspendKeys` でキーを手放す＝034 の住み分け）。
+  // 表示中だけキーを担当する（親は `suspendKeys` でキーを手放す＝034 の住み分け）。
+  // 053：H/L（,/.・←/→）＝1目盛り、⇧ つき＝`bigStep`。値が変わらない（端）ときは onChange を呼ばない。
+  // 矢印は iPad でも登録する（このダイアログに入力欄は無い）。
+  const move = (dir: 1 | -1, by: number) => {
+    const next = nudgeStepValue(value, dir, by, step, min, max);
+    if (next !== value) onChange(next);
+  };
+  const big = bigStep ?? step;
+  const shift = KeyCommand.keyModifierShift;
   useKeyCommands([
     { input: KeyCommand.keyInputEscape, handler: onClose },
     { input: KeyCommand.keyInputEnter, handler: onClose },
+    { input: 'h', handler: () => move(-1, step) },
+    { input: ',', handler: () => move(-1, step) },
+    { input: KeyCommand.keyInputLeftArrow, handler: () => move(-1, step) },
+    { input: 'l', handler: () => move(1, step) },
+    { input: '.', handler: () => move(1, step) },
+    { input: KeyCommand.keyInputRightArrow, handler: () => move(1, step) },
+    { input: 'h', modifierFlags: shift, handler: () => move(-1, big) },
+    { input: ',', modifierFlags: shift, handler: () => move(-1, big) },
+    { input: KeyCommand.keyInputLeftArrow, modifierFlags: shift, handler: () => move(-1, big) },
+    { input: 'l', modifierFlags: shift, handler: () => move(1, big) },
+    { input: '.', modifierFlags: shift, handler: () => move(1, big) },
+    { input: KeyCommand.keyInputRightArrow, modifierFlags: shift, handler: () => move(1, big) },
   ], visible);
 
-  /** 刻みに揃えて範囲へ収める。⚠️ 浮動小数の誤差を落とす（0.05 刻みは 1.2000000000000002 になる）。 */
-  const normalize = (v: number) => {
-    const stepped = Math.round(v / step) * step;
-    return Math.min(max, Math.max(min, Math.round(stepped * 1e6) / 1e6));
-  };
+  const normalize = (v: number) => normalizeStepValue(v, step, min, max);
 
   // ± は1刻みずつの微調整用。指で合わせにくい刻み（0.05 や 1%）を狙って出せるようにする。
   const nudge = (dir: 1 | -1) => onChange(normalize(value + dir * step));

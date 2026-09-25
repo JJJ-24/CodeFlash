@@ -43,6 +43,12 @@ interface Props {
    * モーダルの OK 等）と二重に発火しないように。
    */
   shortcuts?: ComponentProps<typeof ShortcutsModal>['sections'];
+  /**
+   * 053：キーを持たない確認ダイアログ（`ConfirmModal` 等）を出している間 true にする。
+   * 背後の項目操作（J/K・H/L・Return 等）を止め、Esc はフォーカス解除を飛ばして `onBack` へ直行させる
+   * （＝ダイアログを閉じる）。`suspendKeys` と違い Esc / B は手放さない。
+   */
+  blockNav?: boolean;
 }
 
 /**
@@ -50,7 +56,7 @@ interface Props {
  * push 遷移時の戻るボタン残像を防ぐため headerShown:false ＋ インラインカスタムヘッダー
  * （CLAUDE.md のカスタムヘッダーパターン。about.tsx と同形）。
  */
-export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, shortcuts }: Props) {
+export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, shortcuts, blockNav }: Props) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -62,7 +68,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const focusedIdRef = useRef<string | null>(null);
   focusedIdRef.current = focusedId;
   const handlersMap = useRef(new Map<string, { current: SettingsFocusHandlers }>());
-  const layoutMap = useRef(new Map<string, { y: number; h: number }>());
+  const layoutMap = useRef(new Map<string, { y: number; h: number; getOffset: () => number }>());
   const register = useCallback((id: string, handlers: { current: SettingsFocusHandlers }) => {
     handlersMap.current.set(id, handlers);
     return () => {
@@ -71,9 +77,14 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
       if (focusedIdRef.current === id) setFocusedId(null);
     };
   }, []);
-  const setLayout = useCallback((id: string, y: number, h: number) => {
-    layoutMap.current.set(id, { y, h });
+  const setLayout = useCallback((id: string, y: number, h: number, getOffset: () => number) => {
+    layoutMap.current.set(id, { y, h, getOffset });
   }, []);
+  /** スクロールの中身から見た位置（親の `SettingsFocusGroup` の位置を足す）。毎回計算し直す。 */
+  const absLayout = (id: string) => {
+    const l = layoutMap.current.get(id);
+    return l ? { y: l.getOffset() + l.y, h: l.h } : undefined;
+  };
   const registry = useMemo<SettingsFocusRegistry>(() => ({ register, setLayout, focusedId }), [register, setLayout, focusedId]);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -82,7 +93,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   // 自動スクロール（設定タブと同じ：上下 8pt の余白を残して見える位置まで）。
   // ⚠️ 位置は毎回 layoutMap から読む＝文字サイズの変更などでレイアウトが動いても最新の値で測る。
   function scrollIntoView(id: string) {
-    const l = layoutMap.current.get(id);
+    const l = absLayout(id);
     if (!l) return;
     const top = scrollYRef.current;
     const vh = viewportHRef.current;
@@ -90,10 +101,15 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
     else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
   }
   // 並び＝画面上の縦位置の順（条件つきで出る行があっても順序が崩れない）。ヌルサイクル。
+  function orderedIds() {
+    return [...handlersMap.current.keys()]
+      .map((id) => ({ id, l: absLayout(id) }))
+      .filter((e): e is { id: string; l: { y: number; h: number } } => e.l !== undefined)
+      .sort((a, b) => a.l.y - b.l.y)
+      .map((e) => e.id);
+  }
   function moveFocus(dir: 1 | -1) {
-    const ids = [...handlersMap.current.keys()]
-      .filter((id) => layoutMap.current.has(id))
-      .sort((a, b) => layoutMap.current.get(a)!.y - layoutMap.current.get(b)!.y);
+    const ids = orderedIds();
     if (ids.length === 0) return;
     const cur = focusedIdRef.current;
     const i = cur === null ? -1 : ids.indexOf(cur);
@@ -102,6 +118,27 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
     else next = i === -1 ? (cur === null ? ids[ids.length - 1] : null) : i === 0 ? null : ids[i - 1];
     setFocusedId(next);
     if (next !== null) scrollIntoView(next);
+  }
+  // ⇧J/⇧K：前後のセクション見出しへ（学習設定など、見出しを持つ画面）。
+  // 基準は「いまフォーカスしている行の位置」＝セクションの中の行からでも次の見出しへ跳べる。
+  // フォーカスが無ければ ⇧J＝最初の見出し／⇧K＝最後の見出し。
+  // **端では反対の端の見出しへ巡回する**（J/K と同じく巡回＝最下部から ⇧J 1回で最上部へ）。
+  // ⚠️ J/K と違い「フォーカスなし」は挟まない＝見出しへ跳ぶキーで何も無い状態に着いても意味が無い
+  //   （外したいときは Esc）。
+  function moveSection(dir: 1 | -1) {
+    const ids = orderedIds();
+    const isSection = (id: string) => handlersMap.current.get(id)?.current.section === true;
+    const sections = ids.filter(isSection);
+    if (sections.length === 0) return;
+    const cur = focusedIdRef.current;
+    const i = cur === null ? -1 : ids.indexOf(cur);
+    let next: string | undefined;
+    if (i === -1) next = dir > 0 ? sections[0] : sections[sections.length - 1];
+    else if (dir > 0) next = ids.slice(i + 1).find(isSection) ?? sections[0];
+    else next = ids.slice(0, i).reverse().find(isSection) ?? sections[sections.length - 1];
+    if (next === cur) return;
+    setFocusedId(next);
+    scrollIntoView(next);
   }
   const focused = () => (focusedIdRef.current ? handlersMap.current.get(focusedIdRef.current)?.current : undefined);
 
@@ -113,7 +150,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const handleEsc = () => {
     if (showShortcuts) { setShowShortcuts(false); return; }
     if (popEscDismiss()) return;
-    if (focusedIdRef.current !== null) { setFocusedId(null); return; }
+    if (!blockNav && focusedIdRef.current !== null) { setFocusedId(null); return; }
     if (onBack) onBack(false); else router.back();
   };
   // 戻るボタン / FAB / B = 直接戻る。インライン info 展開は消費しない
@@ -131,7 +168,10 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   // ⚠️ 入力欄を持つ画面に広げるときは、その画面だけ矢印を iPhone のみに落とすこと。
   const left = () => focused()?.onLeft?.();
   const right = () => focused()?.onRight?.();
+  const leftBig = () => focused()?.onLeftBig?.();
+  const rightBig = () => focused()?.onRightBig?.();
   const activate = () => focused()?.onActivate?.();
+  const shift = KeyCommand.keyModifierShift;
   useKeyCommands([
     { input: 'j', handler: () => moveFocus(1) },
     { input: 'k', handler: () => moveFocus(-1) },
@@ -143,11 +183,20 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
     { input: 'l', handler: right },
     { input: '.', handler: right },
     { input: KeyCommand.keyInputRightArrow, handler: right },
+    { input: 'j', modifierFlags: shift, handler: () => moveSection(1) },
+    { input: 'k', modifierFlags: shift, handler: () => moveSection(-1) },
+    { input: 'h', modifierFlags: shift, handler: leftBig },
+    { input: ',', modifierFlags: shift, handler: leftBig },
+    { input: KeyCommand.keyInputLeftArrow, modifierFlags: shift, handler: leftBig },
+    { input: 'l', modifierFlags: shift, handler: rightBig },
+    { input: '.', modifierFlags: shift, handler: rightBig },
+    { input: KeyCommand.keyInputRightArrow, modifierFlags: shift, handler: rightBig },
+    { input: 's', handler: () => focused()?.onPreview?.() },
     { input: KeyCommand.keyInputEnter, handler: activate },
     { input: ' ', handler: activate },
     ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ input: String(n), handler: () => focused()?.onSelect?.(n - 1) })),
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcuts(true) },
-  ], keyNav && !suspendKeys && !showShortcuts);
+  ], keyNav && !suspendKeys && !showShortcuts && !blockNav);
 
   // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる（Esc は上の handleEsc）。
   useKeyCommands([

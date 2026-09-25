@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { constants as KeyCommand } from 'react-native-key-command';
 
 import { getSpeechLanguagesFor, speechLanguageLabel, type SpeechScript } from '@/lib/speech';
-import { useKeyCommands } from '@/lib/useKeyCommands';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
+
+import { usePickerKeys } from './usePickerKeys';
 
 interface Props {
   visible: boolean;
@@ -65,12 +65,16 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   }, [visible, fade]);
 
-  // 表示中だけ Esc を担当する（非表示のあいだ登録を持たない＝034 の住み分け）。
-  useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
-
   // 端末に音声が1つも無い場合でも現在値は選べるようにしておく。
   // ⚠️ 「アプリ設定に従う」を選んでいるとき（value === null）は現在値が無いので空のままにする。
   const rows = languages.length > 0 ? languages : value ? [value] : [];
+
+  // 053：J/K・Return/Space（選んで閉じる）・Esc。表示中だけ担当する（非表示のあいだ登録を持たない）。
+  // 一覧は非同期に読むので、読み終えて行数が変わったら選ばれている行へ置き直す（フック側）。
+  const items: (string | null)[] = allowInherit ? [null, ...rows] : rows;
+  const keys = usePickerKeys({ visible, items, value, onPick: onSelect, onClose });
+  const focusBg = (i: number) => (keys.focusedIndex === i ? { backgroundColor: theme.colors.primaryLight } : null);
+  const offset = allowInherit ? 1 : 0;
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -103,17 +107,18 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
                 : t('settings.speechScriptLangHint', { name: scriptName })}
             </Text>
           </View>
-          <ScrollView>
+          <ScrollView ref={keys.scrollRef} {...keys.scrollProps}>
             {/* 050 Phase 2：デッキ側だけに出す「上書きしない」行。声ピッカーの「自動」と同じ役割で、
                 ⚠️ **これが無いとデッキの上書きを解除できない**（一度選ぶと元に戻せなくなる）。 */}
             {allowInherit && (
               <Pressable
                 onPress={() => { onSelect(null); onClose(); }}
-                style={{
+                style={[{
                   flexDirection: 'row', alignItems: 'center', gap: 10,
                   paddingHorizontal: 16, paddingVertical: 12,
                   borderBottomWidth: 1, borderBottomColor: theme.colors.border,
-                }}
+                }, focusBg(0)]}
+                onLayout={keys.rowLayout(0)}
               >
                 <Text
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
@@ -135,15 +140,16 @@ export function SpeechLanguageModal({ visible, script, value, onSelect, onClose,
                 )}
               </Pressable>
             )}
-            {rows.map((code) => (
+            {rows.map((code, i) => (
               <Pressable
                 key={code}
                 onPress={() => { onSelect(code); onClose(); }}
-                style={{
+                style={[{
                   flexDirection: 'row', alignItems: 'center', gap: 10,
                   paddingHorizontal: 16, paddingVertical: 12,
                   borderBottomWidth: 1, borderBottomColor: theme.colors.border,
-                }}
+                }, focusBg(i + offset)]}
+                onLayout={keys.rowLayout(i + offset)}
               >
                 <Text
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}

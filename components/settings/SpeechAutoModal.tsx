@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { constants as KeyCommand } from 'react-native-key-command';
 
 import { SPEECH_AUTO_MODES, type SpeechAutoMode } from '@/lib/speech';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
-import { useKeyCommands } from '@/lib/useKeyCommands';
+
+import { usePickerKeys } from './usePickerKeys';
 
 interface Props {
   visible: boolean;
@@ -48,8 +48,10 @@ export function SpeechAutoModal({ visible, value, onSelect, onClose, allowInheri
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   }, [visible, fade]);
 
-  // 表示中だけ Esc を担当する（非表示のあいだ登録を持たない＝034 の住み分け）。
-  useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible);
+  // 053：J/K・Return/Space（選んで閉じる）・Esc。表示中だけ担当する。
+  const items: (SpeechAutoMode | null)[] = allowInherit ? [null, ...SPEECH_AUTO_MODES] : [...SPEECH_AUTO_MODES];
+  const keys = usePickerKeys({ visible, items, value, onPick: onSelect, onClose });
+  const focusBg = (i: number) => (keys.focusedIndex === i ? { backgroundColor: theme.colors.primaryLight } : null);
 
   const rowStyle = {
     flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
@@ -81,10 +83,10 @@ export function SpeechAutoModal({ visible, value, onSelect, onClose, allowInheri
               {t('settings.speechAutoHint')}
             </Text>
           </View>
-          <ScrollView>
+          <ScrollView ref={keys.scrollRef} {...keys.scrollProps}>
             {/* デッキ側だけに出す「上書きしない」行。⚠️ これが無いとデッキの上書きを解除できない。 */}
             {allowInherit && (
-              <Pressable onPress={() => { onSelect(null); onClose(); }} style={rowStyle}>
+              <Pressable onPress={() => { onSelect(null); onClose(); }} style={[rowStyle, focusBg(0)]} onLayout={keys.rowLayout(0)}>
                 <Text
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
@@ -105,8 +107,13 @@ export function SpeechAutoModal({ visible, value, onSelect, onClose, allowInheri
                 )}
               </Pressable>
             )}
-            {SPEECH_AUTO_MODES.map((mode) => (
-              <Pressable key={mode} onPress={() => { onSelect(mode); onClose(); }} style={rowStyle}>
+            {SPEECH_AUTO_MODES.map((mode, i) => (
+              <Pressable
+                key={mode}
+                onPress={() => { onSelect(mode); onClose(); }}
+                style={[rowStyle, focusBg(allowInherit ? i + 1 : i)]}
+                onLayout={keys.rowLayout(allowInherit ? i + 1 : i)}
+              >
                 <Text
                   style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}

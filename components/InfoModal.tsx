@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { restoreAfterAlert, useAlertPresence } from '@/lib/alertFocus';
+import { useExclusiveKeyCommands } from '@/lib/useKeyCommands';
 
 const isPad = (Platform as any).isPad;
 
@@ -31,13 +34,23 @@ export function InfoModal({ visible, title, message, onClose, okLabel = 'OK' }: 
   // 見た目のフェードではないので、提示を即時にしてフェードだけ Animated に移せば両立する。
   // 閉じるときは従来どおり即時（下の画面のタッチを止めないため＝この3つで揃えてある）。
   const fade = useRef(new Animated.Value(0)).current;
+  // 054：裏の入力欄にカーソルがあれば外して少し待ってから出す（lib/alertFocus.ts）
+  const shown = useAlertPresence(visible);
   useEffect(() => {
-    if (!visible) return;
+    if (!shown) return;
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
-  }, [visible, fade]);
+  }, [shown, fade]);
+  // 054：Return／Esc＝閉じる（OK）。独占登録＝表示中は裏の画面のキーが反応しない
+  //（画面ごとに書いていた Return＝OK は、独占中は反応しないので二重にならない）。
+  // OK だけのアラートは閉じる＝キャンセルと同じ扱い＝入力欄のカーソルを戻す。
+  const close = () => { restoreAfterAlert(); onClose(); };
+  useExclusiveKeyCommands([
+    { input: KeyCommand.keyInputEnter, handler: close },
+    { input: KeyCommand.keyInputEscape, handler: close },
+  ], visible);
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={shown} transparent animationType="none" onRequestClose={close}>
       <Animated.View style={[styles.overlay, { opacity: fade }]}>
         {/* ⚠️ **背景（タップで閉じる）を ScrollView の祖先にしない**＝兄弟として背面に敷く。
             Fabric の `_shouldDisableScrollInteraction` は「スクロールビューの祖先に JS レスポンダ
@@ -46,7 +59,7 @@ export function InfoModal({ visible, title, message, onClose, okLabel = 'OK' }: 
             空振りする症状。CLAUDE.md の「余白タップの配置ルール」と同じ罠）。
             ダイアログ自身も素の View にする＝レスポンダを持たないので、その上のタップは
             背面の背景まで届かず「閉じない」も成立する（兄弟なのでバブリングしない）。 */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessible={false} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={close} accessible={false} />
         <View style={[styles.dialog, { backgroundColor: theme.colors.surface, maxHeight }, isPad && styles.dialogPad]}>
           {!!title && (
             <Text
@@ -75,7 +88,7 @@ export function InfoModal({ visible, title, message, onClose, okLabel = 'OK' }: 
             )}
           </ScrollView>
           <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-          <Pressable style={styles.okBtn} onPress={onClose}>
+          <Pressable style={styles.okBtn} onPress={close}>
             <Text
               style={[styles.okBtnText, { color: theme.colors.primary, fontSize: theme.fontSize.md }]}
               maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}

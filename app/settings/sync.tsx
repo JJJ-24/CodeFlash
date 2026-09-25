@@ -413,8 +413,6 @@ export default function SyncSettingsScreen() {
           message={modal.message}
           actions={modal.actions}
           onClose={() => setModal(null)}
-          // 053 Phase 4：選択肢を J/K で選び Return で実行（最初はフォーカスなし）
-          keyboard
         />
       )}
     </>

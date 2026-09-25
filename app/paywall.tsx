@@ -314,7 +314,7 @@ export default function PaywallScreen() {
           </Text>
         )}
       </ScrollView>
-      {/* 体験開始の確認（一度きりの明示）。確定操作なので Return は割り当てない（タップ/Esc のみ） */}
+      {/* 体験開始の確認（一度きりの明示）。キーは J/K で選んでから Return（054＝開いた時点では未選択なので連打で開始しない） */}
       <ConfirmModal
         visible={trialConfirmVisible}
         title={t('pro.trialConfirmTitle')}

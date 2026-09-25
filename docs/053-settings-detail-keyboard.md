@@ -316,4 +316,4 @@ Phase 2 以降は、画面ごとに部品の操作（スライダー・時刻ピ
 
 ### 今後（別チケット）
 
-- [ ] アプリのすべてのアラート（`ConfirmModal`・`ConfirmDeleteModal` ほか）をキーボードで操作できるようにする（Phase 4 の形を広げる）
+- [x] アプリのすべてのアラート（`ConfirmModal`・`ConfirmDeleteModal` ほか）をキーボードで操作できるようにする（Phase 4 の形を広げる）→ `docs/054`

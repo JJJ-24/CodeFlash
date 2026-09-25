@@ -15,7 +15,8 @@ interface Props {
 
 /**
  * 入力系モーダル（デッキ/タグ/カードの新規・編集）共通の「変更を破棄しますか？」確認。
- * 破棄は確定操作のため Return は割り当てない（タップ/Esc のみ＝CLAUDE.md の方針）。
+ * キー操作は `ConfirmModal` のまま（054）＝J/K で保存/破棄を選んでから Return・Esc で閉じる。開いた時点では未選択なので
+ * Return の連打でうっかり破棄しない。
  */
 export function DiscardConfirmModal({ visible, canSave, onSave, onDiscard, onClose }: Props) {
   const { t } = useTranslation();

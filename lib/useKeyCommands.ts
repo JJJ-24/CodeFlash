@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import type { ScrollView } from 'react-native';
 import * as KeyCommand from 'react-native-key-command';
@@ -197,6 +197,14 @@ function releaseKeyCommands(cmds: { input: string; modifierFlags: number }[]) {
   if (toUnregister.length > 0) KeyCommand.unregisterKeyCommands(toUnregister);
 }
 
+/**
+ * 054：独占登録のスタック（一番上＝最後に有効になったもの）。空でなければ、**一番上以外の全登録の
+ * ハンドラは反応しない**（イベントの配送時に弾く）。アラート（確認・削除・OK だけ）が使う。
+ * ネイティブ登録（参照カウント）には触れない＝裏の画面のキーは登録されたまま、反応だけ止まる。
+ */
+const exclusiveStack: symbol[] = [];
+const exclusiveTop = () => exclusiveStack[exclusiveStack.length - 1];
+
 export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) {
   const enabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   // Esc spec を代替キー（バッククォート・Cmd+.）へ展開してから登録/マッチに使う。
@@ -218,6 +226,8 @@ export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) 
       }));
       acquireKeyCommands(cmds);
       const sub = KeyCommand.eventEmitter.addListener('onKeyCommand', (p) => {
+        // 054：アラートなどが独占している間は反応しない
+        if (exclusiveTop() !== undefined) return;
         const pin = norm(p.input);
         const pmod = p.modifierFlags ?? 0;
         const hit = specsRef.current.find(
@@ -231,4 +241,46 @@ export function useKeyCommands(specs: KeyCommandSpec[], active: boolean = true) 
       };
     }, [enabled, active]),
   );
+}
+
+/**
+ * 054：**独占**して登録する（アラート用）。有効な間は、ほかの全登録（`useKeyCommands` と、下にある独占）の
+ * ハンドラが反応しない＝裏の画面が「アラート中は止める」処理を書き忘れていても二重に反応しない。
+ * 重なったときは最後に有効になったもの（一番上）だけが反応する。
+ *
+ * - **画面のフォーカスに依存しない**（`useEffect` で登録）＝画面の外（`app/_layout.tsx` の同期の競合通知）でも使える。
+ *   アラートは表示中しか `active` にしないので、フォーカス連動は要らない。
+ * - `keyboardShortcutsEnabled` が OFF なら何もしない（`useKeyCommands` と同じ）。
+ * - Esc は代替キー（バッククォート・⌘.）にも展開する（`useKeyCommands` と同じ）。
+ * - 裏で編集中の入力欄のカーソルを外す／キャンセルで戻す処理は `lib/alertFocus.ts`（アラートの部品が呼ぶ）。
+ */
+export function useExclusiveKeyCommands(specs: KeyCommandSpec[], active: boolean) {
+  const enabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
+  const specsRef = useRef<KeyCommandSpec[]>(specs);
+  specsRef.current = expandEscapeAliases(specs);
+  useEffect(() => {
+    if (!enabled || !active) return;
+    const id = Symbol('exclusive');
+    exclusiveStack.push(id);
+    const cmds = specsRef.current.map((s) => ({
+      input: s.input,
+      modifierFlags: s.modifierFlags ?? 0,
+    }));
+    acquireKeyCommands(cmds);
+    const sub = KeyCommand.eventEmitter.addListener('onKeyCommand', (p) => {
+      if (exclusiveTop() !== id) return;
+      const pin = norm(p.input);
+      const pmod = p.modifierFlags ?? 0;
+      const hit = specsRef.current.find(
+        (s) => norm(s.input) === pin && (s.modifierFlags ?? 0) === pmod,
+      );
+      hit?.handler();
+    });
+    return () => {
+      sub.remove();
+      releaseKeyCommands(cmds);
+      const i = exclusiveStack.indexOf(id);
+      if (i !== -1) exclusiveStack.splice(i, 1);
+    };
+  }, [enabled, active]);
 }

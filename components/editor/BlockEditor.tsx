@@ -30,6 +30,7 @@ import { ArchivePill, useArchivePill } from "@/components/ArchivePill";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { DeckIcon } from "@/components/DeckIcon";
 import { InfoContent } from "@/components/InfoContent";
+import { registerAlertRestoreProvider } from "@/lib/alertFocus";
 import { hasBlockContent } from "@/lib/cardPreview";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
@@ -244,6 +245,23 @@ export function BlockEditor({
   const [editTriggerMap, setEditTriggerMap] = useState<Record<string, number>>(
     {},
   );
+  // 054：アラートをキャンセルしたとき、編集していたテキストブロックを**元のカーソル位置で**再開する
+  //（editTrigger は E/Return 用＝末尾へ置く。こちらは最後の選択をそのまま使う）。
+  const [restoreTriggerMap, setRestoreTriggerMap] = useState<Record<string, number>>(
+    {},
+  );
+  // 054：アラート（削除・破棄の確認など）はキーを受け取るため、裏で編集中の入力欄のカーソルを外す。
+  // ブロックの入力欄は編集をやめると消えるので、アラートが入力欄へ直接戻すことはできない＝
+  // 「どのブロックを編集していたか」をここで覚えて再開する手段を渡す（キャンセルしたときだけ使われる）。
+  // テキスト・コードとも restoreTrigger＝最後のカーソル位置のまま再開する（editTrigger は末尾へ置く）。
+  useEffect(() => registerAlertRestoreProvider(() => {
+    const key = editingBlockKeyRef.current;
+    if (!key) return null;
+    const block = currentBlocksRef.current.find((b) => b._key === key);
+    if (!block) return null;
+    const bump = (set: typeof setEditTriggerMap) => () => set((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
+    return block.type === "code" || block.type === "text" ? bump(setRestoreTriggerMap) : null;
+  }), []);
   const [runTriggerMap, setRunTriggerMap] = useState<Record<string, number>>(
     {},
   );
@@ -1258,6 +1276,7 @@ export function BlockEditor({
                   onCollapsedDoubleTap={() => setEditorMode("edit")}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
+                  restoreTrigger={restoreTriggerMap[block._key] ?? 0}
                   blurTrigger={blurTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}
@@ -1284,6 +1303,7 @@ export function BlockEditor({
                   autoFocus={!autoFocusedKeys.has(block._key) && block._key === newBlockKey}
                   isFocused={focusedBlockIndex === index}
                   editTrigger={editTriggerMap[block._key] ?? 0}
+                  restoreTrigger={restoreTriggerMap[block._key] ?? 0}
                   blurTrigger={blurTriggerMap[block._key] ?? 0}
                   onEditBlur={handleBlockEditBlur}
                   onAutoFocused={() => setAutoFocusedKeys((prev) => new Set([...prev, block._key]))}

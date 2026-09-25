@@ -51,6 +51,8 @@ interface Props {
   autoFocus?: boolean;
   isFocused?: boolean;
   editTrigger?: number;
+  /** 054：アラートをキャンセルしたとき、最後のカーソル位置のまま編集を再開するトリガー */
+  restoreTrigger?: number;
   onEditBlur?: () => void;
   onRunButtonPress?: () => void;
   runTrigger?: number;
@@ -65,7 +67,7 @@ interface Props {
   deckHtmlImages?: DeckImage[];
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -96,7 +98,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // 言語選択モーダルを開いたとき、選択中の言語までスクロールするための ref
   const langScrollRef = useRef<ScrollView>(null);
   const selectedLangYRef = useRef(0);
-  const { insertPair, selection, handleSelectionChange, setSelectionToPos } = useInsertPair(
+  const { insertPair, selection, handleSelectionChange, setSelectionToPos, restoreSelection } = useInsertPair(
     block.content,
     (text) => onChange({ content: text }),
     codeInputRef,
@@ -226,6 +228,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   useEffect(() => {
     if ((editTrigger ?? 0) > 0) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); }
   }, [editTrigger]);
+
+  // 054：アラートのキャンセル後に、最後のカーソル位置のまま再開する（入力欄を作る前に選択を渡す）
+  useEffect(() => {
+    if ((restoreTrigger ?? 0) > 0) {
+      restoreSelection();
+      setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50);
+    }
+  }, [restoreTrigger, restoreSelection]);
 
   useEffect(() => {
     if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); initHtmlInputRef.current?.blur(); }

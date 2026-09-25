@@ -1,8 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { forgetAfterAlert, restoreAfterAlert, useAlertPresence } from '@/lib/alertFocus';
+import { useExclusiveKeyCommands } from '@/lib/useKeyCommands';
 
 const isPad = (Platform as any).isPad;
 
@@ -13,6 +16,12 @@ interface Props {
   onClose: () => void;
 }
 
+/**
+ * 削除の確認（削除ボタン1つ）。
+ * 054：`ConfirmModal` と同じ形でキーボード操作できる＝**ボタンが1つでも J/K で選んでから Return**
+ * （Return 1回で消えないように。開いた時点では未選択）・Esc で閉じる。独占登録（表示中は裏の画面のキーが反応しない）。
+ * 矢印は iPhone だけ（iPad はエディタの上に出たとき矢印のキャッシュが残るため）。
+ */
 export function ConfirmDeleteModal({ visible, message, onConfirm, onClose }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -29,14 +38,32 @@ export function ConfirmDeleteModal({ visible, message, onConfirm, onClose }: Pro
   // 見た目のフェードではないので、提示を即時にしてフェードだけ Animated に移せば両立する。
   // 閉じるときは従来どおり即時（下の画面のタッチを止めないため＝この3つで揃えてある）。
   const fade = useRef(new Animated.Value(0)).current;
+  // 054：裏の入力欄にカーソルがあれば外して少し待ってから出す（lib/alertFocus.ts）
+  const shown = useAlertPresence(visible);
   useEffect(() => {
-    if (!visible) return;
+    if (!shown) return;
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
-  }, [visible, fade]);
+  }, [shown, fade]);
+
+  // 054：キャンセルで閉じたら入力欄のカーソルを戻す／削除したら戻さない（ConfirmModal と同じ）
+  const cancel = () => { restoreAfterAlert(); onClose(); };
+  const confirm = () => { forgetAfterAlert(); onConfirm(); };
+  const [selected, setSelected] = useState(false);
+  useEffect(() => { setSelected(false); }, [visible]);
+  useExclusiveKeyCommands([
+    { input: 'j', handler: () => setSelected(true) },
+    { input: 'k', handler: () => setSelected(true) },
+    ...(isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => setSelected(true) },
+      { input: KeyCommand.keyInputUpArrow, handler: () => setSelected(true) },
+    ]),
+    { input: KeyCommand.keyInputEnter, handler: () => { if (selected) confirm(); } },
+    { input: KeyCommand.keyInputEscape, handler: cancel },
+  ], visible);
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={shown} transparent animationType="none" onRequestClose={cancel}>
       <Animated.View style={[styles.overlay, { opacity: fade }]}>
         {/* ⚠️ **背景（タップで閉じる）を ScrollView の祖先にしない**＝兄弟として背面に敷く。
             Fabric の `_shouldDisableScrollInteraction` は「スクロールビューの祖先に JS レスポンダ
@@ -45,7 +72,7 @@ export function ConfirmDeleteModal({ visible, message, onConfirm, onClose }: Pro
             空振りする症状。CLAUDE.md の「余白タップの配置ルール」と同じ罠）。
             ダイアログ自身も素の View にする＝レスポンダを持たないので、その上のタップは
             背面の背景まで届かず「閉じない」も成立する（兄弟なのでバブリングしない）。 */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessible={false} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={cancel} accessible={false} />
         <View style={[styles.dialog, { backgroundColor: theme.colors.surface, maxHeight }, isPad && styles.dialogPad]}>
           <ScrollView style={styles.messageScroll} alwaysBounceVertical={false}>
             <Text style={[styles.message, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -53,11 +80,21 @@ export function ConfirmDeleteModal({ visible, message, onConfirm, onClose }: Pro
             </Text>
           </ScrollView>
           <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-          <Pressable style={styles.deleteBtn} onPress={onConfirm}>
+          <View>
+          <Pressable style={styles.deleteBtn} onPress={confirm}>
             <Text style={[styles.deleteBtnText, { fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('common.delete')}
             </Text>
           </Pressable>
+          {/* 054：キーで選んでいるときの枠（ボタンの外側に少し離して描く） */}
+          {selected && (
+            <View
+              pointerEvents="none"
+              // ボタンの上下に margin 8 があるので、枠はボタンの外側 5pt＝上下 3 に置く
+              style={{ position: 'absolute', left: -5, right: -5, top: 3, bottom: 3, borderRadius: 15, borderWidth: 2, borderColor: theme.colors.primary }}
+            />
+          )}
+          </View>
         </View>
       </Animated.View>
     </Modal>

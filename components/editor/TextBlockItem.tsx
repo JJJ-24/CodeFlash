@@ -53,6 +53,8 @@ interface Props {
   isFocused?: boolean;
   /** BlockEditor から編集開始を指示するトリガー（値が変化するたびにフォーカス） */
   editTrigger?: number;
+  /** 054：アラートをキャンセルしたとき、**最後のカーソル位置のまま**編集を再開するトリガー（editTrigger は末尾へ置く） */
+  restoreTrigger?: number;
   /** BlockEditor からフォーカス解除を指示するトリガー（値が変化するたびにブラー） */
   blurTrigger?: number;
   /** TextInput のフォーカスが外れたとき BlockEditor に通知するコールバック */
@@ -65,7 +67,7 @@ interface Props {
   onDeactivateApply?: (apply: (a: MdAction) => void) => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, blurTrigger, onEditBlur, onAutoFocused, onActivateApply, onDeactivateApply }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onAutoFocused, onActivateApply, onDeactivateApply }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -149,6 +151,15 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
       setFocused(true); setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [editTrigger]);
+
+  // 054：最後の選択（selectionRef）のまま再開する。⚠️ **入力欄を作る前に** pendingSelection を最後の選択にしておく
+  //（入れないと、前回の編集開始時の選択で作られてから onFocus で最後の選択へ移る＝カーソルが一瞬末尾に出るちらつき）。
+  useEffect(() => {
+    if ((restoreTrigger ?? 0) > 0) {
+      setPendingSelection({ ...selectionRef.current });
+      setFocused(true); setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [restoreTrigger]);
 
   useEffect(() => {
     if ((blurTrigger ?? 0) > 0) { inputRef.current?.blur(); }

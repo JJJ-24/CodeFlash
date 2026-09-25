@@ -186,8 +186,6 @@ export default function SyncMergeScreen() {
           message={modal.message}
           actions={modal.actions}
           onClose={() => setModal(null)}
-          // 053 Phase 4：「戻す」/「並び順も戻す」を J/K で選び Return で実行（最初はフォーカスなし）
-          keyboard
         />
       )}
     </>

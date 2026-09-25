@@ -344,7 +344,7 @@ export default function DataSettingsScreen() {
         <InfoModal visible title={modal.title} message={modal.message} onClose={() => setModal(null)} />
       )}
       {modal?.kind === 'confirm' && (
-        <ConfirmModal visible title={modal.title} message={modal.message} actions={modal.actions} onClose={() => setModal(null)} keyboard />
+        <ConfirmModal visible title={modal.title} message={modal.message} actions={modal.actions} onClose={() => setModal(null)} />
       )}
     </>
   );

@@ -47,5 +47,12 @@ export function useInsertPair(
     setTimeout(() => setSelection(undefined), 200);
   }, []);
 
-  return { insertPair, selection, handleSelectionChange, initCursorPosition, setSelectionToPos };
+  /** 054：入力欄を作り直すとき、最後のカーソル位置（selectionRef）を選択として渡す
+   *  （アラートをキャンセルして編集を再開するとき。渡さないと入力欄はカーソルを末尾に置く）。 */
+  const restoreSelection = useCallback(() => {
+    setSelection({ ...selectionRef.current });
+    setTimeout(() => setSelection(undefined), 200);
+  }, []);
+
+  return { insertPair, selection, handleSelectionChange, initCursorPosition, setSelectionToPos, restoreSelection };
 }

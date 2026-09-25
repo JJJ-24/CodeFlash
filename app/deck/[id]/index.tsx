@@ -1652,7 +1652,7 @@ export default function DeckDetailScreen() {
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteModal(false)}
       />
-      {/* アーカイブ中デッキで学習開始したときの2択（選択式なので Return は割り当てない＝タップ/Esc）。
+      {/* アーカイブ中デッキで学習開始したときの2択（キーは J/K で選んでから Return・Esc＝054）。
           解除して学習は「解除後に学習できるカードがある」ときだけ出す。 */}
       <ConfirmModal
         visible={!!archivedStudyPrompt}

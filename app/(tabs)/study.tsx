@@ -59,7 +59,7 @@ const STUDY_TAB_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catDisplay', items: [
     { key: '1–4', descKey: 'shortcut.switchFilter' },
     { key: 'D / T', descKey: 'shortcut.switchDeckTab' },
-    { key: 'E',     descKey: 'shortcut.toggleHideEmpty' },
+    { key: 'F',     descKey: 'shortcut.toggleHideEmpty' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
@@ -314,8 +314,9 @@ export default function StudyScreen() {
     { input: 'h', handler: () => cycleStudyFilter('prev') },
     { input: 'l', handler: () => cycleStudyFilter('next') },
     { input: 's', handler: () => setShuffleEnabled(!shuffleEnabled) },
-    // E = 対象なし行の表示/非表示トグル（旧 H。H はフィルター切替へ移動）
-    { input: 'e', handler: () => { setStudyHideEmpty(!hideEmpty); clearFocus(); } },
+    // F = 対象なし行の表示/非表示トグル（ボタンの漏斗アイコン＝Filter。統計の「学習履歴が残るカードのみ」も F。
+    //   旧 E → さらに旧 H。E は全画面で「アーカイブ切替」に統一しているため F へ移した）
+    { input: 'f', handler: () => { setStudyHideEmpty(!hideEmpty); clearFocus(); } },
     { input: ' ', handler: () => startStudyFocused() },
     // D = デッキ表示 / T = タグ表示（旧 M トグルを明示的な直接選択に）
     { input: 'd', handler: () => setActiveTab('decks') },

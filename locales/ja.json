@@ -978,6 +978,7 @@
     "selectDeck": "デッキ選択",
     "selectPeriod": "期間選択",
     "toggleCountTime": "回数/平均時間/評価率 切替",
+    "toggleRecordableOnly": "学習履歴が残るカードのみ 切替",
     "startFocusedReview": "重点復習開始",
     "startFocusedReviewFromFocus": "重点復習開始\n（フォーカスから開始）",
     "delete": "削除（フォーカス項目）/\nカード削除（未フォーカス）",

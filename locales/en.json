@@ -1028,6 +1028,7 @@
     "selectDeck": "Select deck",
     "selectPeriod": "Select period",
     "toggleCountTime": "Toggle count / time / rate",
+    "toggleRecordableOnly": "Toggle cards that update history",
     "startFocusedReview": "Start focused review",
     "startFocusedReviewFromFocus": "Start focused review\n(from focus)",
     "delete": "Delete focused item/\nDelete card (no focus)",

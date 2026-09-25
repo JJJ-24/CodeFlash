@@ -92,6 +92,7 @@ const STATS_SHORTCUT_GROUPS = [
         { key: 'D',     descKey: 'shortcut.selectDeck', pro: true },
         { key: 'T',     descKey: 'shortcut.selectPeriod', pro: true },
         { key: 'M',     descKey: 'shortcut.toggleCountTime', pro: true },
+        { key: 'F',     descKey: 'shortcut.toggleRecordableOnly', pro: true },
       ] },
       { titleKey: 'shortcut.catFocus', items: [
         { key: 'P',     descKey: 'shortcut.editFocusedItem', pro: true },
@@ -1603,6 +1604,11 @@ export default function StatsScreen() {
     { input: 'd', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); setPeriodPickerVisible(true); } },
     { input: 'm', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro) return; scrollToRankingIfHidden(); handleCycleRankingSort(); } },
+    // F = 「学習履歴が残るカードのみ」の切替（ボタンの漏斗アイコン＝Filter。学習タブの「対象なしを非表示」も F）。
+    // ⚠️ ボタンは評価を展開しているときしか出ないので、展開していなければ何もしない
+    //   （見えないまま設定だけ切り替わり、後で展開したとき「なぜか絞り込まれている」になるため）。
+    // 展開していてボタンが画面外なら先にスクロールする（D/T/M と同じ）。
+    { input: 'f', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('pro')) return; if (!isPro || selectedGradeBlockRef.current === null) return; scrollToRankingIfHidden(); handleToggleRecordableOnly(); } },
     // G = 草グラフの学習量/目標達成の切替（目標 OFF・折りたたみ中は無効＝トグルが見えていないときは効かせない）。
     // 草グラフが画面外なら先にスクロールする（D/T/M と同じ）。目標 OFF のときはスクロールもしない。
     { input: 'g', handler: () => { if (statsCardId !== null || activeSheet !== null || isSectionCollapsed('heatmap')) return; if (!useSettingsStore.getState().studyGoalEnabled) return; scrollToHeatmapIfHidden(); toggleHeatmapMode(); } },

@@ -1030,6 +1030,7 @@
     "selectDeck": "Elegir el mazo",
     "selectPeriod": "Elegir el periodo",
     "toggleCountTime": "Repasos / tiempo medio / tasa",
+    "toggleRecordableOnly": "Solo tarjetas que actualizan el historial",
     "startFocusedReview": "Empezar el repaso enfocado",
     "startFocusedReviewFromFocus": "Empezar el repaso enfocado\n(desde el elemento con foco)",
     "delete": "Eliminar (con foco)/\nEliminar la tarjeta (sin foco)",

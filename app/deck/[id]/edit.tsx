@@ -446,7 +446,6 @@ export default function EditDeckScreen() {
           {/* 057：アーカイブは「基本」の末尾（カード単位ではなくデッキ自体の状態＝名前・色と同じ段） */}
           <DeckFormCard>
             <DeckFormToggleRow
-              icon="archive-outline"
               label={t('deck.archive')}
               value={archived}
               onValueChange={(v) => { Keyboard.dismiss(); setArchived(v); }}

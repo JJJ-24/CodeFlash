@@ -185,7 +185,12 @@ export function DeckFormNavRow({
 export function DeckFormToggleRow({
   icon, label, value, onValueChange, infoLabel, infoText, showInfo, onToggleInfo, dim, note, ...handlers
 }: SettingsFocusHandlers & {
-  icon: ComponentProps<typeof Ionicons>['name'];
+  /**
+   * 項目名の左のアイコン。スイッチの行では飾り（ON/OFF はスイッチが示す）なので、同じ白枠の他の行と
+   * 左端をそろえたいときだけ付ける（読み上げ＝下の「詳細設定」の行にアイコンがある）。
+   * アーカイブは付けない（「基本」の他の項目・カード編集のアーカイブ欄と同じ）。
+   */
+  icon?: ComponentProps<typeof Ionicons>['name'];
   label: string;
   value: boolean;
   onValueChange: (v: boolean) => void;
@@ -201,7 +206,7 @@ export function DeckFormToggleRow({
   return (
     <SettingsFocusRow style={styles.row} onToggle={() => onValueChange(!value)} {...ring} {...handlers}>
       <View style={[styles.navRow, dim && styles.inactive]}>
-        <Ionicons name={icon} size={20} color={theme.colors.textSecondary} />
+        {icon && <Ionicons name={icon} size={20} color={theme.colors.textSecondary} />}
         <View style={styles.toggleLabelWrap}>
           <Text
             style={[styles.toggleLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
@@ -245,11 +250,14 @@ const styles = StyleSheet.create({
   fieldBody: { gap: 8 },
   fieldLabel: { fontWeight: '600' },
   divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14 },
+  // minHeight＝スイッチの行の高さ（スイッチ 31 ＋上下 12×2）。開く行は文字の高さしか無く約10pt 低かった
+  // ＝同じ白枠の中・白枠どうしで行の高さをそろえる。余白ではなく最小の高さなので、文字が大きいときは余計に伸びない
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 12,
+    minHeight: 55,
   },
   navLabel: { fontWeight: '600', flexShrink: 0, maxWidth: '55%' },
   navSummary: { flex: 1, textAlign: 'right' },

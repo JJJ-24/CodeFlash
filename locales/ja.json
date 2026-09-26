@@ -1049,6 +1049,9 @@
     "finishSession": "学習終了",
     "changeColorSelected": "色変更（選択項目）",
     "catStageSheet": "土台/初期化の一覧（モーダル内）",
+    "catColorSheet": "色の変更（モーダル内）",
+    "cycleColorSheet": "色を送る\n[J/K][H/L][,/.]でも可",
+    "applyColorClose": "適用して閉じる",
     "stageOpen": "展開（フォーカス項目）",
     "stageAdd": "土台/初期化を追加"
   },

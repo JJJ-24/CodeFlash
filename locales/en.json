@@ -1099,6 +1099,9 @@
     "finishSession": "Finish session",
     "changeColorSelected": "Change color (selected items)",
     "catStageSheet": "Stage / setup list (in the sheet)",
+    "catColorSheet": "Change color (in the sheet)",
+    "cycleColorSheet": "Cycle color\n[J/K][H/L][,/.] also works",
+    "applyColorClose": "Apply and close",
     "stageOpen": "Open focused item",
     "stageAdd": "Add a stage / setup"
   },

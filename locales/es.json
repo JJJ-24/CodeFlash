@@ -1101,6 +1101,9 @@
     "finishSession": "Terminar la sesión",
     "changeColorSelected": "Cambiar el color (elementos seleccionados)",
     "catStageSheet": "Lista de bases / inicializaciones (en la hoja)",
+    "catColorSheet": "Cambiar color (en la hoja)",
+    "cycleColorSheet": "Cambiar de color\n[J/K][H/L][,/.] también",
+    "applyColorClose": "Aplicar y cerrar",
     "stageOpen": "Desplegar (con foco)",
     "stageAdd": "Agregar una base / inicialización"
   },

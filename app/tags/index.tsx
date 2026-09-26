@@ -78,6 +78,11 @@ const TAG_SELECTION_SHORTCUT_SECTIONS = [
     { key: 'C',     descKey: 'shortcut.changeColorSelected' },
     { key: 'Delete', descKey: 'shortcut.deleteSelected' },
   ] },
+  // C で開く色変更シートの中のキー（デッキ編集の「土台/初期化の一覧（モーダル内）」と同じ形）
+  { titleKey: 'shortcut.catColorSheet', items: [
+    { key: 'C / ⇧C', descKey: 'shortcut.cycleColorSheet' },
+    { key: 'Return', descKey: 'shortcut.applyColorClose' },
+  ] },
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC',   descKey: 'shortcut.esc' },
     { key: '?',     descKey: 'shortcut.showShortcuts' },

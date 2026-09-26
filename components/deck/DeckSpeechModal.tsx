@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { AppSwitch } from '@/components/AppSwitch';
+import { useListNavigation } from '@/hooks/useListNavigation';
 import { SPEECH_AUTO_LABEL_KEYS, SpeechAutoModal } from '@/components/settings/SpeechAutoModal';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import {
@@ -82,14 +83,65 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onC
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  // 表示中だけ Esc を担当する。⚠️ 言語ピッカーが上に乗っている間は**そちらが最上位**なので外す
-  // （両方が登録すると Esc で2枚とも閉じる）。
-  useKeyCommands([{ input: KeyCommand.keyInputEscape, handler: onClose }], visible && picking === null && !pickingAuto);
-
   /** 選べる文字体系（未取得のあいだは設定画面と同じく全部出しておく＝取得後に減る） */
   const scripts = CONFIGURABLE_SCRIPTS.filter(
     (s) => scriptOptions === null || (scriptOptions[s]?.length ?? 0) >= 2,
   );
+
+  // J/K のフォーカス（ヌルサイクル・キー追跡＝裏面の一覧が出入りしても同じ行を指す）。
+  // 並びは画面の上から＝自動読み上げ → 裏面を分けるトグル → 表面の文字体系 → 裏面の文字体系。
+  const focusKeys: string[] = scripts.length === 0
+    ? ['auto']
+    : ['auto', 'split', ...scripts.map((s) => `front-${s}`), ...(splitSides ? scripts.map((s) => `back-${s}`) : [])];
+  const { focusedIndex, setFocusedIndex, moveFocus } = useListNavigation(focusKeys, (k) => k);
+  const focusedKey = focusedIndex != null ? focusKeys[focusedIndex] ?? null : null;
+  const scrollRef = useRef<ScrollView>(null);
+  /** 各行の Y 座標（ScrollView の中身の直接の子の位置）＝フォーカス移動時に見える位置へ送る */
+  const rowYRef = useRef<Record<string, number>>({});
+  const rowLayout = (key: string) => (e: { nativeEvent: { layout: { y: number } } }) => { rowYRef.current[key] = e.nativeEvent.layout.y; };
+
+  // 閉じたらフォーカスを捨てる（次に開いたとき前回の位置が残っていると驚く＝DeckStagesModal と同じ）
+  useEffect(() => {
+    if (!visible) setFocusedIndex(null);
+  }, [visible, setFocusedIndex]);
+  useEffect(() => {
+    if (!focusedKey) return;
+    const y = rowYRef.current[focusedKey];
+    if (y != null) scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+  }, [focusedKey]);
+
+  /** Return＝開く（自動読み上げ・文字体系の行）。トグルの行は Space だけ（053 の流儀：Return＝開く／Space＝スイッチ） */
+  const activateFocused = () => {
+    if (!focusedKey) return;
+    if (focusedKey === 'auto') { setPickingAuto(true); return; }
+    const m = /^(front|back)-(.+)$/.exec(focusedKey);
+    if (m) setPicking({ script: m[2] as SpeechScript, back: m[1] === 'back' });
+  };
+  const toggleFocused = () => {
+    if (focusedKey === 'split') toggleSplit(!splitSides);
+  };
+
+  // 表示中だけキーを担当する。⚠️ 言語ピッカー・自動読み上げの一覧が上に乗っている間は**そちらが最上位**
+  // なので外す（両方が登録すると1押下で2枚とも反応する）。
+  // ⚠️ 矢印は iPhone だけ＝親のデッキ編集には入力欄があり、iPad で矢印を登録すると
+  //   キャッシュが残って入力欄のカーソル移動を奪う（CLAUDE.md「iPad の落とし穴」）。
+  useKeyCommands([
+    { input: 'j', handler: () => moveFocus('next') },
+    { input: 'k', handler: () => moveFocus('prev') },
+    ...((Platform as any).isPad ? [] : [
+      { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus('next') },
+      { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus('prev') },
+    ]),
+    { input: KeyCommand.keyInputEnter, handler: activateFocused },
+    { input: ' ', handler: toggleFocused },
+    // Esc は階層ディスマス（フォーカス解除 → 閉じる）
+    { input: KeyCommand.keyInputEscape, handler: () => { if (focusedIndex != null) setFocusedIndex(null); else onClose(); } },
+  ], visible && picking === null && !pickingAuto);
+
+  /** フォーカス中の行の枠＝カード一覧と同じ primary＋太さ2。⚠️ 太くなったぶん余白を1減らして中身を動かさない */
+  const focusRing = (key: string, padV: number) => (focusedKey === key
+    ? { borderWidth: 2, borderColor: theme.colors.primary, paddingHorizontal: 11, paddingVertical: padV - 1 }
+    : null);
 
   /** 上書きが無いときに実際に読まれる言語（アプリ設定 → 文字体系の既定）。 */
   const inheritedLang = (script: SpeechScript) => appLangs[script] ?? SCRIPT_DEFAULT_LANGS[script];
@@ -115,7 +167,8 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onC
     return (
       <Pressable
         key={`${back ? 'back' : 'front'}-${script}`}
-        style={[styles.row, { borderColor: theme.colors.border }]}
+        style={[styles.row, { borderColor: theme.colors.border }, focusRing(`${back ? 'back' : 'front'}-${script}`, 12)]}
+        onLayout={rowLayout(`${back ? 'back' : 'front'}-${script}`)}
         onPress={() => setPicking({ script, back })}
       >
         <Text
@@ -213,11 +266,12 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onC
             </View>
           )}
 
-          <ScrollView>
+          <ScrollView ref={scrollRef}>
             {/* 052：自動読み上げの上書き（先頭行）。言語と違って端末の音声一覧に依存しないので、
                 選べる文字体系が無くてもこの行は出す。ピッカー先頭の「アプリ設定」が唯一の解除手段。 */}
             <Pressable
-              style={[styles.row, { borderColor: theme.colors.border }]}
+              style={[styles.row, { borderColor: theme.colors.border }, focusRing('auto', 12)]}
+              onLayout={rowLayout('auto')}
               onPress={() => setPickingAuto(true)}
             >
               <Text
@@ -249,7 +303,7 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onC
             ) : (
               <>
                 {/* 051：既定 OFF。ON のときだけ裏面の一覧が続く */}
-                <View style={[styles.toggleRow, { borderColor: theme.colors.border }]}>
+                <View style={[styles.toggleRow, { borderColor: theme.colors.border }, focusRing('split', 8)]} onLayout={rowLayout('split')}>
                   <Text
                     style={[styles.rowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}

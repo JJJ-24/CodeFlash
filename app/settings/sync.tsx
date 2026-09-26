@@ -528,7 +528,7 @@ export default function SyncSettingsScreen() {
       }}
     >
       {/* セクション1: iCloud 同期カード */}
-      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup frame style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <SettingsFocusRow style={styles.notificationRow} onToggle={() => { if (!syncing) void handleSyncToggle(!syncEnabled); }}>
           <View
             style={{

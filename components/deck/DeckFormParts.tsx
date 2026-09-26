@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppSwitch } from '@/components/AppSwitch';
 import { InfoContent } from '@/components/InfoContent';
 import { SettingsFocusGroup, SettingsFocusRow, type SettingsFocusHandlers } from '@/components/settings/settingsFocus';
-import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
+import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from '@/lib/theme';
 
 /**
  * 057：デッキ新規・編集画面を「基本／読み上げ／コード実行」の見出しで区切り、開くだけの行を1行形式に詰める部品。
@@ -26,9 +26,14 @@ export function DeckFormSectionTitle({ title }: { title: string }) {
   );
 }
 
-/** カードの角丸。青枠の角は枠線 1pt の内側に描くので `CARD_RADIUS - 1` */
-const CARD_RADIUS = 10;
-const RING_RADIUS = CARD_RADIUS - 1;
+/**
+ * カードの角丸。**設定画面の白枠（`settingsStyles.card`）と同じ見た目**＝枠線なし・弱い影・角丸12。
+ * かつては入力欄と同じ「枠線1pt・影なし」だった（057 以前のアーカイブ行の形が広がったもの）が、
+ * この白枠は項目をまとめる入れ物で、設定画面の白枠と役割が同じなので見た目もそろえた。
+ * 枠線が残るのは「ここに書ける」入力欄と、状態を色で示すカード編集のブロックだけ。
+ */
+const CARD_RADIUS = 12;
+const RING_RADIUS = CARD_RADIUS;
 
 /** カードの中での行の位置（先頭・末尾）＝青枠の角をカードの角に合わせるため */
 const RowPositionContext = createContext({ first: true, last: true });
@@ -52,7 +57,7 @@ export function DeckFormCard({ children, dim }: { children: ReactNode; dim?: boo
   // 子の先頭・末尾を控えて行へ渡す（Provider は View を作らないので「直接の子」の規則は崩れない）
   const items = Children.toArray(children).filter(isValidElement);
   return (
-    <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, dim && styles.inactive]}>
+    <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }, dim && styles.inactive]}>
       {items.map((child, i) => (
         <RowPositionContext.Provider key={child.key ?? i} value={{ first: i === 0, last: i === items.length - 1 }}>
           {child}
@@ -232,8 +237,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontWeight: '700', marginBottom: -8 },
   // 左右の余白は行が持つ（青枠を白枠いっぱいに出すため）
   card: {
-    borderWidth: 1,
     borderRadius: CARD_RADIUS,
+    ...SHADOW.subtle,
   },
   row: { paddingHorizontal: 14 },
   field: { paddingHorizontal: 14, paddingVertical: 12, gap: 8 },

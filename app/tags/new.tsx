@@ -172,6 +172,7 @@ export default function NewTagScreen() {
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
           onLayout={nav.onViewportLayout}
+          onContentSizeChange={nav.onContentSizeChange}
           scrollEventThrottle={16}
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"

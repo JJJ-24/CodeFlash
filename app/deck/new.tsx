@@ -310,6 +310,7 @@ export default function NewDeckScreen() {
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
           onLayout={nav.onViewportLayout}
+          onContentSizeChange={nav.onContentSizeChange}
           scrollEventThrottle={16}
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"

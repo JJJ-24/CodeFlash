@@ -291,12 +291,13 @@ export default function DataSettingsScreen() {
         <View style={{ flex: 1 }} />
         <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
       </Pressable>
-      </SettingsFocusRow>
+      {/* 説明は行の中＝青枠が説明ごと囲む（行のあいだに区切り線しか無いので、青枠を区切り線まで広げるため） */}
       {row.showInfo && (
         <View style={[styles.syncInfoBox, { backgroundColor: theme.colors.background }]}>
           <InfoContent text={row.info} />
         </View>
       )}
+      </SettingsFocusRow>
     </SettingsFocusGroup>
   );
 
@@ -361,7 +362,8 @@ export default function DataSettingsScreen() {
         </View>
       ) : (
         rowPairs.map((pair, i) => (
-          <SettingsFocusGroup key={i} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          // 上下の余白を区切り線までの距離（gap 12＋区切り線の余白 8＝20）とそろえる＝青枠の中で文字が上下の真ん中に来る
+          <SettingsFocusGroup key={i} frame bleed={24} style={[styles.card, { backgroundColor: theme.colors.surface, paddingVertical: 20 }]}>
             {renderRow(pair[0])}
             <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: 8 }} />
             {renderRow(pair[1])}

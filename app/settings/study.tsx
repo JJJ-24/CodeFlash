@@ -431,7 +431,7 @@ export default function StudySettingsScreen() {
   // **無料機能**なので Pro ロック時の画面にも出す＝JSX を変数に切り出して両方の分岐から描画する
   // （FSRS・学習タイマーは Pro のまま）。
   const goalCard = (
-      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup frame style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <SettingsFocusRow {...sectionKeys('goal')}>
         <CollapsibleSectionTitle
           title={t('settings.studyGoal')}
@@ -592,8 +592,10 @@ export default function StudySettingsScreen() {
           「スウェーデン語（スウェーデン）」が1行に収まらず、`dataRowText` が `flex:1`
           （＝残り幅にだけ収まる）なので見出しが折り返し、値ははみ出して切れる。
           文字サイズを大きくすると必ず起きるので、見出しを独立した行にして幅の取り合いを無くす。 */}
+      {/* 見出しの下だけ間を空ける（gap 2＋6＝8）。子の行どうしは 2 のまま＝ひとまとまりに見せる。
+          ⚠️ 詰めると、白枠いっぱいの青枠（上下へ 6 広がる＝`SettingsFocusGroup` の `bleed`）が見出しにくっつく */}
       <Text
-        style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+        style={[styles.dataRowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md, marginBottom: 6 }]}
         maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
       >
         {t(SPEECH_SCRIPT_LABEL_KEYS[script] ?? 'settings.speechScriptLatin')}
@@ -684,7 +686,7 @@ export default function StudySettingsScreen() {
   };
 
   const speechCard = (
-      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup frame style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         {/* 説明は ⓘ に畳む（目標・タイマーの各カードと同じ形）。常時表示だとここだけ浮く。 */}
         <SettingsFocusRow {...sectionKeys('speech')}>
         <CollapsibleSectionTitle
@@ -938,7 +940,7 @@ export default function StudySettingsScreen() {
       }}
     >
       {/* FSRSカスタマイズ */}
-      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup frame style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <SettingsFocusRow {...sectionKeys('fsrs')}>
         <CollapsibleSectionTitle
           title={t('settings.fsrs')}
@@ -996,7 +998,7 @@ export default function StudySettingsScreen() {
       </SettingsFocusGroup>
 
       {/* 学習タイマー（036・Pro）。説明は常時表示せず、i アイコンのタップで展開（目標保持率と同じ流儀） */}
-      <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <SettingsFocusGroup frame style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <SettingsFocusRow {...sectionKeys('timer')}>
         <CollapsibleSectionTitle
           title={t('settings.studyTimer')}

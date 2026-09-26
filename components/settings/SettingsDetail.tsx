@@ -72,7 +72,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   // ---- 053：項目のフォーカス（J/K）と、フォーカス中の項目への操作の委譲（055 で useFocusRegistry に切り出し） ----
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
-  const { registry, focusedIdRef, setFocusedId, moveFocus, moveSection, focused, onViewportLayout } = useFocusRegistry(scrollRef, scrollYRef);
+  const { registry, focusedIdRef, setFocusedId, moveFocus, moveSection, focused, onViewportLayout, onContentSizeChange } = useFocusRegistry(scrollRef, scrollYRef);
 
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -186,6 +186,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
         ref={scrollRef}
         contentContainerStyle={[settingsStyles.container, { paddingBottom: 32 + 56 + 24 + insets.bottom }]}
         onLayout={onViewportLayout}
+        onContentSizeChange={onContentSizeChange}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={16}
       >

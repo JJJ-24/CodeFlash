@@ -14,6 +14,7 @@ import { settingsStyles as styles } from '@/components/settings/styles';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 
 import { getTrialRemainingMs } from '@/lib/proTrial';
+import { centeredScrollY } from '@/lib/scrollCenter';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
@@ -83,13 +84,14 @@ export default function SettingsScreen() {
   const viewportHRef = useRef(0);
   const itemLayouts = useRef<Map<number, { y: number; h: number }>>(new Map());
 
+  const contentHRef = useRef(0);
+
+  // J/K のフォーカスを画面の真ん中へ送る（ホーム・設定の詳細画面と同じ）
   function scrollIntoView(index: number) {
     const l = itemLayouts.current.get(index);
     if (!l) return;
-    const top = scrollYRef.current;
-    const vh = viewportHRef.current;
-    if (l.y < top + 8) scrollRef.current?.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
-    else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
+    const y = centeredScrollY(l, viewportHRef.current, contentHRef.current, scrollYRef.current);
+    if (y !== null) scrollRef.current?.scrollTo({ y, animated: true });
   }
   function moveFocus(dir: number) {
     setFocusedIndex((prev) => {
@@ -135,6 +137,7 @@ export default function SettingsScreen() {
         ref={scrollRef}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
         onLayout={(e) => { viewportHRef.current = e.nativeEvent.layout.height; }}
+        onContentSizeChange={(_w, h) => { contentHRef.current = h; }}
         scrollEventThrottle={16}
         style={{ flex: 1, backgroundColor: theme.colors.background }}
         contentContainerStyle={{ flexGrow: 1 }}

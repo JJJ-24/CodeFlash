@@ -3,6 +3,7 @@ import type { ReactNode, RefObject } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { GestureResponderEvent, LayoutChangeEvent, ScrollView, StyleProp, ViewStyle } from 'react-native';
 
+import { centeredScrollY } from '@/lib/scrollCenter';
 import { useTheme } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 
@@ -51,21 +52,109 @@ export const SettingsFocusContext = createContext<SettingsFocusRegistry | null>(
 const SettingsFocusOffsetContext = createContext<() => number>(() => 0);
 
 /**
+ * 白枠（`SettingsFocusGroup` の `frame`）の中の行が、自分の位置を枠へ届けるための窓口。
+ * 枠が青枠を描く＝行ごとに白枠の端から端まで広げられる（行は自分の左右に何があるか知らない）。
+ */
+interface FrameApi {
+  register: (id: string, getLayout: () => { y: number; h: number } | undefined) => () => void;
+  /** フォーカス中の行の位置が変わった（折りたたみ・説明の開閉）＝枠を描き直す */
+  relayout: () => void;
+}
+const FrameContext = createContext<FrameApi | null>(null);
+
+/** 青枠を白枠の上下の縁へ吸着させる距離（白枠の上下の余白 14〈データ管理は 20〉＋少し）。これより離れていれば縁まで伸ばさない */
+const FRAME_SNAP = 22;
+/** 白枠の角丸（`settingsStyles.card`）。縁に吸着した側だけこの角丸にする */
+const FRAME_RADIUS = 12;
+
+/**
  * 子の項目に「自分の y」を渡す入れ物（カード・行のまとまり）。入れ子にできる。
  * ⚠️ 項目（`useSettingsFocusItem` の `onLayout` を当てる View）は、**いちばん近い
  * `SettingsFocusGroup`（無ければ `SettingsDetail`）の直接の子**に置く＝onLayout の y は親の中の位置なので、
  * 間に素の View を挟むと y がずれる。
  * 位置は onLayout でしか取らない（`measureLayout` は ScrollView の中身の座標とスクロール量の扱いが読みにくい）。
  */
-export function SettingsFocusGroup({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+export function SettingsFocusGroup({ children, style, frame, bleed = 6 }: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  /**
+   * 白枠そのもの（`settingsStyles.card`）に付ける。中の行（入れ子の Group の中も含む）の青枠を
+   * **白枠の左右の縁いっぱい**に描く（デッキ/タグの編集画面と同じ見え方）。
+   * 上下は行から `bleed` まで・隣の行との中間まで広げ、白枠の上下の縁に近ければ縁まで伸ばす。
+   */
+  frame?: boolean;
+  /**
+   * 青枠を行の上下へ広げる上限。既定 6＝白枠の `gap: 12` の半分＝行どうしがちょうど接する。
+   * ⚠️ 大きくしすぎない＝行のあいだに説明・注記などフォーカスしない中身があると、青枠がそこへ食い込む。
+   * 行のあいだに区切り線しか無い白枠（データ管理）だけ大きくして区切り線まで届かせる。
+   */
+  bleed?: number;
+}) {
   const parentOffset = useContext(SettingsFocusOffsetContext);
   const yRef = useRef(0);
   const getOffset = useCallback(() => parentOffset() + yRef.current, [parentOffset]);
+  const theme = useTheme();
+  const ctx = useContext(SettingsFocusContext);
+  const rowsRef = useRef(new Map<string, () => { y: number; h: number } | undefined>());
+  const [height, setHeight] = useState(0);
+  const [, setTick] = useState(0);
+  const frameApi = useMemo<FrameApi>(() => ({
+    register: (id, getLayout) => {
+      rowsRef.current.set(id, getLayout);
+      return () => { rowsRef.current.delete(id); };
+    },
+    relayout: () => setTick((n) => n + 1),
+  }), []);
+
+  let ring: ReactNode = null;
+  const focusedId = ctx?.focusedId ?? null;
+  if (frame && focusedId && rowsRef.current.has(focusedId)) {
+    const base = getOffset();
+    const rows = [...rowsRef.current.entries()]
+      .map(([id, get]) => ({ id, l: get() }))
+      .filter((e): e is { id: string; l: { y: number; h: number } } => e.l !== undefined)
+      .map((e) => ({ id: e.id, top: e.l.y - base, bottom: e.l.y - base + e.l.h }))
+      .sort((a, b) => a.top - b.top);
+    const i = rows.findIndex((r) => r.id === focusedId);
+    if (i !== -1) {
+      const r = rows[i];
+      const prev = rows[i - 1];
+      const next = rows[i + 1];
+      let top = Math.max(r.top - bleed, prev ? (prev.bottom + r.top) / 2 : -Infinity);
+      let bottom = Math.min(r.bottom + bleed, next ? (r.bottom + next.top) / 2 : Infinity);
+      const snapTop = !prev && r.top <= FRAME_SNAP;
+      const snapBottom = !next && height > 0 && height - r.bottom <= FRAME_SNAP;
+      if (snapTop) top = 0;
+      if (snapBottom) bottom = height;
+      ring = (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute', left: 0, right: 0, top, height: bottom - top,
+            borderWidth: 2, borderColor: theme.colors.primary,
+            borderTopLeftRadius: snapTop ? FRAME_RADIUS : 0, borderTopRightRadius: snapTop ? FRAME_RADIUS : 0,
+            borderBottomLeftRadius: snapBottom ? FRAME_RADIUS : 0, borderBottomRightRadius: snapBottom ? FRAME_RADIUS : 0,
+          }}
+        />
+      );
+    }
+  }
+
+  const content = (
+    <SettingsFocusOffsetContext.Provider value={getOffset}>
+      {children}
+    </SettingsFocusOffsetContext.Provider>
+  );
   return (
-    <View style={style} onLayout={(e) => { yRef.current = e.nativeEvent.layout.y; }}>
-      <SettingsFocusOffsetContext.Provider value={getOffset}>
-        {children}
-      </SettingsFocusOffsetContext.Provider>
+    <View
+      style={style}
+      onLayout={(e) => {
+        yRef.current = e.nativeEvent.layout.y;
+        if (frame) setHeight(e.nativeEvent.layout.height);
+      }}
+    >
+      {frame ? <FrameContext.Provider value={frameApi}>{content}</FrameContext.Provider> : content}
+      {ring}
     </View>
   );
 }
@@ -91,9 +180,16 @@ export function useSettingsFocusItem(handlers: SettingsFocusHandlers, claim = fa
     if (claim && claimFn) claimFn(id);
   }, [claim, claimFn, id]);
   const setLayout = ctx?.setLayout;
+  /** 白枠（frame）へ渡す、スクロールの中身から見た位置。onLayout で控える */
+  const layoutRef = useRef<{ y: number; h: number } | null>(null);
   const onLayout = (e: LayoutChangeEvent) => {
+    layoutRef.current = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height };
     setLayout?.(id, e.nativeEvent.layout.y, e.nativeEvent.layout.height, getOffset);
   };
+  const getAbsLayout = useCallback(() => {
+    const l = layoutRef.current;
+    return l ? { y: getOffset() + l.y, h: l.h } : undefined;
+  }, [getOffset]);
   // 055：項目の中をタップしたら、その項目を青枠の対象にする（最後に触った場所からキー操作を続けられる）。
   // 中の部品（色の見本・スイッチ・入力欄など）のタップも拾えるよう、項目を包む View のタッチで判定する。
   // ⚠️ スクロールのために指を置いただけでは移さない＝ほとんど動かさずに離したとき（タップ）だけ。
@@ -110,7 +206,7 @@ export function useSettingsFocusItem(handlers: SettingsFocusHandlers, claim = fa
     },
     onTouchCancel: () => { touchStartRef.current = null; },
   };
-  return { focused: ctx?.focusedId === id, onLayout, tapToClaim };
+  return { id, focused: ctx?.focusedId === id, onLayout, tapToClaim, getAbsLayout };
 }
 
 /** タップとみなす指の移動量の上限（pt）。これ以上動いたらスクロールとして扱い、青枠を移さない。 */
@@ -175,11 +271,24 @@ export function SettingsFocusRow({ children, style, variant = 'row', ringRadius,
   claim?: boolean;
 }) {
   const theme = useTheme();
-  const { focused, onLayout, tapToClaim } = useSettingsFocusItem(handlers, claim);
+  const { id, focused, onLayout, tapToClaim, getAbsLayout } = useSettingsFocusItem(handlers, claim);
+  // 白枠（frame）の中の行は、青枠を白枠に描いてもらう（白枠の縁いっぱいに広げるため）。
+  const frame = useContext(FrameContext);
+  const inFrame = frame !== null && variant === 'row';
+  const register = frame?.register;
+  useEffect(() => {
+    if (!register || variant !== 'row') return;
+    return register(id, getAbsLayout);
+  }, [register, variant, id, getAbsLayout]);
+  // 描き直しはフォーカス中の行が動いたときだけ（全行の onLayout で白枠を再描画しない）
+  const handleLayout = (e: LayoutChangeEvent) => {
+    onLayout(e);
+    if (inFrame && focused) frame.relayout();
+  };
   return (
-    <View style={style} onLayout={onLayout} {...tapToClaim}>
+    <View style={style} onLayout={handleLayout} {...tapToClaim}>
       {children}
-      {focused && (
+      {focused && !inFrame && (
         <View
           pointerEvents="none"
           style={variant === 'card'
@@ -203,7 +312,7 @@ export function SettingsFocusRow({ children, style, variant = 'row', ringRadius,
 /**
  * 055：J/K のフォーカス管理（053 の `SettingsDetail` から切り出し）。設定の詳細画面と、デッキ/タグの新規・編集画面で共用する。
  * 返り値の `registry` を `SettingsFocusContext.Provider` で子に渡し、ScrollView に `scrollRef`（呼び出し側の ref）・
- * `onLayout={onViewportLayout}`・`onScroll` で `scrollYRef` を更新させる。キーの割り当ては呼び出し側が行う
+ * `onLayout={onViewportLayout}`・`onContentSizeChange`・`onScroll` で `scrollYRef` を更新させる。キーの割り当ては呼び出し側が行う
  * （画面ごとに使えるキーが違うため＝デッキ画面は H が「HTML/CSS 土台」）。
  */
 export function useFocusRegistry(scrollRef: RefObject<ScrollView | null>, scrollYRef: RefObject<number>) {
@@ -239,15 +348,14 @@ export function useFocusRegistry(scrollRef: RefObject<ScrollView | null>, scroll
   const registry = useMemo<SettingsFocusRegistry>(() => ({ register, setLayout, focusedId, claim }), [register, setLayout, focusedId, claim]);
 
   const viewportHRef = useRef(0);
-  // 自動スクロール（設定タブと同じ：上下 8pt の余白を残して見える位置まで）。
+  const contentHRef = useRef(0);
+  // 自動スクロール：フォーカスした項目を**画面の真ん中**へ送る（ホーム・カード一覧の J/K と同じ＝`centeredScrollY`）。
   // ⚠️ 位置は毎回 layoutMap から読む＝文字サイズの変更などでレイアウトが動いても最新の値で測る。
   function scrollIntoView(id: string) {
     const l = absLayout(id);
     if (!l) return;
-    const top = scrollYRef.current;
-    const vh = viewportHRef.current;
-    if (l.y < top + 8) scrollRef.current?.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
-    else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
+    const y = centeredScrollY(l, viewportHRef.current, contentHRef.current, scrollYRef.current);
+    if (y !== null) scrollRef.current?.scrollTo({ y, animated: true });
   }
   // 並び＝画面上の縦位置の順（条件つきで出る行があっても順序が崩れない）。ヌルサイクル。
   function orderedIds() {
@@ -293,7 +401,9 @@ export function useFocusRegistry(scrollRef: RefObject<ScrollView | null>, scroll
 
 
   const onViewportLayout = (e: LayoutChangeEvent) => { viewportHRef.current = e.nativeEvent.layout.height; };
-  return { registry, focusedIdRef, setFocusedId, moveFocus, moveSection, focused, onViewportLayout };
+  /** ScrollView の `onContentSizeChange` に渡す（真ん中へ送るときの下端の上限に使う） */
+  const onContentSizeChange = (_w: number, h: number) => { contentHRef.current = h; };
+  return { registry, focusedIdRef, setFocusedId, moveFocus, moveSection, focused, onViewportLayout, onContentSizeChange };
 }
 
 /** 選択肢の左右：端で止める（循環しない＝053「選択肢の左右は端で止める」）。 */

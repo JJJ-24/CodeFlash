@@ -32,7 +32,8 @@ import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
-import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
+import { stepTagColor, TagColorPicker } from '@/components/TagColorPicker';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -123,7 +124,8 @@ export default function TagsScreen() {
     colorPickerFade.setValue(0);
     Animated.timing(colorPickerFade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   }, [showColorPicker, colorPickerFade]);
-  const [pickedColor, setPickedColor] = useState<string>(PRESET_COLORS[0]);
+  // 一括色変更で選んでいる色。null＝未選択（選んだタグの色がばらばら）＝「適用」を押せない
+  const [pickedColor, setPickedColor] = useState<string | null>(null);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const sortedTags = useMemo(() => {
@@ -293,20 +295,26 @@ export default function TagsScreen() {
     const ids = Array.from(selectedTagIds);
     const idsSet = new Set(ids);
     const color = pickedColor;
+    if (color === null) { setIsProcessing(false); return; }
     await updateTagsColor(db, ids, color);
     setTags(tags.map(t => idsSet.has(t.id) ? { ...t, color } : t));
     exitSelectionMode();
     setIsProcessing(false);
   }
 
-  // カラーピッカーの選択色を巡回（C=順送り / Shift+C=逆順）。タグ新規/編集と同じ操作感。
+  // カラーピッカーの選択色を巡回（C/. =順送り / ⇧C/, =逆順）。タグ新規/編集と同じ順番（`TAG_COLOR_CYCLE`）。
   function cycleColor(dir: number) {
-    setPickedColor((cur) => {
-      const list = PRESET_COLORS as readonly string[];
-      const i = list.indexOf(cur);
-      const n = list.length;
-      return list[(i + dir + n) % n];
-    });
+    setPickedColor((cur) => stepTagColor(cur, dir));
+  }
+  /**
+   * 一括色変更を開く。選んだタグが**すべて同じ色ならその色**を選んだ状態で開く（1個だけのときも）。
+   * ばらばらなら未選択で開く＝かつては常に1色目（赤）が選ばれていて「今の色」に見えたうえ、
+   * 開いてすぐ Return で全部が赤に塗り替わった。
+   */
+  function openColorPicker() {
+    const colors = new Set(tags.filter((tg) => selectedTagIds.has(tg.id)).map((tg) => tg.color));
+    setPickedColor(colors.size === 1 ? [...colors][0] : null);
+    setShowColorPicker(true);
   }
 
   useFocusEffect(
@@ -349,8 +357,11 @@ export default function TagsScreen() {
   // 034: 隠し TextInput を撤去しネイティブキーコマンドへ。J/K は両モード共通、その他は
   // 選択/通常モードで分岐（旧 onKeyPress/onSubmitEditing と同じ割り当て）。
   useKeyCommands([
-    { input: 'j', handler: () => { if (showColorPicker) return; moveFocus('next'); } },
-    { input: 'k', handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
+    // カラーピッカー表示中は J/K（L/H・↓/↑ も）＝色送り（選ぶのは色1つ＝学習画面のタグのシートと同じ並び）
+    { input: 'j', handler: () => { if (showColorPicker) { cycleColor(1); return; } moveFocus('next'); } },
+    { input: 'k', handler: () => { if (showColorPicker) { cycleColor(-1); return; } moveFocus('prev'); } },
+    { input: 'l', handler: () => { if (showColorPicker) cycleColor(1); } },
+    { input: 'h', handler: () => { if (showColorPicker) cycleColor(-1); } },
     // U/D: フォーカス中のタグを手動並べ替え（上へ/下へ）。手動ソート・非選択モード時のみ有効。
     // U/D: 通常モード＝フォーカスタグを手動並べ替え／選択モード＝選択タグをまとめ並べ替え（038）。
     { input: 'u', handler: () => { if (showColorPicker) return; if (selectionMode) moveSelectedTags('up'); else moveTagOrder('up'); } },
@@ -372,10 +383,13 @@ export default function TagsScreen() {
       handler: () => {
         // カラーピッカー表示中は C=順送り。選択モードで未表示なら C で開く。
         if (showColorPicker) { cycleColor(1); return; }
-        if (selectionMode && selectedTagIds.size > 0) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); }
+        if (selectionMode && selectedTagIds.size > 0) openColorPicker();
       },
     },
     { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (showColorPicker) cycleColor(-1); } },
+    // タグ新規/編集と同じく `,`/`.` でも色を送る（カラーピッカー表示中だけ）
+    { input: '.', handler: () => { if (showColorPicker) cycleColor(1); } },
+    { input: ',', handler: () => { if (showColorPicker) cycleColor(-1); } },
     ...deleteKeySpecs(() => {
       if (showColorPicker) return;
       if (selectionMode) {
@@ -427,8 +441,8 @@ export default function TagsScreen() {
       },
     },
     // 矢印キー: 上下=K/J（push 画面なので左右=,/. は無し）
-    { input: KeyCommand.keyInputUpArrow, handler: () => { if (showColorPicker) return; moveFocus('prev'); } },
-    { input: KeyCommand.keyInputDownArrow, handler: () => { if (showColorPicker) return; moveFocus('next'); } },
+    { input: KeyCommand.keyInputUpArrow, handler: () => { if (showColorPicker) { cycleColor(-1); return; } moveFocus('prev'); } },
+    { input: KeyCommand.keyInputDownArrow, handler: () => { if (showColorPicker) { cycleColor(1); return; } moveFocus('next'); } },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (showColorPicker) return; setShowShortcutsModal((v) => !v); } },
   // ショートカット一覧の表示中は背景ナビを解除（カラーピッカーは C/Shift+C/Return を使うので除外＝main 有効のまま。
@@ -809,7 +823,7 @@ export default function TagsScreen() {
           <View style={styles.selectionActions}>
             <Pressable
               style={[styles.iconBtn, { backgroundColor: theme.colors.primary }, (selectedTagIds.size === 0 || isProcessing) && { opacity: 0.4 }]}
-              onPress={() => { if (selectedTagIds.size > 0 && !isProcessing) { setPickedColor(PRESET_COLORS[0]); setShowColorPicker(true); } }}
+              onPress={() => { if (selectedTagIds.size > 0 && !isProcessing) openColorPicker(); }}
               disabled={selectedTagIds.size === 0 || isProcessing}
             >
               <Ionicons name="color-palette-outline" size={22} color="#FFF" />
@@ -873,20 +887,15 @@ export default function TagsScreen() {
             <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text, marginBottom: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('tag.changeColor')}
             </Text>
-            <View style={styles.colorGrid}>
-              {PRESET_COLORS.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[styles.colorCell, { backgroundColor: c }, pickedColor === c && styles.colorCellSelected]}
-                  onPress={() => setPickedColor(c)}
-                >
-                  {pickedColor === c && <Ionicons name="checkmark-sharp" size={18} color="#FFF" />}
-                </TouchableOpacity>
-              ))}
+            {/* タグ新規/編集と同じ色の部品（青・プリセット・テーマ追従・白黒）。かつてはプリセットだけで、
+                青・テーマ追従・白黒へはまとめて変えられなかった */}
+            <View style={styles.colorPickerBody}>
+              <TagColorPicker color={pickedColor} onChange={setPickedColor} />
             </View>
             <TouchableOpacity
-              style={[styles.colorPickerBtn, { backgroundColor: theme.colors.primary }]}
+              style={[styles.colorPickerBtn, { backgroundColor: theme.colors.primary }, pickedColor === null && { opacity: 0.4 }]}
               onPress={handleBulkColorChange}
+              disabled={pickedColor === null}
             >
               <Text style={{ color: '#FFF', fontWeight: '600', fontSize: theme.fontSize.md }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>{t('common.apply')}</Text>
             </TouchableOpacity>
@@ -987,21 +996,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     alignSelf: 'center',
   },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  colorCell: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  colorCellSelected: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
+  colorPickerBody: { marginBottom: 20 },
   colorPickerBtn: {
     alignSelf: 'stretch',
     paddingVertical: 14,

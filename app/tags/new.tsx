@@ -12,12 +12,12 @@ import {
   View,
 } from 'react-native';
 
-import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR, TAG_PRESET_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR } from '@/lib/theme';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
-import { resolveTagColor, TAG_THEME_COLOR, TAG_MONO_COLOR } from '@/lib/tagColors';
+import { resolveTagColor } from '@/lib/tagColors';
 import { SettingsFocusContext, useFocusRegistry } from '@/components/settings/settingsFocus';
 import { DeckFormCard, DeckFormField, DeckFormFieldLabel, DeckFormStaticField } from '@/components/deck/DeckFormParts';
-import { TagColorPicker } from '@/components/TagColorPicker';
+import { stepTagColor, TagColorPicker } from '@/components/TagColorPicker';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
@@ -89,10 +89,7 @@ export default function NewTagScreen() {
 
   // C キー：カラーを循環（TagColorPicker の並び順＝青→プリセット→テーマ色→白黒）。Shift+C で逆順。
   function cycleColor(dir = 1) {
-    const cycle = [PRIMARY_COLOR, ...TAG_PRESET_COLORS, TAG_THEME_COLOR, TAG_MONO_COLOR];
-    const i = cycle.indexOf(color);
-    const n = cycle.length;
-    setColor(cycle[(i + dir + n) % n]);
+    setColor(stepTagColor(color, dir));
   }
 
   // 034: ハードキーボードショートカット。文字キーはテキスト欄フォーカス中は入力に消費される（住み分け）。

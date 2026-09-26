@@ -4,8 +4,23 @@ import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useTheme, TAG_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
 import { TAG_THEME_COLOR, TAG_MONO_COLOR, contrastText } from '@/lib/tagColors';
 
+/**
+ * 色を C／⇧C（`,`／`.`）で送るときの順番＝ピッカーの並びと同じ（青 → プリセット → テーマ追従 → 白黒）。
+ * タグの新規・編集と、タグ管理の選択モードの一括色変更で共用する。
+ */
+export const TAG_COLOR_CYCLE: readonly string[] = [PRIMARY_COLOR, ...TAG_PRESET_COLORS, TAG_THEME_COLOR, TAG_MONO_COLOR];
+
+/** 色を1つ前後へ送る。今の色が一覧に無い（未選択など）なら、順送りは先頭・逆送りは末尾から始める */
+export function stepTagColor(current: string | null, dir: number): string {
+  const n = TAG_COLOR_CYCLE.length;
+  const i = current === null ? -1 : TAG_COLOR_CYCLE.indexOf(current);
+  if (i === -1) return dir > 0 ? TAG_COLOR_CYCLE[0] : TAG_COLOR_CYCLE[n - 1];
+  return TAG_COLOR_CYCLE[(i + dir + n) % n];
+}
+
 interface Props {
-  color: string;
+  /** 選ばれている色。null＝どれも選んでいない（一括色変更で、選んだタグの色がばらばらのとき） */
+  color: string | null;
   onChange: (color: string) => void;
 }
 

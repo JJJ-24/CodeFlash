@@ -10,6 +10,7 @@ import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 
 import { monthLabel, weekdayLabels } from '@/lib/dateLabels';
+import { centeredScrollY } from '@/lib/scrollCenter';
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
@@ -587,7 +588,7 @@ function DonutSheet({
       overlayOpacity.value = withTiming(0, { duration: 200 });
       sheetY.value = withTiming(screenHeight, { duration: 250 });
     }
-  }, [visible, screenHeight]);
+  }, [visible, screenHeight, overlayOpacity, sheetY]);
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
@@ -672,7 +673,7 @@ function DeckPickerSheet({
       overlayOpacity.value = withTiming(0, { duration: 200 });
       sheetY.value = withTiming(screenHeight, { duration: 250 });
     }
-  }, [visible, screenHeight]);
+  }, [visible, screenHeight, overlayOpacity, sheetY]);
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
@@ -844,7 +845,7 @@ function PeriodPickerSheet({
       overlayOpacity.value = withTiming(0, { duration: 200 });
       sheetY.value = withTiming(screenHeight, { duration: 250 });
     }
-  }, [visible, screenHeight]);
+  }, [visible, screenHeight, overlayOpacity, sheetY]);
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
@@ -1009,19 +1010,27 @@ export default function StatsScreen() {
     heatmap: number;
     heatmapHeight: number;
     today: number;
+    todayHeight: number;
     total: number;
+    totalHeight: number;
+    mastery: number;
+    masteryList: number;
     decks: number[];
+    deckHeights: number[];
     proSection: number;
     monthly: number;
+    /** 月別グラフの枠の下端（proSection の中の y）＝J/K で「見出し〜グラフ」を真ん中へ送るため */
+    monthlyBottom: number;
     ranking: number;
     rankingHeight: number;
     rankingOuter: number;
     rankingInner: number;
-  }>({ heatmap: 0, heatmapHeight: 0, today: 0, total: 0, decks: [], proSection: 0, monthly: 0, ranking: 0, rankingHeight: 0, rankingOuter: 0, rankingInner: 0 });
+  }>({ heatmap: 0, heatmapHeight: 0, today: 0, todayHeight: 0, total: 0, totalHeight: 0, mastery: 0, masteryList: 0, decks: [], deckHeights: [], proSection: 0, monthly: 0, monthlyBottom: 0, ranking: 0, rankingHeight: 0, rankingOuter: 0, rankingInner: 0 });
   const pendingFocusRankingRef = useRef(false);
   const shouldScrollAfterLoadRef = useRef(false);
   const cardLayoutMap = useRef<Map<string, { y: number; h: number }>>(new Map());
   const scrollViewHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
   const currentScrollYRef = useRef(0);
 
   const [selectedBlock, setSelectedBlock] = useState<BlockKey>('due');
@@ -1272,49 +1281,48 @@ export default function StatsScreen() {
     scrollViewRef.current?.scrollTo({ y: Math.max(top, 0), animated: true });
   }
 
-  function scrollToCardIfNeeded(cardId: string) {
+  /** ランキングのカード1枚の、スクロールの中身から見た位置 */
+  function cardExtent(cardId: string): { y: number; h: number } | null {
     const layout = cardLayoutMap.current.get(cardId);
-    const scroll = scrollViewRef.current;
-    if (!layout || !scroll) return;
-    const absY =
-      sectionOffsets.current.proSection +
-      sectionOffsets.current.ranking +
-      sectionOffsets.current.rankingOuter +
-      sectionOffsets.current.rankingInner +
-      layout.y;
-    const viewportH = scrollViewHeightRef.current;
-    const curY = currentScrollYRef.current;
-    if (viewportH <= 0) {
-      // ScrollView height 未計測 → 大まかにカード上端を viewport 上から少し下に
-      scroll.scrollTo({ y: Math.max(absY - 100, 0), animated: true });
-      return;
-    }
-    // 既に画面内にあれば何もしない
-    if (absY >= curY && absY + layout.h <= curY + viewportH) return;
-    if (absY < curY) {
-      scroll.scrollTo({ y: Math.max(absY - 16, 0), animated: true });
-    } else {
-      scroll.scrollTo({ y: absY + layout.h - viewportH + 16, animated: true });
+    if (!layout) return null;
+    const o = sectionOffsets.current;
+    return { y: o.proSection + o.ranking + o.rankingOuter + o.rankingInner + layout.y, h: layout.h };
+  }
+
+  /**
+   * J/K の止まり先の、スクロールの中身から見た範囲。セクション（草グラフ・今日・全体・月別）は
+   * **見出しから枠の下端まで**＝何のセクションか読める形で送る。
+   */
+  function focusExtent(item: FocusedItem): { y: number; h: number } | null {
+    if (item === null) return null;
+    const o = sectionOffsets.current;
+    switch (item.kind) {
+      case 'heatmap': return { y: o.heatmap, h: o.heatmapHeight };
+      case 'today': return { y: o.today, h: o.todayHeight };
+      case 'total': return { y: o.total, h: o.totalHeight };
+      case 'deck': return { y: o.mastery + o.masteryList + (o.decks[item.idx] ?? 0), h: o.deckHeights[item.idx] ?? 0 };
+      case 'monthly': return { y: o.proSection + o.monthly, h: Math.max(0, o.monthlyBottom - o.monthly) };
+      case 'card': {
+        const card = gradeBlockCards[item.idx];
+        return card ? cardExtent(card.cardId) : null;
+      }
     }
   }
 
+  // J/K のフォーカスを**画面の真ん中**へ送る（ホーム・カード一覧・設定と同じ＝`centeredScrollY`）。
+  // 背の高いセクション（草グラフなど）は頭をそろえる。
+  // ⚠️ 未計測（ビューポート高 0）のときは項目の頭へ送るだけにする。
   function scrollToFocus(item: FocusedItem) {
-    if (item === null) return;
-    if (item.kind === 'heatmap') {
-      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.heatmap, animated: true });
-    } else if (item.kind === 'today') {
-      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.today, animated: true });
-    } else if (item.kind === 'total') {
-      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total, animated: true });
-    } else if (item.kind === 'deck') {
-      const y = sectionOffsets.current.decks[item.idx] ?? 0;
-      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.total + y, animated: true });
-    } else if (item.kind === 'monthly') {
-      scrollViewRef.current?.scrollTo({ y: sectionOffsets.current.proSection + sectionOffsets.current.monthly, animated: true });
-    } else if (item.kind === 'card') {
-      const card = gradeBlockCards[item.idx];
-      if (card) scrollToCardIfNeeded(card.cardId);
+    const ext = focusExtent(item);
+    const scroll = scrollViewRef.current;
+    if (!ext || !scroll) return;
+    const vh = scrollViewHeightRef.current;
+    if (vh <= 0) {
+      scroll.scrollTo({ y: Math.max(ext.y - 16, 0), animated: true });
+      return;
     }
+    const y = centeredScrollY(ext, vh, contentHeightRef.current, currentScrollYRef.current);
+    if (y !== null) scroll.scrollTo({ y, animated: true });
   }
 
   function moveFocus(dir: 'next' | 'prev') {
@@ -1877,6 +1885,7 @@ export default function StatsScreen() {
         automaticallyAdjustsScrollIndicatorInsets={false}
         scrollsToTop={scrollsToTopArmed}
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
+        onContentSizeChange={(_w, h) => { contentHeightRef.current = h; }}
         onScroll={(e) => { currentScrollYRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={32}
       >
@@ -1999,7 +2008,7 @@ export default function StatsScreen() {
       {/* 今日のサマリー */}
       <View
         style={styles.section}
-        onLayout={(e) => { sectionOffsets.current.today = e.nativeEvent.layout.y; }}
+        onLayout={(e) => { sectionOffsets.current.today = e.nativeEvent.layout.y; sectionOffsets.current.todayHeight = e.nativeEvent.layout.height; }}
       >
         <CollapsibleSectionTitle
           title={t('stats.todaySummary')}
@@ -2016,7 +2025,7 @@ export default function StatsScreen() {
             focusedItem?.kind === 'today' && { borderWidth: 2, borderColor: theme.colors.primary },
             pressed && { opacity: 0.7 },
           ]}
-          onPress={() => { setFocusedItem({ kind: 'today' }); activeSheet === 'today' ? closeSheet() : openSheet('today'); }}
+          onPress={() => { setFocusedItem({ kind: 'today' }); if (activeSheet === 'today') closeSheet(); else openSheet('today'); }}
         >
           <View style={styles.masteryHeader}>
             <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.todayCompletionLabel')}</Text>
@@ -2036,7 +2045,7 @@ export default function StatsScreen() {
       {/* 全体学習率 */}
       <View
         style={styles.section}
-        onLayout={(e) => { sectionOffsets.current.total = e.nativeEvent.layout.y; }}
+        onLayout={(e) => { sectionOffsets.current.total = e.nativeEvent.layout.y; sectionOffsets.current.totalHeight = e.nativeEvent.layout.height; }}
       >
         <CollapsibleSectionTitle
           title={t('stats.totalProgress')}
@@ -2053,7 +2062,7 @@ export default function StatsScreen() {
             focusedItem?.kind === 'total' && { borderWidth: 2, borderColor: theme.colors.primary },
             pressed && { opacity: 0.7 },
           ]}
-          onPress={() => { setFocusedItem({ kind: 'total' }); activeSheet === 'total' ? closeSheet() : openSheet('total'); }}
+          onPress={() => { setFocusedItem({ kind: 'total' }); if (activeSheet === 'total') closeSheet(); else openSheet('total'); }}
         >
           <View style={styles.masteryHeader}>
             <Text style={[styles.masteryDeckName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('stats.allDecks')}</Text>
@@ -2071,7 +2080,7 @@ export default function StatsScreen() {
 
       {/* デッキ別習熟度 */}
       {sortedDeckMastery.length > 0 && (
-        <View style={styles.section}>
+        <View style={styles.section} onLayout={(e) => { sectionOffsets.current.mastery = e.nativeEvent.layout.y; }}>
           <CollapsibleSectionTitle
             title={t('stats.deckMastery')}
             collapsed={isSectionCollapsed('mastery')}
@@ -2080,7 +2089,7 @@ export default function StatsScreen() {
             infoLabel={t('stats.deckMasteryInfoLabel')}
           />
           {!isSectionCollapsed('mastery') && (
-          <View style={styles.deckMasteryList}>
+          <View style={styles.deckMasteryList} onLayout={(e) => { sectionOffsets.current.masteryList = e.nativeEvent.layout.y; }}>
             {sortedDeckMastery.map((m, idx) => {
               const deck = deckMap[m.deckId];
               if (!deck) return null;
@@ -2093,9 +2102,9 @@ export default function StatsScreen() {
                     { backgroundColor: theme.colors.surface },
                     isFocused && { borderWidth: 2, borderColor: theme.colors.primary },
                   ]}
-                  onLayout={(e) => { sectionOffsets.current.decks[idx] = e.nativeEvent.layout.y; }}
+                  onLayout={(e) => { sectionOffsets.current.decks[idx] = e.nativeEvent.layout.y; sectionOffsets.current.deckHeights[idx] = e.nativeEvent.layout.height; }}
                 >
-                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => { setFocusedItem({ kind: 'deck', idx }); activeSheet === idx ? closeSheet() : openSheet(idx); }} />
+                  <DeckMasteryRow deck={deck} mastery={m} theme={theme} onPress={() => { setFocusedItem({ kind: 'deck', idx }); if (activeSheet === idx) closeSheet(); else openSheet(idx); }} />
                 </View>
               );
             })}
@@ -2150,6 +2159,7 @@ export default function StatsScreen() {
                 { backgroundColor: theme.colors.surface, marginBottom: 12 },
                 focusedItem?.kind === 'monthly' && { borderWidth: 2, borderColor: theme.colors.primary },
               ]}
+              onLayout={(e) => { sectionOffsets.current.monthlyBottom = e.nativeEvent.layout.y + e.nativeEvent.layout.height; }}
             >
               <MonthBarChart
                 data={monthlyReviewed}

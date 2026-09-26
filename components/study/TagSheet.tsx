@@ -45,7 +45,7 @@ export function TagSheet({ visible, onClose, tags, selectedIds, onToggle, onCrea
       overlayOpacity.value = withTiming(0, { duration: 200 });
       sheetY.value = withTiming(500, { duration: 250 });
     }
-  }, [visible]);
+  }, [visible, overlayOpacity, sheetY]);
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: sheetY.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
@@ -70,20 +70,23 @@ export function TagSheet({ visible, onClose, tags, selectedIds, onToggle, onCrea
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  // キーボード操作（034）：J/K・H/L・,/.（iPhoneは矢印も）でフォーカス、Space で付け外し、Return で閉じる。
+  // キーボード操作（034）：J/K・H/L・,/.（iPhoneは矢印も）でフォーカス、Space/Return で付け外し。
   // チップは折り返し配置のため配列順（タグ管理の並び順）で直線的に送る。末尾の「＋新規タグ」も対象。
-  const [focusedIndex, setFocusedIndex] = useState(0);
+  // 開いた時点はフォーカス無し（J/L/. ＝先頭のチップ・K/H/, ＝末尾の「＋新規タグ」）。付け外しは押した瞬間に
+  // 保存されるので、開いてすぐの Return で先頭のタグが付いてしまうのを防ぐ（他の選択シートと同じ）。
+  // フォーカス無しの Return＝閉じる／Space＝何もしない。
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const chipYs = useRef<number[]>([]);
   useEffect(() => {
-    if (visible) { setFocusedIndex(0); setCreating(false); setNewName(''); setDupError(false); }
+    if (visible) { setFocusedIndex(null); setCreating(false); setNewName(''); setDupError(false); }
   }, [visible]);
 
   const itemCount = tags.length + 1; // ＋新規タグ チップを含む
 
   function move(dir: number) {
     setFocusedIndex((p) => {
-      const next = (p + dir + itemCount) % itemCount;
+      const next = p === null ? (dir > 0 ? 0 : itemCount - 1) : (p + dir + itemCount) % itemCount;
       const y = chipYs.current[next];
       if (y != null) {
         setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true }), 0);
@@ -121,6 +124,7 @@ export function TagSheet({ visible, onClose, tags, selectedIds, onToggle, onCrea
   }
 
   function activateFocused() {
+    if (focusedIndex === null) return;
     if (focusedIndex < tags.length) {
       if (tags[focusedIndex]) onToggle(tags[focusedIndex].id);
     } else {
@@ -145,7 +149,7 @@ export function TagSheet({ visible, onClose, tags, selectedIds, onToggle, onCrea
     { input: 't', handler: () => { if (visible) onClose(); } },
     // Return は Space と同じ「フォーカス項目の決定」（タグの付け外し/新規作成開始。作成入力中は確定）。
     // アプリ全体の「Return = フォーカス項目の決定」規約に合わせ、閉じるのは T/Esc/タップが担当。
-    { input: KeyCommand.keyInputEnter, handler: () => { if (!visible) return; if (creating) { submitCreate(); } else { activateFocused(); } } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (!visible) return; if (creating) { submitCreate(); } else if (focusedIndex === null) { onClose(); } else { activateFocused(); } } },
     { input: KeyCommand.keyInputEscape, handler: () => { if (!visible) return; if (creating) { cancelCreate(); } else { onClose(); } } },
     ...(((Platform as any).isPad ? [] : [
       { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },

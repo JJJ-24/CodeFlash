@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { DeckIcon } from '@/components/DeckIcon';
 import { sortDecks } from '@/lib/sortDecks';
 import { useKeyCommands } from '@/lib/useKeyCommands';
+import { DoneFocusRing } from '@/hooks/useMultiSelectKeys';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 import type { Deck } from '@/types';
@@ -32,10 +33,13 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
   const [newName, setNewName] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // キーボード操作（034）：新規作成行(あれば index 0) ＋ デッキ一覧をフォーカス。
+  // キーボード操作（034）：新規作成行(あれば index 0) ＋ デッキ一覧 → 最後に「キャンセル」（index = rowCount）。
+  // 開いた時点はフォーカス無し（J＝先頭の行／K＝キャンセル）＝開いてすぐの Return で先頭のデッキへ
+  // 移動してしまう押し間違えを防ぐ（複数選択のシート＝`useMultiSelectKeys` と同じ）。
   const hasCreateRow = !!onCreateDeck;
-  const total = sortedDecks.length + (hasCreateRow ? 1 : 0);
-  const [focusedIndex, setFocusedIndex] = useState(0);
+  const rowCount = sortedDecks.length + (hasCreateRow ? 1 : 0);
+  const cancelIndex = rowCount;
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -43,7 +47,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
       setCreating(false);
       setNewName('');
       setSubmitting(false);
-      setFocusedIndex(0);
+      setFocusedIndex(null);
       // シートを閉じる際にキーボードを確実に閉じる。autoFocus の入力欄を開いたまま
       // 背景タップ・デッキ選択・親 unmount で閉じると、キーボード非表示通知が届かず
       // グローバル状態が固着して他画面が無限スクロールになるのを防ぐ。
@@ -70,7 +74,10 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
 
   function move(dir: number) {
     setFocusedIndex((p) => {
-      const next = (p + dir + total) % total;
+      const total = rowCount + 1;
+      const next = p === null ? (dir > 0 ? 0 : cancelIndex) : (p + dir + total) % total;
+      // キャンセルは一覧の外（下に固定）なのでスクロールしない
+      if (next === cancelIndex) return next;
       setTimeout(() => {
         if (hasCreateRow && next === 0) listRef.current?.scrollToOffset({ offset: 0, animated: true });
         else listRef.current?.scrollToIndex({ index: hasCreateRow ? next - 1 : next, viewPosition: 0.5, animated: true });
@@ -78,7 +85,9 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
       return next;
     });
   }
+  /** Return/Space：行＝選ぶ（新規作成の行は入力欄を開く）・キャンセル／フォーカス無し＝何もせず閉じる */
   function activateFocused() {
+    if (focusedIndex === null || focusedIndex === cancelIndex) { onClose(); return; }
     if (hasCreateRow && focusedIndex === 0) { setCreating(true); return; }
     const deck = sortedDecks[hasCreateRow ? focusedIndex - 1 : focusedIndex];
     if (deck) onSelect(deck);
@@ -89,7 +98,8 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
   useKeyCommands([
     { input: 'j', handler: () => { if (visible) move(1); } },
     { input: 'k', handler: () => { if (visible) move(-1); } },
-    { input: ' ', handler: () => { if (visible) activateFocused(); } },
+    // Space はフォーカス無しでは何もしない（閉じるのは Return/Esc＝押したつもりのない Space で閉じない）
+    { input: ' ', handler: () => { if (visible && focusedIndex !== null) activateFocused(); } },
     { input: KeyCommand.keyInputEnter, handler: () => { if (visible) activateFocused(); } },
     { input: KeyCommand.keyInputEscape, handler: () => { if (!visible) return; if (creating) { setCreating(false); Keyboard.dismiss(); return; } onClose(); } },
     ...(((Platform as any).isPad ? [] : [
@@ -184,6 +194,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
               <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                 {t('common.cancel')}
               </Text>
+              <DoneFocusRing visible={focusedIndex === cancelIndex} />
             </Pressable>
           </Pressable>
         </Pressable>

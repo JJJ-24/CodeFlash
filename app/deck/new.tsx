@@ -426,7 +426,6 @@ export default function NewDeckScreen() {
           <DeckFormCard>
             <DeckFormToggleRow
               section
-              icon="volume-high-outline"
               label={t('deck.speechLabel')}
               value={!speechDisabled}
               onValueChange={(v) => { Keyboard.dismiss(); setSpeechDisabled(!v); }}
@@ -442,7 +441,6 @@ export default function NewDeckScreen() {
                 設定済みのデッキを非 Pro が受け取ったとき、解除する手段が画面から消えるため。
                 ⚠️ **適用（学習画面）には isPro を入れない**。 */}
             <DeckFormNavRow
-              icon="language"
               configured={speechConfigured}
               label={t('deck.speechSettingsLabel')}
               summary={deckSpeechSummary(speechLangs, speechLangsBack, speechAuto, t)}
@@ -463,7 +461,6 @@ export default function NewDeckScreen() {
               <DeckFormCard>
                 <DeckFormNavRow
                   section
-                  icon="globe"
                   configured={htmlConfigured}
                   label={t('deck.htmlInitLabel')}
                   // この行は土台と画像ライブラリの両方への入口なので、**中にある物をそのまま出す**。
@@ -482,7 +479,6 @@ export default function NewDeckScreen() {
                 />
                 <DeckFormDivider />
                 <DeckFormNavRow
-                  icon="server"
                   configured={filledSqlStages > 0}
                   label={t('deck.sqlInitLabel')}
                   summary={filledSqlStages > 0 ? t('deck.sqlStagesSet', { count: filledSqlStages }) : t('deck.sqlInitNone')}

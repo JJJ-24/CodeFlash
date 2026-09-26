@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Children, createContext, isValidElement, useContext } from 'react';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppSwitch } from '@/components/AppSwitch';
@@ -124,14 +124,17 @@ export function DeckFormDivider() {
 }
 
 /**
- * 開くだけの行（読み上げの設定・HTML/CSS 土台・SQL 初期化）。左に項目名、右に要約と ＞。
+ * 開くだけの行（詳細設定・HTML/CSS 土台・SQL 初期化）。左に項目名、右に要約と ＞。
  * かつては項目名を上の段に置き、その下に要約のボタンを並べていた（1項目で2段）。
+ * 左のアイコンは撤去した（状態は右の要約と重複・項目名で見分けがつく・デッキ編集の他の行にアイコンが無い）。
  */
 export function DeckFormNavRow({
-  icon, configured, label, summary, locked, dim, note, onPress, ...handlers
+  configured, label, summary, locked, dim, note, onPress, ...handlers
 }: SettingsFocusHandlers & {
-  icon: ComponentProps<typeof Ionicons>['name'];
-  /** 設定済みなら塗りのアイコン＋primary（未設定は outline＋グレー） */
+  /**
+   * 中身があるか＝項目名の右に青いドット（カード編集の表/裏/メモのタブの点と同じ「中身あり」の印）。
+   * ドットは有無だけ・中身は右の要約で読む。
+   */
   configured: boolean;
   label: string;
   summary: string;
@@ -148,17 +151,15 @@ export function DeckFormNavRow({
   return (
     <SettingsFocusRow style={styles.row} onActivate={onPress} {...ring} {...handlers}>
       <Pressable style={[styles.navRow, dim && styles.inactive]} onPress={onPress}>
-        <Ionicons
-          name={(configured ? icon : `${icon}-outline`) as ComponentProps<typeof Ionicons>['name']}
-          size={20}
-          color={configured ? theme.colors.primary : theme.colors.textSecondary}
-        />
-        <Text
-          style={[styles.navLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
-          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-        >
-          {label}
-        </Text>
+        <View style={styles.navLabelWrap}>
+          <Text
+            style={[styles.navLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
+            maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+          >
+            {label}
+          </Text>
+          {configured && <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />}
+        </View>
         <Text
           style={[styles.navSummary, { color: configured ? theme.colors.text : theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
           numberOfLines={2}
@@ -179,18 +180,12 @@ export function DeckFormNavRow({
 }
 
 /**
- * スイッチの行（読み上げ・アーカイブ）。左からアイコン・項目名・ⓘ・スイッチ。ⓘ の説明は行の下にインライン展開する
+ * スイッチの行（このデッキで使用・アーカイブ）。左から項目名・ⓘ・スイッチ。ⓘ の説明は行の下にインライン展開する
  * （ⓘ はアイコンのタップだけで開く＝ラベルには持たせない）。Space＝スイッチ（055）。
  */
 export function DeckFormToggleRow({
-  icon, label, value, onValueChange, infoLabel, infoText, showInfo, onToggleInfo, dim, note, ...handlers
+  label, value, onValueChange, infoLabel, infoText, showInfo, onToggleInfo, dim, note, ...handlers
 }: SettingsFocusHandlers & {
-  /**
-   * 項目名の左のアイコン。スイッチの行では飾り（ON/OFF はスイッチが示す）なので、同じ白枠の他の行と
-   * 左端をそろえたいときだけ付ける（読み上げ＝下の「詳細設定」の行にアイコンがある）。
-   * アーカイブは付けない（「基本」の他の項目・カード編集のアーカイブ欄と同じ）。
-   */
-  icon?: ComponentProps<typeof Ionicons>['name'];
   label: string;
   value: boolean;
   onValueChange: (v: boolean) => void;
@@ -206,7 +201,6 @@ export function DeckFormToggleRow({
   return (
     <SettingsFocusRow style={styles.row} onToggle={() => onValueChange(!value)} {...ring} {...handlers}>
       <View style={[styles.navRow, dim && styles.inactive]}>
-        {icon && <Ionicons name={icon} size={20} color={theme.colors.textSecondary} />}
         <View style={styles.toggleLabelWrap}>
           <Text
             style={[styles.toggleLabel, { color: theme.colors.text, fontSize: theme.fontSize.md }]}
@@ -259,7 +253,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     minHeight: 55,
   },
-  navLabel: { fontWeight: '600', flexShrink: 0, maxWidth: '55%' },
+  navLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0, maxWidth: '55%' },
+  navLabel: { fontWeight: '600', flexShrink: 1 },
+  // カード編集のタブの「中身あり」の点と同じ大きさ
+  dot: { width: 5, height: 5, borderRadius: 3 },
   navSummary: { flex: 1, textAlign: 'right' },
   toggleLabelWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
   toggleLabel: { fontWeight: '600', flexShrink: 1 },

@@ -1072,7 +1072,7 @@
     "tabSelectCard": "Cambiar de pestaña\n(Anverso/Reverso/Nota)\n[H/L][,/.] también",
     "cycleMode": "Cambiar de modo\n(Edición/Orden/Vista previa)",
     "toggleAddMenu": "Menú para agregar bloques",
-    "editorReturn": "Abrir (+ bloque / etiquetas)/\nConfirmar en el menú",
+    "editorReturn": "Abrir / Confirmar (con foco)",
     "scrollToTags": "Ir a las etiquetas (foco)",
     "save": "Guardar\n[⌘S] también",
     "close": "Cerrar",
@@ -1101,7 +1101,7 @@
     "finishSession": "Terminar la sesión",
     "changeColorSelected": "Cambiar el color (elementos seleccionados)",
     "catStageSheet": "Lista de bases / inicializaciones (en la hoja)",
-    "stageOpen": "Abrir (con foco)",
+    "stageOpen": "Desplegar (con foco)",
     "stageAdd": "Agregar una base / inicialización"
   },
   "speechLang": {

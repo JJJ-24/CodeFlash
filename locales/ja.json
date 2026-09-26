@@ -1020,7 +1020,7 @@
     "tabSelectCard": "タブ切替\n（表面/裏面/メモ）\n[H/L][,/.]でも可",
     "cycleMode": "モード切替\n（編集/並べ替え/プレビュー）",
     "toggleAddMenu": "ブロック追加メニュー",
-    "editorReturn": "開く（＋ブロック追加・タグ）/\nメニューで決定",
+    "editorReturn": "開く / 決定（フォーカス項目）",
     "scrollToTags": "タグ欄へ移動（フォーカス）",
     "save": "保存\n[⌘S]でも可",
     "close": "閉じる",
@@ -1049,7 +1049,7 @@
     "finishSession": "学習終了",
     "changeColorSelected": "色変更（選択項目）",
     "catStageSheet": "土台/初期化の一覧（モーダル内）",
-    "stageOpen": "開く（フォーカス項目）",
+    "stageOpen": "展開（フォーカス項目）",
     "stageAdd": "土台/初期化を追加"
   },
   "speechLang": {

@@ -1070,7 +1070,7 @@
     "tabSelectCard": "Switch tab\n(Front/Back/Memo)\n[H/L][,/.] also works",
     "cycleMode": "Cycle mode\n(Edit/Sort/Preview)",
     "toggleAddMenu": "Toggle add block menu",
-    "editorReturn": "Open (+ Add Block / Tags)/\nConfirm in menu",
+    "editorReturn": "Open / Confirm (focused item)",
     "scrollToTags": "Go to tags (focus)",
     "save": "Save\n[⌘S] also works",
     "close": "Close",

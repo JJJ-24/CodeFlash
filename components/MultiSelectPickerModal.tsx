@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { constants as KeyCommand } from 'react-native-key-command';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { DoneFocusRing, useMultiSelectKeys } from '@/hooks/useMultiSelectKeys';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
-import { useKeyCommands } from '@/lib/useKeyCommands';
 
 export type PickerItem = { id: string; name: string; color?: string };
 
@@ -26,7 +25,7 @@ const ALL_ID = '__all__';
 
 /**
  * 複数選択のシート（検索のタグ絞り込み・カード編集のタグ選択〈056〉で共用）。
- * キー：J/K（iPhone は ↑/↓ も）＝移動・Space＝選択/解除・Return/Esc＝閉じる。
+ * キーは `useMultiSelectKeys`（J/K＝行 → 最後に「完了」・Return＝フォーカス中のものを実行・Space＝選択/解除・Esc＝閉じる）。
  * 表示中のみ発火（`active`＝visible）。親画面は表示中に自分のキーを解除する。
  */
 export function MultiSelectPickerModal({ visible, title, allLabel, items, selectedIds, onToggle, onClearAll, onClose }: Props) {
@@ -39,36 +38,18 @@ export function MultiSelectPickerModal({ visible, title, allLabel, items, select
     () => (allLabel != null ? [{ id: ALL_ID, name: allLabel }, ...items] : items),
     [allLabel, items],
   );
-  const [focusedIndex, setFocusedIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
-  useEffect(() => { setFocusedIndex(0); }, [visible]);
-
-  function move(dir: number) {
-    setFocusedIndex((p) => {
-      const n = data.length;
-      if (n === 0) return 0;
-      const next = (p + dir + n) % n;
-      setTimeout(() => listRef.current?.scrollToIndex({ index: next, viewPosition: 0.5, animated: true }), 0);
-      return next;
-    });
-  }
-  function activateFocused() {
-    const item = data[focusedIndex];
-    if (!item) return;
-    if (item.id === ALL_ID) onClearAll?.(); else onToggle(item.id);
-  }
-
-  useKeyCommands([
-    { input: 'j', handler: () => { if (visible) move(1); } },
-    { input: 'k', handler: () => { if (visible) move(-1); } },
-    { input: ' ', handler: () => { if (visible) activateFocused(); } },
-    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) onClose(); } },
-    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
-    ...(((Platform as any).isPad ? [] : [
-      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
-      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
-    ]) as { input: string; handler: () => void }[]),
-  ], visible);
+  const { focusedIndex, setFocusedIndex, doneFocused } = useMultiSelectKeys({
+    visible,
+    count: data.length,
+    onActivate: (i) => {
+      const item = data[i];
+      if (!item) return;
+      if (item.id === ALL_ID) onClearAll?.(); else onToggle(item.id);
+    },
+    onClose,
+    scrollTo: (i) => listRef.current?.scrollToIndex({ index: i, viewPosition: 0.5, animated: true }),
+  });
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -115,6 +96,7 @@ export function MultiSelectPickerModal({ visible, title, allLabel, items, select
             <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('common.done')}
             </Text>
+            <DoneFocusRing visible={doneFocused} />
           </Pressable>
         </Pressable>
       </Pressable>

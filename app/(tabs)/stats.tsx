@@ -52,6 +52,7 @@ import { STREAK_MEDALS, SURPRISE_STREAKS } from '@/lib/stats/badges';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { DoneFocusRing, useMultiSelectKeys } from '@/hooks/useMultiSelectKeys';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { EmptyState } from '@/components/EmptyState';
@@ -679,14 +680,11 @@ function DeckPickerSheet({
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
   const allActive = selectedIds.length === 0;
 
-  // キーボード操作（034・複数選択）：すべて(0) ＋ デッキ(1..n) を J/K でフォーカス、Space で選択トグル。
-  const total = decks.length + 1;
-  const [focusedIndex, setFocusedIndex] = useState(0);
+  // キーボード操作（034・複数選択）：すべて(0) ＋ デッキ(1..n) → 最後に「完了」（`useMultiSelectKeys`）。
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
   const viewportHRef = useRef(0);
   const itemLayouts = useRef<Map<number, { y: number; h: number }>>(new Map());
-  useEffect(() => { if (visible) setFocusedIndex(0); }, [visible]);
 
   function ensureVisible(index: number) {
     const l = itemLayouts.current.get(index);
@@ -696,29 +694,17 @@ function DeckPickerSheet({
     if (l.y < top + 8) scrollRef.current?.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
     else if (l.y + l.h > top + vh - 8) scrollRef.current?.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
   }
-  function move(dir: number) {
-    setFocusedIndex((p) => {
-      const next = (p + dir + total) % total;
-      setTimeout(() => ensureVisible(next), 0);
-      return next;
-    });
-  }
-  function activateFocused() {
-    if (focusedIndex === 0) { onClearAll(); return; }
-    const deck = decks[focusedIndex - 1];
-    if (deck) onToggle(deck.id);
-  }
-  useKeyCommands([
-    { input: 'j', handler: () => { if (visible) move(1); } },
-    { input: 'k', handler: () => { if (visible) move(-1); } },
-    { input: ' ', handler: () => { if (visible) activateFocused(); } },
-    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) onClose(); } },
-    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
-    ...(((Platform as any).isPad ? [] : [
-      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
-      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
-    ]) as { input: string; handler: () => void }[]),
-  ], visible);
+  const { focusedIndex, setFocusedIndex, doneFocused } = useMultiSelectKeys({
+    visible,
+    count: decks.length + 1,
+    onActivate: (i) => {
+      if (i === 0) { onClearAll(); return; }
+      const deck = decks[i - 1];
+      if (deck) onToggle(deck.id);
+    },
+    onClose,
+    scrollTo: ensureVisible,
+  });
 
   return (
     <View
@@ -813,6 +799,7 @@ function DeckPickerSheet({
           <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('common.done')}
           </Text>
+          <DoneFocusRing visible={doneFocused} />
         </Pressable>
       </Animated.View>
     </View>

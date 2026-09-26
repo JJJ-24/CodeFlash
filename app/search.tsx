@@ -24,6 +24,7 @@ import { localDateStr } from '@/lib/database/utils';
 import { getAllTags } from '@/lib/database/tags';
 import { getCardPreview, hasBlockContent } from '@/lib/cardPreview';
 import { sortDecks } from '@/lib/sortDecks';
+import { DoneFocusRing, useMultiSelectKeys } from '@/hooks/useMultiSelectKeys';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
@@ -97,39 +98,22 @@ function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onT
   const sorted = useMemo(() => sortDecks(decks, deckSortOrder), [decks, deckSortOrder]);
   const allActive = selectedIds.length === 0;
 
-  // フォーカスは [すべて(0), ...sorted(1..n)] の通し index で管理（すべて行はヘッダー）。
-  const total = sorted.length + 1;
-  const [focusedIndex, setFocusedIndex] = useState(0);
+  // フォーカスは [すべて(0), ...sorted(1..n)] の通し index で管理（すべて行はヘッダー）。最後に「完了」。
   const listRef = useRef<FlatList>(null);
-  useEffect(() => { setFocusedIndex(0); }, [visible]);
-
-  function move(dir: number) {
-    setFocusedIndex((p) => {
-      const next = (p + dir + total) % total;
-      setTimeout(() => {
-        if (next === 0) listRef.current?.scrollToOffset({ offset: 0, animated: true });
-        else listRef.current?.scrollToIndex({ index: next - 1, viewPosition: 0.5, animated: true });
-      }, 0);
-      return next;
-    });
-  }
-  function activateFocused() {
-    if (focusedIndex === 0) { onClearAll(); return; }
-    const deck = sorted[focusedIndex - 1];
-    if (deck) onToggle(deck.id);
-  }
-
-  useKeyCommands([
-    { input: 'j', handler: () => { if (visible) move(1); } },
-    { input: 'k', handler: () => { if (visible) move(-1); } },
-    { input: ' ', handler: () => { if (visible) activateFocused(); } },
-    { input: KeyCommand.keyInputEnter, handler: () => { if (visible) onClose(); } },
-    { input: KeyCommand.keyInputEscape, handler: () => { if (visible) onClose(); } },
-    ...(((Platform as any).isPad ? [] : [
-      { input: KeyCommand.keyInputDownArrow, handler: () => { if (visible) move(1); } },
-      { input: KeyCommand.keyInputUpArrow, handler: () => { if (visible) move(-1); } },
-    ]) as { input: string; handler: () => void }[]),
-  ], visible);
+  const { focusedIndex, setFocusedIndex, doneFocused } = useMultiSelectKeys({
+    visible,
+    count: sorted.length + 1,
+    onActivate: (i) => {
+      if (i === 0) { onClearAll(); return; }
+      const deck = sorted[i - 1];
+      if (deck) onToggle(deck.id);
+    },
+    onClose,
+    scrollTo: (i) => {
+      if (i === 0) listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      else listRef.current?.scrollToIndex({ index: i - 1, viewPosition: 0.5, animated: true });
+    },
+  });
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -187,6 +171,7 @@ function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onT
             <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
               {t('common.done')}
             </Text>
+            <DoneFocusRing visible={doneFocused} />
           </Pressable>
         </Pressable>
       </Pressable>

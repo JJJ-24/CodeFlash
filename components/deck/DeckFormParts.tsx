@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Children, createContext, isValidElement, useContext } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -25,17 +26,90 @@ export function DeckFormSectionTitle({ title }: { title: string }) {
   );
 }
 
+/** カードの角丸。青枠の角は枠線 1pt の内側に描くので `CARD_RADIUS - 1` */
+const CARD_RADIUS = 10;
+const RING_RADIUS = CARD_RADIUS - 1;
+
+/** カードの中での行の位置（先頭・末尾）＝青枠の角をカードの角に合わせるため */
+const RowPositionContext = createContext({ first: true, last: true });
+
 /**
- * 行を並べる白枠（カード）。中の行（`DeckFormNavRow`・`SettingsFocusRow`）は**このカードの直接の子**に置く
+ * 行が使う青枠の指定。行はカードの端から端まで広がり（左右の余白は行が持つ）、青枠は行ぴったり＝**白枠いっぱい**に出る。
+ * 角はカードの先頭の行なら上だけ・末尾の行なら下だけ丸める（途中の行は区切り線で切れる四角）。
+ */
+function useRowRing() {
+  const { first, last } = useContext(RowPositionContext);
+  return { variant: 'fill' as const, ringRadius: { top: first ? RING_RADIUS : 0, bottom: last ? RING_RADIUS : 0 } };
+}
+
+/**
+ * 行を並べる白枠（カード）。中の行（`DeckFormField`・`DeckFormNavRow`・`DeckFormToggleRow`）は**このカードの直接の子**に置く
  * （フォーカスの位置は親のカードの中の y で控えるため＝055 の `SettingsFocusGroup` の規則）。
+ * タグの新規・編集画面も同じ部品を使う（見た目をそろえるため）。
  */
 export function DeckFormCard({ children, dim }: { children: ReactNode; dim?: boolean }) {
   const theme = useTheme();
+  // 子の先頭・末尾を控えて行へ渡す（Provider は View を作らないので「直接の子」の規則は崩れない）
+  const items = Children.toArray(children).filter(isValidElement);
   return (
     <SettingsFocusGroup style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }, dim && styles.inactive]}>
-      {children}
+      {items.map((child, i) => (
+        <RowPositionContext.Provider key={child.key ?? i} value={{ first: i === 0, last: i === items.length - 1 }}>
+          {child}
+        </RowPositionContext.Provider>
+      ))}
     </SettingsFocusGroup>
   );
+}
+
+/**
+ * 項目名＋中身（入力欄・アイコン・カラーなど）の行。白枠1つに1項目で置く（入力欄は枠の中で薄いグレーの枠）。
+ */
+export function DeckFormField({ label, small, claim, dim, note, children, ...handlers }: SettingsFocusHandlers & {
+  label: string;
+  /** 項目名を小さく（タグ画面は sm で揃えてある） */
+  small?: boolean;
+  /** 中の入力欄にカーソルが入ったら青枠の対象にする（055） */
+  claim?: boolean;
+  /** 効いていない状態（アイコン未設定のカラーなど）を淡く見せる。注記は淡くしない */
+  dim?: boolean;
+  /** 中身の下に出す注記（なぜ効かないか） */
+  note?: string | null;
+  children: ReactNode;
+}) {
+  const theme = useTheme();
+  const ring = useRowRing();
+  return (
+    <SettingsFocusRow style={styles.field} claim={claim} {...ring} {...handlers}>
+      <View style={[styles.fieldBody, dim && styles.inactive]}>
+        <DeckFormFieldLabel label={label} small={small} />
+        {children}
+      </View>
+      {!!note && (
+        <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+          {note}
+        </Text>
+      )}
+    </SettingsFocusRow>
+  );
+}
+
+/** 項目名（フォーカスしない行＝タグのプレビューでも使う） */
+export function DeckFormFieldLabel({ label, small }: { label: string; small?: boolean }) {
+  const theme = useTheme();
+  return (
+    <Text
+      style={[styles.fieldLabel, { color: theme.colors.textSecondary, fontSize: small ? theme.fontSize.sm : theme.fontSize.md }]}
+      maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+    >
+      {label}
+    </Text>
+  );
+}
+
+/** フォーカスしない項目（タグのプレビュー）。`DeckFormField` と同じ余白 */
+export function DeckFormStaticField({ children }: { children: ReactNode }) {
+  return <View style={styles.field}>{children}</View>;
 }
 
 /** カードの中の行と行のあいだの区切り線 */
@@ -65,8 +139,9 @@ export function DeckFormNavRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
+  const ring = useRowRing();
   return (
-    <SettingsFocusRow onActivate={onPress} {...handlers}>
+    <SettingsFocusRow style={styles.row} onActivate={onPress} {...ring} {...handlers}>
       <Pressable style={[styles.navRow, dim && styles.inactive]} onPress={onPress}>
         <Ionicons
           name={(configured ? icon : `${icon}-outline`) as ComponentProps<typeof Ionicons>['name']}
@@ -117,8 +192,9 @@ export function DeckFormToggleRow({
   note?: string | null;
 }) {
   const theme = useTheme();
+  const ring = useRowRing();
   return (
-    <SettingsFocusRow onToggle={() => onValueChange(!value)} {...handlers}>
+    <SettingsFocusRow style={styles.row} onToggle={() => onValueChange(!value)} {...ring} {...handlers}>
       <View style={[styles.navRow, dim && styles.inactive]}>
         <Ionicons name={icon} size={20} color={theme.colors.textSecondary} />
         <View style={styles.toggleLabelWrap}>
@@ -154,12 +230,16 @@ export function DeckFormToggleRow({
 
 const styles = StyleSheet.create({
   sectionTitle: { fontWeight: '700', marginBottom: -8 },
+  // 左右の余白は行が持つ（青枠を白枠いっぱいに出すため）
   card: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    borderRadius: CARD_RADIUS,
   },
-  divider: { height: StyleSheet.hairlineWidth },
+  row: { paddingHorizontal: 14 },
+  field: { paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
+  fieldBody: { gap: 8 },
+  fieldLabel: { fontWeight: '600' },
+  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14 },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',

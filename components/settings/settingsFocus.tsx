@@ -161,11 +161,16 @@ export function SettingsFocusCard({ children, style, onPress, ...handlers }: Set
  * 中身をそのまま包むだけ（自身は素の View＝レイアウトは変えない）。青枠は行の外側へ少しはみ出して描く
  * （行はカードの内側の余白に接しているので、枠を行ぴったりにすると文字に触れて読みにくい）。
  */
-export function SettingsFocusRow({ children, style, variant = 'row', claim, ...handlers }: SettingsFocusHandlers & {
+export function SettingsFocusRow({ children, style, variant = 'row', ringRadius, claim, ...handlers }: SettingsFocusHandlers & {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** `card`＝中身がカード1枚（通知のスケジュール行など）＝枠をカードの縁にぴったり重ねる */
-  variant?: 'row' | 'card';
+  /**
+   * `card`＝中身がカード1枚（通知のスケジュール行など）＝枠をカードの縁にぴったり重ねる。
+   * `fill`＝行がカードの端から端まで広がっている（デッキ/タグの新規・編集）＝枠を行ぴったりに重ね、角は `ringRadius`。
+   */
+  variant?: 'row' | 'card' | 'fill';
+  /** `fill` の角丸（上端・下端）。カードの先頭の行は上だけ・末尾の行は下だけ丸める（カードの角に合わせる） */
+  ringRadius?: { top: number; bottom: number };
   /** 055：true になったらこの行を青枠の対象にする（中の入力欄にカーソルが入ったとき） */
   claim?: boolean;
 }) {
@@ -179,6 +184,12 @@ export function SettingsFocusRow({ children, style, variant = 'row', claim, ...h
           pointerEvents="none"
           style={variant === 'card'
             ? { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, borderRadius: 12, borderWidth: 2, borderColor: theme.colors.primary }
+            : variant === 'fill'
+            ? {
+              position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, borderWidth: 2, borderColor: theme.colors.primary,
+              borderTopLeftRadius: ringRadius?.top ?? 0, borderTopRightRadius: ringRadius?.top ?? 0,
+              borderBottomLeftRadius: ringRadius?.bottom ?? 0, borderBottomRightRadius: ringRadius?.bottom ?? 0,
+            }
             : {
               position: 'absolute', top: -5, bottom: -5, left: -8, right: -8,
               borderRadius: 8, borderWidth: 2, borderColor: theme.colors.primary,

@@ -38,6 +38,7 @@
       "life": "Vida y otros"
     },
     "color": "Color",
+    "colorNeedsIconNote": "No hay icono, así que el color no se muestra",
     "archive": "Archivar",
     "archiveInfoLabel": "Sobre archivar",
     "archiveHint": "Lo excluye del estudio, las estadísticas y las notificaciones (no se elimina).\nPuedes verlos y restaurarlos en Ajustes → Archivados.",

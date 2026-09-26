@@ -2,8 +2,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useRef, useState } from 'react';
 import { constants as KeyCommand } from 'react-native-key-command';
-import { SettingsFocusContext, SettingsFocusRow, useFocusRegistry } from '@/components/settings/settingsFocus';
-import { DeckFormCard, DeckFormDivider, DeckFormNavRow, DeckFormSectionTitle, DeckFormToggleRow } from '@/components/deck/DeckFormParts';
+import { SettingsFocusContext, useFocusRegistry } from '@/components/settings/settingsFocus';
+import { DeckFormCard, DeckFormDivider, DeckFormField, DeckFormNavRow, DeckFormSectionTitle, DeckFormToggleRow } from '@/components/deck/DeckFormParts';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
@@ -348,96 +348,99 @@ export default function EditDeckScreen() {
           <SettingsFocusContext.Provider value={nav.registry}>
           {/* 057：見出しで「基本／読み上げ／コード実行」に区切る（タブ分けは不採用＝docs/057） */}
           <DeckFormSectionTitle title={t('deck.sectionBasic')} />
-          <SettingsFocusRow style={styles.field} section claim={inputFocus === 'name'} onActivate={() => nameRef.current?.focus()}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.name')}
-            </Text>
-            <TextInput
-              ref={nameRef}
-              style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
-              placeholder={t('deck.namePlaceholder')}
-              placeholderTextColor={theme.colors.textTertiary}
-              value={name}
-              onChangeText={setName}
-              maxLength={50}
-              returnKeyType="next"
-              onFocus={() => { editingRef.current = true; setInputFocus('name'); }}
-              onBlur={() => { editingRef.current = false; setInputFocus((f) => (f === 'name' ? null : f)); }}
-              onSubmitEditing={() => descRef.current?.focus()}
-              autoCorrect={false}
-              spellCheck={false}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-            />
-          </SettingsFocusRow>
-          <SettingsFocusRow style={styles.field} claim={inputFocus === 'desc'} onActivate={() => descRef.current?.focus()}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.description')}
-            </Text>
-            <TextInput
-              ref={descRef}
-              style={[styles.input, styles.multiline, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
-              placeholder={t('deck.descriptionPlaceholder')}
-              placeholderTextColor={theme.colors.textTertiary}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={3}
-              onFocus={() => { editingRef.current = true; setInputFocus('desc'); }}
-              onBlur={() => { editingRef.current = false; setInputFocus((f) => (f === 'desc' ? null : f)); }}
-              autoCorrect={false}
-              spellCheck={false}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-            />
-          </SettingsFocusRow>
+          <DeckFormCard>
+            <DeckFormField label={t('deck.name')} section claim={inputFocus === 'name'} onActivate={() => nameRef.current?.focus()}>
+              <TextInput
+                ref={nameRef}
+                style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
+                placeholder={t('deck.namePlaceholder')}
+                placeholderTextColor={theme.colors.textTertiary}
+                value={name}
+                onChangeText={setName}
+                maxLength={50}
+                returnKeyType="next"
+                onFocus={() => { editingRef.current = true; setInputFocus('name'); }}
+                onBlur={() => { editingRef.current = false; setInputFocus((f) => (f === 'name' ? null : f)); }}
+                onSubmitEditing={() => descRef.current?.focus()}
+                autoCorrect={false}
+                spellCheck={false}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              />
+            </DeckFormField>
+          </DeckFormCard>
+          <DeckFormCard>
+            <DeckFormField label={t('deck.description')} claim={inputFocus === 'desc'} onActivate={() => descRef.current?.focus()}>
+              <TextInput
+                ref={descRef}
+                style={[styles.input, styles.multiline, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.lg }]}
+                placeholder={t('deck.descriptionPlaceholder')}
+                placeholderTextColor={theme.colors.textTertiary}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={3}
+                onFocus={() => { editingRef.current = true; setInputFocus('desc'); }}
+                onBlur={() => { editingRef.current = false; setInputFocus((f) => (f === 'desc' ? null : f)); }}
+                autoCorrect={false}
+                spellCheck={false}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              />
+            </DeckFormField>
+          </DeckFormCard>
 
-          <SettingsFocusRow style={styles.field} onActivate={() => { Keyboard.dismiss(); setShowIconPicker(true); }}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.icon')}
-            </Text>
-            <Pressable
-              style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder }]}
-              onPress={() => { Keyboard.dismiss(); setShowIconPicker(true); }}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: previewIconBg }]}>
-                <Ionicons
-                  name={(iconName ?? 'add') as any}
-                  size={22}
-                  color={iconName ? previewIconColor : theme.colors.textSecondary}
-                />
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: name ? theme.colors.text : theme.colors.textTertiary, fontSize: theme.fontSize.md, fontWeight: '600' }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {name || t('deck.namePlaceholder')}
-                </Text>
-                {!!description && (
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                    {description}
+          <DeckFormCard>
+            <DeckFormField label={t('deck.icon')} onActivate={() => { Keyboard.dismiss(); setShowIconPicker(true); }}>
+              <Pressable
+                style={styles.iconButton}
+                onPress={() => { Keyboard.dismiss(); setShowIconPicker(true); }}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: previewIconBg }]}>
+                  <Ionicons
+                    name={(iconName ?? 'add') as any}
+                    size={22}
+                    color={iconName ? previewIconColor : theme.colors.textSecondary}
+                  />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ color: name ? theme.colors.text : theme.colors.textTertiary, fontSize: theme.fontSize.md, fontWeight: '600' }} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+                    {name || t('deck.namePlaceholder')}
                   </Text>
-                )}
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </Pressable>
-          </SettingsFocusRow>
-
-          <SettingsFocusRow style={styles.field} onLeft={() => cycleColor(-1)} onRight={() => cycleColor(1)}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('deck.color')}
-            </Text>
-            {(Platform as any).isPad ? (
-              // iPad: 横一連に 青+全色 + テーマカラー + 白黒
-              <View style={styles.colorGrid}>
-                {[PRIMARY_COLOR, ...DECK_PRESET_COLORS].map(colorSwatch)}
-                {themeSwatch}
-                {clearSwatch}
-              </View>
-            ) : (
-              // iPhone: 上段8色（青+先頭7） / 下段7色（残り5 + テーマカラー + 白黒）
-              <View style={{ gap: 8 }}>
-                <View style={styles.colorGrid}>{[PRIMARY_COLOR, ...DECK_PRESET_COLORS.slice(0, 7)].map(colorSwatch)}</View>
-                <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(7).map(colorSwatch)}{themeSwatch}{clearSwatch}</View>
-              </View>
-            )}
-          </SettingsFocusRow>
+                  {!!description && (
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                      {description}
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              </Pressable>
+            </DeckFormField>
+            {/* カラーはアイコンの色なので同じ白枠に入れる（アイコン選択の画面に入れる案は、1タップ増えるうえ
+                J/K・`,`/`.` が格子の移動と取り合うため不採用）。アイコンが無いと色はどこにも出ないので、
+                未設定のあいだは淡くして注記する＝「選べるのに効いていない」を画面に出す。選ぶことはできる。 */}
+            <DeckFormDivider />
+            <DeckFormField
+              label={t('deck.color')}
+              onLeft={() => cycleColor(-1)}
+              onRight={() => cycleColor(1)}
+              dim={!iconName}
+              note={iconName ? null : t('deck.colorNeedsIconNote')}
+            >
+              {(Platform as any).isPad ? (
+                // iPad: 横一連に 青+全色 + テーマカラー + 白黒
+                <View style={styles.colorGrid}>
+                  {[PRIMARY_COLOR, ...DECK_PRESET_COLORS].map(colorSwatch)}
+                  {themeSwatch}
+                  {clearSwatch}
+                </View>
+              ) : (
+                // iPhone: 上段8色（青+先頭7） / 下段7色（残り5 + テーマカラー + 白黒）
+                <View style={{ gap: 8 }}>
+                  <View style={styles.colorGrid}>{[PRIMARY_COLOR, ...DECK_PRESET_COLORS.slice(0, 7)].map(colorSwatch)}</View>
+                  <View style={styles.colorGrid}>{DECK_PRESET_COLORS.slice(7).map(colorSwatch)}{themeSwatch}{clearSwatch}</View>
+                </View>
+              )}
+            </DeckFormField>
+          </DeckFormCard>
 
           {/* 057：アーカイブは「基本」の末尾（カード単位ではなくデッキ自体の状態＝名前・色と同じ段） */}
           <DeckFormCard>
@@ -605,8 +608,6 @@ const styles = StyleSheet.create({
   // 最下部まで来ているとき説明（高さ H）は行と余白のあいだに入るので、余白 ≧ H なら
   // その場に現れる（自動スクロール不要）。140 は文字サイズ「大」で折り返した説明でも収まる高さ。
   container: { padding: 20, gap: 20, paddingBottom: 140 },
-  field: { gap: 6 },
-  label: { fontWeight: '600' },
   input: {
     borderWidth: 1,
     borderRadius: 10,
@@ -614,14 +615,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   multiline: { height: 90, textAlignVertical: 'top' },
+  // 白枠の中なので枠は付けない（入力欄ではなく、開くだけの行＝右の ＞ で示す）
   iconButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
   iconCircle: {
     width: 36,

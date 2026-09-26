@@ -12,7 +12,8 @@ import {
   View,
 } from 'react-native';
 
-import { SettingsFocusContext, SettingsFocusRow, useFocusRegistry } from '@/components/settings/settingsFocus';
+import { SettingsFocusContext, useFocusRegistry } from '@/components/settings/settingsFocus';
+import { DeckFormCard, DeckFormField, DeckFormFieldLabel, DeckFormStaticField } from '@/components/deck/DeckFormParts';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
@@ -196,47 +197,46 @@ export default function EditTagScreen() {
           automaticallyAdjustKeyboardInsets
         >
           <SettingsFocusContext.Provider value={nav.registry}>
-          <SettingsFocusRow style={styles.field} claim={nameFocused} onActivate={() => nameRef.current?.focus()}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('tag.name')}
-            </Text>
-            <TextInput
-              ref={nameRef}
-              style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.md }]}
-              placeholder={t('tag.namePlaceholder')}
-              placeholderTextColor={theme.colors.textTertiary}
-              value={name}
-              onChangeText={(v) => { setName(v); setError(''); }}
-              onFocus={() => { editingRef.current = true; setNameFocused(true); }}
-              onBlur={() => { editingRef.current = false; setNameFocused(false); }}
-              autoCorrect={false}
-              spellCheck={false}
-              maxLength={50}
-              maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
-            />
-            {!!error && (
-              <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{error}</Text>
-            )}
-          </SettingsFocusRow>
+          <DeckFormCard>
+            <DeckFormField label={t('tag.name')} small claim={nameFocused} onActivate={() => nameRef.current?.focus()}>
+              <TextInput
+                ref={nameRef}
+                style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.inputBorder, color: theme.colors.text, fontSize: theme.fontSize.md }]}
+                placeholder={t('tag.namePlaceholder')}
+                placeholderTextColor={theme.colors.textTertiary}
+                value={name}
+                onChangeText={(v) => { setName(v); setError(''); }}
+                onFocus={() => { editingRef.current = true; setNameFocused(true); }}
+                onBlur={() => { editingRef.current = false; setNameFocused(false); }}
+                autoCorrect={false}
+                spellCheck={false}
+                maxLength={50}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
+              />
+              {!!error && (
+                <Text style={{ color: theme.colors.danger, fontSize: theme.fontSize.sm }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{error}</Text>
+              )}
+            </DeckFormField>
+          </DeckFormCard>
 
-          <SettingsFocusRow style={styles.field} onLeft={() => cycleColor(-1)} onRight={() => cycleColor(1)}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('tag.color')}
-            </Text>
-            <TagColorPicker color={color} onChange={setColor} />
-          </SettingsFocusRow>
+          <DeckFormCard>
+            <DeckFormField label={t('tag.color')} small onLeft={() => cycleColor(-1)} onRight={() => cycleColor(1)}>
+              <TagColorPicker color={color} onChange={setColor} />
+            </DeckFormField>
+          </DeckFormCard>
 
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-              {t('tag.previewLabel')}
-            </Text>
-            <View style={[styles.preview, { backgroundColor: theme.colors.surface }]}>
-              <View style={[styles.previewDot, { backgroundColor: resolveTagColor(color, theme) }]} />
-              <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                {name || t('tag.namePlaceholder')}
-              </Text>
-            </View>
-          </View>
+          {/* プレビューはフォーカスしない＝白枠そのものをタグの行に見立てる */}
+          <DeckFormCard>
+            <DeckFormStaticField>
+              <DeckFormFieldLabel label={t('tag.previewLabel')} small />
+              <View style={styles.preview}>
+                <View style={[styles.previewDot, { backgroundColor: resolveTagColor(color, theme) }]} />
+                <Text style={[styles.previewName, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
+                  {name || t('tag.namePlaceholder')}
+                </Text>
+              </View>
+            </DeckFormStaticField>
+          </DeckFormCard>
           </SettingsFocusContext.Provider>
         </ScrollView>
 
@@ -267,8 +267,6 @@ export default function EditTagScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   body: { padding: 20, gap: 20 },
-  field: { gap: 8 },
-  label: { fontWeight: '600' },
   input: {
     borderWidth: 1,
     borderRadius: 10,
@@ -279,8 +277,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 10,
-    padding: 14,
   },
   previewDot: { width: 14, height: 14, borderRadius: 7 },
   previewName: { flex: 1 },

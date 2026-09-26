@@ -38,6 +38,7 @@
       "life": "Life & Other"
     },
     "color": "Color",
+    "colorNeedsIconNote": "No icon is set, so the color isn't shown",
     "archive": "Archive",
     "archiveInfoLabel": "About archive",
     "archiveHint": "Excludes from study, stats, and notifications (not deleted).\nYou can review and restore them in Settings → Archive.",

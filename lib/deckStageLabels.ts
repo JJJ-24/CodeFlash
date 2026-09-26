@@ -19,6 +19,8 @@ export const DECK_STAGE_KEYS = {
     listHint: 'deck.stagesHint',
     /** 土台が0件のときの表示 */
     listEmpty: 'deck.stagesEmpty',
+    /** 一覧の末尾の追加ボタン */
+    addButton: 'deck.stageAdd',
     /** 名前が空の土台の表示名（`{{n}}` に並び順） */
     defaultName: 'deck.stageDefaultName',
     /** 編集面の説明文・プレースホルダ */
@@ -40,6 +42,7 @@ export const DECK_STAGE_KEYS = {
     title: 'deck.sqlInitLabel',
     listHint: 'deck.sqlStagesHint',
     listEmpty: 'deck.sqlStagesEmpty',
+    addButton: 'deck.sqlStageAdd',
     defaultName: 'deck.sqlStageDefaultName',
     editorHint: 'deck.sqlInitHint',
     editorPlaceholder: 'deck.sqlInitPlaceholder',

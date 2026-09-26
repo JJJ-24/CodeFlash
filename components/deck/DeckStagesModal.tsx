@@ -108,9 +108,13 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
   }
 
   // 048: 土台のフォーカス（J/K のヌルサイクル・ID 追跡＝並びが変わっても同じ土台を指す）。
-  const { focusedIndex, setFocusedIndex, moveFocus } = useListNavigation(stages, (s) => s.id);
-  const focusedStage = focusedIndex != null ? stages[focusedIndex] : null;
-  /** 各行の Y 座標（フォーカス移動時に見える位置へ送るため）。 */
+  // 末尾の追加ボタンも止まり先に入れる（カード編集の「ブロック追加」と同じ＝056）。
+  const navKeys = [...stages.map((s) => s.id), ADD_KEY];
+  const { focusedIndex, setFocusedIndex, moveFocus } = useListNavigation(navKeys, (k) => k);
+  const focusedKey = focusedIndex != null ? navKeys[focusedIndex] ?? null : null;
+  const focusedStage = focusedKey ? stages.find((s) => s.id === focusedKey) ?? null : null;
+  const addFocused = focusedKey === ADD_KEY;
+  /** 各行の Y 座標（フォーカス移動時に見える位置へ送るため）。追加ボタンは ADD_KEY で控える。 */
   const rowYRef = useRef<Record<string, number>>({});
 
   // 一覧を閉じたらフォーカスを捨てる（次に開いたとき前回の位置が残っていると驚く）。
@@ -121,10 +125,10 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
   // フォーカス行を見える位置へ。`useListNavigation` の自動スクロールは FlatList 用
   // （scrollToIndex）なので、ScrollView のこの一覧では行の実 Y を使って自前で送る。
   useEffect(() => {
-    if (!focusedStage) return;
-    const y = rowYRef.current[focusedStage.id];
+    if (!focusedKey) return;
+    const y = rowYRef.current[focusedKey];
     if (y != null) listRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
-  }, [focusedStage]);
+  }, [focusedKey]);
 
   // 048: 一覧のキー。編集面・削除確認が上に乗っている間は解除する（そちらが最上位になるため）。
   // 文字キーは実 TextInput（画像のリネーム欄）にカーソルがあると発火しない＝034 の住み分け。
@@ -132,7 +136,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
     { input: 'j', handler: () => moveFocus('next') },
     { input: 'k', handler: () => moveFocus('prev') },
     { input: 'n', handler: handleAdd },
-    { input: KeyCommand.keyInputEnter, handler: () => { if (focusedStage) setEditingId(focusedStage.id); } },
+    { input: KeyCommand.keyInputEnter, handler: () => { if (addFocused) handleAdd(); else if (focusedStage) setEditingId(focusedStage.id); } },
     ...deleteKeySpecs(() => { if (focusedStage) setPendingDelete(focusedStage); }),
   // 削除確認（アラート）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
   ], visible && editingId === null);
@@ -196,14 +200,10 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
                   />
                 </Pressable>
               </View>
-              <View style={styles.headerRight}>
-                <Pressable onPress={handleAdd} hitSlop={8} style={styles.headerBtn}>
-                  <Ionicons name="add-circle-outline" size={26} color={theme.colors.primary} />
-                </Pressable>
-                <Pressable onPress={onClose} hitSlop={8} style={styles.headerBtn}>
-                  <Ionicons name="checkmark-sharp" size={26} color={theme.colors.primary} />
-                </Pressable>
-              </View>
+              {/* 追加は一覧の末尾の横長ボタン（右上の丸い＋は小さく ✓ の隣で押し間違えやすかった） */}
+              <Pressable onPress={onClose} hitSlop={8} style={styles.headerBtn}>
+                <Ionicons name="checkmark-sharp" size={26} color={theme.colors.primary} />
+              </Pressable>
             </View>
 
             {showInfo && (
@@ -278,6 +278,25 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
                   );
                 })
               )}
+              {/* 追加ボタン：土台の行と同じ幅・角丸の横長。枠は点線＝既にある土台ではなく
+                  「これから作る行」だと区別する（カード編集の「＋ ブロックを追加」と同じ見せ方）。
+                  土台が0件でも出す（空の案内のすぐ下＝何をすればよいかが一目で分かる）。 */}
+              <Pressable
+                onPress={handleAdd}
+                onLayout={(e) => { rowYRef.current[ADD_KEY] = e.nativeEvent.layout.y; }}
+                style={[
+                  styles.addBtn,
+                  { borderColor: theme.colors.iconSubtle },
+                  addFocused && { borderStyle: 'solid', borderWidth: 2, borderColor: theme.colors.primary },
+                ]}
+              >
+                <Text
+                  style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.md }}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {t(keys.addButton)}
+                </Text>
+              </Pressable>
               {listFooter}
             </ScrollView>
         </View>
@@ -331,7 +350,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   title: { fontWeight: '700', flexShrink: 1 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   headerBtn: { paddingHorizontal: 4 },
   // 説明ボックス（設定画面の syncInfoBox と同じ見た目：背景色は theme.colors.background＝
   // 土台の行と同じ色で、カードテーマにも追従する）。
@@ -353,4 +371,15 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
   preview: { fontFamily: 'monospace' },
   rowBtn: { padding: 4 },
+  addBtn: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
 });
+
+/** J/K の止まり先として追加ボタンを指すキー（土台の id は generateId なので衝突しない） */
+const ADD_KEY = '__add__';

@@ -234,6 +234,7 @@ export function BlockEditor({
   const [editorMode, setEditorMode] = useState<EditorMode>("edit");
   const isPreview = editorMode === "preview";
   const isSortMode = editorMode === "sort";
+  const isEditMode = editorMode === "edit";
   const [frontBlocks, setFrontBlocks] = useState<EditBlock[]>(() =>
     toEditBlocks(initialData?.frontBlocks ?? [newTextBlock()]),
   );
@@ -530,8 +531,9 @@ export function BlockEditor({
   }
 
   // E（フォーカスなし）/ ⇧E からのアーカイブ切替。結果を中央ピルで数秒通知する。
+  // トグルが見える編集モードだけ（並べ替え・プレビューではトグルを隠すのでキーも効かせない）。
   function toggleArchiveWithPill() {
-    if (isPreviewRef.current || !onArchivedChange) return;
+    if (isPreviewRef.current || isSortModeRef.current || !onArchivedChange) return;
     const next = !archived;
     onArchivedChange(next);
     showArchivePill(next);
@@ -814,8 +816,21 @@ export function BlockEditor({
 
   const footerContent = (
     <>
-      {/* ブロック追加ボタン */}
-      {!isPreview && (
+      {/* 並べ替えモードでブロックが1つ以下＝並べ替えるものが無い。何も起きない理由を下の欄の位置に出す
+          （タブごとに数える＝表面は2つ・裏面は1つ、なら裏面でだけ出る。モードはカード全体で1つなので
+          「1つ以下なら並べ替えモードに入れない」はできない） */}
+      {isSortMode && currentBlocks.length <= 1 && (
+        <Text
+          style={[styles.sortHint, { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }]}
+          maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+        >
+          {t("editor.sortNeedsTwoBlocks")}
+        </Text>
+      )}
+      {/* ブロック追加ボタン。下の欄（追加・タグ・アーカイブ・デッキ名）は**編集モードだけ**に出す
+          ＝並べ替え・プレビューでは隠す（並べ替えの J/K はブロックにしか止まらない＝見た目とキーをそろえ、
+          「今は並べ替えだけの画面」だと一目で分かるようにする） */}
+      {isEditMode && (
         <View
           style={styles.addArea}
           onLayout={(e) => {
@@ -970,8 +985,8 @@ export function BlockEditor({
         </View>
       )}
 
-      {/* タグ選択・アーカイブ・デッキ名（プレビュー時は非表示）。タグとアーカイブはデッキ編集と同じ白枠 */}
-      {!isPreview && (
+      {/* タグ選択・アーカイブ・デッキ名（編集モードだけ）。タグとアーカイブはデッキ編集と同じ白枠 */}
+      {isEditMode && (
         <>
           <View style={[styles.whiteCard, styles.tagSection, { backgroundColor: theme.colors.surface }]} onLayout={footerLayout("tags")} {...tapToClaimFooter("tags")}>
             <Text
@@ -1142,7 +1157,7 @@ export function BlockEditor({
     { input: "/", modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (keyboardShortcutsEnabled) onShowShortcuts?.(); } },
     // E = フォーカスあり→そのブロックを編集 / フォーカスなし→アーカイブ切替。
     //   Delete キーと同じ「フォーカスあり＝ブロック単位／なし＝カード単位」の流儀に合わせる。
-    //   アーカイブはトグルが見える編集/並び替えモードのみ有効（プレビューは非表示）＆
+    //   アーカイブはトグルが見える編集モードのみ有効（並べ替え・プレビューは非表示）＆
     //   新規作成では onArchivedChange 未提供＝無効。
     { input: "e", handler: () => {
       if (!keyboardShortcutsEnabled) return;
@@ -1571,6 +1586,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
   addArea: { marginTop: 4 },
+  sortHint: { textAlign: "center", marginTop: 12 },
   addBtn: {
     borderWidth: 1.5,
     borderStyle: "dashed",

@@ -543,6 +543,7 @@
     "textBlock": "Text",
     "codeBlock": "Code",
     "addBlock": "+ Add Block",
+    "sortNeedsTwoBlocks": "Add at least 2 blocks to reorder",
     "tagPickerTitle": "Select Tags",
     "preview": "Preview",
     "selectLanguage": "Select Language",

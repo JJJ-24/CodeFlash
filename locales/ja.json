@@ -517,6 +517,7 @@
     "textBlock": "テキスト",
     "codeBlock": "コード",
     "addBlock": "＋ ブロックを追加",
+    "sortNeedsTwoBlocks": "ブロックが2つ以上あると並べ替えられます",
     "tagPickerTitle": "タグを選択",
     "preview": "プレビュー",
     "selectLanguage": "言語を選択",

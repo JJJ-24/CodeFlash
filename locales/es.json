@@ -545,6 +545,7 @@
     "textBlock": "Texto",
     "codeBlock": "Código",
     "addBlock": "＋ Agregar bloque",
+    "sortNeedsTwoBlocks": "Se necesitan al menos 2 bloques para reordenar",
     "tagPickerTitle": "Seleccionar etiquetas",
     "preview": "Vista previa",
     "selectLanguage": "Elegir lenguaje",

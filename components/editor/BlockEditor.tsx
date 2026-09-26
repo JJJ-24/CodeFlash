@@ -40,7 +40,7 @@ import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
 import { InteractivePreviewContext } from "@/lib/InteractivePreviewContext";
 import type { MdAction } from "@/lib/editor/applyMarkdown";
-import { MAX_FONT_MULTIPLIER, useTheme } from "@/lib/theme";
+import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from "@/lib/theme";
 import { useResponsiveSize } from "@/lib/useResponsiveSize";
 import { resolveTagColor } from "@/lib/tagColors";
 import { useSettingsStore } from "@/store/settings";
@@ -970,10 +970,10 @@ export function BlockEditor({
         </View>
       )}
 
-      {/* タグ選択・デッキ名（プレビュー時は非表示） */}
+      {/* タグ選択・アーカイブ・デッキ名（プレビュー時は非表示）。タグとアーカイブはデッキ編集と同じ白枠 */}
       {!isPreview && (
         <>
-          <View style={styles.tagSection} onLayout={footerLayout("tags")} {...tapToClaimFooter("tags")}>
+          <View style={[styles.whiteCard, styles.tagSection, { backgroundColor: theme.colors.surface }]} onLayout={footerLayout("tags")} {...tapToClaimFooter("tags")}>
             <Text
               style={[
                 styles.tagLabel,
@@ -987,48 +987,15 @@ export function BlockEditor({
               {t("tag.title")}
             </Text>
             <TagSelector selectedTagIds={tagIds} onChange={setTagIds} />
-            {focusRing("tags", styles.focusRingRow)}
+            {focusRing("tags", styles.focusRingWhiteCard)}
           </View>
-
-          {deckName != null && (
-            <View style={[styles.deckRow, { borderColor: theme.colors.border }]}>
-              <Text
-                style={[
-                  styles.tagLabel,
-                  {
-                    color: theme.colors.textSecondary,
-                    fontSize: theme.fontSize.md,
-                  },
-                ]}
-                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-              >
-                {t("deck.name")}
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 8 }}>
-                {deckIconName && <DeckIcon iconName={deckIconName} colorHex={deckColorHex ?? null} />}
-                <Text
-                  style={[
-                    styles.deckName,
-                    {
-                      color: theme.colors.text,
-                      fontSize: theme.fontSize.lg,
-                      flexShrink: 1,
-                    },
-                  ]}
-                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                >
-                  {deckName}
-                </Text>
-              </View>
-            </View>
-          )}
 
           {/* アーカイブトグル（編集時のみ）。タグ・デッキと並ぶカード単位のメタ情報。
               説明は常時表示せず、ⓘ タップで白枠の中にインライン展開する
               （設定画面の card + syncInfoBox と同じ形。デッキ編集も同じ）。 */}
           {onArchivedChange && (
             <View
-              style={[styles.archiveCard, { borderColor: theme.colors.inputBorder, backgroundColor: theme.colors.surface }]}
+              style={[styles.whiteCard, styles.archiveCard, { backgroundColor: theme.colors.surface }]}
               onLayout={footerLayout("archive")}
               {...tapToClaimFooter("archive")}
             >
@@ -1063,7 +1030,42 @@ export function BlockEditor({
                   <InfoContent text={t("deck.archiveHint")} />
                 </View>
               )}
-              {focusRing("archive", styles.focusRingCardBordered)}
+              {focusRing("archive", styles.focusRingWhiteCard)}
+            </View>
+          )}
+
+          {/* デッキ名は見るだけ（ここでは変えられない）＝一番下に置き、白枠にも入れない
+              （白枠は「フォーカスして操作できる欄」の入れ物。操作できるタグ・アーカイブを続けて並べる） */}
+          {deckName != null && (
+            <View style={[styles.deckRow, { borderColor: theme.colors.border }]}>
+              <Text
+                style={[
+                  styles.tagLabel,
+                  {
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSize.md,
+                  },
+                ]}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+              >
+                {t("deck.name")}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 8 }}>
+                {deckIconName && <DeckIcon iconName={deckIconName} colorHex={deckColorHex ?? null} />}
+                <Text
+                  style={[
+                    styles.deckName,
+                    {
+                      color: theme.colors.text,
+                      fontSize: theme.fontSize.lg,
+                      flexShrink: 1,
+                    },
+                  ]}
+                  maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
+                >
+                  {deckName}
+                </Text>
+              </View>
             </View>
           )}
         </>
@@ -1600,6 +1602,13 @@ const styles = StyleSheet.create({
   addBtnText: {},
   addMenuIconWrap: { width: 36, alignItems: "center" },
   addMenuCancel: { paddingVertical: 12, alignItems: "center" },
+  // デッキ/タグ編集・設定画面の白枠と同じ見た目（枠線なし・弱い影・角丸12）
+  whiteCard: {
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    ...SHADOW.subtle,
+  },
   tagSection: { gap: 8, marginTop: 12 },
   tagLabel: { fontWeight: "600" },
   deckRow: {
@@ -1615,13 +1624,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 8,
   },
-  archiveCard: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
+  archiveCard: { marginTop: 12 },
   archiveRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1631,9 +1634,7 @@ const styles = StyleSheet.create({
   focusRing: { position: "absolute", borderWidth: 2 },
   // ＋ブロック追加のボタンにぴったり重ねる（addArea は余白なし・ボタンの角丸 10）
   focusRingCard: { top: 0, bottom: 0, left: 0, right: 0, borderRadius: 10 },
-  // タグ欄は枠の無い行＝文字に触れないよう外側へ少しはみ出す（SettingsFocusRow の row と同じ）
-  focusRingRow: { top: -5, bottom: -5, left: -8, right: -8, borderRadius: 8 },
-  // アーカイブのカード（枠線 1）の縁に重ねる＝絶対配置は枠線の内側基準なので 1 だけ外へ
-  focusRingCardBordered: { top: -1, bottom: -1, left: -1, right: -1, borderRadius: 10 },
+  // タグ・アーカイブの白枠（枠線なし）の縁にぴったり重ねる
+  focusRingWhiteCard: { top: 0, bottom: 0, left: 0, right: 0, borderRadius: 12 },
   validationError: { textAlign: "center" },
 });

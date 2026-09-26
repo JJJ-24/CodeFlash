@@ -32,7 +32,7 @@ import { resolveDeckStageHtml, resolveDeckStageSql } from '@/lib/deckStages';
 import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
-import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock, DeckImage, DeckStage } from '@/types';
@@ -439,8 +439,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 )}
               </GestureDetector>
             )}
-            <Pressable style={styles.codeCopyBtn} onPress={handleCodeCopy} hitSlop={8}>
-              <Ionicons name={codeCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+            <Pressable style={[styles.codeCopyBtn, codeCopied && { backgroundColor: COPY_DONE_BG }]} onPress={handleCodeCopy} hitSlop={8}>
+              <Ionicons name={codeCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={codeCopied ? COPY_DONE_COLOR : '#4B5563'} />
             </Pressable>
           </View>
 
@@ -473,8 +473,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 {!!block.sqlInit?.trim() && (
                   <>
                     <View style={{ flex: 1 }} />
-                    <Pressable onPress={handleSqlInitCopy} hitSlop={8} style={styles.initCopyBtn}>
-                      <Ionicons name={sqlInitCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
+                    <Pressable onPress={handleSqlInitCopy} hitSlop={8} style={[styles.initCopyBtn, sqlInitCopied && { backgroundColor: COPY_DONE_BG }]}>
+                      <Ionicons name={sqlInitCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={sqlInitCopied ? COPY_DONE_COLOR : '#C9C9C9'} />
                     </Pressable>
                   </>
                 )}
@@ -571,8 +571,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 {!!block.htmlInit?.trim() && (
                   <>
                     <View style={{ flex: 1 }} />
-                    <Pressable onPress={handleHtmlInitCopy} hitSlop={8} style={styles.initCopyBtn}>
-                      <Ionicons name={htmlInitCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
+                    <Pressable onPress={handleHtmlInitCopy} hitSlop={8} style={[styles.initCopyBtn, htmlInitCopied && { backgroundColor: COPY_DONE_BG }]}>
+                      <Ionicons name={htmlInitCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={htmlInitCopied ? COPY_DONE_COLOR : '#C9C9C9'} />
                     </Pressable>
                   </>
                 )}
@@ -810,6 +810,7 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   initCopyBtn: {
     paddingHorizontal: 4,
     paddingVertical: 2,
+    borderRadius: 4,
   },
   initSqlInput: {
     fontFamily: 'monospace',

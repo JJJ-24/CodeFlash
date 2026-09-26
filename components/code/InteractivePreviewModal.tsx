@@ -15,7 +15,7 @@ import { useSandboxReload } from '@/hooks/useSandboxReload';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useWindowControlsTopInset } from '@/lib/useLockedTopInset';
-import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
+import { MAX_FONT_MULTIPLIER, useTheme, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import type { DeckImage } from '@/types';
 
 const KEY_ESCAPE = (KeyCommand.constants?.keyInputEscape as string) ?? '';
@@ -250,8 +250,8 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
               {t('code.output')}
             </Text>
             {logs.length > 0 && (
-              <Pressable onPress={copyLogs} hitSlop={8}>
-                <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={Math.round(theme.fontSize.md)} color="#8B949E" />
+              <Pressable onPress={copyLogs} hitSlop={8} style={[{ padding: 2, borderRadius: 4 }, copied && { backgroundColor: COPY_DONE_BG }]}>
+                <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={Math.round(theme.fontSize.md)} color={copied ? COPY_DONE_COLOR : '#8B949E'} />
               </Pressable>
             )}
           </View>

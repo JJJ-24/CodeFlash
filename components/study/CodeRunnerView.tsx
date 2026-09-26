@@ -28,7 +28,7 @@ import { useProStore } from "@/store/pro";
 import { resolveDeckStageHtml, resolveDeckStageSql } from "@/lib/deckStages";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
-import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS } from "@/lib/theme";
+import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from "@/lib/theme";
 import type { CodeBlock, DeckImage, DeckStage } from "@/types";
 
 interface Props {
@@ -507,11 +507,11 @@ export function CodeRunnerView({
           </GestureDetector>
         )}
         <GestureDetector gesture={copyGesture}>
-          <View style={styles.codeCopyBtn}>
+          <View style={[styles.codeCopyBtn, codeCopied && { backgroundColor: COPY_DONE_BG }]}>
             <Ionicons
               name={codeCopied ? "checkmark-sharp" : "copy-outline"}
               size={theme.fontSize.sm}
-              color="#4B5563"
+              color={codeCopied ? COPY_DONE_COLOR : "#4B5563"}
             />
           </View>
         </GestureDetector>

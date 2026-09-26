@@ -143,6 +143,16 @@ export const darkTheme: Omit<AppTheme, 'fontScale' | 'fontSize' | 'cardTheme' | 
   },
 };
 
+/**
+ * コード関係のコピーボタンが「コピーできた」あいだ（約1秒）の見た目（出力欄・ソース欄・コード入力欄・
+ * SQL 初期化/HTML 土台の欄・全画面プレビューのログ）＝**不透明の濃い緑の箱＋白いチェック**。
+ * 押す前は控えめなグレーのまま＝押した瞬間だけ目立たせる。
+ * ⚠️ 半透明の緑の下地＋緑のチェックは分かりにくかった。不透明にするなら下地とチェックの色は分ける
+ *   （同じ緑だとチェックが消える）。下地は明るい緑 #3FB950 ではなく一段濃い #238636＝白との差を取る。
+ */
+export const COPY_DONE_COLOR = '#FFFFFF';
+export const COPY_DONE_BG = '#238636';
+
 export const FILTER_COLORS = {
   learned: '#4CAF50',
   due: '#F57C00',

@@ -14,7 +14,7 @@ import { useSandboxReload } from '@/hooks/useSandboxReload';
 import { buildStaticPreviewHtml } from '@/lib/code-execution/sandbox';
 import type { ExecResult, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
-import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import i18n from '@/lib/i18n';
 import type { DeckImage } from '@/types';
 
@@ -275,6 +275,13 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
     () => Gesture.Tap().maxDistance(10).hitSlop(8).onEnd(() => runOnJS(handleCopy)()),
     [handleCopy]
   );
+  // ソースタブのコピー（欄の右上＝実行結果・コード本文のコピーと同じ置き方）。学習画面でカードを裏返さないよう
+  // RNGH の Tap で受ける（実行結果のコピーと同じ）＋ onInteract でフリップ抑止も通知する
+  const copySourceAndNotify = useCallback(() => { onInteract?.(); void handleCopySource(); }, [onInteract, handleCopySource]);
+  const sourceCopyGesture = useMemo(
+    () => Gesture.Tap().maxDistance(10).hitSlop(8).onEnd(() => runOnJS(copySourceAndNotify)()),
+    [copySourceAndNotify]
+  );
 
   return (
     <>
@@ -349,8 +356,8 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
               </Text>
             )}
             <GestureDetector gesture={copyGesture}>
-              <View style={styles.copyBtn}>
-                <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+              <View style={[styles.copyBtn, copied && { backgroundColor: COPY_DONE_BG }]}>
+                <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={copied ? COPY_DONE_COLOR : '#6B7280'} />
               </View>
             </GestureDetector>
           </View>
@@ -367,7 +374,7 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
               {(hasSource ? (['preview', 'source'] as const) : (['preview'] as const)).map((tab) => (
                 <Pressable key={tab} onPress={() => { onInteract?.(); setPreviewTab(tab); }} style={[styles.previewTab, activeTab === tab && styles.previewTabActive]}>
                   <Text
-                    style={[styles.previewTabText, { fontSize: theme.fontSize.xs }, activeTab === tab && styles.previewTabTextActive]}
+                    style={[styles.previewTabText, { fontSize: theme.fontSize.sm }, activeTab === tab && styles.previewTabTextActive]}
                     maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                   >
                     {t(tab === 'preview' ? 'code.preview' : 'code.source')}
@@ -375,23 +382,20 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
                 </Pressable>
               ))}
             </View>
+            {/* 右側のアイコン（全画面・リセット）は xl（20pt）。大きくした切替ボタンとつり合わせる
+                （lg＝18pt では元の 16pt と見分けがつかなかった）。ソースのコピーは行に置かず、ソース欄の右上
+                （3つ並ぶと iPhone で詰まるため。実行結果・コード本文のコピーと同じ置き方） */}
             <View style={styles.previewTabsRight}>
               {/* 全画面インタラクティブプレビューを開く（041）。操作可能な WebView ＋ ライブ console。 */}
               {onExpand && (
                 <Pressable onPress={() => { onInteract?.(); onExpand(); }} hitSlop={8} style={styles.previewReset}>
-                  <Ionicons name="expand" size={Math.round(theme.fontSize.md)} color="#8B949E" />
-                </Pressable>
-              )}
-              {/* ソースタブ表示中は土台テキストをコピーできる（読み取り専用で選択できないため） */}
-              {activeTab === 'source' && hasSource && (
-                <Pressable onPress={() => { onInteract?.(); handleCopySource(); }} hitSlop={8} style={styles.previewReset}>
-                  <Ionicons name={sourceCopied ? 'checkmark-sharp' : 'copy-outline'} size={Math.round(theme.fontSize.md)} color="#8B949E" />
+                  <Ionicons name="expand" size={Math.round(theme.fontSize.xl)} color="#8B949E" />
                 </Pressable>
               )}
               {/* 実行結果を表示中のときだけ「リセット」＝土台の初期状態（静的プレビュー）に戻す */}
               {execActive && (
                 <Pressable onPress={() => { onInteract?.(); onClear(); }} hitSlop={8} style={styles.previewReset}>
-                  <Ionicons name="refresh" size={Math.round(theme.fontSize.md)} color="#8B949E" />
+                  <Ionicons name="refresh" size={Math.round(theme.fontSize.xl)} color="#8B949E" />
                 </Pressable>
               )}
             </View>
@@ -411,11 +415,22 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
             />
           </View>
           {activeTab === 'source' && (
-            <ScrollView style={[styles.previewSource, { maxHeight: previewHeight }]}>
-              <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false}>
-                <SyntaxHighlightedCode code={sourceText} language="html" wrap={false} />
+            <View>
+              <ScrollView style={[styles.previewSource, { maxHeight: previewHeight }]}>
+                <ScrollView horizontal showsHorizontalScrollIndicator indicatorStyle="white" alwaysBounceHorizontal={false}>
+                  <SyntaxHighlightedCode code={sourceText} language="html" wrap={false} />
+                </ScrollView>
               </ScrollView>
-            </ScrollView>
+              {/* ソースは読み取り専用で選択できないので、コピーは欄の右上のボタンで */}
+              {hasSource && (
+                <GestureDetector gesture={sourceCopyGesture}>
+                  <View style={[styles.sourceCopyBtn, sourceCopied && { backgroundColor: COPY_DONE_BG }]}>
+                    {/* 線は一段明るいグレー（ソース欄はほぼ黒の背景で、コード本文と同じ #4B5563 だと埋もれる） */}
+                    <Ionicons name={sourceCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={sourceCopied ? COPY_DONE_COLOR : '#6B7280'} />
+                  </View>
+                </GestureDetector>
+              )}
+            </View>
           )}
         </View>
       ) : (
@@ -465,17 +480,33 @@ const styles = StyleSheet.create({
   outputContent: {
     position: 'relative',
   },
+  // 下地はソース欄のコピーと同じ白 10%（ほぼ黒の出力欄に黒を重ねても箱が見えない）
   copyBtn: {
     position: 'absolute',
     top: 0,
     right: 0,
     padding: 4,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 4,
+  },
+  // ソース欄の右上のコピー。欄に内側の余白が無いので、コード本文のコピー（CodeRunnerView/CodeBlockItem の
+  // codeCopyBtn）と同じく縁から 8 離す（実行結果の copyBtn は欄の padding 10 の内側に置くので 0 でよい）
+  // ⚠️ 下地はコード本文のコピー（黒の 40%）と同じにしない＝ソース欄の背景（#0D1117）はコード本文（#2A2A2A）より
+  //   ずっと暗く、黒を重ねても下地の箱が見えず、アイコンだけが浮いて「小さく・右に寄って」見えた。
+  //   明るい側へ重ねて、コード本文と同じくらい箱が見えるようにする
+  sourceCopyBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 4,
   },
   clearBtnWrapper: { padding: 2 },
+  // 出力欄（#0D1117＝ほぼ黒）の上なので、コピー・✕ とも一段明るいグレー（ソース欄のコピーと同じ）。
+  // かつての #4B5563 は背景に埋もれていた
   clearBtn: {
-    color: '#4B5563',
+    color: '#6B7280',
   },
   logLine: {
     fontFamily: 'monospace',
@@ -517,7 +548,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 6,
+    padding: 8,
   },
   previewTabsLeft: {
     flexDirection: 'row',
@@ -532,9 +563,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
+  // 押しやすさのため少し大きめ（かつては上下 4・文字 xs で小さかった）
   previewTab: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
     borderRadius: 6,
     backgroundColor: '#161B22',
   },

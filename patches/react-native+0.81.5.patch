@@ -15,7 +15,7 @@ index 6eca156..7015d25 100644
      // $FlowFixMe[unused-promise]
      this._updateBottomIfNecessary();
 diff --git a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
-index 1494fd2..f43ea8a 100644
+index 1494fd2..ce4299e 100644
 --- a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
 +++ b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
 @@ -175,6 +175,11 @@ - (void)_keyboardWillChangeFrame:(NSNotification *)notification
@@ -30,6 +30,20 @@ index 1494fd2..f43ea8a 100644
    BOOL isHorizontal = _scrollView.contentSize.width > self.frame.size.width;
    if (isHorizontal) {
      return;
+@@ -628,6 +633,13 @@ - (void)prepareForRecycle
+   _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+   _shouldUpdateContentInsetAdjustmentBehavior = YES;
+   _isUserTriggeredScrolling = NO;
++  // Drop the keyboard's bottom inset so it does not leak into the next user of this recycled view.
++  // _props is kept across recycling and updateProps only re-applies contentInset when the new props
++  // differ from it, so a view recycled while a screen with automaticallyAdjustKeyboardInsets had the
++  // keyboard up would keep that inset and let the next list scroll past its end.
++  // Reset to the _props values (not zero) so the diff baseline in updateProps stays truthful.
++  _scrollView.contentInset = RCTUIEdgeInsetsFromEdgeInsets(props.contentInset);
++  _scrollView.scrollIndicatorInsets = RCTUIEdgeInsetsFromEdgeInsets(props.scrollIndicatorInsets);
+   CGRect oldFrame = self.frame;
+   self.frame = CGRectZero;
+   self.frame = oldFrame;
 diff --git a/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m b/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m
 index 59f956d..e50c5b2 100644
 --- a/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m

@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
-import { ExecutionOutput } from "@/components/code/ExecutionOutput";
+import { ExecutionOutput, type OutputKeyTrigger } from "@/components/code/ExecutionOutput";
 import { InteractivePreviewModal } from "@/components/code/InteractivePreviewModal";
 import { RUN_STOP_BG, RunButtonIcon } from "@/components/code/RunButtonIcon";
 import { SymbolPalette } from "@/components/code/SymbolPalette";
@@ -44,6 +44,12 @@ interface Props {
   exitEditTrigger?: number;
   runTrigger?: number;
   editTrigger?: number;
+  /** 058：実行結果の先頭の位置（ブロックの上端から見た y）。実行後のスクロールでエラーを先に見せるため */
+  onOutputLayout?: (y: number) => void;
+  /** 058：⌘R＝編集中でもカーソルを残したまま実行（結果は編集中でも出す） */
+  runKeepEditTrigger?: number;
+  /** 058：プレビュー枠のキー操作（V・⇧F・⇧R）。`undefined`＝選ばれていない */
+  outputTrigger?: OutputKeyTrigger | null;
   isSelected?: boolean;
   onRunStart?: () => void;
   /** 同じ BlocksView 内の別ブロックが編集中かどうか */
@@ -71,6 +77,9 @@ export function CodeRunnerView({
   exitEditTrigger,
   runTrigger,
   editTrigger,
+  runKeepEditTrigger,
+  onOutputLayout,
+  outputTrigger,
   isSelected,
   onRunStart,
   anotherBlockEditing,
@@ -124,6 +133,14 @@ export function CodeRunnerView({
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
   const [isEditing, setIsEditing] = useState(false);
+  // 058：⌘R で編集中に実行した＝編集中でも実行結果を出す（通常は編集中は結果を隠し、▶ で編集を抜けてから出す）。
+  // 編集を始め直す・終えると戻す。
+  const [showOutputWhileEditing, setShowOutputWhileEditing] = useState(false);
+  useEffect(() => { if (!isEditing) setShowOutputWhileEditing(false); }, [isEditing]);
+  // 058：⌘R の実行中〜完了直後に入力欄のフォーカスが外れたら（実行の WebView がファーストレスポンダを取ることがある）、
+  // 編集を終えずに入力欄へ戻す。実行が終わって少し待ったら解除する。
+  const keepEditGuardRef = useRef(false);
+  const keepEditGuardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [proModalVisible, setProModalVisible] = useState(false);
   const [expandVisible, setExpandVisible] = useState(false);
@@ -211,6 +228,19 @@ export function CodeRunnerView({
   }, [runTrigger]);
 
   useEffect(() => {
+    if (runKeepEditTrigger && block.executable) handleRun(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runKeepEditTrigger]);
+
+  // 実行が終わったら少し待ってガードを外す（完了直後の WebView の描画でもフォーカスが動くため）
+  useEffect(() => {
+    if (isRunning || !keepEditGuardRef.current) return;
+    keepEditGuardTimerRef.current = setTimeout(() => { keepEditGuardRef.current = false; }, 800);
+    return () => { if (keepEditGuardTimerRef.current) clearTimeout(keepEditGuardTimerRef.current); };
+  }, [isRunning]);
+  useEffect(() => { if (!isEditing) keepEditGuardRef.current = false; }, [isEditing]);
+
+  useEffect(() => {
     if (editTrigger && editable && !isEditingRef.current) {
       isEditingRef.current = true;
       onEditRequest?.();
@@ -258,7 +288,7 @@ export function CodeRunnerView({
   // 実行 - ▶実行ボタン・r キー用
   // isEditingRef / anotherBlockEditingRef を使って stale closure を回避する。
   // 編集中の場合は編集終了 → 300ms 後に実行（keyboardRef の focus 復元を待つ）。
-  const handleRun = useCallback(() => {
+  const handleRun = useCallback((keepEditing = false) => {
     // 実行中にもう一度押したら中止（開始直後の誤操作は stop() 側で無視する）
     if (isRunning) {
       suppress?.(); // カードフリップを抑制
@@ -270,7 +300,14 @@ export function CodeRunnerView({
       return;
     }
     suppress?.(); // カードフリップを抑制
-    const wasThisEditing = isEditingRef.current;
+    // 058：⌘R は編集を抜けずに実行する（カーソルを残す）。結果は編集中でも出す
+    const wasThisEditing = isEditingRef.current && !keepEditing;
+    if (keepEditing && isEditingRef.current) {
+      setShowOutputWhileEditing(true);
+      keepEditGuardRef.current = true;
+      if (keepEditGuardTimerRef.current) clearTimeout(keepEditGuardTimerRef.current);
+      keepEditGuardTimerRef.current = null;
+    }
     if (wasThisEditing) {
       isEditingRef.current = false;
       intentionalExitRef.current = true;
@@ -280,8 +317,13 @@ export function CodeRunnerView({
       onForceKeyboardFocus?.();
     }
     const anotherWasEditing = anotherBlockEditingRef.current;
-    onRunRequest?.(); // 別ブロックが編集中なら終了させる
-    onSelectRequest?.();
+    // 058：⌘R（編集を続けたまま実行）ではこの2つを呼ばない。編集中のブロックは既に選択中なので選び直す必要が無く、
+    // 選び直すと学習画面が「相手の面の編集を終わらせる」処理でキーボードを閉じ、編集中フラグも倒してしまう
+    //（カーソルが外れる・その後の ⌘. が「編集中」と分からず画面ごと戻る、の原因だった）。
+    if (!keepEditing) {
+      onRunRequest?.(); // 別ブロックが編集中なら終了させる
+      onSelectRequest?.();
+    }
     const content =
       editable && editedContent !== undefined ? editedContent : block.content;
     // 045: デッキ側は deckSqlStageId で選ばれた1つ（未指定＝先頭・削除済み参照は積まない）。
@@ -485,6 +527,14 @@ export function CodeRunnerView({
               // （handlePaletteTouchStart の 200ms タイマーが onBlur の 50ms タイマーより
               //   長く paletteActiveRef=true を保持するため、onFocus によるリセットに依存しない）
               setTimeout(() => {
+                // 058：⌘R の実行でフォーカスを取られただけ＝編集は続けて入力欄へ戻す。
+                // 戻すのは1回だけ＝その後の Esc・外タップ（本当に編集をやめたい操作）は従来どおり効かせる
+                if (keepEditGuardRef.current && isEditingRef.current) {
+                  keepEditGuardRef.current = false;
+                  codeInputRef.current?.focus();
+                  intentionalExitRef.current = false;
+                  return;
+                }
                 if (!intentionalExitRef.current && !paletteActiveRef.current) {
                   handleEditEnd();
                 }
@@ -524,7 +574,9 @@ export function CodeRunnerView({
         theme={theme}
       />
 
-      {!isEditing && (
+      {/* 058：実行結果の先頭の位置を測る目印（高さ 0＝レイアウトを変えない） */}
+      <View onLayout={(e) => onOutputLayout?.(e.nativeEvent.layout.y)} />
+      {(!isEditing || showOutputWhileEditing) && (
         <ExecutionOutput
           result={result}
           liveLogs={liveLogs}
@@ -541,6 +593,7 @@ export function CodeRunnerView({
           onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
           deckImages={deckHtmlImages}
           proStageHint={stageDroppedByPro}
+          keyTrigger={outputTrigger}
         />
       )}
       <InteractivePreviewModal

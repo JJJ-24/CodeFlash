@@ -119,7 +119,12 @@ const SESSION_SHORTCUT_SECTIONS = [
   { titleKey: "shortcut.catFocus", items: [
     { key: "J / K", descKey: "shortcut.focusNextPrev" },
     { key: "R", descKey: "shortcut.runFocused" },
+    { key: "⌘R", descKey: "shortcut.runWhileEditing" },
     { key: "E", descKey: "shortcut.editFocusedItem" },
+    // 058：選択中のコードブロックのプレビュー枠（カード編集と同じキー）
+    { key: "V", descKey: "shortcut.previewSourceToggle", pro: true },
+    { key: "⇧F", descKey: "shortcut.previewExpand", pro: true },
+    { key: "⇧R", descKey: "shortcut.previewReset" },
   ] },
   { titleKey: "shortcut.catNavigate", items: [
     { key: ", / .", descKey: "shortcut.nextPrev" },
@@ -776,6 +781,8 @@ export default function StudySessionScreen() {
       else if (side === 'back') cbs.setSelectedCodeBlockSide('back');
       else if (side === 'frontOrBack') cbs.setSelectedCodeBlockSide(isFlipped ? 'back' : 'front');
       cbs.setEditTrigger(0);
+      // 058：タップで選び直したときも ⌘R の値を戻す（選ばれた瞬間に前の ⌘R で実行しないように）
+      cbs.setRunKeepEditTrigger(0);
     },
     [cbs, isFlipped, handleForceKeyboardFocus],
   );
@@ -927,6 +934,7 @@ export default function StudySessionScreen() {
 
     if (key === " ") {
       cbs.setRunTrigger(0);
+      cbs.setRunKeepEditTrigger(0);
       cbs.setEditTrigger(0);
       setIsFlipped((v) => !v);
     } else if (key === "j" || key === "J" || key === "k" || key === "K") {
@@ -938,6 +946,16 @@ export default function StudySessionScreen() {
       );
     } else if (key.toLowerCase() === "r") {
       if (cbs.selectedCodeBlockIdx !== null) cbs.setRunTrigger((v) => v + 1);
+    } else if (key === "cmdR") {
+      // 058：⌘R＝コードブロックを編集中でもカーソルを残したまま実行（R・▶ は編集を抜けてから実行）
+      if (cbs.selectedCodeBlockIdx !== null) cbs.setRunKeepEditTrigger((v) => v + 1);
+    } else if (key === "v" || key === "sF" || key === "sR") {
+      // 058：選択中のコードブロックのプレビュー枠。V＝プレビュー/ソース・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す
+      //（カード編集と同じキー。Space は表裏反転なので使えない）。ボタンが出ていないときは何もしない（ExecutionOutput）
+      if (cbs.selectedCodeBlockIdx !== null) {
+        const action = key === "v" ? "toggleSource" : key === "sF" ? "expand" : "reset";
+        cbs.setOutputTrigger((prev) => ({ action, n: (prev?.n ?? 0) + 1 }));
+      }
     } else if (key === ".") {
       swipe.navigateWithSlide("next");
     } else if (key === ",") {
@@ -950,6 +968,7 @@ export default function StudySessionScreen() {
       setIsFullscreen((v) => !v);
       cbs.setEditTrigger(0);
       cbs.setRunTrigger(0);
+      cbs.setRunKeepEditTrigger(0);
     } else if (key.toLowerCase() === "e") {
       if (cbs.selectedCodeBlockIdx !== null) cbs.setEditTrigger((v) => v + 1);
     } else if (key.toLowerCase() === "u") {
@@ -1044,6 +1063,12 @@ export default function StudySessionScreen() {
     { input: "j", handler: () => handleKeyPress("j") },
     { input: "k", handler: () => handleKeyPress("k") },
     { input: "r", handler: () => handleKeyPress("r") },
+    // 058：選択中のコードブロックのプレビュー枠（V＝プレビュー/ソース・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す）
+    { input: "v", handler: () => handleKeyPress("v") },
+    { input: "f", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("sF") },
+    { input: "r", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("sR") },
+    // 058：⌘R＝編集中でもカーソルを残したまま実行（⌘ 付きは入力欄に取られずアプリに届く）
+    { input: "r", modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleKeyPress("cmdR") },
     { input: ".", handler: () => handleKeyPress(".") },
     { input: ",", handler: () => handleKeyPress(",") },
     { input: "m", handler: () => handleKeyPress("m") },
@@ -1117,6 +1142,7 @@ export default function StudySessionScreen() {
           setIsFullscreen(false);
           cbs.setEditTrigger(0);
           cbs.setRunTrigger(0);
+          cbs.setRunKeepEditTrigger(0);
           return;
         }
         safeBack();
@@ -1693,6 +1719,8 @@ export default function StudySessionScreen() {
                 ? cbs.runTrigger
                 : undefined
             }
+            outputTrigger={showMemo && cbs.selectedCodeBlockSide === "memo" ? cbs.outputTrigger : undefined}
+            runKeepEditTrigger={showMemo && cbs.selectedCodeBlockSide === "memo" ? cbs.runKeepEditTrigger : undefined}
             editTrigger={
               showMemo && cbs.selectedCodeBlockSide === "memo"
                 ? cbs.editTrigger
@@ -1706,6 +1734,7 @@ export default function StudySessionScreen() {
             onCodeRunStart={handleCodeRunComplete}
             exitAllEditTrigger={memoExitAllEditTrigger}
             scrollRef={backScrollRef}
+            scrollYRef={backScrollYRef}
             scrollBaseYRef={memoScrollBaseYRef}
             deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
           />
@@ -1854,6 +1883,7 @@ export default function StudySessionScreen() {
                 setIsFullscreen(false);
                 cbs.setEditTrigger(0);
                 cbs.setRunTrigger(0);
+                cbs.setRunKeepEditTrigger(0);
               }}
             >
               <Ionicons
@@ -1963,12 +1993,15 @@ export default function StudySessionScreen() {
                         onForceKeyboardFocus={handleForceKeyboardFocus}
                         onSelectCodeBlock={makeSelectHandler('frontOrBack')}
                         runTrigger={!isFlipped ? cbs.runTrigger : undefined}
+                        outputTrigger={!isFlipped ? cbs.outputTrigger : undefined}
+                        runKeepEditTrigger={!isFlipped ? cbs.runKeepEditTrigger : undefined}
                         editTrigger={!isFlipped ? cbs.editTrigger : undefined}
                         selectedCodeBlockIdx={
                           !isFlipped ? cbs.selectedCodeBlockIdx : null
                         }
                         onCodeRunStart={handleCodeRunComplete}
                         scrollRef={frontScrollRef}
+                        scrollYRef={frontScrollYRef}
                         deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                       />
                     </ScrollView>
@@ -2008,6 +2041,8 @@ export default function StudySessionScreen() {
                             ? cbs.runTrigger
                             : undefined
                         }
+                        outputTrigger={isFlipped && cbs.selectedCodeBlockSide === "back" ? cbs.outputTrigger : undefined}
+                        runKeepEditTrigger={isFlipped && cbs.selectedCodeBlockSide === "back" ? cbs.runKeepEditTrigger : undefined}
                         editTrigger={
                           isFlipped && cbs.selectedCodeBlockSide === "back"
                             ? cbs.editTrigger
@@ -2021,6 +2056,7 @@ export default function StudySessionScreen() {
                         onCodeRunStart={handleCodeRunComplete}
                         exitAllEditTrigger={backExitAllEditTrigger}
                         scrollRef={backScrollRef}
+                        scrollYRef={backScrollYRef}
                         deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                       />
                       {memoBlock}
@@ -2322,12 +2358,15 @@ export default function StudySessionScreen() {
                       onForceKeyboardFocus={handleForceKeyboardFocus}
                       onSelectCodeBlock={makeSelectHandler(null)}
                       runTrigger={!isFlipped ? cbs.runTrigger : undefined}
+                      outputTrigger={!isFlipped ? cbs.outputTrigger : undefined}
+                      runKeepEditTrigger={!isFlipped ? cbs.runKeepEditTrigger : undefined}
                       editTrigger={!isFlipped ? cbs.editTrigger : undefined}
                       selectedCodeBlockIdx={
                         !isFlipped ? cbs.selectedCodeBlockIdx : null
                       }
                       onCodeRunStart={handleCodeRunComplete}
                       scrollRef={frontScrollRef}
+                      scrollYRef={frontScrollYRef}
                       deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                     />
                   </ScrollView>
@@ -2366,6 +2405,8 @@ export default function StudySessionScreen() {
                           ? cbs.runTrigger
                           : undefined
                       }
+                      outputTrigger={isFlipped && cbs.selectedCodeBlockSide === "back" ? cbs.outputTrigger : undefined}
+                      runKeepEditTrigger={isFlipped && cbs.selectedCodeBlockSide === "back" ? cbs.runKeepEditTrigger : undefined}
                       editTrigger={
                         isFlipped && cbs.selectedCodeBlockSide === "back"
                           ? cbs.editTrigger
@@ -2379,6 +2420,7 @@ export default function StudySessionScreen() {
                       onCodeRunStart={handleCodeRunComplete}
                       exitAllEditTrigger={backExitAllEditTrigger}
                       scrollRef={backScrollRef}
+                      scrollYRef={backScrollYRef}
                       deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
                     />
                     {memoBlock}
@@ -2399,6 +2441,7 @@ export default function StudySessionScreen() {
               setIsFullscreen(true);
               cbs.setEditTrigger(0);
               cbs.setRunTrigger(0);
+              cbs.setRunKeepEditTrigger(0);
             }}
           >
             <Ionicons

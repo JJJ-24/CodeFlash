@@ -13,10 +13,11 @@ import { useKeyCommands } from '@/lib/useKeyCommands';
  *   一覧を非同期に読む画面（言語・声）は、読み終えて行数が変わったときに選ばれている行へ置き直す。
  * - 行が画面外なら見える位置までスクロールする：各行（**ScrollView の中身の直接の子**）に
  *   `rowLayout(i)` を当て、ScrollView に `scrollRef` と `scrollProps` を渡す。
- * - 矢印は iPad でも登録する（一覧に入力欄は無い）。
+ * - 矢印は iPad でも登録する（一覧に入力欄は無い）。ただしカードエディタ・学習セッションの上に出す一覧は
+ *   `arrows: false`＝iPad で登録すると矢印のキャッシュが残り、編集中のカーソル移動を奪う（054 のアラートと同じ）。
  * - 表示中だけキーを担当する（親は `suspendKeys` / `active` でキーを手放していること）。
  */
-export function usePickerKeys<T>({ visible, items, value, onPick, onClose, onPreview }: {
+export function usePickerKeys<T>({ visible, items, value, onPick, onClose, onPreview, arrows = true }: {
   visible: boolean;
   /** 行の値（見えている順）。「自動」「アプリ設定に従う」のような先頭行も含める */
   items: readonly T[];
@@ -26,6 +27,8 @@ export function usePickerKeys<T>({ visible, items, value, onPick, onClose, onPre
   onPick: (v: T) => void;
   onClose: () => void;
   onPreview?: (v: T) => void;
+  /** 矢印キーも登録するか（既定 true） */
+  arrows?: boolean;
 }) {
   const [focusedIndex, setFocusedIndex] = useState(0);
   const count = items.length;
@@ -64,8 +67,10 @@ export function usePickerKeys<T>({ visible, items, value, onPick, onClose, onPre
     { input: KeyCommand.keyInputEscape, handler: onClose },
     { input: 'j', handler: () => move(1) },
     { input: 'k', handler: () => move(-1) },
-    { input: KeyCommand.keyInputDownArrow, handler: () => move(1) },
-    { input: KeyCommand.keyInputUpArrow, handler: () => move(-1) },
+    ...(arrows ? [
+      { input: KeyCommand.keyInputDownArrow, handler: () => move(1) },
+      { input: KeyCommand.keyInputUpArrow, handler: () => move(-1) },
+    ] : []),
     { input: KeyCommand.keyInputEnter, handler: pickFocused },
     { input: ' ', handler: pickFocused },
     ...(onPreview ? [{ input: 's', handler: () => { if (focusedIndex < count) onPreview(items[focusedIndex]); } }] : []),

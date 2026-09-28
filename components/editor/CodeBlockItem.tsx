@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   Animated,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,14 +21,16 @@ import { runOnJS } from 'react-native-reanimated';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { AppSwitch } from '@/components/AppSwitch';
-import { ExecutionOutput } from '@/components/code/ExecutionOutput';
+import { ExecutionOutput, type OutputKeyTrigger } from '@/components/code/ExecutionOutput';
 import { RUN_STOP_BG, RunButtonIcon } from '@/components/code/RunButtonIcon';
 import { InteractivePreviewModal } from '@/components/code/InteractivePreviewModal';
 import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { InfoModal } from '@/components/InfoModal';
+import { usePickerKeys } from '@/components/settings/usePickerKeys';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
 import { DeckStagePicker } from '@/components/editor/DeckStagePicker';
+import { activeDeckStageId, isWebLanguage, type CodeSubStop } from '@/lib/codeBlockStops';
 import { resolveDeckStageHtml, resolveDeckStageSql } from '@/lib/deckStages';
 import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
@@ -47,7 +50,8 @@ interface Props {
   onMoveDown?: () => void;
   collapsed?: boolean;
   flashTrigger?: number;
-  onFocusInput?: () => void;
+  /** 入力欄にカーソルが入った。土台・初期化の欄なら `sub` にその止まり先（058：Esc で青枠をそこへ戻す） */
+  onFocusInput?: (sub?: CodeSubStop) => void;
   autoFocus?: boolean;
   isFocused?: boolean;
   editTrigger?: number;
@@ -65,9 +69,25 @@ interface Props {
   deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決する */
   deckHtmlImages?: DeckImage[];
+  /** 058：J/K で止まっている土台・初期化の項目（青枠を重ねる） */
+  focusedSub?: CodeSubStop | null;
+  /** 058：止まり先の位置（ブロックの上端から見た y・高さ）。画面外ならスクロールするため */
+  onSubLayout?: (sub: CodeSubStop, y: number, h: number) => void;
+  /** 058：Return で土台・初期化の欄を開いて入力を始める */
+  initEditTrigger?: { sub: 'sqlInit' | 'htmlInit'; n: number };
+  /** 058：G で言語の一覧を開く */
+  langPickerTrigger?: number;
+  /** 058：言語の一覧の開閉（開いている間はエディタがキーを手放す＝タップで開いたときも） */
+  onOverlayChange?: (open: boolean) => void;
+  /** 058：本文の入力欄（コード表示）と実行結果の先頭の位置（ブロックの上端から見た y）。
+   *  Return で編集を始めたとき・実行したときのスクロールを「必要な分だけ」にするため */
+  onCodeAreaLayout?: (y: number, h: number) => void;
+  onOutputLayout?: (y: number) => void;
+  /** 058：プレビュー枠のキー操作（V・⇧F・⇧R）。ExecutionOutput へそのまま渡す */
+  outputKeyTrigger?: OutputKeyTrigger | null;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages, focusedSub, onSubLayout, initEditTrigger, langPickerTrigger, onOverlayChange, outputKeyTrigger, onCodeAreaLayout, onOutputLayout }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -95,8 +115,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const initHtmlInputRef = useRef<TextInput>(null);
   const [initSqlFocused, setInitSqlFocused] = useState(false);
   const [initHtmlFocused, setInitHtmlFocused] = useState(false);
-  // 言語選択モーダルを開いたとき、選択中の言語までスクロールするための ref
-  const langScrollRef = useRef<ScrollView>(null);
+  // 言語選択モーダルを開いたとき、選択中の言語までスクロールするための位置
   const selectedLangYRef = useRef(0);
   const { insertPair, selection, handleSelectionChange, setSelectionToPos, restoreSelection } = useInsertPair(
     block.content,
@@ -124,13 +143,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const sqlInits = block.language === 'sql' ? [resolveDeckStageSql(deckSqlStages, block), block.sqlInit ?? ''] : undefined;
   const sqlStages = deckSqlStages ?? [];
   // 選択中の SQL 土台。deckSqlStageId 未指定なら先頭。**削除済みの id を指しているときは null**
-  const activeSqlStageId = block.noDeckSqlInit
-    ? null
-    : (sqlStages.find((st) => st.id === (block.deckSqlStageId ?? sqlStages[0]?.id))?.id ?? null);
+  const activeSqlStageId = activeDeckStageId(sqlStages, block.noDeckSqlInit, block.deckSqlStageId);
 
   // 土台（HTML/CSS）を積む web 系ブロックか。デッキ共通土台の ON/OFF トグルの表示条件に使う。
-  const isWebLang =
-    block.language === 'html' || block.language === 'javascript' || block.language === 'typescript' || block.language === 'css';
+  const isWebLang = isWebLanguage(block.language);
 
   // Web 系4言語（html / js・ts / css）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）。
   // html も 2026-08-08 からブロック土台を持つ（カード単位の「出題の前提」を置けるようにするため。
@@ -147,9 +163,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const deckStages = deckHtmlStages ?? [];
   // 選択中の土台。deckStageId 未指定なら先頭。**削除済みの id を指しているときは null**
   // （＝効果としては「使わない」なので、そのようにハイライトする）。
-  const activeStageId = block.noDeckHtmlInit
-    ? null
-    : (deckStages.find((st) => st.id === (block.deckStageId ?? deckStages[0]?.id))?.id ?? null);
+  const activeStageId = activeDeckStageId(deckStages, block.noDeckHtmlInit, block.deckStageId);
   // 非 Pro のため土台を落として実行した js/ts か（＝Pro なら土台を積んだはずのブロック）。
   // 実行はブロックしない：JS 実行は無料機能で、デッキ共通土台は既定 ON かつ切る手段（noDeckHtmlInit）が
   // Pro 限定のため、止めると「土台のあるデッキでは console.log すら実行できない」逃げ場のない状態になる。
@@ -221,6 +235,20 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     [enterInitHtmlEdit],
   );
 
+  // 058：Return＝欄を開いて（折りたたみなら展開して）入力を始める
+  useEffect(() => {
+    if (!initEditTrigger || initEditTrigger.n === 0) return;
+    if (initEditTrigger.sub === 'sqlInit') { setShowInitSql(true); enterInitSqlEdit(); }
+    else { setShowInitHtml(true); enterInitHtmlEdit(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initEditTrigger]);
+
+  // 058：止まり先の青枠と位置（位置はブロックの上端から見た y＝セクションはブロックの直接の子）
+  const subRing = (sub: CodeSubStop) =>
+    focusedSub === sub ? <View pointerEvents="none" style={[styles.subRing, { borderColor: theme.colors.primary }]} /> : null;
+  const subLayout = (sub: CodeSubStop) => (e: { nativeEvent: { layout: { y: number; height: number } } }) =>
+    onSubLayout?.(sub, e.nativeEvent.layout.y, e.nativeEvent.layout.height);
+
   useEffect(() => {
     if (autoFocus) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); onAutoFocused?.(); }
   }, []);
@@ -241,16 +269,51 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     if ((blurTrigger ?? 0) > 0) { codeInputRef.current?.blur(); initSqlInputRef.current?.blur(); initHtmlInputRef.current?.blur(); }
   }, [blurTrigger]);
 
+  // 058：言語の一覧のキー（J/K・Return/Space＝選んで閉じる・Esc）。開いたときのフォーカスは今の言語。
+  // 矢印は iPhone のみ（カードエディタの上に出る＝iPad で登録すると編集中のカーソル移動を奪う）。
+  const selectLanguage = (lang: string) => {
+    if (!EXECUTABLE_LANGUAGES.includes(lang)) reset();
+    onChange({
+      language: lang,
+      ...(!EXECUTABLE_LANGUAGES.includes(lang) && { executable: false }),
+    });
+    useSettingsStore.getState().setLastSelectedCodeLanguage(lang);
+  };
+  const langKeys = usePickerKeys({
+    visible: langModalVisible,
+    items: LANGUAGES,
+    value: block.language,
+    onPick: selectLanguage,
+    onClose: () => setLangModalVisible(false),
+    arrows: !(Platform as any).isPad,
+  });
+
   // 言語選択モーダルを開いたら選択中の言語が見える位置までスクロールする＋フェードを再生する
   useEffect(() => {
     if (!langModalVisible) return;
     langFade.setValue(0);
     Animated.timing(langFade, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     const id = setTimeout(() => {
-      langScrollRef.current?.scrollTo({ y: Math.max(0, selectedLangYRef.current - 40), animated: false });
+      langKeys.scrollRef.current?.scrollTo({ y: Math.max(0, selectedLangYRef.current - 40), animated: false });
     }, 30);
     return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [langModalVisible, langFade]);
+
+  // 058：言語の一覧の開閉を親へ伝える（開いている間はエディタのキーを手放す）
+  // 開いたまま消えた（タブ切替など）ときも閉じたことにする＝エディタのキーが戻らなくなるのを防ぐ
+  useEffect(() => {
+    if (!langModalVisible) return;
+    onOverlayChange?.(true);
+    return () => onOverlayChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [langModalVisible]);
+
+  // 058：G＝言語の一覧を開く（プレビューでは言語を変えられない）
+  useEffect(() => {
+    if ((langPickerTrigger ?? 0) > 0 && !isPreview) setLangModalVisible(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [langPickerTrigger]);
 
   useEffect(() => {
     if ((runTrigger ?? 0) > 0 && block.executable) {
@@ -390,7 +453,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         </Text>
       ) : (
         <>
-          <View style={styles.codeArea}>
+          <View style={styles.codeArea} onLayout={(e) => onCodeAreaLayout?.(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
             {/* alwaysBounceHorizontal={false}：収まっているコードの上で横ドラッグを掴まない
                 （学習画面のカード送りスワイプと同じ理由。ここは死角の実害は小さいが挙動を揃える） */}
             {isPreview ? (
@@ -453,7 +516,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           {/* SQL ブロック固有の初期化SQL（クエリ本体の前にデッキ共通の後で流す）。SQL は Pro 機能のため非Proでは非表示。
               プレビューでは非表示＝学習画面（CodeRunnerView）は土台を使うだけで表示しないため（下の4セクションも同じ） */}
           {block.language === 'sql' && isPro && !isPreview && (
-            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
+            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]} onLayout={subLayout('sqlInit')}>
+              {subRing('sqlInit')}
               <Pressable style={styles.initSqlHeader} onPress={() => setShowInitSql((v) => !v)} hitSlop={6}>
                 <Ionicons name={showInitSql ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />
                 <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -494,7 +558,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
                       value={block.sqlInit ?? ''}
                       onChangeText={(v) => onChange({ sqlInit: v })}
-                      onFocus={() => { setInitSqlFocused(true); onFocusInput?.(); }}
+                      onFocus={() => { setInitSqlFocused(true); onFocusInput?.('sqlInit'); }}
                       onBlur={() => { setInitSqlFocused(false); onEditBlur?.(); }}
                       multiline
                       scrollEnabled={false}
@@ -528,32 +592,39 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           {/* web 系ブロック：どのデッキ HTML/CSS 土台を積むか。デッキに土台が無ければ選ぶ対象が
               無いので出さない。Pro 機能のため非Proでは非表示（土台自体も積まれない） */}
           {isWebLang && isPro && !isPreview && deckStages.length > 0 && (
-            <DeckStagePicker
-              kind="html"
-              stages={deckStages}
-              activeStageId={activeStageId}
-              onPickNone={() => onChange({ noDeckHtmlInit: true })}
-              onPickStage={(id) => onChange({ noDeckHtmlInit: false, deckStageId: id })}
-              onPickDefault={() => onChange({ noDeckHtmlInit: false, deckStageId: undefined })}
-            />
+            <View onLayout={subLayout('htmlStage')}>
+              <DeckStagePicker
+                kind="html"
+                stages={deckStages}
+                activeStageId={activeStageId}
+                onPickNone={() => onChange({ noDeckHtmlInit: true })}
+                onPickStage={(id) => onChange({ noDeckHtmlInit: false, deckStageId: id })}
+                onPickDefault={() => onChange({ noDeckHtmlInit: false, deckStageId: undefined })}
+              />
+              {subRing('htmlStage')}
+            </View>
           )}
 
           {/* SQL ブロック：どのデッキ初期化SQLを流すか（045）。HTML と同じ部品・同じ規則。
               SQL は言語自体が Pro 限定なので、表示条件も Pro のみで揃えてある */}
           {block.language === 'sql' && isPro && !isPreview && sqlStages.length > 0 && (
-            <DeckStagePicker
-              kind="sql"
-              stages={sqlStages}
-              activeStageId={activeSqlStageId}
-              onPickNone={() => onChange({ noDeckSqlInit: true })}
-              onPickStage={(id) => onChange({ noDeckSqlInit: false, deckSqlStageId: id })}
-              onPickDefault={() => onChange({ noDeckSqlInit: false, deckSqlStageId: undefined })}
-            />
+            <View onLayout={subLayout('sqlStage')}>
+              <DeckStagePicker
+                kind="sql"
+                stages={sqlStages}
+                activeStageId={activeSqlStageId}
+                onPickNone={() => onChange({ noDeckSqlInit: true })}
+                onPickStage={(id) => onChange({ noDeckSqlInit: false, deckSqlStageId: id })}
+                onPickDefault={() => onChange({ noDeckSqlInit: false, deckSqlStageId: undefined })}
+              />
+              {subRing('sqlStage')}
+            </View>
           )}
 
           {/* web 系ブロック固有の HTML/CSS 土台（web プレビューの土台。デッキ共通の後・本文の前に積む）。Pro 機能のため非Proでは非表示 */}
           {isWebLang && isPro && !isPreview && (
-            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
+            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]} onLayout={subLayout('htmlInit')}>
+              {subRing('htmlInit')}
               <Pressable style={styles.initSqlHeader} onPress={() => setShowInitHtml((v) => !v)} hitSlop={6}>
                 <Ionicons name={showInitHtml ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />
                 <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -592,7 +663,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
                       value={block.htmlInit ?? ''}
                       onChangeText={(v) => onChange({ htmlInit: v })}
-                      onFocus={() => { setInitHtmlFocused(true); onFocusInput?.(); }}
+                      onFocus={() => { setInitHtmlFocused(true); onFocusInput?.('htmlInit'); }}
                       onBlur={() => { setInitHtmlFocused(false); onEditBlur?.(); }}
                       multiline
                       scrollEnabled={false}
@@ -627,7 +698,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
           {/* html ブロック：実行前プレビューに本文も描画するか（土台に書き足して完成させる出題向け）。
               既定 OFF＝「表示結果を予想させる」出題の答えを先に見せない。Pro 機能のため非Proでは非表示 */}
           {block.language === 'html' && isPro && !isPreview && (
-            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]}>
+            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]} onLayout={subLayout('previewInit')}>
+              {subRing('previewInit')}
               <View style={styles.initSqlHeader}>
                 <Ionicons name={block.previewInit ? 'eye' : 'eye-off-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
                 <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -659,6 +731,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
+          {/* 058：実行結果の先頭の位置を測る目印（高さ 0＝レイアウトを変えない） */}
+          <View onLayout={(e) => onOutputLayout?.(e.nativeEvent.layout.y)} />
           <ExecutionOutput
             result={result}
             liveLogs={liveLogs}
@@ -674,6 +748,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
             deckImages={deckHtmlImages}
             proStageHint={stageDroppedByPro}
+            keyTrigger={outputKeyTrigger}
           />
         </>
       )}
@@ -695,19 +770,18 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
           <View style={[styles.langModal, { backgroundColor: theme.colors.surface, width: Math.max(220, width * 0.5) }]}>
             <Text style={[styles.langModalTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>{t('editor.selectLanguage')}</Text>
-            <ScrollView ref={langScrollRef}>
-              {LANGUAGES.map((lang) => (
+            <ScrollView ref={langKeys.scrollRef} {...langKeys.scrollProps}>
+              {LANGUAGES.map((lang, i) => (
                 <TouchableOpacity
                   key={lang}
-                  onLayout={block.language === lang ? (e) => { selectedLangYRef.current = e.nativeEvent.layout.y; } : undefined}
-                  style={[styles.langOption, block.language === lang && { backgroundColor: theme.colors.primaryLight }]}
+                  onLayout={(e) => {
+                    langKeys.rowLayout(i)(e);
+                    if (block.language === lang) selectedLangYRef.current = e.nativeEvent.layout.y;
+                  }}
+                  // 背景＝キーのフォーカス（開いたときは今の言語）。選択中の言語は文字色と ✓ で示す
+                  style={[styles.langOption, langKeys.focusedIndex === i && { backgroundColor: theme.colors.primaryLight }]}
                   onPress={() => {
-                    if (!EXECUTABLE_LANGUAGES.includes(lang)) reset();
-                    onChange({
-                      language: lang,
-                      ...(!EXECUTABLE_LANGUAGES.includes(lang) && { executable: false }),
-                    });
-                    useSettingsStore.getState().setLastSelectedCodeLanguage(lang);
+                    selectLanguage(lang);
                     setLangModalVisible(false);
                   }}
                 >
@@ -721,6 +795,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   >
                     {LANG_LABELS[lang]}
                   </Text>
+                  {block.language === lang && (
+                    <Ionicons name="checkmark" size={theme.fontSize.lg} color={theme.colors.primary} />
+                  )}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -847,8 +924,10 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     marginBottom: 8,
     textAlign: 'center',
   },
-  langOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
+  langOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
   langOptionText: {},
+  // 058：J/K で止まっている土台・初期化の項目の青枠（セクションの内側に重ねる＝レイアウトを変えない）
+  subRing: { position: 'absolute', top: 2, bottom: 2, left: 2, right: 2, borderWidth: 2, borderRadius: 8 },
   collapsedPreview: {
     paddingHorizontal: 14,
     paddingVertical: 10,

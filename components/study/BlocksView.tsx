@@ -18,6 +18,7 @@ import { markdownFenceRule } from '@/lib/editor/markdownFenceRule';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
 import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from '@/types';
+import type { OutputKeyTrigger } from '@/components/code/ExecutionOutput';
 import { CodeRunnerView } from './CodeRunnerView';
 import { ZoomableImage } from './ZoomableImage';
 
@@ -83,12 +84,18 @@ interface Props {
   onForceKeyboardFocus?: () => void;
   runTrigger?: number;
   editTrigger?: number;
+  /** 058：⌘R＝編集中でもカーソルを残したまま実行 */
+  runKeepEditTrigger?: number;
+  /** 058：選択中のコードブロックのプレビュー枠のキー操作（V・⇧F・⇧R） */
+  outputTrigger?: OutputKeyTrigger | null;
   exitAllEditTrigger?: number;
   selectedCodeBlockIdx?: number | null;
   onSelectCodeBlock?: (codeBlockIdx: number) => void;
   onCodeRunStart?: () => void;
   scrollRef?: RefObject<ScrollView | null>;
   scrollBaseYRef?: RefObject<number>;
+  /** 058：親の ScrollView の今のスクロール位置（必要な分だけスクロールするため） */
+  scrollYRef?: RefObject<number>;
   /** デッキ共通の SQL 初期化（SQL コードブロック実行時に本体の前に流す） */
   deckSqlStages?: DeckStage[];
   /** デッキ共通の HTML/CSS 土台（web 系コードブロックのプレビュー土台） */
@@ -97,7 +104,7 @@ interface Props {
   deckHtmlImages?: DeckImage[];
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, runKeepEditTrigger, outputTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, scrollYRef, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -105,6 +112,8 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   const blockYPositions = useRef<Record<number, number>>({});
   const blockHeights = useRef<Record<number, number>>({});
   const kbHeightRef = useRef(0);
+  // 058：各コードブロックの中での実行結果の先頭の位置
+  const outputYPositions = useRef<Record<number, number>>({});
   // 現在編集中のブロック index（blocks 配列上の i）を管理
   const editingBlockIdxRef = useRef<number | null>(null);
   // CodeRunnerView に "別ブロックが編集中か" を伝えるための state（ref だけでは再描画されない）
@@ -115,21 +124,39 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   // measure() の pageY（ScrollView のスクリーン上 Y 座標）を使い、
   // "スクリーン高さ - キーボード高さ - ScrollView 上端" でキーボード上の実表示高さを正確に算出する。
   // svH - kh だけでは ScrollView の画面上位置を考慮しないため過小推計になる場合がある。
-  function scrollToBlockEnd(blockIdx: number, kh: number) {
+  // 058：範囲（上端〜下端）を**必要な分だけ**見せる。すでに見えていれば動かさない。収まるなら下端が見えるまで下げ、
+  // 上端が隠れていれば上端へ。収まらなければ `preferEnd` なら下端（編集開始＝カーソルは末尾）、それ以外は上端（実行結果＝エラーを先に）。
+  // 以前は常に「ブロック末尾を表示領域の最下部へ」送っていたため、画面の上の方にあるブロックでも編集を始めると最下部まで動いた。
+  // 今のスクロール位置（scrollYRef）が無い呼び出し元では従来どおり末尾を最下部へ送る。
+  function scrollRangeIntoView(top: number, bottom: number, kh: number, preferEnd: boolean, margin = 16) {
     if (!scrollRef?.current) return;
-    const base = scrollBaseYRef?.current ?? 0;
-    const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
-    const blockH = blockHeights.current[blockIdx] ?? 0;
     (scrollRef.current as any).measure?.((
       _x: number, _y: number, _w: number, svH: number, _pageX: number, pageY: number
     ) => {
       const screenH = Dimensions.get('window').height;
       const visibleH = Math.max(80, Math.min(svH, screenH - kh - pageY));
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, blockY + blockH - visibleH + 16),
-        animated: true,
-      });
+      const current = scrollYRef?.current;
+      let target: number;
+      if (current === undefined) {
+        target = bottom - visibleH + margin;
+      } else if (bottom - top + margin * 2 <= visibleH) {
+        target = current;
+        if (bottom + margin > current + visibleH) target = bottom + margin - visibleH;
+        if (top - margin < target) target = top - margin;
+        if (Math.abs(target - current) < 1) return;
+      } else {
+        target = preferEnd ? bottom + margin - visibleH : top - margin;
+      }
+      scrollRef.current?.scrollTo({ y: Math.max(0, target), animated: true });
     });
+  }
+
+  // ブロック末尾（シンボルパレット含む＝編集中は実行結果を隠すのでブロック末尾がカーソルの近く）が隠れていれば見せる
+  function scrollToBlockEnd(blockIdx: number, kh: number) {
+    const base = scrollBaseYRef?.current ?? 0;
+    const blockY = base + containerYRef.current + (blockYPositions.current[blockIdx] ?? 0);
+    const blockH = blockHeights.current[blockIdx] ?? 0;
+    scrollRangeIntoView(blockY, blockY + blockH, kh, true);
   }
 
   function handleEditRequest(blockIdx: number) {
@@ -350,20 +377,25 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 exitEditTrigger={exitEditTriggers[i]}
                 runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}
                 editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}
+                runKeepEditTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runKeepEditTrigger : undefined}
+                // 選ばれていないブロックは undefined＝対象外（選ばれた瞬間の値は発火しない＝ExecutionOutput）
+                outputTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? outputTrigger ?? null : undefined}
                 isSelected={codeBlockIndexMap[i] === selectedCodeBlockIdx}
                 anotherBlockEditing={editingBlockIdx !== null && editingBlockIdx !== i}
                 onRunStart={() => {
                   onCodeRunStart?.();
                   if (!scrollRef?.current) return;
-                  // 出力レイアウト更新後（400ms）にブロック下端が見える位置へスクロール
+                  // 出力レイアウト更新後（400ms）に実行結果を必要な分だけ見せる。収まらなければ先頭（エラー）を優先
+                  //（058：以前は「ブロック末尾−300」へ送っていたため、プレビューの下まで進んでエラーが半分隠れた）
                   setTimeout(() => {
                     const base = scrollBaseYRef?.current ?? 0;
                     const y = base + containerYRef.current + (blockYPositions.current[i] ?? 0);
                     const h = blockHeights.current[i] ?? 0;
-                    const kh = kbHeightRef.current;
-                    scrollRef.current?.scrollTo({ y: Math.max(0, y + h - 300 + kh + (kh > 0 ? 60 : 0)), animated: true });
+                    const outY = outputYPositions.current[i] ?? 0;
+                    scrollRangeIntoView(y + outY, y + h, kbHeightRef.current, false);
                   }, 400);
                 }}
+                onOutputLayout={(y) => { outputYPositions.current[i] = y; }}
               />
             </View>
           );

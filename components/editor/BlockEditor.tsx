@@ -35,6 +35,8 @@ import { InfoContent } from "@/components/InfoContent";
 import { MultiSelectPickerModal } from "@/components/MultiSelectPickerModal";
 import { registerAlertRestoreProvider } from "@/lib/alertFocus";
 import { hasBlockContent } from "@/lib/cardPreview";
+import { activeDeckStageId, codeBlockSubStops, type CodeSubStop } from "@/lib/codeBlockStops";
+import { centeredScrollY } from "@/lib/scrollCenter";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
@@ -43,10 +45,13 @@ import type { MdAction } from "@/lib/editor/applyMarkdown";
 import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from "@/lib/theme";
 import { useResponsiveSize } from "@/lib/useResponsiveSize";
 import { resolveTagColor } from "@/lib/tagColors";
+import { useProStore } from "@/store/pro";
 import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
 import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from "@/types";
+import type { OutputKeyAction, OutputKeyTrigger } from "@/components/code/ExecutionOutput";
 import { CodeBlockItem } from "./CodeBlockItem";
+import { DeckStageChoiceModal } from "./DeckStageChoiceModal";
 import { ImageBlockItem } from "./ImageBlockItem";
 import { TagSelector } from "./TagSelector";
 import { TextBlockItem } from "./TextBlockItem";
@@ -63,6 +68,8 @@ type EditBlock = Block & { _key: string };
  * ブロックのフォーカス（focusedBlockIndex）とは同時に立たない。デッキ名の行は表示だけなので止めない。
  */
 type FooterFocus = "add" | "tags" | "archive";
+/** 058：コードの編集を始めたとき、本文の欄の下に出る記号パレットのぶん（カーソルの行と一緒に見せる） */
+const CODE_PALETTE_ALLOWANCE = 56;
 
 /**
  * 末尾に確保する余白。最下部のアーカイブ行で ⓘ を開いたとき、説明は行とこの余白のあいだに
@@ -199,6 +206,35 @@ export function BlockEditor({
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
   const scrollViewHeightRef = useRef(windowHeight);
+  const contentHeightRef = useRef(0);
+  // 末尾の項目・コードブロックの中の止まり先へフォーカスしたら**画面の真ん中**へ送る
+  //（ホーム・カード一覧・設定の J/K と同じ＝次の項目が先に見えている。端では止まる）。
+  // ⚠️ **見えている項目のために上へは戻さない**：ブロック本体は上寄せ（上端 −80）で送るので、J でブロックに入った
+  //   直後の止まり先（「使うデッキの土台」など）は画面の上半分にある。そこで真ん中へ送ると画面が一度だけ上へ戻り、
+  //   J で下へ進んでいるのに逆に動いて見える（2026-09-28 指摘）。上端が画面内にあるなら、下へ送るときだけ動かす。
+  const scrollItemToCenter = (item: { y: number; h: number }) => {
+    const current = scrollPosRef.current[activeTabRef.current] ?? 0;
+    const y = centeredScrollY(item, scrollViewHeightRef.current, contentHeightRef.current, current);
+    if (y === null) return;
+    if (y < current && item.y >= current + 8) return;
+    scrollRef.current?.scrollTo({ y, animated: true });
+  };
+  // 058：範囲（上端〜下端）を**必要な分だけ**見せる。収まるなら下端が見えるまで下げ、上端が隠れていれば上端へ。
+  // 収まらなければ上端を優先する（実行結果＝エラーを先に読む）。`preferEnd` なら下端を優先（カーソルが末尾にある編集開始）。
+  // すでに見えていれば動かさない。
+  const scrollRangeIntoView = (top: number, bottom: number, margin = 16, preferEnd = false) => {
+    const current = scrollPosRef.current[activeTabRef.current] ?? 0;
+    const vh = scrollViewHeightRef.current;
+    let target = current;
+    if (bottom - top + margin * 2 <= vh) {
+      if (bottom + margin > current + vh) target = bottom + margin - vh;
+      if (top - margin < target) target = top - margin;
+    } else {
+      target = preferEnd ? bottom + margin - vh : top - margin;
+    }
+    target = Math.max(0, target);
+    if (Math.abs(target - current) >= 1) scrollRef.current?.scrollTo({ y: target, animated: true });
+  };
   const scrollPosRef = useRef<Record<Tab, number>>({
     front: 0,
     back: 0,
@@ -228,7 +264,10 @@ export function BlockEditor({
   // 編集中ブロックのキーを記録（keyboardWillShow 時のスクロール・ESC での編集解除に使用）。
   const setEditingBlockKey = (key: string | null) => {
     editingBlockKeyRef.current = key;
+    if (key === null) editingSubRef.current = null;
   };
+  // 058：編集中の入力欄が土台・初期化の欄ならその止まり先（Esc で青枠をそこへ戻す）
+  const editingSubRef = useRef<CodeSubStop | null>(null);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [editorMode, setEditorMode] = useState<EditorMode>("edit");
@@ -253,9 +292,30 @@ export function BlockEditor({
   const [moveCount, setMoveCount] = useState(0);
   const [newBlockKey, setNewBlockKey] = useState<string | null>(null);
   const [autoFocusedKeys, setAutoFocusedKeys] = useState<Set<string>>(new Set());
-  const [focusedBlockIndex, setFocusedBlockIndex] = useState<number | null>(
+  const [focusedBlockIndex, setFocusedBlockIndexState] = useState<number | null>(
     null,
   );
+  // 058：フォーカス中のブロックの中で止まっている土台・初期化の項目（null＝ブロック本体）。
+  // ⚠️ ブロックのフォーカスを動かすと必ず本体へ戻す＝下の setFocusedBlockIndex を通す（別のブロックの
+  // 止まり先が残って、戻ってきたときに古い項目に青枠が出ないように）。
+  const [focusedSub, setFocusedSub] = useState<CodeSubStop | null>(null);
+  const focusedSubRef = useRef<CodeSubStop | null>(null);
+  function setFocusedBlockIndex(v: SetStateAction<number | null>, sub: CodeSubStop | null = null) {
+    setFocusedBlockIndexState(v);
+    setFocusedSub(sub);
+    focusedSubRef.current = sub;
+  }
+  const isPro = useProStore((s) => s.isPro);
+  // 058：言語の一覧（コードブロックが持つ）・デッキ土台の一覧が出ている間はエディタのキーを手放す
+  const [langOverlayOpen, setLangOverlayOpen] = useState(false);
+  const [stageChoice, setStageChoice] = useState<{ key: string; kind: "html" | "sql" } | null>(null);
+  const [langPickerTriggerMap, setLangPickerTriggerMap] = useState<Record<string, number>>({});
+  // 058 Phase 3：プレビュー枠のキー操作（V＝プレビュー/ソース・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す）。
+  // 学習画面と同じキー＝止まり先にはせず、ブロックにフォーカス中の直接キー（学習画面は Space が表裏反転で使えないため）
+  const [outputKeyTriggerMap, setOutputKeyTriggerMap] = useState<Record<string, OutputKeyTrigger>>({});
+  const [initEditTriggerMap, setInitEditTriggerMap] = useState<Record<string, { sub: "sqlInit" | "htmlInit"; n: number }>>({});
+  // 058：止まり先の位置（ブロックの上端から見た y・高さ）。キーは `${ブロック}:${止まり先}`
+  const subLayoutsRef = useRef<Record<string, { y: number; h: number }>>({});
   const [footerFocus, setFooterFocus] = useState<FooterFocus | null>(null);
   // 056：タグ選択のシート（J/K・Space・Return で選ぶ。検索のタグ絞り込みと同じ部品）
   const [tagPickerVisible, setTagPickerVisible] = useState(false);
@@ -379,6 +439,7 @@ export function BlockEditor({
   isPreviewRef.current = isPreview;
   currentBlocksRef.current = currentBlocks;
   focusedBlockIndexRef.current = focusedBlockIndex;
+  focusedSubRef.current = focusedSub;
   addMenuVisibleRef.current = addMenuVisible;
   addMenuFocusIndexRef.current = addMenuFocusIndex;
   footerFocusRef.current = footerFocus;
@@ -389,6 +450,23 @@ export function BlockEditor({
     ...(tags.length > 0 ? (["tags"] as const) : []),
     ...(onArchivedChange ? (["archive"] as const) : []),
   ];
+
+  // 058：ブロックの中の止まり先（編集モードのコードブロックだけ・表示されているものだけ）
+  const subStopsOf = (block: EditBlock | undefined): CodeSubStop[] =>
+    block?.type === "code" && editorModeRef.current === "edit"
+      ? codeBlockSubStops(block as CodeBlock, { isPro, htmlStages: deckHtmlStages ?? [], sqlStages: deckSqlStages ?? [] })
+      : [];
+
+  // 058：止まり先へフォーカスが来たら画面の真ん中へ送る（末尾の項目と同じ）
+  useEffect(() => {
+    if (!focusedSub || focusedBlockIndex === null) return;
+    const key = currentBlocks[focusedBlockIndex]?._key;
+    const pos = key ? blockPositions.current[key] : undefined;
+    const l = key ? subLayoutsRef.current[`${key}:${focusedSub}`] : undefined;
+    if (!pos || !l) return;
+    scrollItemToCenter({ y: pos.y + l.y, h: l.h });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedSub, focusedBlockIndex]);
 
   // ブロックにフォーカスが移ったら末尾の青枠は外す（同時に2か所に立てない）
   useEffect(() => {
@@ -405,15 +483,12 @@ export function BlockEditor({
     if (!keyboardShortcutsEnabled) setFooterFocus(null);
   }, [keyboardShortcutsEnabled]);
 
-  // 末尾の止まり先へフォーカスが来たら、画面外のときだけ見える位置までスクロールする（055 と同じ上下 8pt の余白）
+  // 末尾の止まり先へフォーカスが来たら画面の真ん中へ送る（他の一覧と同じ）
   useEffect(() => {
     if (!footerFocus) return;
     const l = footerLayoutRef.current[footerFocus];
-    if (!l || !scrollRef.current) return;
-    const top = scrollPosRef.current[activeTabRef.current] ?? 0;
-    const vh = scrollViewHeightRef.current;
-    if (l.y < top + 8) scrollRef.current.scrollTo({ y: Math.max(0, l.y - 8), animated: true });
-    else if (l.y + l.h > top + vh - 8) scrollRef.current.scrollTo({ y: l.y + l.h - vh + 8, animated: true });
+    if (!l) return;
+    scrollItemToCenter(l);
   }, [footerFocus]);
 
   function focusFooter(stop: FooterFocus | null) {
@@ -497,6 +572,8 @@ export function BlockEditor({
     const block = currentBlocks[focusedBlockIndex];
     if (!block) return;
     setTimeout(() => {
+      // 058：前のブロックの止まり先へ K で戻ったときは、止まり先のスクロールに任せる
+      if (focusedSubRef.current) return;
       const pos = blockPositions.current[block._key];
       if (!pos || !scrollRef.current) return;
       scrollRef.current.scrollTo({
@@ -511,8 +588,9 @@ export function BlockEditor({
   // J/K キーボードフォーカス（focusedBlockIndex）をクリアする。
   // editingBlockKeyRef に現在編集中のブロックキーを記録し、
   // keyboardWillShow 時のスクロールに使用する。
-  function handleBlockTapFocus(blockKey: string) {
+  function handleBlockTapFocus(blockKey: string, sub?: CodeSubStop) {
     setEditingBlockKey(blockKey);
+    editingSubRef.current = sub ?? null;
     setFocusedBlockIndex(null);
     setFooterFocus(null);
   }
@@ -545,26 +623,20 @@ export function BlockEditor({
     if (idx === null || !blocks[idx]) return;
     const key = blocks[idx]._key;
     setEditTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
-    // ブロック末尾（カーソル位置）が画面最下部に来るようスクロール
-    const scrollToBlockEnd = () => {
+    // カーソル（末尾の行）が隠れるときだけ、見える位置までスクロールする。
+    // 058：以前は常に「ブロック末尾を画面最下部へ」送っていたため、画面の上の方にあるブロックでも Return で
+    // 最下部まで動いた（iPad＋ハードキーボードではキーボードが出ないので特に目立つ）。コードブロックは本文の欄＋記号パレット
+    // までを見せる（下の実行結果・プレビューまでは見せない＝カーソルと関係ない）。
+    // 350ms はソフトキーボードが出て表示領域が縮んだ後の見直し（縮まなければ何もしない）。
+    const scrollToCursor = () => {
       const pos = blockPositions.current[key];
-      if (!pos || !scrollRef.current) return;
-      const viewH = scrollViewHeightRef.current;
-      scrollRef.current.scrollTo({
-        y: Math.max(0, pos.y + pos.h - viewH + 24),
-        animated: false,
-      });
+      if (!pos) return;
+      const code = subLayoutsRef.current[`${key}:__code`];
+      const end = pos.y + (code ? code.y + code.h + CODE_PALETTE_ALLOWANCE : pos.h);
+      scrollRangeIntoView(pos.y, end, 24, true);
     };
-    setTimeout(() => scrollToBlockEnd(), 100);
-    setTimeout(() => {
-      const pos = blockPositions.current[key];
-      if (!pos || !scrollRef.current) return;
-      const viewH = scrollViewHeightRef.current;
-      scrollRef.current.scrollTo({
-        y: Math.max(0, pos.y + pos.h - viewH + 24),
-        animated: true,
-      });
-    }, 350);
+    setTimeout(scrollToCursor, 100);
+    setTimeout(scrollToCursor, 350);
   }
 
   // Delete キー共通処理：フォーカス中ブロックがあれば削除（空なら即時／非空は確認）、
@@ -633,13 +705,13 @@ export function BlockEditor({
     };
 
     if (inSort) {
-      if (k === "j") {
+      if (k === "j" || k === "jb") {
         setSelectedBlockKey(null);
         setFocusedBlockIndex((prev) => {
           if (prev === null) return blocks.length > 0 ? 0 : null;
           return prev < blocks.length - 1 ? prev + 1 : null;
         });
-      } else if (k === "k") {
+      } else if (k === "k" || k === "kb") {
         setSelectedBlockKey(null);
         setFocusedBlockIndex((prev) => {
           if (prev === null)
@@ -686,31 +758,69 @@ export function BlockEditor({
     //（フォーカスなし＝カード削除にも倒さない。タグを選んでいるつもりで押してカード削除の確認に繋がらないように）。
     const ff = footerFocusRef.current;
     if (ff && k === KEY_DELETE) return;
+    // 058：ブロックの中の止まり先（土台・初期化）にいるときも Delete は何もしない（同じ理由）
+    const sub = focusedSubRef.current;
+    if (sub && k === KEY_DELETE) return;
+    const stopsAt = (i: number) => subStopsOf(blocks[i]);
+    // 前のブロックへ K で戻るときは、そのブロックの最後の止まり先へ入る
+    const focusLastOf = (i: number) => {
+      const st = stopsAt(i);
+      setFocusedBlockIndex(i, st.length > 0 ? st[st.length - 1] : null);
+    };
 
     // J/K：ブロック0…n → 末尾の止まり先 → フォーカスなし（ヌルサイクル）。末尾へは編集モードだけ延ばす
     //（並べ替えモードは上の inSort 分岐＝ブロックだけ）。
-    if (k === "j") {
+    //（058：コードブロックの中の止まり先＝土台・初期化も、表示されているものだけ本体の次に巡回する）
+    // ⇧J/⇧K（"jb"/"kb"）はブロック本体だけを巡回する（止まり先を飛ばす）。
+    if (k === "j" || k === "jb") {
+      const st = idx !== null && k === "j" ? stopsAt(idx) : [];
+      const si = sub ? st.indexOf(sub) : -1;
       if (ff) {
         const i = footerStops.indexOf(ff);
         focusFooter(i >= 0 ? footerStops[i + 1] ?? null : null);
       } else if (idx === null) {
         if (blocks.length > 0) setFocusedBlockIndex(0);
         else focusFooter(footerStops[0]);
+      } else if (si + 1 < st.length) {
+        setFocusedBlockIndex(idx, st[si + 1]);
       } else if (idx < blocks.length - 1) {
         setFocusedBlockIndex(idx + 1);
       } else {
         focusFooter(footerStops[0]);
       }
-    } else if (k === "k") {
+    } else if (k === "k" || k === "kb") {
+      const byBlock = k === "kb";
       if (ff) {
         const i = footerStops.indexOf(ff);
-        if (i > 0) focusFooter(footerStops[i - 1]);
-        else if (blocks.length > 0) { setFooterFocus(null); setFocusedBlockIndex(blocks.length - 1); }
-        else focusFooter(null);
+        if (i > 0 && !byBlock) focusFooter(footerStops[i - 1]);
+        else if (blocks.length > 0) {
+          setFooterFocus(null);
+          if (byBlock) setFocusedBlockIndex(blocks.length - 1);
+          else focusLastOf(blocks.length - 1);
+        } else focusFooter(null);
       } else if (idx === null) {
         focusFooter(footerStops[footerStops.length - 1]);
+      } else if (sub && !byBlock) {
+        const st = stopsAt(idx);
+        const si = st.indexOf(sub);
+        setFocusedBlockIndex(idx, si > 0 ? st[si - 1] : null);
+      } else if (idx > 0) {
+        if (byBlock) setFocusedBlockIndex(idx - 1);
+        else focusLastOf(idx - 1);
       } else {
-        setFocusedBlockIndex(idx > 0 ? idx - 1 : null);
+        setFocusedBlockIndex(null);
+      }
+    } else if (key === "v" || key === "sF" || key === "sR") {
+      if (idx !== null && blocks[idx]?.type === "code") {
+        const blockKey = blocks[idx]._key;
+        const action: OutputKeyAction = key === "v" ? "toggleSource" : key === "sF" ? "expand" : "reset";
+        setOutputKeyTriggerMap((prev) => ({ ...prev, [blockKey]: { action, n: (prev[blockKey]?.n ?? 0) + 1 } }));
+      }
+    } else if (k === "g") {
+      // 058：G＝フォーカス中のコードブロックの言語の一覧を開く（止まり先にいても＝ブロック単位の操作）
+      if (idx !== null && blocks[idx]?.type === "code") {
+        const blockKey = blocks[idx]._key;
+        setLangPickerTriggerMap((prev) => ({ ...prev, [blockKey]: (prev[blockKey] ?? 0) + 1 }));
       }
     } else if (k === "m") {
       cycleMode();
@@ -720,11 +830,15 @@ export function BlockEditor({
       const tabOrder: Tab[] = ["front", "back", "memo"];
       setEditTriggerMap({});
       setRunTriggerMap({});
+      setLangPickerTriggerMap({});
+      setInitEditTriggerMap({});
       setActiveTab((prev) => tabOrder[(tabOrder.indexOf(prev) - 1 + 3) % 3]);
     } else if (key === ".") {
       const tabOrder: Tab[] = ["front", "back", "memo"];
       setEditTriggerMap({});
       setRunTriggerMap({});
+      setLangPickerTriggerMap({});
+      setInitEditTriggerMap({});
       setActiveTab((prev) => tabOrder[(tabOrder.indexOf(prev) + 1) % 3]);
     } else if (k === "a") {
       if (!isPreviewRef.current) {
@@ -771,6 +885,8 @@ export function BlockEditor({
       const tabByNum: Record<string, Tab> = { "1": "front", "2": "back", "3": "memo" };
       setEditTriggerMap({});
       setRunTriggerMap({});
+      setLangPickerTriggerMap({});
+      setInitEditTriggerMap({});
       setActiveTab(tabByNum[k]);
     }
   }
@@ -1138,6 +1254,26 @@ export function BlockEditor({
   useKeyCommands([
     { input: "j", handler: () => handleKeyPress("j") },
     { input: "k", handler: () => handleKeyPress("k") },
+    // 058：⇧J/⇧K＝ブロック本体だけを巡回（コードブロックの中の土台・初期化の止まり先を飛ばす）
+    { input: "j", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("jb") },
+    { input: "k", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("kb") },
+    // 058：G＝フォーカス中のコードブロックの言語の一覧
+    { input: "g", handler: () => handleKeyPress("g") },
+    // 058 Phase 3：プレビュー枠（V＝プレビュー/ソース・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す）
+    { input: "v", handler: () => handleKeyPress("v") },
+    { input: "f", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("sF") },
+    { input: "r", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("sR") },
+    // 058：⌘R＝入力中でも実行（カーソルは残す＝書いては試す）。⌘ 付きは入力欄に取られずアプリに届く。
+    //   編集中のブロックがあればそれを、無ければフォーカス中のブロックを実行（R と同じ）。並べ替え・プレビューでは効かせない。
+    { input: "r", modifierFlags: KeyCommand.keyModifierCommand, handler: () => {
+      if (!keyboardShortcutsEnabled || isSortModeRef.current || isPreviewRef.current) return;
+      const blocks = currentBlocksRef.current;
+      const idx = focusedBlockIndexRef.current;
+      const key = editingBlockKeyRef.current ?? (idx !== null ? blocks[idx]?._key : null);
+      const block = key ? blocks.find((b) => b._key === key) : undefined;
+      if (block?.type !== "code" || !(block as CodeBlock).executable) return;
+      setRunTriggerMap((prev) => ({ ...prev, [block._key]: (prev[block._key] ?? 0) + 1 }));
+    } },
     { input: "m", handler: () => handleKeyPress("m") },
     // ⇧M = モード逆順（編集→プレビュー→並べ替え→編集）。M の順送りの逆。
     { input: "m", modifierFlags: KeyCommand.keyModifierShift, handler: () => handleKeyPress("m_rev") },
@@ -1216,6 +1352,20 @@ export function BlockEditor({
           return;
         }
         if (ff) return;
+        // 058：土台・初期化の止まり先。Return＝欄を開いて入力を始める／デッキ土台が2つ以上なら一覧を開く
+        const sub = focusedSubRef.current;
+        const idx = focusedBlockIndexRef.current;
+        const block = idx !== null ? currentBlocksRef.current[idx] : undefined;
+        if (sub && block) {
+          if (sub === "sqlInit" || sub === "htmlInit") {
+            setInitEditTriggerMap((prev) => ({ ...prev, [block._key]: { sub, n: (prev[block._key]?.n ?? 0) + 1 } }));
+          } else if (sub === "htmlStage" && (deckHtmlStages?.length ?? 0) > 1) {
+            setStageChoice({ key: block._key, kind: "html" });
+          } else if (sub === "sqlStage" && (deckSqlStages?.length ?? 0) > 1) {
+            setStageChoice({ key: block._key, kind: "sql" });
+          }
+          return;
+        }
         startEditFocusedBlock();
       },
     },
@@ -1227,6 +1377,27 @@ export function BlockEditor({
         if (!keyboardShortcutsEnabled) return;
         if (footerFocusRef.current === "archive" && onArchivedChange && !isPreviewRef.current) {
           onArchivedChange(!archived);
+          return;
+        }
+        // 058：コードブロック。本体にフォーカス中＝実行トグル／止まり先＝その項目のスイッチ（編集モードだけ）
+        if (editorModeRef.current !== "edit") return;
+        const idx = focusedBlockIndexRef.current;
+        const block = idx !== null ? currentBlocksRef.current[idx] : undefined;
+        if (block?.type !== "code") return;
+        const code = block as CodeBlock;
+        const sub = focusedSubRef.current;
+        const tab = activeTabRef.current;
+        if (!sub) {
+          if (EXECUTABLE_LANGUAGES.includes(code.language)) updateBlock(tab, block._key, { executable: !code.executable });
+        } else if (sub === "previewInit") {
+          updateBlock(tab, block._key, { previewInit: !code.previewInit });
+        } else if (sub === "htmlStage" && deckHtmlStages?.length === 1) {
+          // 土台1つ＝トグル。ON に戻すときは宙に浮いた選択 id も消す（DeckStagePicker の onPickDefault と同じ）
+          const on = activeDeckStageId(deckHtmlStages, code.noDeckHtmlInit, code.deckStageId) !== null;
+          updateBlock(tab, block._key, on ? { noDeckHtmlInit: true } : { noDeckHtmlInit: false, deckStageId: undefined });
+        } else if (sub === "sqlStage" && deckSqlStages?.length === 1) {
+          const on = activeDeckStageId(deckSqlStages, code.noDeckSqlInit, code.deckSqlStageId) !== null;
+          updateBlock(tab, block._key, on ? { noDeckSqlInit: true } : { noDeckSqlInit: false, deckSqlStageId: undefined });
         }
       },
     },
@@ -1241,7 +1412,7 @@ export function BlockEditor({
   // 親モーダル（ショートカット一覧）・全画面プレビュー表示中はナビ系を解除（背景キー抑止）。
   // 削除確認・破棄確認（アラート）は表示中にキーを独占する（054）ので含めない。
   // タグ選択シート（056）は自前でキーを持つので、表示中は手放す。
-  ], !suspendKeys && !interactivePreviewOpen && !tagPickerVisible);
+  ], !suspendKeys && !interactivePreviewOpen && !tagPickerVisible && !langOverlayOpen && !stageChoice);
 
   // ESC は編集中も含めて常時有効（編集中ブロックを抜ける／キャンセル）。
   // ただし親モーダル表示中は親側が Esc を処理するため解除する。
@@ -1253,12 +1424,14 @@ export function BlockEditor({
         if (addMenuVisible) { setAddMenuVisible(false); return; }
         if (editingBlockKeyRef.current) {
           const key = editingBlockKeyRef.current;
+          // 058：土台・初期化の欄を編集していたなら、青枠はその止まり先へ戻す（055 の「Esc で入力をやめると青枠に戻る」）
+          const editingSub = editingSubRef.current;
           setBlurTriggerMap((prev) => ({ ...prev, [key]: (prev[key] ?? 0) + 1 }));
           setEditingBlockKey(null);
           // 編集を抜けてもブロックフォーカス（青枠）を保持する（学習画面の Esc と同様）。
           // これにより Esc 直後に R で実行・E で再編集ができる（実行ボタンの挙動と一致）。
           const idx = currentBlocksRef.current.findIndex((b) => b._key === key);
-          setFocusedBlockIndex(idx !== -1 ? idx : null);
+          setFocusedBlockIndex(idx !== -1 ? idx : null, idx !== -1 ? editingSub : null);
           Keyboard.dismiss();
           return;
         }
@@ -1268,7 +1441,7 @@ export function BlockEditor({
         onCancel?.();
       },
     },
-  ], !suspendKeys && !interactivePreviewOpen && !tagPickerVisible);
+  ], !suspendKeys && !interactivePreviewOpen && !tagPickerVisible && !langOverlayOpen && !stageChoice);
 
   return (
     <InteractivePreviewContext.Provider value={interactivePreviewCtx}>
@@ -1306,6 +1479,8 @@ export function BlockEditor({
                 setAddMenuVisible(false);
                 setEditTriggerMap({});
                 setRunTriggerMap({});
+                setLangPickerTriggerMap({});
+                setInitEditTriggerMap({});
                 setBlurTriggerMap({});
                 setActiveTab(tab.key);
               }}
@@ -1386,6 +1561,7 @@ export function BlockEditor({
         onLayout={(e) => {
           scrollViewHeightRef.current = e.nativeEvent.layout.height;
         }}
+        onContentSizeChange={(_w, h) => { contentHeightRef.current = h; }}
         // "always": ブロックにフォーカス中（TextInput が first responder）にツールバー/補助パレットを
         // タップしても、キーボード解除＝編集解除にならないようにする。iOS の「フォーカス外の初回タップが
         // resignFirstResponder に消費される」2度タップ問題自体は残る（初回は空振り→2度目で入力）が、
@@ -1480,16 +1656,24 @@ export function BlockEditor({
                     handleCodeBlockRunButtonPress(block._key)
                   }
                   onRunStart={() => {
+                    // 058：実行結果（エラー・出力・プレビュー）を必要な分だけ見せる。収まらなければ先頭（エラー）を優先
+                    //（以前は「ブロック末尾−300」へ送っていたため、プレビューの下まで進んでエラーが半分隠れた）
                     setTimeout(() => {
                       const pos = blockPositions.current[block._key];
-                      if (!pos || !scrollRef.current) return;
-                      scrollRef.current.scrollTo({
-                        y: Math.max(0, pos.y + pos.h - 300),
-                        animated: true,
-                      });
+                      if (!pos) return;
+                      const out = subLayoutsRef.current[`${block._key}:__out`];
+                      scrollRangeIntoView(pos.y + (out?.y ?? 0), pos.y + pos.h);
                     }, 300);
                   }}
-                  onFocusInput={() => handleBlockTapFocus(block._key)}
+                  onCodeAreaLayout={(y, h) => { subLayoutsRef.current[`${block._key}:__code`] = { y, h }; }}
+                  onOutputLayout={(y) => { subLayoutsRef.current[`${block._key}:__out`] = { y, h: 0 }; }}
+                  onFocusInput={(sub) => handleBlockTapFocus(block._key, sub)}
+                  focusedSub={focusedBlockIndex === index ? focusedSub : null}
+                  onSubLayout={(sub, y, h) => { subLayoutsRef.current[`${block._key}:${sub}`] = { y, h }; }}
+                  initEditTrigger={initEditTriggerMap[block._key]}
+                  langPickerTrigger={langPickerTriggerMap[block._key] ?? 0}
+                  onOverlayChange={setLangOverlayOpen}
+                  outputKeyTrigger={outputKeyTriggerMap[block._key] ?? null}
                 />
               )}
               {block.type === "image" && (
@@ -1539,6 +1723,33 @@ export function BlockEditor({
         onToggle={(id) => setTagIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))}
         onClose={() => setTagPickerVisible(false)}
       />
+      {/* 058：デッキ土台が2つ以上のブロックで、どれを積むかを選ぶ一覧（止まり先で Return） */}
+      {(() => {
+        const block = stageChoice ? currentBlocks.find((b) => b._key === stageChoice.key) as (CodeBlock & { _key: string }) | undefined : undefined;
+        const kind = stageChoice?.kind ?? "html";
+        const stages = (kind === "html" ? deckHtmlStages : deckSqlStages) ?? [];
+        const activeId = block
+          ? kind === "html"
+            ? activeDeckStageId(stages, block.noDeckHtmlInit, block.deckStageId)
+            : activeDeckStageId(stages, block.noDeckSqlInit, block.deckSqlStageId)
+          : null;
+        return (
+          <DeckStageChoiceModal
+            visible={!!block}
+            kind={kind}
+            stages={stages}
+            activeStageId={activeId}
+            onSelect={(id) => {
+              if (!block) return;
+              const patch: Partial<CodeBlock> = kind === "html"
+                ? (id === null ? { noDeckHtmlInit: true } : { noDeckHtmlInit: false, deckStageId: id })
+                : (id === null ? { noDeckSqlInit: true } : { noDeckSqlInit: false, deckSqlStageId: id });
+              updateBlock(activeTab, block._key, patch);
+            }}
+            onClose={() => setStageChoice(null)}
+          />
+        );
+      })()}
       <ArchivePill archived={archivePill} />
     </KeyboardAvoidingView>
     </InteractivePreviewContext.Provider>

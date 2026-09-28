@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 // 編集画面ではドラッグ可能リスト（RNGH 配下）の中に置かれるため、RNGH の ScrollView を使わないと
@@ -138,7 +138,15 @@ interface Props {
   /** 非 Pro のため HTML/CSS 土台を積まずに実行したブロック。結果パネルの末尾に理由を1行出す
    *  （実行自体は止めない＝コンソール出力だけのカードは無料でもそのまま動く）。 */
   proStageHint?: boolean;
+  /** 058：キーからの操作（V＝プレビュー/ソース切替・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す）。
+   *  `n` が変わるたびに1回だけ実行する。対応するボタンが出ていないときは何もしない。
+   *  **`undefined`＝このブロックは操作の対象外／`null`＝対象だがまだ押されていない**。
+   *  対象外から対象へ変わった瞬間（J/K で選ばれた・マウント）の値は実行しない＝前に別のブロックへ押したキーが発火しないように。 */
+  keyTrigger?: OutputKeyTrigger | null;
 }
+
+export type OutputKeyAction = 'toggleSource' | 'expand' | 'reset';
+export type OutputKeyTrigger = { action: OutputKeyAction; n: number };
 
 /**
  * コード実行結果の表示と WebView（実行エンジン）を担う共有コンポーネント。
@@ -146,7 +154,7 @@ interface Props {
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages, proStageHint }: Props) {
+export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages, proStageHint, keyTrigger }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -228,6 +236,27 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
   const hasSource = sourceText.trim() !== '';
   // 表示できるソースが無くなったら強制的にプレビュー側へ戻す（state は保持したまま）
   const activeTab = hasSource ? previewTab : 'preview';
+
+  // 058：キーからの操作。ボタンと同じ条件のときだけ効かせる（見えていないボタンを押したことにしない）。
+  const handledKeyRef = useRef(keyTrigger?.n ?? 0);
+  const prevKeyTriggerRef = useRef(keyTrigger);
+  useEffect(() => {
+    const prev = prevKeyTriggerRef.current;
+    prevKeyTriggerRef.current = keyTrigger;
+    if (!keyTrigger) return;
+    if (prev === undefined) { handledKeyRef.current = keyTrigger.n; return; }
+    if (keyTrigger.n === handledKeyRef.current) return;
+    handledKeyRef.current = keyTrigger.n;
+    if (keyTrigger.action === 'toggleSource') {
+      if (activeHtml && hasSource) setPreviewTab(activeTab === 'preview' ? 'source' : 'preview');
+    } else if (keyTrigger.action === 'expand') {
+      if (activeHtml && onExpand) onExpand();
+    } else if (keyTrigger.action === 'reset') {
+      // ⟲（実行前の土台へ戻す）と、実行結果の ✕ は同じ onClear。どちらかが出ていれば効かせる
+      if (execActive || result || (liveLogs?.length ?? 0) > 0) onClear();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyTrigger]);
 
   const handleCopy = useCallback(async () => {
     if (!result) return;

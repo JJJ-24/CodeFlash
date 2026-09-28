@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { OutputKeyTrigger } from '@/components/code/ExecutionOutput';
 import type { Card } from '@/types';
 
 type Side = 'front' | 'back' | 'memo';
@@ -8,12 +9,17 @@ export function useCodeBlockSelection() {
   const [selectedCodeBlockSide, setSelectedCodeBlockSide] = useState<Side | null>(null);
   const [runTrigger, setRunTrigger] = useState(0);
   const [editTrigger, setEditTrigger] = useState(0);
+  // 058：⌘R＝編集中でもカーソルを残したまま実行（R・▶ は編集を抜けてから実行）
+  const [runKeepEditTrigger, setRunKeepEditTrigger] = useState(0);
+  // 058：選択中のコードブロックのプレビュー枠のキー操作（V・⇧F・⇧R）。選ばれた瞬間の値は発火しない（ExecutionOutput 側）
+  const [outputTrigger, setOutputTrigger] = useState<OutputKeyTrigger | null>(null);
 
   function reset() {
     setSelectedCodeBlockIdx(null);
     setSelectedCodeBlockSide(null);
     setRunTrigger(0);
     setEditTrigger(0);
+    setRunKeepEditTrigger(0);
   }
 
   function cycleCodeBlock(
@@ -25,6 +31,8 @@ export function useCodeBlockSelection() {
     if (!currentCard) return;
     setEditTrigger(0);
     setRunTrigger(0);
+    // 058：⌘R の値も戻す＝次に選んだブロック（同じブロックを選び直した場合も）が、その値を受け取った瞬間に実行しないように
+    setRunKeepEditTrigger(0);
 
     if (!isFlipped) {
       // 表面: 表面のコードブロックのみサイクル
@@ -83,8 +91,12 @@ export function useCodeBlockSelection() {
     setSelectedCodeBlockSide,
     runTrigger,
     editTrigger,
+    outputTrigger,
+    runKeepEditTrigger,
     setRunTrigger,
+    setRunKeepEditTrigger,
     setEditTrigger,
+    setOutputTrigger,
     cycleCodeBlock,
     reset,
   };

@@ -19,6 +19,29 @@ import { MAX_FONT_MULTIPLIER, useTheme, COPY_DONE_COLOR, COPY_DONE_BG } from '@/
 import type { DeckImage } from '@/types';
 
 const KEY_ESCAPE = (KeyCommand.constants?.keyInputEscape as string) ?? '';
+
+/**
+ * 058：ページ内の入力欄にカーソルがあるかをモーダルへ知らせる（Esc で「まずカーソルを外す」ため）。
+ * サンドボックス本体（sandbox.ts）には入れず、このモーダルの WebView にだけ差し込む。
+ * 文字を打てる要素だけを「入力中」とみなす（ボタン・チェックボックスなどにフォーカスがあっても R は効く＝外す必要が無い）。
+ */
+const EDITING_WATCH_SCRIPT = `(function(){
+  var NON_TEXT = ['button','submit','reset','checkbox','radio','range','color','file','image','hidden'];
+  function editable(el){
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    var tag = el.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (tag === 'INPUT') return NON_TEXT.indexOf(String(el.type || '').toLowerCase()) === -1;
+    return false;
+  }
+  function post(v){
+    try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: '__editing', value: v })); } catch (e) {}
+  }
+  document.addEventListener('focusin', function(e){ post(editable(e.target)); }, true);
+  document.addEventListener('focusout', function(){ setTimeout(function(){ post(editable(document.activeElement)); }, 0); }, true);
+})(); true;`;
+const BLUR_ACTIVE_SCRIPT = `(function(){ var a = document.activeElement; if (a && a.blur) a.blur(); })(); true;`;
 // console 氾濫（setInterval 連打等）でメモリが膨らまないよう直近 N 件に丸める。
 const MAX_LOGS = 500;
 
@@ -127,9 +150,18 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  // 058：ページ内の入力欄にカーソルがあるか（EDITING_WATCH_SCRIPT が知らせる）。描き直すと入力欄も消えるので戻す
+  const pageEditingRef = useRef(false);
+  useEffect(() => { pageEditingRef.current = false; }, [nonce, reloadNonce]);
+  const webViewRef = useRef<WebView>(null);
+
   const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
     try {
-      const data = JSON.parse(event.nativeEvent.data) as { type?: string; entry?: LogEntry; title?: string };
+      const data = JSON.parse(event.nativeEvent.data) as { type?: string; entry?: LogEntry; title?: string; value?: boolean };
+      if (data.type === '__editing') {
+        pageEditingRef.current = data.value === true;
+        return;
+      }
       if (data.type === 'title') {
         setPageTitle(typeof data.title === 'string' ? data.title.trim() : '');
         return;
@@ -193,7 +225,27 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
   }, [logs]);
 
   // ハードウェア Esc で閉じる（表示中のみ・ショートカット有効時）。✕ と Android 戻るは常時。
-  useKeyCommands(KEY_ESCAPE ? [{ input: KEY_ESCAPE, handler: onClose }] : [], visible);
+  // 058：R＝▶ 実行（再実行）・⇧R＝⟲ 実行前に戻す（ボタンが出ているときだけ）。インラインのプレビュー枠と同じ意味。
+  // ページの keydown とは競合しない：入力欄の外のキーは、アプリが登録していない `a` も含めてページに届いていない
+  //  （2026-09-28 実機確認）。入力欄にカーソルがあるときは入力欄が先に受け取る。
+  const canResetRef = useRef(false);
+  canResetRef.current = ran && canShowPreRun;
+  // 058：Esc はアプリの他の画面と同じ順＝ページの入力欄にカーソルがあればまず外す（そのあと R／⇧R が効く）→ 閉じる。
+  const handleEscape = () => {
+    if (pageEditingRef.current) {
+      pageEditingRef.current = false;
+      webViewRef.current?.injectJavaScript(BLUR_ACTIVE_SCRIPT);
+      return;
+    }
+    onClose();
+  };
+  useKeyCommands([
+    ...(KEY_ESCAPE ? [{ input: KEY_ESCAPE, handler: handleEscape }] : []),
+    { input: 'r', handler: runNow },
+    // ⌘R＝ページの入力欄にカーソルがあっても実行（カーソルは描き直しで消える＝ページごと作り直すため）
+    { input: 'r', modifierFlags: KeyCommand.constants.keyModifierCommand, handler: runNow },
+    { input: 'r', modifierFlags: KeyCommand.constants.keyModifierShift, handler: () => { if (canResetRef.current) resetToPreRun(); } },
+  ], visible);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -227,8 +279,10 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
         <View style={styles.webviewWrap}>
           {visible && html !== null && (
             <WebView
+              ref={webViewRef}
               key={`${nonce}-${reloadNonce}`}
               style={styles.webview}
+              injectedJavaScriptBeforeContentLoaded={EDITING_WATCH_SCRIPT}
               source={{ html, baseUrl: 'about:blank' }}
               onMessage={handleMessage}
               onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}

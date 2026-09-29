@@ -280,10 +280,13 @@ export function SettingsFocusRow({ children, style, variant = 'row', ringRadius,
     if (!register || variant !== 'row') return;
     return register(id, getAbsLayout);
   }, [register, variant, id, getAbsLayout]);
-  // 描き直しはフォーカス中の行が動いたときだけ（全行の onLayout で白枠を再描画しない）
+  // 描き直しは青枠が出ているときだけ（フォーカスが無ければ全行の onLayout で白枠を再描画しない）。
+  // ⚠️ フォーカス中の行だけでなく**隣の行が動いたときも**描き直す＝青枠の上下は隣の行の位置から決まる。
+  //    上の説明（`SettingsFocusBarrier`）を閉じると隣の行が詰まるが、その位置を拾わないと古い位置のまま枠が伸びる。
+  const anyFocused = useContext(SettingsFocusContext)?.focusedId != null;
   const handleLayout = (e: LayoutChangeEvent) => {
     onLayout(e);
-    if (inFrame && focused) frame.relayout();
+    if (inFrame && anyFocused) frame.relayout();
   };
   return (
     <View style={style} onLayout={handleLayout} {...tapToClaim}>
@@ -305,6 +308,43 @@ export function SettingsFocusRow({ children, style, variant = 'row', ringRadius,
             }}
         />
       )}
+    </View>
+  );
+}
+
+/**
+ * 白枠（`SettingsFocusGroup` の `frame`）の青枠が**食い込んではいけない中身**（行の下に開く ⓘ の説明など）。
+ * 白枠には「フォーカスしない行」として登録する＝青枠はこの中身とのあいだの中間で止まる。
+ * 行どうしの間隔が詰まったまとまり（学習設定の文字体系＝`gap: 2`）では、説明を開くと次の行が遠のいて
+ * 青枠が `bleed` の上限まで伸び、説明の上端に食い込んでいた（閉じているときは中間の 1pt で止まる）。
+ * ⚠️ 置き場所は行と同じ＝**いちばん近い `SettingsFocusGroup` の直接の子**（onLayout の y をそのまま使うため）。
+ */
+export function SettingsFocusBarrier({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const getOffset = useContext(SettingsFocusOffsetContext);
+  const frame = useContext(FrameContext);
+  const id = useId();
+  const layoutRef = useRef<{ y: number; h: number } | null>(null);
+  const getAbsLayout = useCallback(() => {
+    const l = layoutRef.current;
+    return l ? { y: getOffset() + l.y, h: l.h } : undefined;
+  }, [getOffset]);
+  const register = frame?.register;
+  const relayout = frame?.relayout;
+  useEffect(() => {
+    if (!register) return;
+    // ⚠️ 外れたときに描き直さない＝この瞬間の隣の行はまだ古い位置（説明のぶん下）にあり、
+    //    描き直すと青枠が一瞬そこまで伸びる。隣の行が詰まった onLayout で描き直される（`SettingsFocusRow`）。
+    return register(id, getAbsLayout);
+  }, [register, id, getAbsLayout]);
+  return (
+    <View
+      style={style}
+      onLayout={(e) => {
+        layoutRef.current = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height };
+        relayout?.();
+      }}
+    >
+      {children}
     </View>
   );
 }

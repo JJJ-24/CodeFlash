@@ -9,7 +9,7 @@ import { CollapsibleSectionTitle } from '@/components/CollapsibleSectionTitle';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { InfoContent } from '@/components/InfoContent';
 import { SettingsDetail } from '@/components/settings/SettingsDetail';
-import { SettingsFocusCard, SettingsFocusGroup, SettingsFocusRow, stepOption, type SettingsFocusHandlers } from '@/components/settings/settingsFocus';
+import { SettingsFocusBarrier, SettingsFocusCard, SettingsFocusGroup, SettingsFocusRow, stepOption, type SettingsFocusHandlers } from '@/components/settings/settingsFocus';
 import { SPEECH_AUTO_LABEL_KEYS, SpeechAutoModal } from '@/components/settings/SpeechAutoModal';
 import { SPEECH_SCRIPT_LABEL_KEYS, SpeechLanguageModal } from '@/components/settings/SpeechLanguageModal';
 import { SpeechVoiceModal } from '@/components/settings/SpeechVoiceModal';
@@ -644,9 +644,9 @@ export default function StudySettingsScreen() {
           {/* 説明は子の行に合わせてインデントする。⚠️ 閉じているときに空の View を残さない
               （親が `gap` を持つので、中身が無くても隙間だけ空いてしまう）。 */}
           {openInfos.has('speechNoMixed') && (
-            <View style={{ paddingLeft: 16 }}>
+            <SettingsFocusBarrier style={{ paddingLeft: 16 }}>
               {infoBox('speechNoMixed', 'settings.speechNoMixedSwitchHint')}
-            </View>
+            </SettingsFocusBarrier>
           )}
         </>
       )}

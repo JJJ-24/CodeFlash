@@ -119,7 +119,6 @@ const SESSION_SHORTCUT_SECTIONS = [
   { titleKey: "shortcut.catFocus", items: [
     { key: "J / K", descKey: "shortcut.focusNextPrev" },
     { key: "R", descKey: "shortcut.runFocused" },
-    { key: "⌘R", descKey: "shortcut.runWhileEditing" },
     { key: "E", descKey: "shortcut.editFocusedItem" },
     // 058：選択中のコードブロックのプレビュー枠（カード編集と同じキー）
     { key: "V", descKey: "shortcut.previewSourceToggle", pro: true },

@@ -15,7 +15,6 @@ export const CARD_EDITOR_SECTIONS_EDIT = [
     { key: 'T',        descKey: 'shortcut.scrollToTags' },
     { key: 'E',        descKey: 'shortcut.editArchiveCombo' },
     { key: 'R',        descKey: 'shortcut.runFocused' },
-    { key: '⌘R',       descKey: 'shortcut.runWhileEditing' },
     { key: 'G',        descKey: 'shortcut.codeLanguage' },
     { key: 'V',        descKey: 'shortcut.previewSourceToggle', pro: true },
     { key: '⇧F',       descKey: 'shortcut.previewExpand', pro: true },

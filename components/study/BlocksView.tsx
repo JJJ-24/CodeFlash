@@ -16,7 +16,7 @@ import { markdownItIns } from '@/lib/editor/markdownItIns';
 import { markdownItCjkFriendly } from '@/lib/editor/markdownItCjkFriendly';
 import { markdownFenceRule } from '@/lib/editor/markdownFenceRule';
 import { markdownTableStyles } from '@/lib/editor/markdownTableStyles';
-import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from '@/types';
 import type { OutputKeyTrigger } from '@/components/code/ExecutionOutput';
 import { CodeRunnerView } from './CodeRunnerView';
@@ -67,8 +67,8 @@ function TextBlockCopyBtn({ content, suppress }: { content: string; suppress: ()
     setTimeout(() => setCopied(false), 1000);
   }, [content]);
   return (
-    <Pressable style={styles.textCopyBtn} onPress={handleCopy} onTouchStart={suppress} hitSlop={8}>
-      <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+    <Pressable style={[styles.textCopyBtn, copied && { backgroundColor: COPY_DONE_BG }]} onPress={handleCopy} onTouchStart={suppress} hitSlop={8}>
+      <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={copied ? COPY_DONE_COLOR : '#4B5563'} />
     </Pressable>
   );
 }

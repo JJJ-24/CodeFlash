@@ -33,7 +33,7 @@ markdownItLinkify.linkify.set({ fuzzyLink: false });
 // 字下げコードブロックは無効（理由は BlocksView 側のコメント参照）。**学習画面と同じ設定にする**＝
 // プレビューと本番の見た目が食い違わないようにするため、片方だけ変えないこと。
 markdownItLinkify.disable('code');
-import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_STATE_HEADERS } from '@/lib/theme';
+import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
 
@@ -345,8 +345,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
         <View style={[styles.preview, isPreview && { paddingHorizontal: 0, paddingVertical: 0 }]}>
           <Markdown markdownit={markdownItLinkify} style={markdownStyles} rules={linkRule}>{block.content}</Markdown>
           {block.content.trim() ? (
-            <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
-              <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+            <Pressable style={[styles.copyBtn, copied && { backgroundColor: COPY_DONE_BG }]} onPress={handleCopy} hitSlop={8}>
+              <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={copied ? COPY_DONE_COLOR : '#4B5563'} />
             </Pressable>
           ) : null}
         </View>
@@ -395,8 +395,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
             </GestureDetector>
           )}
           {block.content.trim() ? (
-            <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={8}>
-              <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color="#4B5563" />
+            <Pressable style={[styles.copyBtn, copied && { backgroundColor: COPY_DONE_BG }]} onPress={handleCopy} hitSlop={8}>
+              <Ionicons name={copied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={copied ? COPY_DONE_COLOR : '#4B5563'} />
             </Pressable>
           ) : null}
         </View>

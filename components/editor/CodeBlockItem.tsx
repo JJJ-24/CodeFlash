@@ -533,7 +533,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                     color="#9CA3AF"
                   />
                 </Pressable>
-                {!!block.sqlInit && !showInitSql && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
+                {!!block.sqlInit?.trim() && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
                 {!!block.sqlInit?.trim() && (
                   <>
                     <View style={{ flex: 1 }} />
@@ -589,22 +589,6 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
-          {/* web 系ブロック：どのデッキ HTML/CSS 土台を積むか。デッキに土台が無ければ選ぶ対象が
-              無いので出さない。Pro 機能のため非Proでは非表示（土台自体も積まれない） */}
-          {isWebLang && isPro && !isPreview && deckStages.length > 0 && (
-            <View onLayout={subLayout('htmlStage')}>
-              <DeckStagePicker
-                kind="html"
-                stages={deckStages}
-                activeStageId={activeStageId}
-                onPickNone={() => onChange({ noDeckHtmlInit: true })}
-                onPickStage={(id) => onChange({ noDeckHtmlInit: false, deckStageId: id })}
-                onPickDefault={() => onChange({ noDeckHtmlInit: false, deckStageId: undefined })}
-              />
-              {subRing('htmlStage')}
-            </View>
-          )}
-
           {/* SQL ブロック：どのデッキ初期化SQLを流すか（045）。HTML と同じ部品・同じ規則。
               SQL は言語自体が Pro 限定なので、表示条件も Pro のみで揃えてある */}
           {block.language === 'sql' && isPro && !isPreview && sqlStages.length > 0 && (
@@ -638,7 +622,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                     color="#9CA3AF"
                   />
                 </Pressable>
-                {!!block.htmlInit && !showInitHtml && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
+                {!!block.htmlInit?.trim() && <View style={[styles.initSqlDot, { backgroundColor: theme.colors.primary }]} />}
                 {!!block.htmlInit?.trim() && (
                   <>
                     <View style={{ flex: 1 }} />
@@ -694,6 +678,22 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             </View>
           )}
 
+          {/* web 系ブロック：どのデッキ HTML/CSS 土台を積むか（ブロック土台の下＝本文から近い順＝強い順。SQL と同じ並び）。デッキに土台が無ければ選ぶ対象が
+              無いので出さない。Pro 機能のため非Proでは非表示（土台自体も積まれない） */}
+          {isWebLang && isPro && !isPreview && deckStages.length > 0 && (
+            <View onLayout={subLayout('htmlStage')}>
+              <DeckStagePicker
+                kind="html"
+                stages={deckStages}
+                activeStageId={activeStageId}
+                onPickNone={() => onChange({ noDeckHtmlInit: true })}
+                onPickStage={(id) => onChange({ noDeckHtmlInit: false, deckStageId: id })}
+                onPickDefault={() => onChange({ noDeckHtmlInit: false, deckStageId: undefined })}
+              />
+              {subRing('htmlStage')}
+            </View>
+          )}
+
 
           {/* html ブロック：実行前プレビューに本文も描画するか（土台に書き足して完成させる出題向け）。
               既定 OFF＝「表示結果を予想させる」出題の答えを先に見せない。Pro 機能のため非Proでは非表示 */}
@@ -701,7 +701,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]} onLayout={subLayout('previewInit')}>
               {subRing('previewInit')}
               <View style={styles.initSqlHeader}>
-                <Ionicons name={block.previewInit ? 'eye' : 'eye-off-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
+                {/* 状態はスイッチが示すのでアイコンは置かない。幅だけ残して折りたたみの行とラベルの書き出しをそろえる */}
+                <View style={{ width: theme.fontSize.sm }} />
                 <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                   {t('editor.previewInitLabel')}
                 </Text>

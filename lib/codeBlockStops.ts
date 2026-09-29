@@ -4,7 +4,7 @@ import type { CodeBlock, DeckStage } from '@/types';
  * 058：コードブロックの中で J/K が止まる「あったり無かったりする」項目。
  * 並びは画面の上から順（`CodeBlockItem` の描画順と同じ）。
  */
-export type CodeSubStop = 'sqlInit' | 'htmlStage' | 'sqlStage' | 'htmlInit' | 'previewInit';
+export type CodeSubStop = 'sqlInit' | 'sqlStage' | 'htmlInit' | 'htmlStage' | 'previewInit';
 
 /** 土台（HTML/CSS）を積む web 系の言語か */
 export function isWebLanguage(language: string): boolean {
@@ -32,10 +32,11 @@ export function codeBlockSubStops(
   const web = isWebLanguage(block.language);
   const sql = block.language === 'sql';
   const stops: CodeSubStop[] = [];
+  // 本文から近い順＝強い順（ブロック → デッキ）。SQL も HTML/CSS も同じ並び
   if (sql) stops.push('sqlInit');
-  if (web && htmlStages.length > 0) stops.push('htmlStage');
   if (sql && sqlStages.length > 0) stops.push('sqlStage');
   if (web) stops.push('htmlInit');
+  if (web && htmlStages.length > 0) stops.push('htmlStage');
   if (block.language === 'html') stops.push('previewInit');
   return stops;
 }

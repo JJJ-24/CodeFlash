@@ -45,7 +45,8 @@ export function DeckStagePicker({ stages, activeStageId, kind, onPickNone, onPic
   return (
     <View style={[styles.section, { borderTopColor: theme.colors.border }]}>
       <View style={styles.header}>
-        <Ionicons name={activeStageId ? 'layers' : 'layers-outline'} size={theme.fontSize.sm} color="#C9C9C9" />
+        {/* 状態はスイッチ／チップが示すのでアイコンは置かない。幅だけ残して、折りたたみの行（先頭に ›）とラベルの書き出しをそろえる */}
+        <View style={{ width: theme.fontSize.sm }} />
         <Text
           style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }}
           maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}

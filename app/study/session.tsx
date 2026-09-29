@@ -601,34 +601,50 @@ export default function StudySessionScreen() {
   const onBreak = timer.mode === "break" && timer.phase === "running";
   swipe.panGesture.enabled(isScreenFocused && !onBreak);
 
-  // ---- 背面化した時間を回答時間（responseTimeMs）から除く ----------------------
-  // カードの計時は `cardShownAtRef`（壁時計）なので、素だとアプリを離れていた時間まで
-  // 「そのカードを見ていた時間」に入り、統計の平均回答時間と総学習時間が伸びる。
+  // ---- 背面化・編集中の時間を回答時間（responseTimeMs）から除く ----------------
+  // カードの計時は `cardShownAtRef`（壁時計）なので、素だとアプリを離れていた時間や
+  // カード編集（モーダル）で作業していた時間まで「そのカードを見ていた時間」に入り、
+  // 統計の平均回答時間・評価別ランキングの並び・総学習時間が伸びる。
   // 休憩の除外とまったく同じ口（`shiftCardShownAt`）へ、離れていた実時間を渡して前へずらす。
-  // ⚠️ 判定は学習タイマーと**同じ基準**にする（`hooks/useStudyTimer.ts` の `appActive`）＝
-  //    `active` 以外（`inactive` も）で止める。iPad の Split View で隣のアプリをタップすると
-  //    `inactive`＝カードは見えたままでも止まるが、タイマーが既にそう振る舞っているので、
+  // 「離れている」＝**画面がフォーカスを失っている（編集モーダル等）か、アプリが `active` でない**。
+  // ⚠️ 判定は学習タイマーと**同じ基準**にする＝タイマーは `appActive`（`hooks/useStudyTimer.ts`）と
+  //    `suspended: !isScreenFocused` で止まる。`active` 以外（`inactive` も）で止めるので、
+  //    iPad の Split View で隣のアプリをタップすると `inactive`＝カードは見えたままでも止まるが、
   //    「タイマーは止まったのに回答時間だけ進む」という食い違いを作らない方を採る。
+  // ⚠️ **2つの条件を1つの「離れていた区間」にまとめる**＝編集中に背面へ回すと両方が重なるので、
+  //    別々に数えると二重に引いて `Math.min` の clamp に当たり、編集前の閲覧時間まで消える。
+  //    どちらかが続いている間は区間を閉じない（編集中に前面へ戻っただけでは引かない）。
   // ⚠️ **休憩中に離れたぶんは記録しない**＝休憩の実時間（`endBreak` の `now - breakStartedAt`）は
-  //    壁時計なので背面化ぶんを既に含んでおり、両方引くと二重に引いて `Math.min` の clamp に
-  //    当たり、休憩前の閲覧時間まで消える。
+  //    壁時計なので背面化・編集中のぶんを既に含んでおり（休憩は編集モーダルの上でも進む）、
+  //    両方引くと二重になる。
   // ⚠️ カードが無いとき（完了画面など）に引いても無害＝次のカードで `goNext`/`loadSession` が
   //    `cardShownAt` を引き直すため、ずれは持ち越されない。
   const onBreakRef = useRef(onBreak);
   onBreakRef.current = onBreak;
   const awayAtRef = useRef<number | null>(null);
+  const appActiveRef = useRef(AppState.currentState === "active");
+  const screenFocusedRef = useRef(isScreenFocused);
+  const updateAway = useCallback(() => {
+    const away = !appActiveRef.current || !screenFocusedRef.current;
+    if (!away) {
+      const awayAt = awayAtRef.current;
+      awayAtRef.current = null;
+      if (awayAt !== null) shiftCardShownAt(Date.now() - awayAt);
+    } else if (awayAtRef.current === null && !onBreakRef.current) {
+      awayAtRef.current = Date.now();
+    }
+  }, [shiftCardShownAt]);
   useEffect(() => {
     const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") {
-        const awayAt = awayAtRef.current;
-        awayAtRef.current = null;
-        if (awayAt !== null) shiftCardShownAt(Date.now() - awayAt);
-      } else if (awayAtRef.current === null && !onBreakRef.current) {
-        awayAtRef.current = Date.now();
-      }
+      appActiveRef.current = next === "active";
+      updateAway();
     });
     return () => sub.remove();
-  }, [shiftCardShownAt]);
+  }, [updateAway]);
+  useEffect(() => {
+    screenFocusedRef.current = isScreenFocused;
+    updateAway();
+  }, [isScreenFocused, updateAway]);
 
   // ---- 自動読み上げ（052・Pro）------------------------------------------
   // カードの表示・表裏の反転のたびに、設定された面を自動で読む。

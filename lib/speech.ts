@@ -562,6 +562,39 @@ export interface SpeakOptions {
  * テキストを文字体系で割り、区間ごとに声を変えて順に読む。
  * 読む対象が空なら何もしない（呼び出し側で「読む文字が無いなら操作させない」判定に使える）。
  */
+/**
+ * 無音がこれより長く続いたら、本文の前に無音の発話（`WARMUP_VOLUME`）を流して音声出力を起こす。
+ *
+ * iOS は無音が続くと音声出力を休ませ、その直後の発話は**出だしが一瞬つまる**
+ * （学習画面で表面を読んでから裏返すと裏面の自動読み上げがつまり、すぐ裏返すとつまらない＝
+ * 経路ではなく前回の発話からの間隔で決まることを実機で確認）。
+ * ⚠️ `preUtteranceDelay`（話し始める前の待ち時間）では直らなかった＝待っているあいだ iOS は
+ *    出力を起こさない（パッチで通して実機で確認済み）。実際に音声データを流す必要がある。
+ * ⚠️ 起きている間は流さない＝続けて読むときに無音ぶんの遅れを足さない。
+ */
+const WARMUP_IDLE_MS = 2000;
+/** 無音の発話の音量。expo-speech は iOS で音量を渡さないので `patches/expo-speech+*.patch` で通している */
+const WARMUP_VOLUME = 0;
+/**
+ * 無音の発話の速度（`speak` の rate 倍率。iOS は 2 で最速＝上限で頭打ち）。
+ * 無音ぶんの待ちを短くするため最速で読む（ユーザーの速度設定は本文にだけ効かせる）。
+ */
+const WARMUP_RATE = 2;
+/** 読み上げ中か（無音の発話を挟むかの判定用） */
+let speechActive = false;
+/** 最後に読み上げが終わった／止まった時刻。0＝起動後まだ読んでいない */
+let speechIdleSince = 0;
+/**
+ * 読み上げの世代。`speakText`・`stopSpeech` のたびに進め、古い世代の完了通知では状態を変えない。
+ * ⚠️ iOS の停止通知は非同期で届くので、止めた直後に次を読み始めると、前の発話の停止通知が
+ *    **新しい読み上げの最中に**届いて「読み終えた」扱いになる。
+ */
+let speechGen = 0;
+function markSpeechIdle() {
+  speechActive = false;
+  speechIdleSince = Date.now();
+}
+
 export function speakText(text: string, options: SpeakOptions): void {
   const segments = resolveSpeechSegments(text, options.scriptLangs ?? {}, {
     noMixedSwitch: options.noMixedSwitch,
@@ -572,24 +605,33 @@ export function speakText(text: string, options: SpeakOptions): void {
     splitSentencesForPause(seg.text).map((text) => ({ text, language: seg.language })),
   );
   if (utterances.length === 0) return;
+  const needsWarmup = !speechActive && Date.now() - speechIdleSince > WARMUP_IDLE_MS;
   Speech.stop();
-  utterances.forEach((seg, i) => {
-    const isLast = i === utterances.length - 1;
-    const base = {
-      language: seg.language,
-      rate: options.rate,
-      onDone: isLast ? options.onDone : undefined,
-      onStopped: options.onStopped,
-    };
-    const voice = options.voices?.[seg.language];
-    if (!voice) { Speech.speak(seg.text, base); return; }
+  speechActive = true;
+  const gen = ++speechGen;
+  const onDone = () => { if (gen === speechGen) markSpeechIdle(); options.onDone?.(); };
+  const onStopped = () => { if (gen === speechGen) markSpeechIdle(); options.onStopped?.(); };
+  const say = (text: string, language: string, extra: Partial<Speech.SpeechOptions>) => {
+    const base = { language, rate: options.rate, ...extra };
+    const voice = options.voices?.[language];
+    if (!voice) { Speech.speak(text, base); return; }
     try {
-      Speech.speak(seg.text, { ...base, voice });
+      Speech.speak(text, { ...base, voice });
     } catch {
       // ⚠️ 端末に無い identifier だと expo-speech が投げる（別端末から同期した設定など）。
       // 声を諦めて言語だけで読み直す＝**黙って無音になるのが一番まずい**ため。
-      Speech.speak(seg.text, base);
+      Speech.speak(text, base);
     }
+  };
+  // 本文の先頭1文字を同じ言語・声・音量 0 で読む＝声の読み込みと出力の起動を本文の前に済ませる
+  // （`WARMUP_IDLE_MS` 参照）。完了の通知は付けない（本文の最後の区間が担う）。
+  if (needsWarmup) {
+    const first = utterances[0];
+    say(Array.from(first.text)[0], first.language, { volume: WARMUP_VOLUME, rate: WARMUP_RATE });
+  }
+  utterances.forEach((seg, i) => {
+    const isLast = i === utterances.length - 1;
+    say(seg.text, seg.language, { onDone: isLast ? onDone : undefined, onStopped });
   });
 }
 
@@ -660,6 +702,11 @@ export function previewVoice(opts: { text: string; language: string; voice?: str
 
 /** 読み上げを止め、キューに残っている区間も破棄する。 */
 export function stopSpeech(): void {
+  // 読み上げ中に止めたときだけ「いま止まった」とする。⚠️ 鳴っていないときに時刻を進めない＝
+  // 学習画面は裏返すたびに止めてから自動で読むので、進めると無音明けでも起こしの発話が挟まらない。
+  // 起こしの発話の最中に止めたときは停止通知を受ける口が無いので、ここで明示的に畳む必要がある。
+  if (speechActive) markSpeechIdle();
+  speechGen++;
   Speech.stop();
 }
 

@@ -1,0 +1,29 @@
+diff --git a/node_modules/expo-speech/ios/SpeechModule.swift b/node_modules/expo-speech/ios/SpeechModule.swift
+index 485d5d3..657c60a 100644
+--- a/node_modules/expo-speech/ios/SpeechModule.swift
++++ b/node_modules/expo-speech/ios/SpeechModule.swift
+@@ -49,6 +49,10 @@ public final class SpeechModule: Module, SpeechResultHadler {
+         utterance.rate = Float(rate) * AVSpeechUtteranceDefaultSpeechRate
+       }
+ 
++      if let volume = options.volume {
++        utterance.volume = Float(volume)
++      }
++
+       if let useApplicationAudioSession = options.useApplicationAudioSession {
+         synthesizer.usesApplicationAudioSession = useApplicationAudioSession
+       }
+diff --git a/node_modules/expo-speech/ios/SpeechOptions.swift b/node_modules/expo-speech/ios/SpeechOptions.swift
+index a072cb8..33d49b1 100644
+--- a/node_modules/expo-speech/ios/SpeechOptions.swift
++++ b/node_modules/expo-speech/ios/SpeechOptions.swift
+@@ -11,6 +11,9 @@ struct SpeechOptions: Record {
+   var voice: String?
+   @Field
+   var useApplicationAudioSession: Bool?
++  // code_flash-card patch: iOS でも音量を渡す（無音の発話で音声出力を起こすため）
++  @Field
++  var volume: Double?
+ }
+ 
+ struct VoiceInfo: Record {

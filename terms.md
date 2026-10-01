@@ -7,7 +7,7 @@ title: Terms of Use
 
 最終更新日 / Last updated / Última actualización: 2026-10-01
 
-## 日本語
+## 日本語 {#ja}
 
 本規約は、開発者が提供するスマートフォン用アプリケーション「CodeFlash」（以下、「本アプリ」といいます）の利用条件を定めるものです。ユーザーの皆様には、本規約に従って本アプリをご利用いただきます。
 
@@ -67,7 +67,7 @@ jjj24.support@gmail.com
 
 ---
 
-## English
+## English {#en}
 
 These Terms of Use (the "Terms") govern your use of the smartphone application "CodeFlash" (the "App") provided by the Developer. By using the App, you agree to comply with these Terms.
 
@@ -127,7 +127,7 @@ Effective date: May 16, 2026
 
 ---
 
-## Español
+## Español {#es}
 
 Estos Términos de uso (en adelante, los «Términos») establecen las condiciones de uso de la aplicación para smartphone «CodeFlash» (en adelante, la «App») ofrecida por el desarrollador (en adelante, el «Desarrollador»). Al usar la App, usted acepta cumplir estos Términos.
 

@@ -7,7 +7,7 @@ title: Privacy Policy
 
 最終更新日 / Last updated / Última actualización: 2026-10-01
 
-## 日本語
+## 日本語 {#ja}
 
 > 本ポリシーは日本語を正文とします。翻訳版との間に相違がある場合は、日本語版が優先します。
 
@@ -51,7 +51,7 @@ CodeFlash Pro のご購入には Apple の課金システムを使用してい�
 
 ---
 
-## English
+## English {#en}
 
 > This English version is a translation provided for your convenience. In case of any discrepancy, the Japanese version prevails.
 
@@ -93,7 +93,7 @@ For any questions, please contact us at jjj24.support@gmail.com.
 
 ---
 
-## Español
+## Español {#es}
 
 > Esta traducción se ofrece para su comodidad. En caso de discrepancia, prevalece la versión en japonés.
 

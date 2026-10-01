@@ -11,12 +11,12 @@ import { InfoModal } from '@/components/InfoModal';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 
-import { APP_STORE_REVIEW_URL, CONTACT_EMAIL, PRIVACY_URL, TERMS_URL } from '@/lib/links';
+import { APP_STORE_REVIEW_URL, CONTACT_EMAIL, PRIVACY_URL, TERMS_URL, policyUrl } from '@/lib/links';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 
 export default function AboutScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const lockedTopInset = useLockedTopInset();
@@ -86,7 +86,7 @@ export default function AboutScreen() {
             </Text>
           </View>
 
-          <Pressable style={styles.row} onPress={() => openExternalLink(PRIVACY_URL)}>
+          <Pressable style={styles.row} onPress={() => openExternalLink(policyUrl(PRIVACY_URL, i18n.language))}>
             <View style={styles.rowText}>
               <Text style={[styles.rowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('about.privacyPolicy')}
@@ -95,7 +95,7 @@ export default function AboutScreen() {
             <Ionicons name="open-outline" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
           </Pressable>
 
-          <Pressable style={styles.row} onPress={() => openExternalLink(TERMS_URL)}>
+          <Pressable style={styles.row} onPress={() => openExternalLink(policyUrl(TERMS_URL, i18n.language))}>
             <View style={styles.rowText}>
               <Text style={[styles.rowTitle, { color: theme.colors.text, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                 {t('about.terms')}

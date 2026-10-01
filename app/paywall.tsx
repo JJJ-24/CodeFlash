@@ -18,7 +18,7 @@ import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { PRIVACY_URL, TERMS_URL } from '@/lib/links';
+import { PRIVACY_URL, TERMS_URL, policyUrl } from '@/lib/links';
 import { getTrialRemainingMs, resetTrialForDev, startTrial } from '@/lib/proTrial';
 import { fetchOfferings, purchasePro, restorePurchases, type PurchasesPackage } from '@/lib/purchases';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
@@ -76,7 +76,7 @@ const CURRENT_FEATURES: Feature[] = [
 ];
 
 export default function PaywallScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme  = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -293,11 +293,11 @@ export default function PaywallScreen() {
 
         {/* フッターリンク */}
         <View style={s.footer}>
-          <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
+          <Pressable onPress={() => Linking.openURL(policyUrl(PRIVACY_URL, i18n.language))}>
             <Text style={s.footerLink} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{t('pro.privacyPolicy')}</Text>
           </Pressable>
           <Text style={s.footerSep} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>・</Text>
-          <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
+          <Pressable onPress={() => Linking.openURL(policyUrl(TERMS_URL, i18n.language))}>
             <Text style={s.footerLink} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>{t('pro.terms')}</Text>
           </Pressable>
         </View>

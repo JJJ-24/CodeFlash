@@ -605,33 +605,53 @@ export function speakText(text: string, options: SpeakOptions): void {
     splitSentencesForPause(seg.text).map((text) => ({ text, language: seg.language })),
   );
   if (utterances.length === 0) return;
+  speakQueued(
+    utterances.map((u) => ({ ...u, voice: options.voices?.[u.language] })),
+    options.rate,
+    options.onDone,
+    options.onStopped,
+  );
+}
+
+/**
+ * 発話を順にキューへ積む（読み上げ本体・試聴の共通の出口）。
+ * 前の再生は止め、無音明けなら本文の前に起こしの発話を挟む（`WARMUP_IDLE_MS` 参照）。
+ * ⚠️ **iOS へ発話を積むのはここだけにする**＝経路ごとに `Speech.speak` を書くと、
+ *    起こしの発話と「読み上げ中か」の管理が漏れる（試聴の ▶ が実際に漏れて出だしがつまった）。
+ */
+function speakQueued(
+  items: { text: string; language: string; voice?: string }[],
+  rate: number,
+  onDoneCb?: () => void,
+  onStoppedCb?: () => void,
+): void {
+  if (items.length === 0) return;
   const needsWarmup = !speechActive && Date.now() - speechIdleSince > WARMUP_IDLE_MS;
   Speech.stop();
   speechActive = true;
   const gen = ++speechGen;
-  const onDone = () => { if (gen === speechGen) markSpeechIdle(); options.onDone?.(); };
-  const onStopped = () => { if (gen === speechGen) markSpeechIdle(); options.onStopped?.(); };
-  const say = (text: string, language: string, extra: Partial<Speech.SpeechOptions>) => {
-    const base = { language, rate: options.rate, ...extra };
-    const voice = options.voices?.[language];
-    if (!voice) { Speech.speak(text, base); return; }
+  const onDone = () => { if (gen === speechGen) markSpeechIdle(); onDoneCb?.(); };
+  const onStopped = () => { if (gen === speechGen) markSpeechIdle(); onStoppedCb?.(); };
+  const say = (item: { text: string; language: string; voice?: string }, extra: Partial<Speech.SpeechOptions>) => {
+    const base = { language: item.language, rate, ...extra };
+    if (!item.voice) { Speech.speak(item.text, base); return; }
     try {
-      Speech.speak(text, { ...base, voice });
+      Speech.speak(item.text, { ...base, voice: item.voice });
     } catch {
       // ⚠️ 端末に無い identifier だと expo-speech が投げる（別端末から同期した設定など）。
       // 声を諦めて言語だけで読み直す＝**黙って無音になるのが一番まずい**ため。
-      Speech.speak(text, base);
+      Speech.speak(item.text, base);
     }
   };
   // 本文の先頭1文字を同じ言語・声・音量 0 で読む＝声の読み込みと出力の起動を本文の前に済ませる
   // （`WARMUP_IDLE_MS` 参照）。完了の通知は付けない（本文の最後の区間が担う）。
   if (needsWarmup) {
-    const first = utterances[0];
-    say(Array.from(first.text)[0], first.language, { volume: WARMUP_VOLUME, rate: WARMUP_RATE });
+    const first = items[0];
+    say({ ...first, text: Array.from(first.text)[0] }, { volume: WARMUP_VOLUME, rate: WARMUP_RATE });
   }
-  utterances.forEach((seg, i) => {
-    const isLast = i === utterances.length - 1;
-    say(seg.text, seg.language, { onDone: isLast ? onDone : undefined, onStopped });
+  items.forEach((item, i) => {
+    const isLast = i === items.length - 1;
+    say(item, { onDone: isLast ? onDone : undefined, onStopped });
   });
 }
 
@@ -687,17 +707,12 @@ export function voiceSampleText(language: string, voiceName: string): string {
 
 /**
  * 声の試聴。**読み上げ本体と同じ速度**で鳴らす（実際の聞こえ方で判断できるように）。
- * ⚠️ 前の再生は必ず止める（連続タップで声が重なるため）。
- * ⚠️ 実在しない identifier は例外になるので、失敗したら声なしで読み直す。
+ * 前の再生を止めること・実在しない identifier のときに声なしで読み直すこと・無音明けの起こしは
+ * `speakQueued` が担う（読み上げ本体と同じ出口）。
  */
 export function previewVoice(opts: { text: string; language: string; voice?: string; rate: number }): void {
-  Speech.stop();
-  const base = { language: opts.language, rate: opts.rate };
-  try {
-    Speech.speak(opts.text, opts.voice ? { ...base, voice: opts.voice } : base);
-  } catch {
-    Speech.speak(opts.text, base);
-  }
+  if (!opts.text.trim()) return;
+  speakQueued([{ text: opts.text, language: opts.language, voice: opts.voice }], opts.rate);
 }
 
 /** 読み上げを止め、キューに残っている区間も破棄する。 */

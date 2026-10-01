@@ -54,7 +54,7 @@ M._resolveFilename = function (request: string, ...rest: unknown[]) {
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const speech = require('@/lib/speech');
-const { splitByScript, resolveSpeechSegments, speakText, stopSpeech } = speech;
+const { splitByScript, resolveSpeechSegments, speakText, stopSpeech, previewVoice } = speech;
 const { scriptForLanguage, hanLangForLocale, SCRIPT_DEFAULT_LANGS, speechLanguageLabel } = speech;
 const { filterKnownVoices, voiceSampleText, isExcludedVoice } = speech;
 const { mergeScriptLangs, parseScriptLangs, scriptLangsEqual } = speech;
@@ -277,6 +277,20 @@ at(30000);
 warmups.length = 0;
 speakText('React の話', { rate: 1.0 });
 eq(warmups.length, 0, '古い世代の完了通知では読み終えた扱いにしない');
+
+// 設定画面の試聴（速度・声の ▶）も同じ出口を通る＝無音明けなら起こしの発話を挟む
+at(31000);
+lastOnDone?.();
+at(40000);
+warmups.length = 0;
+spoken.length = 0;
+previewVoice({ text: 'こんにちは。', language: 'ja-JP', rate: 1.0 });
+eq(warmups, [{ text: 'こ', language: 'ja-JP' }], '試聴も無音明けなら先頭1文字を音量 0 で先に読む');
+eq(spoken, [{ text: 'こんにちは。', language: 'ja-JP', voice: undefined }], '試聴の本文はそのまま1件');
+at(40500);
+warmups.length = 0;
+previewVoice({ text: 'こんにちは。', language: 'ja-JP', rate: 1.0 });
+eq(warmups.length, 0, '試聴を続けて押したとき（再生中）は挟まない');
 Date.now = realNow;
 
 // ---- 文末の間（ピリオドの後が小文字のとき） ---------------------------------

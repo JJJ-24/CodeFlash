@@ -646,7 +646,7 @@
     "studyGoalReachedNone": "Nothing",
     "speech": "Read cards aloud",
     "speechEnable": "Read aloud",
-    "speechHint": "Use the speaker button on the study screen to read the visible side aloud. Code blocks are skipped.\nWith auto read-aloud on, a card is read automatically when it is shown or flipped (Pro).",
+    "speechHint": "Use the speaker button on the study screen to read the visible side aloud. Code blocks are skipped.",
     "speechAuto": "Auto read-aloud",
     "speechAutoHint": "Reads the side automatically when a card is shown or flipped. Memos are not read.\nDoes nothing in decks where read-aloud is turned off.",
     "speechAutoOff": "Off",

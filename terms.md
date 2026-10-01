@@ -3,9 +3,9 @@ layout: default
 title: Terms of Use
 ---
 
-# 利用規約 / Terms of Use
+# 利用規約 / Terms of Use / Términos de uso
 
-最終更新日 / Last updated: 2026-06-10
+最終更新日 / Last updated / Última actualización: 2026-10-01
 
 ## 日本語
 
@@ -54,6 +54,10 @@ CodeFlash Pro は買い切り型の有料機能です。購入・返金は Apple
 ### 第9条（準拠法・裁判管轄）
 
 本規約の解釈にあたっては日本法を準拠法とし、本アプリに関して紛争が生じた場合には、開発者の所在地を管轄する裁判所を第一審の専属的合意管轄裁判所とします。
+
+### 第10条（正文）
+
+本規約は日本語を正文とします。本規約の翻訳版は参考のために提供するものであり、日本語版との間に相違がある場合は、日本語版が優先します。
 
 ### お問い合わせ
 
@@ -111,8 +115,72 @@ The Developer may change these Terms at any time without prior notice when deeme
 
 These Terms shall be governed by and construed in accordance with the laws of Japan. Any disputes arising in connection with the App shall be subject to the exclusive jurisdiction of the court having jurisdiction over the Developer's location as the court of first instance.
 
+### Article 10 (Governing Language)
+
+These Terms are originally written in Japanese. Translations of these Terms, including this English version, are provided for reference only. In case of any discrepancy, the Japanese version prevails.
+
 ### Contact
 
 jjj24.support@gmail.com
 
 Effective date: May 16, 2026
+
+---
+
+## Español
+
+Estos Términos de uso (en adelante, los «Términos») establecen las condiciones de uso de la aplicación para smartphone «CodeFlash» (en adelante, la «App») ofrecida por el desarrollador (en adelante, el «Desarrollador»). Al usar la App, usted acepta cumplir estos Términos.
+
+### Artículo 1 (Aceptación)
+
+Se considera que usted acepta todas las disposiciones de estos Términos desde el momento en que descarga la App y empieza a usarla.
+
+### Artículo 2 (Condiciones de uso)
+
+La App está pensada para el estudio personal.
+
+### Artículo 3 (Actividades prohibidas)
+
+Al usar la App, usted se compromete a no realizar ninguna de las siguientes actividades:
+
+- Actos contrarios a la ley, al orden público o a las buenas costumbres
+- Actos que dañen o interfieran con los servidores o las funciones de red de la App
+- Aprovechar intencionadamente errores (bugs) de la App, o realizar ingeniería inversa, modificación, reproducción, descompilación u otro análisis de la App
+- Actos que causen molestias a otros usuarios o que interfieran con el funcionamiento de la App
+- Cualquier otro acto que el Desarrollador considere inapropiado
+
+### Artículo 4 (Compras dentro de la app)
+
+CodeFlash Pro es una función de pago único. Las compras y los reembolsos se rigen por las políticas de Apple. El Desarrollador no puede realizar reembolsos directamente.
+
+### Artículo 5 (Propiedad intelectual)
+
+Los derechos de autor y demás derechos de propiedad intelectual relacionados con la App pertenecen al Desarrollador.
+
+### Artículo 6 (Exención de responsabilidad)
+
+1. El Desarrollador no garantiza, ni expresa ni implícitamente, que la App esté libre de defectos de hecho o de derecho (incluidos, entre otros, defectos relativos a la seguridad, la fiabilidad, la exactitud, la integridad, la eficacia, la idoneidad para un fin determinado, errores, bugs o la infracción de derechos).
+2. Salvo en caso de dolo o negligencia grave del Desarrollador, el Desarrollador no será responsable de ningún daño que sufra el usuario como consecuencia del uso de la App (incluidos, entre otros, la pérdida de datos o el mal funcionamiento del dispositivo).
+3. El Desarrollador no será responsable de los problemas causados por servicios de terceros con los que se conecta la App (como iCloud de Apple, RevenueCat o Wandbox).
+
+### Artículo 7 (Modificación, suspensión y finalización del servicio)
+
+El Desarrollador podrá modificar el contenido de la App, suspenderla o dejar de ofrecerla en cualquier momento sin previo aviso a los usuarios. El Desarrollador no será responsable de los daños que ello pueda causar a los usuarios.
+
+### Artículo 8 (Modificación de los Términos)
+
+El Desarrollador podrá modificar estos Términos en cualquier momento y sin previo aviso cuando lo considere necesario. Los Términos modificados entrarán en vigor desde el momento en que se publiquen en la App o en la página en la que se publican estos Términos.
+
+### Artículo 9 (Ley aplicable y jurisdicción)
+
+Estos Términos se rigen e interpretan de acuerdo con las leyes de Japón. Cualquier controversia que surja en relación con la App se someterá, en primera instancia, a la jurisdicción exclusiva del tribunal competente del lugar de residencia del Desarrollador.
+
+### Artículo 10 (Idioma prevalente)
+
+El texto original de estos Términos está redactado en japonés. Las traducciones de estos Términos, incluida esta versión en español, se ofrecen solo como referencia. En caso de discrepancia, prevalece la versión en japonés.
+
+### Contacto
+
+jjj24.support@gmail.com
+
+Fecha de entrada en vigor: 16 de mayo de 2026

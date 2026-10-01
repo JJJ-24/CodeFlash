@@ -3,11 +3,13 @@ layout: default
 title: Privacy Policy
 ---
 
-# プライバシーポリシー / Privacy Policy
+# プライバシーポリシー / Privacy Policy / Política de privacidad
 
-最終更新日 / Last updated: 2026-06-10
+最終更新日 / Last updated / Última actualización: 2026-10-01
 
 ## 日本語
+
+> 本ポリシーは日本語を正文とします。翻訳版との間に相違がある場合は、日本語版が優先します。
 
 ### 収集する情報
 
@@ -51,6 +53,8 @@ CodeFlash Pro のご購入には Apple の課金システムを使用してい�
 
 ## English
 
+> This English version is a translation provided for your convenience. In case of any discrepancy, the Japanese version prevails.
+
 ### Information We Collect
 
 CodeFlash does not collect any personal information.
@@ -86,3 +90,45 @@ This privacy policy may be updated from time to time. When changes are made, we 
 ### Contact
 
 For any questions, please contact us at jjj24.support@gmail.com.
+
+---
+
+## Español
+
+> Esta traducción se ofrece para su comodidad. En caso de discrepancia, prevalece la versión en japonés.
+
+### Información que recopilamos
+
+CodeFlash no recopila ningún dato personal.
+
+### Almacenamiento de datos
+
+De forma predeterminada, todos los datos que cree en la app, como mazos, tarjetas e historial de estudio, se guardan únicamente en su dispositivo. Si activa la sincronización con iCloud, los datos se guardan y se sincronizan en la nube a través de iCloud de Apple.
+
+### Sincronización con iCloud
+
+Si activa la sincronización con iCloud, los datos como mazos, tarjetas e historial de estudio se sincronizan a través de iCloud de Apple entre los dispositivos en los que haya iniciado sesión con el mismo Apple ID. A los datos guardados en iCloud se les aplica la política de privacidad de Apple (https://www.apple.com/es/privacy/). Puede desactivar la sincronización con iCloud en cualquier momento desde Ajustes de iOS → [su Apple ID] → iCloud → CodeFlash.
+
+### Exportación e importación
+
+La función de exportación e importación solo intercambia archivos dentro de su dispositivo. Esta función no envía datos a servidores externos.
+
+### Ejecución de código (C++)
+
+Al ejecutar un bloque de código C++, el código fuente introducido se envía a la API de Wandbox (https://wandbox.org/). Solo se envía el contenido del bloque de código; no se incluye ningún dato personal, como su nombre o su dirección de correo electrónico. Si no ejecuta código C++, no se produce ninguna comunicación con Wandbox.
+
+### Compras dentro de la app
+
+Las compras de CodeFlash Pro se procesan mediante el sistema de pagos de Apple. Para gestionar las compras utilizamos RevenueCat (https://www.revenuecat.com), y la información de compra, como la fecha de compra y el ID del producto, se envía a los servidores de RevenueCat. No se incluye ningún dato que permita identificarle personalmente. Puede consultar la política de privacidad de RevenueCat en https://www.revenuecat.com/privacy.
+
+### Terceros
+
+No compartimos ni vendemos datos de los usuarios a terceros. No obstante, en lo relativo a la sincronización con iCloud (Apple), el procesamiento de pagos (RevenueCat) y la ejecución de código C++ (Wandbox), consulte las secciones correspondientes de esta política.
+
+### Cambios en esta política
+
+Esta política de privacidad puede actualizarse cuando sea necesario. Si se producen cambios, lo indicaremos actualizando la fecha de «Última actualización» al principio de esta página. Le recomendamos revisar esta política periódicamente.
+
+### Contacto
+
+Si tiene alguna pregunta, escríbanos a jjj24.support@gmail.com.

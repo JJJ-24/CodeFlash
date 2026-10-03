@@ -15,7 +15,7 @@ installModuleStubs(); // `@/` の解決（codeBlockStops が使う）
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { codeBlockSubStops } = require('../lib/codeBlockStops');
-const { PY_REQUESTS_SHIM_SOURCE, mentionsRequests } = require('../lib/code-execution/pyRequestsShim');
+const { PY_REQUESTS_SHIM_SOURCE, mentionsRequests, isJsonPage } = require('../lib/code-execution/pyRequestsShim');
 const { pagesFromDeckStages } = require('../lib/deckStages');
 const { buildSandboxHtml } = require('../lib/code-execution/sandbox');
 
@@ -93,6 +93,11 @@ const config = {
   ],
   messages: { connection: 'NO {url} | {pages}' },
 };
+
+// Phase 3：ページを見る画面の JSON 判定（TS の isJsonPage）が、代役の Content-Type（Python の _content_type）と一致するか
+const jsonCases = ['[1, 2]', ' {"a": 1} ', '{not json', '<ul></ul>', '', '[', '"text"', '123', '{}', '[]\n', '<p>{"a":1}</p>'];
+const jsonExpected = jsonCases.map((c) => isJsonPage(c));
+check('T4 isJsonPage の代表例', JSON.stringify(jsonExpected) === JSON.stringify([true, true, false, false, false, false, false, false, true, true, false]), jsonExpected);
 
 const pyTest = String.raw`
 import sys, types, json
@@ -190,8 +195,14 @@ check("P9 codes", requests.codes.ok == 200)
 check("P9 from requests import HTTPError", requests.HTTPError is HTTPError)
 check("P10 呼ぶたびに通知", len(used) >= 20, len(used))
 
+for i, (c, ts) in enumerate(zip(JSON_CASES, JSON_TS)):
+    py_json = m._content_type(c) == "application/json"
+    check("P11 JSON の判定が TS と一致 #%d" % i, py_json == ts, repr(c))
+
 print(json.dumps(results, ensure_ascii=False))
-`.replace('CONFIG', JSON.stringify(JSON.stringify(config)));
+`.replace('CONFIG', JSON.stringify(JSON.stringify(config)))
+  .replace('JSON_CASES', JSON.stringify(jsonCases))
+  .replace('JSON_TS', JSON.stringify(jsonExpected).replace(/true/g, 'True').replace(/false/g, 'False'));
 
 const py = spawnSync('python3', ['-c', pyTest], { input: PY_REQUESTS_SHIM_SOURCE, encoding: 'utf8' });
 if (py.status !== 0) {

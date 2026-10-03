@@ -29,6 +29,7 @@ import { mentionsRequests } from "@/lib/code-execution/pyRequestsShim";
 import { pagesFromDeckStages, resolveDeckStageHtml, resolveDeckStageSql } from "@/lib/deckStages";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
+import { PyPagesList } from "@/components/code/PyPagesList";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from "@/lib/theme";
 import type { CodeBlock, DeckImage, DeckStage } from "@/types";
 
@@ -151,6 +152,8 @@ export function CodeRunnerView({
   const [codeCopied, setCodeCopied] = useState(false);
   const [proModalVisible, setProModalVisible] = useState(false);
   const [expandVisible, setExpandVisible] = useState(false);
+  // 059：「デッキのページ」一覧の開閉（既定は閉じる）
+  const [showPyPages, setShowPyPages] = useState(false);
   // 非 Pro のため土台を落として実行した js/ts か（＝Pro なら土台を積んだはずのブロック）。
   // 実行はブロックしない：JS 実行は無料機能で、デッキ共通土台は既定 ON かつ切る手段（noDeckHtmlInit）が
   // Pro 限定のため、止めると「土台のあるデッキでは console.log すら実行できない」逃げ場のない状態になる。
@@ -584,6 +587,19 @@ export function CodeRunnerView({
         suppress={handlePaletteTouchStart}
         theme={theme}
       />
+
+      {/* 059 Phase 3：Python ブロックの「デッキのページ」＝学習者がセレクタを書く前に HTML の構造を確かめる
+          （本物のスクレイピングでブラウザの開発者ツールを開くのと同じ）。カード編集と同じ部品。Pro のときだけ・ページがあるときだけ */}
+      {pyPages && pyPages.length > 0 && (
+        <PyPagesList
+          pages={pyPages}
+          expanded={showPyPages}
+          onToggleExpanded={() => setShowPyPages((v) => !v)}
+          deckImages={deckHtmlImages}
+          onInteract={suppress}
+          onViewerOpenChange={setPreviewOpen}
+        />
+      )}
 
       {/* 058：実行結果の先頭の位置を測る目印（高さ 0＝レイアウトを変えない） */}
       <View onLayout={(e) => onOutputLayout?.(e.nativeEvent.layout.y)} />

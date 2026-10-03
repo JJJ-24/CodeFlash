@@ -86,7 +86,7 @@
     "speechLangsJoin": ", ",
     "speechAutoSummary": "Auto: {{mode}}",
     "speechSummaryParts": "{{langs}} · {{auto}}",
-    "stagesHint": "Las bases HTML/CSS de este mazo. Cada bloque de código elige cuál usa.\nSi el nombre de una base es una URL que empieza por https://, requests.get() de Python con esa URL devuelve el contenido de la base (sin conexión real). Se convierte en una página para practicar scraping y lleva un icono de globo en esta lista.",
+    "stagesHint": "Las bases HTML/CSS de este mazo. Cada bloque de código elige cuál usa.\nSi el nombre de una base es una URL que empieza por https://, requests.get() de Python con esa URL devuelve el contenido de la base (sin conexión real). Se convierte en una página para practicar scraping y lleva un icono de globo en esta lista. Con el botón del ojo puedes verla como página.",
     "stagesEmpty": "Aún no hay bases.",
     "stageAdd": "＋ Agregar base",
     "stageDefaultName": "Base {{n}}",
@@ -531,7 +531,7 @@
     "htmlInitLabel": "Base HTML/CSS del bloque",
     "htmlInitHint": "Una base solo para este bloque, visible antes de ejecutar.\nPrioridad de estilos: 1. el cuerpo 2. esta base 3. la base del mazo (ante la misma regla, gana la de más arriba)\nPara sustituir la base del mazo, desactiva abajo «Base HTML/CSS del mazo» (o elige «Ninguna»).",
     "pyPagesLabel": "Páginas del mazo ({{n}})",
-    "pyPagesHint": "Las bases HTML/CSS del mazo cuyo nombre es una URL. requests.get() con una de estas URL devuelve el contenido de la base sin conexión real.\nAñade o edita bases en «Bases HTML/CSS» al editar el mazo.",
+    "pyPagesHint": "Las bases HTML/CSS del mazo cuyo nombre es una URL. requests.get() con una de estas URL devuelve el contenido de la base sin conexión real. Toca una fila para ver la página y su código HTML.\nAñade o edita bases en «Bases HTML/CSS» al editar el mazo.",
     "htmlInitPlaceholder": "<div id=\"box\">Hello</div>\n<style>#box{ padding:20px }</style>",
     "useDeckHtmlInitLabel": "Base HTML/CSS del mazo",
     "useDeckHtmlInitHint": "Activado: añade la base común del mazo.\nDesactivado: este bloque se queda sin base (JS/TS pasa a salida por consola y no se muestra vista previa).",
@@ -1118,7 +1118,8 @@
     "cycleColorSheet": "Cambiar de color\n[J/K][H/L][,/.] también",
     "applyColorClose": "Aplicar y cerrar",
     "stageOpen": "Desplegar (con foco)",
-    "stageAdd": "Agregar una base / inicialización"
+    "stageAdd": "Agregar una base / inicialización",
+    "stageViewPage": "Ver como página (bases con una URL como nombre)"
   },
   "speechLang": {
     "_comment": "Nombres para el selector de idioma de lectura. Se guardan en la app porque Intl.DisplayNames no está disponible en Hermes en iOS. Los códigos que no estén aquí se muestran tal cual",

@@ -27,6 +27,7 @@ import { InteractivePreviewModal } from '@/components/code/InteractivePreviewMod
 import { SymbolPalette } from '@/components/code/SymbolPalette';
 import { SyntaxHighlightedCode } from '@/components/study/SyntaxHighlightedCode';
 import { InfoModal } from '@/components/InfoModal';
+import { PyPagesList } from '@/components/code/PyPagesList';
 import { usePickerKeys } from '@/components/settings/usePickerKeys';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
 import { DeckStagePicker } from '@/components/editor/DeckStagePicker';
@@ -134,10 +135,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [showHtmlInitInfo, setShowHtmlInitInfo] = useState(false);
   // js/ts ブロック固有の HTML/CSS 土台欄の開閉（内容があれば初期展開）
   const [showInitHtml, setShowInitHtml] = useState(!!block.htmlInit);
-  // 059：Python の「デッキのページ」一覧の開閉（既定は閉じる）と説明の開閉・コピーした URL（✓ を1秒出す）
+  // 059：Python の「デッキのページ」一覧の開閉（既定は閉じる。Return＝開閉と共有するのでここで持つ）
   const [showPyPages, setShowPyPages] = useState(false);
-  const [showPyPagesInfo, setShowPyPagesInfo] = useState(false);
-  const [copiedPageUrl, setCopiedPageUrl] = useState<string | null>(null);
 
   const contentRef = useRef(block.content);
   contentRef.current = block.content;
@@ -388,12 +387,6 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     setSqlInitCopied(true);
     setTimeout(() => setSqlInitCopied(false), 1000);
   }
-  async function handlePyPageCopy(url: string) {
-    await Clipboard.setStringAsync(url);
-    setCopiedPageUrl(url);
-    setTimeout(() => setCopiedPageUrl((cur) => (cur === url ? null : cur)), 1000);
-  }
-
   async function handleHtmlInitCopy() {
     if (!block.htmlInit?.trim()) return;
     await Clipboard.setStringAsync(block.htmlInit);
@@ -715,60 +708,23 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
 
 
           {/* 059：Python ブロック＝`requests.get()` で取得できる「デッキのページ」（URL 名の土台）の一覧。
-              ブロックごとの選択は無い（URL の土台は全部取得できる）ので、ここは**見るだけ**＋URL のコピー
-              （コードに書く URL を写すため）。土台の追加・編集はデッキ編集の「HTML/CSS 土台」で行う
-              ＝カード編集からデッキの土台は変えられない（保存の単位が違う）。既定は閉じる。
+              ブロックごとの選択は無い（URL の土台は全部取得できる）ので、見る・URL をコピーするだけ。
+              土台の追加・編集はデッキ編集の「HTML/CSS 土台」＝カード編集からデッキの土台は変えられない（保存の単位が違う）。
+              **プレビューモードでも出す**（Phase 3）＝学習画面にも出る（学習者がセレクタを書く前に HTML を確かめる）ので、
+              「プレビュー＝学習画面と同じ表示」の規約どおり。J/K の止まり先は編集モードだけ（codeBlockSubStops）。
               ページが無いデッキでは出さない（Python の普通のカードに無関係な行を増やさない）。 */}
-          {block.language === 'python' && isPro && !isPreview && pyPageList.length > 0 && (
-            <View style={[styles.initSqlSection, { borderTopColor: theme.colors.border }]} onLayout={subLayout('pyPages')}>
+          {block.language === 'python' && isPro && pyPageList.length > 0 && (
+            <View onLayout={subLayout('pyPages')}>
+              <PyPagesList
+                pages={pyPageList}
+                expanded={showPyPages}
+                onToggleExpanded={() => setShowPyPages((v) => !v)}
+                deckImages={deckHtmlImages}
+                onViewerOpenChange={setPreviewOpen}
+              />
               {subRing('pyPages')}
-              <Pressable style={styles.initSqlHeader} onPress={() => setShowPyPages((v) => !v)} hitSlop={6}>
-                <Ionicons name={showPyPages ? 'chevron-down' : 'chevron-forward'} size={theme.fontSize.sm} color="#C9C9C9" />
-                <Text style={{ color: '#C9C9C9', fontSize: theme.fontSize.sm, fontWeight: '600', flexShrink: 1 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                  {t('editor.pyPagesLabel', { n: pyPageList.length })}
-                </Text>
-                <Pressable onPress={() => setShowPyPagesInfo((v) => !v)} hitSlop={8}>
-                  <Ionicons
-                    name={showPyPagesInfo ? 'information-circle' : 'information-circle-outline'}
-                    size={Math.max(theme.fontSize.sm, 18)}
-                    color="#9CA3AF"
-                  />
-                </Pressable>
-              </Pressable>
-              {showPyPagesInfo && (
-                <View style={styles.blockInfoBox}>
-                  <Text style={{ color: '#9CA3AF', fontSize: theme.fontSize.xs, lineHeight: 16 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
-                    {t('editor.pyPagesHint')}
-                  </Text>
-                </View>
-              )}
-              {showPyPages && pyPageList.map((page, i) => (
-                <View key={`${i}:${page.url}`} style={styles.pyPageRow}>
-                  <Ionicons name="globe-outline" size={theme.fontSize.sm} color="#9CA3AF" />
-                  <Text
-                    style={[styles.pyPageUrl, { fontSize: theme.fontSize.sm }]}
-                    numberOfLines={1}
-                    ellipsizeMode="middle"
-                    maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
-                  >
-                    {page.url}
-                  </Text>
-                  <Pressable
-                    onPress={() => handlePyPageCopy(page.url)}
-                    hitSlop={8}
-                    style={[styles.initCopyBtn, copiedPageUrl === page.url && { backgroundColor: COPY_DONE_BG }]}
-                  >
-                    <Ionicons
-                      name={copiedPageUrl === page.url ? 'checkmark-sharp' : 'copy-outline'}
-                      size={theme.fontSize.sm}
-                      color={copiedPageUrl === page.url ? COPY_DONE_COLOR : '#C9C9C9'}
-                    />
-                  </Pressable>
-                </View>
-              ))}
             </View>
           )}
-
           {/* html ブロック：実行前プレビューに本文も描画するか（土台に書き足して完成させる出題向け）。
               既定 OFF＝「表示結果を予想させる」出題の答えを先に見せない。Pro 機能のため非Proでは非表示 */}
           {block.language === 'html' && isPro && !isPreview && (
@@ -1003,8 +959,6 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   langOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8 },
   langOptionText: {},
   // 058：J/K で止まっている土台・初期化の項目の青枠（セクションの内側に重ねる＝レイアウトを変えない）
-  pyPageRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  pyPageUrl: { flex: 1, color: '#D4D4D4', fontFamily: 'monospace' },
   subRing: { position: 'absolute', top: 2, bottom: 2, left: 2, right: 2, borderWidth: 2, borderRadius: 8 },
   collapsedPreview: {
     paddingHorizontal: 14,

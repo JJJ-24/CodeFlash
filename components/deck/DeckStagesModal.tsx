@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { PageViewerModal } from '@/components/code/PageViewerModal';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SqlInitModal } from '@/components/SqlInitModal';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -13,7 +14,7 @@ import { pagesFromDeckStages } from '@/lib/deckStages';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSheetKeyboardLift } from '@/lib/useSheetKeyboardLift';
-import type { DeckStage } from '@/types';
+import type { DeckImage, DeckStage } from '@/types';
 
 interface Props {
   visible: boolean;
@@ -34,6 +35,8 @@ interface Props {
    *  土台を書きながらタグが要るときは、一覧でコピーしてから編集面を開く（土台テキストは
    *  `onChangeText` で親 state に即時反映されるので、閉じて開き直しても内容は失われない）。 */
   listFooter?: React.ReactNode;
+  /** 059：デッキの HTML 画像ライブラリ（ページを見る画面で `img://` を解決する。HTML のときだけ渡す） */
+  deckImages?: DeckImage[];
 }
 
 /**
@@ -50,13 +53,15 @@ interface Props {
  * ときに使われるのが先頭だからで、**先頭を削除すると既定が次の土台にずれる**ため削除確認の
  * 文言も分けている。
  */
-export function DeckStagesModal({ visible, stages, onChange, onClose, kind, listFooter }: Props) {
+export function DeckStagesModal({ visible, stages, onChange, onClose, kind, listFooter, deckImages }: Props) {
   const keys = DECK_STAGE_KEYS[kind];
   const theme = useTheme();
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DeckStage | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  /** 059：ページを見る画面で開いている土台（名前が URL の土台だけ。行のタップは編集なので、見るのは目のボタンと V キー） */
+  const [viewingStage, setViewingStage] = useState<DeckStage | null>(null);
   /** 一覧の ScrollView（キーボード表示時に末尾＝画像ライブラリへ送るために持つ）。 */
   const listRef = useRef<ScrollView>(null);
 
@@ -104,6 +109,11 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
     setPendingDelete(null);
   }
 
+  /** 059：名前が URL の土台＝Python の requests.get() で取得できるページ（判定は実行側と同じ関数） */
+  function isPageStage(stage: DeckStage): boolean {
+    return kind === 'html' && pagesFromDeckStages([stage]).length > 0;
+  }
+
   function updateStage(id: string, patch: Partial<DeckStage>) {
     onChange(stages.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
@@ -139,8 +149,11 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
     { input: 'n', handler: handleAdd },
     { input: KeyCommand.keyInputEnter, handler: () => { if (addFocused) handleAdd(); else if (focusedStage) setEditingId(focusedStage.id); } },
     ...deleteKeySpecs(() => { if (focusedStage) setPendingDelete(focusedStage); }),
+    // 059：V＝フォーカス中の土台をページとして見る（名前が URL の土台だけ。058 のプレビュー枠の V と同じ「見る」）
+    { input: 'v', handler: () => { if (focusedStage && isPageStage(focusedStage)) setViewingStage(focusedStage); } },
   // 削除確認（アラート）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
-  ], visible && editingId === null);
+  // ページを見る画面が上に乗っている間も解除する（そちらの V/Esc が最上位）。
+  ], visible && editingId === null && viewingStage === null);
 
   // Esc は階層ディスマス（編集面は自前の Esc に委譲 → フォーカス解除 → 一覧を閉じる）。
   // 親のデッキ編集画面は subModalOpen() でキーを止めているので、ここが最上位になる。
@@ -150,6 +163,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
       handler: () => {
         if (!visible) return;
         if (editingId) return; // SqlInitModal 側の Esc が閉じる
+        if (viewingStage) return; // PageViewerModal 側の Esc が閉じる
         if (focusedIndex != null) { setFocusedIndex(null); return; }
         onClose();
       },
@@ -233,7 +247,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
                 stages.map((stage, index) => {
                   const preview = previewLine(stage);
                   // 059：名前が URL の土台＝Python の requests.get() で取得できるページ（判定は実行側と同じ関数）
-                  const isPage = kind === 'html' && pagesFromDeckStages([stage]).length > 0;
+                  const isPage = isPageStage(stage);
                   return (
                     <View
                       key={stage.id}
@@ -275,6 +289,12 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
                           {preview || t('deck.stageEmptyBody')}
                         </Text>
                       </Pressable>
+                      {/* 059：ページを見る（行のタップは編集を開くので、見るのはこのボタンだけ） */}
+                      {isPage && (
+                        <Pressable onPress={() => setViewingStage(stage)} hitSlop={6} style={styles.rowBtn}>
+                          <Ionicons name="eye-outline" size={20} color={theme.colors.primary} />
+                        </Pressable>
+                      )}
                       <Pressable onPress={() => setPendingDelete(stage)} hitSlop={6} style={styles.rowBtn}>
                         <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
                       </Pressable>
@@ -329,6 +349,13 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
           titlePlaceholder={editingStage ? t(keys.defaultName, { n: editingIndex + 1 }) : undefined}
           hint={t(keys.editorHint)}
           placeholder={t(keys.editorPlaceholder)}
+        />
+
+        {/* 059：ページを見る画面（この Modal の中に置く＝上の注意と同じ） */}
+        <PageViewerModal
+          page={viewingStage ? { url: viewingStage.name.trim(), content: viewingStage.content } : null}
+          onClose={() => setViewingStage(null)}
+          deckImages={deckImages}
         />
 
         <ConfirmDeleteModal

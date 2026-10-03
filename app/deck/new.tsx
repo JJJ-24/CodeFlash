@@ -73,6 +73,7 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
     { key: 'Return', descKey: 'shortcut.stageOpen', pro: true },
     { key: 'Delete', descKey: 'shortcut.deleteFocused', pro: true },
     { key: 'N', descKey: 'shortcut.stageAdd', pro: true },
+    { key: 'V', descKey: 'shortcut.stageViewPage', pro: true },
   ] },
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC', descKey: 'shortcut.esc' },
@@ -512,6 +513,7 @@ export default function NewDeckScreen() {
         onChange={setHtmlStages}
         onClose={() => setShowHtmlInitModal(false)}
         listFooter={<HtmlImageLibrary images={htmlImages} onChange={setHtmlImages} />}
+        deckImages={htmlImages}
       />
       <DeckSpeechModal
         visible={showSpeechModal}

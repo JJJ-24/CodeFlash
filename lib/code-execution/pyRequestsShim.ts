@@ -271,3 +271,17 @@ def session():
 export function mentionsRequests(code: string): boolean {
   return /\brequests\b/.test(code);
 }
+
+/** ページの中身が JSON か（代役の `_content_type` と**同じ判定**＝先頭が `{`/`[` で JSON として読める）。
+ *  ページを見る画面で「描画せずソースだけ・整形して出す」かを決める。⚠️ 判定を変えるときは Python 側も直す
+ *  （`verify:pyrequests` が両者の結果を突き合わせる）。 */
+export function isJsonPage(content: string): boolean {
+  const stripped = content.trim();
+  if (stripped[0] !== '{' && stripped[0] !== '[') return false;
+  try {
+    JSON.parse(stripped);
+    return true;
+  } catch {
+    return false;
+  }
+}

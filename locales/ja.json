@@ -83,7 +83,7 @@
     "speechLangsJoin": "・",
     "speechAutoSummary": "自動 {{mode}}",
     "speechSummaryParts": "{{langs}}・{{auto}}",
-    "stagesHint": "このデッキの HTML/CSS 土台。コードブロックごとに、どれを使うか選べます。\n名前を https:// で始まる URL にすると、Python の requests.get() でその URL を取得したときに、この土台の中身が返ります（実際の通信はしません）。スクレイピングの練習用のページになり、一覧に地球儀のアイコンが付きます。",
+    "stagesHint": "このデッキの HTML/CSS 土台。コードブロックごとに、どれを使うか選べます。\n名前を https:// で始まる URL にすると、Python の requests.get() でその URL を取得したときに、この土台の中身が返ります（実際の通信はしません）。スクレイピングの練習用のページになり、一覧に地球儀のアイコンが付きます。目のボタンで、ページとして表示できます。",
     "stagesEmpty": "まだ土台がありません。",
     "stageAdd": "＋ 土台を追加",
     "stageDefaultName": "土台{{n}}",
@@ -502,7 +502,7 @@
     "htmlInitLabel": "HTML/CSS ブロック土台",
     "htmlInitHint": "このブロック専用の土台。実行前から表示されます。\nスタイルの優先順位：1. 本文 2. この土台 3. デッキ土台（同じ指定なら上が勝ちます）\nデッキ土台と入れ替えたいときは、下の「HTML/CSS デッキ土台」をオフ（または「使わない」）にしてください。",
     "pyPagesLabel": "デッキのページ（{{n}}）",
-    "pyPagesHint": "デッキの HTML/CSS 土台のうち、名前が URL のものです。requests.get() でこの URL を取得すると、実際の通信をせずに土台の中身が返ります。\n土台の追加・編集はデッキ編集の「HTML/CSS 土台」で行います。",
+    "pyPagesHint": "デッキの HTML/CSS 土台のうち、名前が URL のものです。requests.get() でこの URL を取得すると、実際の通信をせずに土台の中身が返ります。行をタップすると、ページの表示と HTML（ソース）を確かめられます。\n土台の追加・編集はデッキ編集の「HTML/CSS 土台」で行います。",
     "htmlInitPlaceholder": "<div id=\"box\">Hello</div>\n<style>#box{ padding:20px }</style>",
     "useDeckHtmlInitLabel": "HTML/CSS デッキ土台",
     "useDeckHtmlInitHint": "オン：デッキ共通の土台を積む。\nオフ：このブロックだけ土台なし（JS/TS はコンソール実行になり、プレビューは出ません）。",
@@ -1065,7 +1065,8 @@
     "cycleColorSheet": "色を送る\n[J/K][H/L][,/.]でも可",
     "applyColorClose": "適用して閉じる",
     "stageOpen": "展開（フォーカス項目）",
-    "stageAdd": "土台/初期化を追加"
+    "stageAdd": "土台/初期化を追加",
+    "stageViewPage": "ページとして見る（名前が URL の土台）"
   },
   "speechLang": {
     "_comment": "読み上げ言語ピッカーの表示名。Intl.DisplayNames が iOS の Hermes に無いためアプリ側で持つ。ここに無いコードはコードのまま表示される（一覧は壊れない）",

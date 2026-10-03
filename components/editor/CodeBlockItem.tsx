@@ -31,7 +31,7 @@ import { PyPagesList } from '@/components/code/PyPagesList';
 import { usePickerKeys } from '@/components/settings/usePickerKeys';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
 import { DeckStagePicker } from '@/components/editor/DeckStagePicker';
-import { activeDeckStageId, isWebLanguage, type CodeSubStop } from '@/lib/codeBlockStops';
+import { activeDeckStageId, isWebLanguage, pyPageIndexOf, type CodeSubStop } from '@/lib/codeBlockStops';
 import { mentionsRequests } from '@/lib/code-execution/pyRequestsShim';
 import { pagesFromDeckStages, resolveDeckStageHtml, resolveDeckStageSql } from '@/lib/deckStages';
 import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
@@ -76,7 +76,12 @@ interface Props {
   /** 058：止まり先の位置（ブロックの上端から見た y・高さ）。画面外ならスクロールするため */
   onSubLayout?: (sub: CodeSubStop, y: number, h: number) => void;
   /** 058：Return で土台・初期化の欄を開いて入力を始める */
-  initEditTrigger?: { sub: 'sqlInit' | 'htmlInit' | 'pyPages'; n: number };
+  initEditTrigger?: { sub: 'sqlInit' | 'htmlInit'; n: number };
+  /** 059：「デッキのページ」の一覧の開閉。J/K の止まり先（開いているときだけ URL に止まる）が開閉に依存するので BlockEditor が持つ */
+  pyPagesExpanded?: boolean;
+  onPyPagesExpandedChange?: (expanded: boolean) => void;
+  /** 059：Return／V で、止まっている URL のページを見る画面を開く */
+  pyPageOpenTrigger?: { index: number; n: number };
   /** 058：G で言語の一覧を開く */
   langPickerTrigger?: number;
   /** 058：言語の一覧の開閉（開いている間はエディタがキーを手放す＝タップで開いたときも） */
@@ -89,7 +94,7 @@ interface Props {
   outputKeyTrigger?: OutputKeyTrigger | null;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages, focusedSub, onSubLayout, initEditTrigger, langPickerTrigger, onOverlayChange, outputKeyTrigger, onCodeAreaLayout, onOutputLayout }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages, focusedSub, onSubLayout, initEditTrigger, pyPagesExpanded = false, onPyPagesExpandedChange, pyPageOpenTrigger, langPickerTrigger, onOverlayChange, outputKeyTrigger, onCodeAreaLayout, onOutputLayout }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -135,8 +140,14 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   const [showHtmlInitInfo, setShowHtmlInitInfo] = useState(false);
   // js/ts ブロック固有の HTML/CSS 土台欄の開閉（内容があれば初期展開）
   const [showInitHtml, setShowInitHtml] = useState(!!block.htmlInit);
-  // 059：Python の「デッキのページ」一覧の開閉（既定は閉じる。Return＝開閉と共有するのでここで持つ）
-  const [showPyPages, setShowPyPages] = useState(false);
+  // 059：「デッキのページ」の一覧の行の位置（一覧の上端から見た y）と、一覧そのものの位置（ブロックの上端から見た y）。
+  // 止まり先の位置はブロックの上端から見た y で渡すので、両方を足す（どちらが先に測れても揃うように両方を控える）
+  const pyPagesYRef = useRef(0);
+  const pyPageRowsRef = useRef<Record<number, { y: number; h: number }>>({});
+  const reportPyPageRow = (i: number) => {
+    const r = pyPageRowsRef.current[i];
+    if (r) onSubLayout?.(`pyPage:${i}`, pyPagesYRef.current + r.y, r.h);
+  };
 
   const contentRef = useRef(block.content);
   contentRef.current = block.content;
@@ -250,7 +261,6 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   useEffect(() => {
     if (!initEditTrigger || initEditTrigger.n === 0) return;
     if (initEditTrigger.sub === 'sqlInit') { setShowInitSql(true); enterInitSqlEdit(); }
-    else if (initEditTrigger.sub === 'pyPages') setShowPyPages((v) => !v); // 059：入力欄は無い＝一覧の開閉
     else { setShowInitHtml(true); enterInitHtmlEdit(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initEditTrigger]);
@@ -714,13 +724,22 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
               「プレビュー＝学習画面と同じ表示」の規約どおり。J/K の止まり先は編集モードだけ（codeBlockSubStops）。
               ページが無いデッキでは出さない（Python の普通のカードに無関係な行を増やさない）。 */}
           {block.language === 'python' && isPro && pyPageList.length > 0 && (
-            <View onLayout={subLayout('pyPages')}>
+            <View
+              onLayout={(e) => {
+                subLayout('pyPages')(e);
+                pyPagesYRef.current = e.nativeEvent.layout.y;
+                Object.keys(pyPageRowsRef.current).forEach((k) => reportPyPageRow(Number(k)));
+              }}
+            >
               <PyPagesList
                 pages={pyPageList}
-                expanded={showPyPages}
-                onToggleExpanded={() => setShowPyPages((v) => !v)}
+                expanded={pyPagesExpanded}
+                onToggleExpanded={() => onPyPagesExpandedChange?.(!pyPagesExpanded)}
                 deckImages={deckHtmlImages}
                 onViewerOpenChange={setPreviewOpen}
+                focusedIndex={pyPageIndexOf(focusedSub)}
+                onRowLayout={(i, y, h) => { pyPageRowsRef.current[i] = { y, h }; reportPyPageRow(i); }}
+                openTrigger={pyPageOpenTrigger}
               />
               {subRing('pyPages')}
             </View>

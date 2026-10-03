@@ -35,7 +35,7 @@ import { InfoContent } from "@/components/InfoContent";
 import { MultiSelectPickerModal } from "@/components/MultiSelectPickerModal";
 import { registerAlertRestoreProvider } from "@/lib/alertFocus";
 import { hasBlockContent } from "@/lib/cardPreview";
-import { activeDeckStageId, codeBlockSubStops, type CodeSubStop } from "@/lib/codeBlockStops";
+import { activeDeckStageId, codeBlockSubStops, pyPageIndexOf, type CodeSubStop } from "@/lib/codeBlockStops";
 import { centeredScrollY } from "@/lib/scrollCenter";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
@@ -313,7 +313,14 @@ export function BlockEditor({
   // 058 Phase 3：プレビュー枠のキー操作（V＝プレビュー/ソース・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す）。
   // 学習画面と同じキー＝止まり先にはせず、ブロックにフォーカス中の直接キー（学習画面は Space が表裏反転で使えないため）
   const [outputKeyTriggerMap, setOutputKeyTriggerMap] = useState<Record<string, OutputKeyTrigger>>({});
-  const [initEditTriggerMap, setInitEditTriggerMap] = useState<Record<string, { sub: "sqlInit" | "htmlInit" | "pyPages"; n: number }>>({});
+  const [initEditTriggerMap, setInitEditTriggerMap] = useState<Record<string, { sub: "sqlInit" | "htmlInit"; n: number }>>({});
+  // 059：Python の「デッキのページ」の一覧の開閉（ブロックごと）。J/K の止まり先が開閉に依存する（開いているときだけ URL に止まる）ので、
+  // コードブロックではなくここで持つ。キーのハンドラから読むので ref にも控える
+  const [pyPagesOpenMap, setPyPagesOpenMap] = useState<Record<string, boolean>>({});
+  const pyPagesOpenRef = useRef(pyPagesOpenMap);
+  pyPagesOpenRef.current = pyPagesOpenMap;
+  // 059：止まっている URL のページを見る画面を開く（Return／V）
+  const [pyPageOpenTriggerMap, setPyPageOpenTriggerMap] = useState<Record<string, { index: number; n: number }>>({});
   // 058：止まり先の位置（ブロックの上端から見た y・高さ）。キーは `${ブロック}:${止まり先}`
   const subLayoutsRef = useRef<Record<string, { y: number; h: number }>>({});
   const [footerFocus, setFooterFocus] = useState<FooterFocus | null>(null);
@@ -454,7 +461,12 @@ export function BlockEditor({
   // 058：ブロックの中の止まり先（編集モードのコードブロックだけ・表示されているものだけ）
   const subStopsOf = (block: EditBlock | undefined): CodeSubStop[] =>
     block?.type === "code" && editorModeRef.current === "edit"
-      ? codeBlockSubStops(block as CodeBlock, { isPro, htmlStages: deckHtmlStages ?? [], sqlStages: deckSqlStages ?? [] })
+      ? codeBlockSubStops(block as CodeBlock, {
+          isPro,
+          htmlStages: deckHtmlStages ?? [],
+          sqlStages: deckSqlStages ?? [],
+          pyPagesExpanded: !!pyPagesOpenRef.current[block._key],
+        })
       : [];
 
   // 058：止まり先へフォーカスが来たら画面の真ん中へ送る（末尾の項目と同じ）
@@ -588,6 +600,20 @@ export function BlockEditor({
   // J/K キーボードフォーカス（focusedBlockIndex）をクリアする。
   // editingBlockKeyRef に現在編集中のブロックキーを記録し、
   // keyboardWillShow 時のスクロールに使用する。
+  // 059：「デッキのページ」の一覧の開閉。閉じたときに中の URL に止まっていたら見出しへ戻す（見えない項目に止まらないように）
+  function setPyPagesExpanded(blockKey: string, expanded: boolean) {
+    setPyPagesOpenMap((prev) => ({ ...prev, [blockKey]: expanded }));
+    const idx = focusedBlockIndexRef.current;
+    if (!expanded && idx !== null && currentBlocksRef.current[idx]?._key === blockKey && pyPageIndexOf(focusedSubRef.current) !== null) {
+      setFocusedBlockIndex(idx, "pyPages");
+    }
+  }
+
+  // 059：止まっている URL のページを見る画面を開く（Return／V）
+  function openPyPage(blockKey: string, index: number) {
+    setPyPageOpenTriggerMap((prev) => ({ ...prev, [blockKey]: { index, n: (prev[blockKey]?.n ?? 0) + 1 } }));
+  }
+
   function handleBlockTapFocus(blockKey: string, sub?: CodeSubStop) {
     setEditingBlockKey(blockKey);
     editingSubRef.current = sub ?? null;
@@ -810,6 +836,9 @@ export function BlockEditor({
       } else {
         setFocusedBlockIndex(null);
       }
+    } else if (key === "v" && idx !== null && pyPageIndexOf(sub) !== null) {
+      // 059：「デッキのページ」の URL に止まっているときの V＝ページを見る（ブロック本体の V＝[プレビュー｜ソース] とは対象が違う）
+      openPyPage(blocks[idx]._key, pyPageIndexOf(sub) as number);
     } else if (key === "v" || key === "sF" || key === "sR") {
       if (idx !== null && blocks[idx]?.type === "code") {
         const blockKey = blocks[idx]._key;
@@ -1357,8 +1386,14 @@ export function BlockEditor({
         const idx = focusedBlockIndexRef.current;
         const block = idx !== null ? currentBlocksRef.current[idx] : undefined;
         if (sub && block) {
-          // 059：Python の「デッキのページ」は Return＝一覧の開閉（入力欄は無い）。合図は初期化欄と同じ経路で送る
-          if (sub === "sqlInit" || sub === "htmlInit" || sub === "pyPages") {
+          const pageIndex = pyPageIndexOf(sub);
+          if (sub === "pyPages") {
+            // 059：「デッキのページ」の見出し＝一覧の開閉（入力欄は無い）
+            setPyPagesExpanded(block._key, !pyPagesOpenRef.current[block._key]);
+          } else if (pageIndex !== null) {
+            // 059：URL＝ページを見る画面を開く（この一覧には「編集」の役目が無いので Return でも開く。V と同じ）
+            openPyPage(block._key, pageIndex);
+          } else if (sub === "sqlInit" || sub === "htmlInit") {
             setInitEditTriggerMap((prev) => ({ ...prev, [block._key]: { sub, n: (prev[block._key]?.n ?? 0) + 1 } }));
           } else if (sub === "htmlStage" && (deckHtmlStages?.length ?? 0) > 1) {
             setStageChoice({ key: block._key, kind: "html" });
@@ -1672,6 +1707,9 @@ export function BlockEditor({
                   focusedSub={focusedBlockIndex === index ? focusedSub : null}
                   onSubLayout={(sub, y, h) => { subLayoutsRef.current[`${block._key}:${sub}`] = { y, h }; }}
                   initEditTrigger={initEditTriggerMap[block._key]}
+                  pyPagesExpanded={!!pyPagesOpenMap[block._key]}
+                  onPyPagesExpandedChange={(v) => setPyPagesExpanded(block._key, v)}
+                  pyPageOpenTrigger={pyPageOpenTriggerMap[block._key]}
                   langPickerTrigger={langPickerTriggerMap[block._key] ?? 0}
                   onOverlayChange={setLangOverlayOpen}
                   outputKeyTrigger={outputKeyTriggerMap[block._key] ?? null}

@@ -51,6 +51,9 @@ check('T2b ページありの Python は pyPages に止まる', JSON.stringify(c
 check('T2b ページなしの Python は止まらない', codeBlockSubStops(pyBlock, { isPro: true, htmlStages: [stages[2]], sqlStages: [] }).length === 0);
 check('T2b 非 Pro は止まらない', codeBlockSubStops(pyBlock, { isPro: false, htmlStages: stages, sqlStages: [] }).length === 0);
 check('T2b js には pyPages を足さない', !codeBlockSubStops({ ...pyBlock, language: 'javascript' }, { isPro: true, htmlStages: stages, sqlStages: [] }).includes('pyPages'));
+check('T2b 一覧が開いていれば URL にも止まる', JSON.stringify(codeBlockSubStops(pyBlock, { isPro: true, htmlStages: stages, sqlStages: [], pyPagesExpanded: true })) === '["pyPages","pyPage:0","pyPage:1"]');
+const { pyPageIndexOf } = require('../lib/codeBlockStops');
+check('T2b pyPageIndexOf', pyPageIndexOf('pyPage:1') === 1 && pyPageIndexOf('pyPages') === null && pyPageIndexOf(null) === null && pyPageIndexOf('pyPage:x') === null);
 
 // ---- 2. 生成 HTML の <script> が JS として読めるか ------------------------------
 function scriptBodies(html: string): string[] {

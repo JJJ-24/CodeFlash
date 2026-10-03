@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -20,6 +20,12 @@ interface Props {
   onInteract?: () => void;
   /** ページを見る画面の開閉（学習画面・カード編集が背後のキーを止めるため＝041 と同じ `InteractivePreviewContext`） */
   onViewerOpenChange?: (open: boolean) => void;
+  /** カード編集：J/K で止まっている URL の番号（青枠を重ねる）。学習画面は渡さない */
+  focusedIndex?: number | null;
+  /** カード編集：各 URL の行の位置（この部品の上端から見た y・高さ）。画面外ならスクロールするため */
+  onRowLayout?: (index: number, y: number, h: number) => void;
+  /** カード編集：Return／V でページを見る画面を開く（`n` が変わるたびに1回） */
+  openTrigger?: { index: number; n: number };
 }
 
 /**
@@ -32,7 +38,7 @@ interface Props {
  * - コピーは別のボタン（コードに書く URL を写すため。行のタップより優先される）。
  * - 既定は閉じる。外枠（上の区切り線）はこの部品が持つ。
  */
-export function PyPagesList({ pages, expanded, onToggleExpanded, deckImages, onInteract, onViewerOpenChange }: Props) {
+export function PyPagesList({ pages, expanded, onToggleExpanded, deckImages, onInteract, onViewerOpenChange, focusedIndex, onRowLayout, openTrigger }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [showInfo, setShowInfo] = useState(false);
@@ -56,6 +62,16 @@ export function PyPagesList({ pages, expanded, onToggleExpanded, deckImages, onI
     setViewing(null);
     onViewerOpenChange?.(false);
   }
+
+  // キーからの「開く」。マウント時の値では開かない（前に押したキーが、ブロックを描き直した途端に効かないように）
+  const lastTriggerN = useRef(openTrigger?.n ?? 0);
+  useEffect(() => {
+    if (!openTrigger || openTrigger.n === lastTriggerN.current) return;
+    lastTriggerN.current = openTrigger.n;
+    const page = pages[openTrigger.index];
+    if (page) open(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTrigger]);
 
   return (
     // 学習画面：**指が触れた瞬間に** suppress() する（onPress では遅い＝カードの裏返りは指を離した瞬間に判定されるので、
@@ -82,7 +98,14 @@ export function PyPagesList({ pages, expanded, onToggleExpanded, deckImages, onI
         </View>
       )}
       {expanded && pages.map((page, i) => (
-        <Pressable key={`${i}:${page.url}`} style={styles.row} onPress={() => open(page)}>
+        <Pressable
+          key={`${i}:${page.url}`}
+          style={styles.row}
+          onPress={() => open(page)}
+          onLayout={onRowLayout ? (e) => onRowLayout(i, e.nativeEvent.layout.y, e.nativeEvent.layout.height) : undefined}
+        >
+          {/* カード編集の J/K の青枠（コードブロックの他の止まり先と同じ見た目） */}
+          {focusedIndex === i && <View pointerEvents="none" style={[styles.focusRing, { borderColor: theme.colors.primary }]} />}
           <Ionicons name="globe-outline" size={theme.fontSize.sm} color="#9CA3AF" />
           <Text style={[styles.url, { fontSize: theme.fontSize.sm }]} numberOfLines={1} ellipsizeMode="middle" maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
             {page.url}
@@ -110,4 +133,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
   url: { flex: 1, color: '#D4D4D4', fontFamily: 'monospace' },
   iconBtn: { paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 },
+  focusRing: { position: 'absolute', top: 0, bottom: 0, left: -8, right: -8, borderWidth: 2, borderRadius: 8 },
 });

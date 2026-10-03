@@ -925,6 +925,7 @@
     "fullscreen": "全画面モード",
     "runFocused": "実行（フォーカス項目）\n[⌘R]は編集中でも可",
     "previewSourceToggle": "プレビュー / ソース切替\n（フォーカス項目）",
+    "previewSourceToggleEditor": "プレビュー / ソース切替（フォーカス項目）\nデッキのページの URL では、ページを表示",
     "previewExpand": "全画面プレビュー\n（フォーカス項目）",
     "previewReset": "実行前に戻す\n（フォーカス項目）",
     "editFocusedItem": "編集（フォーカス項目）\n[Return]でも可",

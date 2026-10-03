@@ -5,7 +5,17 @@ import type { CodeBlock, DeckStage } from '@/types';
  * 058：コードブロックの中で J/K が止まる「あったり無かったりする」項目。
  * 並びは画面の上から順（`CodeBlockItem` の描画順と同じ）。
  */
-export type CodeSubStop = 'sqlInit' | 'sqlStage' | 'htmlInit' | 'htmlStage' | 'previewInit' | 'pyPages';
+export type CodeSubStop = 'sqlInit' | 'sqlStage' | 'htmlInit' | 'htmlStage' | 'previewInit' | 'pyPages' | PyPageStop;
+
+/** 059：「デッキのページ」の一覧の i 番目の URL（一覧が**開いているときだけ**止まる） */
+export type PyPageStop = `pyPage:${number}`;
+
+/** 止まり先が「デッキのページ」の URL なら、その番号（それ以外は null） */
+export function pyPageIndexOf(sub: CodeSubStop | null | undefined): number | null {
+  if (!sub || !sub.startsWith('pyPage:')) return null;
+  const n = Number(sub.slice('pyPage:'.length));
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
 
 /** 土台（HTML/CSS）を積む web 系の言語か */
 export function isWebLanguage(language: string): boolean {
@@ -27,7 +37,7 @@ export function activeDeckStageId(stages: DeckStage[], off: boolean | undefined,
  */
 export function codeBlockSubStops(
   block: CodeBlock,
-  { isPro, htmlStages, sqlStages }: { isPro: boolean; htmlStages: DeckStage[]; sqlStages: DeckStage[] },
+  { isPro, htmlStages, sqlStages, pyPagesExpanded }: { isPro: boolean; htmlStages: DeckStage[]; sqlStages: DeckStage[]; pyPagesExpanded?: boolean },
 ): CodeSubStop[] {
   if (!isPro) return [];
   const web = isWebLanguage(block.language);
@@ -39,7 +49,14 @@ export function codeBlockSubStops(
   if (web) stops.push('htmlInit');
   if (web && htmlStages.length > 0) stops.push('htmlStage');
   if (block.language === 'html') stops.push('previewInit');
-  // 059：Python の「デッキのページ」（URL 名の土台があるときだけ出る）
-  if (block.language === 'python' && pagesFromDeckStages(htmlStages).length > 0) stops.push('pyPages');
+  // 059：Python の「デッキのページ」（URL 名の土台があるときだけ出る）。**一覧が開いているときだけ**中の URL にも止まる
+  // ＝閉じていれば見出しで1回止まるだけ（ふだんの J の手数は増えない・053 の「折りたたんだ中身は飛ばす」と同じ）
+  if (block.language === 'python') {
+    const pages = pagesFromDeckStages(htmlStages);
+    if (pages.length > 0) {
+      stops.push('pyPages');
+      if (pyPagesExpanded) pages.forEach((_, i) => stops.push(`pyPage:${i}`));
+    }
+  }
   return stops;
 }

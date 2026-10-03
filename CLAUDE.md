@@ -140,6 +140,7 @@ types/index.ts           # 全ドメイン型（唯一の定義元）
 locales/ja.json          # 日本語翻訳（基準。verify:i18n はこれと突き合わせる）
 locales/en.json          # 英語翻訳
 locales/es.json          # スペイン語翻訳（047）
+locales/zh-Hans.json     # 簡体字中国語翻訳（047 Phase 4）。言語コードは zh-Hans＝端末判定は文字体系まで見て、繁体字の端末は英語へ倒す（resolveSystemLanguage）
 docs/000〜032-*.md       # 機能チケット（実装計画・Todoチェックリスト）
 ```
 

@@ -5,6 +5,7 @@ import { initReactI18next } from 'react-i18next';
 import en from '@/locales/en.json';
 import es from '@/locales/es.json';
 import ja from '@/locales/ja.json';
+import zhHans from '@/locales/zh-Hans.json';
 
 /**
  * 対応言語（047）＝**コード → その言語での言語名（自言語表記）**。
@@ -21,6 +22,7 @@ export const SUPPORTED_LANGUAGES = {
   ja: '日本語',
   en: 'English',
   es: 'Español',
+  'zh-Hans': '简体中文',
 } as const;
 export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 export const SUPPORTED_LANGUAGE_CODES = Object.keys(SUPPORTED_LANGUAGES) as SupportedLanguage[];
@@ -35,8 +37,21 @@ export function isSupportedLanguage(code: string | undefined | null): code is Su
  * （かつて同じ2行が2箇所に複製されていた）。
  */
 export function resolveSystemLanguage(): SupportedLanguage {
-  const code = getLocales()[0]?.languageCode ?? 'ja';
+  const locale = getLocales()[0];
+  const code = locale?.languageCode ?? 'ja';
+  if (code === 'zh') return isTraditionalChinese(locale) ? 'en' : 'zh-Hans';
   return isSupportedLanguage(code) ? code : 'en';
+}
+
+/**
+ * 中国語の端末が繁体字か。⚠️ **`languageCode` だけでは分からない**（簡体字も繁体字も `zh`）＝
+ * 見ないと台湾・香港の端末に簡体字が出る。繁体字は未対応なので英語へ倒す（足したらそちらへ）。
+ * 文字体系（`Hans`/`Hant`）が取れなければ地域で判断する。
+ */
+function isTraditionalChinese(locale: { languageScriptCode?: string | null; regionCode?: string | null } | undefined): boolean {
+  const script = locale?.languageScriptCode;
+  if (script) return script === 'Hant';
+  return ['TW', 'HK', 'MO'].includes(locale?.regionCode ?? '');
 }
 
 i18n.use(initReactI18next).init({
@@ -44,6 +59,7 @@ i18n.use(initReactI18next).init({
     ja: { translation: ja },
     en: { translation: en },
     es: { translation: es },
+    'zh-Hans': { translation: zhHans },
   },
   lng: resolveSystemLanguage(),
   fallbackLng: 'en',

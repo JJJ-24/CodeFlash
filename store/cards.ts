@@ -23,7 +23,15 @@ export const useCardStore = create<CardState>((set, get) => ({
     set((state) => ({
       cards: state.cards.map((c) => (c.id === updated.id ? updated : c)),
     })),
-  removeCard: (id) => set((state) => ({ cards: state.cards.filter((c) => c.id !== id) })),
+  // 複製の保留 ID からも外す：複製画面で破棄・削除したカード（A'）が残ると、一覧へ戻ったときに
+  // 存在しないカードへフォーカスが移り、コピー元（A）のフォーカスまで上書きされて何も選ばれなくなる。
+  removeCard: (id) =>
+    set((state) => ({
+      cards: state.cards.filter((c) => c.id !== id),
+      pendingDuplicatedIds: state.pendingDuplicatedIds.includes(id)
+        ? state.pendingDuplicatedIds.filter((d) => d !== id)
+        : state.pendingDuplicatedIds,
+    })),
   reorderCards: (reordered) =>
     set((state) => ({
       cards: [

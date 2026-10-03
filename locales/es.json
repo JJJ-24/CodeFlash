@@ -481,6 +481,10 @@
     "proTitle": "Función Pro",
     "proMessage": "Ejecutar SQL, C++, HTML y CSS requiere el plan Pro.",
     "proStageHint": "La vista previa sobre una base HTML/CSS es una función Pro. Este bloque se ejecutó sin la base.",
+    "pyPagesUsed_one": "requests respondió con las bases HTML/CSS del mazo ({{count}} página). No se hizo ninguna conexión real.",
+    "pyPagesUsed": "requests respondió con las bases HTML/CSS del mazo ({{count}} páginas). No se hizo ninguna conexión real.",
+    "pyPagesProHint": "Obtener las bases HTML/CSS del mazo como páginas es una función Pro. Este bloque se ejecutó sin las páginas.",
+    "pyPagesConnectionError": "No se puede conectar a {url}. En esta tarjeta solo se pueden obtener las bases HTML/CSS del mazo cuyo nombre es una URL: {pages}",
     "noResponse": "No se recibió ningún resultado (puede que la página haya ido a otra URL o que el código se haya quedado en un bucle infinito).",
     "openWindowUnsupported": "window.open: esta vista previa no puede crear una ventana nueva. Solo las URL http(s) se abren en Safari ({{url}})"
   },

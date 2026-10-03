@@ -107,3 +107,14 @@ export function legacyInitMirror(stages: DeckStage[] | null | undefined): string
   const content = stages?.[0]?.content;
   return content && content.trim() !== '' ? content : null;
 }
+
+/** 059：Python の `requests.get()` で取得できる「ページ」になる土台＝**名前が `http://`/`https://` で始まるもの**。
+ *  名前が URL でない土台は Python からは見えない（js/ts/html/css の土台としてだけ働く）。
+ *  ブロック側の選択（`deckStageId`/`noDeckHtmlInit`）は見ない＝URL の土台は**全部**取得できる
+ *  （1ページしか選べないと「一覧 → 詳細へリンクをたどる」練習ができないため）。
+ *  Pro ゲートは呼び出し側の責任（非 Pro では渡さない＝`resolveDeckStageHtml` と同じ）。 */
+export function pagesFromDeckStages(stages: DeckStage[] | null | undefined): { url: string; content: string }[] {
+  return (stages ?? [])
+    .filter((s) => /^https?:\/\/\S/i.test(s.name.trim()))
+    .map((s) => ({ url: s.name.trim(), content: s.content }));
+}

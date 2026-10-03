@@ -15,6 +15,7 @@
     "verify:speech": "sucrase-node scripts/verify-speech.ts",
     "verify:timer": "sucrase-node scripts/verify-timer.ts",
     "verify:markdown": "sucrase-node scripts/verify-markdown.ts",
+    "verify:pyrequests": "sucrase-node scripts/verify-pyrequests.ts",
     "postinstall": "patch-package"
   },
   "dependencies": {

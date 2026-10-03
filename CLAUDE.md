@@ -28,6 +28,9 @@ npm run verify:timer
 # 翻訳ファイルの突き合わせ（047：キー欠落・補間トークン・行記法＋ソースが参照するキーの実在確認。locales/*.json を全部読むので es.json を足せば自動で対象）
 npm run verify:i18n
 
+# Python の requests の代役の検証（059：デッキの URL 名の土台がページとして答える。代役のソースをローカルの python3 で直接動かす＋生成 HTML の構文）
+npm run verify:pyrequests
+
 # テキストブロックの Markdown 拡張の検証（==ハイライト==・++下線++・CJK-friendly な flanking 規則。markdown-it を上げたときの退行検知）
 npm run verify:markdown
 ```

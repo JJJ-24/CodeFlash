@@ -25,7 +25,8 @@ import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useInsertPair } from "@/hooks/useInsertPair";
 import { LANG_LABELS, PRO_LANGUAGES } from "@/lib/code-execution/constants";
 import { useProStore } from "@/store/pro";
-import { resolveDeckStageHtml, resolveDeckStageSql } from "@/lib/deckStages";
+import { mentionsRequests } from "@/lib/code-execution/pyRequestsShim";
+import { pagesFromDeckStages, resolveDeckStageHtml, resolveDeckStageSql } from "@/lib/deckStages";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from "@/lib/theme";
@@ -130,6 +131,12 @@ export function CodeRunnerView({
     },
     [block.language, block.htmlInit, block.noDeckHtmlInit, block.deckStageId, deckHtmlStages, isPro],
   );
+  // 059：Python の `requests.get()` に答えるページ（デッキの URL 名の土台）。土台は Pro 機能なので非 Pro では渡さない
+  // （html/js の土台と同じ。実行は止めない＝Python 実行は無料機能）。
+  const pyPages = useMemo(
+    () => (block.language === 'python' && isPro ? pagesFromDeckStages(deckHtmlStages) : undefined),
+    [block.language, deckHtmlStages, isPro],
+  );
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
   const [isEditing, setIsEditing] = useState(false);
@@ -181,6 +188,9 @@ export function CodeRunnerView({
   const execActive = previewMode && !!htmlSource;
   // 実行後にライブ実行する本文＝run() に渡すのと同じもの（学習者の編集を含む）
   const runBody = editable && editedContent !== undefined ? editedContent : block.content;
+  // 059：非 Pro のためデッキのページを渡さずに実行した Python（`requests` を使うカードだけ。理由を結果パネルに1行出す）
+  const pyPagesDroppedByPro =
+    !isPro && block.language === 'python' && pagesFromDeckStages(deckHtmlStages).length > 0 && mentionsRequests(runBody);
 
   const stages = useMemo(() => (htmlInits ?? []).filter((s) => s && s.trim() !== ''), [htmlInits]);
   const codeInputRef = useRef<TextInput>(null);
@@ -337,9 +347,9 @@ export function CodeRunnerView({
         : undefined;
     if (wasThisEditing || anotherWasEditing) {
       // keyboard TextInput の focus 復元を待ってから WebView をマウントする
-      setTimeout(() => run(content, block.language, sqlInits, htmlInits, deckHtmlImages), 300);
+      setTimeout(() => run(content, block.language, sqlInits, htmlInits, deckHtmlImages, pyPages), 300);
     } else {
-      run(content, block.language, sqlInits, htmlInits, deckHtmlImages);
+      run(content, block.language, sqlInits, htmlInits, deckHtmlImages, pyPages);
     }
   }, [
     isRunning,
@@ -356,6 +366,7 @@ export function CodeRunnerView({
     deckSqlStages,
     htmlInits,
     deckHtmlImages,
+    pyPages,
     run,
     onEditBlur,
     onForceKeyboardFocus,
@@ -593,6 +604,7 @@ export function CodeRunnerView({
           onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
           deckImages={deckHtmlImages}
           proStageHint={stageDroppedByPro}
+          pyPagesProHint={pyPagesDroppedByPro}
           keyTrigger={outputTrigger}
         />
       )}

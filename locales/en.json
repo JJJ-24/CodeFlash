@@ -479,6 +479,10 @@
     "proTitle": "Pro Feature",
     "proMessage": "Running SQL, C++, HTML, and CSS requires a Pro plan.",
     "proStageHint": "Previewing on an HTML/CSS stage is a Pro feature. This block ran without the stage.",
+    "pyPagesUsed_one": "requests was answered from the deck's HTML/CSS stages ({{count}} page). No real network access was made.",
+    "pyPagesUsed": "requests was answered from the deck's HTML/CSS stages ({{count}} pages). No real network access was made.",
+    "pyPagesProHint": "Fetching the deck's HTML/CSS stages as pages is a Pro feature. This block ran without the pages.",
+    "pyPagesConnectionError": "Cannot connect to {url}. In this card you can only fetch the deck's HTML/CSS stages whose name is a URL: {pages}",
     "noResponse": "No result was received (the page may have navigated to another URL, or the code may be stuck in an infinite loop).",
     "openWindowUnsupported": "window.open: this preview cannot create a new window. Only http(s) URLs can be opened in Safari ({{url}})"
   },

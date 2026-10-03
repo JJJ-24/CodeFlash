@@ -1,3 +1,5 @@
+import { PY_REQUESTS_SHIM_SOURCE, type PyRequestsConfig } from './pyRequestsShim';
+
 /**
  * 言語別のサンドボックス HTML を構築する。
  *
@@ -5,9 +7,10 @@
  * @param language  言語名
  * @param sqlInits  SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有の順）。空要素は呼び出し側で除外済みを想定
  * @param htmlInits Web 系（html / js・ts の土台）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有の順）
+ * @param pyRequests 059：Python の `requests.get()` に答えるページ（デッキの URL 名の土台）。ページが無ければ null
  */
-export function buildSandboxHtml(code: string, language?: string, sqlInits?: string[], htmlInits?: string[]): string {
-  if (language === 'python') return buildPythonSandboxHtml(code);
+export function buildSandboxHtml(code: string, language?: string, sqlInits?: string[], htmlInits?: string[], pyRequests?: PyRequestsConfig | null): string {
+  if (language === 'python') return buildPythonSandboxHtml(code, pyRequests);
   if (language === 'sql') return buildSqlSandboxHtml(code, sqlInits);
   if (language === 'html') return buildWebSandboxHtml('html', code, htmlInits);
   // css は土台が無くても常に web 実行（装飾対象が無ければ空白が出るだけ＝html と同じ扱い）。
@@ -340,6 +343,12 @@ const HTML_FORMAT_SCRIPT = `
   }
 `;
 
+/** `<script>` の中へ値を埋め込むための JSON。`</script>` を含む文字列（土台の HTML・本文の文字列）で
+ *  スクリプトが途中で閉じないよう `<` を `\\u003c` にする（JSON の文字列としては同じ値）。 */
+function scriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
 
 /**
@@ -348,8 +357,10 @@ const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
  * - Pyodide ロード待機を含む 30 秒のトータルタイムアウト
  * - ユーザーコード実行には別途 5 秒タイムアウトを設定
  */
-function buildPythonSandboxHtml(code: string): string {
-  const escaped = JSON.stringify(code);
+function buildPythonSandboxHtml(code: string, pyRequests?: PyRequestsConfig | null): string {
+  const escaped = scriptJson(code);
+  // 059：ページが1つも無ければ差し込まない＝今までどおり `import requests` は ModuleNotFoundError
+  const requestsConfig = pyRequests && pyRequests.pages.length > 0 ? scriptJson(pyRequests) : 'null';
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -365,7 +376,9 @@ function buildPythonSandboxHtml(code: string): string {
   var _totalTimer = setTimeout(function() {
     if (_done) return;
     _done = true;
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'timeout', logs: _logs, limitMs: ${EXEC_TIMEOUT_MAX_MS} }));
+    var payload = { type: 'timeout', logs: _logs, limitMs: ${EXEC_TIMEOUT_MAX_MS} };
+    if (_pagesUsed) payload.pagesUsed = _requestsConfig.pages.length;
+    window.ReactNativeWebView.postMessage(JSON.stringify(payload));
   }, ${EXEC_TIMEOUT_MAX_MS});
 
   function finish(type, msg) {
@@ -374,10 +387,15 @@ function buildPythonSandboxHtml(code: string): string {
     clearTimeout(_totalTimer);
     var payload = { type: type, logs: _logs };
     if (msg) payload.message = msg;
+    if (_pagesUsed) payload.pagesUsed = _requestsConfig.pages.length;
     window.ReactNativeWebView.postMessage(JSON.stringify(payload));
   }
 
   var pyodide = null;
+  // 059：requests の代役が呼ばれたか（結果パネルに「実際の通信はしていない」と注記するため）
+  var _requestsConfig = ${requestsConfig};
+  var _pagesUsed = false;
+  window._cfMarkPagesUsed = function() { _pagesUsed = true; };
 
   // StringIO に溜めた stdout / stderr を読み出す（読めなければ空文字）
   function readBuf(name) {
@@ -433,6 +451,22 @@ function buildPythonSandboxHtml(code: string): string {
       var m = line.match(/^#\\s*pip:\\s*(.+)/);
       if (m) m[1].trim().split(/\\s+/).forEach(function(p) { if (p) _pipPackages.push(p); });
     });
+    if (_requestsConfig) {
+      // 059：本物の requests は Pyodide では通信できない＝pip で入れても失敗するだけなので、代役を優先する
+      _pipPackages = _pipPackages.filter(function(p) { return p.toLowerCase() !== 'requests'; });
+      pyodide.globals.set('_cf_shim_src', ${scriptJson(PY_REQUESTS_SHIM_SOURCE)});
+      pyodide.globals.set('_cf_shim_cfg', JSON.stringify(_requestsConfig));
+      pyodide.runPython(
+        'import sys as _sys, types as _types, js as _js\\n' +
+        '_m = _types.ModuleType("requests")\\n' +
+        'exec(compile(_cf_shim_src, "<requests>", "exec"), _m.__dict__)\\n' +
+        '_m._cf_setup(_cf_shim_cfg)\\n' +
+        '_m._cf_on_use = _js._cfMarkPagesUsed\\n' +
+        '_sys.modules["requests"] = _m\\n' +
+        '_sys.modules["requests.exceptions"] = _m.exceptions\\n' +
+        'del _m, _cf_shim_src, _cf_shim_cfg, _sys, _types, _js'
+      );
+    }
     if (_pipPackages.length > 0) {
       await pyodide.loadPackage('micropip');
       await pyodide.runPythonAsync(

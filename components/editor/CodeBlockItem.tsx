@@ -31,7 +31,8 @@ import { usePickerKeys } from '@/components/settings/usePickerKeys';
 import { EXECUTABLE_LANGUAGES, LANG_LABELS, LANGUAGES, PRO_LANGUAGES } from '@/lib/code-execution/constants';
 import { DeckStagePicker } from '@/components/editor/DeckStagePicker';
 import { activeDeckStageId, isWebLanguage, type CodeSubStop } from '@/lib/codeBlockStops';
-import { resolveDeckStageHtml, resolveDeckStageSql } from '@/lib/deckStages';
+import { mentionsRequests } from '@/lib/code-execution/pyRequestsShim';
+import { pagesFromDeckStages, resolveDeckStageHtml, resolveDeckStageSql } from '@/lib/deckStages';
 import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
@@ -172,6 +173,11 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     !isPro &&
     (block.language === 'javascript' || block.language === 'typescript') &&
     (resolveDeckStageHtml(deckHtmlStages, block).trim() !== '' || !!block.htmlInit?.trim());
+  // 059：Python の `requests.get()` に答えるページ（デッキの URL 名の土台）。土台は Pro 機能なので非 Pro では渡さない
+  // （html/js の土台と同じ。実行は止めない＝Python 実行は無料機能）。`requests` を使うカードにだけ理由を1行出す。
+  const pyPages = block.language === 'python' && isPro ? pagesFromDeckStages(deckHtmlStages) : undefined;
+  const pyPagesDroppedByPro =
+    !isPro && block.language === 'python' && pagesFromDeckStages(deckHtmlStages).length > 0 && mentionsRequests(block.content);
   // 「ソース」タブに出す土台テキスト（案a）。非空の土台だけを結合する。
   const previewSource = (htmlInits ?? []).filter((s) => s && s.trim() !== '').join('\n');
   // 041: 全画面インタラクティブプレビューの土台配列と、開ける条件（html は常に／js・ts は土台あり時。Pro 限定）。
@@ -326,7 +332,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         setProModalVisible(true);
         return;
       }
-      run(block.content, block.language, sqlInits, htmlInits, deckHtmlImages);
+      run(block.content, block.language, sqlInits, htmlInits, deckHtmlImages, pyPages);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runTrigger]);
@@ -437,7 +443,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   setFocused(false);
                 }
                 onRunButtonPress?.();
-                run(block.content, block.language, sqlInits, htmlInits, deckHtmlImages);
+                run(block.content, block.language, sqlInits, htmlInits, deckHtmlImages, pyPages);
               }}
             >
               <RunButtonIcon running={isRunning} size={Math.round(theme.fontSize.lg)} />
@@ -749,6 +755,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
             onExpand={canExpand ? () => { setExpandVisible(true); setPreviewOpen(true); } : undefined}
             deckImages={deckHtmlImages}
             proStageHint={stageDroppedByPro}
+            pyPagesProHint={pyPagesDroppedByPro}
             keyTrigger={outputKeyTrigger}
           />
         </>

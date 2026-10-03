@@ -138,6 +138,8 @@ interface Props {
   /** 非 Pro のため HTML/CSS 土台を積まずに実行したブロック。結果パネルの末尾に理由を1行出す
    *  （実行自体は止めない＝コンソール出力だけのカードは無料でもそのまま動く）。 */
   proStageHint?: boolean;
+  /** 059：非 Pro のためデッキのページ（URL 名の土台）を渡さずに Python を実行した。結果パネルの末尾に理由を1行出す */
+  pyPagesProHint?: boolean;
   /** 058：キーからの操作（V＝プレビュー/ソース切替・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す）。
    *  `n` が変わるたびに1回だけ実行する。対応するボタンが出ていないときは何もしない。
    *  **`undefined`＝このブロックは操作の対象外／`null`＝対象だがまだ押されていない**。
@@ -154,7 +156,7 @@ export type OutputKeyTrigger = { action: OutputKeyAction; n: number };
  * 「プレビュー / ソース」トグルを描画する。
  * CodeRunnerView（学習画面）と CodeBlockItem（エディタ）で共用する。
  */
-export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages, proStageHint, keyTrigger }: Props) {
+export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear, onMessage, previewMode, previewSource, runNonce, onInteract, staticPreview, staticBody, onExpand, deckImages, proStageHint, pyPagesProHint, keyTrigger }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
@@ -382,6 +384,17 @@ export function ExecutionOutput({ result, liveLogs, htmlSource, baseUrl, onClear
             {proStageHint && (
               <Text style={[styles.proStageHint, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
                 {t('code.proStageHint')}
+              </Text>
+            )}
+            {/* 059：requests が本物の通信ではなくデッキの土台から答えた（本物と違う動きをするので隠さずに見せる） */}
+            {result.pagesUsed !== undefined && (
+              <Text style={[styles.proStageHint, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                {t('code.pyPagesUsed', { count: result.pagesUsed })}
+              </Text>
+            )}
+            {pyPagesProHint && (
+              <Text style={[styles.proStageHint, { fontSize: theme.fontSize.xs }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}>
+                {t('code.pyPagesProHint')}
               </Text>
             )}
             <GestureDetector gesture={copyGesture}>

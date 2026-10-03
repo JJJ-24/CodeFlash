@@ -17,4 +17,9 @@ export interface ExecResult {
    * 未指定なら既定の5秒。
    */
   limitMs?: number;
+  /**
+   * 059：Python の `requests` の代役（デッキの土台が答えるページ）が呼ばれたときの、渡したページ数。
+   * 結果パネルに「実際の通信はしていません」と注記するために使う。呼ばれなければ未指定。
+   */
+  pagesUsed?: number;
 }

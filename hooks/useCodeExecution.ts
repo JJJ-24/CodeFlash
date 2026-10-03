@@ -2,6 +2,7 @@ import { transform } from 'sucrase';
 import { useEffect, useRef, useState } from 'react';
 
 import { buildSandboxHtml, EXEC_TIMEOUT_BASE_MS, EXEC_TIMEOUT_MAX_MS } from '@/lib/code-execution/sandbox';
+import type { PyPage } from '@/lib/code-execution/pyRequestsShim';
 import type { ExecResult, ExecStatus, LogEntry, SqlTableResult } from '@/lib/code-execution/types';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import i18n from '@/lib/i18n';
@@ -260,8 +261,9 @@ export function useCodeExecution(onResult?: () => void) {
    * @param sqlInits  SQL 実行時にクエリ本体の前に流す初期化SQL（デッキ共通 → ブロック固有）。SQL 以外では無視される
    * @param htmlInits Web 系（html / js・ts の土台）で body 先頭に加算する HTML/CSS 土台（デッキ共通 → ブロック固有）
    * @param deckImages デッキの HTML 画像ライブラリ（043）。本文/土台の `img://name` を data URI へ解決するのに使う
+   * @param pyPages   059：Python の `requests.get()` に答えるページ（デッキの URL 名の土台）。Python 以外では無視される
    */
-  function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[], deckImages?: DeckImage[]) {
+  function run(content: string, language: string, sqlInits?: string[], htmlInits?: string[], deckImages?: DeckImage[], pyPages?: PyPage[]) {
     // 中止の直後の実行は無視する（■ の2度押しで再実行が始まらないように・STOP_GUARD_MS）
     if (statusRef.current === 'stopped' && Date.now() - stoppedAtRef.current < STOP_GUARD_MS) return;
     setStatus('running');
@@ -306,7 +308,10 @@ export function useCodeExecution(onResult?: () => void) {
       language === 'python' ? 'https://cdn.jsdelivr.net' :
       language === 'sql' ? 'https://cdnjs.cloudflare.com' : undefined
     );
-    const html = buildSandboxHtml(code, language, sqlInits, htmlInits);
+    const pyRequests = language === 'python' && pyPages && pyPages.length > 0
+      ? { pages: pyPages, messages: { connection: i18n.t('code.pyPagesConnectionError') } }
+      : null;
+    const html = buildSandboxHtml(code, language, sqlInits, htmlInits, pyRequests);
     // 見張りは WebView に HTML を渡すのと同じタイミングで張る（画像解決の待ち時間を含めない）
     const watchdogMs = watchdogMsFor(language);
 
@@ -346,6 +351,7 @@ export function useCodeExecution(onResult?: () => void) {
       tables?: SqlTableResult[];
       limitMs?: number;
       remainingMs?: number;
+      pagesUsed?: number;
     };
     // 実行中の途中経過。結果ではないので status / result には触らない。
     if (data.type === 'logs') {
@@ -370,6 +376,7 @@ export function useCodeExecution(onResult?: () => void) {
       errorMessage: data.message,
       tables: data.tables,
       limitMs: data.limitMs,
+      pagesUsed: data.pagesUsed,
     };
     setStatus(newResult.status);
     setResult(newResult);

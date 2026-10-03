@@ -1,7 +1,7 @@
 # 059 Python のスクレイピング練習：`requests.get()` にデッキの HTML/CSS 土台で答える
 
 **フェーズ:** Phase 1〜2（Phase 3 は保留）
-**ステータス:** 未着手（設計案・2026-10-03）
+**ステータス:** Phase 1 完了（実機確認済み 2026-10-03）・Phase 2 未着手
 **要ネイティブ再ビルド:** 不要（JS のみ）
 **DB 変更:** なし（既存の `decks.htmlStages` をそのまま使う）
 **依存:** 044（デッキの HTML/CSS 土台の複数持ち）・040（土台の Pro ゲート・`proStageHint`）
@@ -94,17 +94,22 @@ for a in soup.select("li.item a"):
 
 ## Phase 1：`requests` の差し込み（実行の中身）
 
-- [ ] `lib/code-execution/pyRequestsShim.ts`：Python のソース文字列（上の互換範囲）＋ページ一覧の受け渡し
-- [ ] `buildPythonSandboxHtml(code, pages)`：ページがあるとき、ユーザーコードの前に `sys.modules['requests']` を差し込む。
+- [x] `lib/code-execution/pyRequestsShim.ts`：Python のソース文字列（上の互換範囲）＋ページ一覧の受け渡し
+- [x] `buildPythonSandboxHtml(code, pages)`：ページがあるとき、ユーザーコードの前に `sys.modules['requests']` を差し込む。
       ページは `JSON.stringify` で埋め込む（`</script>` を含む土台で HTML が壊れないようエスケープする）
-- [ ] 注記の出し分け：shim が「呼ばれたか」を JS 側へ返す（`finish` の payload に `pages: { used: true, count }`）
-- [ ] `useCodeExecution.run()` に Python 用のページ（`{ url, content }[]`）を渡す口。`CodeRunnerView`／`CodeBlockItem` で組み立てる
+- [x] 注記の出し分け：shim が「呼ばれたか」を JS 側へ返す（`finish` の payload に `pages: { used: true, count }`）
+- [x] `useCodeExecution.run()` に Python 用のページ（`{ url, content }[]`）を渡す口。`CodeRunnerView`／`CodeBlockItem` で組み立てる
       （**URL 名の土台の抽出は `lib/deckStages.ts` に1関数**＝`pagesFromDeckStages(stages)`。両画面で同じ関数を使う）
-- [ ] `ExecutionOutput`：注記2種（通信していない／Pro でないので渡していない）。文言は ja/en/es
-- [ ] `npm run verify:pyrequests`：shim のソースを**ローカルの python3 で直接**動かして確かめる
+- [x] `ExecutionOutput`：注記2種（通信していない／Pro でないので渡していない）。文言は ja/en/es
+- [x] `npm run verify:pyrequests`：shim のソースを**ローカルの python3 で直接**動かして確かめる
       （URL 照合・params・404・ConnectionError のメッセージ・json()・Content-Type の判定・Session・405）。
       Pyodide そのものは Node で動かせないので、実機確認は Phase 1 の最後に1回
-- [ ] 実機確認：上の例（一覧 → 詳細）・`res.json()`・存在しないホスト・`raise_for_status()`・非 Pro
+- [x] 実機確認：上の例（一覧 → 詳細）・`res.json()`・存在しないホスト・`raise_for_status()`・非 Pro
+
+実装メモ（2026-10-03）：
+- 検証は 45 項目（URL の照合・params・404・ConnectionError の一覧・json()・Content-Type・Session・405・生成 HTML の構文）。
+- ついでに直した既存の不具合：Python の本文に `</script>` という文字列があると（BeautifulSoup の練習で HTML を文字列に書くと起こりうる）、
+  サンドボックスの `<script>` がそこで閉じて実行できなかった。本文もページも `scriptJson()`（`<` を `\u003c` にする）で埋め込むようにした。
 
 ## Phase 2：作る側の見え方（UI）
 

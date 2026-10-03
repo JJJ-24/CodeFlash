@@ -27,7 +27,6 @@ Python ブロックでスクレイピングを学びたい、という要望（2
 実際の通信はしない＝オフラインでも動き、相手のサイトにも迷惑が掛からない。
 
 ```python
-# pip: beautifulsoup4
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -228,6 +227,6 @@ Phase 2 までで、ページ（URL 名の土台）を**描画して見られる
 ## 許容すること
 
 - 実行の 5 秒の制限は今までどおり（ページの取得は一瞬なので実質影響なし。`time.sleep(1)` を挟む礼儀の練習は数ページまで）。
-- BeautifulSoup の読み込みは今までどおり `# pip: beautifulsoup4` が必要（**初回実行は通信が要る**＝Pyodide 本体も CDN 読み込み。
+- BeautifulSoup は CDN から読み込む（2026-10-03 から `import` 文で自動。`# pip:` は不要）＝**実行には通信が要る**（Pyodide 本体も CDN 読み込み。
   「オフラインで動く」のは `requests` の部分だけ）。
 - 土台の `img://` はそのまま文字列として返る（Python では画像を扱わない）。

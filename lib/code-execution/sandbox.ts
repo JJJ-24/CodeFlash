@@ -356,6 +356,8 @@ const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/';
  * - sys.stdout / sys.stderr を StringIO でキャプチャして logs に変換
  * - Pyodide ロード待機を含む 30 秒のトータルタイムアウト
  * - ユーザーコード実行には別途 5 秒タイムアウトを設定
+ * - **`import` 文から Pyodide 同梱のライブラリを自動で読み込む**（bs4・numpy・pandas など＝ふつうの Python と同じく
+ *   `from bs4 import BeautifulSoup` だけで動く）。`# pip: 名前` は同梱されていないライブラリ用に残す（既存のカードもそのまま動く）
  */
 function buildPythonSandboxHtml(code: string, pyRequests?: PyRequestsConfig | null): string {
   const escaped = scriptJson(code);
@@ -445,7 +447,27 @@ function buildPythonSandboxHtml(code: string, pyRequests?: PyRequestsConfig | nu
 
     var _userCode = ${escaped};
 
-    // # pip: package1 package2 コメントからインストール対象を抽出
+    // import 文から Pyodide 同梱のライブラリを自動で読み込む（# pip: を書かなくてよい＝ふつうの Python と同じコードで動く）。
+    // 判定は Pyodide の find_imports（構文エラーなら空＝読み込まずに本体の実行でエラーを出す）。
+    // ⚠️ 059 の requests の代役があるときは requests を外す（本物を余計に読み込まない＝代役は sys.modules に入れ済みで優先される）。
+    // ⚠️ 読み込みに失敗しても（通信の失敗など）ここでは止めない＝本体の import が ModuleNotFoundError を出すので、
+    //    「どのライブラリが無いか」が Python の通常の表示で分かる。読み込み中の "Loading ..." は出さない。
+    try {
+      pyodide.globals.set('_cf_user_code', _userCode);
+      var _importsProxy = pyodide.runPython('from pyodide.code import find_imports as _fi\\n_fi(_cf_user_code)');
+      var _imports = _importsProxy.toJs();
+      _importsProxy.destroy();
+      pyodide.runPython('del _fi, _cf_user_code');
+      if (_requestsConfig) _imports = _imports.filter(function(n) { return n !== 'requests'; });
+      if (_imports.length > 0) {
+        await pyodide.loadPackagesFromImports(
+          _imports.map(function(n) { return 'import ' + n; }).join('\\n'),
+          { messageCallback: function() {}, errorCallback: function() {} }
+        );
+      }
+    } catch (_e) {}
+
+    // # pip: package1 package2 コメントからインストール対象を抽出（Pyodide に同梱されていないライブラリ用）
     var _pipPackages = [];
     _userCode.split('\\n').forEach(function(line) {
       var m = line.match(/^#\\s*pip:\\s*(.+)/);

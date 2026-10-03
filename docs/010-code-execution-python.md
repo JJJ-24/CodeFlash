@@ -31,6 +31,7 @@ Pyodide（Python in WASM）を WebView 経由で動作させ、Python コード�
 ### 標準ライブラリ対応
 - [x] 組み込みライブラリ（math, json, re 等）動作確認（Pyodide v0.26.2 = CPython 3.12 フル標準ライブラリ同梱）
 - [x] `micropip` による追加パッケージインストール（`# pip: package1 package2` コメントで自動インストール）
+- [x] （2026-10-03 追加）`import` 文から Pyodide 同梱のパッケージを自動で読み込む（`find_imports` → `loadPackagesFromImports`）。`# pip:` は同梱されていないパッケージ用に残す
 
 ### UI
 - [x] コードブロック言語が `python` の場合に実行ボタン表示（`executable: true` で 009 のまま動作）

@@ -205,7 +205,7 @@ push 遷移する全画面（`deck/[id]`・`tags/index`・`tags/[tagId]/cards`�
 
 ### コード実行アーキテクチャ
 
-`useCodeExecution(onResult?)` フックが状態管理を担う。`run()` が `buildSandboxHtml()` で HTML を生成し、`ExecutionOutput` 内の `WebView` で実行する。WebView からの `postMessage` を `handleMessage()` で受け取り `result` を更新する。`onResult` コールバックは `result` がセットされた直後（50ms 遅延）に呼ばれるため、実行完了後のスクロールなどに使える。Python は Pyodide（CDN）を利用するため `baseUrl` が設定される。
+`useCodeExecution(onResult?)` フックが状態管理を担う。`run()` が `buildSandboxHtml()` で HTML を生成し、`ExecutionOutput` 内の `WebView` で実行する。WebView からの `postMessage` を `handleMessage()` で受け取り `result` を更新する。`onResult` コールバックは `result` がセットされた直後（50ms 遅延）に呼ばれるため、実行完了後のスクロールなどに使える。Python は Pyodide（CDN）を利用するため `baseUrl` が設定される。**Python のライブラリは `import` 文から自動で読み込む**（`buildPythonSandboxHtml` が Pyodide の `find_imports` → `loadPackagesFromImports` で同梱のもの＝bs4・numpy・pandas など。2026-10-03〜＝ふつうの Python と同じく `# pip:` を書かずに動く＝カードの答えを PC の Python にそのまま貼れる）。`# pip: 名前` は Pyodide に同梱されていないライブラリ用に残してある（既存のカードもそのまま動く）。⚠️ 読み込みの失敗はそこで止めない（本体の import が `ModuleNotFoundError` を出すので、どれが無いかが Python の通常の表示で分かる）。
 
 実行できる言語は `EXECUTABLE_LANGUAGES`（`javascript`・`typescript`・`python`・`sql`・`cpp`・`html`・`css`）で、うち `PRO_LANGUAGES`（`sql`・`cpp`・`html`・`css`）は Pro 限定。**C++ だけは WebView サンドボックスを使わない例外**で、`runCppViaWandbox()` が Wandbox の公開 API（`https://wandbox.org/api/compile.json`・gcc-13.2.0 / `-std=c++17`）に POST して結果を受け取る。ネットワーク実行のため固有の事情がある：全体30秒の `AbortController` タイムアウト（超過で `status: 'timeout'`）、公開インスタンスの混雑（`WANDBOX_TRANSIENT_PATTERN` に一致する一時障害）は 800ms→1600ms のバックオフで自動リトライし、それでも復旧しなければコードの誤りと区別して `code.serverBusy` を案内する。コンパイルエラー（`compiler_error` に `error:` を含む）はユーザーのコードの問題なのでリトライ対象にしない。
 

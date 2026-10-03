@@ -1,10 +1,11 @@
+import { pagesFromDeckStages } from '@/lib/deckStages';
 import type { CodeBlock, DeckStage } from '@/types';
 
 /**
  * 058：コードブロックの中で J/K が止まる「あったり無かったりする」項目。
  * 並びは画面の上から順（`CodeBlockItem` の描画順と同じ）。
  */
-export type CodeSubStop = 'sqlInit' | 'sqlStage' | 'htmlInit' | 'htmlStage' | 'previewInit';
+export type CodeSubStop = 'sqlInit' | 'sqlStage' | 'htmlInit' | 'htmlStage' | 'previewInit' | 'pyPages';
 
 /** 土台（HTML/CSS）を積む web 系の言語か */
 export function isWebLanguage(language: string): boolean {
@@ -38,5 +39,7 @@ export function codeBlockSubStops(
   if (web) stops.push('htmlInit');
   if (web && htmlStages.length > 0) stops.push('htmlStage');
   if (block.language === 'html') stops.push('previewInit');
+  // 059：Python の「デッキのページ」（URL 名の土台があるときだけ出る）
+  if (block.language === 'python' && pagesFromDeckStages(htmlStages).length > 0) stops.push('pyPages');
   return stops;
 }

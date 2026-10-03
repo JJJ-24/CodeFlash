@@ -9,6 +9,7 @@ import { SqlInitModal } from '@/components/SqlInitModal';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { generateId } from '@/lib/database/utils';
 import { DECK_STAGE_KEYS, type DeckStageKind } from '@/lib/deckStageLabels';
+import { pagesFromDeckStages } from '@/lib/deckStages';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSheetKeyboardLift } from '@/lib/useSheetKeyboardLift';
@@ -231,6 +232,8 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
               ) : (
                 stages.map((stage, index) => {
                   const preview = previewLine(stage);
+                  // 059：名前が URL の土台＝Python の requests.get() で取得できるページ（判定は実行側と同じ関数）
+                  const isPage = kind === 'html' && pagesFromDeckStages([stage]).length > 0;
                   return (
                     <View
                       key={stage.id}
@@ -244,9 +247,11 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
                     >
                       <Pressable style={styles.rowMain} onPress={() => setEditingId(stage.id)}>
                         <View style={styles.rowTitleLine}>
+                          {isPage && <Ionicons name="globe-outline" size={Math.max(theme.fontSize.md, 16)} color={theme.colors.primary} />}
                           <Text
-                            style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600' }}
+                            style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flexShrink: 1 }}
                             numberOfLines={1}
+                            ellipsizeMode={isPage ? 'middle' : 'tail'}
                             maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
                           >
                             {displayName(stage, index)}

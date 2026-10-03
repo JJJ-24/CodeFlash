@@ -313,7 +313,7 @@ export function BlockEditor({
   // 058 Phase 3：プレビュー枠のキー操作（V＝プレビュー/ソース・⇧F＝⛶ 全画面・⇧R＝⟲ 実行前に戻す）。
   // 学習画面と同じキー＝止まり先にはせず、ブロックにフォーカス中の直接キー（学習画面は Space が表裏反転で使えないため）
   const [outputKeyTriggerMap, setOutputKeyTriggerMap] = useState<Record<string, OutputKeyTrigger>>({});
-  const [initEditTriggerMap, setInitEditTriggerMap] = useState<Record<string, { sub: "sqlInit" | "htmlInit"; n: number }>>({});
+  const [initEditTriggerMap, setInitEditTriggerMap] = useState<Record<string, { sub: "sqlInit" | "htmlInit" | "pyPages"; n: number }>>({});
   // 058：止まり先の位置（ブロックの上端から見た y・高さ）。キーは `${ブロック}:${止まり先}`
   const subLayoutsRef = useRef<Record<string, { y: number; h: number }>>({});
   const [footerFocus, setFooterFocus] = useState<FooterFocus | null>(null);
@@ -1357,7 +1357,8 @@ export function BlockEditor({
         const idx = focusedBlockIndexRef.current;
         const block = idx !== null ? currentBlocksRef.current[idx] : undefined;
         if (sub && block) {
-          if (sub === "sqlInit" || sub === "htmlInit") {
+          // 059：Python の「デッキのページ」は Return＝一覧の開閉（入力欄は無い）。合図は初期化欄と同じ経路で送る
+          if (sub === "sqlInit" || sub === "htmlInit" || sub === "pyPages") {
             setInitEditTriggerMap((prev) => ({ ...prev, [block._key]: { sub, n: (prev[block._key]?.n ?? 0) + 1 } }));
           } else if (sub === "htmlStage" && (deckHtmlStages?.length ?? 0) > 1) {
             setStageChoice({ key: block._key, kind: "html" });

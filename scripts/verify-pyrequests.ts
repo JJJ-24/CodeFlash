@@ -9,7 +9,12 @@
  */
 import { spawnSync } from 'node:child_process';
 
+import { installModuleStubs } from './db-harness';
+
+installModuleStubs(); // `@/` の解決（codeBlockStops が使う）
+
 /* eslint-disable @typescript-eslint/no-require-imports */
+const { codeBlockSubStops } = require('../lib/codeBlockStops');
 const { PY_REQUESTS_SHIM_SOURCE, mentionsRequests } = require('../lib/code-execution/pyRequestsShim');
 const { pagesFromDeckStages } = require('../lib/deckStages');
 const { buildSandboxHtml } = require('../lib/code-execution/sandbox');
@@ -39,6 +44,13 @@ check('T1 土台が無ければ空', pagesFromDeckStages(undefined).length === 0
 check('T2 requests を使う本文', mentionsRequests('import requests\nrequests.get("x")'));
 check('T2 requests を使わない本文', !mentionsRequests('from bs4 import BeautifulSoup'));
 check('T2 単語の一部は数えない', !mentionsRequests('my_requests_count = 1'));
+
+// 059 Phase 2：カード編集の J/K の止まり先（「デッキのページ」はページがあるときだけ・Pro だけ）
+const pyBlock = { type: 'code', language: 'python', content: '', executable: true };
+check('T2b ページありの Python は pyPages に止まる', JSON.stringify(codeBlockSubStops(pyBlock, { isPro: true, htmlStages: stages, sqlStages: [] })) === '["pyPages"]');
+check('T2b ページなしの Python は止まらない', codeBlockSubStops(pyBlock, { isPro: true, htmlStages: [stages[2]], sqlStages: [] }).length === 0);
+check('T2b 非 Pro は止まらない', codeBlockSubStops(pyBlock, { isPro: false, htmlStages: stages, sqlStages: [] }).length === 0);
+check('T2b js には pyPages を足さない', !codeBlockSubStops({ ...pyBlock, language: 'javascript' }, { isPro: true, htmlStages: stages, sqlStages: [] }).includes('pyPages'));
 
 // ---- 2. 生成 HTML の <script> が JS として読めるか ------------------------------
 function scriptBodies(html: string): string[] {

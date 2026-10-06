@@ -67,7 +67,7 @@
     "sectionSpeech": "読み上げ",
     "sectionCode": "実行環境",
     "speechInfoLabel": "読み上げの説明",
-    "speechUseHint": "オフにすると、このデッキの学習画面に読み上げボタンが出なくなります。\n読み上げの言語の設定はそのまま残ります。",
+    "speechUseHint": "オフにすると、このデッキの学習画面に読み上げボタンが出なくなります。\n読み上げの詳細設定は残ります。",
     "speechAppOffNote": "アプリの設定で読み上げがオフのため動作しません",
     "speechDeckOffNote": "読み上げを使わない設定のため動作しません",
     "speechSettingsTitle": "読み上げの詳細設定",

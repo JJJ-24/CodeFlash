@@ -70,7 +70,7 @@
     "sectionSpeech": "Lectura en voz alta",
     "sectionCode": "Entorno de ejecución",
     "speechInfoLabel": "Sobre la lectura en voz alta",
-    "speechUseHint": "Si está desactivada, el botón de lectura no aparece en la pantalla de estudio de este mazo.\nLos ajustes del idioma de lectura se conservan tal cual.",
+    "speechUseHint": "Si está desactivada, el botón de lectura no aparece en la pantalla de estudio de este mazo.\nLos ajustes avanzados de lectura se conservan.",
     "speechAppOffNote": "La lectura está desactivada en los ajustes de la app, así que esto no tiene efecto",
     "speechDeckOffNote": "La lectura está desactivada en este mazo, así que esto no tiene efecto",
     "speechSettingsTitle": "Ajustes avanzados de lectura",

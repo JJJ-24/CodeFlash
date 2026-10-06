@@ -67,7 +67,7 @@
     "sectionSpeech": "朗读",
     "sectionCode": "运行环境",
     "speechInfoLabel": "朗读说明",
-    "speechUseHint": "关闭后，此牌组的学习画面将不再显示朗读按钮。\n朗读语言的设置会保留。",
+    "speechUseHint": "关闭后，此牌组的学习画面将不再显示朗读按钮。\n朗读详细设置会保留。",
     "speechAppOffNote": "App 设置中已关闭朗读，因此不会生效",
     "speechDeckOffNote": "已设置为不使用朗读，因此不会生效",
     "speechSettingsTitle": "朗读详细设置",

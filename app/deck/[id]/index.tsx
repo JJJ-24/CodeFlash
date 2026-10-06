@@ -1642,18 +1642,19 @@ export default function DeckDetailScreen() {
         onClose={() => setShowDeleteModal(false)}
       />
       {/* アーカイブ中デッキで学習開始したときの2択（キーは J/K で選んでから Return・Esc＝054）。
+          閲覧を先頭＋塗りにする＝アーカイブしたデッキを開くのは見返したいときが多く、
+          何も書き換えない側を J → Return の最短に置く。解除は状態を変える側なのでゴースト。
           解除して学習は「解除後に学習できるカードがある」ときだけ出す。 */}
       <ConfirmModal
         visible={!!archivedStudyPrompt}
         title={t('deck.archivedStudyTitle')}
-        message={t('deck.archivedStudyMessage')}
+        // 「記録は残りません」は閲覧にしか当てはまらないので、解除も選べるときは両方の結果を書く
+        message={t(promptHasUnarchiveRef.current ? 'deck.archivedStudyMessageWithUnarchive' : 'deck.archivedStudyMessage')}
         actions={[
+          { label: t('deck.archivedStudyBrowse'), onPress: browseArchivedDeck },
           ...(promptHasUnarchiveRef.current
-            ? [{ label: t('deck.archivedStudyUnarchive'), onPress: unarchiveAndStudy }]
+            ? [{ label: t('deck.archivedStudyUnarchive'), onPress: unarchiveAndStudy, secondary: true }]
             : []),
-          // 閲覧は「状態を変えない側」なのでゴースト。ただし解除が出ないとき（解除しても
-          // 0枚になるとき）は唯一の選択肢になるので、そのときは通常の塗りに戻す。
-          { label: t('deck.archivedStudyBrowse'), onPress: browseArchivedDeck, secondary: promptHasUnarchiveRef.current },
         ]}
         onClose={() => setArchivedStudyPrompt(null)}
       />

@@ -100,6 +100,7 @@
     "selectHint": "デッキを選択",
     "archivedStudyTitle": "アーカイブ中のデッキ",
     "archivedStudyMessage": "このデッキはアーカイブ中のため、学習の記録は残りません。",
+    "archivedStudyMessageWithUnarchive": "このデッキはアーカイブ中です。\n閲覧のみ：学習の記録は残りません。\n解除して学習開始：アーカイブを解除して、通常どおり記録します。",
     "archivedStudyUnarchive": "解除して学習開始",
     "archivedStudyBrowse": "閲覧のみ",
     "htmlImagesSet": "画像 {{count}}枚"

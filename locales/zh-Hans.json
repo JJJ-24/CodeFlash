@@ -100,6 +100,7 @@
     "selectHint": "选择牌组",
     "archivedStudyTitle": "已归档的牌组",
     "archivedStudyMessage": "此牌组已归档，学习记录不会保存。",
+    "archivedStudyMessageWithUnarchive": "此牌组已归档。\n仅浏览：学习记录不会保存。\n取消归档并开始学习：取消归档后，照常保存学习记录。",
     "archivedStudyUnarchive": "取消归档并开始学习",
     "archivedStudyBrowse": "仅浏览",
     "htmlImagesSet": "图片 {{count}} 张"

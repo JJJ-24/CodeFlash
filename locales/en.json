@@ -100,6 +100,7 @@
     "selectHint": "Select decks",
     "archivedStudyTitle": "Archived Deck",
     "archivedStudyMessage": "This deck is archived, so your study progress will not be recorded.",
+    "archivedStudyMessageWithUnarchive": "This deck is archived.\nBrowse only: your study progress will not be recorded.\nUnarchive and study: unarchives the deck and records your progress as usual.",
     "archivedStudyUnarchive": "Unarchive and study",
     "archivedStudyBrowse": "Browse only",
     "sqlStagesSet_one": "1 setup",

@@ -103,6 +103,7 @@
     "selectHint": "Selecciona mazos",
     "archivedStudyTitle": "Mazo archivado",
     "archivedStudyMessage": "Este mazo está archivado, así que no se guardará tu progreso de estudio.",
+    "archivedStudyMessageWithUnarchive": "Este mazo está archivado.\nSolo lectura: no se guardará tu progreso de estudio.\nDesarchivar y estudiar: desarchiva el mazo y guarda tu progreso como siempre.",
     "archivedStudyUnarchive": "Desarchivar y estudiar",
     "archivedStudyBrowse": "Solo lectura",
     "htmlImagesSet": "{{count}} imágenes",

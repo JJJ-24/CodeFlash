@@ -542,7 +542,7 @@
       "quote": "引用"
     },
     "mdHelpTitle": "Markdown 写法",
-    "mdHelpBody": "@@基本\n标题\n\t# 标题1\n\t## 标题2\n列表\n\t- 项目\n编号列表\n\t1. 项目\n引用\n\t> 引用文字\n分隔线\n\t---\n换行：直接换行\n分段：插入空行\n@@文字装饰\n粗体\n\t**文字**\n斜体\n\t*文字*\n下划线\n\t++文字++\n删除线\n\t~~文字~~\n标记\n\t==黄色== ==g|绿色== ==p|粉色==\n行内代码\n\t`文字`\n@@块\n代码块\n\t```js\n\tconst a = 1;\n\t```\n//高亮：在开头写上语言名（可省略）\n//js / ts / python / html / css / sql / cpp / java / swift / bash / json\n链接\n\t[Apple](https://apple.com)\n//[]：链接名称\n//()：链接地址（以 https:// 开头）\n//在学习画面长按即可打开\n表格\n\t| 名称 | 年龄 |\n\t| --- | --- |\n\t| a | 20 |\n\t| b | 30 |\n//第 1 行：表头\n//第 2 行：分隔（--- 也可以写成 -）\n对齐\n\t| :--- | :---: | ---: |\n//左 / 居中 / 右",
+    "mdHelpBody": "@@基本\n标题\n\t# 标题1\n\t## 标题2\n列表\n\t- 项目\n编号列表\n\t1. 项目\n引用\n\t> 引用文字\n分隔线\n\t---\n换行：直接换行\n分段：插入空行\n@@文字装饰\n粗体\n\t**文字**\n斜体\n\t*文字*\n下划线\n\t++文字++\n删除线\n\t~~文字~~\n标记\n\t==黄色== ==g|绿色== ==p|粉色==\n行内代码\n\t`文字`\n@@块\n代码块\n\t```js\n\tconst a = 1;\n\t```\n//语法高亮：在开头写上语言名（可省略）\n//js / ts / python / html / css / sql / cpp / java / swift / bash / json\n链接\n\t[Apple](https://apple.com)\n//[]：链接名称\n//()：链接地址（以 https:// 开头）\n//在学习画面长按即可打开\n表格\n\t| 名称 | 年龄 |\n\t| --- | --- |\n\t| a | 20 |\n\t| b | 30 |\n//第 1 行：表头\n//第 2 行：分隔（--- 也可以写成 -）\n对齐\n\t| :--- | :---: | ---: |\n//左 / 居中 / 右",
     "mdHelpLabel": "Markdown 写法"
   },
   "settings": {

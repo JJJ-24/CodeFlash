@@ -5,6 +5,7 @@ import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { SUPPORTED_LANGUAGE_CODES, SUPPORTED_LANGUAGES, type SupportedLanguage } from '@/lib/i18n';
+import { languageNameFont } from '@/lib/languageNameFont';
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import type { LanguagePreference } from '@/store/settings';
@@ -116,7 +117,7 @@ export function LanguagePickerModal({ visible, value, onSelect, onClose, resolve
                 {t('settings.languageSystem')}
               </Text>
               <Text
-                style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }}
+                style={[{ color: theme.colors.textSecondary, fontSize: theme.fontSize.sm }, languageNameFont(resolved)]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
               >
                 {SUPPORTED_LANGUAGES[resolved]}
@@ -128,7 +129,7 @@ export function LanguagePickerModal({ visible, value, onSelect, onClose, resolve
             {SUPPORTED_LANGUAGE_CODES.map((code, i) => (
               <Pressable key={code} onPress={() => pick(code)} style={[rowStyle, focusedIndex === i + 1 && { backgroundColor: theme.colors.primaryLight }]}>
                 <Text
-                  style={{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }}
+                  style={[{ flex: 1, color: theme.colors.text, fontSize: theme.fontSize.md }, languageNameFont(code)]}
                   maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                 >
                   {/* 言語名は自言語表記（日本語 / English / Español）＝UI 言語によらず同じ。 */}

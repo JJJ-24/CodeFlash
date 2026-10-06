@@ -12,6 +12,7 @@ import { SettingsFocusCard } from '@/components/settings/settingsFocus';
 import { settingsStyles as styles } from '@/components/settings/styles';
 
 import { resolveSystemLanguage, SUPPORTED_LANGUAGES } from '@/lib/i18n';
+import { languageNameFont } from '@/lib/languageNameFont';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { CARD_THEME_NAMES, CARD_THEMES, FREE_CARD_THEMES, type CardThemeName } from '@/lib/theme/cardThemes';
 import { useSettingsStore, type InitialFilterPreference } from '@/store/settings';
@@ -33,10 +34,14 @@ export default function DisplaySettingsScreen() {
   const [langModal, setLangModal] = useState(false);
 
   // 「システム」を選んでいるときは**実際に使われる言語**まで出す（「システム」だけだと結果が分からない）。
+  // 言語名の部分だけ言語ごとのフォントで描く（`languageNameFont`）＝「システム（简体中文）」の
+  // 「システム（）」は UI 言語のまま。文言の型は翻訳側にあるので、言語名の位置で分けて組む。
   const systemLang = resolveSystemLanguage();
-  const languageValueLabel = languagePreference === 'system'
-    ? t('settings.languageSystemResolved', { language: SUPPORTED_LANGUAGES[systemLang] })
-    : SUPPORTED_LANGUAGES[languagePreference];
+  const shownLang = languagePreference === 'system' ? systemLang : languagePreference;
+  const NAME_MARK = '\u0000';
+  const [labelBefore, labelAfter = ''] = languagePreference === 'system'
+    ? t('settings.languageSystemResolved', { language: NAME_MARK }).split(NAME_MARK)
+    : ['', ''];
 
   function handleCardThemeSelect(name: CardThemeName) {
     // 無料配色（default / paper）は常に選択可。それ以外は Pro 限定でペイウォールへ誘導。
@@ -158,7 +163,9 @@ export default function DisplaySettingsScreen() {
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={{ flex: 1, color: theme.colors.primary, fontSize: theme.fontSize.md, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-            {languageValueLabel}
+            {labelBefore}
+            <Text style={languageNameFont(shownLang)}>{SUPPORTED_LANGUAGES[shownLang]}</Text>
+            {labelAfter}
           </Text>
           <Ionicons name="chevron-forward" size={theme.fontSize.lg} color={theme.colors.iconSubtle} />
         </View>

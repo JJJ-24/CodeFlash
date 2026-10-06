@@ -212,6 +212,8 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onC
    *   RN の `ScrollView` は `overflow: 'scroll'`（`clipsToBounds = YES`）なので、
    *   はみ出したぶんは描画されずテキストだけ右へずれる。
    */
+  const scriptSectionLabel = (side: string) =>
+    t('deck.speechScriptSectionSide', { section: t('settings.speechScriptSection'), side });
   const sideHeading = (label: string, separated?: boolean) => (
     <View
       style={[
@@ -312,12 +314,14 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onC
                   </Text>
                   <AppSwitch value={splitSides} onValueChange={toggleSplit} />
                 </View>
-                {/* 面の呼び名は `common.front` / `common.back`（カード編集のタブと同じ定義元）。 */}
-                {splitSides && sideHeading(t('common.front'))}
+                {/* 文字体系の行は常に見出し「言語設定」の下に置く（学習設定と同じ名前＝アプリ全体の
+                    言語設定をこのデッキだけ上書きする場所だと分かる）。表裏を分けたときは面を補足に足す。
+                    面の呼び名は `common.front` / `common.back`（カード編集のタブと同じ定義元）。 */}
+                {sideHeading(splitSides ? scriptSectionLabel(t('common.front')) : t('settings.speechScriptSection'))}
                 {scripts.map((script) => renderRow(script, false))}
                 {splitSides && (
                   <>
-                    {sideHeading(t('common.back'), true)}
+                    {sideHeading(scriptSectionLabel(t('common.back')), true)}
                     {scripts.map((script) => renderRow(script, true))}
                   </>
                 )}

@@ -59,10 +59,12 @@ const SEARCH_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'P', descKey: 'shortcut.editFocusedItem' },
-    { key: '⇧Space', descKey: 'shortcut.browseFromFocus' },
     { key: 'A', descKey: 'shortcut.toggleCardStats', pro: true },
   ] },
   { titleKey: 'shortcut.catNavigate', items: [
+    // カード一覧の Space＝学習開始・⇧Space＝フォーカスから と同じ並び・同じカテゴリ
+    { key: 'Space', descKey: 'shortcut.startBrowse' },
+    { key: '⇧Space', descKey: 'shortcut.startBrowseFromFocus' },
     { key: 'B', descKey: 'shortcut.back' },
   ] },
   { titleKey: 'shortcut.catAction', items: [
@@ -190,6 +192,8 @@ export default function SearchScreen() {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const rs = useResponsiveSize();
+  // 上部のデッキ/タグ/日付ボタンのアイコン寸法（「閲覧」ボタンの幅の基準にも使う）
+  const filterIconSize = Math.max(theme.fontSize.xl, rs(20, 22));
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
   useRestoreStatusBar();
@@ -429,6 +433,9 @@ export default function SearchScreen() {
     } },
     { input: 'p', handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
     // ⇧Space＝フォーカス中のカードから閲覧（カード一覧・統計の「フォーカスから学習」と同じキー）。フォーカス無しは先頭から
+    // Space＝先頭から閲覧（件数の行の「閲覧」ボタンと同じ。カード一覧の Space＝学習開始と同じ組）。
+    //   検索欄にカーソルがあるときは入力欄が Space を消費するので発火しない（住み分け）。
+    { input: ' ', handler: () => { if (overlayOpen()) return; browseFrom(0); } },
     { input: ' ', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; browseFrom(focusedIndex ?? 0); } },
     // B＝戻る（ホーム）。入力欄フォーカス中は TextInput が消費するため「カーソル無し時のみ」発火。
     { input: 'b', handler: () => { if (overlayOpen() || editingRef.current) return; router.back(); } },
@@ -534,7 +541,7 @@ export default function SearchScreen() {
         >
           <Ionicons
             name={selectedDeckIds.length > 0 ? 'albums' : 'albums-outline'}
-            size={Math.max(theme.fontSize.xl, rs(20, 22))}
+            size={filterIconSize}
             color={selectedDeckIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
@@ -549,7 +556,7 @@ export default function SearchScreen() {
         >
           <Ionicons
             name={selectedTagIds.length > 0 ? 'pricetag' : 'pricetag-outline'}
-            size={Math.max(theme.fontSize.xl, rs(20, 22))}
+            size={filterIconSize}
             color={selectedTagIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
@@ -567,7 +574,7 @@ export default function SearchScreen() {
         >
           <Ionicons
             name={studiedDate !== null ? 'calendar' : 'calendar-outline'}
-            size={Math.max(theme.fontSize.xl, rs(20, 22))}
+            size={filterIconSize}
             color={studiedDate !== null ? theme.colors.primary : theme.colors.textSecondary}
           />
         </Pressable>
@@ -732,6 +739,30 @@ export default function SearchScreen() {
             accessibilityLabel={t('card.searchResultsInfoLabel')}
           >
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.md, 18)} color={theme.colors.textTertiary} />
+          </Pressable>
+          {/* 先頭から閲覧（右スワイプ／⇧Space の「ここから閲覧」の入口を目に見える形で置く）。
+              ⚠️ 独立した段にしない＝キーボード表示中に結果の見える範囲を削り、0件⇄1件以上で段が出入りして一覧が跳ねる。
+              件数の行は結果があるときだけ出るので、押しても何も起きない状態にならない。 */}
+          <View style={{ flex: 1 }} />
+          <Pressable
+            onPress={() => browseFrom(0)}
+            hitSlop={6}
+            // 形は上部のデッキ/タグ/日付ボタン（filterBtn）と同じ。幅はそのボタン2つ分（間の gap 4 込み）に
+            // 合わせる＝同じ式から出すので窓幅に一緒に追従し、iPad では自然に横長になる。
+            // 右端は件数の行と上部の行の余白（16）が同じなので日付ボタンと縦にそろう。
+            // minWidth＝文字が収まらない言語・文字サイズでは広がって切れない。
+            style={({ pressed }) => [
+              styles.filterBtn,
+              styles.browseBtn,
+              { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary, minWidth: 2 * (filterIconSize + 2 * rs(8, 32) + 2) + 4 },
+              pressed && { opacity: 0.7 },
+            ]}
+            accessibilityRole="button"
+          >
+            <Ionicons name="eye" size={filterIconSize} color={theme.colors.primaryText} />
+            <Text style={[styles.browseBtnText, { color: theme.colors.primaryText, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+              {t('card.searchBrowse')}
+            </Text>
           </Pressable>
         </View>
       )}
@@ -998,6 +1029,8 @@ const styles = StyleSheet.create({
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   resultCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 16, marginTop: 8, marginBottom: 8 },
   resultCount: {},
+  browseBtn: { flexDirection: 'row', gap: 4, paddingHorizontal: 8 },
+  browseBtnText: { fontWeight: '700' },
   resultText: { flex: 1, gap: 2 },
   preview: { fontWeight: '500' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },

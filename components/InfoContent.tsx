@@ -33,6 +33,10 @@ const ICON_TOKENS: Record<string, React.ComponentProps<typeof Ionicons>['name']>
   trash: 'trash-outline',
   pencil: 'pencil-sharp',
   analytics: 'analytics-sharp',
+  // 大きな開始ボタン（説明の見出しに実物と同じアイコンを付ける）：カード一覧の学習開始・統計の重点復習＝play／
+  // 検索結果の閲覧＝eye（右スワイプの「ここから閲覧」と同じ）。
+  play: 'play',
+  eye: 'eye',
   podium: 'podium-outline',
   piechart: 'pie-chart-outline',
   // 統計「学習履歴」の表示モード切替ボタン（学習量／目標達成）。実物と同じアイコン。
@@ -213,7 +217,8 @@ export function InfoContent({ text }: Props) {
           maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}
           style={{ color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '700', marginTop: idx === 0 ? 0 : 8, marginBottom: 2 }}
         >
-          {line}
+          {/* 見出しにもアイコンを置ける（`[{{play}} 学習開始]`＝実物のボタンと同じ形を添える） */}
+          {renderInline(line, theme.colors.primary, theme.fontSize.md, `h${idx}`, theme.colors.border, theme.colors.danger)}
         </Text>
       );
     }

@@ -37,6 +37,9 @@ import { registerAlertRestoreProvider } from "@/lib/alertFocus";
 import { hasBlockContent } from "@/lib/cardPreview";
 import { activeDeckStageId, codeBlockSubStops, pyPageIndexOf, type CodeSubStop } from "@/lib/codeBlockStops";
 import { centeredScrollY } from "@/lib/scrollCenter";
+import { blocksToSpeech } from "@/lib/blocksToSpeech";
+import { scriptLangsForSide, type ScriptLangs } from "@/lib/speech";
+import { useSpeech } from "@/hooks/useSpeech";
 import { EXECUTABLE_LANGUAGES } from "@/lib/code-execution/constants";
 import { isRemoteKeyboardEvent } from "@/lib/keyboardEvent";
 import { deleteKeySpecs, KEY_DELETE, KEY_END, KEY_HOME, KEY_PAGE_DOWN, KEY_PAGE_UP, useKeyCommands } from "@/lib/useKeyCommands";
@@ -134,6 +137,10 @@ interface Props {
   deckHtmlStages?: DeckStage[];
   /** デッキの HTML 画像ライブラリ（043）。CodeBlockItem へ素通しする */
   deckHtmlImages?: DeckImage[];
+  /** 読み上げのデッキ設定（プレビューの読み上げボタン用＝学習画面と同じ言語・同じ OFF の判定） */
+  deckSpeechLangs?: ScriptLangs;
+  deckSpeechLangsBack?: ScriptLangs;
+  deckSpeechDisabled?: boolean;
   onSave: (data: BlockEditorData) => Promise<void>;
   onFrontEmptyChange?: (isEmpty: boolean) => void;
   saving: boolean;
@@ -166,6 +173,9 @@ export function BlockEditor({
   deckSqlStages,
   deckHtmlStages,
   deckHtmlImages,
+  deckSpeechLangs,
+  deckSpeechLangsBack,
+  deckSpeechDisabled,
   onSave,
   onFrontEmptyChange,
   saving: _saving,
@@ -270,6 +280,7 @@ export function BlockEditor({
   const [activeTab, setActiveTab] = useState<Tab>(initialTab ?? "front");
   const [editorMode, setEditorMode] = useState<EditorMode>("edit");
   const isPreview = editorMode === "preview";
+
   const isSortMode = editorMode === "sort";
   const isEditMode = editorMode === "edit";
   const [frontBlocks, setFrontBlocks] = useState<EditBlock[]>(() =>
@@ -367,6 +378,25 @@ export function BlockEditor({
     back: backBlocks,
     memo: memoBlocks,
   };
+
+  // ---- 読み上げ（プレビュー）------------------------------------------------
+  // プレビュー＝学習画面と同じ表示なので、学習画面と同じ読み上げボタンを出す（検索から開いたカードを聞く・
+  // 作りながら読み方を確かめる）。読むのは表示中のタブ。言語はデッキの設定（裏面・メモは裏面の言語）＝学習画面と同じ。
+  // ⚠️ 出す条件も学習画面と同じ（アプリの読み上げ ON・デッキで OFF でない・読む文字がある）＝押しても無音を作らない。
+  // ⚠️ **自動読み上げはしない（タップだけ）**＝プレビューは編集と何度も行き来しタブも頻繁に切り替えるので、
+  //    切り替えのたびに鳴るとうるさい。自動読み上げは学習の流れ（出題・裏返し）に合わせる機能で、
+  //    「プレビュー＝学習画面と同じ表示」の規約は見えるもの（ボタン）をそろえる話＝動きまでは含まない。
+  const speechEnabled = useSettingsStore((s) => s.speechEnabled);
+  const speech = useSpeech(scriptLangsForSide(deckSpeechLangs, deckSpeechLangsBack, activeTab !== "front"));
+  const activeBlocks = blocksByTab[activeTab];
+  const previewSpeechText = useMemo(
+    () => (isPreview ? blocksToSpeech(activeBlocks) : ""),
+    [isPreview, activeBlocks],
+  );
+  const canSpeak = isPreview && speechEnabled && !deckSpeechDisabled && previewSpeechText.trim() !== "";
+  // タブ・モードを変えたら止める（学習画面の「表示が変わったら止める」と同じ）
+  const stopSpeech = speech.stop;
+  useEffect(() => { stopSpeech(); }, [activeTab, editorMode, stopSpeech]);
 
   const setterByTab: Record<Tab, Dispatch<SetStateAction<EditBlock[]>>> = {
     front: setFrontBlocks,
@@ -1805,6 +1835,23 @@ export function BlockEditor({
         );
       })()}
       <ArchivePill archived={archivePill} />
+      {canSpeak && (
+        <Pressable
+          onPress={() => speech.toggle(previewSpeechText)}
+          style={[
+            styles.speakFab,
+            {
+              // 学習画面の読み上げボタンと同じ見た目（再生中は薄い青の下地・アイコンは青）
+              backgroundColor: speech.speaking ? theme.colors.primary + "20" : theme.cardTheme.background,
+              borderColor: theme.cardTheme.border,
+            },
+          ]}
+          hitSlop={8}
+          accessibilityLabel={t("study.speak")}
+        >
+          <Ionicons name={speech.speaking ? "stop" : "volume-high"} size={24} color={theme.colors.primary} />
+        </Pressable>
+      )}
     </KeyboardAvoidingView>
     </InteractivePreviewContext.Provider>
   );
@@ -1912,6 +1959,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   deckName: { fontWeight: "600" },
+  // 学習画面の読み上げボタンと同じ形・同じ左下（底部バーのすぐ上）
+  speakFab: {
+    position: "absolute",
+    left: 20,
+    bottom: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
   focusRing: { position: "absolute", borderWidth: 2 },
   // ＋ブロック追加のボタンにぴったり重ねる（addArea は余白なし・ボタンの角丸 10）
   focusRingCard: { top: 0, bottom: 0, left: 0, right: 0, borderRadius: 10 },

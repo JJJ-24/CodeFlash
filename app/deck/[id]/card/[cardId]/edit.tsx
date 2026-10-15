@@ -235,6 +235,9 @@ export default function EditCardScreen() {
           deckSqlStages={decks.find((d) => d.id === id)?.sqlStages}
           deckHtmlStages={decks.find((d) => d.id === id)?.htmlStages}
           deckHtmlImages={decks.find((d) => d.id === id)?.htmlImages}
+          deckSpeechLangs={decks.find((d) => d.id === id)?.speechLangs}
+          deckSpeechLangsBack={decks.find((d) => d.id === id)?.speechLangsBack}
+          deckSpeechDisabled={decks.find((d) => d.id === id)?.speechDisabled}
           onSave={handleSave}
           onFrontEmptyChange={setFrontEmpty}
           saving={saving}

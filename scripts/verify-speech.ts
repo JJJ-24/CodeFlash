@@ -61,7 +61,7 @@ const { mergeScriptLangs, parseScriptLangs, scriptLangsEqual } = speech;
 const { splitSentencesForPause } = speech;
 const { parseSpeechAutoMode, autoSpeaksSide, SPEECH_AUTO_MODES } = speech;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { blocksToSpeech, stripMarkdown } = require('@/lib/blocksToSpeech');
+const { blocksToSpeech, stripMarkdown, speakParens } = require('@/lib/blocksToSpeech');
 
 // ---- 検証ハーネス ------------------------------------------------------------
 
@@ -471,6 +471,24 @@ eq(speechLanguageLabel('ja-JP', tJa, ['zh-Hans-CN', 'zh-Hant-TW', 'ja-JP']), '�
 eq(speechLanguageLabel('en-IE', tJa, ['en-US', 'en-GB']), '英語（アイルランド）', '一覧に無い現在値も同じ言語として数える');
 eq(speechLanguageLabel('fr-FR', tJa, []), 'フランス語', '一覧が空なら区別する相手がいない');
 eq(speechLanguageLabel('fr-FR', tJa), 'フランス語（フランス）', '一覧を渡さない呼び出しは従来どおり地域つき');
+
+// ---- 半角の括弧（中身で読み分ける） -----------------------------------------------
+
+eq(speakParens('It says (that)〜'), 'It says that 〜', '1語の括弧＝省略してもよい語 → 空白（間なし）');
+eq(speakParens("I'm sure (that) you can."), "I'm sure that you can.", '1語の括弧は文の途中でも空白');
+eq(speakParens("I'll go (if it doesn't rain) tomorrow."), "I'll go, if it doesn't rain, tomorrow.", '2語以上＝補足 → カンマ（間を残す）');
+eq(speakParens('He left (at least twice), then came.'), 'He left, at least twice, then came.', '足したカンマが元のカンマとぶつかったら1つにする');
+eq(speakParens('He left (at last).'), 'He left, at last.', '文末の句点の前にカンマを残さない');
+eq(speakParens('Is it OK (or not)?'), 'Is it OK, or not?', '疑問符の前にもカンマを残さない');
+eq(speakParens('(see below) Then go.'), 'see below, Then go.', '行頭に来たカンマは落とす');
+eq(speakParens('Call map() now.'), 'Call map now.', '空の括弧は読まない');
+eq(speakParens('a ((b c) d) e'), 'a, b c, d, e', '入れ子は内側から外す');
+eq(speakParens('変数(へんすう)を使う'), '変数(へんすう)を使う', '中身が日本語なら括弧はそのまま');
+eq(speakParens('useState(初期値)を返す'), 'useState(初期値)を返す', '英語の後ろでも中身が日本語ならそのまま');
+eq(speakParens('Note (2024) here'), 'Note (2024) here', '英字の無い中身（数字だけ）はそのまま');
+eq(speakParens('全角（そのまま）'), '全角（そのまま）', '全角の括弧は触らない');
+eq(speakParens('line1 (a b)\nline2 (c)'), 'line1, a b,\nline2 c', '行ごとに整える（改行は残す）');
+eq(stripMarkdown('[link](https://x.com) says (that)'), 'link says that', 'リンクの (URL) は先に落ち、残った括弧だけ読み分ける');
 
 // ---- stripMarkdown -----------------------------------------------------------
 

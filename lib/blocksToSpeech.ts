@@ -97,6 +97,8 @@ export function stripMarkdown(md: string): string {
   text = text.replace(/\*([^\n]*?)\*/g, '$1');
   text = text.replace(/~~([^\n]*?)~~/g, '$1');
 
+  text = speakParens(text);
+
   // 空行の連続を1つにまとめ、行頭行末の空白を落とす。
   return text
     .split('\n')
@@ -104,4 +106,58 @@ export function stripMarkdown(md: string): string {
     .filter((l, i, arr) => l !== '' || (i > 0 && arr[i - 1] !== ''))
     .join('\n')
     .trim();
+}
+
+/** 半角の括弧1組（入れ子は内側から1段ずつ）。行をまたがない。 */
+const RE_PARENS = /\(([^()\n]*)\)/;
+/** 英字を含むか（括弧を読み分ける対象） */
+const RE_LATIN_WORD = /[A-Za-z]/;
+/** かな・漢字・ハングルを含むか（含むなら括弧はそのまま＝日本語などの今の読み方を変えない） */
+const RE_NON_LATIN = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
+/** そのまま残す括弧の一時的な置き場（私用領域の文字＝本文には現れない） */
+const KEEP_OPEN = '\ue000';
+const KEEP_CLOSE = '\ue001';
+
+/**
+ * 半角の括弧 `( )` を、**中身で読み分けて**取り除く（読み上げ用）。
+ *
+ * - **中身が1語**（空白を含まない）＝「省略してもよい語」の書き方（`It says (that)〜`）とみなし、
+ *   **空白**にして間を置かずに読む → `It says that〜`
+ * - **中身が2語以上**＝補足・挿入（`I'll go (if it doesn't rain) tomorrow`）とみなし、
+ *   **カンマ**にして前後に短い間を残す → `I'll go, if it doesn't rain, tomorrow`
+ * - **中身が空**（`map()`）＝何も読まない
+ *
+ * 括弧を iOS にそのまま渡すと、**声によっては直前の語の区切りを誤る**
+ * （`It says (that)` が「イッツエス ザット」になる＝括弧の無い `It says that` は正しく読む）。
+ * 変換規則は声ごとに違いアプリからは直せないので、渡す前に括弧を消す。
+ * ⚠️ **全角の（）は触らない**＝日本語の声では問題が起きておらず、今の間を変えないため。
+ * ⚠️ 1語の補足（`Tokyo (Japan)`）も間なしになるのは割り切り（短い補足は間が無くても聞き取れる）。
+ */
+export function speakParens(text: string): string {
+  let out = text;
+  // 入れ子は内側から外す（`RE_PARENS` は括弧を含まない中身にだけ当たる）。回数の上限は暴走よけ。
+  // 残す括弧は私用領域の文字に退避して、外側の括弧の判定から外す（最後に戻す）。
+  for (let i = 0; i < 20 && RE_PARENS.test(out); i++) {
+    out = out.replace(new RegExp(RE_PARENS.source, 'g'), (_, inner: string) => {
+      const body = inner.trim();
+      if (body === '') return ' ';
+      // ⚠️ **中身が英語のときだけ**変える＝`変数(へんすう)` のような日本語の中の半角括弧は、
+      //    今の読み方（問題が起きていない）を変えない。
+      if (!RE_LATIN_WORD.test(body) || RE_NON_LATIN.test(body)) return `${KEEP_OPEN}${inner}${KEEP_CLOSE}`;
+      return /\s/.test(body) ? `, ${body}, ` : ` ${body} `;
+    });
+  }
+  out = out.replaceAll(KEEP_OPEN, '(').replaceAll(KEEP_CLOSE, ')');
+  if (out === text) return text;
+  return out
+    .split('\n')
+    .map((line) => line
+      .replace(/[ \t]+/g, ' ')
+      // 足したカンマが元の句読点とぶつかったら元のほうを残す（`(…),` → `,,` / `(…).` → `,.`）。
+      .replace(/,\s*(?=[,.!?;:])/g, '')
+      .replace(/\s+([,.!?;:])/g, '$1')
+      // 行頭に来たカンマ（`(see below) Then`）は読むものが無い。
+      .replace(/^\s*,\s*/, '')
+      .trim())
+    .join('\n');
 }

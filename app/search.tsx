@@ -227,12 +227,17 @@ export default function SearchScreen() {
   const [searchField, setSearchField] = useState<SearchField>(
     openedDate != null ? 'all' : (lastSearchField as SearchField)
   );
+  // いま一覧に出ている結果を**検索したときの面**。行のプレビュー・編集で開く面はこちらを見る。
+  // ⚠️ `searchField` を直接見ない：面を切り替えた瞬間は結果がまだ前の面の検索のままなので、
+  //    「前の結果のカードの、新しい面」が一瞬並んでから新しい結果に置き換わる（ちらつき）。
+  //    結果と面を同時に入れ替えれば、切り替えは前の一覧 → 新しい一覧の1回だけになる。
+  const [resultsField, setResultsField] = useState<SearchField>(searchField);
 
   // 一覧で見ていた面のまま編集画面を開く（030 Phase 4）。カード編集は `tab` パラメータで
   // 裏面/メモを初期表示できる（学習画面の編集ボタンと同じ経路）。
   // ⚠️ すべて/表面では渡さない＝「すべて」は**どの面にヒットしたのか分からない**ので表面のまま
   //    （面を選んで見ているときだけその面で開く、という規則にする）。
-  const editTab = searchField === 'back' || searchField === 'memo' ? searchField : undefined;
+  const editTab = resultsField === 'back' || resultsField === 'memo' ? resultsField : undefined;
 
   const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(initialSearch.deckIds);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialSearch.tagIds);
@@ -297,6 +302,8 @@ export default function SearchScreen() {
       setSearched(false);
       return;
     }
+    // 追い越し対策：前の検索が後から返ってきても捨てる（面の連打・素早い入力で古い結果が残らないように）
+    let cancelled = false;
     searchCards(
       db,
       query.trim(),
@@ -305,6 +312,7 @@ export default function SearchScreen() {
       selectedTagIds.length > 0 ? selectedTagIds : undefined,
       studiedDate ?? undefined,
     ).then((cards) => {
+      if (cancelled) return;
       // 日付モードではフィールド選択が「**どの面を見るか**」になる（結果行のプレビューもその面）。
       // 裏面/メモを選んだときに、その面が空のカードで「テキストなし」の行が並ばないよう落とす。
       // ⚠️ SQL でやらない：`card_contents` は JSON 文字列なので `[{"type":"text","content":""}]`
@@ -317,8 +325,10 @@ export default function SearchScreen() {
         ? cards.filter((c) => hasBlockContent(searchField === 'back' ? c.backContent : c.memoContent))
         : cards;
       setResults(filtered);
+      setResultsField(searchField);
       setSearched(true);
     });
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, searchField, selectedDeckIds.join(','), selectedTagIds.join(','), studiedDate]);
 
@@ -793,8 +803,8 @@ export default function SearchScreen() {
           renderItem={({ item, index }) => {
             // 選択中のフィールドの面を出す（裏面/メモで検索したとき、何にヒットしたのかが
             // 一覧から読めるように。日付モードでは「昨日学習したカードの裏面を流し読み」になる）。
-            const previewBlocks = searchField === 'back' ? item.backContent
-              : searchField === 'memo' ? item.memoContent
+            const previewBlocks = resultsField === 'back' ? item.backContent
+              : resultsField === 'memo' ? item.memoContent
                 : item.frontContent;
             const preview = getCardPreview(previewBlocks, t('card.imageBlock'));
             const deckName = deckMap[item.deckId]?.name ?? '';

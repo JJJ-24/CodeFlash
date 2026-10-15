@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import markdownItMark from 'markdown-it-mark';
 
 import { BlockItemHeader } from './BlockItemHeader';
+import { CaretProbe } from './CaretProbe';
 import { MarkdownPalette } from './MarkdownPalette';
 import { MarkdownHelpModal } from './MarkdownHelpModal';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
@@ -65,9 +66,15 @@ interface Props {
   onActivateApply?: (apply: (a: MdAction) => void) => void;
   /** 033 Phase5: 編集終了/アンマウント時に登録解除（親側で同一関数のときだけ解除する） */
   onDeactivateApply?: (apply: (a: MdAction) => void) => void;
+  /**
+   * 入力中のカーソルの行が動いたとき、その行の上端・下端（**このブロックの上端から**の距離）を通知する。
+   * BlockEditor が見えていなければスクロールする（入力欄を包む横 ScrollView が iOS の自動スクロールを
+   * 吸収しているため、カーソル追従はアプリ側でやる）。
+   */
+  onCaretMove?: (top: number, bottom: number) => void;
 }
 
-export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onAutoFocused, onActivateApply, onDeactivateApply }: Props) {
+export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onCollapsedDoubleTap, onFocusInput, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onAutoFocused, onActivateApply, onDeactivateApply, onCaretMove }: Props) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [focused, setFocused] = useState(false);
@@ -87,8 +94,15 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   const selectionRef = useRef<Sel>({ start: block.content.length, end: block.content.length });
   const [pendingSelection, setPendingSelection] = useState<Sel | undefined>(undefined);
 
+  // カーソル追従（`CaretProbe`）：カーソルの位置と、行の位置を出すための入力欄・ブロックの寸法
+  const [caretEnd, setCaretEnd] = useState(block.content.length);
+  const inputAreaYRef = useRef(0);
+  const inputAreaHRef = useRef(0);
+  const containerHRef = useRef(0);
+
   const handleSelectionChange = useCallback((e: { nativeEvent: { selection: Sel } }) => {
     selectionRef.current = e.nativeEvent.selection;
+    setCaretEnd(e.nativeEvent.selection.end);
     // プログラムでカーソルを移した直後の onSelectionChange で制御を解放（以後は非制御に戻す）
     setPendingSelection((prev) => (prev ? undefined : prev));
   }, []);
@@ -298,7 +312,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   }), [highlightColors, isPreview, theme.fontSize.md, theme.fontSize.sm]);
 
   return (
-    <View style={[
+    <View onLayout={(e) => { containerHRef.current = e.nativeEvent.layout.height; }} style={[
       styles.container,
       isPreview
         // プレビューは枠線も背景も無いので overflow:hidden 不要。むしろ container の borderRadius:10 で
@@ -351,7 +365,26 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
           ) : null}
         </View>
       ) : (
-        <View style={styles.inputArea}>
+        <View style={styles.inputArea} onLayout={(e) => { inputAreaYRef.current = e.nativeEvent.layout.y; inputAreaHRef.current = e.nativeEvent.layout.height; }}>
+          {focused && onCaretMove ? (
+            <CaretProbe
+              text={block.content}
+              caretEnd={caretEnd}
+              style={[styles.input, { fontSize: theme.fontSize.md, width: width - 32 }]}
+              paddingTop={INPUT_PADDING_V}
+              onCaret={(t, b) => {
+                const top = inputAreaYRef.current + t;
+                const bottom = inputAreaYRef.current + b;
+                // 最後の行にいるときは、入力欄の下（装飾パレット・ブロックの下端）まで見せる＝次に押す
+                // パレットと次のブロックとの境目が見えている。入力欄の下の高さは改行しても変わらないので、
+                // 前回の寸法から求める（入力欄の高さは改行の直後はまだ古い＝それでも「最後の行」と判定される側に倒れる）。
+                const inputBottom = inputAreaYRef.current + inputAreaHRef.current;
+                const onLastLine = bottom >= inputBottom - INPUT_PADDING_V - 2;
+                const below = containerHRef.current - inputBottom;
+                onCaretMove(top, onLastLine && below >= 0 ? bottom + INPUT_PADDING_V + below : bottom);
+              }}
+            />
+          ) : null}
           {focused ? (
             <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ width: width - 32 }}>
               <TextInput
@@ -415,6 +448,9 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
   );
 }
 
+/** 入力欄の上下の余白（カーソル追従の計算でも使う） */
+const INPUT_PADDING_V = 12;
+
 const styles = StyleSheet.create({
   container: {
     borderRadius: 10,
@@ -425,7 +461,7 @@ const styles = StyleSheet.create({
   typeLabel: { fontWeight: '700' },
   input: {
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: INPUT_PADDING_V,
     minHeight: 80,
     lineHeight: 22,
   },

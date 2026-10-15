@@ -50,7 +50,7 @@ import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
 import type { Block, CodeBlock, DeckImage, DeckStage, ImageBlock, TextBlock } from "@/types";
 import type { OutputKeyAction, OutputKeyTrigger } from "@/components/code/ExecutionOutput";
-import { CodeBlockItem } from "./CodeBlockItem";
+import { CODE_PALETTE_ALLOWANCE, CodeBlockItem } from "./CodeBlockItem";
 import { DeckStageChoiceModal } from "./DeckStageChoiceModal";
 import { ImageBlockItem } from "./ImageBlockItem";
 import { TagSelector } from "./TagSelector";
@@ -68,8 +68,6 @@ type EditBlock = Block & { _key: string };
  * ブロックのフォーカス（focusedBlockIndex）とは同時に立たない。デッキ名の行は表示だけなので止めない。
  */
 type FooterFocus = "add" | "tags" | "archive";
-/** 058：コードの編集を始めたとき、本文の欄の下に出る記号パレットのぶん（カーソルの行と一緒に見せる） */
-const CODE_PALETTE_ALLOWANCE = 56;
 
 /**
  * 末尾に確保する余白。最下部のアーカイブ行で ⓘ を開いたとき、説明は行とこの余白のあいだに
@@ -579,8 +577,12 @@ export function BlockEditor({
   }, [currentBlocks.length]);
 
   // フォーカス中ブロックへスクロール
+  // Esc で編集を抜けたときは送らない（`skipFocusScrollRef`）＝いま編集していたブロックは画面にあり、
+  // 長いブロックの下のほうを編集していると上端まで戻されてしまうため。J/K で移ったときだけ送る。
+  const skipFocusScrollRef = useRef(false);
   useEffect(() => {
     if (focusedBlockIndex === null) return;
+    if (skipFocusScrollRef.current) { skipFocusScrollRef.current = false; return; }
     const block = currentBlocks[focusedBlockIndex];
     if (!block) return;
     setTimeout(() => {
@@ -1467,6 +1469,8 @@ export function BlockEditor({
           // 編集を抜けてもブロックフォーカス（青枠）を保持する（学習画面の Esc と同様）。
           // これにより Esc 直後に R で実行・E で再編集ができる（実行ボタンの挙動と一致）。
           const idx = currentBlocksRef.current.findIndex((b) => b._key === key);
+          // 青枠は残すがスクロールはしない（フォーカスが変わるときだけ effect が走るので、変わるときだけ印を立てる）
+          if (idx !== -1 && idx !== focusedBlockIndexRef.current) skipFocusScrollRef.current = true;
           setFocusedBlockIndex(idx !== -1 ? idx : null, idx !== -1 ? editingSub : null);
           Keyboard.dismiss();
           return;
@@ -1663,6 +1667,11 @@ export function BlockEditor({
                   onFocusInput={() => handleBlockTapFocus(block._key)}
                   onActivateApply={(fn) => { activeApplyRef.current = fn; }}
                   onDeactivateApply={(fn) => { if (activeApplyRef.current === fn) activeApplyRef.current = null; }}
+                  onCaretMove={(top, bottom) => {
+                    // 入力中のカーソルの行が隠れたら、必要な分だけスクロールして見せる（見えていれば動かさない）
+                    const pos = blockPositions.current[block._key];
+                    if (pos) scrollRangeIntoView(pos.y + top, pos.y + bottom, 24);
+                  }}
                 />
               )}
               {block.type === "code" && (
@@ -1702,6 +1711,12 @@ export function BlockEditor({
                     }, 300);
                   }}
                   onCodeAreaLayout={(y, h) => { subLayoutsRef.current[`${block._key}:__code`] = { y, h }; }}
+                  onCaretMove={(top, bottom) => {
+                    // 入力中のカーソルの行が隠れたら必要な分だけスクロールする（TextBlockItem と同じ）。
+                    // 最後の行での「下まで見せる」範囲は CodeBlockItem が bottom に含めて渡す
+                    const pos = blockPositions.current[block._key];
+                    if (pos) scrollRangeIntoView(pos.y + top, pos.y + bottom, 24);
+                  }}
                   onOutputLayout={(y) => { subLayoutsRef.current[`${block._key}:__out`] = { y, h: 0 }; }}
                   onFocusInput={(sub) => handleBlockTapFocus(block._key, sub)}
                   focusedSub={focusedBlockIndex === index ? focusedSub : null}

@@ -20,6 +20,7 @@ import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-nati
 import { runOnJS } from 'react-native-reanimated';
 
 import { BlockItemHeader } from './BlockItemHeader';
+import { CaretProbe } from './CaretProbe';
 import { AppSwitch } from '@/components/AppSwitch';
 import { ExecutionOutput, type OutputKeyTrigger } from '@/components/code/ExecutionOutput';
 import { RUN_STOP_BG, RunButtonIcon } from '@/components/code/RunButtonIcon';
@@ -92,9 +93,15 @@ interface Props {
   onOutputLayout?: (y: number) => void;
   /** 058：プレビュー枠のキー操作（V・⇧F・⇧R）。ExecutionOutput へそのまま渡す */
   outputKeyTrigger?: OutputKeyTrigger | null;
+  /**
+   * 本文・土台・初期化SQLの入力中にカーソルの行が動いたとき、見せたい範囲の上端・下端
+   * （**ブロックの上端から**の距離。最後の行では下に続くもの〈記号パレット・次の項目の頭〉まで含める）を通知する。BlockEditor が見えていなければスクロールする（TextBlockItem と同じ。
+   * 入力欄を包む横 ScrollView が iOS の自動スクロールを吸収しているため、追従はアプリ側でやる）。
+   */
+  onCaretMove?: (top: number, bottom: number) => void;
 }
 
-export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages, focusedSub, onSubLayout, initEditTrigger, pyPagesExpanded = false, onPyPagesExpandedChange, pyPageOpenTrigger, langPickerTrigger, onOverlayChange, outputKeyTrigger, onCodeAreaLayout, onOutputLayout }: Props) {
+export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart, onMoveUp, onMoveDown, collapsed, flashTrigger = 0, onFocusInput, autoFocus, isFocused, editTrigger, restoreTrigger, blurTrigger, onEditBlur, onRunButtonPress, runTrigger, onAutoFocused, deckSqlStages, deckHtmlStages, deckHtmlImages, focusedSub, onSubLayout, initEditTrigger, pyPagesExpanded = false, onPyPagesExpandedChange, pyPageOpenTrigger, langPickerTrigger, onOverlayChange, outputKeyTrigger, onCodeAreaLayout, onOutputLayout, onCaretMove }: Props) {
   const { t } = useTranslation();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -128,6 +135,31 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     block.content,
     (text) => onChange({ content: text }),
     codeInputRef,
+  );
+
+  // カーソル追従（`CaretProbe`）：本文と、土台・初期化SQLの欄（同時に入力するのは1つなので位置は共用）
+  const [caretEnd, setCaretEnd] = useState(block.content.length);
+  const [initCaretEnd, setInitCaretEnd] = useState(0);
+  const codeAreaRef = useRef({ y: 0, h: 0 });
+  // 土台・初期化SQLの欄：セクションの位置（ブロックの上端から）と、セクションの中の入力欄の位置・寸法
+  const sectionYRef = useRef<Partial<Record<CodeSubStop, number>>>({});
+  const [initInputBox, setInitInputBox] = useState({ y: 0, w: 0, h: 0 });
+  const initCaret = (sub: 'sqlInit' | 'htmlInit') => (t: number, b: number) => {
+    const base = (sectionYRef.current[sub] ?? 0) + initInputBox.y;
+    // 最後の行にいるときは、欄の下に続く項目の頭まで見せる（iOS の自動スクロールは最下行でぎりぎり止まるため）
+    const onLastLine = b >= initInputBox.h - INIT_INPUT_PADDING_V - 2;
+    onCaretMove?.(base + t, base + b + (onLastLine ? INIT_INPUT_PADDING_V + INIT_BELOW_ALLOWANCE : 0));
+  };
+  const initInputLayout = (e: { nativeEvent: { layout: { y: number; width: number; height: number } } }) => {
+    const { y, width: w, height: h } = e.nativeEvent.layout;
+    setInitInputBox((prev) => (prev.y === y && prev.w === w && prev.h === h ? prev : { y, w, h }));
+  };
+  const handleCodeSelectionChange = useCallback(
+    (e: { nativeEvent: { selection: { start: number; end: number } } }) => {
+      handleSelectionChange(e);
+      setCaretEnd(e.nativeEvent.selection.end);
+    },
+    [handleSelectionChange],
   );
 
   const skipEditBlurRef = useRef(false);
@@ -268,8 +300,10 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // 058：止まり先の青枠と位置（位置はブロックの上端から見た y＝セクションはブロックの直接の子）
   const subRing = (sub: CodeSubStop) =>
     focusedSub === sub ? <View pointerEvents="none" style={[styles.subRing, { borderColor: theme.colors.primary }]} /> : null;
-  const subLayout = (sub: CodeSubStop) => (e: { nativeEvent: { layout: { y: number; height: number } } }) =>
+  const subLayout = (sub: CodeSubStop) => (e: { nativeEvent: { layout: { y: number; height: number } } }) => {
+    sectionYRef.current[sub] = e.nativeEvent.layout.y;
     onSubLayout?.(sub, e.nativeEvent.layout.y, e.nativeEvent.layout.height);
+  };
 
   useEffect(() => {
     if (autoFocus) { setFocused(true); setTimeout(() => codeInputRef.current?.focus(), 50); onAutoFocused?.(); }
@@ -475,7 +509,28 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         </Text>
       ) : (
         <>
-          <View style={styles.codeArea} onLayout={(e) => onCodeAreaLayout?.(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}>
+          <View
+            style={styles.codeArea}
+            onLayout={(e) => {
+              codeAreaRef.current = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height };
+              onCodeAreaLayout?.(e.nativeEvent.layout.y, e.nativeEvent.layout.height);
+            }}
+          >
+            {focused && !isPreview && onCaretMove ? (
+              <CaretProbe
+                text={block.content}
+                caretEnd={caretEnd}
+                style={[styles.codeInput, { fontSize: theme.fontSize.md, width: width - 32 }]}
+                paddingTop={CODE_INPUT_PADDING_V}
+                onCaret={(t, b) => {
+                  const { y, h } = codeAreaRef.current;
+                  // 最後の行にいるときは記号パレットの下まで見せる。カーソルの行から測る＝改行を連打しても
+                  // 古い寸法に引っ張られない（入力欄の高さは改行の直後はまだ古い＝「最後の行」の判定はそれでも成り立つ側に倒れる）
+                  const onLastLine = b >= h - CODE_INPUT_PADDING_V - 2;
+                  onCaretMove(y + t, y + b + (onLastLine ? CODE_INPUT_PADDING_V + CODE_PALETTE_ALLOWANCE : 0));
+                }}
+              />
+            ) : null}
             {/* alwaysBounceHorizontal={false}：収まっているコードの上で横ドラッグを掴まない
                 （学習画面のカード送りスワイプと同じ理由。ここは死角の実害は小さいが挙動を揃える） */}
             {isPreview ? (
@@ -497,7 +552,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                         .replace(/[\u2028\u2029]/g, '\n'),
                     })
                   }
-                  onSelectionChange={handleSelectionChange}
+                  onSelectionChange={handleCodeSelectionChange}
                   multiline
                   scrollEnabled={false}
                   placeholder={t('editor.codePlaceholder')}
@@ -574,9 +629,19 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
               )}
               {showInitSql && (
                 initSqlFocused ? (
-                  <>
+                  <View onLayout={initInputLayout}>
+                    {onCaretMove && initInputBox.w > 0 ? (
+                      <CaretProbe
+                        text={block.sqlInit ?? ''}
+                        caretEnd={initCaretEnd}
+                        style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, width: initInputBox.w }]}
+                        paddingTop={INIT_INPUT_PADDING_V}
+                        onCaret={initCaret('sqlInit')}
+                      />
+                    ) : null}
                     <TextInput
                       ref={initSqlInputRef}
+                      onSelectionChange={(e) => setInitCaretEnd(e.nativeEvent.selection.end)}
                       style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
                       value={block.sqlInit ?? ''}
                       onChangeText={(v) => onChange({ sqlInit: v })}
@@ -592,7 +657,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       spellCheck={false}
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                     />
-                  </>
+                  </View>
                 ) : (
                   // フォーカス外：本文と同じく折り返し・横スクロールなしのハイライト表示（タップで編集）。空欄はタップ可能なプレースホルダ。
                   <GestureDetector gesture={initSqlTapGesture}>
@@ -663,9 +728,19 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
               )}
               {showInitHtml && (
                 initHtmlFocused ? (
-                  <>
+                  <View onLayout={initInputLayout}>
+                    {onCaretMove && initInputBox.w > 0 ? (
+                      <CaretProbe
+                        text={block.htmlInit ?? ''}
+                        caretEnd={initCaretEnd}
+                        style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, width: initInputBox.w }]}
+                        paddingTop={INIT_INPUT_PADDING_V}
+                        onCaret={initCaret('htmlInit')}
+                      />
+                    ) : null}
                     <TextInput
                       ref={initHtmlInputRef}
+                      onSelectionChange={(e) => setInitCaretEnd(e.nativeEvent.selection.end)}
                       style={[styles.initSqlInput, { fontSize: theme.fontSize.sm, color: '#D4D4D4', backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}
                       value={block.htmlInit ?? ''}
                       onChangeText={(v) => onChange({ htmlInit: v })}
@@ -681,7 +756,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                       spellCheck={false}
                       maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
                     />
-                  </>
+                  </View>
                 ) : (
                   // フォーカス外：本文と同じく折り返し・横スクロールなしのハイライト表示（タップで編集）。空欄はタップ可能なプレースホルダ。
                   <GestureDetector gesture={initHtmlTapGesture}>
@@ -870,6 +945,15 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   );
 }
 
+/** 本文の入力欄の上下の余白（カーソル追従の計算でも使う） */
+const CODE_INPUT_PADDING_V = 12;
+/** 土台・初期化SQLの欄の上下の余白（同上） */
+const INIT_INPUT_PADDING_V = 8;
+/** 058：コードの編集中、本文の欄の下に出る記号パレットのぶん（カーソルの行と一緒に見せる） */
+export const CODE_PALETTE_ALLOWANCE = 56;
+/** 土台・初期化SQLの最後の行を入力中に、欄の下に続けて見せるぶん（次の項目の見出しの頭が見える） */
+const INIT_BELOW_ALLOWANCE = 48;
+
 const styles = StyleSheet.create({
   container: {
     borderRadius: 10,
@@ -908,7 +992,7 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   },
   codeInput: {
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: CODE_INPUT_PADDING_V,
     color: '#D4D4D4',
     fontFamily: 'monospace',
     minHeight: 100,
@@ -945,7 +1029,7 @@ langBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 6,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: INIT_INPUT_PADDING_V,
     minHeight: 70,
     lineHeight: 20,
   },

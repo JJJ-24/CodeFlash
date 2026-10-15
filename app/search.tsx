@@ -39,11 +39,13 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
+import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { useDeckStore } from '@/store/decks';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 import { useProStore } from '@/store/pro';
 import { useSearchSessionStore } from '@/store/search';
+import { useReviewStore } from '@/store/reviews';
 import type { Card, Deck } from '@/types';
 
 const SEARCH_SHORTCUT_SECTIONS = [
@@ -57,6 +59,7 @@ const SEARCH_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'P', descKey: 'shortcut.editFocusedItem' },
+    { key: '⇧Space', descKey: 'shortcut.browseFromFocus' },
     { key: 'A', descKey: 'shortcut.toggleCardStats', pro: true },
   ] },
   { titleKey: 'shortcut.catNavigate', items: [
@@ -384,6 +387,19 @@ export default function SearchScreen() {
   // ピッカー/シート表示中は親キーを無効化（Esc は階層処理するので個別に判定）。
   // 情報モーダル（アラート）は表示中にキーを独占する（054）ので含めない。
   const overlayOpen = () => deckPickerVisible || tagPickerVisible || statsCardId !== null || showShortcutsModal || datePickerVisible;
+  // 検索結果を、そのカードから一覧の末尾まで**閲覧モード（記録なし）**で開く（右スワイプ・⇧Space）。
+  // ⚠️ 記録する学習にはしない＝検索結果は複数デッキにまたがるその場の集まりで、並び（更新日・学習日）も
+  //    学習の順番ではない。評価を付けると意図せず FSRS の予定が動く。閲覧なら読み上げ（S・自動）も使え、
+  //    「見つけたカードを聞き流す」に足りる。順序は一覧と同じ（ID はストア経由＝カード一覧・統計と同じ）。
+  const setStudyCardIds = useReviewStore((s) => s.setStudyCardIds);
+  const browseFrom = (idx: number) => {
+    const ids = results.slice(idx).map((c) => c.id);
+    if (ids.length === 0) return;
+    setFocusedIndex(idx);
+    Keyboard.dismiss();
+    setStudyCardIds(ids);
+    router.push({ pathname: '/study/session', params: { order: '1', browse: '1', mode: 'search' } });
+  };
   useKeyCommands([
     { input: 'd', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setDeckPickerVisible(true); } },
     { input: 't', handler: () => { if (overlayOpen()) return; Keyboard.dismiss(); setTagPickerVisible(true); } },
@@ -412,6 +428,8 @@ export default function SearchScreen() {
         if (isPro && focusedIndex !== null && results[focusedIndex]) setStatsCardId(results[focusedIndex].id);
     } },
     { input: 'p', handler: () => { if (overlayOpen()) return; openFocusedCard(); } },
+    // ⇧Space＝フォーカス中のカードから閲覧（カード一覧・統計の「フォーカスから学習」と同じキー）。フォーカス無しは先頭から
+    { input: ' ', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (overlayOpen()) return; browseFrom(focusedIndex ?? 0); } },
     // B＝戻る（ホーム）。入力欄フォーカス中は TextInput が消費するため「カーソル無し時のみ」発火。
     { input: 'b', handler: () => { if (overlayOpen() || editingRef.current) return; router.back(); } },
     // ショートカット一覧（OK のみ）表示中は Return=OK で閉じる。他オーバーレイ表示中は無効。
@@ -750,6 +768,7 @@ export default function SearchScreen() {
             const preview = getCardPreview(previewBlocks, t('card.imageBlock'));
             const deckName = deckMap[item.deckId]?.name ?? '';
             return (
+              <SwipeToDeleteRow onStudyFromHere={() => browseFrom(index)} studyIcon="eye" containerStyle={styles.resultRowSpacing}>
               <Pressable
                 style={[styles.resultItem, { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: focusedIndex === index ? theme.colors.primary : 'transparent' }]}
                 // タップしたカードにフォーカスしてから遷移する（カード一覧と同じ挙動。
@@ -792,6 +811,7 @@ export default function SearchScreen() {
                   </Pressable>
                 </View>
               </Pressable>
+              </SwipeToDeleteRow>
             );
           }}
         />
@@ -968,9 +988,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
     borderRadius: 10,
+    ...SHADOW.subtle,
+  },
+  // 行の外側の余白はスワイプ領域の外に置く（カードに付けるとアクションがカード枠からずれる＝SwipeToDeleteRow の約束）
+  resultRowSpacing: {
     marginHorizontal: 16,
     marginBottom: 8,
-    ...SHADOW.subtle,
   },
   cardActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   resultCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 16, marginTop: 8, marginBottom: 8 },

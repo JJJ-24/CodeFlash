@@ -274,13 +274,22 @@ export default function StudySessionScreen() {
   // 現在のカードが属するデッキの読み上げ言語の上書き（050 Phase 2・051 で表裏に分岐）。
   // ⚠️ 土台と同じく**カードごとに引く**（タグ学習は複数デッキが混ざるため）。
   const currentDeck = currentCard ? decks.find((d) => d.id === currentCard.deckId) : undefined;
-  const sessionTitle = isFocusedReview
-    ? t("study.focusedReviewTitle")
-    : deckId
-      ? (sessionDeck?.name ?? t("study.title"))
-      : tagId
-        ? (tags.find((tg) => tg.id === tagId)?.name ?? t("study.title"))
-        : t("study.title");
+  // ヘッダーは**いつも「いま見ているカードのデッキ」**。セッションの種類（タグ・検索結果・重点復習）は
+  // 進捗の行の右に出す（`sessionLabel`）。タグ学習・重点復習・検索からの閲覧は複数デッキのカードが混ざり、
+  // どのデッキのカードかは一覧を離れると分からないため（カードを送るたびにヘッダーが切り替わる）。
+  // デッキ学習はデッキが1つなので従来どおり（ラベルも出さない＝ヘッダーと同じになる）。
+  const sessionTag = tagId ? tags.find((tg) => tg.id === tagId) : undefined;
+  const sessionLabel: { icon: "pricetag" | "search" | "podium-outline"; color?: string; text: string } | null =
+    isFocusedReview
+      ? { icon: "podium-outline", text: t("study.focusedReviewTitle") }
+      : mode === "search"
+        ? { icon: "search", text: t("study.searchResultsTitle") }
+        : tagId
+          ? { icon: "pricetag", color: sessionTag ? resolveTagColor(sessionTag.color, theme) : undefined, text: sessionTag?.name ?? t("study.title") }
+          : null;
+  const headerDeck = deckId ? sessionDeck : currentDeck;
+  // カードが無い間（読み込み中など）はセッションの種類で代える
+  const sessionTitle = headerDeck?.name ?? sessionLabel?.text ?? t("study.title");
 
   const [statusBarHidden, setStatusBarHidden] = useState(false);
 
@@ -308,6 +317,9 @@ export default function StudySessionScreen() {
   // 読み上げ FAB は下段（表面＝前後送り列／裏面＝評価ボタン列）の**すぐ上**に浮かせる。
   // 下段の高さは表裏で違うので固定値だとズレる＝実測して追従させる。
   const [bottomBarHeight, setBottomBarHeight] = useState(0);
+  // 進捗の行の左端には全画面/リンク/目標のボタンが浮いている（`fullscreenBtnRow`）。セッションの種類の
+  // ラベルをその右から始めるため、浮きボタンの行の幅を測る（リンク・目標の有無で幅が変わる）
+  const [floatRowWidth, setFloatRowWidth] = useState(0);
   // **止め忘れ防止**：カード送り・表裏反転・メモ開閉のたびに個別へ stop() を書くと必ず漏れるので、
   // 「いま読んでいる対象を決める値」が変わったら止める、という1箇所に集約する。
   // ⚠️ その effect は休憩の開始（`onBreak`・052）も見るため、`onBreak` の定義の後＝下の
@@ -1195,11 +1207,11 @@ export default function StudySessionScreen() {
               accessibilityLabel={t("study.browseMode")}
             />
           )}
-          {sessionDeck?.iconName && (
+          {headerDeck?.iconName && (
             <Ionicons
-              name={sessionDeck.iconName as any}
+              name={headerDeck.iconName as any}
               size={20}
-              color={resolveDeckIconColors(sessionDeck.colorHex, theme).color}
+              color={resolveDeckIconColors(headerDeck.colorHex, theme).color}
             />
           )}
           <Text
@@ -2245,11 +2257,11 @@ export default function StudySessionScreen() {
                   accessibilityLabel={t("study.browseMode")}
                 />
               )}
-              {sessionDeck?.iconName && (
+              {headerDeck?.iconName && (
                 <Ionicons
-                  name={sessionDeck.iconName as any}
+                  name={headerDeck.iconName as any}
                   size={20}
-                  color={resolveDeckIconColors(sessionDeck.colorHex, theme).color}
+                  color={resolveDeckIconColors(headerDeck.colorHex, theme).color}
                 />
               )}
               <Text
@@ -2306,7 +2318,21 @@ export default function StudySessionScreen() {
           />
           <View style={{ flex: 1 - progressRatio }} />
         </View>
-        <View style={styles.progressRow}>
+        <View style={[styles.progressRow, sessionLabel && { paddingLeft: Math.max(20, floatRowWidth + 12) }]}>
+          {/* セッションの種類（タグ・検索結果・重点復習）。⚠️ 左端は浮きボタンの帯なので右の並びの先頭に置き、
+              長い名前は「…」で縮める（数字は削らない） */}
+          {sessionLabel && (
+            <View style={styles.sessionLabel}>
+              <Ionicons name={sessionLabel.icon} size={theme.fontSize.sm} color={sessionLabel.color ?? theme.colors.textTertiary} />
+              <Text
+                style={{ color: theme.colors.textTertiary, fontSize: theme.fontSize.sm, flexShrink: 1 }}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.label}
+              >
+                {sessionLabel.text}
+              </Text>
+            </View>
+          )}
           <View
             style={[
               styles.reviewedBadge,
@@ -2448,7 +2474,7 @@ export default function StudySessionScreen() {
         </GestureDetector>
 
         {/* 全画面ボタン＋リンクボタン＋目標バッジ（カードエリア左上） */}
-        <View style={styles.fullscreenBtnRow}>
+        <View style={styles.fullscreenBtnRow} onLayout={(e) => setFloatRowWidth(e.nativeEvent.layout.x + e.nativeEvent.layout.width)}>
           <Pressable
             style={styles.fullscreenBtn}
             onPress={() => {
@@ -2631,6 +2657,12 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 20,
     paddingTop: 6,
+  },
+  sessionLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
   },
   reviewedBadge: {
     borderRadius: 12,

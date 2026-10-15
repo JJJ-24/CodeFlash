@@ -37,10 +37,11 @@ function RightActions({ drag, totalWidth, dangerColor, archiveColor, archived, o
 
 // 右スワイプで左側に出す「ここから学習」ボタン（学習グリーン・▶）。左アクションは
 // drag.value（右スワイプで正）に追従させ、初期は画面外左（translateX=-width）に置く。
-function LeftAction({ drag, width, color, onPress }: {
+function LeftAction({ drag, width, color, icon, onPress }: {
   drag: SharedValue<number>;
   width: number;
   color: string;
+  icon: 'play' | 'eye';
   onPress: () => void;
 }) {
   const animatedStyle = useAnimatedStyle(() => ({
@@ -49,7 +50,7 @@ function LeftAction({ drag, width, color, onPress }: {
   return (
     <Reanimated.View style={[{ width, flexDirection: 'row' }, animatedStyle]}>
       <Pressable onPress={onPress} style={[styles.action, { backgroundColor: color }]} hitSlop={4}>
-        <Ionicons name="play" size={24} color="#fff" />
+        <Ionicons name={icon} size={24} color="#fff" />
       </Pressable>
     </Reanimated.View>
   );
@@ -67,6 +68,11 @@ interface Props {
    * このカードから一覧末尾までを学習する想定。
    */
   onStudyFromHere?: () => void;
+  /**
+   * 「ここから学習」ボタンのアイコン。既定は ▶（学習）。記録しない閲覧で開く画面（検索）は目のアイコン
+   * ＝学習画面のヘッダーで閲覧モードを示すアイコンと同じ形にする。
+   */
+  studyIcon?: 'play' | 'eye';
   /**
    * アーカイブ/解除アクションタップ時。渡したときだけ削除ボタンの左にアーカイブボタンを表示する。
    * 即時トグル想定（archived の真偽でアイコンを切り替える）。
@@ -93,7 +99,7 @@ interface Props {
  * デッキ一覧・カード一覧・タグカード一覧で共用する。
  * 削除は onDelete 内で ConfirmDeleteModal を出して確定する（誤削除防止）。
  */
-export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, onArchive, archived, enabled = true, containerStyle }: Props) {
+export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, studyIcon = 'play', onArchive, archived, enabled = true, containerStyle }: Props) {
   const theme = useTheme();
   if (!enabled) return <View style={containerStyle}>{children}</View>;
   const totalWidth = onArchive ? ACTION_WIDTH * 2 : ACTION_WIDTH;
@@ -116,6 +122,7 @@ export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, onArchiv
           drag={drag}
           width={ACTION_WIDTH}
           color={theme.colors.primary}
+          icon={studyIcon}
           onPress={() => { swipeable.close(); onStudyFromHere(); }}
         />
       ) : undefined}

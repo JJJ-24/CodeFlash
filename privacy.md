@@ -3,9 +3,9 @@ layout: default
 title: Privacy Policy
 ---
 
-# プライバシーポリシー / Privacy Policy / Política de privacidad
+# プライバシーポリシー / Privacy Policy / Política de privacidad / 隐私政策
 
-最終更新日 / Last updated / Última actualización: 2026-10-01
+最終更新日 / Last updated / Última actualización / 最后更新: 2026-10-15
 
 ## 日本語 {#ja}
 
@@ -21,7 +21,7 @@ CodeFlash はユーザーの個人情報を収集しません。
 
 ### iCloud 同期
 
-iCloud 同期機能を有効にすると、デッキ・カード・学習履歴などのデータが Apple の iCloud を通じて、同じ Apple ID でサインインしているデバイス間で同期されます。iCloud に保存されたデータには Apple のプライバシーポリシー（https://www.apple.com/jp/privacy/）が適用されます。iCloud 同期は、iOS の設定 → [お使いの Apple ID] → iCloud → CodeFlash からいつでもオフにできます。
+iCloud 同期機能を有効にすると、デッキ・カード・学習履歴などのデータが Apple の iCloud を通じて、同じ Apple アカウントでサインインしているデバイス間で同期されます。iCloud に保存されたデータには Apple のプライバシーポリシー（https://www.apple.com/jp/privacy/）が適用されます。iCloud 同期は、iOS の設定 → [お使いの Apple アカウント] → iCloud → CodeFlash からいつでもオフにできます。
 
 ### エクスポート・インポート機能
 
@@ -61,11 +61,11 @@ CodeFlash does not collect any personal information.
 
 ### Data Storage
 
-All data including decks, cards, and study history are stored locally on your device by default. If you enable the iCloud sync feature, your data will be stored and synced via Apple's iCloud.
+All data you create in the app, including decks, cards, and study history, is stored locally on your device by default. If you enable the iCloud sync feature, your data will be stored and synced via Apple's iCloud.
 
 ### iCloud Sync
 
-When iCloud sync is enabled, your data including decks, cards, and study history is synced across your Apple devices signed in to the same Apple ID via Apple's iCloud. Data stored in iCloud is subject to Apple's privacy policy (https://www.apple.com/privacy/). You can disable iCloud sync at any time from iOS Settings → [Your Apple ID] → iCloud → CodeFlash.
+When iCloud sync is enabled, your data, including decks, cards, and study history, is synced via Apple's iCloud across your Apple devices signed in to the same Apple Account. Data stored in iCloud is subject to Apple's privacy policy (https://www.apple.com/privacy/). You can disable iCloud sync at any time from iOS Settings → [Your Apple Account] → iCloud → CodeFlash.
 
 ### Export / Import
 
@@ -81,7 +81,7 @@ CodeFlash Pro purchases are processed through Apple's payment system. We use Rev
 
 ### Third Parties
 
-We do not share or sell any user data to third parties. However, please refer to the relevant sections in this policy regarding iCloud sync (Apple), payment processing (RevenueCat), and C++ code execution (Wandbox).
+We do not share user data with third parties or sell it to them. However, please refer to the relevant sections in this policy regarding iCloud sync (Apple), payment processing (RevenueCat), and C++ code execution (Wandbox).
 
 ### Changes to This Policy
 
@@ -107,7 +107,7 @@ De forma predeterminada, todos los datos que cree en la app, como mazos, tarjeta
 
 ### Sincronización con iCloud
 
-Si activa la sincronización con iCloud, los datos como mazos, tarjetas e historial de estudio se sincronizan a través de iCloud de Apple entre los dispositivos en los que haya iniciado sesión con el mismo Apple ID. A los datos guardados en iCloud se les aplica la política de privacidad de Apple (https://www.apple.com/es/privacy/). Puede desactivar la sincronización con iCloud en cualquier momento desde Ajustes de iOS → [su Apple ID] → iCloud → CodeFlash.
+Si activa la sincronización con iCloud, los datos como mazos, tarjetas e historial de estudio se sincronizan a través de iCloud de Apple entre los dispositivos en los que haya iniciado sesión con la misma Cuenta de Apple. A los datos guardados en iCloud se les aplica la política de privacidad de Apple (https://www.apple.com/es/privacy/). Puede desactivar la sincronización con iCloud en cualquier momento desde Ajustes de iOS → [su Cuenta de Apple] → iCloud → CodeFlash.
 
 ### Exportación e importación
 
@@ -119,11 +119,11 @@ Al ejecutar un bloque de código C++, el código fuente introducido se envía a 
 
 ### Compras dentro de la app
 
-Las compras de CodeFlash Pro se procesan mediante el sistema de pagos de Apple. Para gestionar las compras utilizamos RevenueCat (https://www.revenuecat.com), y la información de compra, como la fecha de compra y el ID del producto, se envía a los servidores de RevenueCat. No se incluye ningún dato que permita identificarle personalmente. Puede consultar la política de privacidad de RevenueCat en https://www.revenuecat.com/privacy.
+Las compras de CodeFlash Pro se procesan mediante el sistema de pagos de Apple. Para gestionar las compras utilizamos RevenueCat (https://www.revenuecat.com), y la información de compra, como la fecha de compra y el ID del producto, se envía a los servidores de RevenueCat. No se incluye ningún dato que permita su identificación personal. Puede consultar la política de privacidad de RevenueCat en https://www.revenuecat.com/privacy.
 
 ### Terceros
 
-No compartimos ni vendemos datos de los usuarios a terceros. No obstante, en lo relativo a la sincronización con iCloud (Apple), el procesamiento de pagos (RevenueCat) y la ejecución de código C++ (Wandbox), consulte las secciones correspondientes de esta política.
+No compartimos con terceros ni les vendemos los datos de los usuarios. No obstante, en lo relativo a la sincronización con iCloud (Apple), el procesamiento de pagos (RevenueCat) y la ejecución de código C++ (Wandbox), consulte las secciones correspondientes de esta política.
 
 ### Cambios en esta política
 
@@ -132,3 +132,45 @@ Esta política de privacidad puede actualizarse cuando sea necesario. Si se prod
 ### Contacto
 
 Si tiene alguna pregunta, escríbanos a jjj24.support@gmail.com.
+
+---
+
+## 简体中文 {#zh-Hans}
+
+> 本中文版是为方便阅读而提供的译文。如与日文版有任何不一致之处，以日文版为准。
+
+### 我们收集的信息
+
+CodeFlash 不收集任何用户个人信息。
+
+### 数据存储
+
+您在 App 中创建的牌组、卡片、学习记录等数据，默认仅保存在您的设备上。如果您开启 iCloud 同步功能，数据将通过 Apple 的 iCloud 保存到云端并进行同步。
+
+### iCloud 同步
+
+开启 iCloud 同步功能后，牌组、卡片、学习记录等数据将通过 Apple 的 iCloud，在登录同一 Apple 账户的设备之间同步。保存在 iCloud 中的数据适用 Apple 的隐私政策（https://www.apple.com.cn/privacy/）。您可以随时在 iOS 的“设置”→［您的 Apple 账户］→ iCloud → CodeFlash 中关闭 iCloud 同步。
+
+### 导出与导入功能
+
+数据的导出和导入功能仅在设备内部交换文件，不会通过此功能向外部服务器发送任何数据。
+
+### 代码运行（C++）
+
+运行 C++ 代码块时，您输入的源代码会被发送到 Wandbox API（https://wandbox.org/）。发送的仅为代码块的内容，不包含姓名、电子邮件地址等个人信息。如果您不运行 C++ 代码，则不会与 Wandbox 进行任何通信。
+
+### App 内购买
+
+CodeFlash Pro 的购买通过 Apple 的支付系统进行。我们使用 RevenueCat（https://www.revenuecat.com）处理购买，购买日期、产品 ID 等购买信息会被发送到 RevenueCat 的服务器，其中不包含可识别个人身份的信息。详情请参阅 RevenueCat 的隐私政策（https://www.revenuecat.com/privacy）。
+
+### 向第三方提供数据
+
+我们不会向第三方提供或出售用户数据。但关于 iCloud 同步（Apple）、支付处理（RevenueCat）和 C++ 代码运行（Wandbox），请参阅本政策中的相应部分。
+
+### 本政策的变更
+
+本隐私政策可能会根据需要进行更新。如有变更，我们将更新本页顶部的“最后更新”日期以作通知。建议您定期查阅本政策。
+
+### 联系我们
+
+如有任何疑问，请随时发送邮件至 jjj24.support@gmail.com。

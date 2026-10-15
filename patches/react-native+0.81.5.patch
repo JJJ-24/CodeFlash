@@ -60,3 +60,24 @@ index 59f956d..e50c5b2 100644
    if ([self isHorizontal:_scrollView]) {
      return;
    }
+diff --git a/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm b/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm
+index 216bb23..6e3b4c6 100644
+--- a/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm
++++ b/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm
+@@ -71,10 +71,15 @@ - (void)drawAttributedString:(AttributedString)attributedString
+                        frame:(CGRect)frame
+            drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block
+ {
++  // code_flash-card patch: 描画の高さに 1pt の余裕を足す。寸法は高さ無制限で測るが、描画は画面の画素に
++  // 丸めた枠の高さを上限に渡すため、行の縦位置によっては測った高さより 1pt 未満だけ低くなり、TextKit が
++  // 収まりきらない最後の行を丸ごと描かない（numberOfLines={2} の2行目が空白になる・CJK の代替フォントで
++  // 行の高さに端数が出ると起きやすい）。行数の上限は maximumNumberOfLines が守るので余計な行は出ない。
++  CGSize containerSize = CGSize{frame.size.width, frame.size.height + 1};
+   NSTextStorage *textStorage = [self
+       _textStorageAndLayoutManagerWithAttributesString:[self _nsAttributedStringFromAttributedString:attributedString]
+                                    paragraphAttributes:paragraphAttributes
+-                                                  size:frame.size];
++                                                  size:containerSize];
+   NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
+   NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
+ 

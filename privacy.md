@@ -61,7 +61,7 @@ CodeFlash does not collect any personal information.
 
 ### Data Storage
 
-All data you create in the app, including decks, cards, and study history, is stored locally on your device by default. If you enable the iCloud sync feature, your data will be stored and synced via Apple's iCloud.
+All data you create in the app, including decks, cards, and study history, is stored only on your device by default. If you enable the iCloud sync feature, your data will be stored and synced via Apple's iCloud.
 
 ### iCloud Sync
 
@@ -149,7 +149,7 @@ CodeFlash 不收集任何用户个人信息。
 
 ### iCloud 同步
 
-开启 iCloud 同步功能后，牌组、卡片、学习记录等数据将通过 Apple 的 iCloud，在登录同一 Apple 账户的设备之间同步。保存在 iCloud 中的数据适用 Apple 的隐私政策（https://www.apple.com.cn/privacy/）。您可以随时在 iOS 的“设置”→［您的 Apple 账户］→ iCloud → CodeFlash 中关闭 iCloud 同步。
+开启 iCloud 同步功能后，牌组、卡片、学习记录等数据将通过 Apple 的 iCloud，在登录同一 Apple 账户的设备之间同步。保存在 iCloud 中的数据受 Apple 隐私政策（https://www.apple.com.cn/privacy/）的约束。您可以随时在 iOS 的“设置”→［您的 Apple 账户］→ iCloud → CodeFlash 中关闭 iCloud 同步。
 
 ### 导出与导入功能
 

@@ -3,9 +3,9 @@ layout: default
 title: Terms of Use
 ---
 
-# 利用規約 / Terms of Use / Términos de uso
+# 利用規約 / Terms of Use / Términos de uso / 使用条款
 
-最終更新日 / Last updated / Última actualización: 2026-10-01
+最終更新日 / Last updated / Última actualización / 最后更新: 2026-10-15
 
 ## 日本語 {#ja}
 
@@ -69,13 +69,13 @@ jjj24.support@gmail.com
 
 ## English {#en}
 
-These Terms of Use (the "Terms") govern your use of the smartphone application "CodeFlash" (the "App") provided by the Developer. By using the App, you agree to comply with these Terms.
+These Terms of Use (the "Terms") govern your use of the smartphone application "CodeFlash" (the "App") provided by its developer (the "Developer"). By using the App, you agree to comply with these Terms.
 
 ### Article 1 (Agreement)
 
 By downloading and using the App, you are deemed to have agreed to all provisions of these Terms.
 
-### Article 2 (Eligibility)
+### Article 2 (Conditions of Use)
 
 The App is intended for personal study purposes.
 
@@ -85,7 +85,7 @@ You agree not to engage in any of the following activities when using the App:
 
 - Acts that violate laws or public order and morals
 - Acts that destroy or interfere with the servers or network functions of the App
-- Intentionally exploiting bugs in the App, reverse engineering, modifying, reproducing, or decompiling the App
+- Intentionally exploiting bugs in the App, or reverse engineering, modifying, reproducing, decompiling, or otherwise analyzing the App
 - Acts that cause inconvenience to other users or interfere with the operation of the App
 - Any other acts deemed inappropriate by the Developer
 
@@ -113,7 +113,7 @@ The Developer may change these Terms at any time without prior notice when deeme
 
 ### Article 9 (Governing Law and Jurisdiction)
 
-These Terms shall be governed by and construed in accordance with the laws of Japan. Any disputes arising in connection with the App shall be subject to the exclusive jurisdiction of the court having jurisdiction over the Developer's location as the court of first instance.
+These Terms shall be governed by and construed in accordance with the laws of Japan. Any disputes arising in connection with the App shall be submitted to the exclusive jurisdiction of the court having jurisdiction over the Developer's location as the agreed court of first instance.
 
 ### Article 10 (Governing Language)
 
@@ -133,7 +133,7 @@ Estos Términos de uso (en adelante, los «Términos») establecen las condicion
 
 ### Artículo 1 (Aceptación)
 
-Se considera que usted acepta todas las disposiciones de estos Términos desde el momento en que descarga la App y empieza a usarla.
+Se considera que usted ha aceptado todas las disposiciones de estos Términos desde el momento en que descarga la App y empieza a usarla.
 
 ### Artículo 2 (Condiciones de uso)
 
@@ -144,7 +144,7 @@ La App está pensada para el estudio personal.
 Al usar la App, usted se compromete a no realizar ninguna de las siguientes actividades:
 
 - Actos contrarios a la ley, al orden público o a las buenas costumbres
-- Actos que dañen o interfieran con los servidores o las funciones de red de la App
+- Actos que dañen los servidores o las funciones de red de la App, o que interfieran con ellos
 - Aprovechar intencionadamente errores (bugs) de la App, o realizar ingeniería inversa, modificación, reproducción, descompilación u otro análisis de la App
 - Actos que causen molestias a otros usuarios o que interfieran con el funcionamiento de la App
 - Cualquier otro acto que el Desarrollador considere inapropiado
@@ -159,7 +159,7 @@ Los derechos de autor y demás derechos de propiedad intelectual relacionados co
 
 ### Artículo 6 (Exención de responsabilidad)
 
-1. El Desarrollador no garantiza, ni expresa ni implícitamente, que la App esté libre de defectos de hecho o de derecho (incluidos, entre otros, defectos relativos a la seguridad, la fiabilidad, la exactitud, la integridad, la eficacia, la idoneidad para un fin determinado, errores, bugs o la infracción de derechos).
+1. El Desarrollador no garantiza, ni expresa ni implícitamente, que la App esté libre de defectos de hecho o de derecho (incluidos, entre otros, defectos relativos a la seguridad, la fiabilidad, la exactitud, la integridad, la eficacia, la idoneidad para un fin determinado, la seguridad informática, errores, bugs o la infracción de derechos).
 2. Salvo en caso de dolo o negligencia grave del Desarrollador, el Desarrollador no será responsable de ningún daño que sufra el usuario como consecuencia del uso de la App (incluidos, entre otros, la pérdida de datos o el mal funcionamiento del dispositivo).
 3. El Desarrollador no será responsable de los problemas causados por servicios de terceros con los que se conecta la App (como iCloud de Apple, RevenueCat o Wandbox).
 
@@ -169,11 +169,11 @@ El Desarrollador podrá modificar el contenido de la App, suspenderla o dejar de
 
 ### Artículo 8 (Modificación de los Términos)
 
-El Desarrollador podrá modificar estos Términos en cualquier momento y sin previo aviso cuando lo considere necesario. Los Términos modificados entrarán en vigor desde el momento en que se publiquen en la App o en la página en la que se publican estos Términos.
+El Desarrollador podrá modificar estos Términos en cualquier momento y sin previo aviso cuando lo considere necesario. Los Términos modificados entrarán en vigor desde el momento en que se publiquen en la App o en la página donde se encuentran estos Términos.
 
 ### Artículo 9 (Ley aplicable y jurisdicción)
 
-Estos Términos se rigen e interpretan de acuerdo con las leyes de Japón. Cualquier controversia que surja en relación con la App se someterá, en primera instancia, a la jurisdicción exclusiva del tribunal competente del lugar de residencia del Desarrollador.
+Estos Términos se rigen e interpretan de acuerdo con las leyes de Japón. Para cualquier controversia que surja en relación con la App, las partes acuerdan someterse, en primera instancia, a la jurisdicción exclusiva del tribunal competente del lugar de residencia del Desarrollador.
 
 ### Artículo 10 (Idioma prevalente)
 
@@ -184,3 +184,63 @@ El texto original de estos Términos está redactado en japonés. Las traduccion
 jjj24.support@gmail.com
 
 Fecha de entrada en vigor: 16 de mayo de 2026
+
+---
+
+## 简体中文 {#zh-Hans}
+
+本条款规定了开发者提供的智能手机应用程序“CodeFlash”（以下简称“本应用”）的使用条件。用户应按照本条款使用本应用。
+
+### 第一条（接受条款）
+
+用户在下载本应用并开始使用时，即视为已同意本条款的全部内容。
+
+### 第二条（使用条件）
+
+本应用旨在供个人学习使用。
+
+### 第三条（禁止事项）
+
+用户在使用本应用时，不得从事以下行为：
+
+- 违反法律法规或公序良俗的行为
+- 破坏或妨碍本应用的服务器或网络功能的行为
+- 故意利用本应用的程序错误（Bug）的行为，以及对本应用进行反向工程、篡改、复制、反编译等分析的行为
+- 给其他用户造成困扰或妨碍本应用运营的行为
+- 开发者认为不适当的其他行为
+
+### 第四条（App 内购买）
+
+CodeFlash Pro 是一次性买断的付费功能。购买及退款均遵循 Apple 的政策。开发者无法直接为您的购买办理退款。
+
+### 第五条（知识产权）
+
+与本应用相关的著作权及其他知识产权均归开发者所有。
+
+### 第六条（免责声明）
+
+1. 开发者不以明示或默示的方式保证本应用不存在事实上或法律上的瑕疵（包括但不限于与安全性、可靠性、准确性、完整性、有效性、特定目的适用性、信息安全等相关的缺陷、错误、Bug、侵犯权利等）。
+2. 除因开发者的故意或重大过失所致的情形外，对于因使用本应用而给用户造成的任何损害（如数据丢失、设备故障等），开发者不承担任何责任。
+3. 对于因本应用所连接的第三方服务（Apple 的 iCloud、RevenueCat、Wandbox 等）引起的问题，开发者不承担任何责任。
+
+### 第七条（服务的变更、中断与终止）
+
+开发者可以在不事先通知用户的情况下，变更或中断本应用的内容，或终止提供本应用。对于由此给用户造成的损害，开发者不承担任何责任。
+
+### 第八条（条款的变更）
+
+开发者在认为必要时，可以随时变更本条款，而无需事先通知用户。变更后的条款自其在本应用内或本条款的发布页面上公布之时起生效。
+
+### 第九条（适用法律与管辖法院）
+
+本条款的解释适用日本法律。如因本应用产生争议，双方同意以对开发者所在地有管辖权的法院为第一审专属管辖法院。
+
+### 第十条（正式文本）
+
+本条款以日文为正式文本。本条款的译本仅供参考，如与日文版存在任何不一致之处，以日文版为准。
+
+### 联系我们
+
+jjj24.support@gmail.com
+
+生效日期：2026年5月16日

@@ -563,16 +563,20 @@ export interface SpeakOptions {
  * 読む対象が空なら何もしない（呼び出し側で「読む文字が無いなら操作させない」判定に使える）。
  */
 /**
- * 無音がこれより長く続いたら、本文の前に無音の発話（`WARMUP_VOLUME`）を流して音声出力を起こす。
+ * 読み上げ中でなければ、本文の前に無音の発話（`WARMUP_VOLUME`）を流して音声出力を起こす。
  *
- * iOS は無音が続くと音声出力を休ませ、その直後の発話は**出だしが一瞬つまる**
- * （学習画面で表面を読んでから裏返すと裏面の自動読み上げがつまり、すぐ裏返すとつまらない＝
- * 経路ではなく前回の発話からの間隔で決まることを実機で確認）。
- * ⚠️ `preUtteranceDelay`（話し始める前の待ち時間）では直らなかった＝待っているあいだ iOS は
+ * 2つの症状を同じ手当てで防いでいる（どちらも実機で確認）：
+ * ①**無音が続いた後の出だしのつまり**＝iOS は無音が続くと音声出力を休ませる（学習画面で表面を
+ *   読んでから裏返すと裏面の自動読み上げがつまり、すぐ裏返すとつまらない）。
+ * ②**読み終えた直後に読み直すとプツッと鳴る**（AirPods Pro で明瞭・端末スピーカーではほぼ
+ *   聞こえない）＝読み終えた直後は iOS が出力（Bluetooth の送信）を休ませ始める途中で、そこへ
+ *   本文がぶつかると2語目あたりで雑音が入る。
+ * ⚠️ かつては「無音が2秒を超えたときだけ」挟んでいた＝①しか防げず、2秒以内の読み直しで②が出た。
+ *    **間隔で条件を付けない**（鳴っていなければ毎回挟む）。
+ * ⚠️ `preUtteranceDelay`（話し始める前の待ち時間）では①は直らなかった＝待っているあいだ iOS は
  *    出力を起こさない（パッチで通して実機で確認済み）。実際に音声データを流す必要がある。
- * ⚠️ 起きている間は流さない＝続けて読むときに無音ぶんの遅れを足さない。
+ * ⚠️ 読み上げ中（前の読み上げを打ち切って読み直す）には流さない＝出力は起きている。
  */
-const WARMUP_IDLE_MS = 2000;
 /** 無音の発話の音量。expo-speech は iOS で音量を渡さないので `patches/expo-speech+*.patch` で通している */
 const WARMUP_VOLUME = 0;
 /**
@@ -582,8 +586,6 @@ const WARMUP_VOLUME = 0;
 const WARMUP_RATE = 2;
 /** 読み上げ中か（無音の発話を挟むかの判定用） */
 let speechActive = false;
-/** 最後に読み上げが終わった／止まった時刻。0＝起動後まだ読んでいない */
-let speechIdleSince = 0;
 /**
  * 読み上げの世代。`speakText`・`stopSpeech` のたびに進め、古い世代の完了通知では状態を変えない。
  * ⚠️ iOS の停止通知は非同期で届くので、止めた直後に次を読み始めると、前の発話の停止通知が
@@ -592,7 +594,6 @@ let speechIdleSince = 0;
 let speechGen = 0;
 function markSpeechIdle() {
   speechActive = false;
-  speechIdleSince = Date.now();
 }
 
 export function speakText(text: string, options: SpeakOptions): void {
@@ -615,7 +616,7 @@ export function speakText(text: string, options: SpeakOptions): void {
 
 /**
  * 発話を順にキューへ積む（読み上げ本体・試聴の共通の出口）。
- * 前の再生は止め、無音明けなら本文の前に起こしの発話を挟む（`WARMUP_IDLE_MS` 参照）。
+ * 前の再生は止め、読み上げ中でなければ本文の前に起こしの発話を挟む（`WARMUP_VOLUME` 参照）。
  * ⚠️ **iOS へ発話を積むのはここだけにする**＝経路ごとに `Speech.speak` を書くと、
  *    起こしの発話と「読み上げ中か」の管理が漏れる（試聴の ▶ が実際に漏れて出だしがつまった）。
  */
@@ -626,7 +627,7 @@ function speakQueued(
   onStoppedCb?: () => void,
 ): void {
   if (items.length === 0) return;
-  const needsWarmup = !speechActive && Date.now() - speechIdleSince > WARMUP_IDLE_MS;
+  const needsWarmup = !speechActive;
   Speech.stop();
   speechActive = true;
   const gen = ++speechGen;
@@ -644,7 +645,7 @@ function speakQueued(
     }
   };
   // 本文の先頭1文字を同じ言語・声・音量 0 で読む＝声の読み込みと出力の起動を本文の前に済ませる
-  // （`WARMUP_IDLE_MS` 参照）。完了の通知は付けない（本文の最後の区間が担う）。
+  // （`WARMUP_VOLUME` 参照）。完了の通知は付けない（本文の最後の区間が担う）。
   if (needsWarmup) {
     const first = items[0];
     say({ ...first, text: Array.from(first.text)[0] }, { volume: WARMUP_VOLUME, rate: WARMUP_RATE });
@@ -717,10 +718,9 @@ export function previewVoice(opts: { text: string; language: string; voice?: str
 
 /** 読み上げを止め、キューに残っている区間も破棄する。 */
 export function stopSpeech(): void {
-  // 読み上げ中に止めたときだけ「いま止まった」とする。⚠️ 鳴っていないときに時刻を進めない＝
-  // 学習画面は裏返すたびに止めてから自動で読むので、進めると無音明けでも起こしの発話が挟まらない。
-  // 起こしの発話の最中に止めたときは停止通知を受ける口が無いので、ここで明示的に畳む必要がある。
-  if (speechActive) markSpeechIdle();
+  // 起こしの発話の最中に止めたときは停止通知を受ける口が無いので、ここで明示的に畳む
+  // （畳まないと読み上げ中のまま固まり、以後は起こしの発話が挟まらない）。
+  markSpeechIdle();
   speechGen++;
   Speech.stop();
 }

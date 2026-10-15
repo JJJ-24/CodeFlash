@@ -225,73 +225,54 @@ spoken.length = 0;
 speakText('   ', { rate: 1.0 });
 eq(spoken, [], '空白だけなら1件も積まない');
 
-// ---- 無音明けの出力の起こし（本文の前に音量 0 の発話） -------------------------
+// ---- 出力の起こし（読み上げ中でなければ、本文の前に音量 0 の発話） ---------------
 
 // ここまでの speakText はどれも読み終えていない（スタブは完了を通知しない）＝読み上げ中の扱い。
 warmups.length = 0;
 speakText('React の話', { rate: 1.0 });
 eq(warmups, [], '読み上げ中に続けて読むときは無音の発話を挟まない');
 
+// 読み終えた直後でも挟む＝AirPods で2語目あたりにプツッと鳴るのを防ぐ（間隔で条件を付けない）
 lastOnDone?.();
-warmups.length = 0;
-speakText('React の話', { rate: 1.0 });
-eq(warmups, [], '読み終えてすぐ（2秒以内）なら挟まない');
-
-lastOnDone?.();
-const realNow = Date.now;
-Date.now = () => realNow() + 3000;
 warmups.length = 0;
 spoken.length = 0;
 speakText('React の話', { rate: 1.0 });
-Date.now = realNow;
-eq(warmups, [{ text: 'R', language: 'en-US' }], '無音が2秒を超えたら、先頭1文字を同じ言語・音量 0 で先に読む');
+eq(warmups, [{ text: 'R', language: 'en-US' }], '読み終えた直後でも、先頭1文字を同じ言語・音量 0 で先に読む');
 eq(spoken, [
   { text: 'React', language: 'en-US' },
   { text: 'の話', language: 'ja-JP' },
 ], '本文は従来どおり積む');
 
-// 時刻を進めながら試す（`at(ms)` 以降の Date.now はその時刻）
-const at = (ms: number) => { Date.now = () => realNow() + ms; };
-
-// 学習画面は裏返すたびに stop() してから自動で読む＝鳴っていないときの stop で「いま止まった」にしない
-at(4000);
-lastOnDone?.();            // 4秒の時点で読み終えた
-at(20000);
-stopSpeech();              // 無音のまま 16 秒後に裏返した（止めてから読む）
-warmups.length = 0;
-speakText('React の話', { rate: 1.0 });
-eq(warmups.length, 1, '無音明けに止めてから読んでも、起こしの発話を挟む（鳴っていない stop は時刻を進めない）');
-const staleOnDone = lastOnDone;
-
-// 読み上げの途中で止めた＝出力は起きている → すぐ読むなら挟まない
-at(20500);
+// 学習画面は裏返すたびに stop() してから自動で読む＝止めてから読んでも挟む
+lastOnDone?.();
 stopSpeech();
 warmups.length = 0;
 speakText('React の話', { rate: 1.0 });
-eq(warmups.length, 0, '読み上げ中に止めて2秒以内に読むなら挟まない');
+eq(warmups.length, 1, '鳴っていないときに止めてから読んでも、起こしの発話を挟む');
+const staleOnDone = lastOnDone;
+
+// 読み上げの途中で止めてすぐ読む＝止めた時点で読み上げ中ではなくなる → 挟む
+stopSpeech();
+warmups.length = 0;
+speakText('React の話', { rate: 1.0 });
+eq(warmups.length, 1, '読み上げの途中で止めてから読むときも挟む');
 
 // 古い読み上げの完了通知が、新しい読み上げの最中に届いても「読み終えた」にしない
-at(21000);
 staleOnDone?.();
-at(30000);
 warmups.length = 0;
 speakText('React の話', { rate: 1.0 });
 eq(warmups.length, 0, '古い世代の完了通知では読み終えた扱いにしない');
 
-// 設定画面の試聴（速度・声の ▶）も同じ出口を通る＝無音明けなら起こしの発話を挟む
-at(31000);
+// 設定画面の試聴（速度・声の ▶）も同じ出口を通る
 lastOnDone?.();
-at(40000);
 warmups.length = 0;
 spoken.length = 0;
 previewVoice({ text: 'こんにちは。', language: 'ja-JP', rate: 1.0 });
-eq(warmups, [{ text: 'こ', language: 'ja-JP' }], '試聴も無音明けなら先頭1文字を音量 0 で先に読む');
+eq(warmups, [{ text: 'こ', language: 'ja-JP' }], '試聴も読み上げ中でなければ先頭1文字を音量 0 で先に読む');
 eq(spoken, [{ text: 'こんにちは。', language: 'ja-JP', voice: undefined }], '試聴の本文はそのまま1件');
-at(40500);
 warmups.length = 0;
 previewVoice({ text: 'こんにちは。', language: 'ja-JP', rate: 1.0 });
 eq(warmups.length, 0, '試聴を続けて押したとき（再生中）は挟まない');
-Date.now = realNow;
 
 // ---- 文末の間（ピリオドの後が小文字のとき） ---------------------------------
 

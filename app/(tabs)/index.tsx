@@ -18,7 +18,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 
-import { HeaderTapToTop } from '@/components/HeaderTapToTop';
+import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { CountBadge } from '@/components/CountBadge';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -553,7 +553,7 @@ export default function HomeScreen() {
     <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
-          <Pressable onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
+          <Pressable hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
             <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
           </Pressable>
           <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
@@ -564,7 +564,7 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }} />
           {keyboardShortcutsEnabled && (
             // iPad はタブヘッダー（ナビゲーションヘッダー）の右余白が広く、ホームだけ右寄りに見えるため少し左へ寄せる
-            <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }}>
+            <Pressable hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }}>
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             </Pressable>
           )}

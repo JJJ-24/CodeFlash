@@ -1,6 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
+import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 
@@ -28,7 +29,16 @@ interface Props {
    * 見えるうえ、保存前（まだアーカイブされていない）の予約を確定済みのように見せてしまう。
    */
   archived?: boolean;
+  /**
+   * ヘッダーの何も無いところ（ボタン以外）のタップで先頭へ戻す（components/HeaderTapToTop.tsx）。
+   * iPad は OS の scrollsToTop がヘッダーのボタンの上でも発火し、ショートカット一覧を開くと裏の画面が
+   * 先頭へ戻っていたため、各画面の ScrollView は iPad で scrollsToTop を切り、ここで代わりに受ける。
+   * ショートカット一覧が OFF（onTitlePress 未指定）のときはタイトルのタップも先頭へ。
+   */
+  onHeaderPress?: () => void;
 }
+
+const noop = () => {};
 
 /** タイトル横のアイコン（キーボード・アーカイブ）1つが占める幅（アイコン 20 ＋ gap 4）。 */
 const TITLE_ICON_SPACE = 24;
@@ -45,7 +55,7 @@ const TITLE_ICON_SPACE = 24;
  * 構造: 左＝×（閉じる）／中央＝タイトル（ショートカット有効時はキーボードアイコン付きで
  * タップ→一覧表示）／右＝✓（保存）。
  */
-export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress, showKeyboardIcon, titleMaxWidth, archived }: Props) {
+export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress, showKeyboardIcon, titleMaxWidth, archived, onHeaderPress }: Props) {
   const theme = useTheme();
   const lockedTopInset = useLockedTopInset();
   // ⚠️ タイトルの省略は Text の **maxWidth** で行う（`flexShrink: 1` にしない）。
@@ -57,14 +67,15 @@ export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress,
   const titleTextMaxWidth =
     titleMaxWidth == null ? undefined : Math.max(0, titleMaxWidth - (showKeyboardIcon ? TITLE_ICON_SPACE : 0) - (archived ? TITLE_ICON_SPACE : 0));
   return (
-    <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+    <HeaderTapToTop onPress={onHeaderPress ?? noop} style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
         <Pressable onPress={onClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
           <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
         </Pressable>
         <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }} pointerEvents="box-none">
           <Pressable
-            onPress={onTitlePress}
+            onPress={onTitlePress ?? onHeaderPress}
+            hitSlop={HEADER_BUTTON_HIT_SLOP}
             style={[{ flexDirection: 'row', alignItems: 'center', gap: 4 }, titleMaxWidth != null && { maxWidth: titleMaxWidth }]}
           >
             {archived && (
@@ -87,6 +98,6 @@ export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress,
           <Ionicons name="checkmark-sharp" size={26} color={canSave ? theme.colors.primary : theme.colors.textTertiary} />
         </Pressable>
       </View>
-    </View>
+    </HeaderTapToTop>
   );
 }

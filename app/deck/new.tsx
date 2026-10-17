@@ -306,8 +306,12 @@ export default function NewDeckScreen() {
           canSave={canSave}
           showKeyboardIcon={keyboardShortcutsEnabled}
           onTitlePress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+          onHeaderPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
         />
         <ScrollView
+          // iPad は OS の scrollsToTop がヘッダーのボタンの上でも発火する（ショートカット一覧を開くと先頭へ戻る）ので切り、
+          // ヘッダーの何も無いところのタップ（ModalFormHeader の onHeaderPress）で先頭へ戻す。
+          scrollsToTop={!(Platform as any).isPad}
           ref={scrollRef}
           onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
           onLayout={nav.onViewportLayout}

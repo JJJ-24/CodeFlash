@@ -19,7 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { HeaderTapToTop } from '@/components/HeaderTapToTop';
+import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CountBadge } from '@/components/CountBadge';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
@@ -559,6 +559,7 @@ export default function TagsScreen() {
           <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', pointerEvents: 'box-none' }}>
             <Pressable
               onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : scrollToTopFromHeader}
+              hitSlop={HEADER_BUTTON_HIT_SLOP}
               style={{ maxWidth: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
             >
               <Text style={{ fontWeight: '600', fontSize: theme.fontSize.lg, color: theme.colors.text }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

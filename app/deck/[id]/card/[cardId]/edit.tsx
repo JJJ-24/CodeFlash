@@ -217,6 +217,7 @@ export default function EditCardScreen() {
           canSave={!(saving || frontEmpty)}
           showKeyboardIcon={keyboardShortcutsEnabled}
           onTitlePress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
+          onHeaderPress={() => editorRef.current?.scrollToTop()}
           titleMaxWidth={screenWidth - 112}
           archived={archived}
         />

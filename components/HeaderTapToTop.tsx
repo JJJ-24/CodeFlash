@@ -12,6 +12,13 @@ import type { StyleProp, ViewStyle } from 'react-native';
  * iPhone の OS はステータスバーにしか反応しない。アプリ側で持てば両方で同じ動きになる
  * （iPad は useSafeScrollsToTop が OS の scrollsToTop を切っている）。
  */
+/**
+ * HeaderTapToTop の中に置くボタン（タイトル＋キーボードのアイコン・検索 など）の当たり判定の広げ幅。
+ * アイコンは 20pt 前後と小さく、少し外れたタップが外枠＝先頭へ戻る側に落ちて「押したのに開かない／
+ * 先頭へ戻った」になっていた（iPhone で実際に踏んだ）。上下はヘッダーの行（44pt）いっぱいまで届く量。
+ */
+export const HEADER_BUTTON_HIT_SLOP = { top: 10, bottom: 10, left: 12, right: 12 };
+
 export function HeaderTapToTop({ onPress, style, children }: {
   onPress: () => void;
   style?: StyleProp<ViewStyle>;

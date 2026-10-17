@@ -123,6 +123,8 @@ export interface BlockEditorRef {
   prepareForNavigation: () => void;
   /** 現在のエディタデータを返す（未保存の変更を検知するために使用） */
   getData: () => BlockEditorData;
+  /** 先頭へスクロール（ヘッダーの何も無いところのタップ＝ModalFormHeader の onHeaderPress） */
+  scrollToTop: () => void;
 }
 
 interface Props {
@@ -969,6 +971,7 @@ export function BlockEditor({
       // 034: 旧来は遷移前に hidden input への再フォーカスタイマーを止めていたが、
       // ネイティブキーコマンド化で不要になったため no-op。
       prepareForNavigation: () => {},
+      scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: true }),
       getData: () => ({
         frontBlocks: fromEditBlocks(frontBlocks),
         backBlocks: fromEditBlocks(backBlocks),
@@ -1638,6 +1641,10 @@ export function BlockEditor({
         // "handled" だとその初回タップがキーボード解除まで起こして編集を失うため "always" を採用。
         // 詳細と失敗策は memory: project_editor-first-tap-toolbar-swallow。
         keyboardShouldPersistTaps="always"
+        // iPad は OS がヘッダーのタップ（ショートカット一覧のアイコンの上でも）に scrollsToTop を発火させ、
+        // 一覧を開くと裏の編集画面が先頭へ戻るので切る。先頭へ戻すのはヘッダーの何も無いところのタップ
+        // （ModalFormHeader の onHeaderPress → scrollToTop）。iPhone の OS はステータスバーにしか反応しない。
+        scrollsToTop={!(Platform as any).isPad}
         scrollEventThrottle={100}
         onScroll={(e) => {
           scrollPosRef.current[activeTabRef.current] =

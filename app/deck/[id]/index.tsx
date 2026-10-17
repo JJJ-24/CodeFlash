@@ -43,7 +43,7 @@ import {
   getTodayReviewedCardIdsByDeckId,
   getTodayReviewedCountByDeck,
 } from '@/lib/database/reviews';
-import { HeaderTapToTop } from '@/components/HeaderTapToTop';
+import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
@@ -1248,6 +1248,7 @@ export default function DeckDetailScreen() {
           <View style={{ position: 'absolute', left: 0, right: 0, paddingHorizontal: 56, alignItems: 'center', pointerEvents: 'box-none' }}>
             <Pressable
               onPress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : scrollToTopFromHeader}
+              hitSlop={HEADER_BUTTON_HIT_SLOP}
               style={{ maxWidth: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
             >
               {!selectionMode && deck?.iconName && (

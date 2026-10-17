@@ -73,11 +73,12 @@ export default function DisplaySettingsScreen() {
   const shortcutSections = [
     { title: t('shortcut.catFocus'), items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-    ] },
-    { title: t('shortcut.catAction'), items: [
       { key: '1–3', descKey: 'shortcut.settingValueChoice' },
       { key: 'Return', descKey: 'shortcut.settingActivate' },
       { key: 'Space', descKey: 'shortcut.settingToggle' },
+    ] },
+    { title: t('shortcut.catNavigate'), items: [
+      { key: 'B', descKey: 'shortcut.back' },
     ] },
     { title: t('shortcut.catLanguagePicker'), items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
@@ -85,7 +86,6 @@ export default function DisplaySettingsScreen() {
     ] },
     { title: t('shortcut.catOther'), items: [
       { key: 'ESC', descKey: 'shortcut.esc' },
-      { key: 'B', descKey: 'shortcut.back' },
       { key: '?', descKey: 'shortcut.showShortcuts' },
     ] },
   ];

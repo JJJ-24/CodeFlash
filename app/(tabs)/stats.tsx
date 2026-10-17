@@ -90,7 +90,7 @@ const STATS_SHORTCUT_GROUPS = [
     titleKey: 'shortcut.sectionGradeRanking',
     sections: [
       { titleKey: 'shortcut.catDisplay', items: [
-        { key: '6-9',   descKey: 'shortcut.switchGrade', pro: true },
+        { key: '6–9',   descKey: 'shortcut.switchGrade', pro: true },
         { key: 'D',     descKey: 'shortcut.selectDeck', pro: true },
         { key: 'T',     descKey: 'shortcut.selectPeriod', pro: true },
         { key: 'M',     descKey: 'shortcut.toggleCountTime', pro: true },

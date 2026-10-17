@@ -266,14 +266,15 @@ export default function StudySettingsScreen() {
     { title: t('shortcut.catFocus'), items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: '⇧J / ⇧K', descKey: 'shortcut.sectionNextPrev' },
-    ] },
-    { title: t('shortcut.catAction'), items: [
       { key: 'Return', descKey: 'shortcut.settingActivateStudy' },
       { key: 'Space', descKey: 'shortcut.settingToggle' },
       { key: '1–3', descKey: 'shortcut.settingValueChoice' },
       { key: 'H / L', descKey: 'shortcut.settingValueNumber' },
       { key: '⇧H / ⇧L', descKey: 'shortcut.settingValueBig' },
       { key: 'S', descKey: 'shortcut.settingPreview' },
+    ] },
+    { title: t('shortcut.catNavigate'), items: [
+      { key: 'B', descKey: 'shortcut.back' },
     ] },
     { title: t('shortcut.catPickerList'), items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
@@ -282,7 +283,6 @@ export default function StudySettingsScreen() {
     ] },
     { title: t('shortcut.catOther'), items: [
       { key: 'ESC', descKey: 'shortcut.esc' },
-      { key: 'B', descKey: 'shortcut.back' },
       { key: '?', descKey: 'shortcut.showShortcuts' },
     ] },
   ];

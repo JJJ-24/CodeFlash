@@ -421,14 +421,14 @@ export default function SyncSettingsScreen() {
     { title: t("shortcut.catFocus"), items: [
       { key: "J / K", descKey: "shortcut.focusNextPrev" },
       { key: "⇧J / ⇧K", descKey: "shortcut.sectionNextPrev" },
-    ] },
-    { title: t("shortcut.catAction"), items: [
       { key: "Return", descKey: "shortcut.settingActivateSync" },
       { key: "Space", descKey: "shortcut.settingToggle" },
     ] },
+    { title: t("shortcut.catNavigate"), items: [
+      { key: "B", descKey: "shortcut.back" },
+    ] },
     { title: t("shortcut.catOther"), items: [
       { key: "ESC", descKey: "shortcut.esc" },
-      { key: "B", descKey: "shortcut.back" },
       { key: "?", descKey: "shortcut.showShortcuts" },
     ] },
   ];

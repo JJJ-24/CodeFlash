@@ -628,11 +628,14 @@ export default function NotificationSettingsScreen() {
   const shortcutSections = [
     { title: t('shortcut.catFocus'), items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-    ] },
-    { title: t('shortcut.catAction'), items: [
       { key: 'Return', descKey: 'shortcut.settingActivateNotif' },
       { key: 'Space', descKey: 'shortcut.settingToggle' },
       { key: 'Delete', descKey: 'shortcut.deleteFocused' },
+    ] },
+    { title: t('shortcut.catNavigate'), items: [
+      { key: 'B', descKey: 'shortcut.back' },
+    ] },
+    { title: t('shortcut.catAction'), items: [
       { key: 'N', descKey: 'shortcut.addSchedule' },
     ] },
     { title: t('shortcut.catScheduleSheet'), items: [
@@ -646,7 +649,6 @@ export default function NotificationSettingsScreen() {
     ] },
     { title: t('shortcut.catOther'), items: [
       { key: 'ESC', descKey: 'shortcut.esc' },
-      { key: 'B', descKey: 'shortcut.back' },
       { key: '?', descKey: 'shortcut.showShortcuts' },
     ] },
   ];

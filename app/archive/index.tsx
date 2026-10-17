@@ -48,11 +48,11 @@ const ARCHIVE_SHORTCUT_SECTIONS = [
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K',  descKey: 'shortcut.focusNextPrev' },
+    { key: 'Return', descKey: 'shortcut.openFocused' },
     { key: 'E',      descKey: 'shortcut.unarchiveFocused' },
     { key: 'Delete', descKey: 'shortcut.deleteFocused' },
   ] },
   { titleKey: 'shortcut.catNavigate', items: [
-    { key: 'Return', descKey: 'shortcut.openFocused' },
     { key: 'B',      descKey: 'shortcut.back' },
   ] },
   { titleKey: 'shortcut.catOther', items: [

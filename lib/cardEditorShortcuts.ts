@@ -5,7 +5,7 @@
 // 059：Python の「デッキのページ」は一覧が開いているときだけ中の URL にも止まり、Return／V でページを見る画面を開く。
 export const CARD_EDITOR_SECTIONS_EDIT = [
   { titleKey: 'shortcut.catDisplay', items: [
-    { key: '1-3',      descKey: 'shortcut.tabSelectCard' },
+    { key: '1–3',      descKey: 'shortcut.tabSelectCard' },
     { key: 'U / D',    descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
         { key: 'M / ⇧M',        descKey: 'shortcut.cycleMode' },
@@ -21,11 +21,11 @@ export const CARD_EDITOR_SECTIONS_EDIT = [
     { key: '⇧F',       descKey: 'shortcut.previewExpand', pro: true },
     { key: '⇧R',       descKey: 'shortcut.previewReset' },
     { key: 'Delete',   descKey: 'shortcut.delete' },
-    { key: 'A',        descKey: 'shortcut.toggleAddMenu' },
     { key: 'Return',   descKey: 'shortcut.editorReturn' },
     { key: 'Space',    descKey: 'shortcut.editorSpace' },
   ] },
   { titleKey: 'shortcut.catAction', items: [
+    { key: 'A',        descKey: 'shortcut.toggleAddMenu' },
     { key: '⇧E',       descKey: 'shortcut.archiveToggle' },
     { key: 'S',        descKey: 'shortcut.save' },
     { key: 'C',        descKey: 'shortcut.duplicateCard' },
@@ -72,7 +72,7 @@ export const CARD_EDITOR_SECTIONS_SORT = [
 
 export const CARD_EDITOR_SECTIONS_PREVIEW = [
   { titleKey: 'shortcut.catDisplay', items: [
-    { key: '1-3',      descKey: 'shortcut.tabSelectCard' },
+    { key: '1–3',      descKey: 'shortcut.tabSelectCard' },
     { key: 'U / D',    descKey: 'shortcut.scrollUpDown' },
     { key: '⇧U / ⇧D', descKey: 'shortcut.scrollTopBottom' },
     { key: 'M / ⇧M',        descKey: 'shortcut.cycleMode' },

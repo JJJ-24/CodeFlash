@@ -19,6 +19,8 @@ import { useSyncStore, type SyncErrorCode } from "@/store/sync";
 import { useTagStore } from "@/store/tags";
 
 import {
+  clearLocalDownloads,
+  deleteDownloadedDb,
   deleteRemoteDb,
   deleteRemoteImageFile,
   downloadDb,
@@ -610,6 +612,14 @@ export async function syncNow(
       // checkpoint の失敗は無視（VACUUM INTO の結果が正となる）
     }
 
+    // 前回までに残ったダウンロードの一時コピーを掃除（修正前のバージョンが溜めた分・
+    // タイムアウト後に裏で書き上がった分）。best-effort＝失敗しても同期は続ける。
+    try {
+      await clearLocalDownloads();
+    } catch {
+      // 掃除の失敗で同期本体は止めない
+    }
+
     // 強制アップロードはリモート状態を参照しないので getRemoteStatus を呼ばない
     // （内部の meta ダウンロードが iCloud 実体化待ちで固まり得るため、ハングの起点を回避）。
     // それ以外はタイムアウト付きでリモート状態を取得する。
@@ -753,22 +763,29 @@ export async function syncNow(
         downloadDb(dbFilename),
         transferTimeout,
       );
-      // 自動同期では転送中にブロックしなかったため、ダウンロード中にユーザーがローカルを
-      // 編集した可能性がある。その場合は上書きせず中断し、編集を守る
-      // （次回同期で localChanged=true となり LWW で解決される）。
-      if (opts?.silent) {
-        const after = await getLocalChangeInfo(db);
-        if (after.version !== localInfo.version) {
-          sync.setStatus("idle");
-          return "aborted";
+      // 一時コピーは入れ替えの材料に読むだけ＝成功・失敗・中断のどれでも最後に消す
+      // （入れ替えはトランザクションで巻き戻るので、失敗してもコピーは要らない）。
+      try {
+        // 自動同期では転送中にブロックしなかったため、ダウンロード中にユーザーがローカルを
+        // 編集した可能性がある。その場合は上書きせず中断し、編集を守る
+        // （次回同期で localChanged=true となり LWW で解決される）。
+        if (opts?.silent) {
+          const after = await getLocalChangeInfo(db);
+          if (after.version !== localInfo.version) {
+            sync.setStatus("idle");
+            return "aborted";
+          }
+          // ここからローカルを書き換える＝この瞬間だけ短時間ブロックする。
+          sync.setStatus("syncing", "download");
         }
-        // ここからローカルを書き換える＝この瞬間だけ短時間ブロックする。
-        sync.setStatus("syncing", "download");
+        // 上書きでローカルの内容が失われる直前に、現在のローカルを端末へ退避（安全網）
+        await backupLocalDbBeforeReplace(db);
+        // 接続を開いたまま ATTACH でデータを入れ替える（ツリー再マウントを伴わずクラッシュしない）
+        await replaceLocalDataFromDownloadedDb(db, downloadedPath);
+      } finally {
+        // DETACH 済み（replaceLocalDataFromDownloadedDb の finally）なので消してよい
+        await deleteDownloadedDb(dbFilename).catch(() => {});
       }
-      // 上書きでローカルの内容が失われる直前に、現在のローカルを端末へ退避（安全網）
-      await backupLocalDbBeforeReplace(db);
-      // 接続を開いたまま ATTACH でデータを入れ替える（ツリー再マウントを伴わずクラッシュしない）
-      await replaceLocalDataFromDownloadedDb(db, downloadedPath);
       await refreshGlobalCaches(db);
       // ローカルデータが入れ替わったことを画面に通知（集計をローカル state に持つ学習タブ等が、
       // フォーカス中でもこれを購読して再読込し、ダウンロード完了直後に内容を反映する）。

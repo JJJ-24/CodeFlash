@@ -153,5 +153,11 @@ export async function exportDatabase(db: SQLiteDatabase, includeImages = false):
   const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const fileUri = FileSystem.cacheDirectory + `CF_${timestamp}.json`;
   await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' });
-  await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'CodeFlash バックアップ' });
+  try {
+    await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'CodeFlash バックアップ' });
+  } finally {
+    // 共有シートを閉じた時点で保存・送信先へのコピーは済んでいる。残すと画像込みで
+    // 1回数十MBずつキャッシュに溜まる（実機で5個・91MB）。
+    await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+  }
 }

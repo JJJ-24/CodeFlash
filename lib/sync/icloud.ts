@@ -295,6 +295,27 @@ export async function downloadDb(dbFilename: string): Promise<string> {
   return downloadedPath;
 }
 
+/**
+ * ダウンロードした DB の一時コピーを消す（入れ替えの成功・失敗・中断のどれでも呼ぶ）。
+ * 版ごとにファイル名が違うので、消さないと取り込むたびに DB 1個ぶんずつ溜まり続けていた
+ * （実機で iPad 約 1GB・199 個）。入れ替えはトランザクションで、失敗時の巻き戻しにも
+ * 再試行にもこのコピーは使わない（再試行は downloadDb が取り直す）＝消して失うものは無い。
+ * ⚠️ ATTACH 中に消さない＝replaceLocalDataFromDownloadedDb の DETACH の後で呼ぶ。
+ */
+export async function deleteDownloadedDb(dbFilename: string): Promise<void> {
+  await FileSystem.deleteAsync(`${LOCAL_DOWNLOAD_DIR}/${dbFilename}`, { idempotent: true });
+}
+
+/**
+ * ダウンロード用の一時フォルダを丸ごと空にする（同期の開始時に呼ぶ）。
+ * deleteDownloadedDb だけでは拾えないもの＝修正前のバージョンが溜めた分と、
+ * タイムアウトで同期を諦めた後に裏で書き上がったコピーを回収する。
+ * 同期中以外はこのフォルダを誰も読まないので、全部消してよい。
+ */
+export async function clearLocalDownloads(): Promise<void> {
+  await FileSystem.deleteAsync(LOCAL_DOWNLOAD_DIR, { idempotent: true });
+}
+
 /** リモート Database/ 内の全 DB 版（旧形式・残骸含む）を削除する。 */
 export async function deleteRemoteDb(): Promise<void> {
   if (!defaultICloudContainerPath) return;

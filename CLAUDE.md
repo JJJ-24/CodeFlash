@@ -77,6 +77,7 @@ lib/
 ├── InteractivePreviewContext.ts  # 041・全画面インタラクティブプレビューの開閉を子（CodeRunnerView/CodeBlockItem）から親（session/BlockEditor）のキー抑止へ伝える Context（setOpen のみ）
 ├── export.ts            # 全テーブル（review_logs 含む）を JSON エクスポート
 ├── import.ts            # merge（同じ id は上書き＝INSERT OR REPLACE。card_tags と各ログだけ IGNORE）/ replace（全削除後挿入）の2モードでインポート
+├── cacheCleanup.ts      # 起動時に Library/Caches の使い終わりを消す（書き出しの JSON/TSV・DocumentPicker/ImagePicker の一時コピー）。WebKit と画像表示のキャッシュには触れない
 ├── tsv.ts               # TSV形式でのデッキエクスポート/インポート（Anki互換）。コードブロックは ```言語 フェンスで往復（blocksToText ⇄ textToBlocks）
 ├── notifications.ts     # requestPermission()・scheduleDailyReminder()・updateBadgeCount(db)
 ├── fsrs.ts              # FSRS スケジューリングエンジン（ts-fsrs ライブラリのラッパー）。実際の次回復習日計算はここ

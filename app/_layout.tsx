@@ -10,6 +10,7 @@ import { ActivityIndicator, Animated, AppState, StyleSheet, Text, useColorScheme
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { cleanupCacheLeftovers } from '@/lib/cacheCleanup';
 import { migrateDbIfNeeded } from '@/lib/database/schema';
 import { cleanupOrphanImages } from '@/lib/image';
 import { installNavigationGuard } from '@/lib/navigationGuard';
@@ -52,6 +53,8 @@ function RootStack() {
     listLocalBackups()
       .then((backups) => cleanupOrphanImages(db, backups.map((b) => b.path)))
       .catch(() => {});
+    // 書き出しと、ファイル選択・写真選択が残した一時ファイルを消す（lib/cacheCleanup.ts）。
+    cleanupCacheLeftovers().catch(() => {});
     restoreProStatus().catch(() => {});
     // 休憩中（039）にアプリを終了した場合の残留通知を掃除する。タイマーはインメモリなので
     // 再起動で idle に戻るが、OS の予約通知は残り得る（cold start は AppState change が

@@ -271,7 +271,12 @@ export async function exportDeckToTsv(db: SQLiteDatabase, deckId: string, deckNa
   const filename = `${deckName.replace(/[/\\:*?"<>|]/g, '_')}_${timestamp}.tsv`;
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, tsv, { encoding: 'utf8' });
-  await Sharing.shareAsync(uri, { mimeType: 'text/tab-separated-values', dialogTitle: filename });
+  try {
+    await Sharing.shareAsync(uri, { mimeType: 'text/tab-separated-values', dialogTitle: filename });
+  } finally {
+    // 共有シートを閉じた時点でコピーは済んでいる（残った分は起動時の cleanupCacheLeftovers が回収）
+    await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+  }
 }
 
 export async function pickTsvFile(): Promise<string | null> {

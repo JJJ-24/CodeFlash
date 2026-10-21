@@ -138,7 +138,10 @@ export function StudyTimer({
     </Animated.View>
   );
 
-  // 休憩中は「☕ 休憩中」ピルをフェードなしで常時表示（startHint と同じスタイルを再利用）
+  // 休憩中は「☕ 休憩中」ピルをフェードなしで常時表示（startHint と同じスタイルを再利用）。
+  // 休憩が2回以上ある設定（3セット以上）だけ「(i/n)」を付ける＝休憩中の cycleIndex は直前に終えた
+  // セットの番号＝何回目の休憩か。分母は休憩の回数（セット数−1）。1回だけなら (1/1) で情報が無い。
+  const breakCount = cycleCount - 1;
   const breakPill = breakMode && (
     <View style={styles.startHintWrap} pointerEvents="none">
       <View style={[styles.startHint, { backgroundColor: theme.colors.surface, borderColor: theme.colors.textTertiary + '4D' }]}>
@@ -147,7 +150,9 @@ export function StudyTimer({
           style={{ fontSize: theme.fontSize.sm, fontWeight: '600', color: theme.colors.textSecondary }}
           allowFontScaling={false}
         >
-          {t('study.breakPill')}
+          {breakCount >= 2
+            ? t('study.breakPillCycle', { i: cycleIndex, n: breakCount })
+            : t('study.breakPill')}
         </Text>
       </View>
     </View>

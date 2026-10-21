@@ -171,6 +171,7 @@
     "timerStop": "Stop Timer",
     "timerSkipBreak": "Skip Break",
     "breakPill": "On break",
+    "breakPillCycle": "On break ({{i}}/{{n}})",
     "timerPomodoroEndTitle": "Pomodoro Complete",
     "timerPomodoroEndMessage": "You've completed all study cycles."
   },

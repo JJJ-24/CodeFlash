@@ -161,6 +161,7 @@
     "timerStop": "タイマーを終了",
     "timerSkipBreak": "休憩をスキップ",
     "breakPill": "休憩中",
+    "breakPillCycle": "休憩中 ({{i}}/{{n}})",
     "timerPomodoroEndTitle": "ポモドーロ完了",
     "timerPomodoroEndMessage": "設定した学習サイクルがすべて完了しました。"
   },

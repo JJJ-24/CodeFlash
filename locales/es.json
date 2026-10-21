@@ -172,6 +172,7 @@
     "timerStop": "Detener el temporizador",
     "timerSkipBreak": "Saltar el descanso",
     "breakPill": "En descanso",
+    "breakPillCycle": "En descanso ({{i}}/{{n}})",
     "timerPomodoroEndTitle": "Pomodoro completado",
     "timerPomodoroEndMessage": "Has completado todos los ciclos de estudio."
   },

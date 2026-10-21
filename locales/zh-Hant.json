@@ -161,6 +161,7 @@
     "timerStop": "結束計時",
     "timerSkipBreak": "跳過休息",
     "breakPill": "休息中",
+    "breakPillCycle": "休息中 ({{i}}/{{n}})",
     "timerPomodoroEndTitle": "番茄鐘完成",
     "timerPomodoroEndMessage": "設定的學習循環已全部完成。"
   },

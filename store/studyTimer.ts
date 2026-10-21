@@ -69,10 +69,15 @@ interface StudyTimerState {
   reset: () => void;
   /** 計時が止まった時刻を記録する（tick の cleanup から呼ぶ）。 */
   noteActive: (now: number) => void;
-  /** 学習→休憩へ遷移（phase は 'running' のまま）。now は呼び手（hook）が渡す＝ストアは純粋な set のみ */
-  startBreak: (now: number) => void;
-  /** 休憩→次の学習インターバルへ遷移。休憩スキップもこれを共用する */
-  startNextStudy: () => void;
+  /** 学習→休憩へ遷移（phase は 'running' のまま）。`at` は**学習が終わるはずだった時刻**で、
+   *  休憩はそこから数える（呼び手＝hook が渡す＝ストアは純粋な set のみ）。
+   *  ⚠️ 「今」を渡さない＝遅れて気づいた切り替え（裏で止めそこねた計時が翌日に発火した等）で
+   *  lastActiveAt が今日になり、`isTimerStale` が日またぎを見逃す＝前日の続きから動く。 */
+  startBreak: (at: number) => void;
+  /** 休憩→次の学習インターバルへ遷移。休憩スキップもこれを共用する。
+   *  `at` は lastActiveAt に記録する時刻＝自然に終わったときは**休憩の終了予定時刻**（startBreak と同じ理由）、
+   *  スキップは今（省略時）。 */
+  startNextStudy: (at?: number) => void;
 }
 
 export const useStudyTimerStore = create<StudyTimerState>((set) => ({
@@ -144,17 +149,17 @@ export const useStudyTimerStore = create<StudyTimerState>((set) => ({
       breakStartedAt: null,
       lastActiveAt: null,
     }),
-  startBreak: (now) =>
+  startBreak: (at) =>
     set((s) => ({
       mode: 'break',
       totalMs: s.breakTotalMs,
       remainingMs: s.breakTotalMs,
-      breakEndAt: now + s.breakTotalMs,
-      breakStartedAt: now,
+      breakEndAt: at + s.breakTotalMs,
+      breakStartedAt: at,
       epoch: s.epoch + 1,
-      lastActiveAt: now,
+      lastActiveAt: at,
     })),
-  startNextStudy: () =>
+  startNextStudy: (at) =>
     set((s) => ({
       mode: 'study',
       cycleIndex: s.cycleIndex + 1,
@@ -163,7 +168,7 @@ export const useStudyTimerStore = create<StudyTimerState>((set) => ({
       breakEndAt: null,
       breakStartedAt: null,
       epoch: s.epoch + 1,
-      lastActiveAt: Date.now(),
+      lastActiveAt: at ?? Date.now(),
     })),
 }));
 

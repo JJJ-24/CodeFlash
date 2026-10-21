@@ -87,7 +87,9 @@ export function useStudyTimer({
     if (reason === 'stop') {
       st.stop();
     } else {
-      st.startNextStudy();
+      // 自然に終わったときは終了予定時刻を記録する（翌日に気づいた場合も前日の時刻のまま＝
+      // 日またぎの判定でリセットされる）。スキップは今。
+      st.startNextStudy(reason === 'natural' ? (st.breakEndAt ?? now) : now);
       breakCallbacksRef.current.onBreakEnd?.();
     }
     cancelBreakEndNotification();
@@ -170,14 +172,18 @@ export function useStudyTimer({
           // 0分の休憩を実際に発生させるとグレーアウトが一瞬点滅・ハプティクスが2連発するため回避。
           // 通知・グレーアウト・実休憩時間はゼロ＝発生しない。切替の合図（ハプティクス1回）と
           // 「⏱ N分 (i/n)」ヒント（startNextStudy の epoch+1 で発火）だけ出す。
-          st.startNextStudy();
+          st.startNextStudy(endAt);
           breakCallbacksRef.current.onBreakStart?.();
         } else {
           // 中間インターバル終了→休憩へ自動移行（epoch が進むためこの effect は再起動され、
           // studyCounting=false で tick は止まる）。休憩終了通知はこの時点で予約する
           // （画面離脱・バックグラウンドを問わず届く。フォアグラウンド表示の可否は
           // lib/notifications の setNotificationHandler が判定）。
-          st.startBreak(Date.now());
+          // ⚠️ 休憩は「今」ではなく学習の終了予定時刻（endAt）から数える＝裏へ回したときに止めそこねた
+          // 計時が翌日に発火しても、前日に終わった休憩として扱われ日またぎの判定でリセットされる
+          // （「今」から数えると休憩中＝継続の扱いになり、前日の続きから動いていた）。
+          // 画面を見たまま切り替わる通常時は endAt ≒ 今（tick の間隔ぶん）なので体感は変わらない。
+          st.startBreak(endAt);
           const after = useStudyTimerStore.getState();
           if (after.breakEndAt != null) scheduleBreakEndNotification(after.breakEndAt).catch(() => {});
           breakCallbacksRef.current.onBreakStart?.();

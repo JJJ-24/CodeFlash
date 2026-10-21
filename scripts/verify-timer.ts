@@ -111,6 +111,76 @@ async function relaunch() {
   await tick();
   check('保存が消えている', Object.keys(store).length === 0);
 
+  // 8〜10：アプリを裏に置いたまま（プロセスが生きたまま）翌日に開いた場合。
+  // 判定は hook（useStudyTimer）が前面復帰時に isTimerStale で行うので、hook が呼ぶのと同じ順で
+  // ストアを操作し、判定の入力になる状態が正しく残るかを見る（hook は RN 依存で動かせない）。
+  const { isTimerStale } = require('@/store/studyTimer');
+
+  console.log('8) 休憩中に裏へ回し、翌朝に開く（復帰の瞬間に休憩の終了を検出して2回目へ進む）');
+  fakeNow = new Date('2026-08-28T23:00:00+09:00').getTime();
+  ({ useStudyTimerStore } = await relaunch());
+  useStudyTimerStore.getState().start(10 * 60_000, { cycleCount: 2, breakMs: 3 * 60_000 });
+  fakeNow += 10 * 60_000;
+  useStudyTimerStore.getState().startBreak(Date.now() - 100);   // tick が学習の終わり（endAt）で休憩へ
+  fakeNow = new Date('2026-08-29T09:00:00+09:00').getTime();
+  {
+    const st = useStudyTimerStore.getState();
+    st.startNextStudy(st.breakEndAt);                            // endBreak('natural') と同じ
+  }
+  check('2回目へ進んでも日またぎと判定される（リセット）',
+    isTimerStale(useStudyTimerStore.getState(), Date.now()));
+  useStudyTimerStore.getState().startNextStudy();                // 修正前＝「今」を記録していた
+  check('（対照）「今」を記録すると見逃す＝修正前の不具合',
+    !isTimerStale(useStudyTimerStore.getState(), Date.now()));
+
+  console.log('9) 学習の途中（5分経過）で裏へ回し、翌朝に開く');
+  fakeNow = new Date('2026-08-29T23:00:00+09:00').getTime();
+  ({ useStudyTimerStore } = await relaunch());
+  useStudyTimerStore.getState().start(10 * 60_000, { cycleCount: 2, breakMs: 3 * 60_000 });
+  fakeNow += 5 * 60_000;
+  useStudyTimerStore.getState().setRemainingMs(5 * 60_000);
+  useStudyTimerStore.getState().noteActive(Date.now());          // 計時の停止（cleanup）
+  fakeNow = new Date('2026-08-30T09:00:00+09:00').getTime();
+  check('途中の残り時間から始まらない（リセット）',
+    isTimerStale(useStudyTimerStore.getState(), Date.now()));
+
+  console.log('10) 計時を止めそこねたまま翌朝に開く（溜まった tick が「10分過ぎた」と休憩へ進める）');
+  fakeNow = new Date('2026-08-30T23:00:00+09:00').getTime();
+  ({ useStudyTimerStore } = await relaunch());
+  useStudyTimerStore.getState().start(10 * 60_000, { cycleCount: 2, breakMs: 3 * 60_000 });
+  const endAt = Date.now() + 10 * 60_000;                        // tick が持つ終了予定時刻
+  fakeNow = new Date('2026-08-31T09:00:00+09:00').getTime();
+  useStudyTimerStore.getState().startBreak(endAt);
+  check('前日に終わった休憩として扱われる（リセット）',
+    isTimerStale(useStudyTimerStore.getState(), Date.now()));
+  useStudyTimerStore.getState().startBreak(Date.now());          // 修正前＝「今」から休憩を数えていた
+  check('（対照）「今」から数えると休憩中＝継続になる＝修正前の不具合',
+    !isTimerStale(useStudyTimerStore.getState(), Date.now()));
+  // 休憩0分（連続セット）は休憩へ入らず次へ直行する＝同じく終了予定時刻を記録する
+  fakeNow = new Date('2026-08-31T23:00:00+09:00').getTime();
+  ({ useStudyTimerStore } = await relaunch());
+  useStudyTimerStore.getState().start(10 * 60_000, { cycleCount: 2, breakMs: 0 });
+  const endAt0 = Date.now() + 10 * 60_000;
+  fakeNow = new Date('2026-09-01T09:00:00+09:00').getTime();
+  useStudyTimerStore.getState().startNextStudy(endAt0);
+  check('休憩0分でも同じくリセット', isTimerStale(useStudyTimerStore.getState(), Date.now()));
+
+  console.log('11) 画面を見たまま普通に切り替わる（同じ日）');
+  fakeNow = new Date('2026-09-01T20:00:00+09:00').getTime();
+  ({ useStudyTimerStore } = await relaunch());
+  useStudyTimerStore.getState().start(10 * 60_000, { cycleCount: 2, breakMs: 3 * 60_000 });
+  fakeNow += 10 * 60_000;
+  useStudyTimerStore.getState().startBreak(Date.now() - 100);
+  check('休憩は3分（終了予定時刻から数える）',
+    useStudyTimerStore.getState().breakEndAt === Date.now() - 100 + 3 * 60_000);
+  fakeNow += 3 * 60_000;
+  {
+    const st = useStudyTimerStore.getState();
+    st.startNextStudy(st.breakEndAt);
+  }
+  check('2回目へ進み、継続と判定される',
+    useStudyTimerStore.getState().cycleIndex === 2 && !isTimerStale(useStudyTimerStore.getState(), Date.now()));
+
   Date.now = realNow;
   console.log(`\n===== ${pass} passed, ${fail} failed =====`);
   process.exit(fail ? 1 : 0);

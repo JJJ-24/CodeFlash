@@ -428,7 +428,7 @@ export default function SyncSettingsScreen() {
       { key: "B", descKey: "shortcut.back" },
     ] },
     { title: t("shortcut.catOther"), items: [
-      { key: "ESC", descKey: "shortcut.esc" },
+      { key: "ESC", descKey: "shortcut.escCloseWindow" },
       { key: "?", descKey: "shortcut.showShortcuts" },
     ] },
   ];

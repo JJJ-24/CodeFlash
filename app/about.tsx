@@ -30,7 +30,8 @@ export default function AboutScreen() {
   const goBack = () => router.back();
   useKeyCommands([
     { input: 'b', handler: goBack },
-    { input: KeyCommand.keyInputEscape, handler: goBack },
+    // ⌘W も同じ（登録しないと iPadOS がアプリの窓を閉じる）
+    { input: KeyCommand.keyInputEscape, handler: goBack, closeWindowAlias: true },
   ]);
 
   async function openExternalLink(url: string) {

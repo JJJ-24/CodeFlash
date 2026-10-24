@@ -639,7 +639,7 @@ export default function NotificationSettingsScreen() {
       { key: 'N', descKey: 'shortcut.addSchedule' },
     ] },
     { title: t('shortcut.catOther'), items: [
-      { key: 'ESC', descKey: 'shortcut.esc' },
+      { key: 'ESC', descKey: 'shortcut.escCloseWindow' },
       { key: '?', descKey: 'shortcut.showShortcuts' },
     ] },
   ];

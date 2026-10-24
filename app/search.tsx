@@ -72,7 +72,7 @@ const SEARCH_SHORTCUT_SECTIONS = [
     { key: 'Delete', descKey: 'shortcut.clearSearch' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
-    { key: 'ESC', descKey: 'shortcut.esc' },
+    { key: 'ESC', descKey: 'shortcut.escCloseWindow' },
     { key: '?', descKey: 'shortcut.showShortcuts' },
   ] },
 ];
@@ -465,20 +465,29 @@ export default function SearchScreen() {
     ]) as { input: string; handler: () => void }[]),
     {
       input: KeyCommand.keyInputEscape,
-      handler: () => {
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-        if (statsCardId !== null) { setStatsCardId(null); return; }
-        // カレンダーは自前のキーを持たない（ネイティブの UI なのでキー操作を渡せない）ため
-        // ここで閉じる。デッキ/タグのピッカーは自分で Esc を処理するので委ねる。
-        if (datePickerVisible) { setDatePickerVisible(false); return; }
-        if (deckPickerVisible || tagPickerVisible) return; // ピッカー側の Esc に委ねる
-        if (editingRef.current) { Keyboard.dismiss(); return; }
-        router.back();
-      },
+      handler: () => handleEscRef.current(),
     },
   // ピッカー/ショートカット一覧 表示中はメインのキー登録を外す（同じ j/k/Space 等の二重登録による
   // 多重発火・モーダル側スクロールキーとの相互削除を防ぐ。一覧の Esc 閉じは ShortcutsModal が担当）。
   ], !deckPickerVisible && !tagPickerVisible && !showShortcutsModal);
+
+  // ⌘W = Esc と同じ（いちばん上を閉じる→戻る）。上のフックはピッカー表示中に外れるので、常時有効の別フックに置く
+  //（外れている間は iPadOS がアプリの窓を閉じてしまう）。ピッカー表示中は handleEsc がピッカーへ委ねる＝何もしない。
+  useKeyCommands([
+    { input: 'w', modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleEscRef.current() },
+  ]);
+  function handleEsc() {
+    if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+    if (statsCardId !== null) { setStatsCardId(null); return; }
+    // カレンダーは自前のキーを持たない（ネイティブの UI なのでキー操作を渡せない）ため
+    // ここで閉じる。デッキ/タグのピッカーは自分で Esc を処理するので委ねる。
+    if (datePickerVisible) { setDatePickerVisible(false); return; }
+    if (deckPickerVisible || tagPickerVisible) return; // ピッカー側の Esc に委ねる
+    if (editingRef.current) { Keyboard.dismiss(); return; }
+    router.back();
+  }
+  const handleEscRef = useRef(handleEsc);
+  handleEscRef.current = handleEsc;
 
   // ?（Shift+/）= ショートカット一覧を開く／表示中は Esc・Return で閉じる（共通フック）。
   // 入力欄フォーカス中は TextInput が消費するため発火しない。

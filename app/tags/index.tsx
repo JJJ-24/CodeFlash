@@ -61,7 +61,7 @@ const TAG_SHORTCUT_SECTIONS = [
     { key: 'B',      descKey: 'shortcut.back' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
-    { key: 'ESC',    descKey: 'shortcut.esc' },
+    { key: 'ESC',    descKey: 'shortcut.escCloseWindow' },
     { key: '?',      descKey: 'shortcut.showShortcuts' },
   ] },
 ];
@@ -89,7 +89,7 @@ const TAG_SELECTION_SHORTCUT_SECTIONS = [
     { key: 'Delete', descKey: 'shortcut.deleteSelected' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
-    { key: 'ESC',   descKey: 'shortcut.esc' },
+    { key: 'ESC',   descKey: 'shortcut.escCloseWindow' },
     { key: '?',     descKey: 'shortcut.showShortcuts' },
   ] },
 ];
@@ -465,6 +465,8 @@ export default function TagsScreen() {
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
+      // ⌘W も同じ（いちばん上を閉じる→戻る。登録しないと iPadOS がアプリの窓を閉じる）
+      closeWindowAlias: true,
       handler: () => {
         if (showColorPicker) { setShowColorPicker(false); return; }
         if (showShortcutsModal) { setShowShortcutsModal(false); return; }

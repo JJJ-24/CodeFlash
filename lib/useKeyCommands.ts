@@ -13,6 +13,12 @@ export type KeyCommandSpec = {
   modifierFlags?: number;
   /** 発火時の処理。 */
   handler: () => void;
+  /**
+   * Esc（修飾なし）の spec で true にすると ⌘W にも同じ処理を割り当てる（push で開く画面＝「いちばん上を閉じる→戻る」）。
+   * ⚠️ ⌘W をアプリが受け取らない画面では iPadOS の「ウィンドウを閉じる」が動きアプリの窓が閉じるので、
+   * 立てる Esc は**常時有効のフック**に置く（オーバーレイ表示中に外れるフックだとその間だけ窓が閉じる）。
+   */
+  closeWindowAlias?: boolean;
 };
 
 // 登録時の定数と、イベント payload の input（特殊キーは小文字の特殊文字列で返る）を
@@ -47,6 +53,7 @@ function expandEscapeAliases(specs: KeyCommandSpec[]): KeyCommandSpec[] {
       out.push({ input: KEY_ESC_ALT_BACKTICK, handler: s.handler });
       if (KEY_MOD_COMMAND) {
         out.push({ input: '.', modifierFlags: KEY_MOD_COMMAND, handler: s.handler });
+        if (s.closeWindowAlias) out.push({ input: 'w', modifierFlags: KEY_MOD_COMMAND, handler: s.handler });
       }
     }
   }

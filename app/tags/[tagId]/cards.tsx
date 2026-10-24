@@ -59,7 +59,7 @@ const TAG_CARDS_SHORTCUT_SECTIONS = [
     { key: 'B',     descKey: 'shortcut.back' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
-    { key: 'ESC',   descKey: 'shortcut.esc' },
+    { key: 'ESC',   descKey: 'shortcut.escCloseWindow' },
     { key: '?',     descKey: 'shortcut.showShortcuts' },
   ] },
 ];
@@ -78,7 +78,7 @@ const TAG_CARDS_SELECTION_SHORTCUT_SECTIONS = [
     { key: 'E',     descKey: 'shortcut.archiveSelected' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
-    { key: 'ESC',   descKey: 'shortcut.esc' },
+    { key: 'ESC',   descKey: 'shortcut.escCloseWindow' },
     { key: '?',     descKey: 'shortcut.showShortcuts' },
   ] },
 ];
@@ -375,6 +375,8 @@ export default function TagCardsScreen() {
   useKeyCommands([
     {
       input: KeyCommand.keyInputEscape,
+      // ⌘W も同じ（いちばん上を閉じる→戻る。登録しないと iPadOS がアプリの窓を閉じる）
+      closeWindowAlias: true,
       handler: () => {
         if (showDeckPicker) return; // DeckPickerModal 側の Esc が閉じる
         if (statsCardId !== null) { setStatsCardId(null); return; }

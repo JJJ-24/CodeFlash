@@ -1150,32 +1150,33 @@ export default function StudySessionScreen() {
   ], !showLinksModal && !showTagSheet && !showShortcutsModal && !interactivePreviewOpen);
 
   // ESC は編集中も含めて常時有効（編集解除／モーダル閉じ／全画面解除／戻る）。
+  // ⌘W も同じ順に閉じるが、最後は戻る（セッションを黙って抜ける）代わりに Q＝終了の確認（閲覧は即戻る）。
+  //   登録しないと iPadOS がアプリの窓を閉じるので、Esc と同じ常時フックに置く。
   useKeyCommands([
-    {
-      input: KeyCommand.keyInputEscape,
-      handler: () => {
-        // 041: 全画面インタラクティブプレビュー表示中はモーダル自身の Esc が閉じる担当。
-        // ここで処理を進めると最後に safeBack() が走り学習セッションごと抜けてしまうため最優先で return。
-        if (interactivePreviewOpen) return;
-        if (completed) { safeBack(); return; }
-        // コードブロック編集中は編集解除を最優先（実入力欄を blur すると onEditBlur が走る）。
-        if (codeEditingRef.current) { Keyboard.dismiss(); return; }
-        if (showLinksModal) { setShowLinksModal(false); return; }
-        // タグシートの Esc はシート側が担当（新規作成中=キャンセル/それ以外=閉じる の二段階のため）
-        if (showTagSheet) return;
-        if (showShortcutsModal) { setShowShortcutsModal(false); return; }
-        if (isFullscreen) {
-          setCodeEditing(false);
-          setIsFullscreen(false);
-          cbs.setEditTrigger(0);
-          cbs.setRunTrigger(0);
-          cbs.setRunKeepEditTrigger(0);
-          return;
-        }
-        safeBack();
-      },
-    },
+    { input: KeyCommand.keyInputEscape, handler: () => closeTopmost(safeBack) },
+    { input: 'w', modifierFlags: KeyCommand.keyModifierCommand, handler: () => closeTopmost(() => handleKeyPress("q")) },
   ]);
+  function closeTopmost(onNothingOpen: () => void) {
+    // 041: 全画面インタラクティブプレビュー表示中はモーダル自身の Esc が閉じる担当。
+    // ここで処理を進めると最後に safeBack() が走り学習セッションごと抜けてしまうため最優先で return。
+    if (interactivePreviewOpen) return;
+    if (completed) { safeBack(); return; }
+    // コードブロック編集中は編集解除を最優先（実入力欄を blur すると onEditBlur が走る）。
+    if (codeEditingRef.current) { Keyboard.dismiss(); return; }
+    if (showLinksModal) { setShowLinksModal(false); return; }
+    // タグシートの Esc はシート側が担当（新規作成中=キャンセル/それ以外=閉じる の二段階のため）
+    if (showTagSheet) return;
+    if (showShortcutsModal) { setShowShortcutsModal(false); return; }
+    if (isFullscreen) {
+      setCodeEditing(false);
+      setIsFullscreen(false);
+      cbs.setEditTrigger(0);
+      cbs.setRunTrigger(0);
+      cbs.setRunKeepEditTrigger(0);
+      return;
+    }
+    onNothingOpen();
+  }
 
   // ショートカット一覧（OK のみ）表示中の Return = 閉じる（main は同時に解除されているので Return 重複しない）。
   // 終了確認（アラート）の Return は ConfirmModal 自身が受け持つ（054）。

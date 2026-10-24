@@ -101,6 +101,16 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
     { input: 'b', handler: () => { if (!showShortcuts) handleBack(); } },
     { input: KeyCommand.keyInputEscape, handler: handleEsc },
   ], !suspendKeys);
+  // ⌘W = 戻る（B と同じ。ショートカット一覧が開いていれば先に閉じる）。上のフックは suspendKeys で外れるので
+  // 常時有効の別フックに置く（外れている間は iPadOS がアプリの窓を閉じてしまう）。子のモーダルが自前のキーを
+  // 持っている間（suspendKeys）は何もしない＝そのモーダルの Esc / ✕ で閉じる。
+  useKeyCommands([
+    { input: 'w', modifierFlags: KeyCommand.keyModifierCommand, handler: () => {
+      if (suspendKeys) return;
+      if (showShortcuts) { setShowShortcuts(false); return; }
+      handleBack();
+    } },
+  ]);
 
   // 053：項目の操作。キー操作に対応した画面（shortcuts を渡した画面）だけ登録する。
   // 矢印は iPad でも登録する（詳細画面に文字の入力欄が無い＝CLAUDE.md「編集が無い画面は両方で登録」）。

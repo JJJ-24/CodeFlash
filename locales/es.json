@@ -1099,7 +1099,7 @@
     "editorReturn": "Abrir / Confirmar",
     "scrollToTags": "Ir a las etiquetas (foco)",
     "save": "Guardar\n[⌘S] también",
-    "close": "Cerrar",
+    "close": "Cerrar\n[⌘W] también",
     "focusDeckName": "Cursor (nombre del mazo)",
     "focusDeckDesc": "Cursor (descripción)",
     "focusTagName": "Cursor (nombre de la etiqueta)",

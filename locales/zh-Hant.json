@@ -1054,7 +1054,7 @@
     "editorReturn": "開啟 / 確定",
     "scrollToTags": "移到標籤欄（焦點）",
     "save": "儲存\n也可用 [⌘S]",
-    "close": "關閉",
+    "close": "關閉\n也可用 [⌘W]",
     "focusDeckName": "游標（牌組名稱）",
     "focusDeckDesc": "游標（說明）",
     "focusTagName": "游標（標籤名稱）",

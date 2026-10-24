@@ -113,6 +113,8 @@ export default function EditTagScreen() {
     { input: 's', handler: () => { if (canSave) handleSave(); } },
     { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (canSave) handleSave(); } },
     { input: 'x', handler: () => { handleClose(); } },
+    // ⌘W = 閉じる（X と同じ。ウィンドウを閉じる OS 慣習＝CLAUDE.md「迷ったら⌘」）
+    { input: 'w', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { handleClose(); } },
     ...deleteKeySpecs(() => { confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
     // 055：J/K＝項目のフォーカス・Return＝入力を始める・`,`/`.`＝色を送る（デッキ画面とそろえて H/L・矢印は使わない）

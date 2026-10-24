@@ -1097,7 +1097,7 @@
     "editorReturn": "Open / Confirm",
     "scrollToTags": "Go to tags (focus)",
     "save": "Save\n[⌘S] also works",
-    "close": "Close",
+    "close": "Close\n[⌘W] also works",
     "focusDeckName": "Focus deck name",
     "focusDeckDesc": "Focus description",
     "focusTagName": "Focus tag name",

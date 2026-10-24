@@ -1054,7 +1054,7 @@
     "editorReturn": "開く / 決定",
     "scrollToTags": "タグ欄へ移動（フォーカス）",
     "save": "保存\n[⌘S]でも可",
-    "close": "閉じる",
+    "close": "閉じる\n[⌘W]でも可",
     "focusDeckName": "カーソル（デッキ名）",
     "focusDeckDesc": "カーソル（説明）",
     "focusTagName": "カーソル（タグ名）",

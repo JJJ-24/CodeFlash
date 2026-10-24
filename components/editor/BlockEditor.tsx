@@ -1353,6 +1353,9 @@ export function BlockEditor({
     //   優先される（テキスト入力が先に消費）ため、非編集時のみカード複製として発火する。
     { input: "s", modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleKeyPress("s") },
     { input: "c", modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleKeyPress("c") },
+    // ⌘W = 閉じる（X と同じ＝未保存なら破棄の確認。ウィンドウを閉じる OS 慣習。CLAUDE.md「迷ったら⌘」）。
+    //   iPadOS 26 の「ウィンドウを閉じる」より先にアプリが受け取る（実機確認済み）。⌘W を登録していない画面ではアプリの窓が閉じる
+    { input: "w", modifierFlags: KeyCommand.keyModifierCommand, handler: () => handleKeyPress("x") },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: "/", modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (keyboardShortcutsEnabled) onShowShortcuts?.(); } },
     // E = フォーカスあり→そのブロックを編集 / フォーカスなし→アーカイブ切替。

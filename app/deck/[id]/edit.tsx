@@ -192,6 +192,8 @@ export default function EditDeckScreen() {
     { input: 's', handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 's', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; if (canSave) handleSave(); } },
     { input: 'x', handler: () => { if (subModalOpen()) return; handleClose(); } },
+    // ⌘W = 閉じる（X と同じ。ウィンドウを閉じる OS 慣習＝CLAUDE.md「迷ったら⌘」）
+    { input: 'w', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (subModalOpen()) return; handleClose(); } },
     { input: 'c', handler: () => { if (subModalOpen()) return; cycleColor(); } },
     { input: 'c', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; cycleColor(-1); } },
     { input: 'i', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setShowIconPicker(true); } },

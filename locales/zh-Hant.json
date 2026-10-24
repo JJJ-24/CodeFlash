@@ -1003,6 +1003,7 @@
     "reorderUpDown": "上移/下移\n※ 手動排序時",
     "reorderSelectedUpDown": "上移/下移\n分散的選擇會向移動方向集中\n※ 手動排序時",
     "search": "搜尋卡片\n也可用 [⌘F]",
+    "searchCmd": "搜尋卡片",
     "tags": "標籤管理",
     "tabNextPrev": "切換標籤頁\n（主頁/學習/統計/設定）",
     "cycleChart": "切換圖表\n（連續/已學/複習/新卡）\n也可用 [H/L][,/.]",

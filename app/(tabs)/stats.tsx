@@ -78,6 +78,7 @@ const STATS_SHORTCUT_GROUPS = [
         { key: 'Space', descKey: 'shortcut.openChart' },
       ] },
       { titleKey: 'shortcut.catNavigate', items: [
+        { key: '⌘F', descKey: 'shortcut.searchCmd' },
         { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
       ] },
       { titleKey: 'shortcut.catOther', items: [
@@ -1063,8 +1064,9 @@ export default function StatsScreen() {
   if (sectionInfoModal) lastSectionInfoRef.current = sectionInfoModal;
   const selectedGradeBlockRef = useRef<0 | 1 | 2 | 3 | null>(null);
 
+  // 検索は pushChild 経由（戻りで上部ブロックの初期値を当て直さない）。pushChild は後方で定義＝押下時には初期化済み
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true), () =>
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true }));
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true }), () => pushChild('/search'));
   const { todayReviewed, todayDue, streak, learned, unlearned, todayCreated,
           schedule, past7DaysReviewed, past7DaysActivity, past7DaysCreated,
           deckMastery, decks, heatmapData, gradeTotals, gradeAvgTimes, monthlyReviewed } = stats;
@@ -1510,6 +1512,8 @@ export default function StatsScreen() {
     { input: ',', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('prev'); } },
     { input: '.', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('next'); } },
     { input: 'h', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('prev'); } },
+    // ⌘F = 検索（ヘッダー左上のボタンと同じ。F は「学習履歴が残るカードのみ」に使っているので修飾付きだけ）
+    { input: 'f', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (statsCardId !== null || activeSheet !== null) return; pushChild('/search'); } },
     { input: 'l', handler: () => { if (statsCardId !== null || activeSheet !== null) return; cycleStatsBlock('next'); } },
     {
       input: ' ',

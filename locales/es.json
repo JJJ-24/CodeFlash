@@ -1048,6 +1048,7 @@
     "reorderUpDown": "Mover arriba / abajo\n※ con orden manual",
     "reorderSelectedUpDown": "Mover juntos arriba / abajo\nlos separados se agrupan hacia donde muevas\n※ con orden manual",
     "search": "Buscar tarjetas\n[⌘F] también",
+    "searchCmd": "Buscar tarjetas",
     "tags": "Gestionar etiquetas",
     "tabNextPrev": "Cambiar de pestaña\n(Inicio/Estudio/Estadísticas/Ajustes)",
     "cycleChart": "Cambiar de gráfico\n(Racha/Hechas/Repaso/Nuevas)\n[H/L][,/.] también",

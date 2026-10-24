@@ -25,6 +25,7 @@ const SETTINGS_SHORTCUT_SECTIONS = [
     { key: 'Return', descKey: 'shortcut.openFocused' },
   ] },
   { titleKey: 'shortcut.catNavigate', items: [
+    { key: '⌘F', descKey: 'shortcut.searchCmd' },
     { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
@@ -54,7 +55,7 @@ export default function SettingsScreen() {
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true), () =>
-    scrollRef.current?.scrollTo({ y: 0, animated: true }));
+    scrollRef.current?.scrollTo({ y: 0, animated: true }), () => router.push('/search'));
 
   const navItems: NavItem[] = [
     { key: 'display', label: t('settings.display'), icon: 'color-palette-outline', onPress: () => router.push('/settings/display') },
@@ -116,6 +117,8 @@ export default function SettingsScreen() {
     { input: KeyCommand.keyInputDownArrow, handler: () => moveFocus(1) },
     { input: KeyCommand.keyInputUpArrow, handler: () => moveFocus(-1) },
     { input: KeyCommand.keyInputEnter, handler: () => openFocused() },
+    // ⌘F = 検索（ヘッダー左上のボタンと同じ）
+    { input: 'f', modifierFlags: KeyCommand.keyModifierCommand, handler: () => router.push('/search') },
     // ?（Shift+/）= ショートカット一覧を開く（閉じる/トグルは ShortcutsModal 側が担当）
     { input: '/', modifierFlags: KeyCommand.keyModifierShift, handler: () => setShowShortcutsModal((v) => !v) },
   // ショートカット一覧表示中は背景ナビを解除（Esc は別フックで常時有効）。

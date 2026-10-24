@@ -67,6 +67,7 @@ const STUDY_TAB_SHORTCUT_SECTIONS = [
     { key: 'Space', descKey: 'shortcut.startStudyFocused' },
   ] },
   { titleKey: 'shortcut.catNavigate', items: [
+    { key: '⌘F', descKey: 'shortcut.searchCmd' },
     { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
@@ -135,8 +136,10 @@ export default function StudyScreen() {
   const deckListRef = useRef<FlatList<any>>(null);
   const tagListRef = useRef<FlatList<any>>(null);
 
+  // 検索から戻ったときに初期フィルターを当て直さない（学習セッションから戻るときと同じ印）
+  const openSearch = () => { fromSessionRef.current = true; router.push('/search'); };
   useShortcutsHeader(keyboardShortcutsEnabled, () => setShowShortcutsModal(true), () =>
-    (activeTab === 'decks' ? deckListRef : tagListRef).current?.scrollToOffset({ offset: 0, animated: true }));
+    (activeTab === 'decks' ? deckListRef : tagListRef).current?.scrollToOffset({ offset: 0, animated: true }), openSearch);
 
   useEffect(() => {
     if (activeTab === 'decks') {
@@ -318,6 +321,8 @@ export default function StudyScreen() {
     //   旧 E → さらに旧 H。E は全画面で「アーカイブ切替」に統一しているため F へ移した）
     { input: 'f', handler: () => { setStudyHideEmpty(!hideEmpty); clearFocus(); } },
     { input: ' ', handler: () => startStudyFocused() },
+    // ⌘F = 検索（ヘッダー左上のボタンと同じ。F は対象なし行の切替に使っているので修飾付きだけ）
+    { input: 'f', modifierFlags: KeyCommand.keyModifierCommand, handler: () => openSearch() },
     // D = デッキ表示 / T = タグ表示（旧 M トグルを明示的な直接選択に）
     { input: 'd', handler: () => setActiveTab('decks') },
     { input: 't', handler: () => setActiveTab('tags') },

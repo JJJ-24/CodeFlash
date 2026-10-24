@@ -1046,6 +1046,7 @@
     "reorderUpDown": "Reorder\n(Up/Down, manual sort)",
     "reorderSelectedUpDown": "Reorder together\n(gathers toward move direction, manual sort)",
     "search": "Search cards\n[⌘F] also works",
+    "searchCmd": "Search cards",
     "tags": "Tag manager",
     "tabNextPrev": "Switch tab\n(Home/Study/Stats/Settings)",
     "cycleChart": "Cycle charts\n(Streak/Done/Due/New)\n[H/L][,/.] also works",

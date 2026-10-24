@@ -1003,6 +1003,7 @@
     "reorderUpDown": "上/下 移動\n※手動ソート時",
     "reorderSelectedUpDown": "上/下 移動\n離れた選択は移動方向へ集約\n※手動ソート時",
     "search": "カード検索\n[⌘F]でも可",
+    "searchCmd": "カード検索",
     "tags": "タグ管理",
     "tabNextPrev": "タブ切替\n（ホーム/学習/統計/設定）",
     "cycleChart": "グラフ切替\n（連続/済み/復習/新規）\n[H/L][,/.]でも可",

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { DECK_ICON_CATEGORIES, type DeckIconName } from '@/lib/deckIcons';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { forgetAfterAlert, restoreAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
 
 interface Props {
   visible: boolean;
@@ -19,7 +20,10 @@ interface Props {
 
 const CELL_SIZE = 56;
 
-export function IconPickerModal({ visible, selected, highlightColor, onSelect, onClose }: Props) {
+export function IconPickerModal({ visible, selected, highlightColor, onSelect: onSelectProp, onClose }: Props) {
+  // 開いたら裏の入力欄（デッキ名・説明）のカーソルを外し、選ばずに閉じたら戻す（lib/alertFocus.ts）
+  const shown = useOverlayFocus(visible, { keepEditing: true });
+  const onSelect = (icon: DeckIconName | null) => { forgetAfterAlert(); onSelectProp(icon); };
   const theme = useTheme();
   const { t } = useTranslation();
 
@@ -189,7 +193,7 @@ export function IconPickerModal({ visible, selected, highlightColor, onSelect, o
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={shown} transparent animationType="slide" onRequestClose={onClose} onDismiss={restoreAfterAlert}>
       <View style={styles.overlay}>
         <Pressable style={styles.closeArea} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>

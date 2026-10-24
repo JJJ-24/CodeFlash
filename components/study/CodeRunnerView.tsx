@@ -28,7 +28,7 @@ import { useProStore } from "@/store/pro";
 import { mentionsRequests } from "@/lib/code-execution/pyRequestsShim";
 import { pagesFromDeckStages, resolveDeckStageHtml, resolveDeckStageSql } from "@/lib/deckStages";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
-import { isBlurKeepingEdit } from "@/lib/alertFocus";
+import { isBlurKeepingEdit, markEditHeld } from "@/lib/alertFocus";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
 import { PyPagesList } from "@/components/code/PyPagesList";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from "@/lib/theme";
@@ -565,6 +565,7 @@ export function CodeRunnerView({
               // （handlePaletteTouchStart の 200ms タイマーが onBlur の 50ms タイマーより
               //   長く paletteActiveRef=true を保持するため、onFocus によるリセットに依存しない）
               const keepEditing = isBlurKeepingEdit();
+              if (keepEditing && isEditingRef.current) markEditHeld();
               setTimeout(() => {
                 // ショートカット一覧を開くためにカーソルを外しただけ＝編集を続ける（閉じたら restoreTrigger で戻る）
                 if (keepEditing && isEditingRef.current) {

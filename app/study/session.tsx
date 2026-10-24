@@ -73,6 +73,7 @@ import { useProStore } from "@/store/pro";
 import { useReviewStore } from "@/store/reviews";
 import { useSettingsStore } from "@/store/settings";
 import { useTagStore } from "@/store/tags";
+import { isBlurKeepingEdit, isEditHeld } from "@/lib/alertFocus";
 
 const SCROLL_STEP = 200;
 // 画面下の前後ボタンの長押しオートリピート（キーボード長押しに相当）。
@@ -390,6 +391,10 @@ export default function StudySessionScreen() {
     });
     const hide = Keyboard.addListener('keyboardWillHide', (e) => {
       if (isRemoteKeyboardEvent(e)) return;
+      // シート・一覧を開くためにカーソルだけ外した（編集中の見た目は残る）＝余白を残す。消すと中央寄せの
+      // カードの中身がシートの後ろで下へ動き、閉じて編集へ戻ると上へ戻る（lib/alertFocus.ts の editHeld）。
+      // ⚠️ 判定は外した瞬間の印（isBlurKeepingEdit）も見る＝この通知とブロックの onBlur の順番は決まっていない
+      if (isBlurKeepingEdit() || isEditHeld()) return;
       setKbHeight(0);
     });
     return () => { show.remove(); hide.remove(); };
@@ -905,7 +910,7 @@ export default function StudySessionScreen() {
   const handleToggleTagSheet = useCallback(() => {
     if (!currentCard) return;
     if (showTagSheet) { setShowTagSheet(false); return; }
-    Keyboard.dismiss();
+    // カーソルは TagSheet が外して（編集の見た目は残す）閉じたら戻す＝ここで外すと編集が終わってしまう
     getAllTags(db).then((rows) => { setAllTags(rows); setShowTagSheet(true); });
   }, [currentCard, showTagSheet, db]);
 
@@ -1923,7 +1928,7 @@ export default function StudySessionScreen() {
             {cardLinks.length > 0 && (
               <Pressable
                 style={styles.fullscreenEditBtn}
-                onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
+                onPress={() => setShowLinksModal(true)}
                 accessibilityLabel={t("study.links")}
               >
                 <Ionicons
@@ -2495,7 +2500,7 @@ export default function StudySessionScreen() {
           {cardLinks.length > 0 && (
             <Pressable
               style={styles.fullscreenBtn}
-              onPress={() => { Keyboard.dismiss(); setShowLinksModal(true); }}
+              onPress={() => setShowLinksModal(true)}
               accessibilityLabel={t("study.links")}
             >
               <Ionicons

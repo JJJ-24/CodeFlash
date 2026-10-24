@@ -206,9 +206,10 @@ export default function NewDeckScreen() {
    * 直す手段が画面から無くなるのを防ぐ（デッキ設定はアプリ設定に勝つので打ち消せない）。
    */
   function openSpeechSettings() {
-    Keyboard.dismiss();
+    // カーソルは開く一覧（DeckSpeechModal）・確認（ConfirmModal）が外して閉じたら戻す＝ここで外すと戻す先を覚えられない
     if (isPro) { setShowSpeechModal(true); return; }
     if (speechConfigured) { setShowSpeechProModal(true); return; }
+    Keyboard.dismiss();
     router.push('/paywall');
   }
 
@@ -374,10 +375,10 @@ export default function NewDeckScreen() {
           </DeckFormCard>
 
           <DeckFormCard>
-            <DeckFormField label={t('deck.icon')} onActivate={() => { Keyboard.dismiss(); setShowIconPicker(true); }}>
+            <DeckFormField label={t('deck.icon')} onActivate={() => setShowIconPicker(true)}>
               <Pressable
                 style={styles.iconButton}
-                onPress={() => { Keyboard.dismiss(); setShowIconPicker(true); }}
+                onPress={() => setShowIconPicker(true)}
               >
                 <View style={[styles.iconCircle, { backgroundColor: previewIconBg }]}>
                   <Ionicons
@@ -488,14 +489,14 @@ export default function NewDeckScreen() {
                     : htmlImages.length > 0
                       ? t('deck.htmlImagesOnly', { count: htmlImages.length })
                       : t('deck.htmlInitNone')}
-                  onPress={() => { Keyboard.dismiss(); setShowHtmlInitModal(true); }}
+                  onPress={() => setShowHtmlInitModal(true)}
                 />
                 <DeckFormDivider />
                 <DeckFormNavRow
                   configured={filledSqlStages > 0}
                   label={t('deck.sqlInitLabel')}
                   summary={filledSqlStages > 0 ? t('deck.sqlStagesSet', { count: filledSqlStages }) : t('deck.sqlInitNone')}
-                  onPress={() => { Keyboard.dismiss(); setShowSqlInitModal(true); }}
+                  onPress={() => setShowSqlInitModal(true)}
                 />
               </DeckFormCard>
             </>

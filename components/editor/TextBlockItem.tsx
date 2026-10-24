@@ -37,6 +37,7 @@ markdownItLinkify.disable('code');
 import { useTheme, MAX_FONT_MULTIPLIER, HIGHLIGHT_COLORS, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import { applyAction, type MdAction, type Sel } from '@/lib/editor/applyMarkdown';
 import type { TextBlock } from '@/types';
+import { isBlurKeepingEdit, markEditHeld } from '@/lib/alertFocus';
 
 interface Props {
   block: TextBlock;
@@ -410,7 +411,8 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
                   // tap 再フォーカス＝前回選択が戻り即装飾でき、E/自動フォーカスは上の effect が末尾を入れる。
                   setPendingSelection({ ...selectionRef.current });
                 }}
-                onBlur={() => { setFocused(false); onDeactivateApply?.(stableApply); onEditBlur?.(); }}
+                // ショートカット一覧を開くためにカーソルを外しただけ＝編集を続ける（閉じたら restoreTrigger で戻る）
+                onBlur={() => { if (isBlurKeepingEdit()) { markEditHeld(); return; } setFocused(false); onDeactivateApply?.(stableApply); onEditBlur?.(); }}
                 textAlignVertical="top"
                 autoCorrect={false}
                 spellCheck={false}

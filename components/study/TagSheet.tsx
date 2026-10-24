@@ -11,6 +11,7 @@ import { resolveTagColor, contrastText } from '@/lib/tagColors';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER, themedFrameBorder } from '@/lib/theme';
 import type { Tag } from '@/types';
+import { forgetAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
 
 interface Props {
   visible: boolean;
@@ -31,7 +32,12 @@ interface Props {
  * 揃え、「編集画面のタグ欄と同じ付け外し操作」であることを見た目で伝える。
  * 末尾の「＋新規タグ」チップからインライン作成できる（DeckPickerModal と同じ流儀）。
  */
-export function TagSheet({ visible, onClose, tags, selectedIds, onToggle, onCreateTag }: Props) {
+export function TagSheet({ visible, onClose, tags, selectedIds, onToggle: onToggleProp, onCreateTag: onCreateTagProp }: Props) {
+  // 開いたら編集中のコードブロックのカーソルを外す（残すとキーが入力欄に入る）。編集の見た目は残し、
+  // タグを変えずに閉じたら同じ入力欄へ戻す（lib/alertFocus.ts）
+  useOverlayFocus(visible, { keepEditing: true, restoreOnHide: true });
+  const onToggle = (id: string) => { forgetAfterAlert(); onToggleProp(id); };
+  const onCreateTag = (name: string) => { forgetAfterAlert(); return onCreateTagProp(name); };
   const { t } = useTranslation();
   const theme = useTheme();
   const sheetY = useSharedValue(500);

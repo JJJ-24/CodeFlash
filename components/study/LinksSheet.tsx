@@ -8,6 +8,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import type { LinkItem } from '@/lib/study/extractLinks';
+import { forgetAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
 
 interface Props {
   visible: boolean;
@@ -16,6 +17,8 @@ interface Props {
 }
 
 export function LinksSheet({ visible, onClose, links }: Props) {
+  // 開いたら編集中のコードブロックのカーソルを外す（編集の見た目は残す）。リンクを開かずに閉じたら戻す
+  useOverlayFocus(visible, { keepEditing: true, restoreOnHide: true });
   const { t } = useTranslation();
   const theme = useTheme();
   const sheetY = useSharedValue(500);
@@ -50,7 +53,7 @@ export function LinksSheet({ visible, onClose, links }: Props) {
   }
   function openFocused() {
     const l = links[focusedIndex];
-    if (l) { onClose(); Linking.openURL(l.url); }
+    if (l) { forgetAfterAlert(); onClose(); Linking.openURL(l.url); }
   }
   // 親（学習画面）のキーは表示中に active ゲートで解除済み。Esc は学習画面側が閉じる。
   // W は開閉トグル：開くのは学習画面の W、閉じるのは表示中のここが担う（親キーは解除されているため）。
@@ -91,7 +94,7 @@ export function LinksSheet({ visible, onClose, links }: Props) {
           renderItem={({ item, index }) => (
             <Pressable
               style={[styles.linkRow, { borderBottomColor: theme.colors.inputBorder }, focusedIndex === index && { backgroundColor: theme.colors.primaryLight }]}
-              onPress={() => { setFocusedIndex(index); onClose(); Linking.openURL(item.url); }}
+              onPress={() => { setFocusedIndex(index); forgetAfterAlert(); onClose(); Linking.openURL(item.url); }}
             >
               <View style={{ flex: 1 }}>
                 <Text style={[styles.linkText, { color: theme.colors.text, fontSize: theme.fontSize.md }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

@@ -15,6 +15,7 @@ import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useSheetKeyboardLift } from '@/lib/useSheetKeyboardLift';
 import type { DeckImage, DeckStage } from '@/types';
+import { forgetAfterAlert, restoreAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
 
 interface Props {
   visible: boolean;
@@ -53,7 +54,10 @@ interface Props {
  * ときに使われるのが先頭だからで、**先頭を削除すると既定が次の土台にずれる**ため削除確認の
  * 文言も分けている。
  */
-export function DeckStagesModal({ visible, stages, onChange, onClose, kind, listFooter, deckImages }: Props) {
+export function DeckStagesModal({ visible, stages, onChange: onChangeProp, onClose, kind, listFooter, deckImages }: Props) {
+  // 開いたら裏の入力欄（デッキ名・説明）のカーソルを外し、何も変えずに閉じたら戻す（lib/alertFocus.ts）
+  const shown = useOverlayFocus(visible, { keepEditing: true });
+  const onChange = (next: DeckStage[]) => { forgetAfterAlert(); onChangeProp(next); };
   const keys = DECK_STAGE_KEYS[kind];
   const theme = useTheme();
   const { t } = useTranslation();
@@ -195,7 +199,7 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
   })();
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={shown} transparent animationType="slide" onRequestClose={onClose} onDismiss={restoreAfterAlert}>
       <View style={styles.overlay}>
         <Pressable style={styles.closeArea} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.colors.surface, maxHeight: sheetMaxHeight }]}>

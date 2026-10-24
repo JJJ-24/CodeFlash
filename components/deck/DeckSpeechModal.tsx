@@ -20,6 +20,7 @@ import {
 import { MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useSettingsStore } from '@/store/settings';
+import { forgetAfterAlert, restoreAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
 
 interface Props {
   visible: boolean;
@@ -59,7 +60,12 @@ interface Props {
  * ⚠️ 2枚目のモーダル（言語ピッカー）は**この Modal の children の中**に置く。兄弟に並べると
  * iOS が2枚目を提示できず、閉じた後に親画面がタップを受け付けなくなる（044 で踏んだ）。
  */
-export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onChangeBack, onChangeAuto, onClose }: Props) {
+export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange: onChangeProp, onChangeBack: onChangeBackProp, onChangeAuto: onChangeAutoProp, onClose }: Props) {
+  // 開いたら裏の入力欄（デッキ名・説明）のカーソルを外す（残すと J/K が入力欄に入る）。何も変えずに閉じたら戻す
+  const shown = useOverlayFocus(visible, { keepEditing: true });
+  const onChange = (v: ScriptLangs) => { forgetAfterAlert(); onChangeProp(v); };
+  const onChangeBack = (v: ScriptLangs) => { forgetAfterAlert(); onChangeBackProp(v); };
+  const onChangeAuto = (v: SpeechAutoMode | null) => { forgetAfterAlert(); onChangeAutoProp(v); };
   const theme = useTheme();
   const { t } = useTranslation();
   const appLangs = useSettingsStore((s) => s.speechScriptLangs);
@@ -232,7 +238,7 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange, onC
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={shown} transparent animationType="slide" onRequestClose={onClose} onDismiss={restoreAfterAlert}>
       <View style={styles.overlay}>
         <Pressable style={styles.closeArea} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>

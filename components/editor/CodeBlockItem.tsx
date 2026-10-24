@@ -42,6 +42,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COP
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 import type { CodeBlock, DeckImage, DeckStage } from '@/types';
+import { forgetAfterAlert, isBlurKeepingEdit, markEditHeld, restoreAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
 
 interface Props {
   block: CodeBlock;
@@ -328,6 +329,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // 058：言語の一覧のキー（J/K・Return/Space＝選んで閉じる・Esc）。開いたときのフォーカスは今の言語。
   // 矢印は iPhone のみ（カードエディタの上に出る＝iPad で登録すると編集中のカーソル移動を奪う）。
   const selectLanguage = (lang: string) => {
+    // 選び変えたら入力中だった欄へは戻さない（同じ言語を選んだだけなら戻す）
+    if (lang !== block.language) forgetAfterAlert();
     if (!EXECUTABLE_LANGUAGES.includes(lang)) reset();
     onChange({
       language: lang,
@@ -335,6 +338,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     });
     useSettingsStore.getState().setLastSelectedCodeLanguage(lang);
   };
+  // keepEditing＝編集の見た目を残す（残さないと一覧の後ろでブロックが縮み、閉じたあと伸びてちらつく）
+  const langModalShown = useOverlayFocus(langModalVisible, { keepEditing: true });
   const langKeys = usePickerKeys({
     visible: langModalVisible,
     items: LANGUAGES,
@@ -558,7 +563,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   placeholder={t('editor.codePlaceholder')}
                   placeholderTextColor="#6B7280"
                   onFocus={() => { setFocused(true); onFocusInput?.(); }}
-                  onBlur={() => { setFocused(false); if (!skipEditBlurRef.current) { onEditBlur?.(); } skipEditBlurRef.current = false; }}
+                  // 一覧・ショートカット一覧を開くためにカーソルを外しただけ＝編集を続ける（閉じたら restoreTrigger で戻る）
+                  onBlur={() => { if (isBlurKeepingEdit()) { markEditHeld(); return; } setFocused(false); if (!skipEditBlurRef.current) { onEditBlur?.(); } skipEditBlurRef.current = false; }}
                   textAlignVertical="top"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -890,8 +896,8 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
         deckImages={deckHtmlImages}
       />
 
-      {/* 言語選択モーダル */}
-      <Modal visible={langModalVisible} transparent animationType="none">
+      {/* 言語選択モーダル（開いたら入力中の欄のカーソルを外す＝残すと J/K が入力欄に入る。閉じたら戻す） */}
+      <Modal visible={langModalShown} transparent animationType="none" onDismiss={restoreAfterAlert}>
         <Animated.View style={{ flex: 1, opacity: langFade }}>
         <Pressable style={styles.overlay} onPress={() => setLangModalVisible(false)}>
           <View style={[styles.langModal, { backgroundColor: theme.colors.surface, width: Math.max(220, width * 0.5) }]}>

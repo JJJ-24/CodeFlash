@@ -47,6 +47,7 @@ import { useProStore } from '@/store/pro';
 import { useSearchSessionStore } from '@/store/search';
 import { useReviewStore } from '@/store/reviews';
 import type { Card, Deck } from '@/types';
+import { forgetAfterAlert, restoreAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
 
 const SEARCH_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catDisplay', items: [
@@ -392,6 +393,16 @@ export default function SearchScreen() {
     if (snapshot !== null && snapshot === ids.join(',')) setTimeout(() => inputRef.current?.focus(), 100);
   };
 
+  // ⓘ（InfoModal）はショートカットが ON なら自分でカーソルを外して閉じたら戻す（lib/alertFocus.ts）。OFF のときは
+  // 何もしないので、キーボードが説明を覆わないようここで下げる（従来どおり）
+  const blurIfNoShortcuts = () => {
+    if (keyboardShortcutsEnabled) return;
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+  };
+  // カレンダー：開いたら検索欄のカーソルを外し、日付を変えずに閉じたら戻す
+  const datePickerShown = useOverlayFocus(datePickerVisible, { keepEditing: true });
+
   const dismissFocus = () => {
     setFocusedIndex(null);
     Keyboard.dismiss();
@@ -560,7 +571,7 @@ export default function SearchScreen() {
           >
             {t('card.searchTitle')}
           </Text>
-          <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); infoIsResultsRef.current = false; setShowSearchInfo(true); }} hitSlop={8} accessibilityLabel={t('card.searchInfoLabel')}>
+          <Pressable onPress={() => { blurIfNoShortcuts(); infoIsResultsRef.current = false; setShowSearchInfo(true); }} hitSlop={8} accessibilityLabel={t('card.searchInfoLabel')}>
             <Ionicons name="information-circle-outline" size={Math.max(theme.fontSize.lg, 20)} color={theme.colors.textTertiary} />
           </Pressable>
         </View>
@@ -731,7 +742,7 @@ export default function SearchScreen() {
                 <Ionicons name="chevron-back" size={16} color={theme.colors.primary} />
               </Pressable>
               {/* 日付部分のタップでカレンダーを開く（◀▶ で届かない日を1発で指す）。 */}
-              <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setDatePickerVisible(true); }} hitSlop={6}>
+              <Pressable onPress={() => setDatePickerVisible(true)} hitSlop={6}>
                 <Text
                   style={[styles.chipText, { color: theme.colors.primary, fontSize: theme.fontSize.sm, textDecorationLine: 'underline' }]}
                   numberOfLines={1}
@@ -770,7 +781,7 @@ export default function SearchScreen() {
               : t('card.searchResultCount', { count: results.length })}
           </Text>
           <Pressable
-            onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); infoIsResultsRef.current = true; setShowSearchInfo(true); }}
+            onPress={() => { blurIfNoShortcuts(); infoIsResultsRef.current = true; setShowSearchInfo(true); }}
             hitSlop={8}
             accessibilityLabel={t('card.searchResultsInfoLabel')}
           >
@@ -894,7 +905,7 @@ export default function SearchScreen() {
           ⚠️ 未来の日付には学習記録が存在しえないので `maximumDate` で today に止める
           （チップの ▶ が今日で止まるのと同じ制限をピッカー側にも掛ける）。
           ⚠️ 色は `themeVariant` で渡す（`Appearance.setColorScheme()` は使わない方針）。 */}
-      <Modal visible={datePickerVisible} transparent animationType="slide" onRequestClose={() => setDatePickerVisible(false)}>
+      <Modal visible={datePickerShown} transparent animationType="slide" onRequestClose={() => setDatePickerVisible(false)} onDismiss={restoreAfterAlert}>
         <Pressable style={pickerStyles.overlay} onPress={() => setDatePickerVisible(false)}>
           <Pressable style={[pickerStyles.sheet, { backgroundColor: theme.colors.surface, paddingBottom: 16 }]} onPress={() => {}}>
             <Text style={[pickerStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -908,7 +919,7 @@ export default function SearchScreen() {
               locale={i18n.language}
               themeVariant={theme.dark ? 'dark' : 'light'}
               onChange={(_, date) => {
-                if (date) setStudiedDate(localDateStr(date));
+                if (date) { forgetAfterAlert(); setStudiedDate(localDateStr(date)); }
                 setDatePickerVisible(false);
               }}
               style={{ marginHorizontal: 8 }}

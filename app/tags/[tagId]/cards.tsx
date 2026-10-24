@@ -350,6 +350,8 @@ export default function TagCardsScreen() {
       if (focusedCardIndex !== null && displayedCards[focusedCardIndex]) confirmDeleteCard(displayedCards[focusedCardIndex]);
     }),
     { input: 'n', handler: () => { if (statsCardId !== null || selectionMode) return; setShowDeckPicker(true); } },
+    // ⌘N = 同じ（新規作成・追加の OS 慣習。⌘付きはどの画面でも同じ意味＝CLAUDE.md「迷ったら⌘」）
+    { input: 'n', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (statsCardId !== null || selectionMode) return; setShowDeckPicker(true); } },
     { input: 'b', handler: () => { if (statsCardId !== null || selectionMode) return; router.back(); } },
     {
       input: KeyCommand.keyInputEnter,

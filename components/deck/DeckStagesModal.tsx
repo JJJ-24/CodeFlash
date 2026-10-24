@@ -147,6 +147,8 @@ export function DeckStagesModal({ visible, stages, onChange, onClose, kind, list
     { input: 'j', handler: () => moveFocus('next') },
     { input: 'k', handler: () => moveFocus('prev') },
     { input: 'n', handler: handleAdd },
+    // ⌘N = 同じ（新規作成・追加の OS 慣習。⌘付きはどの画面でも同じ意味＝CLAUDE.md「迷ったら⌘」）
+    { input: 'n', modifierFlags: KeyCommand.keyModifierCommand, handler: handleAdd },
     { input: KeyCommand.keyInputEnter, handler: () => { if (addFocused) handleAdd(); else if (focusedStage) setEditingId(focusedStage.id); } },
     ...deleteKeySpecs(() => { if (focusedStage) setPendingDelete(focusedStage); }),
     // 059：V＝フォーカス中の土台をページとして見る（名前が URL の土台だけ。058 のプレビュー枠の V と同じ「見る」）

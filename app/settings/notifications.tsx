@@ -671,7 +671,11 @@ export default function NotificationSettingsScreen() {
       // 削除の確認・権限の案内（アラート）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
       suspendKeys={modalVisible}
       // N＝追加（一覧の新規＝N の流儀。上限に達していれば openAddModal が何もしない）
-      extraKeys={[{ input: 'n', handler: () => void openAddModal() }]}
+      extraKeys={[
+        { input: 'n', handler: () => void openAddModal() },
+        // ⌘N = 同じ（新規作成・追加の OS 慣習。CLAUDE.md「迷ったら⌘」）
+        { input: 'n', modifierFlags: KeyCommand.keyModifierCommand, handler: () => void openAddModal() },
+      ]}
       onBack={() => {
         if (modalVisible) { closeModal(); return; }
         router.back();

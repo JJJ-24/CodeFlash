@@ -1000,7 +1000,7 @@
     "startStudyFocused": "Start studying\n[Return] also works",
     "switchFilter": "Switch filter\n(All/Done/Due/New)\n[H/L][,/.] also works",
     "switchFilterAllActive": "Switch filter\n(All/Active)\n[H/L][,/.] also works",
-    "new": "New",
+    "new": "New\n[⌘N] also works",
     "toggleSelect": "Toggle selection mode",
     "toggleCheck": "Select / Deselect",
     "selectAll": "Select all / Deselect all\n[⌘A] also works",
@@ -1075,7 +1075,7 @@
     "blockNextPrev": "Move by block\n(next / previous)",
     "codeLanguage": "Choose language\n(code block)",
     "settingActivateNotif": "Expand",
-    "addSchedule": "Add schedule",
+    "addSchedule": "Add schedule\n[⌘N] also works",
     "catScheduleSheet": "Edit schedule",
     "scheduleTimeDigits": "Change time\n[H/L] hour: 1 h · minute: 1 min\n[⇧H/⇧L] hour: 3 h · minute: 10 min\n[,/.][⇧,/⇧.] also work",
     "settingActivateSync": "Run / expand",
@@ -1127,7 +1127,7 @@
     "cycleColorSheet": "Cycle color\n[J/K][H/L][,/.] also works",
     "applyColorClose": "Apply and close",
     "stageOpen": "Open",
-    "stageAdd": "Add a stage / setup",
+    "stageAdd": "Add a stage / setup\n[⌘N] also works",
     "stageViewPage": "View as a page\n(stages named with a URL)"
   },
   "speechLang": {

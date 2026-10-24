@@ -1002,7 +1002,7 @@
     "startStudyFocused": "Estudiar\n[Return] también",
     "switchFilter": "Cambiar filtro\n(Todo/Hechas/Repaso/Nuevas)\n[H/L][,/.] también",
     "switchFilterAllActive": "Cambiar filtro\n(Todo/En uso)\n[H/L][,/.] también",
-    "new": "Crear",
+    "new": "Crear\n[⌘N] también",
     "toggleSelect": "Modo de selección",
     "toggleCheck": "Seleccionar o quitar",
     "selectAll": "Seleccionar o quitar todo\n[⌘A] también",
@@ -1077,7 +1077,7 @@
     "blockNextPrev": "Moverse por bloque\n(siguiente / anterior)",
     "codeLanguage": "Elegir lenguaje\n(bloque de código)",
     "settingActivateNotif": "Desplegar",
-    "addSchedule": "Agregar horario",
+    "addSchedule": "Agregar horario\n[⌘N] también",
     "catScheduleSheet": "Editar horario",
     "scheduleTimeDigits": "Cambiar la hora\n[H/L] hora: 1 h · minuto: 1 min\n[⇧H/⇧L] hora: 3 h · minuto: 10 min\n[,/.][⇧,/⇧.] también",
     "settingActivateSync": "Ejecutar / desplegar",
@@ -1129,7 +1129,7 @@
     "cycleColorSheet": "Cambiar de color\n[J/K][H/L][,/.] también",
     "applyColorClose": "Aplicar y cerrar",
     "stageOpen": "Desplegar",
-    "stageAdd": "Agregar una base / inicialización",
+    "stageAdd": "Agregar una base / inicialización\n[⌘N] también",
     "stageViewPage": "Ver como página\n(bases con una URL como nombre)"
   },
   "speechLang": {

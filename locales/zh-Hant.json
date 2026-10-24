@@ -957,7 +957,7 @@
     "startStudyFocused": "開始學習\n也可用 [Return]",
     "switchFilter": "切換篩選\n（全部/已學/複習/新卡）\n也可用 [H/L][,/.]",
     "switchFilterAllActive": "切換篩選\n（全部/使用中）\n也可用 [H/L][,/.]",
-    "new": "新建",
+    "new": "新建\n也可用 [⌘N]",
     "toggleSelect": "選擇模式",
     "toggleCheck": "選擇/取消",
     "selectAll": "全選/全部取消\n也可用 [⌘A]",
@@ -1032,7 +1032,7 @@
     "blockNextPrev": "按塊移動\n（下一個/上一個）",
     "codeLanguage": "選擇語言\n（程式碼區塊）",
     "settingActivateNotif": "展開",
-    "addSchedule": "新增計劃",
+    "addSchedule": "新增計劃\n也可用 [⌘N]",
     "catScheduleSheet": "編輯計劃",
     "scheduleTimeDigits": "更改時間\n[H/L] 時＝1 小時・分＝1 分鐘\n[⇧H/⇧L] 時＝3 小時・分＝10 分鐘\n也可用 [,/.][⇧,/⇧.]",
     "settingActivateSync": "執行 / 展開",
@@ -1084,7 +1084,7 @@
     "cycleColorSheet": "切換顏色\n也可用 [J/K][H/L][,/.]",
     "applyColorClose": "應用並關閉",
     "stageOpen": "展開",
-    "stageAdd": "新增預置/初始化",
+    "stageAdd": "新增預置/初始化\n也可用 [⌘N]",
     "stageViewPage": "作為頁面檢視\n（名稱為 URL 的預置）"
   },
   "speechLang": {

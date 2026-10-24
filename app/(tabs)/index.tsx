@@ -477,6 +477,8 @@ export default function HomeScreen() {
       }
     } },
     { input: 'n', handler: () => router.push({ pathname: '/deck/new' }) },
+    // ⌘N = 同じ（新規作成・追加の OS 慣習。⌘付きはどの画面でも同じ意味＝CLAUDE.md「迷ったら⌘」）
+    { input: 'n', modifierFlags: KeyCommand.keyModifierCommand, handler: () => router.push({ pathname: '/deck/new' }) },
     { input: 'f', handler: () => router.push('/search') },
     // ⌘F = 検索（OS 慣習のエイリアス）
     { input: 'f', modifierFlags: KeyCommand.keyModifierCommand, handler: () => router.push('/search') },

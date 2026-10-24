@@ -931,6 +931,8 @@ export default function DeckDetailScreen() {
     },
     { input: 'b', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; router.back(); } },
     { input: 'n', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; router.push({ pathname: '/deck/[id]/card/new', params: { id } }); } },
+    // ⌘N = 同じ（新規作成・追加の OS 慣習。⌘付きはどの画面でも同じ意味＝CLAUDE.md「迷ったら⌘」）
+    { input: 'n', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; router.push({ pathname: '/deck/[id]/card/new', params: { id } }); } },
     { input: '1', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; const f = FILTER_KEY_MAP['1']; setSelectedFilter(f); if (initialFilterPreference === 'none') setLastDeckDetailFilter(f); } },
     { input: '2', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; const f = FILTER_KEY_MAP['2']; setSelectedFilter(f); if (initialFilterPreference === 'none') setLastDeckDetailFilter(f); } },
     { input: '3', handler: () => { if (showDeckPicker || statsCardId !== null || selectionMode) return; const f = FILTER_KEY_MAP['3']; setSelectedFilter(f); if (initialFilterPreference === 'none') setLastDeckDetailFilter(f); } },

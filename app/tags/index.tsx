@@ -419,6 +419,8 @@ export default function TagsScreen() {
       },
     },
     { input: 'n', handler: () => { if (showColorPicker) return; if (!selectionMode) router.push('/tags/new'); } },
+    // ⌘N = 同じ（新規作成・追加の OS 慣習。⌘付きはどの画面でも同じ意味＝CLAUDE.md「迷ったら⌘」）
+    { input: 'n', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (showColorPicker) return; if (!selectionMode) router.push('/tags/new'); } },
     {
       input: 'm',
       handler: () => {

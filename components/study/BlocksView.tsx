@@ -8,6 +8,7 @@ import markdownItMark from 'markdown-it-mark';
 import { useTranslation } from 'react-i18next';
 
 import { Image } from 'expo-image';
+import { registerAlertRestoreProvider } from '@/lib/alertFocus';
 import { useFlipSuppress } from '@/lib/FlipSuppressContext';
 import { isRemoteKeyboardEvent } from '@/lib/keyboardEvent';
 import { resolveImageUri, imageMaxWidth } from '@/lib/image';
@@ -119,6 +120,15 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
   // CodeRunnerView に "別ブロックが編集中か" を伝えるための state（ref だけでは再描画されない）
   const [editingBlockIdx, setEditingBlockIdx] = useState<number | null>(null);
   const [exitEditTriggers, setExitEditTriggers] = useState<Record<number, number>>({});
+  // ショートカット一覧・アラートは裏の入力欄のカーソルを外す（lib/alertFocus.ts）。コードの入力欄は編集をやめると
+  // 消えるので、入力欄へ直接は戻せない＝「どのブロックを編集していたか」を覚えて再開する手段を渡す
+  //（カード編集の BlockEditor と同じ。キャンセルで閉じたときだけ使われる）。
+  const [restoreTriggers, setRestoreTriggers] = useState<Record<number, number>>({});
+  useEffect(() => registerAlertRestoreProvider(() => {
+    const idx = editingBlockIdxRef.current;
+    if (idx === null) return null;
+    return () => setRestoreTriggers((t) => ({ ...t, [idx]: (t[idx] ?? 0) + 1 }));
+  }), []);
 
   // ブロック末尾（シンボルパレット含む）がキーボード上端より 16px 上に来るようスクロール。
   // measure() の pageY（ScrollView のスクリーン上 Y 座標）を使い、
@@ -377,6 +387,7 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 exitEditTrigger={exitEditTriggers[i]}
                 runTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runTrigger : undefined}
                 editTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? editTrigger : undefined}
+                restoreTrigger={restoreTriggers[i]}
                 runKeepEditTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? runKeepEditTrigger : undefined}
                 // 選ばれていないブロックは undefined＝対象外（選ばれた瞬間の値は発火しない＝ExecutionOutput）
                 outputTrigger={codeBlockIndexMap[i] === selectedCodeBlockIdx ? outputTrigger ?? null : undefined}

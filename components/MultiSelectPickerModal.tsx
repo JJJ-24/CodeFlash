@@ -19,6 +19,8 @@ interface Props {
   /** 「すべて」行を押したとき（allLabel と組で渡す） */
   onClearAll?: () => void;
   onClose: () => void;
+  /** スライドで閉じ終わったとき（検索欄へカーソルを戻す判定に使う） */
+  onDismiss?: () => void;
 }
 
 const ALL_ID = '__all__';
@@ -28,7 +30,7 @@ const ALL_ID = '__all__';
  * キーは `useMultiSelectKeys`（J/K＝行 → 最後に「完了」・Return＝フォーカス中のものを実行・Space＝選択/解除・Esc＝閉じる）。
  * 表示中のみ発火（`active`＝visible）。親画面は表示中に自分のキーを解除する。
  */
-export function MultiSelectPickerModal({ visible, title, allLabel, items, selectedIds, onToggle, onClearAll, onClose }: Props) {
+export function MultiSelectPickerModal({ visible, title, allLabel, items, selectedIds, onToggle, onClearAll, onClose, onDismiss }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const allActive = selectedIds.length === 0;
@@ -52,7 +54,7 @@ export function MultiSelectPickerModal({ visible, title, allLabel, items, select
   });
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} onDismiss={onDismiss}>
       <Pressable style={pickerStyles.overlay} onPress={onClose}>
         <Pressable style={[pickerStyles.sheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
           <Text style={[pickerStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>

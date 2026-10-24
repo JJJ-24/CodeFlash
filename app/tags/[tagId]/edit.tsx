@@ -185,7 +185,8 @@ export default function EditTagScreen() {
           onSave={handleSave}
           canSave={canSave}
           showKeyboardIcon={keyboardShortcutsEnabled}
-          onTitlePress={keyboardShortcutsEnabled ? () => { Keyboard.dismiss(); setShowShortcutsModal(true); } : undefined}
+          // カーソルは一覧（ShortcutsModal）が外して閉じたら戻す＝ここで外すと戻す先を覚えられない
+          onTitlePress={keyboardShortcutsEnabled ? () => setShowShortcutsModal(true) : undefined}
           onHeaderPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
         />
         <ScrollView

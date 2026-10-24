@@ -36,8 +36,19 @@ export function registerAlertRestoreProvider(p: RestoreProvider): () => void {
 let pendingRestore: (() => void) | null = null;
 let openAlerts = 0;
 
+/**
+ * カーソルを外しても「編集をやめた」と扱わない間 true（`useAlertPresence(visible, { keepEditing: true })`）。
+ * ショートカット一覧は閉じれば必ず戻すので、編集をやめて入力欄を片付けると、開くときにブロックが縮み、
+ * 閉じたあと少しして伸びる（遅れて見える）。入力欄の onBlur でこれを見て編集を続けたことにすれば、
+ * キーボードが下がるだけで済み、閉じたら同じ入力欄へカーソルが戻る（学習画面の CodeRunnerView が使う）。
+ */
+let keepEditingBlur = false;
+export function isBlurKeepingEdit(): boolean {
+  return keepEditingBlur;
+}
+
 /** 入力欄にカーソルがあれば、戻し方を控えてから外す。外したら true。 */
-function blurForAlert(): boolean {
+function blurForAlert(keepEditing = false): boolean {
   const input = TextInput.State.currentlyFocusedInput();
   if (!input) return false;
   // ⚠️ 戻し方は**外す前に**聞く（外すとエディタの「編集中のブロック」の記録が消えるため）
@@ -50,6 +61,11 @@ function blurForAlert(): boolean {
     // 入力欄がその間に消えていても落とさない（戻す先が無いだけ）
     try { TextInput.State.focusTextInput(input); } catch { /* noop */ }
   });
+  if (keepEditing) {
+    keepEditingBlur = true;
+    // 入力欄の onBlur は少し遅れて判定する（CodeRunnerView は 50ms）ので、それより長く立てておく
+    setTimeout(() => { keepEditingBlur = false; }, 300);
+  }
   TextInput.State.blurTextInput(input);
   return true;
 }
@@ -73,7 +89,8 @@ const PRESENT_DELAY_MS = 100;
  * アラートの表示を管理する。`visible` になったら、入力欄にカーソルがあれば外して少し待ってから true を返す
  * （無ければすぐ true）。アラートの `Modal` の `visible` にはこの戻り値を渡す。
  */
-export function useAlertPresence(visible: boolean): boolean {
+export function useAlertPresence(visible: boolean, opts?: { keepEditing?: boolean }): boolean {
+  const keepEditing = opts?.keepEditing === true;
   const enabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const [shown, setShown] = useState(
     () => visible && !(enabled && TextInput.State.currentlyFocusedInput()),
@@ -85,12 +102,13 @@ export function useAlertPresence(visible: boolean): boolean {
     // 別の画面の入力欄へ戻さないため）。重なったアラートは最初の控えを引き継ぐ。
     if (openAlerts === 1) pendingRestore = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    if (enabled && blurForAlert()) timer = setTimeout(() => setShown(true), PRESENT_DELAY_MS);
+    // keepEditing は見た目が変わらない（編集の見た目のまま）ので待たずに出す
+    if (enabled && blurForAlert(keepEditing) && !keepEditing) timer = setTimeout(() => setShown(true), PRESENT_DELAY_MS);
     else setShown(true);
     return () => {
       if (timer) clearTimeout(timer);
       openAlerts -= 1;
     };
-  }, [visible, enabled]);
+  }, [visible, enabled, keepEditing]);
   return visible && shown;
 }

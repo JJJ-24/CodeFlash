@@ -4,6 +4,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from '
 import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
+import { restoreAfterAlert, useAlertPresence } from '@/lib/alertFocus';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useKeyCommands, scrollKeySpecs } from '@/lib/useKeyCommands';
 import { useProStore } from '@/store/pro';
@@ -39,6 +40,14 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
   const { t } = useTranslation();
   const theme = useTheme();
   const { isPro } = useProStore();
+
+  // 開いたら、裏の入力欄のカーソルを外す（学習画面のコードブロック・検索欄・カード編集のブロックなど）。
+  // 残すと入力欄がキーを受け取り続け、一覧の Esc・?・J/K が効かない（アイコンのタップで開いたときに起きる。
+  // キーで開くときは入力中には開けないので元々外れている）。各画面の開く処理ではなくここに置く＝漏れない。
+  // 一覧は見るだけで何も変えない＝閉じ方はいつもアラートの「キャンセル」と同じ＝閉じ切ったら元の編集へ戻す
+  // （lib/alertFocus.ts の仕組みをそのまま使う。戻すのは onDismiss＝スライドで閉じ終わってから）。
+  // keepEditing＝コードブロックの編集の見た目を残す（開くときに縮み、閉じたあと遅れて伸びるのを防ぐ）
+  const shown = useAlertPresence(visible, { keepEditing: true });
 
   // 一覧が一画面に収まらないときキーボードでスクロールできるようにする。
   const scrollRef = useRef<ScrollView>(null);
@@ -121,7 +130,7 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={shown} transparent animationType="slide" onRequestClose={onClose} onDismiss={restoreAfterAlert}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.baseSurface, maxHeight }]}>

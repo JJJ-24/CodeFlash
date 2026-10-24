@@ -94,9 +94,11 @@ interface DeckMultiSelectPickerProps {
   onToggle: (id: string) => void;
   onClearAll: () => void;
   onClose: () => void;
+  /** スライドで閉じ終わったとき（検索欄へカーソルを戻す判定に使う） */
+  onDismiss?: () => void;
 }
 
-function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onToggle, onClearAll, onClose }: DeckMultiSelectPickerProps) {
+function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onToggle, onClearAll, onClose, onDismiss }: DeckMultiSelectPickerProps) {
   const theme = useTheme();
   const { t } = useTranslation();
   const deckSortOrder = useSettingsStore((s) => s.deckSortOrder);
@@ -121,7 +123,7 @@ function DeckMultiSelectPickerModal({ visible, allLabel, decks, selectedIds, onT
   });
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} onDismiss={onDismiss}>
       <Pressable style={pickerStyles.overlay} onPress={onClose}>
         <Pressable style={[pickerStyles.sheet, { backgroundColor: theme.colors.surface }]} onPress={() => {}}>
           <Text style={[pickerStyles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
@@ -377,6 +379,19 @@ export default function SearchScreen() {
    *  ソフトキーボードが出たままだと結果一覧の見える範囲がその分狭くなる。
    *  ⚠️ リストは `keyboardShouldPersistTaps="handled"` なので、Pressable が受けたタップでは
    *  キーボードは自動で閉じない＝ここで明示的に閉じる必要がある。 */
+  // 絞り込みの一覧を開いたときに検索欄へ入力中だったか（と、そのときの選択）。何も変えずに閉じたらカーソルを戻す。
+  // 選び変えたら戻さない＝絞り込んだ結果を見たい場面で、キーボードが結果を覆うため（アラートの「実行したら戻さない」と同じ規則）。
+  const pickerRestoreRef = useRef<string | null>(null);
+  const notePickerOpen = (ids: string[]) => {
+    pickerRestoreRef.current = editingRef.current ? ids.join(',') : null;
+  };
+  const restoreAfterPicker = (ids: string[]) => {
+    const snapshot = pickerRestoreRef.current;
+    pickerRestoreRef.current = null;
+    // 閉じ終わった直後の focus は効かないことがある＝アラートの restoreAfterAlert と同じく少し待つ
+    if (snapshot !== null && snapshot === ids.join(',')) setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
   const dismissFocus = () => {
     setFocusedIndex(null);
     Keyboard.dismiss();
@@ -525,7 +540,7 @@ export default function SearchScreen() {
           {keyboardShortcutsEnabled && (
             // ホームのショートカットアイコンとスタイルを完全に揃える（animation:'none' の
             // ホーム⇄検索切替でアイコン位置がズレて見えないよう、padding 方式・値も同一にする）
-            <Pressable onPress={() => { Keyboard.dismiss(); inputRef.current?.blur(); setShowShortcutsModal(true); }} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }} hitSlop={4}>
+            <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }} hitSlop={4}>
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             </Pressable>
           )}
@@ -550,7 +565,8 @@ export default function SearchScreen() {
           </Pressable>
         </View>
         <Pressable
-          onPress={() => setDeckPickerVisible(true)}
+          // 検索欄のカーソルを外してから開く（残すと入力欄がキーを受け取り、一覧の J/K・Return が効かない）
+          onPress={() => { notePickerOpen(selectedDeckIds); Keyboard.dismiss(); inputRef.current?.blur(); setDeckPickerVisible(true); }}
           style={[
             styles.filterBtn,
             { borderColor: selectedDeckIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme) },
@@ -565,7 +581,8 @@ export default function SearchScreen() {
           />
         </Pressable>
         <Pressable
-          onPress={() => setTagPickerVisible(true)}
+          // 検索欄のカーソルを外してから開く（残すと入力欄がキーを受け取り、一覧の J/K・Return が効かない）
+          onPress={() => { notePickerOpen(selectedTagIds); Keyboard.dismiss(); inputRef.current?.blur(); setTagPickerVisible(true); }}
           style={[
             styles.filterBtn,
             { borderColor: selectedTagIds.length > 0 ? theme.colors.primary : themedFrameBorder(theme) },
@@ -909,6 +926,7 @@ export default function SearchScreen() {
         onToggle={toggleDeck}
         onClearAll={() => setSelectedDeckIds([])}
         onClose={() => setDeckPickerVisible(false)}
+        onDismiss={() => restoreAfterPicker(selectedDeckIds)}
       />
 
       {/* タグ絞り込みピッカー */}
@@ -921,6 +939,7 @@ export default function SearchScreen() {
         onToggle={toggleTag}
         onClearAll={() => setSelectedTagIds([])}
         onClose={() => setTagPickerVisible(false)}
+        onDismiss={() => restoreAfterPicker(selectedTagIds)}
       />
 
       <InfoModal

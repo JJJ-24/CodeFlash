@@ -28,6 +28,7 @@ import { useProStore } from "@/store/pro";
 import { mentionsRequests } from "@/lib/code-execution/pyRequestsShim";
 import { pagesFromDeckStages, resolveDeckStageHtml, resolveDeckStageSql } from "@/lib/deckStages";
 import { useFlipSuppress } from "@/lib/FlipSuppressContext";
+import { isBlurKeepingEdit } from "@/lib/alertFocus";
 import { useInteractivePreview } from "@/lib/InteractivePreviewContext";
 import { PyPagesList } from "@/components/code/PyPagesList";
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from "@/lib/theme";
@@ -46,6 +47,9 @@ interface Props {
   exitEditTrigger?: number;
   runTrigger?: number;
   editTrigger?: number;
+  /** 編集を最後のカーソル位置のまま再開する（ショートカット一覧・アラートをキャンセルで閉じたとき。BlocksView が渡す）。
+   *  editTrigger は末尾へ置く・実行結果も消すので別にしてある（カード編集の CodeBlockItem の restoreTrigger と同じ） */
+  restoreTrigger?: number;
   /** 058：実行結果の先頭の位置（ブロックの上端から見た y）。実行後のスクロールでエラーを先に見せるため */
   onOutputLayout?: (y: number) => void;
   /** 058：⌘R＝編集中でもカーソルを残したまま実行（結果は編集中でも出す） */
@@ -79,6 +83,7 @@ export function CodeRunnerView({
   exitEditTrigger,
   runTrigger,
   editTrigger,
+  restoreTrigger,
   runKeepEditTrigger,
   onOutputLayout,
   outputTrigger,
@@ -207,7 +212,7 @@ export function CodeRunnerView({
   // 別ブロックが編集中かどうかの ref 版（prop 変化時に useEffect で更新）
   const anotherBlockEditingRef = useRef(false);
   useEffect(() => { anotherBlockEditingRef.current = anotherBlockEditing ?? false; }, [anotherBlockEditing]);
-  const { insertPair, selection, handleSelectionChange, initCursorPosition } = useInsertPair(
+  const { insertPair, selection, handleSelectionChange, initCursorPosition, restoreSelection } = useInsertPair(
     editedContent ?? block.content,
     onContentChange ?? (() => {}),
     codeInputRef,
@@ -223,15 +228,19 @@ export function CodeRunnerView({
     if (!block.executable) reset();
   }, [block.executable]);
 
+  // 再開（restoreTrigger）のときは末尾へ置き直さない＝restoreSelection で渡した最後のカーソル位置のまま
+  const restoringRef = useRef(false);
   useEffect(() => {
     if (isEditing) {
       // focus() によるプログラム的フォーカスでは onSelectionChange が発火しない（iOS の挙動）ため、
       // カーソル位置をテキスト末尾で初期化する。これにより、ユーザーが手動でタップする前でも
       // パレットからの挿入が正しい位置（末尾）に行われる。
       const textLength = (editedContent ?? block.content).length;
+      const restoring = restoringRef.current;
+      restoringRef.current = false;
       setTimeout(() => {
         codeInputRef.current?.focus();
-        initCursorPosition(textLength);
+        if (!restoring) initCursorPosition(textLength);
       }, 50);
     }
   }, [isEditing]);
@@ -262,6 +271,21 @@ export function CodeRunnerView({
       onEditFocus?.();
     }
   }, [editTrigger]);
+
+  useEffect(() => {
+    if (!restoreTrigger) return;
+    // 編集を続けたまま（ショートカット一覧）なら入力欄へ戻すだけ（カーソル位置は入力欄が覚えている）
+    if (isEditingRef.current) { codeInputRef.current?.focus(); return; }
+    if (editable) {
+      restoringRef.current = true;
+      // ⚠️ 入力欄を作る前に最後の選択を渡す（渡さないと末尾に作られてから移る）
+      restoreSelection();
+      isEditingRef.current = true;
+      onEditRequest?.();
+      setIsEditing(true);
+      onEditFocus?.();
+    }
+  }, [restoreTrigger]);
 
   // 編集終了のみ（実行なし）- 完了ボタン・exitEditTrigger 用
   const handleEditEnd = useCallback(() => {
@@ -540,7 +564,13 @@ export function CodeRunnerView({
               // パレットタップ経由は paletteActiveRef で防ぐ
               // （handlePaletteTouchStart の 200ms タイマーが onBlur の 50ms タイマーより
               //   長く paletteActiveRef=true を保持するため、onFocus によるリセットに依存しない）
+              const keepEditing = isBlurKeepingEdit();
               setTimeout(() => {
+                // ショートカット一覧を開くためにカーソルを外しただけ＝編集を続ける（閉じたら restoreTrigger で戻る）
+                if (keepEditing && isEditingRef.current) {
+                  intentionalExitRef.current = false;
+                  return;
+                }
                 // 058：⌘R の実行でフォーカスを取られただけ＝編集は続けて入力欄へ戻す。
                 // 戻すのは1回だけ＝その後の Esc・外タップ（本当に編集をやめたい操作）は従来どおり効かせる
                 if (keepEditGuardRef.current && isEditingRef.current) {

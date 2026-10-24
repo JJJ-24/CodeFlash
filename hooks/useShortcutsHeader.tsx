@@ -6,6 +6,16 @@ import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapTo
 import { useTheme } from '@/lib/theme';
 
 /**
+ * 標準ヘッダーが左右に足す余白（pt）。iOS で幅 414pt 以上（iPad・大きい iPhone）だと 5pt
+ *（@react-navigation/elements の Header＝`IPAD_MINI_MEDIUM_WIDTH` 以上で `marginHorizontal: 5`）。
+ * 自前ヘッダー（ホーム・検索）のボタンは、この分を足して標準ヘッダーのタブとボタンの位置をそろえる。
+ */
+export function useStandardHeaderInset(): number {
+  const { width } = useWindowDimensions();
+  return Platform.OS === 'ios' && width >= 414 ? 5 : 0;
+}
+
+/**
  * 標準ヘッダー（学習/統計/設定タブ）の右端にショートカット一覧ボタンを出す。
  * `onHeaderTap` を渡すと、ヘッダーの何も無いところのタップで呼ぶ（一覧の先頭へ戻す用。
  * 詳細は components/HeaderTapToTop.tsx）。背景に敷くのでボタンのタップでは呼ばれない。
@@ -16,11 +26,8 @@ import { useTheme } from '@/lib/theme';
 export function useShortcutsHeader(enabled: boolean, onPress: () => void, onHeaderTap?: () => void, onSearch?: () => void) {
   const navigation = useNavigation();
   const theme = useTheme();
-  // 標準ヘッダーは iOS で幅 414pt 以上（iPad・大きい iPhone）だと左右に 5pt の余白を足す
-  //（@react-navigation/elements の Header＝`IPAD_MINI_MEDIUM_WIDTH` 以上で `marginHorizontal: 5`）。
-  // ホームの自前ヘッダーには無いので、その分を引いて検索ボタンをホームと同じ位置にする
-  const { width } = useWindowDimensions();
-  const headerInset = Platform.OS === 'ios' && width >= 414 ? 5 : 0;
+  // 標準ヘッダーが足す余白（useStandardHeaderInset）はホームの自前ヘッダーに無いので、引いて検索ボタンをホームと同じ位置にする
+  const headerInset = useStandardHeaderInset();
   // 毎レンダー新しい関数が来ても setOptions をやり直さないよう ref 経由で呼ぶ
   const headerTapRef = useRef(onHeaderTap);
   headerTapRef.current = onHeaderTap;

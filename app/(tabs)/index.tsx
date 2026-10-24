@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -43,6 +42,7 @@ import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useSyncStore } from '@/store/sync';
 import { useSettingsStore, type DeckSortOrder } from '@/store/settings';
 import type { Deck } from '@/types';
+import { useStandardHeaderInset } from '@/hooks/useShortcutsHeader';
 
 // ショートカット一覧を6カテゴリー（表示/フォーカス・選択/移動/操作/文字装飾/その他）に分類。
 // 該当するカテゴリーだけを並べる（順序固定・同じキーは全画面で同じ分類）。
@@ -163,6 +163,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  // 右上のキーボードのアイコンを、標準ヘッダーのタブ（学習/統計/設定）と同じ位置にそろえる
+  const headerInset = useStandardHeaderInset();
   const rs = useResponsiveSize();
   const bm = useBlockMetrics();
   // ステータスバー文字色の復元は deps:[] の focus effect 内から参照するため、常に最新値を ref で渡す。
@@ -565,8 +567,8 @@ export default function HomeScreen() {
           </View>
           <View style={{ flex: 1 }} />
           {keyboardShortcutsEnabled && (
-            // iPad はタブヘッダー（ナビゲーションヘッダー）の右余白が広く、ホームだけ右寄りに見えるため少し左へ寄せる
-            <Pressable hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }}>
+            // 標準ヘッダー（他のタブ）は幅 414pt 以上で左右に余白を足す＝その分だけ左へ寄せて右端のボタンの位置をそろえる
+            <Pressable hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: 8 + headerInset }}>
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             </Pressable>
           )}

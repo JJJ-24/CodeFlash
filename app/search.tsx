@@ -48,6 +48,7 @@ import { useSearchSessionStore } from '@/store/search';
 import { useReviewStore } from '@/store/reviews';
 import type { Card, Deck } from '@/types';
 import { forgetAfterAlert, restoreAfterAlert, useOverlayFocus } from '@/lib/alertFocus';
+import { useStandardHeaderInset } from '@/hooks/useShortcutsHeader';
 
 const SEARCH_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catDisplay', items: [
@@ -194,6 +195,8 @@ export default function SearchScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
+  // 右上のキーボードのアイコンを、標準ヘッダーのタブ（学習/統計/設定）と同じ位置にそろえる
+  const headerInset = useStandardHeaderInset();
   const rs = useResponsiveSize();
   // 上部のデッキ/タグ/日付ボタンのアイコン寸法（「閲覧」ボタンの幅の基準にも使う）
   const filterIconSize = Math.max(theme.fontSize.xl, rs(20, 22));
@@ -551,7 +554,7 @@ export default function SearchScreen() {
           {keyboardShortcutsEnabled && (
             // ホームのショートカットアイコンとスタイルを完全に揃える（animation:'none' の
             // ホーム⇄検索切替でアイコン位置がズレて見えないよう、padding 方式・値も同一にする）
-            <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: (Platform as any).isPad ? 13 : 8 }} hitSlop={4}>
+            <Pressable onPress={() => setShowShortcutsModal(true)} style={{ paddingLeft: 8, paddingRight: 8 + headerInset }} hitSlop={4}>
               <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
             </Pressable>
           )}

@@ -276,14 +276,20 @@ export default function StudySettingsScreen() {
     { title: t('shortcut.catNavigate'), items: [
       { key: 'B', descKey: 'shortcut.back' },
     ] },
-    { title: t('shortcut.catPickerList'), items: [
-      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-      { key: 'Return', descKey: 'shortcut.pickAndClose' },
-      { key: 'S', descKey: 'shortcut.settingPreviewVoice' },
-    ] },
     { title: t('shortcut.catOther'), items: [
       { key: 'ESC', descKey: 'shortcut.esc' },
       { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
+  // 画面の上に開くモーダルのキーは■見出しで画面のキーと分ける（統計と同じ2階層）。
+  const shortcutGroups = [
+    { title: t('settings.studySettings'), sections: shortcutSections },
+    { title: t('shortcut.catPickerList'), sections: [
+      { title: t('shortcut.catFocus'), items: [
+        { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+        { key: 'Return', descKey: 'shortcut.pickAndClose' },
+        { key: 'S', descKey: 'shortcut.settingPreviewVoice' },
+      ] },
     ] },
   ];
 
@@ -890,7 +896,7 @@ export default function StudySettingsScreen() {
         // 読み上げの言語/声のモーダルは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
         // （両方が登録すると Esc でモーダルが閉じると同時に画面まで戻る）
         suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
-        shortcuts={shortcutSections}
+        shortcutGroups={shortcutGroups}
         // 非 Pro でも目標枚数・読み上げ（ともに無料）の i アイコンが開けるので、
         // Pro 側と同じく「開いている説明があれば先に閉じる」を渡す
         // （目標 OFF の確認ダイアログ＝アラートは表示中にキーを独占する＝054 ので、ここでは閉じない）
@@ -933,7 +939,7 @@ export default function StudySettingsScreen() {
       title={t('settings.studySettings')}
       // 上（非 Pro 分岐）と同じ理由でモーダル表示中はキーを手放す
       suspendKeys={speechLangModal !== null || speechVoiceModal !== null || speechAutoModal || sliderModal !== null}
-      shortcuts={shortcutSections}
+      shortcutGroups={shortcutGroups}
       onBack={(direct) => {
         if (!direct && openInfos.size > 0) { setOpenInfos(new Set()); return; }
         router.back();

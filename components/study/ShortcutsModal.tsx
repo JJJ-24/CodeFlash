@@ -96,6 +96,30 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
     );
   }
 
+  // 「フォーカス」「選択」のカテゴリーは見出しの下に対象の説明を出す（各行の「（フォーカス項目）」等を省くため）。
+  // 見出しの文字列で判定する＝画面側のセクション定義に手を入れずに全画面へ効く。
+  function sectionNote(title: string): string | null {
+    if (title === t('shortcut.catFocus')) return t('shortcut.catFocusNote');
+    if (title === t('shortcut.catSelected')) return t('shortcut.catSelectedNote');
+    return null;
+  }
+
+  function renderSectionHeader(title: string, separated = false) {
+    const note = sectionNote(title);
+    return (
+      <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border }, separated && styles.sectionHeaderSeparator]}>
+        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+          {title}
+        </Text>
+        {note != null && (
+          <Text style={{ color: theme.colors.textSecondary, fontSize: theme.fontSize.xs, marginTop: 2 }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
+            {note}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -124,11 +148,7 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
                   </View>
                   {group.sections.map((section) => (
                     <View key={section.title}>
-                      <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border }]}>
-                        <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                          {section.title}
-                        </Text>
-                      </View>
+                      {renderSectionHeader(section.title)}
                       {section.items.map(renderItem)}
                     </View>
                   ))}
@@ -137,11 +157,7 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
             ) : sections ? (
               sections.map((section, sectionIndex) => (
                 <View key={section.title}>
-                  <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border }, sectionIndex > 0 && styles.sectionHeaderSeparator]}>
-                    <Text style={{ color: theme.colors.primary, fontSize: theme.fontSize.sm, fontWeight: '700' }} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
-                      {section.title}
-                    </Text>
-                  </View>
+                  {renderSectionHeader(section.title, sectionIndex > 0)}
                   {section.items.map(renderItem)}
                 </View>
               ))

@@ -68,16 +68,21 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
     { key: 'S', descKey: 'shortcut.save' },
     { key: 'X', descKey: 'shortcut.close' },
   ] },
-  { titleKey: 'shortcut.catStageSheet', items: [
-    { key: 'J / K', descKey: 'shortcut.focusNextPrev', pro: true },
-    { key: 'Return', descKey: 'shortcut.stageOpen', pro: true },
-    { key: 'Delete', descKey: 'shortcut.deleteFocused', pro: true },
-    { key: 'N', descKey: 'shortcut.stageAdd', pro: true },
-    { key: 'V', descKey: 'shortcut.stageViewPage', pro: true },
-  ] },
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC', descKey: 'shortcut.esc' },
     { key: '?', descKey: 'shortcut.showShortcuts' },
+  ] },
+];
+// 土台/初期化の一覧（H/Q で開くモーダル）の中のキー。画面のキーとは■見出しで分ける（統計と同じ2階層）。
+const STAGE_SHEET_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catFocus', items: [
+    { key: 'J / K', descKey: 'shortcut.focusNextPrev', pro: true },
+    { key: 'Return', descKey: 'shortcut.stageOpen', pro: true },
+    { key: 'Delete', descKey: 'shortcut.deleteFocused', pro: true },
+    { key: 'V', descKey: 'shortcut.stageViewPage', pro: true },
+  ] },
+  { titleKey: 'shortcut.catAction', items: [
+    { key: 'N', descKey: 'shortcut.stageAdd', pro: true },
   ] },
 ];
 
@@ -549,7 +554,10 @@ export default function NewDeckScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={DECK_NEW_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        groups={[
+          { title: t('deck.new'), sections: DECK_NEW_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
+          { title: t('shortcut.catStageSheet'), sections: STAGE_SHEET_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
+        ]}
       />
     </>
   );

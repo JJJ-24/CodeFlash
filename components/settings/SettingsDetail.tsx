@@ -46,6 +46,8 @@ interface Props {
    * モーダルの OK 等）と二重に発火しないように。
    */
   shortcuts?: ComponentProps<typeof ShortcutsModal>['sections'];
+  /** `shortcuts` の2階層版（画面の上に開くモーダルのキーを■見出しで分ける＝統計と同じ形）。どちらか一方を渡す。 */
+  shortcutGroups?: ComponentProps<typeof ShortcutsModal>['groups'];
   /**
    * 053：キーを持たない確認ダイアログ（`ConfirmModal` 等）を出している間 true にする。
    * 背後の項目操作（J/K・H/L・Return 等）を止め、Esc はフォーカス解除を飛ばして `onBack` へ直行させる
@@ -61,7 +63,7 @@ interface Props {
  * push 遷移時の戻るボタン残像を防ぐため headerShown:false ＋ インラインカスタムヘッダー
  * （CLAUDE.md のカスタムヘッダーパターン。about.tsx と同形）。
  */
-export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, shortcuts, blockNav, extraKeys }: Props) {
+export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, shortcuts, shortcutGroups, blockNav, extraKeys }: Props) {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -70,7 +72,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   // （日時・Wi-Fi・電池）が消えたまま戻らなかった＝他の自前ヘッダーの画面と同じく再アサートする。
   // ヘッダーは useLockedTopInset で高さ固定なので、無条件に表示へ戻してもヘッダーは動かない。
   useRestoreStatusBar();
-  const keyNav = shortcuts != null;
+  const keyNav = shortcuts != null || shortcutGroups != null;
   const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const { t } = useTranslation();
 
@@ -211,7 +213,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
 
       {overlay}
       {keyNav && (
-        <ShortcutsModal visible={showShortcuts} onClose={() => setShowShortcuts(false)} sections={shortcuts} />
+        <ShortcutsModal visible={showShortcuts} onClose={() => setShowShortcuts(false)} sections={shortcuts} groups={shortcutGroups} />
       )}
     </View>
   );

@@ -80,13 +80,19 @@ export default function DisplaySettingsScreen() {
     { title: t('shortcut.catNavigate'), items: [
       { key: 'B', descKey: 'shortcut.back' },
     ] },
-    { title: t('shortcut.catLanguagePicker'), items: [
-      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-      { key: 'Return', descKey: 'shortcut.pickAndClose' },
-    ] },
     { title: t('shortcut.catOther'), items: [
       { key: 'ESC', descKey: 'shortcut.esc' },
       { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
+  // 画面の上に開くモーダルのキーは■見出しで画面のキーと分ける（統計と同じ2階層）。
+  const shortcutGroups = [
+    { title: t('settings.display'), sections: shortcutSections },
+    { title: t('shortcut.catLanguagePicker'), sections: [
+      { title: t('shortcut.catFocus'), items: [
+        { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+        { key: 'Return', descKey: 'shortcut.pickAndClose' },
+      ] },
     ] },
   ];
 
@@ -115,7 +121,7 @@ export default function DisplaySettingsScreen() {
       title={t('settings.display')}
       // 言語ピッカーは自前で Esc を持つ＝開いている間はこの画面のキーを手放す
       suspendKeys={langModal}
-      shortcuts={shortcutSections}
+      shortcutGroups={shortcutGroups}
     >
       <SegmentedCard
         label={t('settings.theme')}

@@ -348,6 +348,8 @@ export default function DeckDetailScreen() {
     { titleKey: 'shortcut.catFocus', items: [
       { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
       { key: 'Space', descKey: 'shortcut.toggleCheck' },
+    ] },
+    { titleKey: 'shortcut.catSelected', items: [
       { key: 'A',     descKey: 'shortcut.selectAll' },
       { key: 'U / D', descKey: 'shortcut.reorderSelectedUpDown' },
       { key: 'M',     descKey: 'shortcut.moveSelected' },

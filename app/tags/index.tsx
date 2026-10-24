@@ -66,6 +66,14 @@ const TAG_SHORTCUT_SECTIONS = [
   ] },
 ];
 
+// C で開く色変更シートの中のキー。選択モードのキーとは■見出しで分ける（デッキ編集の土台の一覧と同じ形）。
+const TAG_COLOR_SHEET_SHORTCUT_SECTIONS = [
+  { titleKey: 'shortcut.catAction', items: [
+    { key: 'C / ⇧C', descKey: 'shortcut.cycleColorSheet' },
+    { key: 'Return', descKey: 'shortcut.applyColorClose' },
+  ] },
+];
+
 const TAG_SELECTION_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catDisplay', items: [
     { key: 'S',     descKey: 'shortcut.exitSelect' },
@@ -73,15 +81,12 @@ const TAG_SELECTION_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'Space', descKey: 'shortcut.toggleCheck' },
+  ] },
+  { titleKey: 'shortcut.catSelected', items: [
     { key: 'A',     descKey: 'shortcut.selectAll' },
     { key: 'U / D', descKey: 'shortcut.reorderSelectedUpDown' },
     { key: 'C',     descKey: 'shortcut.changeColorSelected' },
     { key: 'Delete', descKey: 'shortcut.deleteSelected' },
-  ] },
-  // C で開く色変更シートの中のキー（デッキ編集の「土台/初期化の一覧（モーダル内）」と同じ形）
-  { titleKey: 'shortcut.catColorSheet', items: [
-    { key: 'C / ⇧C', descKey: 'shortcut.cycleColorSheet' },
-    { key: 'Return', descKey: 'shortcut.applyColorClose' },
   ] },
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC',   descKey: 'shortcut.esc' },
@@ -860,10 +865,13 @@ export default function TagsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        subtitle={selectionMode ? t('shortcut.selectMode') : t('shortcut.normalMode')}
-        sections={(selectionMode ? TAG_SELECTION_SHORTCUT_SECTIONS : TAG_SHORTCUT_SECTIONS)
-          .map((s) => ({ title: t(s.titleKey), items: s.items }))
-        }
+        // 選択モードは色変更シートのキーを■見出しで分ける＝副題の「■ 選択モード」を1つ目の見出しにする（■が2段重ならないように）
+        subtitle={selectionMode ? undefined : t('shortcut.normalMode')}
+        sections={selectionMode ? undefined : TAG_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        groups={selectionMode ? [
+          { title: t('shortcut.selectMode'), sections: TAG_SELECTION_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
+          { title: t('shortcut.catColorSheet'), sections: TAG_COLOR_SHEET_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
+        ] : undefined}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

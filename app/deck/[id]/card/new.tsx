@@ -24,11 +24,16 @@ import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useSettingsStore } from '@/store/settings';
 
 // 新規作成では「カード複製(C)」「アーカイブ(E・フォーカスなし / ⇧E)」は無効（どちらもカード編集時のみ）。
-// 編集画面と共有のセクションからこの2項目を除外し、空になったカテゴリーも落とす。
+// 編集画面と共有のセクションからこれらを除外し、空になったカテゴリーも落とす。
 // Space は 058 からコードブロックの実行トグル・土台のスイッチにも使うので、新規作成でも残す。
-const NEW_CARD_EXCLUDED = new Set(['shortcut.duplicateCard', 'shortcut.archiveUnfocused', 'shortcut.archiveToggle']);
-// 新規作成では E は編集のみ（アーカイブ不可）。編集＋アーカイブの結合表示を編集専用の文言へ差し替える。
-const NEW_CARD_REMAP: Record<string, string> = { 'shortcut.editArchiveCombo': 'shortcut.editFocusedItem' };
+// プレビューの Delete（カード削除）も新規作成では onDeleteCard が無く効かないので除外する。
+const NEW_CARD_EXCLUDED = new Set(['shortcut.duplicateCard', 'shortcut.archiveToggle', 'shortcut.deleteCard']);
+// 新規作成では E は編集のみ（アーカイブ不可）・フォーカスなしの Delete も何もしない（カード削除は編集時のみ）。
+// 「フォーカスなし：…」の2行目を持つ文言を、フォーカス時の動作だけの文言へ差し替える。
+const NEW_CARD_REMAP: Record<string, string> = {
+  'shortcut.editArchiveCombo': 'shortcut.editFocusedItem',
+  'shortcut.delete': 'shortcut.deleteFocused',
+};
 type ShortcutSectionDef = { titleKey: string; items: { key: string; descKey: string; pro?: boolean }[] };
 const filterForNew = (sections: ShortcutSectionDef[]): ShortcutSectionDef[] =>
   sections

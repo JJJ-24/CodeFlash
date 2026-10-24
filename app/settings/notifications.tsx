@@ -638,18 +638,26 @@ export default function NotificationSettingsScreen() {
     { title: t('shortcut.catAction'), items: [
       { key: 'N', descKey: 'shortcut.addSchedule' },
     ] },
-    { title: t('shortcut.catScheduleSheet'), items: [
-      { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
-      { key: '0–9', descKey: 'shortcut.scheduleTimeDigits' },
-      { key: '1–7', descKey: 'shortcut.scheduleWeekday' },
-      { key: 'Return', descKey: 'shortcut.scheduleLabel' },
-      { key: 'Space', descKey: 'shortcut.settingToggle' },
-      { key: 'S', descKey: 'shortcut.save' },
-      { key: 'Delete', descKey: 'shortcut.deleteSchedule' },
-    ] },
     { title: t('shortcut.catOther'), items: [
       { key: 'ESC', descKey: 'shortcut.esc' },
       { key: '?', descKey: 'shortcut.showShortcuts' },
+    ] },
+  ];
+  // 画面の上に開くモーダルのキーは■見出しで画面のキーと分ける（統計と同じ2階層）。
+  const shortcutGroups = [
+    { title: t('notification.title'), sections: shortcutSections },
+    { title: t('shortcut.catScheduleSheet'), sections: [
+      { title: t('shortcut.catFocus'), items: [
+        { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
+        { key: '0–9', descKey: 'shortcut.scheduleTimeDigits' },
+        { key: '1–7', descKey: 'shortcut.scheduleWeekday' },
+        { key: 'Return', descKey: 'shortcut.scheduleLabel' },
+        { key: 'Space', descKey: 'shortcut.settingToggle' },
+      ] },
+      { title: t('shortcut.catAction'), items: [
+        { key: 'S', descKey: 'shortcut.save' },
+        { key: 'Delete', descKey: 'shortcut.deleteSchedule' },
+      ] },
     ] },
   ];
 
@@ -658,7 +666,7 @@ export default function NotificationSettingsScreen() {
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SettingsDetail
       title={t('notification.title')}
-      shortcuts={shortcutSections}
+      shortcutGroups={shortcutGroups}
       // 編集シートは自前でキー（Esc 含む）を持つ＝開いている間はこの画面のキーを手放す。
       // 削除の確認・権限の案内（アラート）は表示中にキーを独占する（054）ので、ここでは止めない・閉じない。
       suspendKeys={modalVisible}

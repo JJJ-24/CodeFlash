@@ -60,11 +60,11 @@ const STUDY_TAB_SHORTCUT_SECTIONS = [
     { key: '1–4', descKey: 'shortcut.switchFilter' },
     { key: 'D / T', descKey: 'shortcut.switchDeckTab' },
     { key: 'F',     descKey: 'shortcut.toggleHideEmpty' },
+    { key: 'S',     descKey: 'shortcut.toggleShuffle' },
   ] },
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'Space', descKey: 'shortcut.startStudyFocused' },
-    { key: 'S',     descKey: 'shortcut.toggleShuffle' },
   ] },
   { titleKey: 'shortcut.catNavigate', items: [
     { key: 'Tab / ⇧Tab', descKey: 'shortcut.tabNextPrev' },

@@ -115,6 +115,7 @@ const SESSION_SHORTCUT_SECTIONS = [
     { key: "F", descKey: "shortcut.fullscreen" },
     { key: "U / D", descKey: "shortcut.scrollUpDown" },
     { key: "⇧U / ⇧D", descKey: "shortcut.scrollTopBottom" },
+    { key: "W", descKey: "shortcut.links" },
   ] },
   { titleKey: "shortcut.catFocus", items: [
     { key: "J / K", descKey: "shortcut.focusNextPrev" },
@@ -138,7 +139,6 @@ const SESSION_SHORTCUT_SECTIONS = [
   ] },
   { titleKey: "shortcut.catOther", items: [
     { key: "ESC", descKey: "shortcut.esc" },
-    { key: "W", descKey: "shortcut.links" },
     { key: "?", descKey: "shortcut.showShortcuts" },
   ] },
 ];

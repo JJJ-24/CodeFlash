@@ -71,6 +71,8 @@ const TAG_CARDS_SELECTION_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catFocus', items: [
     { key: 'J / K', descKey: 'shortcut.focusNextPrev' },
     { key: 'Space', descKey: 'shortcut.toggleCheck' },
+  ] },
+  { titleKey: 'shortcut.catSelected', items: [
     { key: 'A',     descKey: 'shortcut.selectAll' },
     { key: 'T',     descKey: 'shortcut.removeTagSelected' },
     { key: 'E',     descKey: 'shortcut.archiveSelected' },

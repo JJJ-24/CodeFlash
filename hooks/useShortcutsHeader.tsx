@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { Pressable } from 'react-native';
+import { Platform, Pressable, useWindowDimensions } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapToTop';
@@ -16,6 +16,11 @@ import { useTheme } from '@/lib/theme';
 export function useShortcutsHeader(enabled: boolean, onPress: () => void, onHeaderTap?: () => void, onSearch?: () => void) {
   const navigation = useNavigation();
   const theme = useTheme();
+  // 標準ヘッダーは iOS で幅 414pt 以上（iPad・大きい iPhone）だと左右に 5pt の余白を足す
+  //（@react-navigation/elements の Header＝`IPAD_MINI_MEDIUM_WIDTH` 以上で `marginHorizontal: 5`）。
+  // ホームの自前ヘッダーには無いので、その分を引いて検索ボタンをホームと同じ位置にする
+  const { width } = useWindowDimensions();
+  const headerInset = Platform.OS === 'ios' && width >= 414 ? 5 : 0;
   // 毎レンダー新しい関数が来ても setOptions をやり直さないよう ref 経由で呼ぶ
   const headerTapRef = useRef(onHeaderTap);
   headerTapRef.current = onHeaderTap;
@@ -39,12 +44,12 @@ export function useShortcutsHeader(enabled: boolean, onPress: () => void, onHead
           <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
         </Pressable>
       ) : undefined,
-      headerLeftContainerStyle: hasSearch ? { paddingLeft: 8 } : undefined,
+      headerLeftContainerStyle: hasSearch ? { paddingLeft: 8 - headerInset } : undefined,
       headerBackground: hasHeaderTap
         ? ({ style }: { style: any }) => (
           <HeaderTapToTop style={[{ flex: 1 }, style]} onPress={() => headerTapRef.current?.()} />
         )
         : undefined,
     });
-  }, [enabled, theme, onPress, navigation, hasHeaderTap, hasSearch]);
+  }, [enabled, theme, onPress, navigation, hasHeaderTap, hasSearch, headerInset]);
 }

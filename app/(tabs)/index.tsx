@@ -29,7 +29,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
-import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
@@ -469,13 +469,13 @@ export default function HomeScreen() {
     // E = フォーカス中デッキのアーカイブ切替（全画面で E に統一）。ホームには選択モードが
     //   無いため、これがキーボードからアーカイブする唯一の手段。「有効」フィルターでは
     //   アーカイブすると行が消えるので、ピル通知を添える。
-    { input: 'e', handler: () => {
+    ...archiveKeySpecs(() => {
       if (focusedDeckIndex !== null && displayedDecks[focusedDeckIndex]) {
         const deck = displayedDecks[focusedDeckIndex];
         toggleDeckArchive(deck);
         showArchivePill(!deck.archived);
       }
-    } },
+    }),
     { input: 'n', handler: () => router.push({ pathname: '/deck/new' }) },
     // ⌘N = 同じ（新規作成・追加の OS 慣習。⌘付きはどの画面でも同じ意味＝CLAUDE.md「迷ったら⌘」）
     { input: 'n', modifierFlags: KeyCommand.keyModifierCommand, handler: () => router.push({ pathname: '/deck/new' }) },

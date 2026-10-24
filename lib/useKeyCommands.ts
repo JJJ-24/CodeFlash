@@ -78,6 +78,15 @@ export const deleteKeySpecs = (handler: () => void): KeyCommandSpec[] => [
 ];
 
 /**
+ * アーカイブの E を ⇧E にも割り当てる spec を返す。カード編集はフォーカス中の E が「ブロック編集」なので
+ * ⇧E がアーカイブで、その手癖がどの画面でも効くようにする（⇧E＝アーカイブは全画面で同じ意味）。
+ */
+export const archiveKeySpecs = (handler: () => void): KeyCommandSpec[] => [
+  { input: 'e', handler },
+  { input: 'e', modifierFlags: KEY_MOD_SHIFT, handler },
+];
+
+/**
  * PageUp / PageDown キー（フルサイズ外付けキーボードのみ。iPad/Mac ノートには無い）。
  * iOS 公式の UIKeyInputPageUp / UIKeyInputPageDown 定数を使う（patches/ でライブラリの
  * ネイティブ定数に追加済み）。直接の文字推測（U+F72C/F72D 等）では発火しなかったため、

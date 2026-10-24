@@ -28,7 +28,7 @@ import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
-import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
@@ -320,7 +320,7 @@ export default function TagCardsScreen() {
     // E = アーカイブ切替（全画面で E に統一）。Delete と同じ「選択モード＝選択カード／
     //   通常モード＝フォーカスカード」の流儀。「有効」フィルターではアーカイブすると
     //   その行が消えるため、キー操作にはピル通知を添える（スワイプはボタン表示があるので不要）。
-    { input: 'e', handler: () => {
+    ...archiveKeySpecs(() => {
       if (statsCardId !== null) return;
       if (selectionMode) {
         handleArchiveSelected();
@@ -329,7 +329,7 @@ export default function TagCardsScreen() {
         archiveCard(card);
         showArchivePill(!card.archived);
       }
-    } },
+    }),
     { input: 's', handler: () => { if (statsCardId !== null) return; if (selectionMode) exitSelectionMode(); else if (cards.length > 0) enterSelectionMode(); } },
     { input: '1', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('all'); } },
     { input: '2', handler: () => { if (statsCardId !== null || selectionMode) return; setLastTagCardFilter('active'); } },

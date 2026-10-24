@@ -29,7 +29,7 @@ import { deleteCardsBulk, getArchivedCards, setCardsArchived } from '@/lib/datab
 import { deleteDecksBulk, getAllDecks, setDecksArchived } from '@/lib/database/decks';
 import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from '@/lib/theme';
 import { useBlockMetrics } from '@/lib/blockMetrics';
-import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
@@ -317,7 +317,7 @@ export default function ArchiveScreen() {
     { input: 'a', handler: () => { if (selectionMode) toggleSelectAll(); } },
     { input: 'a', modifierFlags: KeyCommand.keyModifierCommand, handler: () => { if (selectionMode) toggleSelectAll(); } },
     // E = アーカイブ解除（全画面で E に統一。選択モード＝選択分／通常＝フォーカス行）
-    { input: 'e', handler: () => { if (selectionMode) unarchiveSelected(); else unarchiveFocused(); } },
+    ...archiveKeySpecs(() => { if (selectionMode) unarchiveSelected(); else unarchiveFocused(); }),
     ...deleteKeySpecs(() => { if (selectionMode) confirmDeleteSelected(); else deleteFocused(); }),
     { input: 's', handler: () => { if (selectionMode) exitSelectionMode(); else if (items.length > 0) enterSelectionMode(); } },
     { input: '1', handler: () => { if (!selectionMode) switchTab('decks'); } },

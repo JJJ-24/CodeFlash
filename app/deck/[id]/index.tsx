@@ -54,7 +54,7 @@ import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
-import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
+import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { createDeck, setDeckArchived } from '@/lib/database/decks';
@@ -910,7 +910,7 @@ export default function DeckDetailScreen() {
     // E = アーカイブ切替（全画面で E に統一）。Delete と同じ「選択モード＝選択カード／
     //   通常モード＝フォーカスカード」の流儀。復習/新規フィルターではアーカイブすると
     //   その行が消えるため、キー操作にはピル通知を添える（スワイプはボタン表示があるので不要）。
-    { input: 'e', handler: () => {
+    ...archiveKeySpecs(() => {
       if (showDeckPicker || statsCardId !== null) return;
       if (selectionMode) {
         if (selectedCardIds.size > 0 && !isProcessing) handleArchiveSelected();
@@ -919,7 +919,7 @@ export default function DeckDetailScreen() {
         archiveCard(card);
         showArchivePill(!card.archived);
       }
-    } },
+    }),
     {
       input: 'p',
       handler: () => {

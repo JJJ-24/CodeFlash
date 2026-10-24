@@ -36,7 +36,7 @@ import type { DeckIconName } from '@/lib/deckIcons';
 import type { DeckImage, DeckStage } from '@/types';
 import { deleteDeck, setDeckArchived, updateDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
-import { deleteKeySpecs, scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
+import { archiveKeySpecs, deleteKeySpecs, scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
 import { ArchivePill, useArchivePill } from '@/components/ArchivePill';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useDeckStore } from '@/store/decks';
@@ -202,7 +202,7 @@ export default function EditDeckScreen() {
     // 052: ⇧R = このデッキの読み上げ ON/OFF（R＝読み上げの設定を開く、の Shift 版。E＝アーカイブと同じ「トグルはキー1つ」）
     { input: 'r', modifierFlags: KeyCommand.keyModifierShift, handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); setSpeechDisabled((v) => !v); } },
     // アーカイブ切替（全画面で E に統一）。欄が画面外でも分かるよう中央ピルで通知＋ヘッダーにアイコン（ModalFormHeader）
-    { input: 'e', handler: () => { if (subModalOpen()) return; Keyboard.dismiss(); const next = !archived; setArchived(next); showArchivePill(next); } },
+    ...archiveKeySpecs(() => { if (subModalOpen()) return; Keyboard.dismiss(); const next = !archived; setArchived(next); showArchivePill(next); }),
     ...deleteKeySpecs(() => { if (subModalOpen()) return; confirmDelete(); }), // 削除（Backspace/Delete）
     // 画面スクロール（U/D＝段階、PgUp/PgDn＝同、Home/End＝最上部/最下部、⇧U/⇧D＝端）。
     // 055：J/K＝項目のフォーカス・Return＝開く/入力を始める・Space＝スイッチ・`,`/`.`＝色を送る

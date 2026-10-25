@@ -25,7 +25,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
@@ -715,7 +715,7 @@ export default function HomeScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={HOME_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(HOME_SHORTCUT_SECTIONS, t)}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

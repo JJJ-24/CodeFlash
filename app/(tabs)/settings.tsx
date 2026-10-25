@@ -11,7 +11,7 @@ import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 
 import { settingsStyles as styles } from '@/components/settings/styles';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 
 import { getTrialRemainingMs } from '@/lib/proTrial';
 import { centeredScrollY } from '@/lib/scrollCenter';
@@ -210,7 +210,7 @@ export default function SettingsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={SETTINGS_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(SETTINGS_SHORTCUT_SECTIONS, t)}
       />
     </View>
   );

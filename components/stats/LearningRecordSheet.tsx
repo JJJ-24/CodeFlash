@@ -16,7 +16,7 @@ import { MAX_FONT_MULTIPLIER, FILTER_COLORS, themedFrameBorder, type AppTheme } 
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { InfoContent } from '@/components/InfoContent';
 import { InfoModal } from '@/components/InfoModal';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import type { LifetimeStats } from '@/lib/database/reviews';
 import { formatDateLabel } from '@/lib/dateLabels';
 import { BADGES, BADGE_MAX_LAP, BADGE_SECTIONS, LAP_GOLD, LAP_SILVER, badgeEarnedDates, badgeLevel, badgeMetricValue, badgeStage, badgeThresholdForLap, badgeTotal, earnedBadgeCount, type BadgeDef } from '@/lib/stats/badges';
@@ -682,7 +682,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={RECORD_SHEET_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(RECORD_SHEET_SHORTCUT_SECTIONS, t)}
       />
     </View>
   );

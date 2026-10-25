@@ -25,7 +25,7 @@ import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { createTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
@@ -240,7 +240,7 @@ export default function NewTagScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={TAG_NEW_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(TAG_NEW_SHORTCUT_SECTIONS, t)}
       />
     </>
   );

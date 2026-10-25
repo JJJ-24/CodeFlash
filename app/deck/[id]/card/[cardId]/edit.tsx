@@ -17,7 +17,7 @@ import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { deleteCard, duplicateCard, getCardById, setCardArchived, updateCard } from '@/lib/database/cards';
 import { getTagsByCardId, addTagToCard, removeTagFromCard } from '@/lib/database/tags';
 import { getCardPreview } from '@/lib/cardPreview';
@@ -266,12 +266,12 @@ export default function EditCardScreen() {
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
         subtitle={editorMode === 'sort' ? t('shortcut.sortMode') : editorMode === 'preview' ? t('shortcut.previewMode') : t('shortcut.editMode')}
-        sections={(editorMode === 'sort'
+        sections={localizeSections((editorMode === 'sort'
           ? CARD_EDITOR_SECTIONS_SORT
           : editorMode === 'preview'
           ? CARD_EDITOR_SECTIONS_PREVIEW
           : CARD_EDITOR_SECTIONS_EDIT
-        ).map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        ), t)}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

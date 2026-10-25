@@ -37,7 +37,7 @@ import { DeckIcon } from '@/components/DeckIcon';
 import { MultiSelectPickerModal, pickerStyles, type PickerItem } from '@/components/MultiSelectPickerModal';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { useDeckStore } from '@/store/decks';
@@ -968,7 +968,7 @@ export default function SearchScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={SEARCH_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(SEARCH_SHORTCUT_SECTIONS, t)}
       />
     </View>
   );

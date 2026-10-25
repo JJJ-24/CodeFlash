@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -24,6 +25,17 @@ interface ShortcutSection {
 interface ShortcutGroup {
   title: string;
   sections: ShortcutSection[];
+}
+
+/** 画面側の定義（見出しは翻訳キーのまま持つ）。表示前に localizeSections で翻訳する。 */
+export interface ShortcutSectionDef {
+  titleKey: string;
+  items: ShortcutItem[];
+}
+
+/** 見出しの翻訳キーを文言に変える（各画面の `sections` / `groups` に渡す前の共通の変換）。 */
+export function localizeSections(sections: readonly ShortcutSectionDef[], t: TFunction): ShortcutSection[] {
+  return sections.map((s) => ({ title: t(s.titleKey), items: s.items }));
 }
 
 interface Props {

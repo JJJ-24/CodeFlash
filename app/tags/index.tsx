@@ -26,7 +26,7 @@ import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
 import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
@@ -871,10 +871,10 @@ export default function TagsScreen() {
         onClose={() => setShowShortcutsModal(false)}
         // 選択モードは色変更シートのキーを■見出しで分ける＝副題の「■ 選択モード」を1つ目の見出しにする（■が2段重ならないように）
         subtitle={selectionMode ? undefined : t('shortcut.normalMode')}
-        sections={selectionMode ? undefined : TAG_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={selectionMode ? undefined : localizeSections(TAG_SHORTCUT_SECTIONS, t)}
         groups={selectionMode ? [
-          { title: t('shortcut.selectMode'), sections: TAG_SELECTION_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
-          { title: t('shortcut.catColorSheet'), sections: TAG_COLOR_SHEET_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
+          { title: t('shortcut.selectMode'), sections: localizeSections(TAG_SELECTION_SHORTCUT_SECTIONS, t) },
+          { title: t('shortcut.catColorSheet'), sections: localizeSections(TAG_COLOR_SHEET_SHORTCUT_SECTIONS, t) },
         ] : undefined}
       />
       <ConfirmDeleteModal

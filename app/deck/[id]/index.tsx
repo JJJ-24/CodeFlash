@@ -52,7 +52,7 @@ import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
 import { DeckPickerModal } from '@/components/DeckPickerModal';
 import { EmptyState } from '@/components/EmptyState';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
@@ -1638,8 +1638,7 @@ export default function DeckDetailScreen() {
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="75%"
         subtitle={selectionMode ? t('shortcut.selectMode') : t('shortcut.normalMode')}
-        sections={(selectionMode ? DECK_SHORTCUT_SECTIONS_SELECT : DECK_SHORTCUT_SECTIONS_NORMAL)
-          .map((s) => ({ title: t(s.titleKey), items: s.items }))
+        sections={localizeSections(selectionMode ? DECK_SHORTCUT_SECTIONS_SELECT : DECK_SHORTCUT_SECTIONS_NORMAL, t)
         }
       />
       <ConfirmDeleteModal

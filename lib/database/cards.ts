@@ -308,9 +308,7 @@ export async function updateCardSortOrders(db: SQLiteDatabase, orderedIds: strin
 /** 今日作成したカード数（全デッキ合計）。統計タブ上部ブロック「新規」用。
  *  作成実績（過去実績）なのでアーカイブ除外しない（032方針）＝「過去7日間の新規作成」グラフと一致させる。
  *  ⚠️ **「新規」が今日作成なのはこの統計タブだけ**で、学習タブ・カード一覧の「新規」は
- *  **未学習カード**（getUnlearnedCount*／学習すると減る）＝別物。
- *  ⚠️ 下の getTodayCreatedCountPerDeck/PerTag/ByDeck/CardIds* は**現在どこからも呼ばれていない**
- *  （学習タブが未学習ベースに変わった名残）。 */
+ *  **未学習カード**（getUnlearnedCount*／学習すると減る）＝別物。 */
 export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> {
   const { start, end } = todayLocalRange();
   const row = await db.getFirstAsync<{ count: number }>(
@@ -318,63 +316,6 @@ export async function getTodayCreatedCount(db: SQLiteDatabase): Promise<number> 
     [start, end]
   );
   return row?.count ?? 0;
-}
-
-/** 今日作成したカード数（デッキ別マップ） */
-export async function getTodayCreatedCountPerDeck(db: SQLiteDatabase): Promise<Record<string, number>> {
-  const { start, end } = todayLocalRange();
-  const rows = await db.getAllAsync<{ deckId: string; count: number }>(
-    `SELECT deckId, COUNT(*) as count FROM cards WHERE createdAt >= ? AND createdAt < ? AND ${activeCardCond('')} GROUP BY deckId`,
-    [start, end]
-  );
-  return Object.fromEntries(rows.map(r => [r.deckId, r.count]));
-}
-
-/** 今日作成したカード数（タグ別マップ） */
-export async function getTodayCreatedCountPerTag(db: SQLiteDatabase): Promise<Record<string, number>> {
-  const { start, end } = todayLocalRange();
-  const rows = await db.getAllAsync<{ tagId: string; count: number }>(
-    `SELECT ct.tagId, COUNT(*) as count
-     FROM cards c
-     JOIN card_tags ct ON c.id = ct.cardId
-     WHERE c.createdAt >= ? AND c.createdAt < ? AND ${activeCardCond('c')}
-     GROUP BY ct.tagId`,
-    [start, end]
-  );
-  return Object.fromEntries(rows.map(r => [r.tagId, r.count]));
-}
-
-/** 今日作成したカード数（デッキ単体） */
-export async function getTodayCreatedCountByDeck(db: SQLiteDatabase, deckId: string): Promise<number> {
-  const { start, end } = todayLocalRange();
-  const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ? AND ${activeCardCond('')}`,
-    [deckId, start, end]
-  );
-  return row?.count ?? 0;
-}
-
-/** 今日作成したカードID一覧（デッキ単体） */
-export async function getTodayCreatedCardIdsByDeckId(db: SQLiteDatabase, deckId: string): Promise<string[]> {
-  const { start, end } = todayLocalRange();
-  const rows = await db.getAllAsync<{ id: string }>(
-    `SELECT id FROM cards WHERE deckId = ? AND createdAt >= ? AND createdAt < ? AND ${activeCardCond('')} ORDER BY sortOrder ASC`,
-    [deckId, start, end]
-  );
-  return rows.map(r => r.id);
-}
-
-/** 今日作成したカードID一覧（タグ横断） */
-export async function getTodayCreatedCardIdsByTagId(db: SQLiteDatabase, tagId: string): Promise<string[]> {
-  const { start, end } = todayLocalRange();
-  const rows = await db.getAllAsync<{ id: string }>(
-    `SELECT c.id FROM cards c
-     JOIN card_tags ct ON c.id = ct.cardId
-     WHERE ct.tagId = ? AND c.createdAt >= ? AND c.createdAt < ? AND ${activeCardCond('c')}
-     ORDER BY c.sortOrder ASC`,
-    [tagId, start, end]
-  );
-  return rows.map(r => r.id);
 }
 
 /** 未学習カード数（デッキ別マップ） */

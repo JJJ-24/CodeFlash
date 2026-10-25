@@ -23,7 +23,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { InfoContent } from '@/components/InfoContent';
 import { InfoModal } from '@/components/InfoModal';
 import { SwipeToDeleteRow } from '@/components/SwipeToDeleteRow';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { getCardPreview } from '@/lib/cardPreview';
 import { deleteCardsBulk, getArchivedCards, setCardsArchived } from '@/lib/database/cards';
 import { deleteDecksBulk, getAllDecks, setDecksArchived } from '@/lib/database/decks';
@@ -608,8 +608,7 @@ export default function ArchiveScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         subtitle={selectionMode ? t('shortcut.selectMode') : t('shortcut.normalMode')}
-        sections={(selectionMode ? ARCHIVE_SELECTION_SHORTCUT_SECTIONS : ARCHIVE_SHORTCUT_SECTIONS)
-          .map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(selectionMode ? ARCHIVE_SELECTION_SHORTCUT_SECTIONS : ARCHIVE_SHORTCUT_SECTIONS, t)}
       />
       <InfoModal
         visible={showInfoModal}

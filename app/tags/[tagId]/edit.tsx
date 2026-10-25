@@ -26,7 +26,7 @@ import { stepTagColor, TagColorPicker } from '@/components/TagColorPicker';
 import { deleteTag, updateTag } from '@/lib/database/tags';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { deleteKeySpecs, scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useTagStore } from '@/store/tags';
 import { useSettingsStore } from '@/store/settings';
 
@@ -264,7 +264,7 @@ export default function EditTagScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={TAG_EDIT_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(TAG_EDIT_SHORTCUT_SECTIONS, t)}
       />
     </>
   );

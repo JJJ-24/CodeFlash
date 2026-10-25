@@ -11,7 +11,7 @@ import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal, type ShortcutSectionDef } from '@/components/study/ShortcutsModal';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
@@ -34,7 +34,6 @@ const NEW_CARD_REMAP: Record<string, string> = {
   'shortcut.editArchiveCombo': 'shortcut.editFocusedItem',
   'shortcut.delete': 'shortcut.deleteFocused',
 };
-type ShortcutSectionDef = { titleKey: string; items: { key: string; descKey: string; pro?: boolean }[] };
 const filterForNew = (sections: ShortcutSectionDef[]): ShortcutSectionDef[] =>
   sections
     .map((s) => ({
@@ -148,12 +147,12 @@ export default function NewCardScreen() {
         onClose={() => setShowShortcutsModal(false)}
         maxHeight="80%"
         subtitle={editorMode === 'sort' ? t('shortcut.sortMode') : editorMode === 'preview' ? t('shortcut.previewMode') : t('shortcut.editMode')}
-        sections={(editorMode === 'sort'
+        sections={localizeSections((editorMode === 'sort'
           ? NEW_SECTIONS_SORT
           : editorMode === 'preview'
           ? NEW_SECTIONS_PREVIEW
           : NEW_SECTIONS_EDIT
-        ).map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        ), t)}
       />
       <DiscardConfirmModal
         visible={showDiscardModal}

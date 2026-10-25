@@ -35,7 +35,8 @@ import type { DeckImage, DeckStage } from '@/types';
 import { createDeck } from '@/lib/database/decks';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { scrollKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { DECK_STAGE_SHEET_SHORTCUT_SECTIONS } from '@/lib/deckFormShortcuts';
 import { useDeckStore } from '@/store/decks';
 import { usePendingFocusStore } from '@/store/pendingFocus';
 import { useProStore } from '@/store/pro';
@@ -71,18 +72,6 @@ const DECK_NEW_SHORTCUT_SECTIONS = [
   { titleKey: 'shortcut.catOther', items: [
     { key: 'ESC', descKey: 'shortcut.esc' },
     { key: '?', descKey: 'shortcut.showShortcuts' },
-  ] },
-];
-// 土台/初期化の一覧（H/Q で開くモーダル）の中のキー。画面のキーとは■見出しで分ける（統計と同じ2階層）。
-const STAGE_SHEET_SHORTCUT_SECTIONS = [
-  { titleKey: 'shortcut.catFocus', items: [
-    { key: 'J / K', descKey: 'shortcut.focusNextPrev', pro: true },
-    { key: 'Return', descKey: 'shortcut.stageOpen', pro: true },
-    { key: 'Delete', descKey: 'shortcut.deleteFocused', pro: true },
-    { key: 'V', descKey: 'shortcut.stageViewPage', pro: true },
-  ] },
-  { titleKey: 'shortcut.catAction', items: [
-    { key: 'N', descKey: 'shortcut.stageAdd', pro: true },
   ] },
 ];
 
@@ -559,8 +548,8 @@ export default function NewDeckScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         groups={[
-          { title: t('deck.new'), sections: DECK_NEW_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
-          { title: t('shortcut.catStageSheet'), sections: STAGE_SHEET_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items })) },
+          { title: t('deck.new'), sections: localizeSections(DECK_NEW_SHORTCUT_SECTIONS, t) },
+          { title: t('shortcut.catStageSheet'), sections: localizeSections(DECK_STAGE_SHEET_SHORTCUT_SECTIONS, t) },
         ]}
       />
     </>

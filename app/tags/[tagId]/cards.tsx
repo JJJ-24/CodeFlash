@@ -27,7 +27,7 @@ import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
@@ -667,8 +667,7 @@ export default function TagCardsScreen() {
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
         subtitle={selectionMode ? t('shortcut.selectMode') : t('shortcut.normalMode')}
-        sections={(selectionMode ? TAG_CARDS_SELECTION_SHORTCUT_SECTIONS : TAG_CARDS_SHORTCUT_SECTIONS)
-          .map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(selectionMode ? TAG_CARDS_SELECTION_SHORTCUT_SECTIONS : TAG_CARDS_SHORTCUT_SECTIONS, t)}
       />
       <ConfirmDeleteModal
         visible={showDeleteModal}

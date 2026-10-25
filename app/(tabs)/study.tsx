@@ -19,7 +19,7 @@ import { CountBadge } from '@/components/CountBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
@@ -747,7 +747,7 @@ export default function StudyScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        sections={STUDY_TAB_SHORTCUT_SECTIONS.map((s) => ({ title: t(s.titleKey), items: s.items }))}
+        sections={localizeSections(STUDY_TAB_SHORTCUT_SECTIONS, t)}
       />
 
       <InfoModal

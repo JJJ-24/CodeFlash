@@ -51,7 +51,7 @@ import { LearningRecordSheet } from '@/components/stats/LearningRecordSheet';
 import { STREAK_MEDALS, SURPRISE_STREAKS } from '@/lib/stats/badges';
 import { InfoModal } from '@/components/InfoModal';
 import { InfoContent } from '@/components/InfoContent';
-import { ShortcutsModal } from '@/components/study/ShortcutsModal';
+import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { DoneFocusRing, useMultiSelectKeys } from '@/hooks/useMultiSelectKeys';
 import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
@@ -2537,7 +2537,7 @@ export default function StatsScreen() {
       <ShortcutsModal
         visible={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
-        groups={STATS_SHORTCUT_GROUPS.map((g) => ({ title: t(g.titleKey), sections: g.sections.map((s) => ({ title: t(s.titleKey), items: s.items })) }))}
+        groups={STATS_SHORTCUT_GROUPS.map((g) => ({ title: t(g.titleKey), sections: localizeSections(g.sections, t) }))}
       />
       <CardStatsSheet cardId={statsCardId} onClose={() => setStatsCardId(null)} />
       <LearningRecordSheet

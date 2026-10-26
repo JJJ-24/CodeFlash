@@ -169,14 +169,19 @@ DEVELOPER_DIR=$X27 xcrun simctl launch $DUO com.jjj24.codeflash
 
 OS 依存の実装が集中している順：
 
-- [ ] HTML/CSS プレビュー（WKWebView・`window.open` → Safari・`window.close()`・フォーム送信のリロード・相対 URL でクラッシュしない）
-- [ ] コード実行後のステータスバーとヘッダー高さ（`useLockedTopInset`・Dynamic Island の −5.33 補正）
-- [ ] iPad：ウィンドウ表示の赤黄青ボタンの補正（`useWindowControlsTopInset`）・Split View で隣のアプリのキーボードを出したときのエディタ（パッチ①）・キーボードを出したまま閉じた後の無限スクロール（パッチ②）
-- [ ] ハードウェアキーボード：矢印・Tab の iPad 優先・PageUp/PageDown/Home/End（パッチ）・Split View 往復後
-- [ ] スライダー（範囲の違う設定を続けて開く・ドラッグでちらつかない）・ドラッグ並べ替え（同じ位置に落とした後のオートスクロール）
-- [ ] カード一覧の2行目が空白にならない（パッチ④）
-- [ ] 通知・バッジ・iCloud 同期（アップロード完了の判定）・写真ピッカー・読み上げ（声の一覧・AirPods のプツッ）
-- [ ] Python（Pyodide）・SQL・C++（Wandbox）の実行
+確認用データは、アプリの DB 層（`scripts/db-harness.ts`）で作った DB をシミュレータのアプリの `Documents/SQLite/codeflash.db` に差し替えて入れた（3デッキ・50枚＝コード実行8種・並べ替え40枚・読み上げ2枚。Pro は設定タブの Pro カードの長押し＝開発ビルドの切り替え）。
+
+- [x] HTML/CSS プレビュー（WKWebView・`window.open` → Safari・`window.close()`・フォーム送信のリロード・相対 URL でクラッシュしない）→ iPhone 18 Pro（iOS 27.0 シミュ）で OK（10/26）
+- [x] コード実行後のステータスバーとヘッダー高さ（`useLockedTopInset`・Dynamic Island の −5.33 補正）→ iPhone 18 Pro で OK。あわせて iPhone で、編集プレビューのコードの横スクロール（`LegacyScrollView`）・カード一覧/学習画面のキー操作・学習のスワイプ送り・読み上げ・声の一覧・写真ピッカー・通知の許可も OK
+- [x] iPad：ウィンドウ表示の赤黄青ボタンの補正（`useWindowControlsTopInset`）→ iPad Pro 11（M5・iOS 27.0 シミュ）で OK。4タブのヘッダーの高さもそろう
+- [ ] **実機で確認する**：iPad の Split View で隣のアプリのキーボードを出したときのエディタ（パッチ①）・キーボードを出したまま閉じた後の無限スクロール（パッチ②）（シミュレータには入力できる標準アプリがほぼ無いため）
+- [x] ハードウェアキーボード：矢印・Tab の iPad 優先・PageUp/PageDown/Home/End（パッチ）→ iPad シミュで OK（ホームの ↑/↓・Tab/⇧Tab・学習画面の H/L・PageUp/PageDown/Home/End のキー・U/D・⇧U/⇧D・編集中の矢印でカーソル移動）。⚠️ fn＋矢印は Device Hub が「fn 付きの矢印」として送るので効かない＝割り当ては PageUp などのキーそのもの（無いキーボード向けは U/D・⇧U/⇧D）で、移行による変化ではない
+- [ ] **実機で確認する**：Split View 往復後のハードウェアキーボード
+- [x] スライダー（範囲の違う設定を続けて開く・ドラッグでちらつかない）・ドラッグ並べ替え（同じ位置に落とした後のオートスクロール）→ OK（slider パッチ削除後も問題なし）。あわせてスワイプ行（左＝アーカイブ/削除・右＝ここから学習・斜めの縦スクロールが取られない）も OK
+- [x] カード一覧の2行目が空白にならない（パッチ④）→ OK
+- [ ] **実機で確認する**：画面キーボードを出したまま入力画面を閉じた後、次の画面が下端を越えてスクロールしない（シミュレータは Device Hub がハードウェアキーボード扱いで画面キーボードが出ないため実機へ回した）
+- [ ] **実機で確認する**：通知の発火・バッジ・iCloud 同期（アップロード完了の判定）・読み上げの AirPods のプツッ（通知の許可・写真ピッカー・読み上げ・声の一覧はシミュで OK）
+- [x] Python（Pyodide）・SQL・C++（Wandbox）の実行 → OK（JS の setTimeout 延長・CSS の土台装飾も OK）
 
 ### Phase 4：iPhone Duo
 

@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle } from 'react-native';
+import type { NativeScrollEvent, NativeSyntheticEvent, ScrollViewInstance, ViewStyle } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { restoreAfterAlert, useAlertPresence } from '@/lib/alertFocus';
@@ -62,7 +62,7 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
   const shown = useAlertPresence(visible, { keepEditing: true });
 
   // 一覧が一画面に収まらないときキーボードでスクロールできるようにする。
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const offsetRef = useRef(0);
   const SCROLL_STEP = 220;
   const scrollBy = (d: number) =>
@@ -144,7 +144,7 @@ export function ShortcutsModal({ visible, onClose, sections, groups, subtitle, m
   return (
     <Modal visible={shown} transparent animationType="slide" onRequestClose={onClose} onDismiss={restoreAfterAlert}>
       <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: theme.baseSurface, maxHeight }]}>
           <Text style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.lg }, subtitle != null && { paddingBottom: 4 }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
             {t('settings.keyboardShortcuts')}

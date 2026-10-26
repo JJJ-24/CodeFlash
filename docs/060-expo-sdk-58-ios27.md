@@ -1,7 +1,7 @@
 # 060 Expo SDK 58 への移行（iOS 27 SDK でのビルド・UIScene 対応・iPhone Duo）
 
 **フェーズ:** Phase 0〜5
-**ステータス:** Phase 0 完了（2026-10-26）・Phase 1 から `feature/060-expo-sdk-58` ブランチで進める
+**ステータス:** Phase 1 完了（2026-10-26・`feature/060-expo-sdk-58` ブランチ）。次は Phase 2（Xcode 27 でのネイティブビルド）
 **要ネイティブ再ビルド:** 必要（`ios/` を prebuild で作り直す）
 **DB 変更:** なし
 **依存:** なし（ただし**審査中のバージョンがある間は着手しない**＝同じ環境で作り直せなくなる）
@@ -132,10 +132,24 @@ DEVELOPER_DIR=$X27 xcrun simctl launch $DUO com.jjj24.codeflash
 
 ### Phase 1：依存を上げて JS 側を通す
 
-- [ ] `npx expo install expo@^58` → `npx expo install --fix`（4つ飛ばしで不具合が切り分けにくければ 55 → 56 → 57 → 58 と1つずつ）
-- [ ] `npx expo-doctor`
-- [ ] `npx tsc --noEmit`・`npm run lint`
-- [ ] 検証ハーネス：`verify:db`・`verify:speech`・`verify:timer`・`verify:i18n`・`verify:pyrequests`・`verify:markdown`（`scripts/db-harness.ts` が expo-sqlite 互換を前提にしているので、API が変わっていればハーネス側を直す）
+- [x] `npx expo install expo@^58` → `npx expo install --fix`（一気に 54 → 58。`expo` は `~58.0.19`）
+- [x] `npx expo-doctor`（20/20 通過）
+- [x] `npx tsc --noEmit`（0 件）・`npm run lint`（エラー 0・警告 358）
+- [x] 検証ハーネス：`verify:db`（228）・`verify:speech`（196）・`verify:timer`（17）・`verify:i18n`（エラー 0）・`verify:pyrequests`（63）・`verify:markdown`（46）すべて成功。ハーネスの修正は不要だった（TypeScript 6 対応の `/// <reference types="node" />` だけ）
+- [x] `npx expo export --platform ios` で JS のバンドルが通る
+- [ ] `@react-navigation/bottom-tabs`・`elements`・`native` を package.json から外す（アプリからの import は無くなった。`npm uninstall` がこのセッションでは許可されなかったので未実施）
+
+#### Phase 1 でやったこと（2026-10-26）
+
+- **依存**：`react-native-webview` を `expo.install.exclude` から外してピンの 14.0.1 へ。i18next 25 が TypeScript 6 を許さず衝突したので、同じメジャーの最新（i18next 25.10.10・react-i18next 16.6.6）へ。
+- **パッチ**（Phase 2 の項目だが postinstall が通らないので先にやった）：`expo-speech`・`slider` のパッチを削除。`react-native` は 0.88.0 向けに3ファイル（KAV・Fabric ScrollView のリモートキーボード除外・文字描画 +1pt）で作り直し。`draggable-flatlist` は `InteractionManager.runAfterInteractions` → `requestIdleCallback`（RN の案内どおり）＋ライブラリ内の `FlatList`/`ScrollView` を `LegacyFlatList`/`LegacyScrollView` に。key-command・icloud-storage はそのまま当たる。
+- **`@react-navigation/*` → `expo-router`**（9ファイル）：`useFocusEffect`・`useIsFocused`・`useNavigation`・`ThemeProvider`・`DarkTheme`・`DefaultTheme` は `expo-router`、`getDefaultHeaderHeight` は `expo-router/react-navigation`。
+- **`beforeRemove` の削除**：`hooks/useDismissKeyboardOnLeave.ts` から外した（代わりの `removed` はアンマウント後に届く＝既存のアンマウント時の保険と同じなので足さない）。
+- **gesture-handler 3**：アプリの `ScrollView`（4ファイル）を `LegacyScrollView` に。`ReanimatedSwipeable` の `dragOffsetFromRightEdge={28}`/`dragOffsetFromLeftEdge={28}` → `dragOffsetFromRight={-28}`/`dragOffsetFromLeft={28}`（改名＋右は 0 以下。正の値は開発ビルドで例外）。
+- **RN 0.88 の型**：ref の型を `ScrollViewInstance`・`TextInputInstance`・`ViewInstance` へ、`StyleSheet.absoluteFillObject` → `absoluteFill`、`FlatList` の `ListHeaderComponent`/`ListEmptyComponent` に `null` ではなく `undefined`、`isRemoteKeyboardEvent` の引数を `KeyboardEvent`（Android の通知には `isEventFromThisApp` が無い）、タブアイコンの `color` を `ColorValue`。react-native-webview 14 の型が `WebView<P = undefined>`＝props が never になるので `useRef<WebView<object>>`。
+- **`expo-modules-core`** が `expo` の配下に入ったので `lib/sync/icloud.ts` は `requireNativeModule` を `expo` から import。
+- **app.json**：`newArchEnabled`・`android.edgeToEdgeEnabled` を削除。`paywall` に `headerTransparent: false`（iOS 26 以降の透明ヘッダーを避けて従来の見た目に据え置く）。
+- **lint**：eslint-config-expo 58 から React Compiler の診断（`react-hooks/refs` など5規則・計 337 件）がエラーで入った＝既存コードの書き方への指摘で、移行の不具合ではない。**当面は警告に落とした**（`eslint.config.js`）。直すのは別作業。`app-example/`（gitignore 済みのテンプレートの残り）は lint の対象から外した。
 
 ### Phase 2：ネイティブを作り直す（Xcode 27）
 
@@ -171,6 +185,7 @@ OS 依存の実装が集中している順：
 - [ ] CLAUDE.md の更新（技術スタックの版・パッチの記述・`withPrebuiltRNDeps` の要否・`expo.install.exclude`・Xcode 26.6 の直接起動の話は不要になる）
 - [ ] メモリの更新（`project_ios27-and-sdk-upgrade`）
 - [ ] TestFlight で実機確認してからリリース
+- [ ] main へ入れた後、React Compiler の lint（Phase 1 で警告に落とした5規則・計337件）を直す専用チケットを作る＝1規則ずつ直し、直した規則は `eslint.config.js` の `'warn'` 行を消してエラーに戻す（2026-10-26 合意）。それまでは lint の警告が 358 件より増えていないかを見る
 
 ---
 

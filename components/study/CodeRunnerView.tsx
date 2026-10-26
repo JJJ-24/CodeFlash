@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type TextInputInstance,
 } from "react-native";
 
 import { useTranslation } from "react-i18next";
@@ -201,7 +202,7 @@ export function CodeRunnerView({
     !isPro && block.language === 'python' && pagesFromDeckStages(deckHtmlStages).length > 0 && mentionsRequests(runBody);
 
   const stages = useMemo(() => (htmlInits ?? []).filter((s) => s && s.trim() !== ''), [htmlInits]);
-  const codeInputRef = useRef<TextInput>(null);
+  const codeInputRef = useRef<TextInputInstance>(null);
   // onBlur での二重実行防止フラグ（完了ボタン・▶実行ボタン押下時はtrueにセット）
   const intentionalExitRef = useRef(false);
   // パレットタップ中フラグ（onTouchStart でセット、onFocus でリセット）

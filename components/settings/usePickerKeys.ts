@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent, ScrollView } from 'react-native';
+import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent, ScrollViewInstance } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { useKeyCommands } from '@/lib/useKeyCommands';
@@ -39,7 +39,7 @@ export function usePickerKeys<T>({ visible, items, value, onPick, onClose, onPre
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, count]);
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollYRef = useRef(0);
   const viewportHRef = useRef(0);
   const layouts = useRef(new Map<number, { y: number; h: number }>());

@@ -72,10 +72,10 @@ export function LinksSheet({ visible, onClose, links }: Props) {
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.baseSurface }]}>
         <View style={styles.header}>

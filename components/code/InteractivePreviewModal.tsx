@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as KeyCommand from 'react-native-key-command';
 import { transform } from 'sucrase';
@@ -82,7 +82,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
   // 全画面の中でも「実行前（土台のみ）／実行後（本文あり）」を往復できる＝インラインと同じ軸。
   // 開いた時点のインラインの状態（initialRan）で初期化し、▶/⟲ で切り替える。
   const [ran, setRan] = useState(initialRan);
-  const consoleRef = useRef<ScrollView>(null);
+  const consoleRef = useRef<ScrollViewInstance>(null);
   // action="" / action="#" の送信は about:blank への遷移＝真っ白になるので、
   // ブラウザのリロードと同じ「同じ HTML が描き直されて入力欄が空になる」に寄せる。
   const { reloadNonce, onShouldStartLoadWithRequest } = useSandboxReload();
@@ -153,7 +153,8 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
   // 058：ページ内の入力欄にカーソルがあるか（EDITING_WATCH_SCRIPT が知らせる）。描き直すと入力欄も消えるので戻す
   const pageEditingRef = useRef(false);
   useEffect(() => { pageEditingRef.current = false; }, [nonce, reloadNonce]);
-  const webViewRef = useRef<WebView>(null);
+  // react-native-webview 14 の型は WebView<P = undefined>＝props が WebViewProps & undefined（never）になるので P を明示する
+  const webViewRef = useRef<WebView<object>>(null);
 
   const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
     try {

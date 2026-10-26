@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
+// gesture-handler 3 の ScrollView は新 API の実装で、旧 API の Gesture（カード送り・ドラッグ並べ替え）と関係を結べないので旧実装を使う
+import { LegacyScrollView as ScrollView } from 'react-native-gesture-handler';
 
 import { monthLabel, weekdayLabels } from '@/lib/dateLabels';
 import { localDateStr } from '@/lib/database/utils';
@@ -48,7 +49,7 @@ interface Props {
 export default function ActivityHeatmap({ data, weeks = 52, goal }: Props) {
   const theme = useTheme();
   const { t, i18n } = useTranslation();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   const { today, columns, monthLabels, dayLabels, maxCount } = useMemo(() => {
     const countMap = new Map<string, number>(data.map((d) => [d.date, d.count]));

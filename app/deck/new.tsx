@@ -12,6 +12,8 @@ import {
   Text,
   TextInput,
   View,
+  type ScrollViewInstance,
+  type TextInputInstance,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -125,11 +127,11 @@ export default function NewDeckScreen() {
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   // ネイティブキーコマンド用：各テキスト欄の ref と編集中フラグ（Esc の挙動分岐に使う）。
-  const nameRef = useRef<TextInput>(null);
-  const descRef = useRef<TextInput>(null);
+  const nameRef = useRef<TextInputInstance>(null);
+  const descRef = useRef<TextInputInstance>(null);
   const editingRef = useRef(false);
   // 画面スクロール（U/D・PgUp/PgDn・Home/End）用。
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollYRef = useRef(0);
   // 055：J/K で項目を選び Return/Space/`,`/`.` で操作する（053 の設定の詳細画面と同じ仕組み）。文字キー（N/M/C/I/R/H/Q/E）は残す。
   const nav = useFocusRegistry(scrollRef, scrollYRef);

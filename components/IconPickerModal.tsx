@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance, type ViewInstance } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useTranslation } from 'react-i18next';
 
@@ -43,9 +43,9 @@ export function IconPickerModal({ visible, selected, highlightColor, onSelect: o
 
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
-  const scrollRef = useRef<ScrollView>(null);
-  const contentRef = useRef<View>(null);
-  const cellRefs = useRef<Map<number, View>>(new Map());
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const contentRef = useRef<ViewInstance>(null);
+  const cellRefs = useRef<Map<number, ViewInstance>>(new Map());
   // 各セルの content 基準の座標（縦移動 J/K で「真上・真下の行」を求めるのに使う）。
   const cellLayouts = useRef<Map<number, { x: number; y: number; w: number; h: number }>>(new Map());
   const scrollYRef = useRef(0);
@@ -156,7 +156,7 @@ export function IconPickerModal({ visible, selected, highlightColor, onSelect: o
       <Pressable
         key={icon ?? '__none__'}
         ref={(r) => {
-          if (r) cellRefs.current.set(index, r as unknown as View);
+          if (r) cellRefs.current.set(index, r as unknown as ViewInstance);
           else cellRefs.current.delete(index);
         }}
         onLayout={() => {

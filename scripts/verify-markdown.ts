@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * テキストブロックの Markdown 拡張（`==ハイライト==`・`++下線++`・CJK-friendly な flanking 規則）を
  * Node 上で検証する。

@@ -1,16 +1,34 @@
 diff --git a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
-index 7c88afc..bde28e0 100644
+index 7c88afc..1ba1e04 100644
 --- a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
 +++ b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
-@@ -11,6 +11,7 @@ import {
+@@ -10,10 +10,12 @@ import {
+   ListRenderItem,
    FlatListProps,
    LayoutChangeEvent,
-   InteractionManager,
+-  InteractionManager,
 +  View,
  } from "react-native";
++// patched: gesture-handler 3 は FlatList/ScrollView を新 API の実装へ差し替えた。新旧の API の間では
++// simultaneous などの関係を結べず、このライブラリのドラッグ（旧 API の Gesture.Pan）と噛み合わないので旧実装を使う。
  import {
-   FlatList,
-@@ -231,6 +232,21 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+-  FlatList,
++  LegacyFlatList as FlatList,
+   Gesture,
+   GestureDetector,
+ } from "react-native-gesture-handler";
+@@ -119,7 +121,9 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+   if (dataHasChanged) {
+     // When data changes make sure `activeKey` is nulled out in the same render pass
+     activeKey = null;
+-    InteractionManager.runAfterInteractions(() => {
++    // patched: InteractionManager は RN 0.88 で削除された（触れると開発ビルドは例外・本番は undefined）。
++    // RN の案内どおり requestIdleCallback へ置き換える。
++    requestIdleCallback(() => {
+       reset();
+     });
+   }
+@@ -231,6 +235,21 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
        onDragEnd?.({ from, to, data: newData });
  
        setActiveKey(null);
@@ -22,9 +40,9 @@ index 7c88afc..bde28e0 100644
 +      // -1 → 0以上 になる瞬間）が二度と発火せず、scrollTarget が古い値のまま固定される。
 +      // その結果 hasScrolledToTarget が false になり、以後のドラッグでオートスクロールが
 +      // 効かなくなる（スクロール位置を変えたあとほど顕著）。
-+      // データが変わった場合と同じタイミング（runAfterInteractions）でリセットする。
++      // データが変わった場合と同じタイミング（requestIdleCallback＝旧 runAfterInteractions）でリセットする。
 +      // 二重に呼ばれても同じ値を入れるだけなので無害。
-+      InteractionManager.runAfterInteractions(() => {
++      requestIdleCallback(() => {
 +        // 直後に次のドラッグが始まっていたら、その状態を壊さないよう何もしない
 +        if (isTouchActiveNative.value) return;
 +        reset();
@@ -32,7 +50,7 @@ index 7c88afc..bde28e0 100644
      }
    );
  
-@@ -374,9 +390,9 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+@@ -374,9 +393,9 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
        layoutAnimationDisabled={layoutAnimationDisabled}
      >
        <GestureDetector gesture={panGesture}>
@@ -44,7 +62,7 @@ index 7c88afc..bde28e0 100644
            onLayout={onContainerLayout}
          >
            {props.renderPlaceholder && (
-@@ -404,7 +420,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+@@ -404,7 +423,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
                scrollOffset={scrollOffset}
              />
            )}
@@ -54,7 +72,7 @@ index 7c88afc..bde28e0 100644
      </DraggableFlatListProvider>
    );
 diff --git a/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx b/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx
-index 1559352..ba27c4f 100644
+index 1559352..98e3d6c 100644
 --- a/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx
 +++ b/node_modules/react-native-draggable-flatlist/src/components/NestableDraggableFlatList.tsx
 @@ -1,5 +1,5 @@
@@ -64,7 +82,18 @@ index 1559352..ba27c4f 100644
  import Animated, {
    useDerivedValue,
    useSharedValue,
-@@ -48,8 +48,6 @@ function NestableDraggableFlatListInner<T>(
+@@ -10,7 +10,9 @@ import { useSafeNestableScrollContainerContext } from "../context/nestableScroll
+ import { useNestedAutoScroll } from "../hooks/useNestedAutoScroll";
+ import { typedMemo } from "../utils";
+ import { useStableCallback } from "../hooks/useStableCallback";
+-import { FlatList } from "react-native-gesture-handler";
++// patched: gesture-handler 3 は FlatList/ScrollView を新 API の実装へ差し替えた。新旧の API の間では
++// simultaneous などの関係を結べず、このライブラリのドラッグ（旧 API の Gesture.Pan）と噛み合わないので旧実装を使う。
++import { LegacyFlatList as FlatList } from "react-native-gesture-handler";
+ 
+ function NestableDraggableFlatListInner<T>(
+   props: DraggableFlatListProps<T>,
+@@ -48,8 +50,6 @@ function NestableDraggableFlatListInner<T>(
    });
  
    const onListContainerLayout = useStableCallback(async ({ containerRef }) => {
@@ -73,7 +102,7 @@ index 1559352..ba27c4f 100644
      const onSuccess = (_x: number, y: number) => {
        listVerticalOffset.value = y;
      };
-@@ -57,7 +55,7 @@ function NestableDraggableFlatListInner<T>(
+@@ -57,7 +57,7 @@ function NestableDraggableFlatListInner<T>(
        console.log("## nested draggable list measure fail");
      };
      //@ts-ignore
@@ -82,18 +111,49 @@ index 1559352..ba27c4f 100644
    });
  
    const onDragBegin: DraggableFlatListProps<T>["onDragBegin"] = useStableCallback(
+diff --git a/node_modules/react-native-draggable-flatlist/src/components/NestableScrollContainer.tsx b/node_modules/react-native-draggable-flatlist/src/components/NestableScrollContainer.tsx
+index 61054a7..c653a6a 100644
+--- a/node_modules/react-native-draggable-flatlist/src/components/NestableScrollContainer.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/components/NestableScrollContainer.tsx
+@@ -1,6 +1,8 @@
+ import React from "react";
+ import { LayoutChangeEvent, ScrollViewProps } from "react-native";
+-import { ScrollView } from "react-native-gesture-handler";
++// patched: gesture-handler 3 は FlatList/ScrollView を新 API の実装へ差し替えた。新旧の API の間では
++// simultaneous などの関係を結べず、このライブラリのドラッグ（旧 API の Gesture.Pan）と噛み合わないので旧実装を使う。
++import { LegacyScrollView as ScrollView } from "react-native-gesture-handler";
+ import Animated, { useAnimatedScrollHandler } from "react-native-reanimated";
+ import {
+   NestableScrollContainerProvider,
+diff --git a/node_modules/react-native-draggable-flatlist/src/context/nestableScrollContainerContext.tsx b/node_modules/react-native-draggable-flatlist/src/context/nestableScrollContainerContext.tsx
+index 6b035d1..b85a7a4 100644
+--- a/node_modules/react-native-draggable-flatlist/src/context/nestableScrollContainerContext.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/context/nestableScrollContainerContext.tsx
+@@ -1,5 +1,7 @@
+ import React, { useContext, useMemo, useRef, useState } from "react";
+-import { ScrollView } from "react-native-gesture-handler";
++// patched: gesture-handler 3 は FlatList/ScrollView を新 API の実装へ差し替えた。新旧の API の間では
++// simultaneous などの関係を結べず、このライブラリのドラッグ（旧 API の Gesture.Pan）と噛み合わないので旧実装を使う。
++import { LegacyScrollView as ScrollView } from "react-native-gesture-handler";
+ import Animated, { useSharedValue } from "react-native-reanimated";
+ 
+ type NestableScrollContainerContextVal = ReturnType<
 diff --git a/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx b/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx
-index 49bee06..42c30f2 100644
+index 49bee06..aac3d6b 100644
 --- a/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx
 +++ b/node_modules/react-native-draggable-flatlist/src/context/refContext.tsx
-@@ -1,5 +1,6 @@
+@@ -1,6 +1,9 @@
  import React, { useContext, useEffect } from "react";
  import { useMemo, useRef } from "react";
+-import { FlatList } from "react-native-gesture-handler";
 +import { View } from "react-native";
- import { FlatList } from "react-native-gesture-handler";
++// patched: gesture-handler 3 は FlatList/ScrollView を新 API の実装へ差し替えた。新旧の API の間では
++// simultaneous などの関係を結べず、このライブラリのドラッグ（旧 API の Gesture.Pan）と噛み合わないので旧実装を使う。
++import { LegacyFlatList as FlatList } from "react-native-gesture-handler";
  import Animated, { type SharedValue, useSharedValue, WithSpringConfig } from "react-native-reanimated";
  import { DEFAULT_PROPS } from "../constants";
-@@ -11,7 +12,7 @@ type RefContextValue<T> = {
+ import { useProps } from "./propsContext";
+@@ -11,7 +14,7 @@ type RefContextValue<T> = {
    animationConfigRef: SharedValue<WithSpringConfig>;
    cellDataRef: React.MutableRefObject<Map<string, CellData>>;
    keyToIndexRef: React.MutableRefObject<Map<string, number>>;
@@ -102,7 +162,7 @@ index 49bee06..42c30f2 100644
    flatlistRef: React.RefObject<FlatList<T>> | React.ForwardedRef<FlatList<T>>;
    scrollViewRef: React.RefObject<Animated.ScrollView>;
  };
-@@ -65,7 +66,7 @@ function useSetupRefs<T>({
+@@ -65,7 +68,7 @@ function useSetupRefs<T>({
  
    const cellDataRef = useRef(new Map<string, CellData>());
    const keyToIndexRef = useRef(new Map<string, number>());
@@ -127,3 +187,18 @@ index d3add83..4130b03 100644
      }
    }
  
+diff --git a/node_modules/react-native-draggable-flatlist/src/types.ts b/node_modules/react-native-draggable-flatlist/src/types.ts
+index d6755c8..119c019 100644
+--- a/node_modules/react-native-draggable-flatlist/src/types.ts
++++ b/node_modules/react-native-draggable-flatlist/src/types.ts
+@@ -6,7 +6,9 @@ import {
+   ViewStyle,
+ } from "react-native";
+ import { useAnimatedValues } from "./context/animatedValueContext";
+-import { FlatList } from "react-native-gesture-handler";
++// patched: gesture-handler 3 は FlatList/ScrollView を新 API の実装へ差し替えた。新旧の API の間では
++// simultaneous などの関係を結べず、このライブラリのドラッグ（旧 API の Gesture.Pan）と噛み合わないので旧実装を使う。
++import { LegacyFlatList as FlatList } from "react-native-gesture-handler";
+ import Animated, {
+   AnimateProps,
+   WithSpringConfig,

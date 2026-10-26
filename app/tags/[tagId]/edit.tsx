@@ -11,6 +11,8 @@ import {
   Text,
   TextInput,
   View,
+  type ScrollViewInstance,
+  type TextInputInstance,
 } from 'react-native';
 
 import { SettingsFocusContext, useFocusRegistry } from '@/components/settings/settingsFocus';
@@ -85,9 +87,9 @@ export default function EditTagScreen() {
   const isDirty = name.trim() !== (existingTag?.name ?? '') || color !== (existingTag?.color ?? PRESET_COLORS[0]);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
-  const nameRef = useRef<TextInput>(null);
+  const nameRef = useRef<TextInputInstance>(null);
   const editingRef = useRef(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollYRef = useRef(0);
   // 055：J/K で項目を選び Return/`,`/`.` で操作する（デッキの新規・編集画面と同じ）。文字キー（N/C）は残す。
   const nav = useFocusRegistry(scrollRef, scrollYRef);

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 
 import { AppSwitch } from '@/components/AppSwitch';
 import { LanguagePickerModal } from '@/components/settings/LanguagePickerModal';
@@ -99,7 +99,7 @@ export default function DisplaySettingsScreen() {
   // 選択中テーマがスクロール領域の右半分にある場合、初期表示でその近くまで自動スクロール。
   // useState の init 関数でマウント時の値だけを使うことで、後続のタップ→再レンダリングでも
   // contentOffset の参照が変わらず、iOS の ScrollView がスクロール位置をリセットしない。
-  const swatchScrollRef = useRef<ScrollView>(null);
+  const swatchScrollRef = useRef<ScrollViewInstance>(null);
   const SWATCH_ITEM_WIDTH = 104;
   const SWATCH_ITEM_TOTAL_WIDTH = SWATCH_ITEM_WIDTH + 8; // width + gap
   const [initialContentOffset] = useState(() => {

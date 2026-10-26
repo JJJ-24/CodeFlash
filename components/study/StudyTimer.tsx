@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: STUDY_TIMER_SIZE / 2,
   },
   center: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

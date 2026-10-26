@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * 翻訳ファイル（locales/*.json）の突き合わせ（047 Phase 1）。
  *

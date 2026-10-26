@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Text } from 'react-native';
+import { Text, type ColorValue } from 'react-native';
 
 import { useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
@@ -9,8 +9,9 @@ import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({ name, color, size }: { name: IoniconsName; color: string; size: number }) {
-  return <Ionicons name={name} size={size} color={color} />;
+// tabBarIcon の color は SDK 58 から ColorValue 型。渡ってくるのは既定のタブ色（文字列）なので Ionicons の型へ寄せる
+function TabIcon({ name, color, size }: { name: IoniconsName; color: ColorValue; size: number }) {
+  return <Ionicons name={name} size={size} color={color as string} />;
 }
 
 export default function TabsLayout() {

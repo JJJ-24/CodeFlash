@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { constants as KeyCommand } from 'react-native-key-command';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 
 import { PageViewerModal } from '@/components/code/PageViewerModal';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
@@ -67,7 +67,7 @@ export function DeckStagesModal({ visible, stages, onChange: onChangeProp, onClo
   /** 059：ページを見る画面で開いている土台（名前が URL の土台だけ。行のタップは編集なので、見るのは目のボタンと V キー） */
   const [viewingStage, setViewingStage] = useState<DeckStage | null>(null);
   /** 一覧の ScrollView（キーボード表示時に末尾＝画像ライブラリへ送るために持つ）。 */
-  const listRef = useRef<ScrollView>(null);
+  const listRef = useRef<ScrollViewInstance>(null);
 
   const editingIndex = stages.findIndex((s) => s.id === editingId);
   const editingStage = editingIndex >= 0 ? stages[editingIndex] : null;

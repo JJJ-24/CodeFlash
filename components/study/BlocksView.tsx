@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type RefObject } from 'react';
-import { Dimensions, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Keyboard, Linking, Pressable, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -93,7 +93,7 @@ interface Props {
   selectedCodeBlockIdx?: number | null;
   onSelectCodeBlock?: (codeBlockIdx: number) => void;
   onCodeRunStart?: () => void;
-  scrollRef?: RefObject<ScrollView | null>;
+  scrollRef?: RefObject<ScrollViewInstance | null>;
   scrollBaseYRef?: RefObject<number>;
   /** 058：親の ScrollView の今のスクロール位置（必要な分だけスクロールするため） */
   scrollYRef?: RefObject<number>;

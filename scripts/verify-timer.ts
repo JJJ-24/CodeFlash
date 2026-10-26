@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 学習タイマー（036/039）の**永続化・復元・日またぎ判定**を Node 上で検証する。

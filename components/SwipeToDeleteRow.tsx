@@ -113,8 +113,9 @@ export function SwipeToDeleteRow({ children, onDelete, onStudyFromHere, studyIco
       // 縦スクロールの出だしに横成分が10px混ざるだけで行パンがタッチを奪い、
       // 「スワイプしたのにスクロールしない（空振り）」になる。28px なら縦スクロールが確実に先勝ちし、
       // 意図的な左スワイプ（削除/アーカイブ）には十分反応する。
-      dragOffsetFromRightEdge={28}
-      dragOffsetFromLeftEdge={28}
+      // gesture-handler 3 で *Edge の名前が外れ、右（左スワイプ）は 0 以下の値で書く（正の値は開発ビルドで例外）。
+      dragOffsetFromRight={-28}
+      dragOffsetFromLeft={28}
       overshootRight={false}
       overshootLeft={false}
       renderLeftActions={onStudyFromHere ? (_progress, drag, swipeable: SwipeableMethods) => (

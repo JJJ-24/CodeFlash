@@ -3,7 +3,7 @@
 // （連続20＋回数/時間/日数 各10・周回込み110）を表示する。
 // ドーナツグラフ側（正答率/学習日数/平均時間）と重複しない指標に絞っている。無料機能。
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type ScrollViewInstance } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -125,7 +125,7 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   );
 
   // 画面スクロール（U/D・PgUp/PgDn＝段階、⇧U/⇧D・Home/End＝最上部/最下部）用。
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollYRef = useRef(0);
   const SCROLL_STEP = 240;
   const scrollBy = (delta: number) =>
@@ -346,10 +346,10 @@ export function LearningRecordSheet({ visible, onClose, stats, theme }: Props) {
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.header, { backgroundColor: theme.colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16 }]}>

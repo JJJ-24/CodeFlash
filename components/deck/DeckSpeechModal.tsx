@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
 import { AppSwitch } from '@/components/AppSwitch';
@@ -101,7 +101,7 @@ export function DeckSpeechModal({ visible, langs, langsBack, auto, onChange: onC
     : ['auto', 'split', ...scripts.map((s) => `front-${s}`), ...(splitSides ? scripts.map((s) => `back-${s}`) : [])];
   const { focusedIndex, setFocusedIndex, moveFocus } = useListNavigation(focusKeys, (k) => k);
   const focusedKey = focusedIndex != null ? focusKeys[focusedIndex] ?? null : null;
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   /** 各行の Y 座標（ScrollView の中身の直接の子の位置）＝フォーカス移動時に見える位置へ送る */
   const rowYRef = useRef<Record<string, number>>({});
   const rowLayout = (key: string) => (e: { nativeEvent: { layout: { y: number } } }) => { rowYRef.current[key] = e.nativeEvent.layout.y; };

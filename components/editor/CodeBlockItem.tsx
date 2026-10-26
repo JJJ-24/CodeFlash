@@ -13,10 +13,12 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  type TextInputInstance,
 } from 'react-native';
 
 import { useTranslation } from 'react-i18next';
-import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
+// gesture-handler 3 の ScrollView は新 API の実装で、旧 API の Gesture（カード送り・ドラッグ並べ替え）と関係を結べないので旧実装を使う
+import { Gesture, GestureDetector, LegacyScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
 import { BlockItemHeader } from './BlockItemHeader';
@@ -125,9 +127,9 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
   // 中央ダイアログの項）。⚠️ ここは**構造を変えず** Animated.View を1枚かぶせるだけにする
   // （背景 Pressable を兄弟へ移すと「シート本体のタップでも閉じる」現在の挙動まで変わるため）。
   const langFade = useRef(new Animated.Value(0)).current;
-  const codeInputRef = useRef<TextInput>(null);
-  const initSqlInputRef = useRef<TextInput>(null);
-  const initHtmlInputRef = useRef<TextInput>(null);
+  const codeInputRef = useRef<TextInputInstance>(null);
+  const initSqlInputRef = useRef<TextInputInstance>(null);
+  const initHtmlInputRef = useRef<TextInputInstance>(null);
   const [initSqlFocused, setInitSqlFocused] = useState(false);
   const [initHtmlFocused, setInitHtmlFocused] = useState(false);
   // 言語選択モーダルを開いたとき、選択中の言語までスクロールするための位置

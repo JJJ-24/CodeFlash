@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import type { GestureResponderEvent, LayoutChangeEvent, ScrollView, StyleProp, ViewStyle } from 'react-native';
+import type { GestureResponderEvent, LayoutChangeEvent, ScrollViewInstance, StyleProp, ViewStyle } from 'react-native';
 
 import { centeredScrollY } from '@/lib/scrollCenter';
 import { useTheme } from '@/lib/theme';
@@ -355,7 +355,7 @@ export function SettingsFocusBarrier({ children, style }: { children: ReactNode;
  * `onLayout={onViewportLayout}`・`onContentSizeChange`・`onScroll` で `scrollYRef` を更新させる。キーの割り当ては呼び出し側が行う
  * （画面ごとに使えるキーが違うため＝デッキ画面は H が「HTML/CSS 土台」）。
  */
-export function useFocusRegistry(scrollRef: RefObject<ScrollView | null>, scrollYRef: RefObject<number>) {
+export function useFocusRegistry(scrollRef: RefObject<ScrollViewInstance | null>, scrollYRef: RefObject<number>) {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const focusedIdRef = useRef<string | null>(null);
   focusedIdRef.current = focusedId;

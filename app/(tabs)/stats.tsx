@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type ScrollViewInstance } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -443,7 +443,7 @@ function MonthBarChart({
   onSelectMonth?: (item: MonthlyGradeData, label: string) => void;
 }) {
   const { i18n } = useTranslation();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const maxTotal = Math.max(...data.map((d) => d.again + d.hard + d.good + d.easy), 1);
   const barCountH = Math.ceil(theme.fontSize.xs * 1.95);
@@ -598,10 +598,10 @@ function DonutSheet({
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={[sheetStyles.header, { justifyContent: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 48 }]}>
@@ -682,7 +682,7 @@ function DeckPickerSheet({
   const allActive = selectedIds.length === 0;
 
   // キーボード操作（034・複数選択）：すべて(0) ＋ デッキ(1..n) → 最後に「完了」（`useMultiSelectKeys`）。
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollYRef = useRef(0);
   const viewportHRef = useRef(0);
   const itemLayouts = useRef<Map<number, { y: number; h: number }>>(new Map());
@@ -710,10 +710,10 @@ function DeckPickerSheet({
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={sheetStyles.header}>
@@ -868,10 +868,10 @@ function PeriodPickerSheet({
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>
         <View style={sheetStyles.header}>
@@ -993,7 +993,7 @@ export default function StatsScreen() {
   // push 画面から戻ると一瞬ちらつく）ため、フォーカス直後 800ms も無効のままにする
   // （詳細は lib/useSafeScrollsToTop.ts）。
   const scrollsToTopArmed = useSafeScrollsToTop();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollViewInstance>(null);
   const sectionOffsets = useRef<{
     heatmap: number;
     heatmapHeight: number;

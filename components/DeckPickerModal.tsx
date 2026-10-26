@@ -164,7 +164,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
               ref={listRef}
               data={sortedDecks}
               keyExtractor={(item) => item.id}
-              ListHeaderComponent={header}
+              ListHeaderComponent={header ?? undefined}
               onScrollToIndexFailed={() => {}}
               renderItem={({ item, index }) => (
                 <Pressable
@@ -183,7 +183,7 @@ export function DeckPickerModal({ visible, title, decks, onSelect, onClose, show
                 </Pressable>
               )}
               ListEmptyComponent={
-                onCreateDeck ? null : (
+                onCreateDeck ? undefined : (
                   <Text style={[styles.empty, { color: theme.colors.textSecondary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.ui}>
                     {emptyMessage ?? t('card.noDeckToMove')}
                   </Text>

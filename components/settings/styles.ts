@@ -135,7 +135,7 @@ export const settingsStyles = StyleSheet.create({
   syncAdvancedItemText: { flexShrink: 1, fontWeight: '600' },
 
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'transparent',
   },
 });

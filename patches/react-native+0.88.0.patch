@@ -1,8 +1,8 @@
 diff --git a/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js b/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js
-index 6eca156..7015d25 100644
+index d2fff11..3d6ef85 100644
 --- a/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js
 +++ b/node_modules/react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js
-@@ -111,6 +111,11 @@ class KeyboardAvoidingView extends React.Component<
+@@ -120,6 +120,11 @@ class KeyboardAvoidingView extends React.Component<
    }
  
    _onKeyboardChange = (event: ?KeyboardEvent) => {
@@ -15,10 +15,10 @@ index 6eca156..7015d25 100644
      // $FlowFixMe[unused-promise]
      this._updateBottomIfNecessary();
 diff --git a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
-index 1494fd2..ce4299e 100644
+index 14a08b4..e4c7fef 100644
 --- a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
 +++ b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTScrollViewComponentView.mm
-@@ -175,6 +175,11 @@ - (void)_keyboardWillChangeFrame:(NSNotification *)notification
+@@ -189,6 +189,11 @@ - (void)_keyboardWillChangeFrame:(NSNotification *)notification
    if (!_automaticallyAdjustKeyboardInsets) {
      return;
    }
@@ -30,41 +30,11 @@ index 1494fd2..ce4299e 100644
    BOOL isHorizontal = _scrollView.contentSize.width > self.frame.size.width;
    if (isHorizontal) {
      return;
-@@ -628,6 +633,13 @@ - (void)prepareForRecycle
-   _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
-   _shouldUpdateContentInsetAdjustmentBehavior = YES;
-   _isUserTriggeredScrolling = NO;
-+  // Drop the keyboard's bottom inset so it does not leak into the next user of this recycled view.
-+  // _props is kept across recycling and updateProps only re-applies contentInset when the new props
-+  // differ from it, so a view recycled while a screen with automaticallyAdjustKeyboardInsets had the
-+  // keyboard up would keep that inset and let the next list scroll past its end.
-+  // Reset to the _props values (not zero) so the diff baseline in updateProps stays truthful.
-+  _scrollView.contentInset = RCTUIEdgeInsetsFromEdgeInsets(props.contentInset);
-+  _scrollView.scrollIndicatorInsets = RCTUIEdgeInsetsFromEdgeInsets(props.scrollIndicatorInsets);
-   CGRect oldFrame = self.frame;
-   self.frame = CGRectZero;
-   self.frame = oldFrame;
-diff --git a/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m b/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m
-index 59f956d..e50c5b2 100644
---- a/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m
-+++ b/node_modules/react-native/React/Views/ScrollView/RCTScrollView.m
-@@ -284,6 +284,11 @@ - (void)_keyboardWillChangeFrame:(NSNotification *)notification
-   if (![self automaticallyAdjustKeyboardInsets]) {
-     return;
-   }
-+  // Ignore keyboard events from other apps (iPad Split View / Stage Manager),
-+  // otherwise insets are adjusted when a neighboring app shows its keyboard.
-+  if (![notification.userInfo[UIKeyboardIsLocalUserInfoKey] boolValue]) {
-+    return;
-+  }
-   if ([self isHorizontal:_scrollView]) {
-     return;
-   }
 diff --git a/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm b/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm
-index 216bb23..6e3b4c6 100644
+index 5f9847a..b240fbf 100644
 --- a/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm
 +++ b/node_modules/react-native/ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/textlayoutmanager/RCTTextLayoutManager.mm
-@@ -71,10 +71,15 @@ - (void)drawAttributedString:(AttributedString)attributedString
+@@ -132,10 +132,15 @@ - (void)drawAttributedString:(AttributedString)attributedString
                         frame:(CGRect)frame
             drawHighlightPath:(void (^_Nullable)(UIBezierPath *highlightPath))block
  {

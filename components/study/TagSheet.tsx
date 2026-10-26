@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance, type TextInputInstance } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -60,7 +60,7 @@ export function TagSheet({ visible, onClose, tags, selectedIds, onToggle: onTogg
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [dupError, setDupError] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   // ソフトキーボードで入力欄が隠れないようシートを持ち上げる（リモートキーボードは無視・共通ルール）
   const [kbHeight, setKbHeight] = useState(0);
@@ -82,7 +82,7 @@ export function TagSheet({ visible, onClose, tags, selectedIds, onToggle: onTogg
   // 保存されるので、開いてすぐの Return で先頭のタグが付いてしまうのを防ぐ（他の選択シートと同じ）。
   // フォーカス無しの Return＝閉じる／Space＝何もしない。
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const chipYs = useRef<number[]>([]);
   useEffect(() => {
     if (visible) { setFocusedIndex(null); setCreating(false); setNewName(''); setDupError(false); }
@@ -170,10 +170,10 @@ export function TagSheet({ visible, onClose, tags, selectedIds, onToggle: onTogg
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[sheetStyle, styles.sheet, { backgroundColor: theme.baseSurface, marginBottom: kbHeight }]}>
         <View style={styles.header}>

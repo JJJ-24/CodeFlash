@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
   View,
+  type TextInputInstance,
 } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 
@@ -207,7 +208,7 @@ export default function SearchScreen() {
   const { tags, setTags } = useTagStore();
   const { lastSearchField, setLastSearchField, keyboardShortcutsEnabled } = useSettingsStore();
   const { isPro } = useProStore();
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   useDismissKeyboardOnLeave();
 
   // 030: 統計の「済み」の棒からは `studiedDate` 付きで push される。このときは

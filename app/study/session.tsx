@@ -1,10 +1,11 @@
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import {
   Stack,
   useFocusEffect,
+  useIsFocused,
   useLocalSearchParams,
+  useNavigation,
   useRouter,
 } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
@@ -23,6 +24,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  type ScrollViewInstance,
 } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import { constants as KeyCommand } from "react-native-key-command";
@@ -463,8 +465,8 @@ export default function StudySessionScreen() {
     }, 300);
   }, []);
 
-  const frontScrollRef = useRef<ScrollView>(null);
-  const backScrollRef = useRef<ScrollView>(null);
+  const frontScrollRef = useRef<ScrollViewInstance>(null);
+  const backScrollRef = useRef<ScrollViewInstance>(null);
   const frontScrollYRef = useRef(0);
   const backScrollYRef = useRef(0);
   const memoSectionYRef = useRef(0);
@@ -2833,7 +2835,7 @@ const styles = StyleSheet.create({
   // 全画面ヘッダー（30）より下、その他の操作要素（全画面ボタン行=10・下部操作列）より上。
   // 背景色はテーマ依存でインライン指定。
   breakOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 15,
   },
   gradeRow: { flexDirection: "row", gap: 8 },

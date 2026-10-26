@@ -157,7 +157,7 @@ export default function SyncMergeScreen() {
     <>
       {processing && (
         <View
-          style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)' }}
+          style={{ ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)' }}
           onStartShouldSetResponder={() => true}
           onMoveShouldSetResponder={() => true}
         >

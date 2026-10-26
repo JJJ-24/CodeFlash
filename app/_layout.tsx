@@ -1,8 +1,7 @@
 import '@/lib/i18n';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Network from 'expo-network';
 import { StatusBar } from 'expo-status-bar';
-import { router, Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -217,7 +216,9 @@ function RootStack() {
       <Stack.Screen name="settings/data" options={{ headerShown: false }} />
       <Stack.Screen name="archive/index" options={{ headerShown: false }} />
       {/* 049 Phase 1a：読み上げの実測用（__DEV__ 限定・入口は設定タブ最下部）。判断後に画面ごと削除する */}
-      <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+      {/* SDK 58 の Stack は iOS 26 以降で標準ヘッダーを既定で透明（Liquid Glass・内容がヘッダーの下に潜る）にする。
+          paywall は標準ヘッダーを使う唯一の画面なので、従来の不透明なヘッダーに据え置く。 */}
+      <Stack.Screen name="paywall" options={{ presentation: 'modal', headerTransparent: false }} />
     </Stack>
     </ThemeProvider>
   );

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, type TextInputInstance } from 'react-native';
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
-import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
+// gesture-handler 3 の ScrollView は新 API の実装で、旧 API の Gesture（カード送り・ドラッグ並べ替え）と関係を結べないので旧実装を使う
+import { Gesture, GestureDetector, LegacyScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -87,7 +88,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     setCopied(true);
     setTimeout(() => setCopied(false), 1000);
   }
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   // 装飾ツールバー用: 選択範囲を ref で追跡し、記法適用後はカーソルを内側へ移す。
   // 初期値は本文末尾（初回タップ時にカーソルが末尾へ＝従来挙動）。以後は onSelectionChange・

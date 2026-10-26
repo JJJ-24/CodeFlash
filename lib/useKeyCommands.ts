@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { ScrollView } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import * as KeyCommand from 'react-native-key-command';
 
 import { useSettingsStore } from '@/store/settings';
@@ -117,7 +117,7 @@ export const KEY_END = (KeyCommand.constants?.keyInputEnd as string) || '\uF72B'
  * `guard` \u304C true \u3092\u8FD4\u3059\u9593\u306F\u7121\u8996\u3059\u308B\uFF08\u30B5\u30D6\u30E2\u30FC\u30C0\u30EB\u8868\u793A\u4E2D\u306E\u6291\u6B62\uFF09\u3002
  */
 export function scrollKeySpecs(opts: {
-  scrollRef: RefObject<ScrollView | null>;
+  scrollRef: RefObject<ScrollViewInstance | null>;
   scrollYRef: RefObject<number>;
   step?: number;
   guard?: () => boolean;

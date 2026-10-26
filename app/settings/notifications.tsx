@@ -5,7 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
+  Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions, type ScrollViewInstance, type TextInputInstance,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { constants as KeyCommand } from 'react-native-key-command';
@@ -108,13 +108,13 @@ function ScheduleModal({
   // ⚠️ **キーボードのアニメーション（約250ms）を待ってから送る**＝余白（キーボード insets）が
   // 増えるより先に送っても届かない。`automaticallyAdjustKeyboardInsets` 任せにせず明示的に
   // 送るのは、どこまで自動で送られるかが端末・OS で揺れるため（送り先は同じ位置）。
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   // ---- 053：キーボード操作（docs/053「通知画面」の編集シート） ----
   const focusOrder: SheetFocus[] = ['hour', 'minute', 'weekdays', 'label', ...(goalEnabled ? ['goal' as const] : [])];
   const [focus, setFocus] = useState<SheetFocus | null>(null);
   useEffect(() => { if (visible) setFocus(null); }, [visible]);
-  const labelRef = useRef<TextInput>(null);
+  const labelRef = useRef<TextInputInstance>(null);
   const [labelEditing, setLabelEditing] = useState(false);
   const scrollYRef = useRef(0);
   const viewportHRef = useRef(0);
@@ -245,10 +245,10 @@ function ScheduleModal({
   return (
     <View
       pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { justifyContent: 'flex-end' }]}
+      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end' }]}
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
       <Animated.View style={[sheetStyle, sheetStyles.sheet, { backgroundColor: theme.colors.surface }]}>

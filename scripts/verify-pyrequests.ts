@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * 059：Python の `requests` の代役（lib/code-execution/pyRequestsShim.ts）の検証。
  *

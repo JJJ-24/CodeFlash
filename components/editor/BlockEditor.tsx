@@ -23,6 +23,7 @@ import {
   useWindowDimensions,
   type GestureResponderEvent,
   type LayoutChangeEvent,
+  type ScrollViewInstance,
 } from "react-native";
 
 import { constants as KeyCommand } from "react-native-key-command";
@@ -197,7 +198,7 @@ export function BlockEditor({
   const rs = useResponsiveSize();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const { height: windowHeight } = useWindowDimensions();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   // キーボード（iOSの文字入力パレット含む）が出ている間、最下部のアーカイブ欄まで
   // スクロールできるようキーボード高さ分の余白をスクロール内容の末尾に確保する。
   // モーダル表示では KeyboardAvoidingView が高さを過小評価するため明示的に補う。

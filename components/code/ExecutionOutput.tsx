@@ -5,7 +5,8 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { useTranslation } from 'react-i18next';
 // 編集画面ではドラッグ可能リスト（RNGH 配下）の中に置かれるため、RNGH の ScrollView を使わないと
 // 横スクロールのジェスチャーが外側に奪われてテーブルを横スクロールできない。
-import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
+// gesture-handler 3 の ScrollView は新 API の実装で、旧 API の Gesture（カード送り・ドラッグ並べ替え）と関係を結べないので旧実装を使う
+import { Gesture, GestureDetector, LegacyScrollView as ScrollView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { WebView } from 'react-native-webview';
 

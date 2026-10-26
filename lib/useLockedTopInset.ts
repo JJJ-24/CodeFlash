@@ -1,4 +1,4 @@
-import { getDefaultHeaderHeight } from '@react-navigation/elements';
+import { getDefaultHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Platform } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';

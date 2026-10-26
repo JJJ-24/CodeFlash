@@ -83,7 +83,7 @@ export function MarkdownHelpModal({ visible, onClose }: Props) {
           祖先に置くと、押せる要素の無い場所から始めたドラッグでスクロールが始まらない
           （Fabric の _shouldDisableScrollInteraction。CLAUDE.md / ShortcutsModal と同じ構造）。 */}
       <Animated.View style={[styles.overlay, { opacity: fade }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={[styles.dialog, { backgroundColor: theme.colors.surface }, isPad && styles.dialogPad]}>
           <Text
             style={[styles.title, { color: theme.colors.text, fontSize: theme.fontSize.md }]}

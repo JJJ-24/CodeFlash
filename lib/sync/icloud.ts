@@ -9,7 +9,7 @@ import {
   unlinkAsync,
   uploadFileAsync,
 } from '@oleg_svetlichnyi/expo-icloud-storage';
-import { requireNativeModule } from 'expo-modules-core';
+import { requireNativeModule } from 'expo';
 
 // 「配置で完了とみなす」アップロード（setUbiquitous で iCloud コンテナに配置できたら完了。
 // 実バイト転送は OS が裏で完遂する）。これにより大量データのバックグラウンドアップロードが

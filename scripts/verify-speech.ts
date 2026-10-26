@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * 049：読み上げのテキスト処理（分割・Markdown 除去）を Node 上で検証する。
  *

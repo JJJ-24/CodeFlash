@@ -5,7 +5,7 @@ import { normalizeLanguage } from '@/lib/code-execution/constants';
 
 /** 横スクロールに使う ScrollView（呼び出し側の事情で RN 標準／RNGH 版を使い分ける）。 */
 type HorizontalScrollView = React.ComponentType<{
-  horizontal?: boolean | null;
+  horizontal?: boolean;
   showsHorizontalScrollIndicator?: boolean;
   alwaysBounceHorizontal?: boolean;
   children?: React.ReactNode;

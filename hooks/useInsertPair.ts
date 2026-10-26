@@ -1,12 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import type { TextInput } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 
 /** コードブロックの記号ペア挿入ロジックを管理するフック */
 export function useInsertPair(
   content: string,
   onContentChange: (text: string) => void,
-  codeInputRef: RefObject<TextInput | null>,
+  codeInputRef: RefObject<TextInputInstance | null>,
 ) {
   const selectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const insertTimeRef = useRef(0);

@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   View,
+  type TextInputInstance,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -50,7 +51,7 @@ export function ImageBlockItem({ block, onChange, onDelete, onMoveUp, onMoveDown
   const [ratio, setRatio] = useState<number | null>(null);
   const [availWidth, setAvailWidth] = useState(0);
   const prevCollapsedRef = useRef(collapsed);
-  const altInputRef = useRef<TextInput>(null);
+  const altInputRef = useRef<TextInputInstance>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {

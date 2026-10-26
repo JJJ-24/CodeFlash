@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 
 import { constants as KeyCommand } from 'react-native-key-command';
 
@@ -80,7 +80,7 @@ export default function SettingsScreen() {
   // scrollsToTop を誤発火させる（下へスクロールした状態で push 画面から戻ると一瞬ちらつく）ため、
   // フォーカス直後 800ms も無効のままにする（詳細は lib/useSafeScrollsToTop.ts）。
   const scrollsToTopArmed = useSafeScrollsToTop();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollYRef = useRef(0);
   const viewportHRef = useRef(0);
   const itemLayouts = useRef<Map<number, { y: number; h: number }>>(new Map());

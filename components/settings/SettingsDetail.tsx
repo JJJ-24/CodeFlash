@@ -3,7 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 import { constants as KeyCommand } from 'react-native-key-command';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -77,7 +77,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const { t } = useTranslation();
 
   // ---- 053：項目のフォーカス（J/K）と、フォーカス中の項目への操作の委譲（055 で useFocusRegistry に切り出し） ----
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollYRef = useRef(0);
   const { registry, focusedIdRef, setFocusedId, moveFocus, moveSection, focused, onViewportLayout, onContentSizeChange } = useFocusRegistry(scrollRef, scrollYRef);
 

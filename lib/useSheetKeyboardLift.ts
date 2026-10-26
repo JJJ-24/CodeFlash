@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, useWindowDimensions } from 'react-native';
+import { Keyboard, useWindowDimensions, type KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isRemoteKeyboardEvent } from '@/lib/keyboardEvent';
@@ -38,12 +38,12 @@ export function useSheetKeyboardLift() {
   const [kbHeight, setKbHeight] = useState(0);
 
   useEffect(() => {
-    const onChange = (e: { endCoordinates?: { height?: number }; isEventFromThisApp?: boolean }) => {
+    const onChange = (e: KeyboardEvent) => {
       if (isRemoteKeyboardEvent(e)) return;
       const h = e.endCoordinates?.height ?? 0;
       setKbHeight(h > SOFT_KEYBOARD_MIN_HEIGHT ? h : 0);
     };
-    const onHide = (e: { isEventFromThisApp?: boolean }) => {
+    const onHide = (e: KeyboardEvent) => {
       if (isRemoteKeyboardEvent(e)) return;
       setKbHeight(0);
     };

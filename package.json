@@ -60,7 +60,7 @@
     "react-native-gesture-handler": "~3.3.0",
     "react-native-key-command": "^1.0.15",
     "react-native-markdown-display": "^7.0.2",
-    "react-native-purchases": "^10.1.1",
+    "react-native-purchases": "^10.15.1",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",

@@ -1,7 +1,7 @@
 # 060 Expo SDK 58 への移行（iOS 27 SDK でのビルド・UIScene 対応・iPhone Duo）
 
 **フェーズ:** Phase 0〜5
-**ステータス:** Phase 1 完了（2026-10-26・`feature/060-expo-sdk-58` ブランチ）。次は Phase 2（Xcode 27 でのネイティブビルド）
+**ステータス:** Phase 2 完了（2026-10-26・`feature/060-expo-sdk-58` ブランチ）。次は Phase 3（動作確認）
 **要ネイティブ再ビルド:** 必要（`ios/` を prebuild で作り直す）
 **DB 変更:** なし
 **依存:** なし（ただし**審査中のバージョンがある間は着手しない**＝同じ環境で作り直せなくなる）
@@ -153,13 +153,17 @@ DEVELOPER_DIR=$X27 xcrun simctl launch $DUO com.jjj24.codeflash
 
 ### Phase 2：ネイティブを作り直す（Xcode 27）
 
-- [ ] パッチを当て直し、`npx patch-package` で作り直す（不要になったものは削除）
-- [ ] `npx expo prebuild --clean -p ios`
-- [ ] `withKeyCommands`・`withPrebuiltRNDeps` が通るか（失敗したら AppDelegate／Podfile の新しい形に合わせて直す）
-- [ ] `ios/Podfile.lock` で「`React-Core (from ../node_modules/react-native/)` と `ReactNativeDependencies` が共存・`fmt` Pod が無い」を確認
-- [ ] Xcode 27 でビルド（`xcode-select` を 27 に切り替えるか `DEVELOPER_DIR` を付ける）
-- [ ] 起動して真っ白にならない（UIScene）
-- [ ] **ハードウェアキーボードのショートカットが効く**（keyCommands の責任者チェーン）
+- [x] パッチを当て直し、`npx patch-package` で作り直す（不要になったものは削除）→ Phase 1 で実施済み
+- [x] `npx expo prebuild --clean -p ios`
+- [x] `withKeyCommands`・`withPrebuiltRNDeps` が通るか → `withKeyCommands` のアンカーを `/class AppDelegate:\s*ExpoAppDelegate\b[^{]*\{/` に直した（SDK 58 は `class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider {`）。`withPrebuiltRNDeps` はそのまま通る。ブリッジヘッダも生成される
+- [x] `ios/Podfile.lock` の構成 → `React-Core` は `../node_modules/react-native/`（ソース）＋`ReactNativeDependencies`（プリビルド）。⚠️ RN 0.88 では **`fmt`・`glog`・`fast_float` が Pod として載るが、中身は `build/rndeps-facades/fmt` のファサード（`ReactNativeDependencies` に依存するだけ）＝ソースからはビルドしない**。「`fmt` Pod が無い」ではなく「`fmt` が `:path: build/rndeps-facades/fmt`」を見る（CLAUDE.md の確認方法も Phase 5 で直す）
+- [x] Xcode 27 でビルド（`DEVELOPER_DIR=/Applications/Xcode-27.1.app/Contents/Developer`・`-derivedDataPath ios/build/sdk58`）→ **RevenueCat 5.72.0 が新しい Swift で `invalid redeclaration of synthesized memberwise 'init(stringRepresentation:)'`** になった。RevenueCat は 5.78.0 で Xcode 27 対応済みなので、`react-native-purchases` を同じメジャーの **10.15.1**（PurchasesHybridCommon 19.14.1・RevenueCat 5.96.1）へ上げて解決（`pod update PurchasesHybridCommon RevenueCat RNPurchases`）。ローカルモジュール2つ（`modules/*/ios/*.podspec`）の最低 iOS を 15.1 → 16.4 に（pod install が警告して引き上げていた）
+- [x] 起動して真っ白にならない（UIScene）→ iPhone 18 Pro（iOS 27.0 シミュレータ）でホーム画面まで表示。⚠️ Duo（iOS 27.1）は `simctl` でヘッドレス起動すると画面写真が真っ黒だった（JS は動いていた）＝Device Hub で開いた状態で Phase 4 で確かめる
+- [x] **ハードウェアキーボードのショートカットが効く**（keyCommands の責任者チェーン）→ `?`（一覧）・Tab（タブ切替）・N（新規デッキ）が効いた＝UIScene でも AppDelegate の `keyCommands` が拾われる
+
+⚠️ **シミュレータで dev client を Metro へつなぐとき**：`simctl openurl` で `codeflashcard://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081` を開くと、iOS 27 は「"CodeFlash" で開きますか？」の確認を出す（コマンドからは押せない）。`simctl` で起動したシミュレータはヘッドレスなので、`open /Applications/Xcode-27.1.app/Contents/Applications/DeviceHub.app` で Device Hub を開いて画面を出して押す（または dev client の「Enter URL manually」）。⚠️ `npx expo run:ios` は `xcode-select` の Xcode 26.6 でビルドし直すので、Xcode 27 の確認には使わない。
+
+⚠️ **このブランチで作った `ios/`・`node_modules` は SDK 58 のもの**。main（SDK 54）へ戻って作業するときは `npm install` → `npx expo prebuild --clean -p ios` をやり直す（`ios/` は gitignore の生成物）。
 
 ### Phase 3：動作確認（シミュレータ → 実機）
 

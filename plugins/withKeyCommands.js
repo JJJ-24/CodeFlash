@@ -45,7 +45,9 @@ function withKeyCommandsAppDelegate(config) {
       tag: 'react-native-key-command',
       src: cfg.modResults.contents,
       newSrc: METHODS,
-      anchor: /class AppDelegate:\s*ExpoAppDelegate\s*\{/,
+      // SDK 58 から `class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider {` の形になったので、
+      // 継承の並びには依存せず「ExpoAppDelegate を継承する AppDelegate クラスの開き括弧」を探す。
+      anchor: /class AppDelegate:\s*ExpoAppDelegate\b[^{]*\{/,
       offset: 1,
       comment: '//',
     }).contents;

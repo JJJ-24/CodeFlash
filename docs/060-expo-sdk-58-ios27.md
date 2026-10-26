@@ -137,7 +137,7 @@ DEVELOPER_DIR=$X27 xcrun simctl launch $DUO com.jjj24.codeflash
 - [x] `npx tsc --noEmit`（0 件）・`npm run lint`（エラー 0・警告 358）
 - [x] 検証ハーネス：`verify:db`（228）・`verify:speech`（196）・`verify:timer`（17）・`verify:i18n`（エラー 0）・`verify:pyrequests`（63）・`verify:markdown`（46）すべて成功。ハーネスの修正は不要だった（TypeScript 6 対応の `/// <reference types="node" />` だけ）
 - [x] `npx expo export --platform ios` で JS のバンドルが通る
-- [ ] `@react-navigation/bottom-tabs`・`elements`・`native` を package.json から外す（アプリからの import は無くなった。`npm uninstall` がこのセッションでは許可されなかったので未実施）
+- [x] `@react-navigation/bottom-tabs`・`elements`・`native` を package.json から外す（アプリからの import は無くなった）
 
 #### Phase 1 でやったこと（2026-10-26）
 

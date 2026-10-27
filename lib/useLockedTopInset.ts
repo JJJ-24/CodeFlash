@@ -1,5 +1,5 @@
 import { getDefaultHeaderHeight } from 'expo-router/react-navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Platform } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -52,6 +52,13 @@ function useWindowControls(): { top: number; windowed: boolean } {
 const WINDOWED_SHRINK_DELAY_MS = 800;
 
 /**
+ * 画面の大きさが変わった（回転・iPhone Duo の開閉）あと、上端の値に**下方向にも**追従する時間。
+ * safe area と画面の大きさは同じレンダーで届くとは限らない（Duo の実測：上端が先・大きさが後のことも、その逆もある）ので、
+ * 変わった瞬間だけでなく少しのあいだ追従させる。WKWebView の後始末の落ち込みは画面の大きさが変わらないので、この窓には入らない。
+ */
+const FRAME_CHANGE_FOLLOW_MS = 1000;
+
+/**
  * カスタムヘッダーの高さ計算に使う「上端 safe area（ステータスバー）」を返す。
  *
  * 単純な `useRef(insets.top)` だと、遷移アニメーション中など insets.top が未解決
@@ -66,7 +73,12 @@ const WINDOWED_SHRINK_DELAY_MS = 800;
  * - 学習セッションのフルスクリーン等でステータスバーを隠して insets.top=0 になっても縮まない
  *   （＝従来 `useRef` でロックしていた「ヘッダー高さを変えない」意図もそのまま満たす）
  *
- * **例外：iPad のウィンドウ表示では縮む**（`WINDOWED_SHRINK_DELAY_MS` 待ってから）。
+ * **例外1：画面の大きさが変わったら保持をやり直す**（`FRAME_CHANGE_FOLLOW_MS` のあいだは下方向にも追従）。
+ * iPhone Duo は開いた状態で回転でき（iPhone の向きの固定が効かない）、開閉でも上端が変わる
+ * （実測：開いた縦＝82／開いた横・閉じた状態＝0）。保持したままだと、開いた縦で見た 82 を閉じた後も持ち続け、
+ * ヘッダーが伸びたまま戻らなかった。
+ *
+ * **例外2：iPad のウィンドウ表示では縮む**（`WINDOWED_SHRINK_DELAY_MS` 待ってから）。
  * ウィンドウを画面の最上部へ寄せるとステータスバーが出て上端が伸び、離すと消えて縮む。
  * 縮まないままだと、先に開いていた画面（ホーム）だけ高いまま残り、後から開いた画面
  * （カード一覧など）はその時点の値で作られるので、画面ごとにヘッダーの高さが食い違う。
@@ -74,9 +86,22 @@ const WINDOWED_SHRINK_DELAY_MS = 800;
  */
 export function useLockedTopInset() {
   const { top: rawTop, windowed } = useWindowControls();
+  const { width, height } = useSafeAreaFrame();
   const [top, setTop] = useState(rawTop);
+  const sizeRef = useRef({ width, height });
+  const followUntilRef = useRef(0);
+  // ⚠️ 下の effect より先に宣言する＝同じコミットで先に走り、大きさが変わったレンダーの上端から追従させる
+  useEffect(() => {
+    if (sizeRef.current.width === width && sizeRef.current.height === height) return;
+    sizeRef.current = { width, height };
+    followUntilRef.current = Date.now() + FRAME_CHANGE_FOLLOW_MS;
+  }, [width, height]);
   useEffect(() => {
     if (rawTop > top) {
+      setTop(rawTop);
+      return;
+    }
+    if (rawTop < top && Date.now() < followUntilRef.current) {
       setTop(rawTop);
       return;
     }
@@ -84,7 +109,7 @@ export function useLockedTopInset() {
       const timer = setTimeout(() => setTop(rawTop), WINDOWED_SHRINK_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [rawTop, top, windowed]);
+  }, [rawTop, top, windowed, width, height]);
   return top;
 }
 

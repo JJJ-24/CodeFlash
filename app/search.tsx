@@ -531,9 +531,9 @@ export default function SearchScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface, ...headerHeights.bleed }}>
         <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
+          position: 'absolute', ...headerHeights.row, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }}>

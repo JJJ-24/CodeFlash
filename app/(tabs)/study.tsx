@@ -23,6 +23,7 @@ import { useShortcutsHeader } from '@/hooks/useShortcutsHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, FILTER_COLORS, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
+import { useHorizontalInsets } from '@/lib/useLockedTopInset';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -80,6 +81,8 @@ export default function StudyScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
+  // 左右の safe area（iPhone Duo の右の帯）。標準ヘッダーとタブバーは自分で避けるので、本文だけここで避ける
+  const horizontalInsets = useHorizontalInsets();
   const rs = useResponsiveSize();
   const bm = useBlockMetrics();
   // デッキアイコンを文字サイズ設定（fontScale）に連動させる（ホームと同じ算出）
@@ -440,7 +443,7 @@ export default function StudyScreen() {
   const filterBlockMinHeight = bm.minHeightFor(filterLabelFontSize);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right }]}>
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={theme.colors.primary} />

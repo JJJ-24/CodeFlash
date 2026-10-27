@@ -14,6 +14,7 @@ import { centeredScrollY } from '@/lib/scrollCenter';
 import { DONUT_CX, DONUT_CY, DONUT_INNER_R, DONUT_R, DONUT_SIZE, donutArcPath } from '@/lib/donut';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { useTheme, type AppTheme, FILTER_COLORS, GRADE_COLORS, MAX_FONT_MULTIPLIER, SHADOW, fontSizeForDigits, themedFrameBorder } from '@/lib/theme';
+import { useHorizontalInsets } from '@/lib/useLockedTopInset';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { useSettingsStore, GRADE_RANKING_PERIOD_DAYS, GRADE_RANKING_RATE_MIN_TOTAL } from '@/store/settings';
@@ -981,6 +982,8 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
+  // 左右の safe area（iPhone Duo の右の帯）。標準ヘッダーとタブバーは自分で避けるので、本文だけここで避ける
+  const horizontalInsets = useHorizontalInsets();
   const rs = useResponsiveSize();
   const bm = useBlockMetrics();
   const { initialFilterPreference, keyboardShortcutsEnabled, gradeRankingSortBy, setGradeRankingSortBy, gradeRankingPeriod, setGradeRankingPeriod, gradeRankingDeckIds, setGradeRankingDeckIds, gradeRankingRecordableOnly, setGradeRankingRecordableOnly, deckSortOrder, statsCollapsedSections, toggleStatsSection, studyGoalEnabled, studyGoalCount, heatmapMode, setHeatmapMode } = useSettingsStore();
@@ -1802,7 +1805,7 @@ export default function StatsScreen() {
           : { data: schedule, title: t('stats.upcomingSchedule'), color: FILTER_COLORS.due, todayIsLast: false };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right }]}>
       {(() => {
         const statNums = [streak, todayReviewed, todayDue, todayCreated];
         const maxDigits = Math.max(...statNums.map(n => String(n).length));

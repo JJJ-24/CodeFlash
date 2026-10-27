@@ -114,6 +114,34 @@ export function useLockedTopInset() {
 }
 
 /**
+ * 左右の safe area。iPhone Duo の閉じた状態・開いた横向きでは、カメラとステータスバーの帯のぶん
+ * **右 84pt** が報告される（閉じた状態はステータスバーが上端ではなく右上へ縦に移る＝上は 0）。
+ * 今までの iPhone（縦固定）と iPad では 0 なので、これを使う箇所は Duo 以外では何も変わらない。
+ *
+ * 避け方の規約（060 Phase 4）：
+ * - **本文**は画面の根元で余白を付ける＝Stack の画面は `app/_layout.tsx` の `contentStyle`、
+ *   タブの4画面は各画面の根元の View（`(tabs)` には付けない＝標準ヘッダーとタブバーは自分で避けるので二重になる）
+ * - **自前ヘッダー**は背景を端まで伸ばし（`useLockedHeaderHeights().bleed`）、中のボタン行だけ内側に置く（`.row`）
+ *   ＝帯の下にヘッダーの色が届かず、右上だけ本文の色の切れ目が出るのを防ぐ
+ */
+export function useHorizontalInsets() {
+  const { left, right } = useSafeAreaInsets();
+  return useMemo(() => ({ left, right }), [left, right]);
+}
+
+/**
+ * 自前ヘッダーの左右：外側の View に `bleed`（根元の余白を打ち消して背景を端まで伸ばす）、
+ * 中の `position: 'absolute'` の行に `row`（`left: 0, right: 0` の代わり）を当てる。
+ */
+export function useHeaderHorizontal() {
+  const { left, right } = useHorizontalInsets();
+  return useMemo(() => ({
+    bleed: { marginLeft: -left, marginRight: -right },
+    row: { left, right },
+  }), [left, right]);
+}
+
+/**
  * カスタムヘッダーの高さを React Navigation の標準ヘッダーと同じ算出で返す共通フック。
  *
  * `lockedTopInset + 44` の直書きは Dynamic Island 搭載 iPhone でズレる：
@@ -123,6 +151,7 @@ export function useLockedTopInset() {
  *
  * - `total`: ヘッダー全体の高さ（ステータスバー込み）。外側 View の height に使う
  * - `content`: コンテンツ行の高さ（total − inset）。下端寄せの内側行の height に使う
+ * - `bleed` / `row`: 左右の safe area の扱い（`useHeaderHorizontal`）
  *
  * ホームのタブヘッダー合わせ（旧 computeHeaderHeights）と push 画面の自前ヘッダーの両方が
  * このフックを使うことで、全画面のヘッダー高さ・タイトル位置が一致する。
@@ -130,8 +159,9 @@ export function useLockedTopInset() {
 export function useLockedHeaderHeights() {
   const lockedTopInset = useLockedTopInset();
   const frame = useSafeAreaFrame();
+  const { bleed, row } = useHeaderHorizontal();
   return useMemo(() => {
     const total = getDefaultHeaderHeight(frame, false, lockedTopInset);
-    return { total, content: total - lockedTopInset };
-  }, [frame, lockedTopInset]);
+    return { total, content: total - lockedTopInset, bleed, row };
+  }, [frame, lockedTopInset, bleed, row]);
 }

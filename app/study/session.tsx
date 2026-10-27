@@ -1193,9 +1193,9 @@ export default function StudySessionScreen() {
 
   // iPhone 用インラインカスタムヘッダー（headerShown:false のため全状態で共通利用）
   const iPhoneHeader = !(Platform as any).isPad ? (
-    <View style={{ height: headerHeights.total, backgroundColor: theme.baseSurface }}>
+    <View style={{ height: headerHeights.total, backgroundColor: theme.baseSurface, ...headerHeights.bleed }}>
       <View style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
+        position: 'absolute', ...headerHeights.row, bottom: 0, height: headerHeights.content,
         flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
       }}>
         <Pressable

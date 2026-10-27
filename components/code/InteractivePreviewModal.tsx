@@ -14,7 +14,7 @@ import type { LogEntry } from '@/lib/code-execution/types';
 import { useSandboxReload } from '@/hooks/useSandboxReload';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import { useWindowControlsTopInset } from '@/lib/useLockedTopInset';
+import { useHorizontalInsets, useWindowControlsTopInset } from '@/lib/useLockedTopInset';
 import { MAX_FONT_MULTIPLIER, useTheme, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import type { DeckImage } from '@/types';
 
@@ -73,6 +73,8 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
   const theme = useTheme();
   // iPad のウィンドウ表示では ✕ が赤黄青のウィンドウ操作ボタンに重ならないよう下げる
   const topInset = useWindowControlsTopInset();
+  // 別 VC の全画面なので根元の余白（app/_layout.tsx の contentStyle）が効かない＝左右の safe area は自分で避ける
+  const horizontalInsets = useHorizontalInsets();
   const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [nonce, setNonce] = useState(0);
@@ -250,7 +252,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <View style={[styles.root, { paddingTop: topInset }]}>
+      <View style={[styles.root, { paddingTop: topInset, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right }]}>
         {/* ヘッダー（左右のグループを同じ最小幅にしてタイトルを中央に保つ） */}
         <View style={styles.header}>
           <View style={styles.headerSide}>

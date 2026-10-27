@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InfoModal } from '@/components/InfoModal';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useHeaderHorizontal, useLockedTopInset } from '@/lib/useLockedTopInset';
 
 import { APP_STORE_REVIEW_URL, CONTACT_EMAIL, PRIVACY_URL, TERMS_URL, policyUrl } from '@/lib/links';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW } from '@/lib/theme';
@@ -20,6 +20,7 @@ export default function AboutScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const lockedTopInset = useLockedTopInset();
+  const headerHorizontal = useHeaderHorizontal();
 
   const [errorVisible, setErrorVisible] = useState(false);
   const isOpeningRef = useRef(false);
@@ -49,9 +50,9 @@ export default function AboutScreen() {
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
+      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface, ...headerHorizontal.bleed }}>
         <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: 44,
+          position: 'absolute', ...headerHorizontal.row, bottom: 0, height: 44,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }}>

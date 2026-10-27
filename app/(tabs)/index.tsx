@@ -553,9 +553,9 @@ export default function HomeScreen() {
   );
 
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background, paddingLeft: headerHeights.row.left, paddingRight: headerHeights.row.right }]}>
+      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface, ...headerHeights.bleed }}>
+        <View style={{ position: 'absolute', ...headerHeights.row, bottom: 0, height: headerHeights.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
           <Pressable hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>
             <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
           </Pressable>

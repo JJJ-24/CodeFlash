@@ -395,9 +395,9 @@ export default function TagCardsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface }}>
+      <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface, ...headerHeights.bleed }}>
         <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, height: headerHeights.content,
+          position: 'absolute', ...headerHeights.row, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           {/* 中央の帯全体ではなく文字とアイコンの幅だけを押せるようにする＝左右の空きはヘッダータップ（先頭へ）。

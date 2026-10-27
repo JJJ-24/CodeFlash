@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useHeaderHorizontal, useLockedTopInset } from '@/lib/useLockedTopInset';
 
 interface Props {
   title: string;
@@ -58,6 +58,7 @@ const TITLE_ICON_SPACE = 24;
 export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress, showKeyboardIcon, titleMaxWidth, archived, onHeaderPress }: Props) {
   const theme = useTheme();
   const lockedTopInset = useLockedTopInset();
+  const headerHorizontal = useHeaderHorizontal();
   // ⚠️ タイトルの省略は Text の **maxWidth** で行う（`flexShrink: 1` にしない）。
   // 行が溢れたときの flexShrink は Yoga がテキストを測り直すが、**日本語はどの文字間でも
   // 改行できるので最小幅が「1文字」になり**、箱は縮んだ幅のまま中身だけ `カ…` に潰れる
@@ -67,8 +68,8 @@ export function ModalFormHeader({ title, onClose, onSave, canSave, onTitlePress,
   const titleTextMaxWidth =
     titleMaxWidth == null ? undefined : Math.max(0, titleMaxWidth - (showKeyboardIcon ? TITLE_ICON_SPACE : 0) - (archived ? TITLE_ICON_SPACE : 0));
   return (
-    <HeaderTapToTop onPress={onHeaderPress ?? noop} style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface }}>
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
+    <HeaderTapToTop onPress={onHeaderPress ?? noop} style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface, ...headerHorizontal.bleed }}>
+      <View style={{ position: 'absolute', ...headerHorizontal.row, bottom: 0, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
         <Pressable onPress={onClose} style={{ paddingHorizontal: 4, zIndex: 1 }} hitSlop={8}>
           <Ionicons name="close" size={26} color={theme.colors.textSecondary} />
         </Pressable>

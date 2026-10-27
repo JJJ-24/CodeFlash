@@ -19,6 +19,7 @@ import { initializePurchases, restoreProStatus } from '@/lib/purchases';
 import { syncNoticeText } from '@/lib/sync/errorText';
 import { listLocalBackups, triggerBackgroundUpload, triggerForegroundSync } from '@/lib/sync/syncEngine';
 import { useTheme } from '@/lib/theme';
+import { useHorizontalInsets } from '@/lib/useLockedTopInset';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 import { useSyncStore } from '@/store/sync';
@@ -29,6 +30,7 @@ installNavigationGuard();
 
 function RootStack() {
   const theme = useTheme();
+  const horizontalInsets = useHorizontalInsets();
   const baseNavTheme = theme.dark ? DarkTheme : DefaultTheme;
   const navigationTheme = {
     ...baseNavTheme,
@@ -187,12 +189,16 @@ function RootStack() {
         headerStyle: { backgroundColor: theme.colors.surface },
         headerTintColor: theme.colors.text,
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: theme.colors.background },
+        // 左右の safe area（iPhone Duo の閉じた状態・開いた横＝右 84pt のカメラとステータスバーの帯）は画面の根元で避ける。
+        // 自前ヘッダーは `useLockedHeaderHeights().bleed` で背景だけ端まで伸ばす。規約は `useHorizontalInsets` のコメント。
+        contentStyle: { backgroundColor: theme.colors.background, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right },
         headerBackTitle: '',
         headerBackButtonDisplayMode: 'minimal',
       }}
     >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '' }} />
+      {/* タブは標準ヘッダーとタブバーが自分で左右の safe area を避けるので、根元の余白を付けない（二重になる）。
+          本文の余白は各タブの画面が付ける。 */}
+      <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '', contentStyle: { backgroundColor: theme.colors.background } }} />
       <Stack.Screen name="deck/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="deck/new" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       <Stack.Screen name="deck/[id]/edit" options={{ presentation: 'fullScreenModal', headerShown: false }} />

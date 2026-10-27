@@ -128,8 +128,8 @@ export function useLockedTopInset() {
  * 今までの iPhone（縦固定）と iPad では 0 なので、これを使う箇所は Duo 以外では何も変わらない。
  *
  * 避け方の規約（060 Phase 4）：
- * - **本文**は画面の根元で余白を付ける＝Stack の画面は `app/_layout.tsx` の `contentStyle`、
- *   タブの4画面は各画面の根元の View（`(tabs)` には付けない＝標準ヘッダーとタブバーは自分で避けるので二重になる）
+ * - **本文**は Stack・Tabs の `screenLayout`（`components/HorizontalSafeAreaLayout.tsx`＝ネイティブの SafeAreaView）で避ける。
+ *   ⚠️ この値で本文に `padding` を付けない＝JS の値は開閉のたびに少し遅れて届き、デッキの行や＋ボタンが一瞬動いた
  * - **自前ヘッダー**は背景を端まで伸ばし（`useLockedHeaderHeights().bleed`）、中のボタン行だけ内側に置く（`.row`）
  *   ＝帯の下にヘッダーの色が届かず、右上だけ本文の色の切れ目が出るのを防ぐ
  */

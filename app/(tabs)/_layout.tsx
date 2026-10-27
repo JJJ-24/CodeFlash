@@ -6,6 +6,7 @@ import { Text, type ColorValue } from 'react-native';
 import { useLockedHeaderHeights, useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
+import { horizontalSafeAreaLayout } from '@/components/HorizontalSafeAreaLayout';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -34,6 +35,8 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      // 中身（標準ヘッダーの下）を左右の safe area の内側に置く。標準ヘッダーとタブバーは自分で避ける
+      screenLayout={horizontalSafeAreaLayout}
       screenOptions={{
         headerShown: true,
         headerStatusBarHeight: headerTopInset,

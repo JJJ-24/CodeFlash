@@ -28,7 +28,7 @@ import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsMo
 import { resolveDeckIconColors } from '@/lib/deckIconColors';
 import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
-import { useHorizontalInsets, useLockedHeaderHeights } from '@/lib/useLockedTopInset';
+import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
@@ -259,8 +259,6 @@ export default function HomeScreen() {
   // React Navigation の標準ヘッダーと同じ算出（Dynamic Island 補正込み）＋縮まない inset。
   // 詳細は lib/useLockedTopInset.ts の useLockedHeaderHeights を参照。
   const headerHeights = useLockedHeaderHeights();
-  // 本文の左右は safe area だけで避ける（`headerHeights.row` は角の余白を含むので使わない＝使うとヘッダーの余白が二重になり、背景の左端に隙間が出る）
-  const horizontalInsets = useHorizontalInsets();
 
   async function handleDelete(id: string) {
     await deleteDeck(db, id);
@@ -560,7 +558,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right }]}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.background}]}>
       <HeaderTapToTop onPress={scrollToTopFromHeader} style={{ height: headerHeights.total, backgroundColor: theme.colors.surface, ...headerHeights.bleed }}>
         <View style={{ position: 'absolute', ...headerHeights.row, bottom: 0, height: headerHeights.content, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 }}>
           <Pressable hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => router.push('/search')} style={{ paddingHorizontal: 8 }}>

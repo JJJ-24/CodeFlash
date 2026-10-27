@@ -16,7 +16,6 @@ import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsMo
 import { getTrialRemainingMs } from '@/lib/proTrial';
 import { centeredScrollY } from '@/lib/scrollCenter';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
-import { useHorizontalInsets } from '@/lib/useLockedTopInset';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
 
@@ -46,8 +45,6 @@ interface NavItem {
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
-  // 左右の safe area（iPhone Duo の右の帯）。標準ヘッダーとタブバーは自分で避けるので、本文だけここで避ける
-  const horizontalInsets = useHorizontalInsets();
   const router = useRouter();
   // isPro は実効値（購入 or トライアル中）。Pro カードの導線は purchased で分岐する：
   // トライアル中もカードから paywall を開けるようにする（体験中も購入可能・035）
@@ -138,7 +135,7 @@ export default function SettingsScreen() {
   ], showShortcutsModal);
 
   return (
-    <View style={{ flex: 1, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right }}>
+    <View style={{ flex: 1 }}>
       <ScrollView
         ref={scrollRef}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}

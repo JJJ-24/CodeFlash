@@ -173,7 +173,6 @@ export default function HomeScreen() {
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
   const { deckSortOrder, setDeckSortOrder, deckSortLocked, setDeckSortLocked, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
   // 幅・余白・文字サイズ・最小高さは useBlockMetrics に集約（7画面で同じ規則）。
-  const blockWidth = bm.blockWidth;
   const blockPadH = bm.padH;
   const homeLabelFontSize = bm.labelSize([t('common.all'), t('common.active')]);
   const filterBlockMinHeight = bm.minHeightFor(homeLabelFontSize);
@@ -354,7 +353,7 @@ export default function HomeScreen() {
         <Pressable
           style={[
             styles.statItem,
-            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
+            { backgroundColor: theme.colors.surface, flex: 1, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
             selectedFilter === 'all' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
           ]}
           onPress={() => setSelectedFilter('all')}
@@ -366,7 +365,7 @@ export default function HomeScreen() {
         <Pressable
           style={[
             styles.statItem,
-            { backgroundColor: theme.colors.surface, width: blockWidth, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
+            { backgroundColor: theme.colors.surface, flex: 1, minHeight: filterBlockMinHeight, paddingHorizontal: blockPadH },
             selectedFilter === 'active' && { margin: 0, borderWidth: 2, borderColor: theme.colors.primary },
           ]}
           onPress={() => setSelectedFilter('active')}
@@ -374,6 +373,12 @@ export default function HomeScreen() {
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.statValue, { color: theme.colors.text, fontSize: homeValueFontSize }]}>{activeDeckCount}</Text>
           <Text numberOfLines={1} allowFontScaling={false} style={[styles.statLabel, { color: theme.colors.textSecondary, fontSize: homeLabelFontSize }]}>{t('common.active')}</Text>
         </Pressable>
+        {/* 4列の残り2つぶんの空き＝ブロックの幅をほかの画面（4つ並び）と同じにする。
+            ⚠️ 幅を JS で計算して `width` に入れない：画面の大きさが変わったとき（iPhone Duo の開閉・iPad の窓の大きさの変更）、
+            新しい幅が JS に届くまでの1〜2コマだけ古い幅で描かれ、折りたたむとブロックが一瞬大きいまま出た。
+            `flex: 1` ならネイティブのレイアウトが同じコマで割り直す（学習タブの4つと同じ）。 */}
+        <View style={styles.statSpacer} />
+        <View style={styles.statSpacer} />
       </View>
       <View style={styles.sectionRow}>
         <View style={styles.sectionTitleCol}>
@@ -745,6 +750,7 @@ const styles = StyleSheet.create({
     margin: 2,
     ...SHADOW.card,
   },
+  statSpacer: { flex: 1, margin: 2 },
   statValue: { fontWeight: '700' },
   statLabel: { marginTop: 2, textAlign: 'center', fontWeight: '600' },
   sectionRow: {

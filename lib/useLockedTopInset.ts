@@ -1,5 +1,5 @@
 import { getDefaultHeaderHeight } from 'expo-router/react-navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Platform } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
@@ -89,20 +89,27 @@ export function useLockedTopInset() {
   const { top: rawTop, windowed } = useWindowControls();
   const { width, height } = useSafeAreaFrame();
   const [top, setTop] = useState(rawTop);
-  const sizeRef = useRef({ width, height });
-  const followUntilRef = useRef(0);
-  // ⚠️ 下の effect より先に宣言する＝同じコミットで先に走り、大きさが変わったレンダーの上端から追従させる
+  // 画面の大きさが変わったら `FRAME_CHANGE_FOLLOW_MS` のあいだ「追従中」にし、その間は上端の値を**このレンダーで**そのまま返す。
+  // effect で state を更新してから返すと描き直し1回ぶん遅れ、回転した直後にヘッダーが一瞬前の高さで出た。
+  // 大きさの変化はレンダー中に検出する（前回の大きさを state に持つ＝React の「前回のレンダーの情報を保存する」形。ref だと lint に掛かる）。
+  const [size, setSize] = useState({ width, height });
+  const [following, setFollowing] = useState(false);
+  if (size.width !== width || size.height !== height) {
+    setSize({ width, height });
+    setFollowing(true);
+  }
   useEffect(() => {
-    if (sizeRef.current.width === width && sizeRef.current.height === height) return;
-    sizeRef.current = { width, height };
-    followUntilRef.current = Date.now() + FRAME_CHANGE_FOLLOW_MS;
-  }, [width, height]);
+    if (!following) return;
+    // 大きさが続けて変わったら（回転の途中など）張り直す
+    const timer = setTimeout(() => setFollowing(false), FRAME_CHANGE_FOLLOW_MS);
+    return () => clearTimeout(timer);
+  }, [following, width, height]);
   useEffect(() => {
     if (rawTop > top) {
       setTop(rawTop);
       return;
     }
-    if (rawTop < top && Date.now() < followUntilRef.current) {
+    if (rawTop < top && following) {
       setTop(rawTop);
       return;
     }
@@ -110,8 +117,9 @@ export function useLockedTopInset() {
       const timer = setTimeout(() => setTop(rawTop), WINDOWED_SHRINK_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [rawTop, top, windowed, width, height]);
-  return top;
+  }, [rawTop, top, windowed, following]);
+  // 追従が終わる時点では上の effect で top が rawTop にそろっているので、切り替わりで値は跳ねない
+  return following ? rawTop : top;
 }
 
 /**

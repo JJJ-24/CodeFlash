@@ -1,7 +1,5 @@
 import { useCallback } from 'react';
-import { Platform, useWindowDimensions } from 'react-native';
-
-const IS_PAD = (Platform as any).isPad;
+import { useWindowDimensions } from 'react-native';
 
 /**
  * 窓幅に応じて「iPhone 寸法 ⇄ iPad 寸法」を補間する共通フック。
@@ -21,8 +19,10 @@ const IS_PAD = (Platform as any).isPad;
  * ブレークポイントで切り替える案は不採用：Stage Manager のハンドルをドラッグしている最中に
  * 閾値でボタンがカクッと跳ねる。線形補間なら追従して縮む。
  *
- * ⚠️ iPhone は `IS_PAD` ゲートで一切通さない（0 固定）。幅だけで判定すると横向きや
- * 将来の大型端末で iPad 寸法に化けうるため、「iPhone は不変」を構造で保証する。
+ * iPhone も幅だけで判定する（060 Phase 4 で `IS_PAD` ゲートを外した）：iPhone は縦に固定していて幅は 440pt 以下＝
+ * 常に 0 のままで不変。広くなるのは iPhone Duo を開いたとき（縦 669pt・横 951pt）だけで、そこは iPad 並みの画面なのに
+ * iPhone の寸法のまま広がって窮屈だった。かつて心配していた「iPhone の横向きで iPad 寸法に化ける」は縦固定なので起きない。
+ * ⚠️ 矢印・Tab の扱い（iPad のフォーカスエンジン対策）は端末の判定のまま＝幅で切り替えるものではない。
  */
 const COMPACT_W = 440;
 const WIDE_W = 744;
@@ -30,7 +30,6 @@ const WIDE_W = 744;
 /** 0（iPhone 寸法）〜 1（iPad 寸法）の連続値。 */
 export function usePadScale(): number {
   const { width } = useWindowDimensions();
-  if (!IS_PAD) return 0;
   return Math.min(1, Math.max(0, (width - COMPACT_W) / (WIDE_W - COMPACT_W)));
 }
 

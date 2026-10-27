@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text, type ColorValue } from 'react-native';
 
-import { useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useLockedHeaderHeights, useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 
@@ -28,13 +28,16 @@ export default function TabsLayout() {
   // 足さないためホームだけ高くなり、タブを切り替えるたびにヘッダーの下端が跳ねる。
   // 縮まない値なので、WKWebView の後始末でステータスバーが消えてもヘッダーが縮まない。
   const headerTopInset = useLockedTopInset();
+  // 高さもホームの自前ヘッダーと同じ計算にそろえる（標準ヘッダーは別経路の画面サイズで計算するので、
+  // iPhone Duo を開いた横向きでホームと食い違った＝lib/useLockedTopInset.ts の useLockedHeaderHeights）
+  const headerHeights = useLockedHeaderHeights();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
         headerStatusBarHeight: headerTopInset,
-        headerStyle: { backgroundColor: theme.colors.surface },
+        headerStyle: { backgroundColor: theme.colors.surface, height: headerHeights.total },
         headerTintColor: theme.colors.text,
         headerShadowVisible: false,
         tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border },

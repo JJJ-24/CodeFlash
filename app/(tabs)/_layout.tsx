@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Text, type ColorValue } from 'react-native';
+import { Platform, Text, type ColorValue } from 'react-native';
 
 import { useLockedHeaderHeights, useLockedTopInset } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { horizontalSafeAreaLayout } from '@/components/HorizontalSafeAreaLayout';
+import { renderTabBar } from '@/components/BandTabBar';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -37,6 +38,8 @@ export default function TabsLayout() {
     <Tabs
       // 中身（標準ヘッダーの下）を左右の safe area の内側に置く。標準ヘッダーとタブバーは自分で避ける
       screenLayout={horizontalSafeAreaLayout}
+      // iPhone Duo の閉じた状態だけ、タブのボタンを右の帯（safe area の外）の中へ移す。それ以外は標準のタブバー
+      tabBar={renderTabBar}
       screenOptions={{
         headerShown: true,
         headerStatusBarHeight: headerTopInset,
@@ -44,6 +47,9 @@ export default function TabsLayout() {
         headerTintColor: theme.colors.text,
         headerShadowVisible: false,
         tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border },
+        // iPhone の横向き（Duo を開いたとき）は既定だとラベルが横並びの細いバー（32pt）になり、縦向き（49pt）と高さが変わる。
+        // iPad は縦横とも 49pt なので、iPhone も縦向きと同じ「アイコンの下にラベル」（49pt）に固定してそろえる。iPad は既定のまま
+        ...(!(Platform as any).isPad && { tabBarLabelPosition: 'below-icon' as const }),
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textTertiary,
       }}

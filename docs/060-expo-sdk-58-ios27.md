@@ -174,19 +174,20 @@ OS 依存の実装が集中している順：
 - [x] HTML/CSS プレビュー（WKWebView・`window.open` → Safari・`window.close()`・フォーム送信のリロード・相対 URL でクラッシュしない）→ iPhone 18 Pro（iOS 27.0 シミュ）で OK（10/26）
 - [x] コード実行後のステータスバーとヘッダー高さ（`useLockedTopInset`・Dynamic Island の −5.33 補正）→ iPhone 18 Pro で OK。あわせて iPhone で、編集プレビューのコードの横スクロール（`LegacyScrollView`）・カード一覧/学習画面のキー操作・学習のスワイプ送り・読み上げ・声の一覧・写真ピッカー・通知の許可も OK
 - [x] iPad：ウィンドウ表示の赤黄青ボタンの補正（`useWindowControlsTopInset`）→ iPad Pro 11（M5・iOS 27.0 シミュ）で OK。4タブのヘッダーの高さもそろう
-- [ ] **実機で確認する**：iPad の Split View で隣のアプリのキーボードを出したときのエディタ（パッチ①）・キーボードを出したまま閉じた後の無限スクロール（パッチ②）（シミュレータには入力できる標準アプリがほぼ無いため）
+- [x] **実機で確認する**：iPad の Split View で隣のアプリのキーボードを出したときのエディタ（パッチ①）・キーボードを出したまま閉じた後の無限スクロール（パッチ②）（シミュレータには入力できる標準アプリがほぼ無いため）→ TestFlight（v1.14.0）で OK（2026-10-29）＝隣のアプリでキーボードを出しても潰れない・ずれない
+  - ⚠️ 別件（060 の退行ではない）：**Split View のときだけ**、画面キーボードがまだ出ていない状態で下の方の欄（土台の欄など）をタップすると、カーソルの1行手前でスクロールが止まる。キーボードが出ている状態でタップしたときと、アプリだけを表示しているときは正しくスクロールする。**v1.13.2 でも同じ**＝058 のカーソル追従（`CaretProbe`）からある。アプリはタップの瞬間（キーボードが出る前の高さ）でしかカーソルを見ておらず、キーボードが出て表示が縮んだあとは iOS の自動スクロール任せになっている疑い（全画面では足りていて、Split View では足りない理由は未確認）。060 を main へ入れた後に別に調べる。案：編集中に ScrollView の高さが縮んだら、最後に測ったカーソルの範囲で `scrollRangeIntoView` をやり直す
 - [x] ハードウェアキーボード：矢印・Tab の iPad 優先・PageUp/PageDown/Home/End（パッチ）→ iPad シミュで OK（ホームの ↑/↓・Tab/⇧Tab・学習画面の H/L・PageUp/PageDown/Home/End のキー・U/D・⇧U/⇧D・編集中の矢印でカーソル移動）。⚠️ fn＋矢印は Device Hub が「fn 付きの矢印」として送るので効かない＝割り当ては PageUp などのキーそのもの（無いキーボード向けは U/D・⇧U/⇧D）で、移行による変化ではない
-- [ ] **実機で確認する**：Split View 往復後のハードウェアキーボード
+- [x] **実機で確認する**：Split View 往復後のハードウェアキーボード → TestFlight（v1.14.0）で OK（2026-10-29）
 - [x] スライダー（範囲の違う設定を続けて開く・ドラッグでちらつかない）・ドラッグ並べ替え（同じ位置に落とした後のオートスクロール）→ OK（slider パッチ削除後も問題なし）。あわせてスワイプ行（左＝アーカイブ/削除・右＝ここから学習・斜めの縦スクロールが取られない）も OK
 - [x] カード一覧の2行目が空白にならない（パッチ④）→ OK
-- [ ] **実機で確認する**：画面キーボードを出したまま入力画面を閉じた後、次の画面が下端を越えてスクロールしない（シミュレータは Device Hub がハードウェアキーボード扱いで画面キーボードが出ないため実機へ回した）
-- [ ] **実機で確認する**：通知の発火・バッジ・iCloud 同期（アップロード完了の判定）・読み上げの AirPods のプツッ（通知の許可・写真ピッカー・読み上げ・声の一覧はシミュで OK）
+- [x] **実機で確認する**：画面キーボードを出したまま入力画面を閉じた後、次の画面が下端を越えてスクロールしない（シミュレータは Device Hub がハードウェアキーボード扱いで画面キーボードが出ないため実機へ回した）→ TestFlight（v1.14.0）で OK（2026-10-29）
+- [x] **実機で確認する**：通知の発火・バッジ・iCloud 同期（アップロード完了の判定）・読み上げの AirPods のプツッ（通知の許可・写真ピッカー・読み上げ・声の一覧はシミュで OK）→ TestFlight（v1.14.0）で OK（2026-10-29）
 - [x] Python（Pyodide）・SQL・C++（Wandbox）の実行 → OK（JS の setTimeout 延長・CSS の土台装飾も OK）
 - [x] **学習画面でステータスバーが隠れない**（2026-10-29 に iPhone 18 Pro・iOS 27.0 シミュで発見。今までの iPhone・iPad では隠れていた）：RN 0.88 の `RCTStatusBarManager` は `UIApplication.setStatusBarHidden:`（`UIViewControllerBasedStatusBarAppearance = NO` 前提の古い API）を使う＝UIScene（iOS 27 SDK）で効かなくなった疑い。同じ API の文字の色（ダークのとき白）も確認する。直し方の候補は react-native-screens の画面ごとの `statusBarHidden`／`statusBarStyle`（view controller から設定）。⚠️ Duo では縦の帯にあるステータスバーに `hidden` はそもそも効かない（`expo-status-bar` の仕様）＝Duo 側は `docs/061`
   - → **A 案で対応（2026-10-29・v1.14.0）**：ステータスバーを react-native-screens の画面ごとの指定（view controller）へ移した。`app.json` の Info.plist に `UIViewControllerBasedStatusBarAppearance: true`、文字色は `app/_layout.tsx` の Stack の `screenOptions.statusBarStyle`（ダーク＝白／ライト＝黒）、学習画面は `navigation.setOptions({ statusBarHidden, statusBarAnimation: 'fade' })`（フォーカス時に隠し・離れるときに戻す既存の state をそのまま渡す）。`expo-status-bar` の `<StatusBar>`・`setStatusBarHidden`/`setStatusBarStyle` は全部撤去（ルートの `<StatusBar style>`・学習画面の `<StatusBar hidden>` 7か所と命令型の復元・コード実行直後の再アサート〈`BlocksView` の `onCodeRunStart`〉）
   - `useRestoreStatusBar`（WKWebView の後始末が壊したアプリ全体のステータスバーを、フォーカス直後の多段タイマー・キーボードの出し入れ・フォアグラウンド復帰のたびに再アサートしていたフック）は削除＝画面ごとの指定は後始末に壊されない。使っていた13か所（タブの `_layout`・カード一覧・入力系6画面・検索・タグ管理・タグ別カード一覧・アーカイブ・`SettingsDetail`）とホームの同等の復元（focus effect）を外した
   - ⚠️ 不採用：`RCTStatusBarManager` を UIScene の API に直すパッチ（RN のネイティブパッチが増える・RN を上げるたびに当たり直しが要る）
-  - [ ] 確認する（Info.plist が変わるので再ビルド後）：学習画面で隠れる・離れると戻る／ダーク・ライトで文字色が合う（テーマ切替にも追従）／コード実行（WKWebView）の後も他の画面で消えない・ヘッダーが縮まない／iPad のウィンドウ表示・キーボードの出し入れ（通知のラベル）／入力系モーダル（fullScreenModal）でも色が合う
+  - [x] 確認する（Info.plist が変わるので再ビルド後）：学習画面で隠れる・離れると戻る／ダーク・ライトで文字色が合う（テーマ切替にも追従）／コード実行（WKWebView）の後も他の画面で消えない・ヘッダーが縮まない／iPad のウィンドウ表示・キーボードの出し入れ（通知のラベル）／入力系モーダル（fullScreenModal）でも色が合う → TestFlight（v1.14.0）の実機で全部 OK（2026-10-29）
 
 ### Phase 4：iPhone Duo
 

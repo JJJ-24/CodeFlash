@@ -2,7 +2,6 @@ import { getDefaultHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Platform } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useResponsiveSize } from '@/lib/useResponsiveSize';
 
 /**
  * iPadOS 26 のウィンドウ表示（ステージマネージャ／ウィンドウ表示のアプリ）で、左上の
@@ -21,6 +20,37 @@ import { useResponsiveSize } from '@/lib/useResponsiveSize';
 const WINDOW_CONTROLS_EXTRA = 30;
 
 /**
+ * iPhone Duo のヘッダー（060 Phase 4）。Duo はステータスバー（時刻・Wi-Fi）が上端の中央ではなく**右上の角**にある
+ * （開いた縦）か、右の帯の中にある（閉じた状態・開いた横＝このアプリは縦固定なので、開いた横でも閉じた状態と同じ配置になる）。
+ * Safari はヘッダーを1行（約 80pt）にして、ボタンの縦の中心を時刻・Wi-Fi と同じ約 48pt にそろえ、右上の時刻・Wi-Fi のぶん
+ * （約 120pt）だけ空けている。それに合わせ、開閉・回転で高さが変わらない1行にする。
+ *
+ * ⚠️ iOS は時刻・Wi-Fi の位置を教えてくれない（報告されるのは四角い safe area＝開いた縦は上 82pt・閉じた状態と開いた横は右 84pt）。
+ * 下の値は Duo のシミュレータの Safari の画面写真から測った決め打ち（2026-10-29）。実機や今後の iOS で位置が違えば合わせ直す。
+ * ⚠️ iOS の上の safe area（開いた縦＝82pt）はヘッダーの高さに使わない＝使うと回転のたびにヘッダーが約 80pt 伸び縮みした。
+ * ⚠️ 高さは 80pt より低くしない：開いた縦向きは iOS が時刻・Wi-Fi の後ろに白い下地（下端が約 75pt）を敷くので、
+ *   70pt にしたらヘッダーの下からはみ出して見えた。
+ */
+/** ヘッダーの行の上の余白。行（`DUO_HEADER_CONTENT`）の中心が 48pt（Safari のボタンと時刻・Wi-Fi の中心）に来る */
+const DUO_HEADER_TOP = 16;
+/** ヘッダーの行の高さ。上の余白と合わせて 80pt */
+const DUO_HEADER_CONTENT = 64;
+/** 画面の右端から時刻・Wi-Fi の左端まで（約 120pt）＋すき間。開いた縦向きのヘッダーの右側の中身はこれより内側に置く */
+const DUO_STATUS_RESERVE = 128;
+/** 左右の safe area が無い側の、ヘッダーの行の端の余白（Safari の戻るボタンは画面の左端から約 16pt） */
+const DUO_EDGE_PADDING = 16;
+
+/**
+ * iPhone Duo か。iOS は「ステータスバーが右上にある」ことを教えてくれないので寸法で判定する：
+ * 画面の短いほうの辺が 450pt を超える iPhone（Duo の閉じた状態 466pt・開いた状態 669pt。今までの iPhone は最大 440pt）。
+ * 閉じた状態と開いた状態のどちらでも true＝開閉でこの判定は変わらない（JS の値の遅れでヘッダーが揺れない）。
+ */
+export function useIsDuo(): boolean {
+  const { width, height } = useSafeAreaFrame();
+  return !(Platform as any).isPad && Math.min(width, height) > 450;
+}
+
+/**
  * safe area の上端に、iPad のウィンドウ表示ならウィンドウ操作ボタンのぶんを足した値を返す。
  *
  * ウィンドウ表示の判定は「iPadOS 26 以上 **かつ** ウィンドウが画面より小さい」。
@@ -37,6 +67,9 @@ export function useWindowControlsTopInset() {
 function useWindowControls(): { top: number; windowed: boolean } {
   const insets = useSafeAreaInsets();
   const frame = useSafeAreaFrame();
+  const isDuo = useIsDuo();
+  // Duo は上の safe area を使わず、ヘッダーの行を時刻・Wi-Fi と同じ高さに置く（`DUO_HEADER_TOP`）
+  if (isDuo) return { top: DUO_HEADER_TOP, windowed: false };
   if (!(Platform as any).isPad) return { top: insets.top, windowed: false };
   const screen = Dimensions.get('screen');
   const smallerThanScreen = frame.width < screen.width - 1 || frame.height < screen.height - 1;
@@ -138,47 +171,45 @@ export function useHorizontalInsets() {
   return useMemo(() => ({ left, right }), [left, right]);
 }
 
+/** 自前ヘッダーの行の左右の余白（各ヘッダーの `paddingHorizontal: 8` と同じ値） */
+const HEADER_ROW_PADDING = 8;
+
+/**
+ * ヘッダーの行の左右の余白（左右の safe area の内側から測る）。普通の端末は `base` のまま。
+ * iPhone Duo は、左右の safe area が無い側を `DUO_EDGE_PADDING`（画面の角の丸みから離す）にし、さらに右に safe area が無いとき
+ * （開いた縦向き＝時刻・Wi-Fi が右上の角にある）は画面の右端から `DUO_STATUS_RESERVE` を空ける。
+ * 右に帯があるとき（閉じた状態・開いた横＝時刻・Wi-Fi は帯の中）は帯の手前まで使う。
+ * `base`：そのヘッダーの普段の余白（自前ヘッダー＝8・全画面プレビュー＝12）。
+ */
+export function useHeaderSides(base: number = HEADER_ROW_PADDING): { left: number; right: number } {
+  const isDuo = useIsDuo();
+  const { left, right } = useHorizontalInsets();
+  return useMemo(() => {
+    if (!isDuo) return { left: base, right: base };
+    return {
+      left: left > 0 ? base : Math.max(base, DUO_EDGE_PADDING),
+      right: right > 0 ? base : Math.max(base, DUO_STATUS_RESERVE),
+    };
+  }, [isDuo, left, right, base]);
+}
+
 /**
  * 自前ヘッダーの左右：外側の View に `bleed`（根元の余白を打ち消して背景を端まで伸ばす）、
  * 中の `position: 'absolute'` の行に `row`（`left: 0, right: 0` の代わり）を当てる。
  */
-/** 自前ヘッダーの行の左右の余白（各ヘッダーの `paddingHorizontal: 8` と同じ値） */
-const HEADER_ROW_PADDING = 8;
-
 export function useHeaderHorizontal() {
   const { left, right } = useHorizontalInsets();
-  const corner = useHeaderCornerInset();
+  const sides = useHeaderSides();
   return useMemo(() => ({
     bleed: { marginLeft: -left, marginRight: -right },
-    // 角の余白は行の位置ではなく行の内側の余白として足す：ボタンは余白の内側に並び、
+    // 端の余白は行の位置ではなく行の内側の余白として足す：ボタンは余白の内側に並び、
     // 行いっぱいに広げた中央のタイトル（`position: 'absolute', left: 0, right: 0`）は余白を無視して
     // safe area の中央に来る＝標準ヘッダー（タブ）のタイトルと同じ位置。行の位置に足すと、
-    // 左だけ角の余白があるとき（Duo の開いた横）にタイトルがその半分だけ右へずれた。
+    // 左右で余白が違うとき（Duo の右の時刻・Wi-Fi）にタイトルがその半分だけずれる。
     // ⚠️ `paddingLeft`/`paddingRight` は各ヘッダーの `paddingHorizontal: 8` より優先される（辺ごとの指定が勝つ）ので、
-    // ここで 8 を含めて返す（`HEADER_ROW_PADDING`）。
-    row: {
-      left,
-      right,
-      paddingLeft: HEADER_ROW_PADDING + (left > 0 ? 0 : corner),
-      paddingRight: HEADER_ROW_PADDING + (right > 0 ? 0 : corner),
-    },
-  }), [left, right, corner]);
-}
-
-/**
- * ヘッダーの行が画面の角の丸みに接するときに、左右へ足す余白。
- *
- * 上端の safe area が 0 になるのは iPhone Duo の閉じた状態・開いた横向き（ステータスバーが右上の帯へ移る）で、
- * ヘッダーの行が画面のいちばん上＝角の丸みの中に置かれ、左上の検索・戻るボタンが窮屈に見えた。
- * 今までの iPhone・iPad は上にステータスバーがあり、行は角より下に来るので 0（何も変わらない）。
- * ⚠️ その側に左右の safe area があるとき（Duo の右の帯）は safe area のほうで避けるので足さない。
- * ⚠️ 判定は縮まない上端（`useLockedTopInset`）で行う＝学習の全画面などでステータスバーを隠しても余白は動かない。
- */
-export function useHeaderCornerInset(): number {
-  const top = useLockedTopInset();
-  const rs = useResponsiveSize();
-  // 窓の幅で補間する：閉じた状態（幅 466pt）≒ 6pt・開いた横向き（951pt）＝ 24pt（実機の見た目で決めた値。10/27）
-  return top === 0 ? rs(4, 24) : 0;
+    // ここで 8 を含めて返す（`useHeaderSides`）。
+    row: { left, right, paddingLeft: sides.left, paddingRight: sides.right },
+  }), [left, right, sides]);
 }
 
 /**
@@ -194,7 +225,7 @@ export function useHeaderCornerInset(): number {
  * - `bleed` / `row`: 左右の safe area の扱い（`useHeaderHorizontal`）
  *
  * ⚠️ タブの標準ヘッダー（学習/統計/設定）にも `total` を `headerStyle.height` で渡している（`app/(tabs)/_layout.tsx`）。
- * 標準ヘッダーは別経路の画面サイズで高さを計算するので、渡さないと iPhone Duo を開いた横向きでホーム（32pt）と食い違った。
+ * 標準ヘッダーは別経路の画面サイズ・上端で高さを計算するので、渡さないと iPhone Duo でホームと食い違う。
  *
  * ホームのタブヘッダー合わせ（旧 computeHeaderHeights）と push 画面の自前ヘッダーの両方が
  * このフックを使うことで、全画面のヘッダー高さ・タイトル位置が一致する。
@@ -202,15 +233,33 @@ export function useHeaderCornerInset(): number {
 export function useLockedHeaderHeights() {
   const lockedTopInset = useLockedTopInset();
   const frame = useSafeAreaFrame();
+  const isDuo = useIsDuo();
   const { bleed, row } = useHeaderHorizontal();
   return useMemo(() => {
-    // ⚠️ iPhone の横向きは縦と同じ高さで計算する。`getDefaultHeaderHeight` は iPhone の横向きに
-    // 細いバー（32pt）を返すが、このアプリは iPhone を縦に固定しているので、横向きになるのは
-    // iPhone Duo を開いたときだけ＝iPad 並みの広い画面で 32pt は窮屈すぎる（060 Phase 4）。
-    const layout = !(Platform as any).isPad && frame.width > frame.height
-      ? { width: frame.height, height: frame.width }
-      : frame;
-    const total = getDefaultHeaderHeight(layout, false, lockedTopInset);
+    // Duo は開閉・回転で変わらない1行（上の余白 `DUO_HEADER_TOP`＋行 `DUO_HEADER_CONTENT`）。上端は `useLockedTopInset` が `DUO_HEADER_TOP` を返す
+    // ⚠️ `getDefaultHeaderHeight` は iPhone の横向きに細いバー（32pt）を返すが、このアプリの iPhone は縦固定で、
+    // 横向きになるのは Duo（上で別に扱う）だけ
+    if (isDuo) return { total: lockedTopInset + DUO_HEADER_CONTENT, content: DUO_HEADER_CONTENT, bleed, row };
+    const total = getDefaultHeaderHeight(frame, false, lockedTopInset);
     return { total, content: total - lockedTopInset, bleed, row };
-  }, [frame, lockedTopInset, bleed, row]);
+  }, [frame, lockedTopInset, isDuo, bleed, row]);
+}
+
+/**
+ * `lockedTopInset + 44` で組んでいる自前ヘッダー（入力系モーダル・設定の詳細画面・このアプリについて）の高さ。
+ * 普通の端末は従来どおり（`getDefaultHeaderHeight` の補正を使わない＝変えると見た目が数 pt 変わる）、
+ * iPhone Duo だけ `useLockedHeaderHeights` と同じ1行（80pt）にする。
+ */
+export function useSimpleHeaderHeights(): { total: number; content: number } {
+  const lockedTopInset = useLockedTopInset();
+  const isDuo = useIsDuo();
+  return useMemo(() => {
+    const content = isDuo ? DUO_HEADER_CONTENT : 44;
+    return { total: lockedTopInset + content, content };
+  }, [lockedTopInset, isDuo]);
+}
+
+/** 全画面プレビュー（041・ページを見る）のヘッダーの行の高さ。iPhone Duo だけ他のヘッダーと同じ行の高さにそろえる（普通の端末は中身なり） */
+export function useDuoHeaderRowHeight(): number | undefined {
+  return useIsDuo() ? DUO_HEADER_CONTENT : undefined;
 }

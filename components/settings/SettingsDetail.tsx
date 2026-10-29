@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { popEscDismiss } from '@/lib/escStack';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
-import { useHeaderHorizontal, useLockedTopInset } from '@/lib/useLockedTopInset';
+import { useHeaderHorizontal, useSimpleHeaderHeights } from '@/lib/useLockedTopInset';
 import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
@@ -67,7 +67,7 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const lockedTopInset = useLockedTopInset();
+  const headerHeights = useSimpleHeaderHeights();
   const headerHorizontal = useHeaderHorizontal();
   // 入力欄のある画面（通知のスケジュールのラベル）でキーボードを出し入れすると、iPad でステータスバー
   // （日時・Wi-Fi・電池）が消えたまま戻らなかった＝他の自前ヘッダーの画面と同じく再アサートする。
@@ -161,9 +161,9 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* インラインカスタムヘッダー */}
-      <View style={{ height: lockedTopInset + 44, backgroundColor: theme.colors.surface, ...headerHorizontal.bleed }}>
+      <View style={{ height: headerHeights.total, backgroundColor: theme.colors.surface, ...headerHorizontal.bleed }}>
         <View style={{
-          position: 'absolute', ...headerHorizontal.row, bottom: 0, height: 44,
+          position: 'absolute', ...headerHorizontal.row, bottom: 0, height: headerHeights.content,
           flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8,
         }}>
           <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }}>

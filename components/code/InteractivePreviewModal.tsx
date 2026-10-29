@@ -14,7 +14,7 @@ import type { LogEntry } from '@/lib/code-execution/types';
 import { useSandboxReload } from '@/hooks/useSandboxReload';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import { useHorizontalInsets, useWindowControlsTopInset } from '@/lib/useLockedTopInset';
+import { useDuoHeaderRowHeight, useHeaderSides, useHorizontalInsets, useWindowControlsTopInset } from '@/lib/useLockedTopInset';
 import { MAX_FONT_MULTIPLIER, useTheme, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import type { DeckImage } from '@/types';
 
@@ -75,6 +75,9 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
   const topInset = useWindowControlsTopInset();
   // 別 VC の全画面なので根元の余白（app/_layout.tsx の contentStyle）が効かない＝左右の safe area は自分で避ける
   const horizontalInsets = useHorizontalInsets();
+  // ヘッダーの左右の余白（普段は 12＝styles.header と同じ。iPhone Duo は左の角と右の時刻・Wi-Fi を空ける）
+  const headerSides = useHeaderSides(12);
+  const headerRowHeight = useDuoHeaderRowHeight();
   const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [nonce, setNonce] = useState(0);
@@ -254,7 +257,7 @@ export function InteractivePreviewModal({ visible, onClose, language, body, prev
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <View style={[styles.root, { paddingTop: topInset, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right }]}>
         {/* ヘッダー（左右のグループを同じ最小幅にしてタイトルを中央に保つ） */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingLeft: headerSides.left, paddingRight: headerSides.right, height: headerRowHeight }]}>
           <View style={styles.headerSide}>
             <Pressable onPress={onClose} hitSlop={10} style={styles.headerBtn}>
               <Ionicons name="close" size={Math.round(theme.fontSize.xxl)} color="#E5E7EB" />

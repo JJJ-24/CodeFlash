@@ -12,7 +12,7 @@ import { buildStaticPreviewHtml } from '@/lib/code-execution/sandbox';
 import { hasImageRefs, resolveHtmlImageRefs } from '@/lib/htmlImages';
 import { COPY_DONE_BG, COPY_DONE_COLOR, MAX_FONT_MULTIPLIER, useTheme } from '@/lib/theme';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import { useHorizontalInsets, useWindowControlsTopInset } from '@/lib/useLockedTopInset';
+import { useDuoHeaderRowHeight, useHeaderSides, useHorizontalInsets, useWindowControlsTopInset } from '@/lib/useLockedTopInset';
 import type { DeckImage } from '@/types';
 
 const KEY_ESCAPE = (KeyCommand.constants?.keyInputEscape as string) ?? '';
@@ -48,6 +48,9 @@ export function PageViewerModal({ page, onClose, deckImages }: Props) {
   const topInset = useWindowControlsTopInset();
   // 別 VC の全画面なので根元の余白（app/_layout.tsx の contentStyle）が効かない＝左右の safe area は自分で避ける
   const horizontalInsets = useHorizontalInsets();
+  // ヘッダーの左右の余白（普段は 12＝styles.header と同じ。iPhone Duo は左の角と右の時刻・Wi-Fi を空ける）
+  const headerSides = useHeaderSides(12);
+  const headerRowHeight = useDuoHeaderRowHeight();
   const visible = page !== null;
   // 閉じるアニメーションの間も中身を出し続ける（null にすると閉じかけで空になる）
   const [shown, setShown] = useState(page);
@@ -109,7 +112,7 @@ export function PageViewerModal({ page, onClose, deckImages }: Props) {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <View style={[styles.root, { paddingTop: topInset, paddingLeft: horizontalInsets.left, paddingRight: horizontalInsets.right }]}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingLeft: headerSides.left, paddingRight: headerSides.right, height: headerRowHeight }]}>
           <Pressable onPress={onClose} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="close" size={Math.round(theme.fontSize.xxl)} color="#E5E7EB" />
           </Pressable>

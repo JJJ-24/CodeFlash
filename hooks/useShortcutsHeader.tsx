@@ -2,10 +2,9 @@ import { useLayoutEffect, useRef } from 'react';
 import { Platform, Pressable, useWindowDimensions } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HEADER_BUTTON_HIT_SLOP, HeaderTapToTop } from '@/components/HeaderTapToTop';
 import { useTheme } from '@/lib/theme';
-import { useHeaderCornerInset } from '@/lib/useLockedTopInset';
+import { useHeaderSides } from '@/lib/useLockedTopInset';
 
 /**
  * 標準ヘッダーが左右に足す余白（pt）。iOS で幅 414pt 以上（iPad・大きい iPhone）だと 5pt
@@ -30,12 +29,9 @@ export function useShortcutsHeader(enabled: boolean, onPress: () => void, onHead
   const theme = useTheme();
   // 標準ヘッダーが足す余白（useStandardHeaderInset）はホームの自前ヘッダーに無いので、引いて検索ボタンをホームと同じ位置にする
   const headerInset = useStandardHeaderInset();
-  // 画面の角に接するとき（iPhone Duo の閉じた状態・開いた横）の余白＝自前ヘッダーの `useHeaderHorizontal` と同じ値。
-  // 標準ヘッダーは左右の safe area を自分で避けるので、その側に safe area があれば足さない
-  const corner = useHeaderCornerInset();
-  const insets = useSafeAreaInsets();
-  const cornerLeft = insets.left > 0 ? 0 : corner;
-  const cornerRight = insets.right > 0 ? 0 : corner;
+  // 左右の余白＝自前ヘッダーの `useHeaderHorizontal` と同じ値（普段は 8・iPhone Duo は左の角と右の時刻・Wi-Fi を空ける）。
+  // 標準ヘッダーも左右の safe area を自分で避けるので、safe area の内側から測った値をそのまま使える
+  const sides = useHeaderSides();
   // 毎レンダー新しい関数が来ても setOptions をやり直さないよう ref 経由で呼ぶ
   const headerTapRef = useRef(onHeaderTap);
   headerTapRef.current = onHeaderTap;
@@ -52,19 +48,19 @@ export function useShortcutsHeader(enabled: boolean, onPress: () => void, onHead
           <MaterialIcons name="keyboard" size={22} color={theme.colors.primary} />
         </Pressable>
       ) : undefined,
-      headerRightContainerStyle: enabled ? { paddingRight: 8 + cornerRight } : undefined,
+      headerRightContainerStyle: enabled ? { paddingRight: sides.right } : undefined,
       // ホームと同じ見た目（外側 8＋ボタン 8＝左端から 16・アイコンは xxl）
       headerLeft: hasSearch ? () => (
         <Pressable onPress={() => searchRef.current?.()} hitSlop={HEADER_BUTTON_HIT_SLOP} style={{ paddingHorizontal: 8 }}>
           <Ionicons name="search-outline" size={theme.fontSize.xxl} color={theme.colors.primary} />
         </Pressable>
       ) : undefined,
-      headerLeftContainerStyle: hasSearch ? { paddingLeft: 8 - headerInset + cornerLeft } : undefined,
+      headerLeftContainerStyle: hasSearch ? { paddingLeft: sides.left - headerInset } : undefined,
       headerBackground: hasHeaderTap
         ? ({ style }: { style: any }) => (
           <HeaderTapToTop style={[{ flex: 1 }, style]} onPress={() => headerTapRef.current?.()} />
         )
         : undefined,
     });
-  }, [enabled, theme, onPress, navigation, hasHeaderTap, hasSearch, headerInset, cornerLeft, cornerRight]);
+  }, [enabled, theme, onPress, navigation, hasHeaderTap, hasSearch, headerInset, sides]);
 }

@@ -1,7 +1,7 @@
 # 060 Expo SDK 58 への移行（iOS 27 SDK でのビルド・UIScene 対応・iPhone Duo）
 
 **フェーズ:** Phase 0〜5
-**ステータス:** Phase 4 完了（2026-10-27・`feature/060-expo-sdk-58` ブランチ・シミュレータ）。Phase 3 の実機の項目が残り。次は Phase 5（仕上げ）
+**ステータス:** Phase 5 進行中（2026-10-29・`feature/060-expo-sdk-58` ブランチ）。CLAUDE.md・メモリの更新まで完了。Phase 3 の実機の項目が残り（TestFlight で確認）
 **要ネイティブ再ビルド:** 必要（`ios/` を prebuild で作り直す）
 **DB 変更:** なし
 **依存:** なし（ただし**審査中のバージョンがある間は着手しない**＝同じ環境で作り直せなくなる）
@@ -198,8 +198,8 @@ OS 依存の実装が集中している順：
 
 ### Phase 5：仕上げ
 
-- [ ] CLAUDE.md の更新（技術スタックの版・パッチの記述・`withPrebuiltRNDeps` の要否・`expo.install.exclude`・Xcode 26.6 の直接起動の話は不要になる）
-- [ ] メモリの更新（`project_ios27-and-sdk-upgrade`）
+- [x] CLAUDE.md の更新（技術スタックの版・パッチの記述・`withPrebuiltRNDeps` の要否・`expo.install.exclude`・Xcode 26.6 の直接起動の話は不要になる） → 2026-10-29。技術スタック・パッチ（RN 0.88.0・slider/expo-speech の削除・ScrollView の inset 戻しは上流で修正）・`withPrebuiltRNDeps`（引き続き要る＋Podfile.lock の見方・プリコンパイル済みモジュールの注意）・`expo.install.exclude`（空）・ビルド環境（Xcode 27・Device Hub・UIScene）・`@react-navigation/*` を import しない・RNGH 3 の Legacy*・Duo の左右の safe area と `rs()` の iPhone ゲート撤去・lint の警告・TypeScript 6 のハーネス。Xcode 26.6 の直接起動の話は CLAUDE.md には元々無かった（メモリ側）
+- [x] メモリの更新（`project_ios27-and-sdk-upgrade`）→ 2026-10-29
 - [ ] TestFlight で実機確認してからリリース
 - [ ] main へ入れた後、React Compiler の lint（Phase 1 で警告に落とした5規則・計337件）を直す専用チケットを作る＝1規則ずつ直し、直した規則は `eslint.config.js` の `'warn'` 行を消してエラーに戻す（2026-10-26 合意）。それまでは lint の警告が 358 件より増えていないかを見る
 

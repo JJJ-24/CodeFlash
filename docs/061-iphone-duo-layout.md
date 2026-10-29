@@ -29,7 +29,7 @@ Duo の safe area（実測・2026-10-29）：
 
 ### 学習画面でステータスバーを隠しても、Duo の帯は消えない
 
-学習画面は開いた直後にステータスバーを隠す（`app/study/session.tsx` の `setStatusBarHidden(true)`）。Duo でログを取ると、隠した後も safe area は変わらない（閉じた状態・開いた横＝右 84・開いた縦＝上 82）うえ、時刻・Wi-Fi も消えない。
+学習画面は開いた直後にステータスバーを隠す（`app/study/session.tsx` の `setStatusBarHidden(true)`。その後 060 で画面ごとの `statusBarHidden` に移した＝下の「普通の iPhone でも…」）。Duo でログを取ると、隠した後も safe area は変わらない（閉じた状態・開いた横＝右 84・開いた縦＝上 82）うえ、時刻・Wi-Fi も消えない。
 
 原因は `expo-status-bar` 58.0.4 の型の説明に書いてある：**`hidden` は iPhone Duo では効かない**（ステータスバーが縦の帯にあるため）。帯を上へ戻すには **`verticalBarBehaviorIOS: 'disabled'`** を使う、とある。
 
@@ -47,6 +47,7 @@ iPhone 18 Pro（iOS 27.0 シミュレータ・SDK 58 のビルド）でも、学
 `RCTStatusBarManager`（RN 0.88）は `UIApplication.setStatusBarHidden:`（`UIViewControllerBasedStatusBarAppearance = NO` 前提の古い API）で隠しているので、**UIScene（iOS 27 SDK）でこの API が効かなくなった**可能性が高い。Duo とは別の問題で、060 の退行として扱う（→ `docs/060` の Phase 3 に追記）。
 同じ API で文字の色（`style`＝ダークのとき白）も設定しているので、そちらも効いていない可能性がある。
 直し方の候補：react-native-screens の画面ごとの `statusBarHidden`／`statusBarStyle`（expo-router の Stack の options。`UIViewControllerBasedStatusBarAppearance = YES` で view controller から設定する）へ移す。
+→ **060 で A 案（画面ごとの指定）に移した（2026-10-29・v1.14.0）**＝`expo-status-bar` はもう使っていない。⚠️ 下の `verticalBarBehaviorIOS` を試すときは `expo-status-bar` を再び使うことになるので、`UIViewControllerBasedStatusBarAppearance = YES`＋画面ごとの指定の下でも効くか（どの view controller の `preferredVerticalBarBehavior` を差し替えるか）を合わせて確かめる。react-native-screens に同じ指定があればそちらを優先する。
 
 ---
 

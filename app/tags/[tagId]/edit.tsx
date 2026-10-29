@@ -22,7 +22,6 @@ import { DiscardConfirmModal } from '@/components/DiscardConfirmModal';
 import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { useTheme, MAX_FONT_MULTIPLIER, TAG_PRESET_COLORS as PRESET_COLORS } from '@/lib/theme';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { resolveTagColor } from '@/lib/tagColors';
 import { stepTagColor, TagColorPicker } from '@/components/TagColorPicker';
 import { deleteTag, updateTag } from '@/lib/database/tags';
@@ -62,7 +61,6 @@ export default function EditTagScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  useRestoreStatusBar();
   const { tags, updateTag: updateStore, removeTag } = useTagStore();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);

@@ -30,7 +30,6 @@ import { MAX_FONT_MULTIPLIER, SHADOW, useTheme } from '@/lib/theme';
 import { useBlockMetrics } from '@/lib/blockMetrics';
 import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useSafeScrollsToTop } from '@/lib/useSafeScrollsToTop';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useDeckStore } from '@/store/decks';
@@ -95,7 +94,6 @@ export default function ArchiveScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const headerHeights = useLockedHeaderHeights();
-  useRestoreStatusBar();
   const lastFocusTimeRef = useRef(0);
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();

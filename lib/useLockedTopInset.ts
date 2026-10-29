@@ -80,8 +80,8 @@ function useWindowControls(): { top: number; windowed: boolean } {
 
 /**
  * ウィンドウ表示で上端が下がったとき、ヘッダーを縮めるまでの待ち時間。
- * `useRestoreStatusBar` の多段復元（最後が 550ms）より長くして、WKWebView の後始末で
- * ステータスバーが一瞬隠れただけの落ち込みでは縮めない（戻ってきたらタイマーごと取り消す）。
+ * WKWebView の後始末などでステータスバーが一瞬隠れただけの落ち込みでは縮めない
+ * （戻ってきたらタイマーごと取り消す。かつての `useRestoreStatusBar` の多段復元〈最後が 550ms〉より長くしてあった）。
  */
 const WINDOWED_SHRINK_DELAY_MS = 800;
 

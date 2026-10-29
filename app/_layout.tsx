@@ -1,6 +1,5 @@
 import '@/lib/i18n';
 import * as Network from 'expo-network';
-import { StatusBar } from 'expo-status-bar';
 import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -179,10 +178,6 @@ function RootStack() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-    {/* アプリ全体のステータスバー文字色の基準（ダーク=白/ライト=黒）。
-        WebView クリーンアップ等で壊れた後の恒久的な基準色を正しく保つ。
-        学習セッションはより深い階層で <StatusBar hidden> を出して一時的に上書きする。 */}
-    <StatusBar style={theme.dark ? 'light' : 'dark'} />
     <Stack
       // 左右の safe area（iPhone Duo の右 84pt の帯）は各画面の中身をネイティブの SafeAreaView で包んで避ける。
       // `(tabs)` は包まない（タブの中身は app/(tabs)/_layout.tsx の screenLayout が包む）。詳細は components/HorizontalSafeAreaLayout.tsx
@@ -194,6 +189,12 @@ function RootStack() {
         contentStyle: { backgroundColor: theme.colors.background },
         headerBackTitle: '',
         headerBackButtonDisplayMode: 'minimal',
+        // ステータスバー（時刻・電池・Wi-Fi）の文字色は画面ごとの指定（view controller）で決める（ダーク＝白／ライト＝黒）。
+        // ⚠️ expo-status-bar の <StatusBar> / setStatusBarHidden・setStatusBarStyle は使わない：RN の実装は
+        // UIApplication.setStatusBarHidden/Style（UIViewControllerBasedStatusBarAppearance = NO 前提の古い API）で、
+        // iOS 27 SDK（UIScene）では効かない（060 で発見）。Info.plist は app.json で YES にしてある。
+        // 隠すのも画面ごと（学習画面の `statusBarHidden`）
+        statusBarStyle: theme.dark ? 'light' : 'dark',
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false, title: '' }} />

@@ -19,7 +19,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { SettingsFocusContext, useFocusRegistry } from '@/components/settings/settingsFocus';
 import { DeckFormCard, DeckFormDivider, DeckFormField, DeckFormNavRow, DeckFormSectionTitle, DeckFormToggleRow } from '@/components/deck/DeckFormParts';
@@ -82,7 +81,6 @@ export default function NewDeckScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  useRestoreStatusBar();
   const { addDeck } = useDeckStore();
   const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const isPro = useProStore((s) => s.isPro);

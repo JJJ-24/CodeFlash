@@ -30,7 +30,6 @@ import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsMo
 import { DRAG_LOCK_ACTIVATION_DISTANCE } from '@/lib/dragLock';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
 import { stepTagColor, TagColorPicker } from '@/components/TagColorPicker';
@@ -103,7 +102,6 @@ export default function TagsScreen() {
   const bm = useBlockMetrics();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
-  useRestoreStatusBar();
   // ホーム/タグカード一覧のフィルターブロックと同じ寸法（4列レイアウトの1ブロック幅）
   const blockWidth = bm.blockWidth;
   const blockPadH = bm.padH;

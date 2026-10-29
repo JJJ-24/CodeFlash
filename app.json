@@ -2,7 +2,7 @@
   "expo": {
     "name": "CodeFlash",
     "slug": "codeflash",
-    "version": "1.13.2",
+    "version": "1.14.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon-light.png",
     "scheme": "codeflashcard",
@@ -16,7 +16,8 @@
         "tinted": "./assets/images/icon-tinted.png"
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIViewControllerBasedStatusBarAppearance": true
       },
       "entitlements": {
         "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)$(CFBundleIdentifier)"

@@ -29,7 +29,6 @@ import { useBlockMetrics } from '@/lib/blockMetrics';
 import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteCard, getCardsByTagId, setCardArchived, setCardsArchived } from '@/lib/database/cards';
 import { removeTagFromCards } from '@/lib/database/tags';
@@ -92,7 +91,6 @@ export default function TagCardsScreen() {
   const bm = useBlockMetrics();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
-  useRestoreStatusBar();
   const lastFocusTimeRef = useRef(0);
   const { decks } = useDeckStore();
   const { tags } = useTagStore();

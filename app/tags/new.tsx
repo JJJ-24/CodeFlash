@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 
 import { useTheme, MAX_FONT_MULTIPLIER, PRIMARY_COLOR } from '@/lib/theme';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { resolveTagColor } from '@/lib/tagColors';
 import { SettingsFocusContext, useFocusRegistry } from '@/components/settings/settingsFocus';
 import { DeckFormCard, DeckFormField, DeckFormFieldLabel, DeckFormStaticField } from '@/components/deck/DeckFormParts';
@@ -60,7 +59,6 @@ export default function NewTagScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  useRestoreStatusBar();
   const { tags, addTag } = useTagStore();
   const setPendingFocus = usePendingFocusStore((s) => s.setPendingFocus);
   const { keyboardShortcutsEnabled } = useSettingsStore();

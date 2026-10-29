@@ -13,7 +13,6 @@ import { FormBottomBar } from '@/components/FormBottomBar';
 import { ModalFormHeader } from '@/components/ModalFormHeader';
 import { useKeyCommands } from '@/lib/useKeyCommands';
 import { useTheme } from '@/lib/theme';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
@@ -40,7 +39,6 @@ export default function EditCardScreen() {
   const { updateCard: updateStore, removeCard, markDuplicated } = useCardStore();
   const { decks, updateDeck } = useDeckStore();
   const theme = useTheme();
-  useRestoreStatusBar();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   useDismissKeyboardOnLeave();
 

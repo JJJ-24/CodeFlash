@@ -49,8 +49,8 @@ const TITLE_ICON_SPACE = 24;
  * 標準（native-stack）ヘッダーはコード実行 WebView がステータスバーを隠すと高さが縮み、
  * ネイティブバーボタンのハイライトカプセルも変形するため、これらの画面は
  * `headerShown: false` ＋ このヘッダーを使う（高さは useLockedTopInset ＝縮まない）。
- * 詳細は CLAUDE.md「カスタムヘッダーパターン」。ステータスバーの表示・色の復元は
- * 各画面の useRestoreStatusBar が担当する。
+ * 詳細は CLAUDE.md「カスタムヘッダーパターン」。ステータスバーの表示・色は画面ごとの指定
+ * （app/_layout.tsx の statusBarStyle）で決まる。
  *
  * 構造: 左＝×（閉じる）／中央＝タイトル（ショートカット有効時はキーボードアイコン付きで
  * タップ→一覧表示）／右＝✓（保存）。

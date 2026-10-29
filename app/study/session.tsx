@@ -9,8 +9,7 @@ import {
   useRouter,
 } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { StatusBar, setStatusBarHidden as expoSetStatusBarHidden } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -229,9 +228,6 @@ export default function StudySessionScreen() {
         }
         isScreenFocusedRef.current = false;
         setStatusBarHidden(false);
-        // コンポーネントのアンマウントとバッチ処理されて StatusBar 再レンダリングが
-        // 走らない場合があるため、命令型 API で確実に復元する
-        expoSetStatusBarHidden(false, 'fade');
       };
     }, [refreshCurrentCard]),
   );
@@ -295,6 +291,12 @@ export default function StudySessionScreen() {
   const sessionTitle = headerDeck?.name ?? sessionLabel?.text ?? t("study.title");
 
   const [statusBarHidden, setStatusBarHidden] = useState(false);
+  // ステータスバーを隠すのはこの画面の指定（view controller）で行う＝この画面を離れれば自動で戻る。
+  // ⚠️ <StatusBar hidden>（expo-status-bar）は使わない＝iOS 27 SDK（UIScene）では効かない（app/_layout.tsx の statusBarStyle の説明）。
+  // かつて WKWebView の後始末がアプリ全体のステータスバーを壊すので命令型で再アサートしていたが、画面ごとの指定は壊されない
+  useLayoutEffect(() => {
+    navigation.setOptions({ statusBarHidden, statusBarAnimation: 'fade' });
+  }, [navigation, statusBarHidden]);
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
@@ -776,13 +778,6 @@ export default function StudySessionScreen() {
     setCodeEditing(false);
     if (isScreenFocusedRef.current) {
       Keyboard.dismiss();
-    }
-  }, []);
-  const handleCodeRunComplete = useCallback(() => {
-    // WebView 実行完了直後に iOS がネイティブレベルでステータスバー状態を
-    // 変化させる場合があるため、hidden=true を命令型 API で再アサートする
-    if (isScreenFocusedRef.current) {
-      expoSetStatusBarHidden(true, 'none');
     }
   }, []);
   /**
@@ -1273,7 +1268,6 @@ export default function StudySessionScreen() {
   if (loading) {
     return (
       <>
-        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         {iPhoneHeader}
         <View style={[styles.center, { backgroundColor: theme.baseBackground }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -1287,7 +1281,6 @@ export default function StudySessionScreen() {
   if (completed && browseMode) {
     return (
       <>
-        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         {iPhoneHeader}
         <View style={[styles.center, { backgroundColor: theme.baseBackground }]} />
       </>
@@ -1361,7 +1354,6 @@ export default function StudySessionScreen() {
 
     return (
       <>
-        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         <Stack.Screen options={{ headerShown: false }} />
         {(Platform as any).isPad ? (
           <View
@@ -1595,7 +1587,6 @@ export default function StudySessionScreen() {
   if (!currentCard) {
     return (
       <>
-        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         {iPhoneHeader}
       </>
     );
@@ -1766,7 +1757,6 @@ export default function StudySessionScreen() {
                 ? cbs.selectedCodeBlockIdx
                 : null
             }
-            onCodeRunStart={handleCodeRunComplete}
             exitAllEditTrigger={memoExitAllEditTrigger}
             scrollRef={backScrollRef}
             scrollYRef={backScrollYRef}
@@ -1897,7 +1887,6 @@ export default function StudySessionScreen() {
   if (isFullscreen) {
     return (
       <>
-        <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
         <Stack.Screen
           options={{
             title: t("study.title"),
@@ -2034,7 +2023,6 @@ export default function StudySessionScreen() {
                         selectedCodeBlockIdx={
                           !isFlipped ? cbs.selectedCodeBlockIdx : null
                         }
-                        onCodeRunStart={handleCodeRunComplete}
                         scrollRef={frontScrollRef}
                         scrollYRef={frontScrollYRef}
                         deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
@@ -2088,7 +2076,6 @@ export default function StudySessionScreen() {
                             ? cbs.selectedCodeBlockIdx
                             : null
                         }
-                        onCodeRunStart={handleCodeRunComplete}
                         exitAllEditTrigger={backExitAllEditTrigger}
                         scrollRef={backScrollRef}
                         scrollYRef={backScrollYRef}
@@ -2222,7 +2209,6 @@ export default function StudySessionScreen() {
 
   return (
     <>
-      <StatusBar hidden={statusBarHidden} style={theme.dark ? 'light' : 'dark'} />
       <Stack.Screen options={{ headerShown: false }} />
       {(Platform as any).isPad ? (
         <View
@@ -2413,7 +2399,6 @@ export default function StudySessionScreen() {
                       selectedCodeBlockIdx={
                         !isFlipped ? cbs.selectedCodeBlockIdx : null
                       }
-                      onCodeRunStart={handleCodeRunComplete}
                       scrollRef={frontScrollRef}
                       scrollYRef={frontScrollYRef}
                       deckSqlStages={currentDeckSqlStages} deckHtmlStages={currentDeckHtmlStages} deckHtmlImages={currentDeckHtmlImages}
@@ -2466,7 +2451,6 @@ export default function StudySessionScreen() {
                           ? cbs.selectedCodeBlockIdx
                           : null
                       }
-                      onCodeRunStart={handleCodeRunComplete}
                       exitAllEditTrigger={backExitAllEditTrigger}
                       scrollRef={backScrollRef}
                       scrollYRef={backScrollYRef}

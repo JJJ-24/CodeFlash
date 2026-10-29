@@ -55,7 +55,6 @@ import { localizeSections, ShortcutsModal } from '@/components/study/ShortcutsMo
 import { CardStatsSheet } from '@/components/stats/CardStatsSheet';
 import { archiveKeySpecs, deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { createDeck, setDeckArchived } from '@/lib/database/decks';
 import { useCardStore } from '@/store/cards';
 import { useDeckStore } from '@/store/decks';
@@ -202,7 +201,6 @@ export default function DeckDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
-  useRestoreStatusBar();
   const { decks, updateDeck, addDeck } = useDeckStore();
   const { cards, setCards, removeCard, reorderCards, takeDuplicated } = useCardStore();
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);

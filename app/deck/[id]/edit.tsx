@@ -31,7 +31,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme, MAX_FONT_MULTIPLIER, DECK_PRESET_COLORS, PRIMARY_COLOR } from '@/lib/theme';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { DECK_THEME_COLOR, resolveDeckIconColors } from '@/lib/deckIconColors';
 import { legacyInitMirror } from '@/lib/deckStages';
 import type { DeckIconName } from '@/lib/deckIcons';
@@ -87,7 +86,6 @@ export default function EditDeckScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
-  useRestoreStatusBar();
   const { decks, updateDeck: updateStore, removeDeck } = useDeckStore();
   const isPro = useProStore((s) => s.isPro);
   const { keyboardShortcutsEnabled, speechEnabled } = useSettingsStore();

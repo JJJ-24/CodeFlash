@@ -11,7 +11,6 @@ import { ShortcutsModal } from '@/components/study/ShortcutsModal';
 import { popEscDismiss } from '@/lib/escStack';
 import { deleteKeySpecs, useKeyCommands } from '@/lib/useKeyCommands';
 import { useHeaderHorizontal, useSimpleHeaderHeights } from '@/lib/useLockedTopInset';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { useSettingsStore } from '@/store/settings';
 
@@ -69,10 +68,6 @@ export function SettingsDetail({ title, children, overlay, onBack, suspendKeys, 
   const insets = useSafeAreaInsets();
   const headerHeights = useSimpleHeaderHeights();
   const headerHorizontal = useHeaderHorizontal();
-  // 入力欄のある画面（通知のスケジュールのラベル）でキーボードを出し入れすると、iPad でステータスバー
-  // （日時・Wi-Fi・電池）が消えたまま戻らなかった＝他の自前ヘッダーの画面と同じく再アサートする。
-  // ヘッダーは useLockedTopInset で高さ固定なので、無条件に表示へ戻してもヘッダーは動かない。
-  useRestoreStatusBar();
   const keyNav = shortcuts != null || shortcutGroups != null;
   const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
   const { t } = useTranslation();

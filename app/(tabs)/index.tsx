@@ -1,6 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { setStatusBarHidden, setStatusBarStyle } from 'expo-status-bar';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -166,9 +165,6 @@ export default function HomeScreen() {
   const headerInset = useStandardHeaderInset();
   const rs = useResponsiveSize();
   const bm = useBlockMetrics();
-  // ステータスバー文字色の復元は deps:[] の focus effect 内から参照するため、常に最新値を ref で渡す。
-  const darkRef = useRef(theme.dark);
-  darkRef.current = theme.dark;
   const { decks, setDecks, removeDeck, reorderDecks, updateDeck } = useDeckStore();
   const takePendingFocus = usePendingFocusStore((s) => s.takePendingFocus);
   const { deckSortOrder, setDeckSortOrder, deckSortLocked, setDeckSortLocked, keyboardShortcutsEnabled, lastHomeFilter, setLastHomeFilter } = useSettingsStore();
@@ -214,18 +210,6 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       isFocusedRef.current = true;
-      // WKWebView がネイティブクリーンアップ時に iOS ステータスバー状態（表示・文字色）を
-      // 上書きするため、フォーカス直後から複数タイミングで復元して確実に打ち勝つ。
-      // insets.top 監視ではノッチ/Dynamic Island iPhone でステータスバーを隠しても
-      // insets.top が変化しないため機能しない。文字色も直さないとダークモードで黒いままになる。
-      const restoreStatusBar = () => {
-        if (!isFocusedRef.current) return;
-        setStatusBarStyle(darkRef.current ? 'light' : 'dark', false);
-        setStatusBarHidden(false, 'none');
-      };
-      restoreStatusBar();
-      const sbTid1 = setTimeout(restoreStatusBar, 200);
-      const sbTid2 = setTimeout(restoreStatusBar, 550);
       // 新規デッキ作成から戻った場合は、作成デッキへフォーカス＋スクロール（スクロール位置復元はしない）。
       const pendingFocusDeck = takePendingFocus('deck')?.id ?? null;
       let tid1: ReturnType<typeof setTimeout>;
@@ -246,8 +230,6 @@ export default function HomeScreen() {
       }
       return () => {
         isFocusedRef.current = false;
-        clearTimeout(sbTid1);
-        clearTimeout(sbTid2);
         clearTimeout(tid1);
         restorationEndTimeRef.current = 0;
         savedScrollOffsetRef.current = scrollOffsetRef.current;

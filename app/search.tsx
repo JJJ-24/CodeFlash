@@ -30,7 +30,6 @@ import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { useListNavigation } from '@/hooks/useListNavigation';
 import { deleteKeySpecs, useKeyCommands, useShortcutsToggleKeys } from '@/lib/useKeyCommands';
 import { useLockedHeaderHeights } from '@/lib/useLockedTopInset';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER, SHADOW, themedFrameBorder } from '@/lib/theme';
 import { useResponsiveSize } from '@/lib/useResponsiveSize';
 import { resolveTagColor } from '@/lib/tagColors';
@@ -203,7 +202,6 @@ export default function SearchScreen() {
   const filterIconSize = Math.max(theme.fontSize.xl, rs(20, 22));
   // 標準ヘッダーと同じ高さ算出（Dynamic Island 補正込み）。lib/useLockedTopInset.ts 参照。
   const headerHeights = useLockedHeaderHeights();
-  useRestoreStatusBar();
   const { decks, setDecks } = useDeckStore();
   const { tags, setTags } = useTagStore();
   const { lastSearchField, setLastSearchField, keyboardShortcutsEnabled } = useSettingsStore();

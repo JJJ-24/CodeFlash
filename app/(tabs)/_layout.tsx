@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Text, type ColorValue } from 'react-native';
 
 import { useLockedHeaderHeights, useLockedTopInset } from '@/lib/useLockedTopInset';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useTheme, MAX_FONT_MULTIPLIER } from '@/lib/theme';
 import { horizontalSafeAreaLayout } from '@/components/HorizontalSafeAreaLayout';
 import { renderTabBar } from '@/components/BandTabBar';
@@ -20,10 +19,6 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
 
-  // 学習セッション/コード実行 WebView 後にステータスバーが非表示になった状態で
-  // タブへ戻るたびに、多段タイマーで確実に復元する（WKWebView のネイティブクリーンアップは
-  // 遅れて発火するため、単発の復元では負けて学習タブ等のヘッダーが縮んだままになる）。
-  useRestoreStatusBar();
 
   // 標準ヘッダー（学習/統計/設定）の上端を、ホームの自前ヘッダーと同じ値にそろえる。
   // 既定の insets.top のままだと、iPad のウィンドウ表示で赤黄青ボタンのぶん（useWindowControlsTopInset）を

@@ -92,7 +92,6 @@ interface Props {
   exitAllEditTrigger?: number;
   selectedCodeBlockIdx?: number | null;
   onSelectCodeBlock?: (codeBlockIdx: number) => void;
-  onCodeRunStart?: () => void;
   scrollRef?: RefObject<ScrollViewInstance | null>;
   scrollBaseYRef?: RefObject<number>;
   /** 058：親の ScrollView の今のスクロール位置（必要な分だけスクロールするため） */
@@ -105,7 +104,7 @@ interface Props {
   deckHtmlImages?: DeckImage[];
 }
 
-export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, runKeepEditTrigger, outputTrigger, exitAllEditTrigger, selectedCodeBlockIdx, onCodeRunStart, scrollRef, scrollBaseYRef, scrollYRef, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
+export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockChange, onEditFocus, onEditBlur, onForceKeyboardFocus, onSelectCodeBlock, runTrigger, editTrigger, runKeepEditTrigger, outputTrigger, exitAllEditTrigger, selectedCodeBlockIdx, scrollRef, scrollBaseYRef, scrollYRef, deckSqlStages, deckHtmlStages, deckHtmlImages }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const { suppress } = useFlipSuppress();
@@ -394,7 +393,6 @@ export function BlocksView({ blocks, editableCode, editedContents, onCodeBlockCh
                 isSelected={codeBlockIndexMap[i] === selectedCodeBlockIdx}
                 anotherBlockEditing={editingBlockIdx !== null && editingBlockIdx !== i}
                 onRunStart={() => {
-                  onCodeRunStart?.();
                   if (!scrollRef?.current) return;
                   // 出力レイアウト更新後（400ms）に実行結果を必要な分だけ見せる。収まらなければ先頭（エラー）を優先
                   //（058：以前は「ブロック末尾−300」へ送っていたため、プレビューの下まで進んでエラーが半分隠れた）

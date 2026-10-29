@@ -13,7 +13,6 @@ import { BlockEditor } from '@/components/editor/BlockEditor';
 import type { BlockEditorData, BlockEditorRef, EditorMode } from '@/components/editor/BlockEditor';
 import { localizeSections, ShortcutsModal, type ShortcutSectionDef } from '@/components/study/ShortcutsModal';
 import { useKeyCommands } from '@/lib/useKeyCommands';
-import { useRestoreStatusBar } from '@/lib/useRestoreStatusBar';
 import { useDismissKeyboardOnLeave } from '@/hooks/useDismissKeyboardOnLeave';
 import { CARD_EDITOR_SECTIONS_EDIT, CARD_EDITOR_SECTIONS_SORT, CARD_EDITOR_SECTIONS_PREVIEW } from '@/lib/cardEditorShortcuts';
 import { createCard } from '@/lib/database/cards';
@@ -52,7 +51,6 @@ export default function NewCardScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
-  useRestoreStatusBar();
   const { width: screenWidth } = useWindowDimensions();
   const { keyboardShortcutsEnabled } = useSettingsStore();
   useDismissKeyboardOnLeave();

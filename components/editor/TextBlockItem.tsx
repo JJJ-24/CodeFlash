@@ -3,8 +3,7 @@ import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import Markdown, { MarkdownIt } from 'react-native-markdown-display';
 import { useTranslation } from 'react-i18next';
 // gesture-handler 3 の ScrollView は新 API の実装で、旧 API の Gesture（カード送り・ドラッグ並べ替え）と関係を結べないので旧実装を使う
-import { Gesture, GestureDetector, LegacyScrollView as GHScrollView } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { LegacyScrollView as GHScrollView } from 'react-native-gesture-handler';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -14,6 +13,7 @@ import { BlockItemHeader } from './BlockItemHeader';
 import { CaretProbe } from './CaretProbe';
 import { MarkdownPalette } from './MarkdownPalette';
 import { MarkdownHelpModal } from './MarkdownHelpModal';
+import { useTapToEdit } from '@/hooks/useTapToEdit';
 import { markdownItHighlightColor } from '@/lib/editor/markdownHighlight';
 import { markdownItIns } from '@/lib/editor/markdownItIns';
 import { markdownItCjkFriendly } from '@/lib/editor/markdownItCjkFriendly';
@@ -130,10 +130,7 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
-  const tapGesture = useMemo(
-    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterEditMode)(); }),
-    [enterEditMode],
-  );
+  const tapToEdit = useTapToEdit(enterEditMode);
 
   const doubleTapCountRef = useRef(0);
   const doubleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -421,14 +418,14 @@ export function TextBlockItem({ block, isPreview, onChange, onDelete, autoFocus,
               />
             </ScrollView>
           ) : (
-            <GestureDetector gesture={tapGesture}>
+            <View {...tapToEdit}>
               <Text
                 style={[styles.input, { color: block.content ? theme.colors.text : theme.colors.textTertiary, fontSize: theme.fontSize.md, fontStyle: block.content ? 'normal' : 'italic' }]}
                 maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}
               >
                 {block.content || t('editor.textBlockPlaceholder')}
               </Text>
-            </GestureDetector>
+            </View>
           )}
           {block.content.trim() ? (
             <Pressable style={[styles.copyBtn, copied && { backgroundColor: COPY_DONE_BG }]} onPress={handleCopy} hitSlop={8}>

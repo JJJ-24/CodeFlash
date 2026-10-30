@@ -404,6 +404,7 @@ iPadOS は**ハードキーボードの「修飾なし矢印」と Tab を OS �
 react-native-gesture-handler (RNGH) と react-native-reanimated を組み合わせる際の必須ルール：
 
 - **RNGH は 3.x（060 で 2.28 から上げた）だが、ジェスチャーは旧 API（`Gesture.Pan()`/`Gesture.Tap()`＋`GestureDetector`）のまま**＝v3 の `GestureDetector` は旧 API のジェスチャーを旧実装へ回すので動く。⚠️ **RNGH の `ScrollView`/`FlatList` は名前そのままで新実装に置き換わった**うえ、**新旧の API の間では simultaneous などの関係を結べない**。旧 API のジェスチャー（カード送りの横 Pan・draggable のドラッグ）と同じ場所で使う RNGH のスクロールは **`LegacyScrollView`/`LegacyFlatList`** を使う（`ExecutionOutput`・`TextBlockItem`・`CodeBlockItem`・`ActivityHeatmap` は `LegacyScrollView as ScrollView`／`as GHScrollView` で import。draggable-flatlist の中もパッチで Legacy に差し替え済み）。素の `ScrollView` を RNGH から新しく import しないこと。ジェスチャーをフックの新 API へ移すのは別作業。
+- **タップで入力欄へフォーカスを移す処理に `Gesture.Tap()` を使わない**（`hooks/useTapToEdit.ts` を使う）：RNGH 3 では、iPad のウィンドウ表示（Split View・ステージマネージャ）のときだけ、`Gesture.Tap()` で編集に入った後の**次の1回のタッチが入力欄のカーソルを外すだけで終わる**（保存・閉じる・タブ切替・入力欄の中のカーソル移動まで1回目が空振り。全画面表示・Return で入った場合は起きない）。カード編集の4か所（テキスト本文・コード本文・初期化SQL・HTML 土台）は RN のタッチイベント（移動 8pt 未満＝元の `maxDeltaX/Y(8)` と同じ）に置き換え済み。学習画面の `CodeRunnerView` のタップで編集に入る処理は `Gesture.Tap()` のままだが、実機で再現しないことを確認済み（2026-10-30・`FlipCard` との入れ子があるので触らない）。
 - **`ReanimatedSwipeable`（`components/SwipeToDeleteRow.tsx`）は v3 で書き直された**：`dragOffsetFromRightEdge`/`dragOffsetFromLeftEdge` は `dragOffsetFromRight`/`dragOffsetFromLeft` に改名され、**右は 0 以下**（`dragOffsetFromRight={-28}`。正の値は開発ビルドで例外）。
 
 - **worklet から JS 関数を呼ぶ**: `onEnd(() => runOnJS(fn)())` の形式を使う。`onEnd(() => fn())` はクラッシュする。

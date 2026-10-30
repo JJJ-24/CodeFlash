@@ -188,6 +188,9 @@ OS 依存の実装が集中している順：
   - `useRestoreStatusBar`（WKWebView の後始末が壊したアプリ全体のステータスバーを、フォーカス直後の多段タイマー・キーボードの出し入れ・フォアグラウンド復帰のたびに再アサートしていたフック）は削除＝画面ごとの指定は後始末に壊されない。使っていた13か所（タブの `_layout`・カード一覧・入力系6画面・検索・タグ管理・タグ別カード一覧・アーカイブ・`SettingsDetail`）とホームの同等の復元（focus effect）を外した
   - ⚠️ 不採用：`RCTStatusBarManager` を UIScene の API に直すパッチ（RN のネイティブパッチが増える・RN を上げるたびに当たり直しが要る）
   - [x] 確認する（Info.plist が変わるので再ビルド後）：学習画面で隠れる・離れると戻る／ダーク・ライトで文字色が合う（テーマ切替にも追従）／コード実行（WKWebView）の後も他の画面で消えない・ヘッダーが縮まない／iPad のウィンドウ表示・キーボードの出し入れ（通知のラベル）／入力系モーダル（fullScreenModal）でも色が合う → TestFlight（v1.14.0）の実機で全部 OK（2026-10-29）
+- [x] **カード編集で、ブロックをタップして編集に入ると次の1回のタップが効かない**（2026-10-30 に iPad の実機で発見・v1.13.2 では起きない＝060 の退行）：iPad のウィンドウ表示（Split View・ステージマネージャ）のときだけ、タップで編集に入った後の1回目のタッチが入力欄のカーソルを外すだけで終わる（保存・×・削除・複製・タブ切替・モード切替・ショートカット一覧・テキストのコピー・入力欄の中のカーソル移動。＋ブロック追加・タグは1回目が青枠になるだけ）。Return で編集に入ったとき・新規作成の自動フォーカス・全画面表示では起きない＝gesture-handler 3 の `Gesture.Tap()` の経路だけ。デッキ/タグ編集（`Gesture.Tap()` を使わない）でも起きない
+  - → カード編集の4か所（テキスト本文・コード本文・初期化SQL・HTML 土台）の `Gesture.Tap()` を、RN のタッチイベントで判定する `hooks/useTapToEdit.ts`（移動 8pt 未満・2本指とスクロールの取り消しは除く＝元の `maxDeltaX/Y(8)` と同じ）に置き換えた。iPad 実機（Metro）で OK。学習画面の `CodeRunnerView`（同じく `Gesture.Tap()` で編集に入る）は再現しなかったのでそのまま
+  - ⚠️ 実機の Debug ビルド（`DEVELOPER_DIR=/Applications/Xcode-27.1.app/Contents/Developer npx expo run:ios --device <UDID>`）で `CDPDebugAPI::addConsoleMessage` が見つからないリンクエラーになったら：TestFlight 用の Release ビルドの後、`ios/Pods/hermes-engine` が Release 版のまま残り、前回の構成を記録する `.last_build_configuration` が無いと RN のスクリプトが Debug 版へ戻さない。`printf Release > ios/Pods/hermes-engine/.last_build_configuration` で次のビルドが差し替える
 
 ### Phase 4：iPhone Duo
 

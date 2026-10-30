@@ -18,8 +18,7 @@ import {
 
 import { useTranslation } from 'react-i18next';
 // gesture-handler 3 の ScrollView は新 API の実装で、旧 API の Gesture（カード送り・ドラッグ並べ替え）と関係を結べないので旧実装を使う
-import { Gesture, GestureDetector, LegacyScrollView as GHScrollView } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { LegacyScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 import { BlockItemHeader } from './BlockItemHeader';
 import { CaretProbe } from './CaretProbe';
@@ -40,6 +39,7 @@ import { pagesFromDeckStages, resolveDeckStageHtml, resolveDeckStageSql } from '
 import { useInteractivePreview } from '@/lib/InteractivePreviewContext';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useInsertPair } from '@/hooks/useInsertPair';
+import { useTapToEdit } from '@/hooks/useTapToEdit';
 import { useTheme, MAX_FONT_MULTIPLIER, CODE_STATE_HEADERS, COPY_DONE_COLOR, COPY_DONE_BG } from '@/lib/theme';
 import { useProStore } from '@/store/pro';
 import { useSettingsStore } from '@/store/settings';
@@ -269,28 +269,19 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
     setTimeout(() => codeInputRef.current?.focus(), 50);
   }, [setSelectionToPos]);
 
-  const tapGesture = useMemo(
-    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterEditMode)(); }),
-    [enterEditMode],
-  );
+  const tapToEdit = useTapToEdit(enterEditMode);
 
   // 土台欄（初期化SQL / HTML 土台）も本文と同じく、フォーカス外はハイライト表示・タップで編集復帰にする。
   const enterInitSqlEdit = useCallback(() => {
     setInitSqlFocused(true);
     setTimeout(() => initSqlInputRef.current?.focus(), 50);
   }, []);
-  const initSqlTapGesture = useMemo(
-    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterInitSqlEdit)(); }),
-    [enterInitSqlEdit],
-  );
+  const initSqlTapToEdit = useTapToEdit(enterInitSqlEdit);
   const enterInitHtmlEdit = useCallback(() => {
     setInitHtmlFocused(true);
     setTimeout(() => initHtmlInputRef.current?.focus(), 50);
   }, []);
-  const initHtmlTapGesture = useMemo(
-    () => Gesture.Tap().maxDeltaX(8).maxDeltaY(8).onEnd(() => { runOnJS(enterInitHtmlEdit)(); }),
-    [enterInitHtmlEdit],
-  );
+  const initHtmlTapToEdit = useTapToEdit(enterInitHtmlEdit);
 
   // 058：Return＝欄を開いて（折りたたみなら展開して）入力を始める
   useEffect(() => {
@@ -575,7 +566,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                 />
               </ScrollView>
             ) : (
-              <GestureDetector gesture={tapGesture}>
+              <View {...tapToEdit}>
                 {isEmpty ? (
                   <Text style={[styles.codeEmptyPrompt, { color: theme.colors.textTertiary, fontSize: theme.fontSize.md }]} maxFontSizeMultiplier={MAX_FONT_MULTIPLIER.content}>
                     {t('editor.codePlaceholder')}
@@ -585,7 +576,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                     <SyntaxHighlightedCode code={block.content} language={block.language} />
                   </View>
                 )}
-              </GestureDetector>
+              </View>
             )}
             <Pressable style={[styles.codeCopyBtn, codeCopied && { backgroundColor: COPY_DONE_BG }]} onPress={handleCodeCopy} hitSlop={8}>
               <Ionicons name={codeCopied ? 'checkmark-sharp' : 'copy-outline'} size={theme.fontSize.sm} color={codeCopied ? COPY_DONE_COLOR : '#4B5563'} />
@@ -668,8 +659,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   </View>
                 ) : (
                   // フォーカス外：本文と同じく折り返し・横スクロールなしのハイライト表示（タップで編集）。空欄はタップ可能なプレースホルダ。
-                  <GestureDetector gesture={initSqlTapGesture}>
-                    <View style={[styles.initSqlDisplay, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}>
+                  <View {...initSqlTapToEdit} style={[styles.initSqlDisplay, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}>
                       {block.sqlInit?.trim() ? (
                         <SyntaxHighlightedCode code={block.sqlInit} language="sql" />
                       ) : (
@@ -677,8 +667,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                           {t('editor.sqlInitPlaceholder')}
                         </Text>
                       )}
-                    </View>
-                  </GestureDetector>
+                  </View>
                 )
               )}
             </View>
@@ -767,8 +756,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                   </View>
                 ) : (
                   // フォーカス外：本文と同じく折り返し・横スクロールなしのハイライト表示（タップで編集）。空欄はタップ可能なプレースホルダ。
-                  <GestureDetector gesture={initHtmlTapGesture}>
-                    <View style={[styles.initSqlDisplay, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}>
+                  <View {...initHtmlTapToEdit} style={[styles.initSqlDisplay, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: '#3A3A3A' }]}>
                       {block.htmlInit?.trim() ? (
                         <SyntaxHighlightedCode code={block.htmlInit} language="html" />
                       ) : (
@@ -776,8 +764,7 @@ export function CodeBlockItem({ block, isPreview, onChange, onDelete, onRunStart
                           {t('editor.htmlInitPlaceholder')}
                         </Text>
                       )}
-                    </View>
-                  </GestureDetector>
+                  </View>
                 )
               )}
             </View>

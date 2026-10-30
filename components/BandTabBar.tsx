@@ -1,6 +1,6 @@
 import { BottomTabBar, type BottomTabBarProps } from 'expo-router/js-tabs';
-import { useState, type ReactNode } from 'react';
-import { LayoutAnimation, Platform, Pressable, StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/lib/theme';
 
@@ -27,8 +27,11 @@ const ICON_SIZE = 24;
  *   切り替えが残るのは開いた縦向き（上 82pt・左右 0＝下のタブバー）との回転・開閉だけ。
  * - アイコンだけ（帯で使える幅は約 60pt＝ラベルは言語によって入らない。Safari も帯のボタンはアイコンだけ）。
  *   今のタブはアイコンの色と丸い背景で示す。読み上げ機能向けのラベルは標準のタブバーと同じ形で付ける。
- * - ⚠️ 下のタブバーとの切り替え（開いた縦向きとの回転・開閉）は1〜2コマ遅れて中身の高さが変わるので、
- *   切り替わるときだけ `LayoutAnimation` で滑らかに移す（`SWITCH_ANIMATION`）。
+ * - 下のタブバーとの切り替え（開いた縦向きとの回転・開閉）は、safe area が新しい画面の大きさより約 0.07 秒遅れて
+ *   JS に届くので、その時点で中身の高さが約 50pt 変わり、右下の＋ボタンが一度だけ移る（一瞬なので目立たない）。
+ *   ⚠️ `LayoutAnimation` で滑らかにしない（2026-10-30 に外した）：`configureNext` はタブバーだけでなく**その描画の
+ *   レイアウトの変化すべて**にかかるので、帯が出て本文が 84pt 狭くなるのに合わせて、並べ替えボタンなど右寄せの部品まで
+ *   0.22 秒かけて滑っていた（閉じたときに目立ち、開くときは iOS の演出に紛れていた）。外すと一瞬で切り替わり動いて見えない。
  *   ⚠️ 中身の大きさを変えない形（下のタブバーも重ねて、そのぶんの余白を常にネイティブで空ける）は試して不採用：
  *   動きは止まるが、帯のときも下に約 50pt の空きが残り、＋ボタンが高い位置に浮いて、一覧がその手前で切れた。
  */
@@ -39,13 +42,6 @@ export function renderTabBar(props: BottomTabBarProps): ReactNode {
 function AdaptiveTabBar(props: BottomTabBarProps) {
   const { left, right } = props.insets;
   const side = (Platform as any).isPad ? null : right > 0 ? 'right' : left > 0 ? 'left' : null;
-  // 切り替わるレンダーで次のコミットのレイアウトの変化をアニメーションにする（effect だと1コマ遅れて、跳ねた後に滑ることになる）。
-  // 前回の値は state に持つ（React の「前回のレンダーの情報を保存する」形）
-  const [prevSide, setPrevSide] = useState(side);
-  if (prevSide !== side) {
-    setPrevSide(side);
-    LayoutAnimation.configureNext(SWITCH_ANIMATION);
-  }
   if (!side) return <BottomTabBar {...props} />;
   return <BandTabBar {...props} side={side} bandWidth={side === 'right' ? right : left} />;
 }
@@ -92,8 +88,6 @@ function BandTabBar({ state, descriptors, emitter, navigateToTab, insets, side, 
   );
 }
 
-/** 帯のタブ ⇄ 下のタブバーの切り替え（現れる・消えるものは透明度、動くものは位置と大きさ） */
-const SWITCH_ANIMATION = LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity);
 
 const styles = StyleSheet.create({
   // 画面の上に重ねる（本文は帯の手前で止まっているので何も隠さない）。帯の外のタッチは下へ通す
